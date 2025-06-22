@@ -479,6 +479,24 @@ export const getProductAsync = async () => {
   }
 }
 
+export const getAllProductsDataAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/product`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getAllCategoriesData = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/dashboard/categories`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const addProductAsync = async (unitData: FormData) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
