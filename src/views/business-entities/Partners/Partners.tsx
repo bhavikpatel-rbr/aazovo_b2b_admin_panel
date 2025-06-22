@@ -1710,7 +1710,7 @@ const CompanyListTable = () => {
       <DataTable
         selectable
         columns={columns}
-        data={pageData}
+        // data={pageData}
         loading={isLoading}
         pagingData={{
           total,

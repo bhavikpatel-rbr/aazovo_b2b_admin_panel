@@ -594,9 +594,7 @@ const preparePayloadForApi = (
   append("enable_billing", data.BILLING_FIELD);
 
   // Handle file upload for logo
-  // if (data.company_logo instanceof File) {
-    append("logo", data.company_logo);
-  // }
+  append("company_logo", data.company_logo);
 
   // Handle multi-selects explicitly
   append("brands", data.brands);
@@ -2485,7 +2483,7 @@ const MemberManagementSection = ({
   errors,
   formMethods,
 }: FormSectionBaseProps) => {
-    const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch();
   const { memberData } = useSelector(masterSelector);
   const { fields, append, remove } = useFieldArray({
     control,
@@ -2503,9 +2501,9 @@ const MemberManagementSection = ({
       : [];
   }, [memberData]);
 
-    useEffect(() => {
-      dispatch(getMemberAction());
-    }, [dispatch]);
+  useEffect(() => {
+    dispatch(getMemberAction());
+  }, [dispatch]);
   return (
     <Card id="memberManagement">
       {" "}
