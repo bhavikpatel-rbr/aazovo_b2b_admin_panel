@@ -2085,6 +2085,8 @@ export const addCompanyAsync = async (unitData: any) => {
         },
       }
     );
+    console.log(unitData, response);
+    
     return response;
   } catch (err) {
     return isAxiosError(err);
