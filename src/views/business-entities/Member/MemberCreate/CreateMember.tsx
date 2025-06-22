@@ -77,6 +77,7 @@ import {
   deleteRequestFeedbackAction,
   editMemberAction,
   editRequestFeedbackAction,
+  getAllProductsAction,
   getBrandAction,
   getCategoriesAction,
   getCompanyAction,
@@ -156,7 +157,7 @@ export interface MemberFormSchema {
   membership_plan_text?: string;
   upgrade_plan?: string | { label: string; value: string };
   request_description?: string;
-  favourite_product_ids?: Array<{ label: string; value: string }>;
+  favourite_product_id?: Array<{ label: string; value: string }>;
   business_opportunity?: string | { label: string; value: string };
   member_grade?: string | { label: string; value: string };
   relationship_manager?: string | { label: string; value: string };
@@ -385,12 +386,11 @@ const transformApiToFormSchema = (
   // Helper to normalize country codes (e.g., "++263" to "+263")
   const normalizeCountryCode = (code: string | undefined | null) =>
     code ? code.replace(/^\+\+/, "+") : undefined;
-  
+
   const createCountryCodeOption = (code: string | undefined | null) => {
     const normalized = normalizeCountryCode(code);
     return normalized ? { value: normalized, label: normalized } : undefined;
   };
-
   return {
     id: formData.id,
     name: formData.name || "",
@@ -433,7 +433,7 @@ const transformApiToFormSchema = (
     // Member Profile
     business_opportunity: toSelectOption(formData.business_opportunity),
     business_type: toSelectOption(formData.business_type),
-    favourite_product_ids: formData.favourite_products_list?.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
+    favourite_product_id: formData.favourite_products_list.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
     interested_in: toSelectOption(formData.interested_in), // Form uses interested_in
     // interested_category_ids: formData.interested_categories_list?.map((c: any) => ({ value: String(c.id), label: c.name })) || [], // Example if API had this
     // interested_subcategory_ids: formData.interested_subcategories_list?.map((sc: any) => ({ value: String(sc.id), label: sc.name })) || [], // Example
@@ -444,16 +444,25 @@ const transformApiToFormSchema = (
       : undefined,
     dealing_in_bulk: formData.dealing_in_bulk || "No", // For Radio group
     remarks: formData.remarks || "",
-    member_profiles: formData.dynamic_member_profiles?.map((profile: any) => {
-        // Deeper transformation needed here if dynamic_member_profiles has complex structure
-        // For now, if it's just an array of simple objects or needs {value, label} for its fields:
-        return {
-            ...profile, // Basic pass-through, adjust as needed
-            member_type: toSelectOption(profile.member_type), // Example
-            // brands: profile.brands?.map((b: any) => ({value: b.id, label: b.name})), // Example
-            // categories: profile.categories?.map((c: any) => ({value: c.id, label: c.name})), // Example
-            // sub_categories: profile.sub_categories?.map((sc: any) => ({value: sc.id, label: sc.name})), // Example
-        };
+    dynamic_member_profiles: formData.dynamic_member_profiles?.map((profile: any) => {
+      // Deeper transformation needed here if dynamic_member_profiles has complex structure
+      // For now, if it's just an array of simple objects or needs {value, label} for its fields:
+      return {
+        ...profile, // Basic pass-through, adjust as needed
+        member_type: toSelectOption(profile.member_type), // Example
+        brand_id: profile.brand_id,
+        brand_names: profile.brand_names,
+        category_id: profile.category_id,
+        category_names: profile.category_names,
+        id: profile.id,
+        member_id: profile.member_id,
+        member_type_id: profile.member_type_id,
+        sub_category_id: profile.sub_category_id,
+        sub_category_names: profile.sub_category_names,
+        // brands: profile.brands?.map((b: any) => ({value: b.id, label: b.name})), // Example
+        // categories: profile.categories?.map((c: any) => ({value: c.id, label: c.name})), // Example
+        // sub_categories: profile.sub_categories?.map((sc: any) => ({value: sc.id, label: sc.name})), // Example
+      };
     }) || [],
 
 
@@ -479,8 +488,11 @@ const preparePayloadForApi = (
 ): any => {
   const getValue = (field: any) => (typeof field === 'object' && field !== null ? field.value : field);
 
+  console.log(formData.favourite_product_id, "favourite_product_id");
+
   const payload: any = {
     // Personal Details
+    id: formData.id,
     name: formData.name || "",
     number: formData.mobile_no || "",
     number_code: getValue(formData.contact_country_code) || null, // API expects string or null
@@ -515,8 +527,8 @@ const preparePayloadForApi = (
     // Member Profile
     business_opportunity: getValue(formData.business_opportunity) || null,
     business_type: getValue(formData.business_type) || null,
-    // For arrays like favourite_product_ids, map back to array of IDs if API expects that
-    favourite_product_ids: formData.favourite_product_ids?.map(p => p.value) || [], // Example, if API expects array of IDs
+    // For arrays like favourite_product_id, map back to array of IDs if API expects that
+    favourite_product_id: formData.favourite_product_id?.map(p => p.value) || [], // Example, if API expects array of IDs
     interested_in: getValue(formData.interested_in) || null, // API expects interested_in
     // interested_category_ids: formData.interested_category_ids?.map(c => c.value) || [], // Example
     // interested_subcategory_ids: formData.interested_subcategory_ids?.map(sc => sc.value) || [], // Example
@@ -548,9 +560,9 @@ const preparePayloadForApi = (
   if (!isEditMode && formData.password) { // Only include password for new members if provided
     payload.password = formData.password;
   } else if (isEditMode && formData.password) { // For existing members, only include if changed
-     payload.password = formData.password; // Or your API might have a specific way to update password
+    payload.password = formData.password; // Or your API might have a specific way to update password
   }
-  
+
   // Clean up null values if API prefers undefined/omitted keys
   // Object.keys(payload).forEach(key => (payload[key] === null && delete payload[key]));
 
@@ -558,20 +570,18 @@ const preparePayloadForApi = (
   // The API response example for `favourite_product_id` is null, not an array.
   // If `favourite_product_id` is supposed to be a single selection:
   // favourite_product_id: getValue(formData.favourite_product_id_singular_select) || null, // if it was a single select
-  // If `favourite_product_ids` from form is an array of selected product IDs and API expects `favourite_product_id` as comma-separated string:
-  // favourite_product_id: formData.favourite_product_ids?.map(p => p.value).join(',') || null,
+  // If `favourite_product_id` from form is an array of selected product IDs and API expects `favourite_product_id` as comma-separated string:
+  // favourite_product_id: formData.favourite_product_id?.map(p => p.value).join(',') || null,
 
   // Based on your initial API example for `favourite_product_id: null`
-  // and `favourite_products_list: []` which maps to `favourite_product_ids: []` in form.
+  // and `favourite_products_list: []` which maps to `favourite_product_id: []` in form.
   // If API expects a single ID for `favourite_product_id` from a multi-select, you might take the first one:
-  // favourite_product_id: formData.favourite_product_ids?.[0]?.value || null,
-  // This part needs clarification based on API expectation for favourite_product_id vs favourite_product_ids.
-  // For now, I'm assuming if form has `favourite_product_ids` (array), API might expect an array of IDs.
+  // favourite_product_id: formData.favourite_product_id?.[0]?.value || null,
+  // This part needs clarification based on API expectation for favourite_product_id vs favourite_product_id.
+  // For now, I'm assuming if form has `favourite_product_id` (array), API might expect an array of IDs.
   // The provided API structure `favourite_product_id: null` suggests it's a single value, not an array.
-  // Let's stick to the form structure and assume API can handle array of IDs for `favourite_product_ids`.
+  // Let's stick to the form structure and assume API can handle array of IDs for `favourite_product_id`.
   // If `favourite_product_id` is a specific single field:
-  payload.favourite_product_id = null; // As per API structure, if it's not directly mapped from a form multi-select.
-
 
   // For dynamic_member_profiles, ensure the key matches what API expects
   if (formData.member_profiles) {
@@ -1892,6 +1902,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     subCategoriesData = [],
     ProductsData = [],
     Employees = [],
+    AllProducts = []
   } = useSelector(masterSelector);
 
   const { fields, append, remove } = useFieldArray({
@@ -1916,6 +1927,14 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     value: String(sc.id),
     label: sc.name,
   }));
+
+  const allproductOptions = AllProducts.map((sc: any) => ({
+    value: parseInt(sc.id),
+    label: sc.name,
+  }));
+
+  console.log(ProductsData, "allproductOptions");
+
 
   const opportunityOptions = [
     { value: "Indian Buyer", label: "Indian Buyer" },
@@ -2001,18 +2020,18 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
         </FormItem>
         <FormItem
           label="Favourite Product(s)"
-          invalid={!!errors.favourite_product_ids}
-          errorMessage={errors.favourite_product_ids?.message as string}
+          invalid={!!errors.favourite_product_id}
+          errorMessage={errors.favourite_product_id?.message as string}
         >
           <Controller
-            name="favourite_product_ids"
+            name="favourite_product_id"
             control={control}
             render={({ field }) => (
               <Select
                 {...field}
                 isMulti
                 placeholder="Select favourite products"
-                options={productOptions}
+                options={allproductOptions}
                 isClearable
               />
             )}
@@ -2300,6 +2319,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
 const PersonalDetailsComponent = ({
   control,
   errors,
+  isEditMode,
 }: FormSectionBaseProps) => {
   // Assuming `CompanyData` is fetched and available in the master slice
   const {
@@ -2411,6 +2431,7 @@ const PersonalDetailsComponent = ({
             render={({ field }) => (
               <Input
                 type="password"
+                disabled={isEditMode ? true : false}
                 placeholder="Enter new password"
                 {...field}
               />
@@ -2572,23 +2593,28 @@ const PersonalDetailsComponent = ({
 
 const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
   const { CountriesData = [] } = useSelector(masterSelector);
-  const countryCodeOptions = CountriesData.filter((c: any) => c.phonecode)
+
+  const countryOptions = CountriesData.map((country: any) => ({
+    value: String(country.id),
+    label: country.name,
+  }));
+
+  const countryCodeOptions = CountriesData
     .map((c: any) => ({
-      value: `+${c.phonecode}`,
-      label: `${c.iso_code} (+${c.phonecode})`,
-    }))
-    .filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
+      value: `+${c.phone_code}`,
+      label: `${c.iso_code} (${c.phone_code})`,
+    })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
 
   return (
     <Card id="socialContactInformation">
       <h4 className="mb-6">Social & Contact Information</h4>
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-3 gap-4" style={{ width: "22vh !important" }}>
         <FormItem
           label={<div>WhatsApp No.<span className="text-red-500"> * </span></div>}
           invalid={!!errors.whatsapp_number}
           errorMessage={errors.whatsapp_number?.message}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" style={{ width: "22vh !important" }}>
             <Controller
               name="whatsapp_country_code"
               control={control}
@@ -2627,10 +2653,10 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
               control={control}
               render={({ field }) => (
                 <Select
+                  {...field}
                   placeholder="Code"
                   className="w-28"
                   options={countryCodeOptions}
-                  {...field}
                 />
               )}
             />
@@ -3038,8 +3064,8 @@ const MemberFormComponent = (props: {
     if (currentIndex > 0) setActiveSection(navigationKeys[currentIndex - 1]);
   };
 
-  const renderActiveSection = () => {
-    const sectionProps = { errors, control, formMethods };
+  const renderActiveSection = (isEditMode: isEditMode) => {
+    const sectionProps = { errors, control, formMethods, isEditMode };
     switch (activeSection) {
       case "personalDetails":
         return <PersonalDetailsComponent {...sectionProps} />;
@@ -3080,7 +3106,7 @@ const MemberFormComponent = (props: {
           onNavigate={setActiveSection}
         />
       </Card>
-      <div className="flex flex-col gap-4 pb-20">{renderActiveSection()}</div>
+      <div className="flex flex-col gap-4 pb-20">{renderActiveSection(isEditMode)}</div>
       <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center p-4">
           <div>
@@ -3208,7 +3234,7 @@ const MemberCreate = () => {
     membership_plan_text: "",
     upgrade_plan: undefined,
     request_description: "",
-    favourite_product_ids: [],
+    favourite_product_id: [],
     business_opportunity: undefined,
     member_grade: undefined,
     relationship_manager: undefined,
@@ -3229,6 +3255,7 @@ const MemberCreate = () => {
     dispatch(getCategoriesAction());
     // dispatch(getSubcategoriesByIdAction());
     dispatch(getEmployeesAction());
+    dispatch(getAllProductsAction());
   }, [dispatch]);
 
   useEffect(() => {
@@ -3302,7 +3329,7 @@ const MemberCreate = () => {
           </Notification>
         );
       }
-      // navigate("/business-entities/member");
+      navigate("/business-entities/member");
     } catch (error: any) {
       const errorMessage =
         error?.message ||

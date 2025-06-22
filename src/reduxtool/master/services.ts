@@ -2122,6 +2122,16 @@ export const deleteAllcompanyAsync = async (unitData: any) => {
   * Member Module
 */}
 
+
+export const getAllProductsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/product`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const getMemberAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/customer`)
