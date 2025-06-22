@@ -1,3 +1,4 @@
+import { AxiosResponse } from "axios";
 import axiosInstance, { isAxiosError } from "../../services/api/api"
 import { config } from "../../utils/config"
 interface ApiParams {
@@ -2212,14 +2213,33 @@ export const deleteAllpartnerAsync = async (unitData: any) => {
   }
 }
 
-export const getpWallListingAsync = async () => {
+export const getpWallListingAsync = async (params: WallApiRequestParams = {}) => { // <-- ACCEPTS PARAMS
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      // For per_page = -1 (export all), ensure your API handles this.
+      // If API expects a very large number instead of -1, adjust here.
+      // e.g. if (key === 'per_page' && value === -1) value = 99999;
+      queryParams.append(key, String(value));
+    }
+  });
+  const queryString = queryParams.toString();
+
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/wall/enquiry?page=1`)
-    return response
+    // Make sure the response type matches what your API actually returns
+    const response: AxiosResponse<any> = await axiosInstance.get(
+      `${config.apiURL}/wall/enquiry${queryString ? `?${queryString}` : ''}`
+    );
+    return response; // Return the full Axios response
   } catch (err) {
-    return isAxiosError(err)
+    // It's generally better to let the createAsyncThunk handle the error catching
+    // by re-throwing, or to return a structured error object.
+    // The `isAxiosError` check should happen in the thunk's catch block.
+    console.error("Error in getpWallListingAsync:", err);
+    throw err; // Re-throw to be caught by the thunk or calling function
   }
-}
+};
+
 
 export const deleteAllWallAsync = async (unitData: any) => {
   try {
