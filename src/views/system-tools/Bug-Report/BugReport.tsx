@@ -1149,9 +1149,7 @@ const BugReportListing = () => {
         label="Attachment"
         className="md:col-span-2"
         invalid={!!currentFormMethods.formState.errors.attachment}
-        errorMessage={
-          currentFormMethods.formState.errors.attachment?.message as string
-        }
+        errorMessage={currentFormMethods.formState.errors.attachment?.message as string}
       >
         <Controller
           name="attachment"
