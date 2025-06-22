@@ -108,7 +108,7 @@ export interface CompanyFormSchema {
   company_name?: string;
   primary_contact_number?: string;
   primary_contact_number_code?: { label: string; value: string };
-  general_mobile?: string;
+  general_contact_number?: string;
   general_contact_number_code?: { label: string; value: string };
   alternate_contact_number?: string;
   alternate_contact_number_code?: { label: string; value: string };
@@ -219,7 +219,7 @@ interface ApiSingleCompanyItem {
   // company_code?: string;
   primary_contact_number?: string;
   primary_contact_number_code?: string;
-  general_mobile?: string;
+  general_contact_number?: string;
   general_contact_number_code?: string;
   alternate_contact_number?: string;
   alternate_contact_number_code?: string;
@@ -346,7 +346,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Par
         value: apiData.primary_contact_number_code,
       }
       : undefined,
-    general_mobile: apiData.general_mobile,
+    general_contact_number: apiData.general_contact_number,
     general_contact_number_code: apiData.general_contact_number_code
       ? {
         label: apiData.general_contact_number_code,
@@ -578,7 +578,7 @@ const preparePayloadForApi = (
   append("primary_email_id", data.primary_email_id);
   append("primary_contact_number", data.primary_contact_number);
   append("primary_contact_number_code", data.primary_contact_number_code);
-  append("general_mobile", data.general_mobile);
+  append("general_contact_number", data.general_contact_number);
   append("general_contact_number_code", data.general_contact_number_code);
   append("alternate_email_id", data.alternate_email_id);
   append("alternate_contact_number", data.alternate_contact_number);
@@ -1152,7 +1152,7 @@ const CompanyDetailsSection = ({
               )}
             />
             <Controller
-              name="general_mobile"
+              name="general_contact_number"
               control={control}
               render={({ field }) => (
                 <Input placeholder="Company Mobile" {...field} />
@@ -2826,7 +2826,7 @@ const CompanyCreate = () => {
     company_name: "",
     primary_contact_number: "",
     primary_contact_number_code: undefined,
-    general_mobile: "",
+    general_contact_number: "",
     general_contact_number_code: undefined,
     company_profile_settings_id: "",
     alternate_contact_number: "",
