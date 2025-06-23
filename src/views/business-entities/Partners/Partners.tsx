@@ -1496,19 +1496,21 @@ const CompanyListTable = () => {
         size: 190,
         cell: ({ row }) => {
           const {
-            total_members = 0,
+            members_count = 0,
+            teams_count = 0,
             progress = 0,
             kyc_verified,
             enable_billing,
+            due_after_3_months_date,
           } = row.original;
           return (
             <div className="flex flex-col gap-1.5 text-xs">
               {" "}
               <span>
-                <b>Members:</b> {total_members}
+                <b>Members:</b> {members_count}
               </span>{" "}
               <span>
-                <b>Teams:</b> {total_members}
+                <b>Teams:</b> {teams_count}
               </span>{" "}
               <div className="flex gap-1 items-center">
                 {" "}
@@ -1528,8 +1530,8 @@ const CompanyListTable = () => {
                     <MdCancel className="text-red-500 text-lg" />
                   )}
                 </Tooltip>{" "}
-                Billing Due:
               </div>{" "}
+              Billing Due: {due_after_3_months_date}
               <Tooltip title={`Profile Completion ${progress}%`}>
                 <div className="h-1.5 w-full rounded-full bg-gray-300">
                   <div
