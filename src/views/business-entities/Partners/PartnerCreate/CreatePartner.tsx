@@ -27,6 +27,7 @@ import toast from "@/components/ui/toast";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addpartnerAction,
+  deletepartnerAction,
   editpartnerAction,
   getBrandAction,
   getCategoriesAction,
@@ -2878,10 +2879,29 @@ const CreatePartner = () => {
   };
   const openDiscardDialog = () => setDiscardConfirmationOpen(true);
   const closeDiscardDialog = () => setDiscardConfirmationOpen(false);
-  const handleConfirmDiscard = () => {
-    closeDiscardDialog();
-    navigate("/business-entities/partner");
-  };
+   const handleConfirmDiscard = async () => {
+      try {
+        const { id } = useParams<{ id?: string }>();
+        await dispatch(deletepartnerAction({ id: id })).unwrap();
+        toast.push(
+          <Notification
+            title="Entry Deleted"
+            type="success"
+          >{`Entry deleted.`}</Notification>
+        );
+        dispatch(getpartnerAction());
+      } catch (e: any) {
+        toast.push(
+          <Notification title="Delete Failed" type="danger">
+            {(e as Error).message}
+          </Notification>
+        );
+      } finally {
+        closeDiscardDialog();
+        navigate("/business-entities/partner");
+      }
+  
+    };
   if (pageLoading)
     return (
       <Container className="h-full flex justify-center items-center">
