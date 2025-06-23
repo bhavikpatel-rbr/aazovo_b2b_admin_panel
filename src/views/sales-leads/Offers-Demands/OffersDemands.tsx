@@ -811,8 +811,9 @@ const OffersDemands = () => {
 
   const handleEdit = useCallback((item: OfferDemandItem) => {
     const bP = item.type === "Offer" ? "offers" : "demands";
-    if (bP === "offers") navigate(`/sales-leads/offers/create`, { state: item });
-    else navigate(`/sales-leads/${bP}/edit/${(item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id}`);
+    // if (bP === "offers") navigate(`/sales-leads/offers/create`, { state: item });
+    // else navigate(`/sales-leads/${bP}/edit/${(item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id}`);
+     navigate(`/sales-leads/${bP}/create`, { state: item });
   }, [navigate]);
   const handleDeleteClick = useCallback((item: OfferDemandItem) => setItemToDeleteConfirm(item), []);
 
