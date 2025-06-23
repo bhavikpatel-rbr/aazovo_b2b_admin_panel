@@ -129,6 +129,7 @@ export type WallItem = {
   productSpecId?: number;
   memberTypeId?: number;
   createdById?: number;
+  member?: any; // Assuming member data structure
 };
 
 // --- Zod Schemas ---
@@ -476,6 +477,7 @@ const WallListing = () => {
     updated_by_name: apiItem.updated_by_name,
     updated_by_role: apiItem.updated_by_role,
     createdById: apiItem.created_by,
+    member: apiItem?.member || null,
   }), []);
 
   // ✅ CORRECT: This `useMemo` is the core of the server-side filtering logic.
@@ -687,17 +689,17 @@ const WallListing = () => {
     {
       header: "Company & Member", accessorKey: "company_name", size: 260,
       cell: ({ row }) => {
-        const { companyId, company_name, member_name, memberId, member_email, member_phone, listing_url, } = row.original;
+        const { name, id, member_email, member_phone } = row.original?.member || {};
         return (
           <div className="flex flex-col gap-0.5 text-xs">
-            <div className="mb-1 w-full">{companyId && (<span className="font-semibold text-gray-500 dark:text-gray-400">{companyId} | </span>)}<span className="font-semibold text-gray-800 dark:text-gray-100">{company_name || "N/A"}</span></div>
-            <div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700 w-full">
-              {memberId && (<span className="font-semibold text-gray-500 dark:text-gray-400">{memberId} | </span>)}
-              {member_name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{member_name}</span>)}
+            {/* <div className="mb-1 w-full">{id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}<span className="font-semibold text-gray-800 dark:text-gray-100">{name || "N/A"}</span></div> */}
+            <div className="mt-1 pt-1 dark:border-gray-700 w-full">
+              {id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}
+              {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
               {member_email && (<a href={`mailto:${member_email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{member_email}</a>)}
               {member_phone && (<span className="block text-gray-600 dark:text-gray-300">{member_phone}</span>)}
             </div>
-            {listing_url && (<div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700"><a href={listing_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300 truncate max-w-[200px]">Listing URL</a></div>)}
+            {/* {listing_url && (<div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700"><a href={listing_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300 truncate max-w-[200px]">Listing URL</a></div>)} */}
           </div>
         );
       }
