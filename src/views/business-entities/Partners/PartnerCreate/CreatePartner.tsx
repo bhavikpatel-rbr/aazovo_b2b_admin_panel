@@ -27,6 +27,7 @@ import toast from "@/components/ui/toast";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addpartnerAction,
+  deletepartnerAction,
   editpartnerAction,
   getBrandAction,
   getCategoriesAction,
@@ -498,7 +499,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any = [])
     // ),
     partner_references: apiData.partner_references?.map((ref) => ({
       person_name: ref.person_name,
-      referenced_partner_id: data?.find((value: any) => value.value == ref.referenced_partner_id) ?? ref.referenced_partner_id,
+      referenced_partner_id: data?.find((value: any) => value.value == ref.partner_id) ?? ref.partner_id,
       number: ref.number,
       remark: ref.remark,
     })),
@@ -1689,7 +1690,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                   render={({ field }) => (
                     <Checkbox checked={!!field.value} onChange={field.onChange}>
                       {" "}
-                      {doc.label} (Verified){" "}<span className="text-red-500"> * </span>
+                      {doc.label} (Verified){" "}
                     </Checkbox>
                   )}
                 />{" "}
@@ -2770,8 +2771,8 @@ const CreatePartner = () => {
     dispatch(getMembersAction());
   }, [dispatch]);
 
-  const { CompanyData = [] } = useSelector(masterSelector);
-  const companyOptions = CompanyData?.data?.map((c: any) => ({
+  const { partnerData = [] } = useSelector(masterSelector);
+  const companyOptions = partnerData?.data?.map((c: any) => ({
     value: String(c.id),
     label: c.partner_name,
   }));
@@ -2878,10 +2879,29 @@ const CreatePartner = () => {
   };
   const openDiscardDialog = () => setDiscardConfirmationOpen(true);
   const closeDiscardDialog = () => setDiscardConfirmationOpen(false);
-  const handleConfirmDiscard = () => {
-    closeDiscardDialog();
-    navigate("/business-entities/partner");
-  };
+   const handleConfirmDiscard = async () => {
+      try {
+        const { id } = useParams<{ id?: string }>();
+        await dispatch(deletepartnerAction({ id: id })).unwrap();
+        toast.push(
+          <Notification
+            title="Entry Deleted"
+            type="success"
+          >{`Entry deleted.`}</Notification>
+        );
+        dispatch(getpartnerAction());
+      } catch (e: any) {
+        toast.push(
+          <Notification title="Delete Failed" type="danger">
+            {(e as Error).message}
+          </Notification>
+        );
+      } finally {
+        closeDiscardDialog();
+        navigate("/business-entities/partner");
+      }
+  
+    };
   if (pageLoading)
     return (
       <Container className="h-full flex justify-center items-center">

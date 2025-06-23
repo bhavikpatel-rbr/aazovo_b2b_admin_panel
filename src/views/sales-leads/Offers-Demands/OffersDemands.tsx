@@ -965,7 +965,39 @@ const OffersDemands = () => {
   const columns: ColumnDef<OfferDemandItem>[] = useMemo(() => [
     { header: "ID", accessorKey: "id", enableSorting: true, size: 70, cell: (props: CellContext<OfferDemandItem, any>) => (<span className="font-mono text-xs">{props.getValue<string>()}</span>), },
     { header: "Name", accessorKey: "name", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => (<div><div className="font-semibold">{props.row.original.name}</div>{(props.row.original.numberOfBuyers !== undefined || props.row.original.numberOfSellers !== undefined) && (<><div className="text-xs text-gray-600 dark:text-gray-300">Buyers: {props.row.original.numberOfBuyers ?? "N/A"}</div><div className="text-xs text-gray-600 dark:text-gray-300">Sellers: {props.row.original.numberOfSellers ?? "N/A"}</div></>)}</div>), },
-    { header: "Section Details", id: "sectionDetails", size: 220, cell: ({ row }: CellContext<OfferDemandItem, any>) => { const { groups } = row.original; if (!groups || groups.length === 0) return (<span className="text-xs text-gray-500">No group details</span>); return (<div className="space-y-1">{groups.map((group, index) => (<div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><div className="pl-2 flex flex-col gap-0.5 text-gray-600 dark:text-gray-400">{group.items.slice(0, 3).map((item, itemIdx) => (<span key={itemIdx}>{item}</span>))}{group.items.length > 3 && (<span className="italic">...and {group.items.length - 3} more</span>)}</div></div>))}</div>); }, },
+    {
+      header: "Section Details", id: "sectionDetails", size: 220, cell: ({ row }: CellContext<OfferDemandItem, any>) => {
+        const { groups } = row.original;
+        if (!groups || groups.length === 0) {
+          return <span className="text-xs text-gray-500">No group details</span>;
+        }
+        return (
+          <div className="space-y-1">
+            {groups.map((group, index) => {
+              const isSpecialGroup =
+                group.groupName === 'Group A' || group.groupName === 'Group B';
+
+              if (isSpecialGroup && group.items?.[0]) {
+                const fullText = group.items[0];
+                return (
+                  <div key={index} className="text-xs">
+                    <b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b>
+                    <Tooltip title={fullText}>
+                      <p className="line-clamp-2 pl-2 text-gray-600 dark:text-gray-400">
+                        {fullText}
+                      </p>
+                    </Tooltip>
+                  </div>
+                );
+              }
+
+              // Fallback for other groups or if special groups are empty
+              return (<div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><div className="pl-2 flex flex-col gap-0.5 text-gray-600 dark:text-gray-400">{group.items.slice(0, 3).map((item, itemIdx) => (<span key={itemIdx}>{item}</span>))}{group.items.length > 3 && (<span className="italic">...and {group.items.length - 3} more</span>)}</div></div>);
+            })}
+          </div>
+        );
+      },
+    },
     { header: "Created By / Assigned", accessorKey: "createdByInfo.userName", id: "createdBy", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => { const item = props.row.original; const fCD = dayjs(item.createdDate).format('D MMM YYYY, h:mm A'); return (<div className="flex flex-col gap-1"><div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span className="font-semibold">{item.createdByInfo.userName}</span></div>{item.assignedToInfo && (<div className="text-xs text-gray-600 dark:text-gray-300"><b>Assigned: </b> {item.assignedToInfo.userName}</div>)}<div className="text-xs text-gray-500 dark:text-gray-400"><span>{fCD}</span></div></div>); }, },
     { header: "Updated Info", accessorKey: "created_by", id: "updatedInfo", enableSorting: true, size: 120, cell: (props) => { const { updated_at, name, updated_by_role } = props.row.original; const fD = updated_at ? dayjs(updated_at).format('D MMM YYYY, h:mm A') : "N/A"; return (<div className="text-xs"><span>{name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span> <br /><span>{fD}</span></div>); }, },
     { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 120, cell: (props: CellContext<OfferDemandItem, any>) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onView={() => handleView(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />), },
@@ -1085,8 +1117,8 @@ const OffersDemands = () => {
           )}
           <FormItem label="Created Date"><Controller name="createdDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange} placeholder="Start - End" inputFormat="DD MMM YYYY" />)} /></FormItem>
           <FormItem label="Updated Date"><Controller name="updatedDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange} placeholder="Start - End" inputFormat="DD MMM YYYY" />)} /></FormItem>
-          <FormItem label="Creator"><Controller name="creatorIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Creator(s)" options={allApiUsersForFilterDropdown} value={allApiUsersForFilterDropdown.filter(opt => field.value?.includes(opt.value))} onChange={(options) => field.onChange(options?.map(opt => opt.value) || [])} />)} /></FormItem>
-          <FormItem label="Assignee"><Controller name="assigneeIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Assignee(s)" options={allApiUsersForFilterDropdown} value={allApiUsersForFilterDropdown.filter(opt => field.value?.includes(opt.value))} onChange={(options) => field.onChange(options?.map(opt => opt.value) || [])} />)} /></FormItem>
+          {/* <FormItem label="Creator"><Controller name="creatorIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Creator(s)" options={allApiUsersForFilterDropdown} value={allApiUsersForFilterDropdown.filter(opt => field.value?.includes(opt.value))} onChange={(options) => field.onChange(options?.map(opt => opt.value) || [])} />)} /></FormItem>
+          <FormItem label="Assignee"><Controller name="assigneeIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Assignee(s)" options={allApiUsersForFilterDropdown} value={allApiUsersForFilterDropdown.filter(opt => field.value?.includes(opt.value))} onChange={(options) => field.onChange(options?.map(opt => opt.value) || [])} />)} /></FormItem> */}
         </Form>
       </Drawer>
       <OfferDemandModals modalState={modalState} onClose={handleCloseModal} />

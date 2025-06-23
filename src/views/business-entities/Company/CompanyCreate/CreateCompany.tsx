@@ -1,6 +1,5 @@
 import classNames from "classnames";
-import isEmpty from "lodash/isEmpty";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Control,
   Controller,
@@ -9,7 +8,7 @@ import {
   useFieldArray,
   useForm,
 } from "react-hook-form";
-import { NavLink, useLocation, useParams, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useParams } from "react-router-dom";
 
 // UI Components
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
@@ -28,18 +27,18 @@ import toast from "@/components/ui/toast";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addcompanyAction,
+  deletecompanyAction,
   editCompanyAction,
-  getContinentsAction,
-  getCountriesAction,
-  getCompanyByIdAction,
   getBrandAction,
   getCategoriesAction,
-  getMembersAction,
   getCompanyAction,
+  getCompanyByIdAction,
+  getContinentsAction,
+  getCountriesAction,
   getMemberAction,
+  getMembersAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import axiosInstance from "@/services/api/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BiChevronRight } from "react-icons/bi";
 import { TbPlus, TbTrash } from "react-icons/tb";
@@ -1701,7 +1700,7 @@ const KYCDetailSection = ({
                   render={({ field }) => (
                     <Checkbox checked={!!field.value} onChange={field.onChange}>
                       {" "}
-                      {doc.label} (Verified){" "}<span className="text-red-500"> * </span>
+                      {doc.label} (Verified){" "}
                     </Checkbox>
                   )}
                 />{" "}
@@ -3028,9 +3027,28 @@ const CompanyCreate = () => {
   };
   const openDiscardDialog = () => setDiscardConfirmationOpen(true);
   const closeDiscardDialog = () => setDiscardConfirmationOpen(false);
-  const handleConfirmDiscard = () => {
-    closeDiscardDialog();
-    navigate("/business-entities/company");
+  const handleConfirmDiscard = async () => {
+    try {
+      const { id } = useParams<{ id?: string }>();
+      await dispatch(deletecompanyAction({ id: id })).unwrap();
+      toast.push(
+        <Notification
+          title="Entry Deleted"
+          type="success"
+        >{`Entry deleted.`}</Notification>
+      );
+      dispatch(getCompanyAction());
+    } catch (e: any) {
+      toast.push(
+        <Notification title="Delete Failed" type="danger">
+          {(e as Error).message}
+        </Notification>
+      );
+    } finally {
+      closeDiscardDialog();
+      navigate("/business-entities/company");
+    }
+
   };
   if (pageLoading)
     return (
