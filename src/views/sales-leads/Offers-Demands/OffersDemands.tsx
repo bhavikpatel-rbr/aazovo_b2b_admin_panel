@@ -222,15 +222,15 @@ export type OfferDemandItem = {
   health_score?: number;
 };
 
-// FIX: Added 'ALL' to the TABS constant so it can be used in logic and UI rendering.
 const TABS = { ALL: "all", OFFER: "offer", DEMAND: "demand" };
 
 // ============================================================================
-// --- MODALS SECTION (ASSUMED UNCHANGED as per instructions) ---
+// --- MODALS SECTION ---
 // ============================================================================
 export type OfferDemandModalType =
   | "email" | "whatsapp" | "notification" | "task" | "active" | "calendar"
-  | "alert" | "trackRecord" | "engagement" | "document" | "feedback" | "wallLink";
+  | "alert" | "trackRecord" | "engagement" | "document" | "feedback" | "wallLink"
+  | "viewDetails"; // Added new modal type for viewing details
 
 export interface OfferDemandModalState { isOpen: boolean; type: OfferDemandModalType | null; data: OfferDemandItem | null; }
 interface OfferDemandModalsProps { modalState: OfferDemandModalState; onClose: () => void; }
@@ -249,6 +249,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClo
   if (!isOpen || !item) return null;
   const renderModalContent = () => {
     switch (type) {
+      case "viewDetails": return <ViewDetailsDialog item={item} onClose={onClose} />;
       case "email": return <SendEmailDialog item={item} onClose={onClose} />;
       case "whatsapp": return <SendWhatsAppDialog item={item} onClose={onClose} />;
       case "notification": return <AddNotificationDialog item={item} onClose={onClose} />;
@@ -262,6 +263,78 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClo
     }
   };
   return <>{renderModalContent()}</>;
+};
+
+const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
+      <div className="flex items-start justify-between">
+        <h5 className="mb-4">Details for: {item.name}</h5>
+        <span
+          className={`px-2 py-1 text-xs font-semibold rounded-full ${item.type === 'Offer'
+            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+            : 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300'
+            }`}
+        >
+          {item.type}
+        </span>
+      </div>
+      <div className="mt-4 space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-2">
+        {/* <div className="flex justify-between border-b pb-2 dark:border-gray-600">
+            <span className="font-semibold text-gray-700 dark:text-gray-200">ID</span>
+            <span className="font-mono text-gray-600 dark:text-gray-400">{item.id}</span>
+        </div> */}
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
+          <span className="font-semibold text-gray-700 dark:text-gray-200">Created By</span>
+          <span className="text-gray-600 dark:text-gray-400">{item.createdByInfo.userName}</span>
+        </div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
+          <span className="font-semibold text-gray-700 dark:text-gray-200">Assigned To</span>
+          <span className="text-gray-600 dark:text-gray-400">{item.assignedToInfo?.userName || 'N/A'}</span>
+        </div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
+          <span className="font-semibold text-gray-700 dark:text-gray-200">Created Date</span>
+          <span className="text-gray-600 dark:text-gray-400">{dayjs(item.createdDate).format('D MMM YYYY, h:mm A')}</span>
+        </div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
+          <span className="font-semibold text-gray-700 dark:text-gray-200">Last Updated</span>
+          <span className="text-gray-600 dark:text-gray-400">{item.updated_at ? dayjs(item.updated_at).format('D MMM YYYY, h:mm A') : 'N/A'}</span>
+        </div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
+          <span className="font-semibold text-gray-700 dark:text-gray-200">Updated By</span>
+          <span className="text-gray-600 dark:text-gray-400">{item.updated_by_name || 'N/A'} {item.updated_by_role && `(${item.updated_by_role})`}</span>
+        </div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
+          <span className="font-semibold text-gray-700 dark:text-gray-200">Number of Buyers</span>
+          <span className="text-gray-600 dark:text-gray-400">{item.numberOfBuyers ?? 'N/A'}</span>
+        </div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
+          <span className="font-semibold text-gray-700 dark:text-gray-200">Number of Sellers</span>
+          <span className="text-gray-600 dark:text-gray-400">{item.numberOfSellers ?? 'N/A'}</span>
+        </div>
+        {item.groups && item.groups.length > 0 && (
+          <div className="pt-2">
+            <span className="font-semibold text-gray-700 dark:text-gray-200">Group Details</span>
+            <div className="mt-1 space-y-2 pl-2">
+              {item.groups.map((group, index) => (
+                <div key={index} className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                  <p className="font-semibold text-gray-800 dark:text-gray-100">{group.groupName}</p>
+                  <ul className="list-disc list-inside pl-2 mt-1 text-gray-600 dark:text-gray-400">
+                    {group.items.map((gItem, gIndex) => (
+                      <li key={gIndex}>{gItem}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>Close</Button>
+      </div>
+    </Dialog>
+  );
 };
 
 const SendEmailDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
@@ -549,10 +622,10 @@ const transformApiDemand = (apiDemand: ActualApiDemandShape): OfferDemandItem =>
   };
 };
 
-const ActionColumn = React.memo(({ rowData, onEdit, onDelete, onOpenModal, }: { rowData: OfferDemandItem; onEdit: () => void; onDelete: () => void; onOpenModal: (type: OfferDemandModalType, data: OfferDemandItem) => void; }) => (
+const ActionColumn = React.memo(({ rowData, onEdit, onView, onDelete, onOpenModal, }: { rowData: OfferDemandItem; onEdit: () => void; onView: () => void; onDelete: () => void; onOpenModal: (type: OfferDemandModalType, data: OfferDemandItem) => void; }) => (
   <div className="flex items-center justify-center gap-0">
-    <Tooltip title="Edit / View"><div role="button" onClick={onEdit} className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"><TbPencil /></div></Tooltip>
-    <Tooltip title="View Details"><div role="button" onClick={onEdit} className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"><TbEye /></div></Tooltip>
+    <Tooltip title="Edit"><div role="button" onClick={onEdit} className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"><TbPencil /></div></Tooltip>
+    <Tooltip title="View Details"><div role="button" onClick={onView} className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-sky-600 dark:text-gray-400 dark:hover:text-sky-400"><TbEye /></div></Tooltip>
     <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
       <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark Active</span></Dropdown.Item>
@@ -642,7 +715,7 @@ const OffersDemands = () => {
   const offersError = useSelector(masterSelector).offersError;
   const demandsError = useSelector(masterSelector).demandsError;
 
-  const [currentTab, setCurrentTab] = useState<string>(TABS.ALL); // FIX: Default to the 'all' tab
+  const [currentTab, setCurrentTab] = useState<string>(TABS.ALL);
   const initialTableQueries: TableQueries = { pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" };
   const [offerTableConfig, setOfferTableConfig] = useState<TableQueries>(initialTableQueries);
   const [demandTableConfig, setDemandTableConfig] = useState<TableQueries>(initialTableQueries);
@@ -659,7 +732,7 @@ const OffersDemands = () => {
   const [dataForExportLoading, setDataForExportLoading] = useState(false);
 
   const [modalState, setModalState] = useState<OfferDemandModalState>({ isOpen: false, type: null, data: null });
-  const handleOpenModal = (type: OfferDemandModalType, itemData: OfferDemandItem) => setModalState({ isOpen: true, type, data: itemData });
+  const handleOpenModal = useCallback((type: OfferDemandModalType, itemData: OfferDemandItem) => setModalState({ isOpen: true, type, data: itemData }), []);
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
@@ -719,8 +792,6 @@ const OffersDemands = () => {
     if (filters.creatorIds?.length) params.created_by = filters.creatorIds.join(',');
     if (filters.assigneeIds?.length) params.assign_user = filters.assigneeIds.join(',');
 
-    // FIX: This parameter is now sent to the backend when a type is selected in the filter.
-    // This is crucial for filtering on the "All" tab.
     if (filters.itemType) {
       params.item_type = filters.itemType.toLowerCase(); // Assuming backend expects 'offer' or 'demand'
     }
@@ -817,11 +888,13 @@ const OffersDemands = () => {
   const handleEdit = useCallback((item: OfferDemandItem) => {
     const baseRoute = item.type === "Offer" ? "offers" : "demands";
     const itemId = (item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id;
-    // FIX: Correctly navigate to an edit route with the item's ID.
-    // The previous implementation navigated to 'create', which was incorrect for editing.
-    // navigate(`/sales-leads/${baseRoute}/edit/${itemId}`, { state: { itemData: item } });
     navigate(`/sales-leads/${baseRoute}/create`, { state: item });
   }, [navigate]);
+
+  const handleView = useCallback((item: OfferDemandItem) => {
+    handleOpenModal("viewDetails", item);
+  }, [handleOpenModal]);
+
   const handleDeleteClick = useCallback((item: OfferDemandItem) => setItemToDeleteConfirm(item), []);
 
   const onConfirmDelete = useCallback(async () => {
@@ -895,8 +968,8 @@ const OffersDemands = () => {
     { header: "Section Details", id: "sectionDetails", size: 220, cell: ({ row }: CellContext<OfferDemandItem, any>) => { const { groups } = row.original; if (!groups || groups.length === 0) return (<span className="text-xs text-gray-500">No group details</span>); return (<div className="space-y-1">{groups.map((group, index) => (<div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><div className="pl-2 flex flex-col gap-0.5 text-gray-600 dark:text-gray-400">{group.items.slice(0, 3).map((item, itemIdx) => (<span key={itemIdx}>{item}</span>))}{group.items.length > 3 && (<span className="italic">...and {group.items.length - 3} more</span>)}</div></div>))}</div>); }, },
     { header: "Created By / Assigned", accessorKey: "createdByInfo.userName", id: "createdBy", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => { const item = props.row.original; const fCD = dayjs(item.createdDate).format('D MMM YYYY, h:mm A'); return (<div className="flex flex-col gap-1"><div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span className="font-semibold">{item.createdByInfo.userName}</span></div>{item.assignedToInfo && (<div className="text-xs text-gray-600 dark:text-gray-300"><b>Assigned: </b> {item.assignedToInfo.userName}</div>)}<div className="text-xs text-gray-500 dark:text-gray-400"><span>{fCD}</span></div></div>); }, },
     { header: "Updated Info", accessorKey: "created_by", id: "updatedInfo", enableSorting: true, size: 120, cell: (props) => { const { updated_at, name, updated_by_role } = props.row.original; const fD = updated_at ? dayjs(updated_at).format('D MMM YYYY, h:mm A') : "N/A"; return (<div className="text-xs"><span>{name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span> <br /><span>{fD}</span></div>); }, },
-    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 120, cell: (props: CellContext<OfferDemandItem, any>) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />), },
-  ], [handleEdit, handleDeleteClick, handleOpenModal]);
+    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 120, cell: (props: CellContext<OfferDemandItem, any>) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onView={() => handleView(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />), },
+  ], [handleEdit, handleView, handleDeleteClick, handleOpenModal]);
 
   const isLoadingO = offersStatus === 'loading' || offersStatus === 'idle'; const isLoadingD = demandsStatus === 'loading' || demandsStatus === 'idle';
   let isOverallLoading = false;
@@ -949,7 +1022,6 @@ const OffersDemands = () => {
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
               <div><h6 className="text-violet-500">{offerDemandCounts?.demands ?? 0}</h6><span className="font-semibold text-xs">Demands</span></div>
             </Card>
-
             {/* Card 4: Today Total */}
             <Card
               bodyClass="flex gap-2 p-2"
@@ -965,7 +1037,6 @@ const OffersDemands = () => {
                 <span className="font-semibold text-xs">Today</span>
               </div>
             </Card>
-
             {/* Card 5: Today Offers */}
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-teal-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
@@ -980,11 +1051,9 @@ const OffersDemands = () => {
           </div>
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-              {/* FIX: Added TABS.ALL to the array to render all three tabs. */}
               {[TABS.ALL, TABS.OFFER, TABS.DEMAND].map((tabKey) =>
               (<button key={tabKey} onClick={() => handleTabChange(tabKey)} className={classNames("whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize",
                 currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>
-                {/* FIX: This logic now correctly displays "All Items" for the 'all' tab. */}
                 {tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}
               </button>))}</nav></div>
           <div className="mb-4">
@@ -1011,7 +1080,6 @@ const OffersDemands = () => {
       ><Form id="exportReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2"><FormItem label="Reason for exporting:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
       <Drawer title="Filter Options" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="flex justify-end gap-2 w-full"><Button size="sm" onClick={onClearFilters}>Clear All</Button><Button size="sm" variant="solid" form="filterForm" type="submit">Apply</Button></div>}>
         <Form id="filterForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-y-6 p-4 h-full overflow-y-auto">
-          {/* FIX: Conditionally render the Type filter only when the 'All' tab is active to avoid confusion. */}
           {currentTab === TABS.ALL && (
             <FormItem label="Type"><Controller name="itemType" control={filterFormMethods.control} render={({ field }) => (<Select placeholder="Filter by Offer/Demand" options={itemTypeOptions} value={itemTypeOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option?.value || null)} isClearable />)} /></FormItem>
           )}
