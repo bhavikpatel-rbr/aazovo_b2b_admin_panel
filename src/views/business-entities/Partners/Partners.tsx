@@ -222,7 +222,7 @@ const useCompanyList = (): CompanyListStore => {
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { partnerData, CountriesData, ContinentsData  } = useSelector(masterSelector);
+  const { partnerData, CountriesData, ContinentsData } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
 
   // FIX: Initialize state assuming partnerData?.data is an object like { data: [], total: 0 }
@@ -1377,6 +1377,7 @@ const CompanyListTable = () => {
                   src={`https://aazovo.codefriend.in/${partner_logo}`}
                   size="md"
                   shape="circle"
+                  onClick={() => partner_logo && openImageViewer(partner_logo)}
                   icon={<TbUserCircle />}
                 />{" "}
                 <div>
@@ -1496,11 +1497,7 @@ const CompanyListTable = () => {
         cell: ({ row }) => {
           const {
             total_members = 0,
-            member_participation = 0,
             progress = 0,
-            success_score = 0,
-            trust_score = 0,
-            health_score = 0,
             kyc_verified,
             enable_billing,
           } = row.original;
@@ -1508,24 +1505,30 @@ const CompanyListTable = () => {
             <div className="flex flex-col gap-1.5 text-xs">
               {" "}
               <span>
-                <b>Members:</b> {total_members} ({member_participation}%)
+                <b>Members:</b> {total_members}
+              </span>{" "}
+              <span>
+                <b>Teams:</b> {total_members}
               </span>{" "}
               <div className="flex gap-1 items-center">
                 {" "}
-                <Tooltip title={`KYC: ${kyc_verified}`}>
+                KYC Verified:<Tooltip title={`KYC: ${kyc_verified}`}>
                   {kyc_verified ? (
                     <MdCheckCircle className="text-green-500 text-lg" />
                   ) : (
                     <MdCancel className="text-red-500 text-lg" />
                   )}
                 </Tooltip>{" "}
-                <Tooltip title={`Billing: ${enable_billing}`}>
+              </div>
+              <div className="flex gap-1 items-center">
+                Billing: <Tooltip title={`Billing: ${enable_billing}`}>
                   {enable_billing ? (
                     <MdCheckCircle className="text-green-500 text-lg" />
                   ) : (
                     <MdCancel className="text-red-500 text-lg" />
                   )}
                 </Tooltip>{" "}
+                Billing Due:
               </div>{" "}
               <Tooltip title={`Profile Completion ${progress}%`}>
                 <div className="h-1.5 w-full rounded-full bg-gray-300">
@@ -1535,24 +1538,7 @@ const CompanyListTable = () => {
                   ></div>
                 </div>
               </Tooltip>{" "}
-              <div className="grid grid-cols-3 gap-x-1 text-center mt-1">
-                {" "}
-                <Tooltip title={`Success: ${success_score}%`}>
-                  <div className="bg-green-100 dark:bg-green-500/20 text-green-700 p-0.5 rounded text-[10px]">
-                    S: {success_score}%
-                  </div>
-                </Tooltip>{" "}
-                <Tooltip title={`Trust: ${trust_score}%`}>
-                  <div className="bg-blue-100 dark:bg-blue-500/20 text-blue-700 p-0.5 rounded text-[10px]">
-                    T: {trust_score}%
-                  </div>
-                </Tooltip>{" "}
-                <Tooltip title={`Health: ${health_score}%`}>
-                  <div className="bg-purple-100 dark:bg-purple-500/20 text-purple-700 p-0.5 rounded text-[10px]">
-                    H: {health_score}%
-                  </div>
-                </Tooltip>{" "}
-              </div>{" "}
+
             </div>
           );
         },
@@ -1661,8 +1647,28 @@ const CompanyListTable = () => {
   ];
   const { DatePickerRange } = DatePicker;
 
+  const [isImageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageToView, setImageToView] = useState<string | null>(null);
+  const closeImageViewer = () => {
+    setImageViewerOpen(false);
+    setImageToView(null);
+  };
+  const openImageViewer = (imageUrl: string | null) => {
+    if (imageUrl) {
+      setImageToView(imageUrl);
+      setImageViewerOpen(true);
+    }
+  };
   return (
     <>
+      <Dialog
+        isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}
+      >
+        <div className="flex justify-center items-center p-4">
+          {imageToView ? <img src={`https://aazovo.codefriend.in/${imageToView}`} alt="Brand Icon Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
+        </div>
+      </Dialog>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
         <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
           <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">

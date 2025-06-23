@@ -363,15 +363,13 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any): Par
     alternate_email_id: apiData.alternate_email_id,
     ownership_type: apiData.ownership_type
       ? { label: apiData.ownership_type, value: apiData.ownership_type }
-      : undefined,
+      : '',
     owner_name: apiData.owner_name,
     company_address: apiData.company_address,
     city: apiData.city,
     state: apiData.state,
     zip_code: apiData.zip_code,
-    country_id: apiData.country_id
-      ? { label: apiData.country_id, value: apiData.country_id }
-      : undefined,
+    country_id: apiData.country_id ? { label: apiData.country_id, value: apiData.country_id } : '',
     continent_id: apiData.continent_id
       ? { label: apiData?.continent?.name, value: apiData.continent_id }
       : undefined,
@@ -1135,7 +1133,13 @@ const CompanyDetailsSection = ({
           </div>
         </FormItem>
 
-        <FormItem className="sm:col-span-6 lg:col-span-4" label="General Mobile">
+        <FormItem className="sm:col-span-6 lg:col-span-4"
+          label={<div>General Contact Number<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.general_contact_number}
+          errorMessage={
+            errors.general_contact_number?.message as string
+          }
+        >
           <div className="flex items-center gap-2">
             <Controller
               name="general_contact_number_code"
@@ -2653,10 +2657,19 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         .object({ value: z.string(), label: z.string() })
         .optional()
         .nullable(),
+      country_id: z
+        .object({ value: z.string(), label: z.string() })
+        .optional()
+        .nullable(),
       primary_contact_number: z
         .string()
         .trim()
         .min(1, { message: "Primary contact number is required!" })
+        .regex(/^\+?\d{7,15}$/, { message: "Invalid contact number format" }),
+      general_contact_number: z
+        .string()
+        .trim()
+        .min(1, { message: "Genral contact number is required!" })
         .regex(/^\+?\d{7,15}$/, { message: "Invalid contact number format" }),
       // company_website: z
       //   .string()
@@ -2896,7 +2909,7 @@ const CompanyCreate = () => {
     billing_documents: [],
     DOMAIN_MANAGEMENT_FIELD: [],
     member: [],
-    status: undefined,
+    status: '',
     // company_code: "",
     brands: [],
     category: [],
