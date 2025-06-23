@@ -67,7 +67,6 @@ import {
   // TbCircleLetterX, // Not used
   // TbCircleX, // Not used
   TbClipboardText,
-  TbClockHour4,
   // TbCloudDownload, // Not used directly
   TbCloudUpload,
   // TbDotsVertical, // Not used
@@ -94,7 +93,7 @@ import {
   // TbUpload, // Not used
   TbUser,
   TbUserCircle,
-  TbUserSearch,
+  TbUserSearch
 } from "react-icons/tb";
 
 // Redux
@@ -168,6 +167,11 @@ export type ActualApiOfferShape = {
   numberOfSellers?: number;
   updated_by_name?: string;
   updated_by_role?: string;
+  // Additions from new response format
+  seller_section_data?: Array<{ id: number; name: string }>;
+  buyer_section_data?: Array<{ id: number; name: string }>;
+  created_by_user?: ApiUserShape;
+  assign_user_data?: ApiUserShape | null;
 };
 
 export type ActualApiDemandShape = {
@@ -488,24 +492,36 @@ function exportToCsvOffersDemands(filename: string, rows: OfferDemandItem[]) {
 
 const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
   const offerGroups: ApiGroupItem[] = [];
-  let sellerItems: string[] = [];
-  if (typeof apiOffer.seller_section === 'string') {
-    try { const p = JSON.parse(apiOffer.seller_section); if (Array.isArray(p)) sellerItems = p.map(String); } catch (e) { console.warn("Failed to parse seller_section", e); }
-  } else if (Array.isArray(apiOffer.seller_section)) { sellerItems = apiOffer.seller_section.map(String); }
-  if (sellerItems.length > 0) offerGroups.push({ groupName: "Seller Section", items: sellerItems });
 
-  let buyerItems: string[] = [];
-  if (typeof apiOffer.buyer_section === 'string') {
-    try { const p = JSON.parse(apiOffer.buyer_section); if (Array.isArray(p)) buyerItems = p.map(String); } catch (e) { console.warn("Failed to parse buyer_section", e); }
-  } else if (Array.isArray(apiOffer.buyer_section)) { buyerItems = apiOffer.buyer_section.map(String); }
-  if (buyerItems.length > 0) offerGroups.push({ groupName: "Buyer Section", items: buyerItems });
+  // Use the new _data fields that contain user names for sections
+  if (apiOffer.seller_section_data && Array.isArray(apiOffer.seller_section_data)) {
+    const sellerItems = apiOffer.seller_section_data.map(user => user.name).filter(Boolean);
+    if (sellerItems.length > 0) offerGroups.push({ groupName: "Seller Section", items: sellerItems });
+  }
+
+  if (apiOffer.buyer_section_data && Array.isArray(apiOffer.buyer_section_data)) {
+    const buyerItems = apiOffer.buyer_section_data.map(user => user.name).filter(Boolean);
+    if (buyerItems.length > 0) offerGroups.push({ groupName: "Buyer Section", items: buyerItems });
+  }
 
   if (apiOffer.groupA) offerGroups.push({ groupName: "Group A", items: [apiOffer.groupA] });
   if (apiOffer.groupB) offerGroups.push({ groupName: "Group B", items: [apiOffer.groupB] });
+
+  // Use the more complete user objects if they are provided.
+  const creator = apiOffer.created_by_user || apiOffer.created_by;
+  const assignee = apiOffer.assign_user_data || apiOffer.assign_user;
+
   return {
     id: apiOffer.generate_id, type: "Offer", name: apiOffer.name,
-    createdByInfo: { userId: String(apiOffer.created_by.id), userName: apiOffer.created_by.name, email: `${apiOffer.created_by.name?.replace(/\s+/g, ".").toLowerCase()}@example.com`, },
-    assignedToInfo: apiOffer.assign_user ? { userId: String(apiOffer.assign_user.id), userName: apiOffer.assign_user.name, } : undefined,
+    createdByInfo: {
+      userId: String(creator.id),
+      userName: creator.name,
+      email: `${creator.name?.replace(/\s+/g, ".").toLowerCase()}@example.com`,
+    },
+    assignedToInfo: assignee ? {
+      userId: String(assignee.id),
+      userName: assignee.name,
+    } : undefined,
     createdDate: new Date(apiOffer.created_at), updated_at: apiOffer.updated_at ? new Date(apiOffer.updated_at) : undefined,
     numberOfBuyers: apiOffer.numberOfBuyers, numberOfSellers: apiOffer.numberOfSellers,
     groups: offerGroups.length > 0 ? offerGroups : undefined,
@@ -519,7 +535,7 @@ const transformApiDemand = (apiDemand: ActualApiDemandShape): OfferDemandItem =>
   if (apiDemand.seller_section) { const i: string[] = []; Object.values(apiDemand.seller_section).forEach(sP => { if (sP?.questions) Object.values(sP.questions).forEach(q => { if (q?.question) i.push(q.question); }); }); if (i.length > 0) demandGroups.push({ groupName: "Seller Section", items: i }); }
   if (apiDemand.buyer_section) { const i: string[] = []; Object.values(apiDemand.buyer_section).forEach(sP => { if (sP?.questions) Object.values(sP.questions).forEach(q => { if (q?.question) i.push(q.question); }); }); if (i.length > 0) demandGroups.push({ groupName: "Buyer Section", items: i }); }
   if (apiDemand.groupA) demandGroups.push({ groupName: "Group A", items: [apiDemand.groupA] });
-  if (apiDemand.groupB) demandGroups.push({ groupName: "Group B", items: [apiDemand.groupB] });
+  if (apiDemand.groupB) demandGroups.push({ groupName: "Group B", items: [apiDemand.groupB] });  
   return {
     id: apiDemand.generate_id, type: "Demand", name: apiDemand.name,
     createdByInfo: { userId: String(apiDemand?.created_by?.id), userName: apiDemand?.created_by?.name, email: `${apiDemand.created_by?.name?.replace(/\s+/g, ".")?.toLowerCase()}@example.com`, },
@@ -802,7 +818,8 @@ const OffersDemands = () => {
     const itemId = (item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id;
     // FIX: Correctly navigate to an edit route with the item's ID.
     // The previous implementation navigated to 'create', which was incorrect for editing.
-    navigate(`/sales-leads/${baseRoute}/edit/${itemId}`, { state: { itemData: item } });
+    // navigate(`/sales-leads/${baseRoute}/edit/${itemId}`, { state: { itemData: item } });
+    navigate(`/sales-leads/${baseRoute}/create`, { state: item });
   }, [navigate]);
   const handleDeleteClick = useCallback((item: OfferDemandItem) => setItemToDeleteConfirm(item), []);
 
@@ -890,8 +907,10 @@ const OffersDemands = () => {
     const safeDItems = Array.isArray(demandsStoreData?.data) ? demandsStoreData.data : [];
 
     safeOItems.forEach((o: ActualApiOfferShape) => {
-      if (o.created_by) users.set(String(o.created_by.id), o.created_by.name);
-      if (o.assign_user) users.set(String(o.assign_user.id), o.assign_user.name);
+      const creator = o.created_by_user || o.created_by;
+      const assignee = o.assign_user_data || o.assign_user;
+      if (creator) users.set(String(creator.id), creator.name);
+      if (assignee) users.set(String(assignee.id), assignee.name);
     });
     safeDItems.forEach((d: ActualApiDemandShape) => {
       if (d.created_by) users.set(String(d.created_by.id), d.created_by.name);
