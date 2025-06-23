@@ -67,7 +67,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { getEmployeesListingAction } from "@/reduxtool/master/middleware";
+import { getDepartmentsAction, getDesignationsAction, getEmployeesListingAction, getRolesAction } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -709,7 +709,9 @@ const EmployeesListing = () => {
     defaultValues: filterCriteria,
   });
 
-  const { EmployeesList: Employees } = useSelector(masterSelector);
+  const { EmployeesList: Employees, Roles = [],
+    departmentsData = [],
+    designationsData = [], } = useSelector(masterSelector);
   console.log(Employees, "EmployeesList");
 
   useEffect(() => {
@@ -720,6 +722,9 @@ const EmployeesListing = () => {
 
   useEffect(() => {
     dispatch(getEmployeesListingAction());
+    dispatch(getRolesAction());
+    dispatch(getDepartmentsAction());
+    dispatch(getDesignationsAction());
   }, [dispatch])
 
   // --- CRUD and Drawer Handlers ---
@@ -875,6 +880,7 @@ const EmployeesListing = () => {
   // --- Data Processing (Filtering, Sorting, Pagination from original) ---
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData = cloneDeep(employees); // Use local employees state
+console.log(processedData, 'processedData');
 
     // Apply Filters from filterCriteria
     if (filterCriteria.filterDepartments?.length) {
@@ -882,7 +888,7 @@ const EmployeesListing = () => {
         o.value.toLowerCase()
       );
       processedData = processedData.filter((e) =>
-        v.includes(e.department.toLowerCase())
+        v.includes(e.department?.name?.toLowerCase())
       );
     }
     if (filterCriteria.filterDesignations?.length) {
@@ -890,7 +896,7 @@ const EmployeesListing = () => {
         o.value.toLowerCase()
       );
       processedData = processedData.filter((e) =>
-        v.includes(e.designation.toLowerCase())
+        v.includes(e.designation?.toLowerCase())
       );
     }
     if (filterCriteria.filterStatuses?.length) {
@@ -898,9 +904,9 @@ const EmployeesListing = () => {
       processedData = processedData.filter((e) => v.includes(e.status));
     }
     if (filterCriteria.filterRoles?.length) {
-      const v = filterCriteria.filterRoles.map((o) => o.value.toLowerCase());
+      const v = filterCriteria.filterRoles.map((o) => o.value?.toLowerCase());
       processedData = processedData.filter((e) =>
-        e.roles.some((role) => v.includes(role.toLowerCase()))
+        e.roles.some((role) => v.includes(role?.name?.toLowerCase()))
       );
     }
 
@@ -1170,24 +1176,10 @@ const EmployeesListing = () => {
   ); // Added openEditPage, handleDeleteClick to deps
 
   // Options for Filter Dropdowns
-  const departmentOptions = useMemo(() => {
-    const unique = new Set(employees.map((e) => e.department));
-    return Array.from(unique).map((d) => ({ value: d, label: d }));
-  }, [employees]);
-  const designationOptions = useMemo(() => {
-    const unique = new Set(employees.map((e) => e.designation));
-    return Array.from(unique).map((d) => ({ value: d, label: d }));
-  }, [employees]);
-  const roleOptions = useMemo(() => {
-    const allRoles = employees.flatMap((e) => e.roles);
-    const unique = new Set(allRoles);
-    return Array.from(unique).map((r) => ({ value: r, label: r }));
-  }, [employees]);
-  const statusOptionsForFilter = useMemo(
-    () =>
-      EMPLOYEE_STATUS_OPTIONS.map((s) => ({ value: s.value, label: s.label })),
-    []
-  );
+  const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
+  const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: any) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
+  const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: any) => ({ value: String(d.id), label: d.name })) : [], [designationsData?.data]);
+  const statusOptionsForFilter = useMemo(() =>EMPLOYEE_STATUS_OPTIONS.map((s) => ({ value: s.value, label: s.label })),[]);
 
   return (
     <>

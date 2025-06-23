@@ -1740,6 +1740,7 @@ const CompanyListTable = () => {
                   src={`https://aazovo.codefriend.in/${company_logo}`}
                   size="md"
                   shape="circle"
+                  className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
                   onClick={() => company_logo && openImageViewer(company_logo)}
                   icon={<TbUserCircle />}
                 />{" "}
@@ -1751,9 +1752,6 @@ const CompanyListTable = () => {
               </div>{" "}
               <span className="text-xs mt-1">
                 <b>Type:</b> {ownership_type}
-              </span>{" "}
-              <span className="text-xs">
-                <b>Business:</b> {row.original.business_type}
               </span>{" "}
               <div className="text-xs text-gray-500">
                 {/* @ts-ignore */}
@@ -1839,23 +1837,25 @@ const CompanyListTable = () => {
         size: 190,
         cell: ({ row }) => {
           const {
-            total_members = 0,
-            progress = 0,
+            members_count = 0,
+            teams_count = 0,
+            profile_completion = 0,
             kyc_verified,
             enable_billing,
+            due_after_3_months_date,
           } = row.original;
           return (
             <div className="flex flex-col gap-1.5 text-xs">
               {" "}
               <span>
-                <b>Members:</b> {total_members}
+                <b>Members:</b> {members_count}
               </span>{" "}
               <span>
-                <b>Teams:</b> {total_members}
+                <b>Teams:</b> {teams_count}
               </span>{" "}
               <div className="flex gap-1 items-center">
                 {" "}
-                KYC Verified:<Tooltip title={`KYC: ${kyc_verified}`}>
+                <b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified}`}>
                   {kyc_verified ? (
                     <MdCheckCircle className="text-green-500 text-lg" />
                   ) : (
@@ -1864,20 +1864,28 @@ const CompanyListTable = () => {
                 </Tooltip>{" "}
               </div>
               <div className="flex gap-1 items-center">
-                Billing: <Tooltip title={`Billing: ${enable_billing}`}>
+                <b>Billing:</b> <Tooltip title={`Billing: ${enable_billing}`}>
                   {enable_billing ? (
                     <MdCheckCircle className="text-green-500 text-lg" />
                   ) : (
                     <MdCancel className="text-red-500 text-lg" />
                   )}
                 </Tooltip>{" "}
-                Billing Due:
               </div>{" "}
-              <Tooltip title={`Profile Completion ${progress}%`}>
-                <div className="h-1.5 w-full rounded-full bg-gray-300">
+              <span>
+                <b>Billing Due:</b>  {new Date(due_after_3_months_date)
+                  .toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                  .replace(/ /g, "/") || "N/A"}
+              </span>{" "}
+              <Tooltip title={`Profile Completion ${profile_completion}%`}>
+                <div className="h-2.5 w-full rounded-full bg-gray-300">
                   <div
-                    className="rounded-full h-1.5 bg-blue-500"
-                    style={{ width: `${progress}%` }}
+                    className="rounded-full h-2.5 bg-blue-500"
+                    style={{ width: `${profile_completion}%` }}
                   ></div>
                 </div>
               </Tooltip>{" "}
@@ -1963,7 +1971,7 @@ const CompanyListTable = () => {
     { value: "No", label: "No" },
   ];
   const { DatePickerRange } = DatePicker;
-  
+
   const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
   const closeImageViewer = () => {
