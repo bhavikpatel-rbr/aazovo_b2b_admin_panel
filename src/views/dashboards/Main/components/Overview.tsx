@@ -319,12 +319,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         <h6 className="text-xs">PAN: <span className='font-normal'>AZXRFDRDSD</span></h6> 
                     </span>
                     <div className='flex gap-1 items-center'>
-                        <Tooltip title="KYC Verification : 48%" className='text-xs'>
+                        {/* <Tooltip title="KYC Verification : 48%" className='text-xs'>
                             <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
                                 <MdCheckCircle className='text-green-500 text-lg' />
                                 <span>13/27</span>
                             </div>
-                        </Tooltip>
+                        </Tooltip> */}
                         <Tooltip title="Enable Billing" className='text-xs'><MdCancel className='text-red-500 text-lg' /></Tooltip>
                     </div>
                     <Tooltip className='text-xs' title={`Profile Completion ${props.row.original.progress}%`}>
@@ -399,24 +399,24 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         //         </div>
         //     )
         // },
-        {
-            header: 'Ratio', accessorKey: 'trustRatio',
-            size: 100,
-            meta:{HeaderClass:'text-center'},
-            cell: props => (
-                <div className='flex flex-col gap-1 text-center items-center'>
-                    <Tag className="flex gap-1 text-[10px]">
-                        <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
-                    </Tag>
-                    <Tag className="flex gap-1 text-[10px]">
-                        <h6 className="text-[10px]">Trust:</h6> {props.getValue()}
-                    </Tag>
-                    <Tag className="flex gap-1 text-[10px] flex-wrap">
-                        <h6 className="text-[10px]">Health Score:</h6> 80%
-                    </Tag>
-                </div>
-            )
-        },
+        // {
+        //     header: 'Ratio', accessorKey: 'trustRatio',
+        //     size: 100,
+        //     meta:{HeaderClass:'text-center'},
+        //     cell: props => (
+        //         <div className='flex flex-col gap-1 text-center items-center'>
+        //             <Tag className="flex gap-1 text-[10px]">
+        //                 <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
+        //             </Tag>
+        //             <Tag className="flex gap-1 text-[10px]">
+        //                 <h6 className="text-[10px]">Trust:</h6> {props.getValue()}
+        //             </Tag>
+        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
+        //                 <h6 className="text-[10px]">Health Score:</h6> 80%
+        //             </Tag>
+        //         </div>
+        //     )
+        // },
 
     ]
 
@@ -594,12 +594,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 <div className='flex flex-col gap-1'>
                     <span className="flex gap-1 text-black dark:text-white text-xs font-semibold">INS - PREMIUM</span>
                     <div className='flex gap-1 items-center'>
-                        <Tooltip title="KYC Verification" className='text-xs'>
+                        {/* <Tooltip title="KYC Verification" className='text-xs'>
                             <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
                                 <MdCheckCircle className='text-green-500 text-lg' />
                                 <span>13/27</span>
                             </div>
-                        </Tooltip>
+                        </Tooltip> */}
                         <Tooltip title="Email Verification" className='text-xs'><MdCancel className='text-red-500 text-lg' /></Tooltip>
                     </div>
                     <Tooltip className='text-xs' title={`Profile Completion ${props.row.original.progress}%`}>
@@ -653,23 +653,23 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 </div>
             )
         },
-        {
-            header: 'Ratio', accessorKey: 'trustRatio',
-            size:190,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <Tag className="flex gap-1 text-[10px]">
-                        <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
-                    </Tag>
-                    <Tag className="flex gap-1 text-[10px]">
-                        <h6 className="text-[10px]">Trust:</h6> {props.getValue()}
-                    </Tag>
-                    <Tag className="flex gap-1 text-[10px] flex-wrap">
-                        <h6 className="text-[10px]">Activity Level:</h6> 80%
-                    </Tag>
-                </div>
-            )
-        },
+        // {
+        //     header: 'Ratio', accessorKey: 'trustRatio',
+        //     size:190,
+        //     cell: props => (
+        //         <div className='flex flex-col gap-1'>
+        //             <Tag className="flex gap-1 text-[10px]">
+        //                 <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
+        //             </Tag>
+        //             <Tag className="flex gap-1 text-[10px]">
+        //                 <h6 className="text-[10px]">Trust:</h6> {props.getValue()}
+        //             </Tag>
+        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
+        //                 <h6 className="text-[10px]">Activity Level:</h6> 80%
+        //             </Tag>
+        //         </div>
+        //     )
+        // },
 
     ]
 
@@ -883,19 +883,19 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 </div>
             )
         },
-        {
-            header: 'Ratio', accessorKey: 'trustRatio',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <Tag className="flex gap-1 text-[10px]">
-                        <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
-                    </Tag>
-                    <Tag className="flex gap-1 text-[10px] flex-wrap">
-                        <h6 className="text-[10px]">Engagement:</h6> 80%
-                    </Tag>
-                </div>
-            )
-        },
+        // {
+        //     header: 'Ratio', accessorKey: 'trustRatio',
+        //     cell: props => (
+        //         <div className='flex flex-col gap-1'>
+        //             <Tag className="flex gap-1 text-[10px]">
+        //                 <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
+        //             </Tag>
+        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
+        //                 <h6 className="text-[10px]">Engagement:</h6> 80%
+        //             </Tag>
+        //         </div>
+        //     )
+        // },
 
     ]
 
@@ -1145,22 +1145,22 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 </div>
             )
         },
-        {
-            header: 'Ratio', accessorKey: 'trustRatio',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <Tag className="flex gap-1 text-xs flex-wrap">
-                        <h6 className="text-xs">Approach:</h6> 80%
-                    </Tag>
-                    <Tag className="flex gap-1 text-xs">
-                        <h6 className="text-xs">Conversion:</h6> {props.row.original.successRatio}
-                    </Tag>
-                    <span className="flex gap-1 text-xs flex-wrap">
-                        Minimum Buying strong seller profile, focus on selling
-                    </span>
-                </div>
-            )
-        },
+        // {
+        //     header: 'Ratio', accessorKey: 'trustRatio',
+        //     cell: props => (
+        //         <div className='flex flex-col gap-1'>
+        //             <Tag className="flex gap-1 text-xs flex-wrap">
+        //                 <h6 className="text-xs">Approach:</h6> 80%
+        //             </Tag>
+        //             <Tag className="flex gap-1 text-xs">
+        //                 <h6 className="text-xs">Conversion:</h6> {props.row.original.successRatio}
+        //             </Tag>
+        //             <span className="flex gap-1 text-xs flex-wrap">
+        //                 Minimum Buying strong seller profile, focus on selling
+        //             </span>
+        //         </div>
+        //     )
+        // },
 
     ]
     const partnerColumns = [
@@ -1663,8 +1663,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
 
                                 <div className='mt-8 block  gap-2'>
                                     <div className='flex justify-between items-center'>
-                                        <h6 className='mb-6'>Company Leaderboard</h6>
-                                        <div className='flex gap-2 items-center text-sm'>
+                                        <h6 className='mb-3'>Company Leaderboard</h6>
+                                        {/* <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Health Score</h6>
                                             <Select
                                                 className="min-w-[140px]"
@@ -1677,11 +1677,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
                                             />
-                                        </div>
+                                        </div> */}
                                     </div>
                                     <DebouceInput
                                             // ref={ref}
-                                            className="w-full mb-3 mt-3"
+                                            className="w-full mb-2"
                                             placeholder="Quick Search..."
                                             suffix={<TbSearch className="text-lg" />}
                                           />
@@ -1718,52 +1718,22 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Verified"
-                                            percent={20}
-                                            color='text-[#2ecc71]'
-                                            className="bg-[#2ecc71] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Unverified"
-                                            percent={20}
-                                            color='text-[#e74c3c]'
-                                            className="bg-[#e74c3c] dark:opacity-70"
-                                        />
-                                        <Bar
                                             field="Active"
                                             percent={20}
                                             color='text-[#28a745]'
                                             className="bg-[#28a745] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Inactive"
+                                            field="Disabled"
                                             percent={28}
                                             color='text-[#6c757d]'
                                             className="bg-[#6c757d] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Listers"
-                                            percent={32}
-                                            color='text-[#ffc107]'
-                                            className="bg-[#ffc107] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="New Lister"
+                                            field="Unregistered"
                                             percent={20}
-                                            color='text-[#fd7e14]'
-                                            className="bg-[#fd7e14] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Zero Listers"
-                                            percent={20}
-                                            color='text-[#007bff]'
-                                            className="bg-[#007bff] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Activity Score"
-                                            percent={20}
-                                            color='text-gray-500'
-                                            className="bg-gray-500 dark:opacity-70"
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
                                         />
                                     </div>
                                 </div>
@@ -1830,6 +1800,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             className="bg-[#6c757d] dark:opacity-70"
                                         />
                                         <Bar
+                                            field="Pending"
+                                            percent={32}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
+                                        />
+                                        <Bar
                                             field="Categories(3/5)"
                                             percent={20}
                                             color='text-[#2ecc71]'
@@ -1859,19 +1835,19 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
-                                        <Bar
+                                        {/* <Bar
                                             field="Activity Score"
                                             percent={20}
                                             color='text-gray-500'
                                             className="bg-gray-500 dark:opacity-70"
-                                        />
+                                        /> */}
                                     </div>
                                 </div>
 
                                 <div className='mt-8 block  gap-2'>
                                     <div className='flex justify-between items-center'>
                                         <h6 className='mb-6'>Products Leaderboard</h6>
-                                        <div className='flex gap-2 items-center text-sm'>
+                                        {/* <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Engagement Score</h6>
                                             <Select
                                                 className="min-w-[140px]"
@@ -1884,7 +1860,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
                                             />
-                                        </div>
+                                        </div> */}
                                     </div>
                                     <DataTable
                                         columns={productColumns}
