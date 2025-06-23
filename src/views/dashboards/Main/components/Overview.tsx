@@ -1235,20 +1235,20 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 <span className="text-xs">10 May, 2025</span>
             )
         },
-        {
-            header: 'Score', accessorKey: 'trustRatio',
-            size: 180,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <Tag className="flex gap-1 text-[10px] flex-wrap">
-                        <h6 className="text-[10px]">Trust Score:</h6> 80%
-                    </Tag>
-                    <span className="flex gap-1 text-xs flex-wrap">
-                        Minimum Buying strong seller profile, focus on selling
-                    </span>
-                </div>
-            )
-        },
+        // {
+        //     header: 'Score', accessorKey: 'trustRatio',
+        //     size: 180,
+        //     cell: props => (
+        //         <div className='flex flex-col gap-1'>
+        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
+        //                 <h6 className="text-[10px]">Trust Score:</h6> 80%
+        //             </Tag>
+        //             <span className="flex gap-1 text-xs flex-wrap">
+        //                 Minimum Buying strong seller profile, focus on selling
+        //             </span>
+        //         </div>
+        //     )
+        // },
 
     ]
     const teamColumns = [
@@ -2013,18 +2013,36 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Verified"
-                                            percent={20}
-                                            color='text-[#6610f2]'
-                                            className="bg-[#6610f2] dark:opacity-70"
-                                        />
-                                        <Bar
                                             field="Active"
                                             percent={20}
                                             color='text-[#2ecc71]'
                                             className="bg-[#2ecc71] dark:opacity-70"
                                         />
                                         <Bar
+                                            field="Unregistered"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Disabled"
+                                            percent={28}
+                                            color='text-[#6c757d]'
+                                            className="bg-[#6c757d] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Verified"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Unverified"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        {/* <Bar
                                             field="Inactive"
                                             percent={20}
                                             color='text-[#e74c3c]'
@@ -2036,6 +2054,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             color='text-[#ffc107]'
                                             className="bg-[#ffc107] dark:opacity-70"
                                         />
+                                        
                                         <Bar
                                             field="Blocked"
                                             percent={20}
@@ -2071,14 +2090,14 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             percent={20}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
-                                        />
+                                        /> */}
                                     </div>
                                 </div>
 
                                 <div className='mt-8 block  gap-2'>
                                     <div className='flex justify-between items-center'>
                                         <h6 className='mb-6'>Partners Leaderboard</h6>
-                                        <div className='flex gap-2 items-center text-sm'>
+                                        {/* <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Trust Score</h6>
                                             <Select
                                                 className="min-w-[140px]"
@@ -2091,7 +2110,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
                                             />
-                                        </div>
+                                        </div> */}
                                     </div>
                                     <DataTable
                                         columns={partnerColumns}
@@ -2118,46 +2137,28 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     </div>
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
-                                            field="Total"
-                                            percent={20}
-                                            color='text-[#6610f2]'
-                                            className="bg-[#6610f2] dark:opacity-70"
-                                        />
-                                        <Bar
                                             field="Active"
                                             percent={20}
                                             color='text-[#2ecc71]'
                                             className="bg-[#2ecc71] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="Inactive"
-                                            percent={20}
+                                            field="Disabled"
+                                            percent={28}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
-                                         <Bar
-                                            field="On Leave"
-                                            percent={32}
-                                            color='text-[#ffc107]'
-                                            className="bg-[#ffc107] dark:opacity-70"
-                                        />
                                         <Bar
-                                            field="Unapproved"
+                                            field="Blocked"
                                             percent={20}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         <Bar
-                                            field="New Joinee"
-                                            percent={20}
-                                            color='text-[#007bff]'
-                                            className="bg-[#007bff] dark:opacity-70"
-                                        />
-                                        <Bar
-                                            field="Resigned"
-                                            percent={20}
-                                            color='text-[#28a745]'
-                                            className="bg-[#28a745] dark:opacity-70"
+                                            field="On Notice"
+                                            percent={32}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Departments"
@@ -2165,6 +2166,33 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             color='text-[#6c757d]'
                                             className="bg-[#6c757d] dark:opacity-70"
                                         />
+                                        <Bar
+                                            field="Designations"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        {/* <Bar
+                                            field="Inactive"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                         
+                                        <Bar
+                                            field="Unapproved"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        
+                                        <Bar
+                                            field="Resigned"
+                                            percent={20}
+                                            color='text-[#28a745]'
+                                            className="bg-[#28a745] dark:opacity-70"
+                                        />
+                                        
                                         <Bar
                                             field="Task"
                                             percent={20}
@@ -2176,14 +2204,14 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             percent={20}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
-                                        />
+                                        /> */}
                                     </div>
                                 </div>
 
                                 <div className='mt-8 block  gap-2'>
                                     <div className='flex justify-between items-center'>
                                         <h6 className='mb-6'>Team Leaderboard</h6>
-                                        <div className='flex gap-2 items-center text-sm'>
+                                        {/* <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Performance Score</h6>
                                             <Select
                                                 className="min-w-[140px]"
@@ -2196,7 +2224,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
                                             />
-                                        </div>
+                                        </div> */}
                                     </div>
                                     <DataTable
                                         columns={teamColumns}
