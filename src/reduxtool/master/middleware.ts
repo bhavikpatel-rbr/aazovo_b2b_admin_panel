@@ -4100,7 +4100,7 @@ export const getOffersAction = createAsyncThunk(
       // if (response?.data) { return response?.data }
       // This implies responseData IS what was previously response.data
       if (responseData?.data) {
-        return responseData?.data;
+        return responseData;
       }
       // If responseData is not satisfactory (e.g., falsy), reject.
       // The original code was `rejectWithValue(response)`, but `response` is not available here.
