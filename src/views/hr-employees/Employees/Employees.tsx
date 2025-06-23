@@ -67,7 +67,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { getEmployeesAction, getEmployeesListingAction } from "@/reduxtool/master/middleware";
+import { getEmployeesListingAction } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -106,8 +106,8 @@ const employeeStatusValues = EMPLOYEE_STATUS_OPTIONS.map((s) => s.value) as [
 ];
 
 export const employeeStatusColor: Record<EmployeeItem["status"], string> = {
-  inactive: "bg-gray-500",
-  active: "bg-emerald-500",
+  active: "bg-blue-500",
+  inactive: "bg-emerald-500",
   on_leave: "bg-amber-500",
   terminated: "bg-red-500",
 };
@@ -1052,9 +1052,10 @@ const EmployeesListing = () => {
           const displayStatus = status
             .replace(/_/g, " ")
             .replace(/\b\w/g, (l) => l.toLowerCase());
+
           return (
             <Tag
-              className={`${employeeStatusColor[status]} text-white capitalize`}
+              className={`${employeeStatusColor[displayStatus]} text-white capitalize`}
             >
               {displayStatus}
             </Tag>
