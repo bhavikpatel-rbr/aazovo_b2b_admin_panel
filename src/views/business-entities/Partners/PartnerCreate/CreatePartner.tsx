@@ -2770,8 +2770,8 @@ const CreatePartner = () => {
     dispatch(getMembersAction());
   }, [dispatch]);
 
-  const { CompanyData = [] } = useSelector(masterSelector);
-  const companyOptions = CompanyData?.data?.map((c: any) => ({
+  const { partnerData = [] } = useSelector(masterSelector);
+  const companyOptions = partnerData?.data?.map((c: any) => ({
     value: String(c.id),
     label: c.partner_name,
   }));
