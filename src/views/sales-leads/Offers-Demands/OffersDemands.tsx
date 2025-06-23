@@ -1,20 +1,19 @@
 // src/views/your-path/OffersDemands.tsx
 
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  Ref,
-  useEffect,
-} from "react";
-import { Link, useNavigate } from "react-router-dom";
-import classNames from "classnames";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import classNames from "classnames";
 import dayjs from 'dayjs';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState
+} from "react";
+import { Controller, useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 dayjs.extend(localizedFormat);
 dayjs.extend(relativeTime);
@@ -42,10 +41,10 @@ import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
 // import Tag from "@/components/ui/Tag"; // Not used directly, but DataTable might use it
-import toast from "@/components/ui/toast";
-import Tooltip from "@/components/ui/Tooltip";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Spinner from "@/components/ui/Spinner";
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -96,31 +95,30 @@ import {
   TbUser,
   TbUserCircle,
   TbUserSearch,
-  // TbUsersGroup, // Not used
 } from "react-icons/tb";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  getOffersAction,
-  getDemandsAction,
-  submitExportReasonAction,
-  deleteOfferAction,
+  deleteAllDemandsAction,
   deleteAllOffersAction,
   deleteDemandAction,
-  deleteAllDemandsAction,
+  deleteOfferAction,
+  getDemandsAction,
+  getOffersAction,
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 
 // Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-  CellContext,
-} from "@/components/shared/DataTable";
 import type { TableQueries as CommonTableQueries } from "@/@types/common";
+import type {
+  CellContext,
+  ColumnDef,
+  OnSortParam,
+  Row,
+} from "@/components/shared/DataTable";
 
 // Define specific table queries if needed, or ensure CommonTableQueries matches
 interface TableQueries extends CommonTableQueries {
@@ -222,15 +220,6 @@ export type OfferDemandItem = {
   updated_by_role?: string;
   originalApiItem: ActualApiOfferShape | ActualApiDemandShape;
   health_score?: number;
-};
-
-const offerDemandCounts = {
-  total: 1250,
-  offer: 720,
-  demand: 530,
-  todayTotal: 45,
-  todayOffer: 25,
-  todayDemand: 20,
 };
 
 const TABS = { OFFER: "offer", DEMAND: "demand" };
@@ -517,9 +506,6 @@ const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
 
   if (apiOffer.groupA) offerGroups.push({ groupName: "Group A", items: [apiOffer.groupA] });
   if (apiOffer.groupB) offerGroups.push({ groupName: "Group B", items: [apiOffer.groupB] });
-
-  console.log(apiOffer, "apiOffer");
-  
   return {
     id: apiOffer.generate_id, type: "Offer", name: apiOffer.name,
     createdByInfo: { userId: String(apiOffer.created_by.id), userName: apiOffer.created_by.name, email: `${apiOffer.created_by.name?.replace(/\s+/g, ".").toLowerCase()}@example.com`, },
@@ -635,14 +621,24 @@ const OffersDemands = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const offersStoreData = useSelector(masterSelector).Offers;
+  // const offerDemandCounts = {
+  //   total: 1250,
+  //   offer: 720,
+  //   demand: 530,
+  //   todayTotal: 45,
+  //   todayOffer: 25,
+  //   todayDemand: 20,
+  // };
+
+  const offerDemandCounts= useSelector(masterSelector).Offers.counts;
+  const offersStoreData = useSelector(masterSelector).Offers?.data;
   const demandsStoreData = useSelector(masterSelector).Demands;
   const offersStatus = useSelector(masterSelector).offersStatus;
   const demandsStatus = useSelector(masterSelector).demandsStatus;
   const offersError = useSelector(masterSelector).offersError;
   const demandsError = useSelector(masterSelector).demandsError;
 
-  console.log("offersStoreData", offersStoreData);
+  // console.log("offersStoreData", offersStoreCount);
 
   const [currentTab, setCurrentTab] = useState<string>(TABS.OFFER);
   const initialTableQueries: TableQueries = { pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" };
@@ -758,7 +754,7 @@ const OffersDemands = () => {
     const safeDemandsTotal = typeof demandsStoreData?.total === 'number' ? demandsStoreData.total : 0;
 
     // debugger
-    
+
     if (currentTab === TABS.OFFER) {
       itemsToDisplay = safeOffersItems.map(transformApiOffer);
       currentTotal = safeOffersTotal;
@@ -813,7 +809,11 @@ const OffersDemands = () => {
     } else { setCurrentSelectedItems((prev) => prev.filter(i => !cVIds.has(i.id))); }
   }, [setCurrentSelectedItems]);
 
-  const handleEdit = useCallback((item: OfferDemandItem) => { const bP = item.type === "Offer" ? "offers" : "demands"; navigate(`/sales-leads/${bP}/edit/${(item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id}`); }, [navigate]);
+  const handleEdit = useCallback((item: OfferDemandItem) => {
+    const bP = item.type === "Offer" ? "offers" : "demands";
+    if (bP === "offers") navigate(`/sales-leads/offers/create`, { state: item });
+    else navigate(`/sales-leads/${bP}/edit/${(item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id}`);
+  }, [navigate]);
   const handleDeleteClick = useCallback((item: OfferDemandItem) => setItemToDeleteConfirm(item), []);
 
   const onConfirmDelete = useCallback(async () => {
@@ -948,7 +948,7 @@ const OffersDemands = () => {
               </div>
               <div>
                 <h6 className="text-green-500">
-                  {offerDemandCounts?.offer ?? 0}
+                  {offerDemandCounts?.offers ?? 0}
                 </h6>
                 <span className="font-semibold text-xs">Offers</span>
               </div>
@@ -964,13 +964,13 @@ const OffersDemands = () => {
               </div>
               <div>
                 <h6 className="text-violet-500">
-                  {offerDemandCounts?.demand ?? 0}
+                  {offerDemandCounts?.demands ?? 0}
                 </h6>
                 <span className="font-semibold text-xs">Demands</span>
               </div>
             </Card>
 
-            {/* Card 4: Today Total */}
+            {/* Card 4: Today Total
             <Card
               bodyClass="flex gap-2 p-2"
               className="rounded-md border border-amber-300"
@@ -981,10 +981,10 @@ const OffersDemands = () => {
               <div>
                 <h6 className="text-amber-500">
                   {offerDemandCounts?.todayTotal ?? 0}
-                </h6>
+                </h6> 
                 <span className="font-semibold text-xs">Today</span>
               </div>
-            </Card>
+            </Card> */}
 
             {/* Card 5: Today Offers */}
             <Card
@@ -996,7 +996,7 @@ const OffersDemands = () => {
               </div>
               <div>
                 <h6 className="text-teal-500">
-                  {offerDemandCounts?.todayOffer ?? 0}
+                  {offerDemandCounts?.today_offers ?? 0}
                 </h6>
                 <span className="font-semibold text-xs">Today Offers</span>
               </div>
@@ -1012,7 +1012,7 @@ const OffersDemands = () => {
               </div>
               <div>
                 <h6 className="text-rose-500">
-                  {offerDemandCounts?.todayDemand ?? 0}
+                  {offerDemandCounts?.today_demands ?? 0}
                 </h6>
                 <span className="font-semibold text-xs">Today Demands</span>
               </div>
@@ -1026,7 +1026,6 @@ const OffersDemands = () => {
           <div className="mb-4">
             <ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchQuery={currentTableConfig.query} /></div>
           <div className="flex-grow overflow-auto">
-            {console.log(offersStoreData, "pageData")}
             <ItemTable columns={columns} data={pageData} loading={isOverallLoading || dataForExportLoading}
               pagingData={{ total: totalItems, pageIndex: currentTableConfig.pageIndex as number, pageSize: currentTableConfig.pageSize as number }}
               selectedItems={currentSelectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange}

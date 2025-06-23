@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
@@ -19,8 +19,10 @@ import { TbCopy } from "react-icons/tb";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addOfferAction,
+  editOfferAction, // <-- IMPORT THE UPDATE ACTION
   getAllProductAction,
   getMembersAction,
+  getOfferById,
   getProductsAction,
   getProductSpecificationsAction,
   getUsersAction,
@@ -44,7 +46,6 @@ const offerFormSchema = z.object({
 type OfferFormData = z.infer<typeof offerFormSchema>;
 type OptionType = { value: number | string; label: string };
 
-// LOGIC CHANGE: PriceListItem now includes product info for detailed tracking
 type PriceListItem = {
   id: string; // A unique ID like "productID-color"
   productId: number;
@@ -54,21 +55,48 @@ type PriceListItem = {
   price?: number;
 };
 
+// --- Helper to parse stringified JSON from API ---
+const parseJsonArray = (jsonString: string | null | undefined): number[] => {
+  if (!jsonString) return [];
+  try {
+    const parsed = JSON.parse(jsonString);
+    // Ensure it's an array and convert items to numbers
+    return Array.isArray(parsed) ? parsed.map(Number).filter(n => !isNaN(n)) : [];
+  } catch (e) {
+    console.error("Failed to parse JSON string:", jsonString, e);
+    return [];
+  }
+};
+
 
 const CreateOffer = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // --- LOGIC CHANGE: Safely get ID and determine if it's an edit operation ---
+  const id = location.state?.originalApiItem?.id;
+  const isEdit = !!id;
+
   const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [priceListData, setPriceListData] = useState<PriceListItem[]>([]);
 
+  // State to hold price items loaded for an existing offer
+  const [loadedPriceItems, setLoadedPriceItems] = useState<any[] | null>(null);
+
   useEffect(() => {
+    // Master data needed for both create and edit
     dispatch(getUsersAction());
     dispatch(getAllProductAction());
     dispatch(getMembersAction());
     dispatch(getProductsAction());
     dispatch(getProductSpecificationsAction());
+    // Fetch specific offer data only when in edit mode
+    if (isEdit) {
 
-  }, [dispatch]);
+      dispatch(getOfferById(id));
+    }
+  }, [dispatch, id, isEdit]);
 
   const {
     usersData = [],
@@ -76,8 +104,10 @@ const CreateOffer = () => {
     memberData = [],
     ProductsData = [],
     ProductSpecificationsData = [],
+    currentOffer: offerData, // <-- Get the single offer data for editing
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
+  console.log(offerData, "isEdit");
 
   // Memoized options for select dropdowns
   const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: u.name })) : [], [usersData]);
@@ -106,20 +136,54 @@ const CreateOffer = () => {
       groupB_notes: "",
       productStatus: "active",
       productSpec: null,
+      modified: false, // This field is not in the schema but can be used for tracking changes
     },
   });
 
-  const { product_id: watchedProductIds, productSpec: watchedSpec, productStatus: watchedStatus } = watch();
-
-  // --- LOGIC CHANGE: Automatically update price list based on selected products and their specific colors ---
+  // --- LOGIC CHANGE: Populate form when editing ---
   useEffect(() => {
-    if (!ProductsData?.data || !productOptions.length) {
-      return;
+    if (isEdit && offerData) {
+      const defaultValues = {
+        name: offerData.name || "",
+        assignedUserId: offerData.assign_user ? Number(offerData.assign_user) : null,
+        product_id: parseJsonArray(offerData.product_id),
+        sellers: parseJsonArray(offerData.seller_section),
+        buyers: parseJsonArray(offerData.buyer_section),
+        groupA_notes: offerData.groupA || "",
+        groupB_notes: offerData.groupB || "",
+        // **ASSUMPTION**: The API response for a single offer includes 'price_list_details'
+        productStatus: offerData.price_list_details?.status || "active",
+        productSpec: offerData.price_list_details?.spec_id || null,
+      };  
+
+      reset(defaultValues);
+
+      setValue("groupA_notes", defaultValues.groupA_notes, { shouldDirty: true });
+
+      // Store loaded price items to be processed by the price list generation effect
+      if (offerData.price_list_details?.items) {
+        setLoadedPriceItems(offerData.price_list_details.items);
+      }
     }
+  }, [isEdit, offerData, reset]);
+
+  const { product_id: watchedProductIds, productSpec: watchedSpec, productStatus: watchedStatus, modified: watchmodified } = watch();
+
+  // --- LOGIC CHANGE: Enhanced effect to build price list for both new and edited offers ---
+  useEffect(() => {
+    if (!ProductsData?.data || !productOptions.length) return;
 
     const newPriceList: PriceListItem[] = [];
-    // Create a map of existing data to preserve it
     const existingDataMap = new Map(priceListData.map(item => [item.id, item]));
+
+    // If we have data from an edited offer, map it for easy lookup
+    const loadedDataMap = new Map();
+    if (loadedPriceItems) {
+      loadedPriceItems.forEach(item => {
+        const uniqueId = `${item.product_id}-${item.color}`;
+        loadedDataMap.set(uniqueId, item);
+      });
+    }
 
     const selectedProductsData = ProductsData.data.filter((p: any) =>
       watchedProductIds.includes(parseInt(p.id))
@@ -134,14 +198,16 @@ const CreateOffer = () => {
         if (trimmedColor) {
           const uniqueId = `${product.id}-${trimmedColor}`;
           const existingItem = existingDataMap.get(uniqueId);
+          const loadedItem = loadedDataMap.get(uniqueId);
 
           newPriceList.push({
             id: uniqueId,
             productId: parseInt(product.id),
             productName: productName,
             color: trimmedColor,
-            qty: existingItem?.qty, // Preserve existing qty if available
-            price: existingItem?.price, // Preserve existing price
+            // Prioritize loaded data, then existing (user-changed) data, then default to undefined
+            qty: loadedItem?.qty ?? existingItem?.qty,
+            price: loadedItem?.price ?? existingItem?.price,
           });
         }
       });
@@ -149,18 +215,22 @@ const CreateOffer = () => {
 
     setPriceListData(newPriceList);
 
-    // Disabling exhaustive-deps because we intentionally want to control this flow
+    // Clear loaded items after they've been used to prevent interference
+    if (loadedPriceItems) {
+      setLoadedPriceItems(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedProductIds, ProductsData, productOptions]);
+  }, [watchedProductIds, ProductsData, productOptions, loadedPriceItems]);
 
 
   const handlePriceListChange = (index: number, field: "qty" | "price", value: string, type = 'number') => {
-
+    setValue("modified", true, { shouldDirty: true });
+    // ... (This function remains unchanged)
     if (type === 'string') {
       const updatedList = [...priceListData];
       const currentItem = { ...updatedList[index] };
-
       if (value == "") return;
+      // @ts-ignore
       currentItem[field] = value;
       updatedList[index] = currentItem;
       setPriceListData(updatedList);
@@ -168,14 +238,12 @@ const CreateOffer = () => {
       const updatedList = [...priceListData];
       const currentItem = { ...updatedList[index] };
       const numericValue = value === "" ? undefined : parseFloat(value);
-
       if (value !== "" && isNaN(numericValue as number)) return;
-
+      // @ts-ignore
       currentItem[field] = numericValue;
       updatedList[index] = currentItem;
       setPriceListData(updatedList);
     }
-
   };
 
   const totals = useMemo(() => {
@@ -185,58 +253,59 @@ const CreateOffer = () => {
   }, [priceListData]);
 
 
-  // --- LOGIC CHANGE: Auto-generate notes with product-by-product grouping ---
+  // --- Auto-generate notes effect (remains unchanged, works for both modes) ---
   useEffect(() => {
-    const selectedSpec = productSpecOptions.find(s => s.value === watchedSpec);
-    const relevantItems = priceListData.filter(item => item.qty && Number(item.qty) > 0);
+    // This effect now correctly rebuilds notes based on the populated price list in both add/edit modes.
+    if (watchmodified) {
 
-    if (relevantItems.length === 0) {
-      setValue("groupA_notes", "");
-      setValue("groupB_notes", "");
-      return;
-    }
+      const selectedSpec = productSpecOptions.find(s => s.value === watchedSpec);
+      const relevantItems = priceListData.filter(item => item.qty && Number(item.qty) > 0);
 
-    // Group items by product
-    const itemsByProduct = relevantItems.reduce((acc, item) => {
-      if (!acc[item.productName]) {
-        acc[item.productName] = [];
+      if (relevantItems.length === 0) {
+        setValue("groupA_notes", "");
+        setValue("groupB_notes", "");
+        return;
       }
-      acc[item.productName].push(item);
-      return acc;
-    }, {} as Record<string, PriceListItem[]>);
 
-    let message = "";
-    let message2 = "";
-    if (selectedSpec) {
-      message += `Specification: ${selectedSpec.label}\n\n`;
-      message2 += `Specification: ${selectedSpec.label}\n\n`;
+      const itemsByProduct = relevantItems.reduce((acc, item) => {
+        if (!acc[item.productName]) acc[item.productName] = [];
+        acc[item.productName].push(item);
+        return acc;
+      }, {} as Record<string, PriceListItem[]>);
+
+      let message = "";
+      let message2 = "";
+      if (selectedSpec) {
+        message += `Specification: ${selectedSpec.label}\n\n`;
+        message2 += `Specification: ${selectedSpec.label}\n\n`;
+      }
+
+      for (const productName in itemsByProduct) {
+        message += `Product: ${productName}\n`;
+        message2 += `Product: ${productName}\n`;
+        itemsByProduct[productName].forEach(item => {
+          const price = Number(item.price || 0);
+          message += `  - Color: ${item.color}, Qty: ${item.qty}, Price: $${price.toFixed(2)}\n`;
+          message2 += `  - Color: ${item.color}, Qty: ${item.qty}\n`;
+        });
+        message += "\n";
+        message2 += "\n";
+      }
+
+      message += `Total Qty: ${totals.totalQty}\n`;
+      message += `Total Price: $${totals.totalPrice.toFixed(2)}\n`;
+      message += `Status: ${watchedStatus.toUpperCase()}`;
+      message2 += `Total Qty: ${totals.totalQty}\n`;
+      message2 += `Status: ${watchedStatus.toUpperCase()}`;
+
+      setValue("groupA_notes", message, { shouldDirty: true });
+      setValue("groupB_notes", message2, { shouldDirty: true });
     }
-
-    // Build the message string from the grouped data
-    for (const productName in itemsByProduct) {
-      message += `Product: ${productName}\n`;
-      message2 += `Product: ${productName}\n`;
-      itemsByProduct[productName].forEach(item => {
-        const price = Number(item.price || 0);
-        message += `  - Color: ${item.color}, Qty: ${item.qty}, Price: $${price.toFixed(2)}\n`;
-        message2 += `  - Color: ${item.color}, Qty: ${item.qty}\n`;
-      });
-      message += "\n";
-      message2 += "\n";
-    }
-
-    message += `Total Qty: ${totals.totalQty}\n`;
-    message += `Total Price: $${totals.totalPrice.toFixed(2)}\n`;
-    message += `Status: ${watchedStatus.toUpperCase()}`;
-    message2 += `Total Qty: ${totals.totalQty}\n`;
-    // message2 += `Total Price: $${totals.totalPrice.toFixed(2)}\n`;
-    message2 += `Status: ${watchedStatus.toUpperCase()}`;
-
-    setValue("groupA_notes", message, { shouldDirty: true });
-    setValue("groupB_notes", message2, { shouldDirty: true });
 
   }, [watchedSpec, watchedStatus, priceListData, totals, productSpecOptions, setValue]);
 
+
+  // --- LOGIC CHANGE: Unified form submission for both Create and Update ---
   const onFormSubmit = useCallback(async (data: OfferFormData) => {
     setIsSubmitting(true);
     const apiPayload = {
@@ -250,7 +319,6 @@ const CreateOffer = () => {
       price_list_details: {
         spec_id: data.productSpec,
         status: data.productStatus,
-        // LOGIC CHANGE: Send product ID with each item for precise data
         items: priceListData
           .filter(item => item.qty && item.qty > 0)
           .map(({ productId, color, qty, price }) => ({
@@ -263,17 +331,25 @@ const CreateOffer = () => {
     };
 
     try {
-      await dispatch(addOfferAction(apiPayload)).unwrap();
-      toast.push(<Notification title="Offer Created" type="success">Offer "{data.name}" has been successfully created.</Notification>);
+      const actionType = isEdit ? 'Updated' : 'Created';
+      if (isEdit) {
+        await dispatch(editOfferAction({ id, ...apiPayload })).unwrap();
+      } else {
+        await dispatch(addOfferAction(apiPayload)).unwrap();
+      }
+
+      toast.push(<Notification title={`Offer ${actionType}`} type="success">Offer "{data.name}" has been successfully {actionType.toLowerCase()}.</Notification>);
       reset();
       navigate("/sales-leads/offers-demands");
+
     } catch (error: any) {
-      const errorMessage = error?.message || "Could not create offer. Please try again.";
-      toast.push(<Notification title="Creation Failed" type="danger">{errorMessage}</Notification>);
+      const actionType = isEdit ? 'Update' : 'Creation';
+      const errorMessage = error?.message || `Could not ${actionType.toLowerCase()} offer. Please try again.`;
+      toast.push(<Notification title={`${actionType} Failed`} type="danger">{errorMessage}</Notification>);
     } finally {
       setIsSubmitting(false);
     }
-  }, [dispatch, navigate, reset, priceListData]);
+  }, [dispatch, navigate, reset, priceListData, isEdit, id]);
 
   const handleCancel = () => {
     reset();
@@ -288,17 +364,18 @@ const CreateOffer = () => {
         {/* Breadcrumb Navigation */}
       </div>
 
-      <Form id="createOfferForm" onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
+      <Form id="offerForm" onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
         <Card>
           {isLoading && !productsMasterData.length ? (
             <div className="flex justify-center p-10"><Spinner size="lg" /></div>
           ) : (
             <>
               <div className="flex justify-between items-center mb-6">
-                <h4>Add Offer</h4>
+                {/* --- DYNAMIC TITLE --- */}
+                <h4>{isEdit ? 'Edit Offer' : 'Add Offer'}</h4>
               </div>
 
-              {/* --- Initial Details --- */}
+              {/* --- Initial Details (structure unchanged) --- */}
               <div className="grid md:grid-cols-2 gap-4">
                 <FormItem label="Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
                   <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Offer Name" />} />
@@ -311,9 +388,8 @@ const CreateOffer = () => {
                 </FormItem>
               </div>
 
-              {/* --- Seller and Buyer Selection --- */}
+              {/* --- Seller and Buyer Selection (structure unchanged) --- */}
               <div className="grid md:grid-cols-2 gap-4 mt-4">
-                {/* Seller Section */}
                 <Card>
                   <h5>Seller Section</h5>
                   <div className="mt-4">
@@ -322,7 +398,6 @@ const CreateOffer = () => {
                     </FormItem>
                   </div>
                 </Card>
-                {/* Buyer Section */}
                 <Card>
                   <h5>Buyer Section</h5>
                   <div className="mt-4">
@@ -333,7 +408,7 @@ const CreateOffer = () => {
                 </Card>
               </div>
 
-              {/* --- Price List Table View --- */}
+              {/* --- Price List Table View (structure unchanged) --- */}
               <Card className="mt-4">
                 <div className="grid lg:grid-cols-2 gap-4 mb-4">
                   <FormItem label="Status">
@@ -349,7 +424,6 @@ const CreateOffer = () => {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr No</th>
-                        {/* LOGIC CHANGE: Added Product column */}
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
@@ -388,7 +462,7 @@ const CreateOffer = () => {
                 </div>
               </Card>
 
-              {/* --- Group Notes --- */}
+              {/* --- Group Notes (structure unchanged) --- */}
               <div className="grid md:grid-cols-2 gap-4 mt-4">
                 <Card>
                   <h5>Group A Notes</h5>
@@ -415,7 +489,8 @@ const CreateOffer = () => {
 
         <Card bodyClass="flex justify-end gap-2" className="mt-4">
           <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
-          <Button type="submit" form="createOfferForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || isLoading}>{isSubmitting ? "Saving..." : "Save Offer"}</Button>
+          {/* --- DYNAMIC BUTTON TEXT --- */}
+          <Button type="submit" form="offerForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || isLoading}>{isSubmitting ? "Saving..." : (isEdit ? 'Update Offer' : 'Save Offer')}</Button>
         </Card>
       </Form>
     </>
