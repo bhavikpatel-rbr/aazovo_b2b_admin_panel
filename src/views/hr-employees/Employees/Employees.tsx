@@ -880,7 +880,6 @@ const EmployeesListing = () => {
   // --- Data Processing (Filtering, Sorting, Pagination from original) ---
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData = cloneDeep(employees); // Use local employees state
-console.log(processedData, 'processedData');
 
     // Apply Filters from filterCriteria
     if (filterCriteria.filterDepartments?.length) {

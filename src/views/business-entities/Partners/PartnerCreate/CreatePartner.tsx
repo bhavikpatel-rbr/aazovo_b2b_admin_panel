@@ -369,7 +369,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any = [])
     country_id: apiData.country_id
       ? { label: apiData.country_id, value: apiData.country_id }
       : undefined,
-    continent_id: apiData.continent_id  
+    continent_id: apiData.continent_id
       ? { label: apiData?.continent?.name, value: apiData.continent_id }
       : undefined,
     join_us_as: apiData.join_us_as
@@ -1455,7 +1455,7 @@ const CompanyDetailsSection = ({
                 {typeof uploadCertificateValue === "string" &&
                   uploadCertificateValue && (
                     <a
-                      href={uploadCertificateValue}
+                      href={`https://aazovo.codefriend.in/${uploadCertificateValue}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-blue-500 hover:underline mt-1 inline-block"
@@ -1732,7 +1732,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                       {" "}
                       {typeof fileValue === "string" ? (
                         <a
-                          href={fileValue}
+                          href={`https://aazovo.codefriend.in/${fileValue}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-500 hover:underline"
@@ -2243,7 +2243,7 @@ const AccessibilitySection = ({
                   />
                   {typeof docFileValue === "string" && docFileValue && (
                     <a
-                      href={docFileValue}
+                      href={`https://aazovo.codefriend.in/${docFileValue}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-blue-500 hover:underline mt-1 inline-block"
@@ -2879,29 +2879,29 @@ const CreatePartner = () => {
   };
   const openDiscardDialog = () => setDiscardConfirmationOpen(true);
   const closeDiscardDialog = () => setDiscardConfirmationOpen(false);
-   const handleConfirmDiscard = async () => {
-      try {
-        const { id } = useParams<{ id?: string }>();
-        await dispatch(deletepartnerAction({ id: id })).unwrap();
-        toast.push(
-          <Notification
-            title="Entry Deleted"
-            type="success"
-          >{`Entry deleted.`}</Notification>
-        );
-        dispatch(getpartnerAction());
-      } catch (e: any) {
-        toast.push(
-          <Notification title="Delete Failed" type="danger">
-            {(e as Error).message}
-          </Notification>
-        );
-      } finally {
-        closeDiscardDialog();
-        navigate("/business-entities/partner");
-      }
-  
-    };
+  const handleConfirmDiscard = async () => {
+    try {
+      const { id } = useParams<{ id?: string }>();
+      await dispatch(deletepartnerAction({ id: id })).unwrap();
+      toast.push(
+        <Notification
+          title="Entry Deleted"
+          type="success"
+        >{`Entry deleted.`}</Notification>
+      );
+      dispatch(getpartnerAction());
+    } catch (e: any) {
+      toast.push(
+        <Notification title="Delete Failed" type="danger">
+          {(e as Error).message}
+        </Notification>
+      );
+    } finally {
+      closeDiscardDialog();
+      navigate("/business-entities/partner");
+    }
+
+  };
   if (pageLoading)
     return (
       <Container className="h-full flex justify-center items-center">

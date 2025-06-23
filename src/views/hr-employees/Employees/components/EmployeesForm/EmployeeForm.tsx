@@ -20,7 +20,7 @@ import OffBoardingSection from './components/OffBoarding'
 import Navigator from './components/Navigator'
 import type { EmployeeFormSchema } from './types'
 
-const sectionKeys: FormSectionKey[] = ['registration', 'personalInformation', 'documentSubmission', 'roleResponsibility', 'training', 'equipmentsAssetsProvided', 'timeAttendence', 'offBoarding'];
+const sectionKeys: FormSectionKey[] = ['registration', 'personalInformation', 'documentSubmission', 'roleResponsibility', 'training', 'equipmentsAssetsProvided', 'offBoarding'];
 type FormSectionKey = keyof Omit<EmployeeFormSchema, 'id'>;
 
 type EmployeeFormProps = {
@@ -124,7 +124,7 @@ const EmployeeForm = (props: EmployeeFormProps) => {
             case 'roleResponsibility': return <RoleResponsibilitySection control={control} errors={errors} />
             case 'training': return <TrainingSection control={control} errors={errors} />
             case 'equipmentsAssetsProvided': return <EquipmentsAssetsSection control={control} errors={errors} />
-            case 'timeAttendence': return <TimeAttendanceSection control={control} errors={errors} />
+            // case 'timeAttendence': return <TimeAttendanceSection control={control} errors={errors} />
             case 'offBoarding': return <OffBoardingSection control={control} errors={errors} />
             default: return <RegistrationSection control={control} errors={errors} />
         }

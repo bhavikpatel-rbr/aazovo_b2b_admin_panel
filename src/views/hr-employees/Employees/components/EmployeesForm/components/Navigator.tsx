@@ -9,7 +9,7 @@ export const navigationList = [
     { label: 'Role & Responsibility', link: 'roleResponsibility' },
     { label: 'Training', link: 'training' },
     { label: 'Equipments & Assets Provided', link: 'equipmentsAssetsProvided' },
-    { label: 'Time & Attendence', link: 'timeAttendence' },
+    // { label: 'Time & Attendence', link: 'timeAttendence' },
     { label: 'Off Boarding', link: 'offBoarding' },
 ];
 

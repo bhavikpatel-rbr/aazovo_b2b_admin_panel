@@ -3,50 +3,14 @@ import Select from '@/components/ui/Select'
 import { FormItem } from '@/components/ui/Form'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps } from '../types' // Assuming this path is correct
+import { getCountriesAction, getDepartmentsAction, getDesignationsAction, getRolesAction } from '@/reduxtool/master/middleware'
+import { useSelector } from 'react-redux'
+import { useEffect, useMemo } from 'react'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
+import { useAppDispatch } from '@/reduxtool/store'
 
 // --- Mock Options Data (Replace with real data or fetch from API as needed) ---
-const roleOptions = [
-    { value: 'individual_contributor', label: 'Individual Contributor' },
-    { value: 'team_lead', label: 'Team Lead' },
-    { value: 'manager', label: 'Manager' },
-    { value: 'senior_manager', label: 'Senior Manager' },
-    { value: 'director', label: 'Director' },
-    { value: 'vp', label: 'Vice President' },
-    { value: 'c_level', label: 'C-Level Executive' },
-]
 
-const departmentOptions = [
-    { value: 'engineering', label: 'Engineering' },
-    { value: 'product', label: 'Product' },
-    { value: 'design', label: 'Design' },
-    { value: 'sales', label: 'Sales' },
-    { value: 'marketing', label: 'Marketing' },
-    { value: 'human_resources', label: 'Human Resources' },
-    { value: 'finance', label: 'Finance' },
-    { value: 'operations', label: 'Operations' },
-    { value: 'customer_support', label: 'Customer Support' },
-]
-
-const designationOptions = [ // These can be very specific and numerous
-    { value: 'software_engineer', label: 'Software Engineer' },
-    { value: 'senior_software_engineer', label: 'Senior Software Engineer' },
-    { value: 'product_manager', label: 'Product Manager' },
-    { value: 'ux_designer', label: 'UX Designer' },
-    { value: 'sales_executive', label: 'Sales Executive' },
-    { value: 'marketing_specialist', label: 'Marketing Specialist' },
-    { value: 'hr_business_partner', label: 'HR Business Partner' },
-    // Add more as needed
-]
-
-const countryOptions = [
-    { value: 'us', label: 'United States' },
-    { value: 'ca', label: 'Canada' },
-    { value: 'gb', label: 'United Kingdom' },
-    { value: 'in', label: 'India' },
-    { value: 'au', label: 'Australia' },
-    { value: 'de', label: 'Germany' },
-    // ... other countries
-]
 
 const categoryOptions = [
     { value: 'technology', label: 'Technology' },
@@ -115,6 +79,23 @@ const RoleResponsibilitySection = ({
     control,
     errors,
 }: RoleResponsibilitySectionProps) => {
+    const dispatch = useAppDispatch();
+
+    const { Roles = [], departmentsData = [], designationsData = [],CountriesData =[] } = useSelector(masterSelector);
+
+    useEffect(() => {
+        dispatch(getRolesAction());
+        dispatch(getDepartmentsAction());
+        dispatch(getDesignationsAction());
+        dispatch(getCountriesAction());
+        
+    }, [dispatch])
+
+    const countryOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((country: any) => ({ value: String(country.id), label: country.name })) : [], [Roles]);
+    const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
+    const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: any) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
+    const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: any) => ({ value: String(d.id), label: d.name })) : [], [designationsData?.data]);
+
     return (
         <Card id="roleResponsibility">
             <h4 className="mb-6">Role & Responsibility</h4>

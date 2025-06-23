@@ -1285,7 +1285,7 @@ const CompanyDetailsSection = ({
           {typeof companyLogoBrochureValue === "string" &&
             companyLogoBrochureValue && (
               <img
-                src={companyLogoBrochureValue}
+                src={`https://aazovo.codefriend.in/${companyLogoBrochureValue}`}
                 alt="logo preview"
                 className="mt-2 h-16 w-auto"
               />
@@ -1454,7 +1454,7 @@ const CompanyDetailsSection = ({
                 {typeof uploadCertificateValue === "string" &&
                   uploadCertificateValue && (
                     <a
-                      href={uploadCertificateValue}
+                      href={`https://aazovo.codefriend.in/${uploadCertificateValue}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-blue-500 hover:underline mt-1 inline-block"
@@ -1746,7 +1746,7 @@ const KYCDetailSection = ({
                       {" "}
                       {typeof fileValue === "string" ? (
                         <a
-                          href={fileValue}
+                          href={`https://aazovo.codefriend.in/${fileValue}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-500 hover:underline"
@@ -2127,7 +2127,7 @@ const SpotVerificationSection = ({
                 />
                 {typeof photoValue === "string" && photoValue && (
                   <a
-                    href={photoValue}
+                    href={`https://aazovo.codefriend.in/${photoValue}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-blue-500 hover:underline mt-1 inline-block"
@@ -2369,7 +2369,7 @@ const AccessibilitySection = ({
                   />
                   {typeof docFileValue === "string" && docFileValue && (
                     <a
-                      href={docFileValue}
+                      href={`https://aazovo.codefriend.in/${docFileValue}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-blue-500 hover:underline mt-1 inline-block"
