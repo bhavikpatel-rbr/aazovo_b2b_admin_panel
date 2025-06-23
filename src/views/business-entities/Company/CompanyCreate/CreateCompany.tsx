@@ -67,7 +67,7 @@ interface SpotVerificationItemFE {
 interface CompanyBankDetailItemFE {
   id?: string;
   bank_account_number?: string;
-  bank_name?: string | { label: string; value: string };
+  bank_name?: string;
   ifsc_code?: string;
   verification_photo?: File | string | null;
   type?: { label: string; value: string };
@@ -257,7 +257,7 @@ interface ApiSingleCompanyItem {
   declaration_206AB_verify?: boolean | string;
   declaration_206AB_remark?: string | null;
   ABCQ_file?: string | null; // API file URL
-  ABCQ_declaration_verified?: boolean | string;
+  ABCQ_verified?: boolean | string;
   ABCQ_remark?: string | null;
   office_photo_file?: string | null; // API file URL
   office_photo_verified?: boolean | string;
@@ -419,7 +419,7 @@ const transformApiToFormSchema = (
     declaration_206ab_remark_enabled: stringToBoolean(apiData.declaration_206AB_verify),
     ABCQ_file: apiData.ABCQ_file || null,
     ABCQ_remark: apiData.ABCQ_remark || '',
-    ABCQ_remark_enabled: stringToBoolean(apiData.ABCQ_declaration_verified),
+    ABCQ_remark_enabled: stringToBoolean(apiData.ABCQ_verified),
     office_photo_file: apiData.office_photo_file || null,
     office_photo_remark: apiData.office_photo_remark || "",
     office_photo_remark_enabled: stringToBoolean(apiData.office_photo_verified),
@@ -456,7 +456,7 @@ const transformApiToFormSchema = (
     secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
     company_bank_details: apiData.company_bank_details?.map(bank => ({
         bank_account_number: bank.bank_account_number || '',
-        bank_name: bank.bank_name ? { label: bank.bank_name, value: bank.bank_name } : undefined, // Assuming free text
+        bank_name: bank.bank_name || undefined, // Assuming free text
         ifsc_code: bank.ifsc_code || '',
         type: bank.type ? { label: bank.type, value: bank.type } : undefined,
         verification_photo: bank.verification_photo || null,
@@ -593,7 +593,7 @@ const preparePayloadForApi = (
   // KYC Documents
   const kycDocsConfig = [
     { feFileKey: "declaration_206ab", beFileKey: "declaration_206AB_file", feVerifyKey: "declaration_206ab_remark_enabled", beVerifyKey: "declaration_206AB_verify", feRemarkKey: "declaration_206ab_remark", beRemarkKey: "declaration_206AB_remark" },
-    { feFileKey: "ABCQ_file", beFileKey: "ABCQ_file", feVerifyKey: "ABCQ_remark_enabled", beVerifyKey: "ABCQ_declaration_verified", feRemarkKey: "ABCQ_remark", beRemarkKey: "ABCQ_remark" },
+    { feFileKey: "ABCQ_file", beFileKey: "ABCQ_file", feVerifyKey: "ABCQ_remark_enabled", beVerifyKey: "ABCQ_verified", feRemarkKey: "ABCQ_remark", beRemarkKey: "ABCQ_remark" },
     { feFileKey: "office_photo_file", beFileKey: "office_photo_file", feVerifyKey: "office_photo_remark_enabled", beVerifyKey: "office_photo_verified", feRemarkKey: "office_photo_remark", beRemarkKey: "office_photo_remark" },
     { feFileKey: "gst_certificate_file", beFileKey: "gst_certificate_file", feVerifyKey: "gst_certificate_remark_enabled", beVerifyKey: "gst_certificate_verified", feRemarkKey: "gst_certificate_remark", beRemarkKey: "gst_certificate_remark" },
     { feFileKey: "authority_letter_file", beFileKey: "authority_letter_file", feVerifyKey: "authority_letter_remark_enabled", beVerifyKey: "authority_letter_verified", feRemarkKey: "authority_letter_remark", beRemarkKey: "authority_letter_remark" },
@@ -623,7 +623,7 @@ const preparePayloadForApi = (
 
   data.company_bank_details?.forEach((bank: CompanyBankDetailItemFE, index: number) => {
     apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
-    apiPayload.append(`company_bank_details[${index}][bank_name]`, (typeof bank.bank_name === 'object' ? bank.bank_name?.value : bank.bank_name) || '');
+    apiPayload.append(`company_bank_details[${index}][bank_name]`,bank.bank_name || '');
     apiPayload.append(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code || '');
     apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
     appendFileIfExists(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
