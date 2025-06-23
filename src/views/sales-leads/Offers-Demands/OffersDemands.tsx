@@ -67,6 +67,7 @@ import {
   // TbCircleLetterX, // Not used
   // TbCircleX, // Not used
   TbClipboardText,
+  TbClockHour4,
   // TbCloudDownload, // Not used directly
   TbCloudUpload,
   // TbDotsVertical, // Not used
@@ -535,7 +536,7 @@ const transformApiDemand = (apiDemand: ActualApiDemandShape): OfferDemandItem =>
   if (apiDemand.seller_section) { const i: string[] = []; Object.values(apiDemand.seller_section).forEach(sP => { if (sP?.questions) Object.values(sP.questions).forEach(q => { if (q?.question) i.push(q.question); }); }); if (i.length > 0) demandGroups.push({ groupName: "Seller Section", items: i }); }
   if (apiDemand.buyer_section) { const i: string[] = []; Object.values(apiDemand.buyer_section).forEach(sP => { if (sP?.questions) Object.values(sP.questions).forEach(q => { if (q?.question) i.push(q.question); }); }); if (i.length > 0) demandGroups.push({ groupName: "Buyer Section", items: i }); }
   if (apiDemand.groupA) demandGroups.push({ groupName: "Group A", items: [apiDemand.groupA] });
-  if (apiDemand.groupB) demandGroups.push({ groupName: "Group B", items: [apiDemand.groupB] });  
+  if (apiDemand.groupB) demandGroups.push({ groupName: "Group B", items: [apiDemand.groupB] });
   return {
     id: apiDemand.generate_id, type: "Demand", name: apiDemand.name,
     createdByInfo: { userId: String(apiDemand?.created_by?.id), userName: apiDemand?.created_by?.name, email: `${apiDemand.created_by?.name?.replace(/\s+/g, ".")?.toLowerCase()}@example.com`, },
@@ -633,7 +634,7 @@ const OffersDemands = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const offerDemandCounts= useSelector(masterSelector).Offers.counts;
+  const offerDemandCounts = useSelector(masterSelector).Offers.counts;
   const offersStoreData = useSelector(masterSelector).Offers?.data;
   const demandsStoreData = useSelector(masterSelector).Demands;
   const offersStatus = useSelector(masterSelector).offersStatus;
@@ -721,7 +722,7 @@ const OffersDemands = () => {
     // FIX: This parameter is now sent to the backend when a type is selected in the filter.
     // This is crucial for filtering on the "All" tab.
     if (filters.itemType) {
-        params.item_type = filters.itemType.toLowerCase(); // Assuming backend expects 'offer' or 'demand'
+      params.item_type = filters.itemType.toLowerCase(); // Assuming backend expects 'offer' or 'demand'
     }
 
     return params;
@@ -948,7 +949,23 @@ const OffersDemands = () => {
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
               <div><h6 className="text-violet-500">{offerDemandCounts?.demands ?? 0}</h6><span className="font-semibold text-xs">Demands</span></div>
             </Card>
-            
+
+            {/* Card 4: Today Total */}
+            <Card
+              bodyClass="flex gap-2 p-2"
+              className="rounded-md border border-amber-300"
+            >
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500">
+                <TbClockHour4 size={24} />
+              </div>
+              <div>
+                <h6 className="text-amber-500">
+                  {offerDemandCounts?.today ?? 0}
+                </h6>
+                <span className="font-semibold text-xs">Today</span>
+              </div>
+            </Card>
+
             {/* Card 5: Today Offers */}
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-teal-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
@@ -967,9 +984,9 @@ const OffersDemands = () => {
               {[TABS.ALL, TABS.OFFER, TABS.DEMAND].map((tabKey) =>
               (<button key={tabKey} onClick={() => handleTabChange(tabKey)} className={classNames("whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize",
                 currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>
-                  {/* FIX: This logic now correctly displays "All Items" for the 'all' tab. */}
-                  {tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}
-                </button>))}</nav></div>
+                {/* FIX: This logic now correctly displays "All Items" for the 'all' tab. */}
+                {tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}
+              </button>))}</nav></div>
           <div className="mb-4">
             <ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchQuery={currentTableConfig.query} /></div>
           <div className="flex-grow overflow-auto">
