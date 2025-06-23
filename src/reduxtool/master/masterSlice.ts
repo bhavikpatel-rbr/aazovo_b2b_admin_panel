@@ -64,6 +64,7 @@ import {
   getEmailCampaignsAction,
   getEmailTemplatesAction,
   getEmployeesAction,
+  getEmployeesListingAction,
   getExportMappingsAction,
   getFormBuilderAction,
   getHomeCategoryAction,
@@ -173,6 +174,7 @@ const INITIAL_STATE: any = {
   suppliers: [],
   Employees: [],
   AllCompanyData: [],
+  EmployeesList: [],
   getwallItemsData:  {}
 };
 
@@ -629,6 +631,10 @@ const masterSlice = createSlice({
     builder.addCase(getEmployeesAction.fulfilled, (state, { payload }) => ({
       ...state,
       Employees: payload,
+    }));
+    builder.addCase(getEmployeesListingAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      EmployeesList: payload,
     }));
     builder.addCase(getParentCategoriesAction.fulfilled, (state, { payload }) => ({
       ...state,

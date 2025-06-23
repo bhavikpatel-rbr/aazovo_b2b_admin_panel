@@ -1,27 +1,20 @@
 // src/views/your-path/EmployeesListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react"; // Added useEffect
+import React, { Ref, useCallback, useEffect, useMemo, useState } from "react"; // Added useEffect
 // import { Link, useNavigate } from 'react-router-dom'; // useNavigate will be replaced by drawer logic for add/edit
-import cloneDeep from "lodash/cloneDeep";
-import { useNavigate } from 'react-router-dom';
-import { useForm, Controller } from "react-hook-form"; // Added
 import { zodResolver } from "@hookform/resolvers/zod"; // Added
+import cloneDeep from "lodash/cloneDeep";
+import { Controller, useForm } from "react-hook-form"; // Added
+import { useNavigate } from 'react-router-dom';
 import { z } from "zod"; // Added
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
-import Tag from "@/components/ui/Tag";
-import Button from "@/components/ui/Button";
-import Dialog from "@/components/ui/Dialog";
-import Avatar from "@/components/ui/Avatar";
-import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
+import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Card,
   Drawer,
@@ -31,52 +24,54 @@ import {
   Input,
   Select as UiSelect,
 } from "@/components/ui"; // Added Drawer, Form, FormItem, UiSelect, Textarea
+import Avatar from "@/components/ui/Avatar";
+import Button from "@/components/ui/Button";
+import Dialog from "@/components/ui/Dialog";
+import Notification from "@/components/ui/Notification";
+import Tag from "@/components/ui/Tag";
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-  TbPencil,
-  TbDotsVertical,
-  TbEye,
-  TbShare,
+  TbActivity,
+  TbBell,
+  TbBrandWhatsapp,
+  TbCalendarEvent,
   TbChecks,
-  TbSearch,
-  TbFilter,
   TbCloudUpload,
-  TbPlus,
-  TbUserCircle,
-  TbMail,
-  TbPhone,
-  TbBuildingSkyscraper,
-  TbBriefcase,
-  TbCalendar,
-  TbUsers,
-  TbTrash,
+  TbDownload,
+  TbEye,
+  TbFilter,
   TbKey,
+  TbMail,
+  TbPencil,
+  TbPlus,
   TbReload,
-  TbUserSquareRounded,
+  TbSearch,
+  TbTagStarred,
+  TbUser,
   TbUserBolt,
+  TbUserCircle,
   TbUserExclamation,
+  TbUsers,
   TbUserScreen,
   TbUserShare,
-  TbBrandWhatsapp,
-  TbUser,
-  TbBell,
-  TbActivity,
-  TbCalendarEvent,
-  TbDownload,
-  TbTagStarred, // Additional icons for form
+  TbUserSquareRounded
 } from "react-icons/tb";
-import DatePicker from "@/components/ui/DatePicker"; // Added DatePicker for date selection
-import { Select } from "@/components/ui/Select"; // Added Select for dropdowns
 // Types
+import type { TableQueries } from "@/@types/common";
 import type {
-  OnSortParam,
   ColumnDef,
+  OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
-import { BsThreeDotsVertical } from "react-icons/bs";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { getEmployeesAction, getEmployeesListingAction } from "@/reduxtool/master/middleware";
+import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
+import { BsThreeDotsVertical } from "react-icons/bs";
+import { useSelector } from "react-redux";
 
 // --- Define Item Type ---
 export type EmployeeStatus = "active" | "inactive" | "on_leave" | "terminated";
@@ -111,8 +106,8 @@ const employeeStatusValues = EMPLOYEE_STATUS_OPTIONS.map((s) => s.value) as [
 ];
 
 export const employeeStatusColor: Record<EmployeeItem["status"], string> = {
-  active: "bg-emerald-500",
   inactive: "bg-gray-500",
+  active: "bg-emerald-500",
   on_leave: "bg-amber-500",
   terminated: "bg-red-500",
 };
@@ -662,9 +657,7 @@ const EmployeesListing = () => {
   const navigate = useNavigate('hr-employees/employees/add'); // Not used for add/edit if using drawers
 
   // --- State ---
-  const [employees, setEmployees] = useState<EmployeeItem[]>(
-    initialDummyEmployees
-  );
+  const [employees, setEmployees] = useState([]);
   const [masterLoadingStatus, setMasterLoadingStatus] = useState<
     "idle" | "idle"
   >("idle"); // Mimicking Redux status
@@ -700,6 +693,7 @@ const EmployeesListing = () => {
   const [changePwdOpen, setChangePwdOpen] = useState(false);
   const [currentItemForDialog, setCurrentItemForDialog] =
     useState<EmployeeItem | null>(null);
+  const dispatch = useAppDispatch();
 
   // React Hook Form instances
   const addFormMethods = useForm<EmployeeFormData>({
@@ -714,6 +708,19 @@ const EmployeesListing = () => {
     resolver: zodResolver(employeeFilterFormSchema),
     defaultValues: filterCriteria,
   });
+
+  const { EmployeesList: Employees } = useSelector(masterSelector);
+  console.log(Employees, "EmployeesList");
+
+  useEffect(() => {
+    if (Employees && Employees?.data?.data?.length > 0) {
+      setEmployees(Employees?.data?.data);
+    }
+  }, [Employees]);
+
+  useEffect(() => {
+    dispatch(getEmployeesListingAction());
+  }, [dispatch])
 
   // --- CRUD and Drawer Handlers ---
   const openAddDrawer = () => {
@@ -1039,10 +1046,12 @@ const EmployeesListing = () => {
         header: "Status",
         accessorKey: "status",
         /* ... (keep original cell) ... */ cell: (props) => {
-          const { status } = props.row.original;
+          const { status } = props.row.original || {};
+          console.log(status, "statusstatus");
+
           const displayStatus = status
             .replace(/_/g, " ")
-            .replace(/\b\w/g, (l) => l.toUpperCase());
+            .replace(/\b\w/g, (l) => l.toLowerCase());
           return (
             <Tag
               className={`${employeeStatusColor[status]} text-white capitalize`}
@@ -1056,7 +1065,7 @@ const EmployeesListing = () => {
         header: "Name",
         accessorKey: "name",
         /* ... (keep original cell) ... */ cell: (props) => {
-          const { name, email, mobile, avatar } = props.row.original;
+          const { name, email, mobile, avatar } = props.row.original || {};
           return (
             <div className="flex items-center">
               <Avatar
@@ -1076,30 +1085,70 @@ const EmployeesListing = () => {
           );
         },
       },
-      { header: "Designation", accessorKey: "designation" },
-      { header: "Department", accessorKey: "department", size: 200 },
+      {
+        header: "Designation", accessorKey: "designation", size: 200,
+         /* ... (keep original cell) ... */ cell: (props) => {
+          const data = props.row.original || {};
+          console.log(data, "datadatadatadata");
+
+          return (
+            <div className="flex items-center">
+              <div className="ml-2 rtl:mr-2">
+                <span className="font-semibold">{data?.designation_id ?? ""}</span>
+                {/* <div className="text-xs text-gray-500">{data?.designation_id ?? ""}</div> */}
+                {/* <div className="text-xs text-gray-500">{mobile}</div> */}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Department",
+        accessorKey: "department",
+        size: 200,
+
+         /* ... (keep original cell) ... */ cell: (props) => {
+          const { department } = props.row.original || {};
+
+          return (
+            <div className="flex items-center">
+              <div className="ml-2 rtl:mr-2">
+                <span className="font-semibold">{department?.name ?? ""}</span>
+                {/* <div className="text-xs text-gray-500">{department?.id ?? ""}</div> */}
+                {/* <div className="text-xs text-gray-500">{mobile}</div> */}
+              </div>
+            </div>
+          );
+        },
+      },
       {
         header: "Roles",
         accessorKey: "roles",
-        cell: (props) => (
-          <div className="flex flex-wrap gap-1 text-xs">
-            {props.row.original.roles.map((role) => (
-              <Tag
-                key={role}
-                className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]"
-              >
-                {role}
-              </Tag>
-            ))}
-          </div>
-        ),
+        cell: (props) => {
+
+          const { roles } = props.row.original || {};
+          console.log(roles, "datadatadatadata");
+
+          return (
+            <div className="flex flex-wrap gap-1 text-xs">
+              {props?.row?.original?.roles?.map((role) => (
+                <Tag
+                  key={role}
+                  className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]"
+                >
+                  {role?.name || ""}
+                </Tag>
+              ))}
+            </div>)
+        }
+        ,
       },
       {
         header: "Joined At",
         accessorKey: "joiningDate",
-        size:200,
+        size: 200,
         cell: (props) =>
-          props.getValue() ? <span className="text-xs"> {dayjs(props.getValue()).format("D MMM YYYY, h:mm A")}</span> : '-'
+          props?.row?.original?.date_of_joining ? <span className="text-xs"> {dayjs(props?.row?.original?.date_of_joining).format("D MMM YYYY, h:mm A")}</span> : '-'
       }, // Added Joining Date
       {
         header: "Action",
@@ -1156,7 +1205,7 @@ const EmployeesListing = () => {
                 <TbUsers size={24} />
               </div>
               <div>
-                <h6 className="text-blue-500">879</h6>
+                <h6 className="text-blue-500">{Employees?.counts?.total || 0}</h6>
                 <span className="font-semibold text-xs">Total</span>
               </div>
             </Card>
@@ -1165,7 +1214,7 @@ const EmployeesListing = () => {
                 <TbUserSquareRounded size={24} />
               </div>
               <div>
-                <h6 className="text-violet-500">23</h6>
+                <h6 className="text-violet-500">{Employees?.counts?.this_month || 0}</h6>
                 <span className="font-semibold text-xs">This Month</span>
               </div>
             </Card>
@@ -1174,7 +1223,7 @@ const EmployeesListing = () => {
                 <TbUserBolt size={24} />
               </div>
               <div>
-                <h6 className="text-pink-500">34%</h6>
+                <h6 className="text-pink-500">{Employees?.counts?.avg_present_percent || 0}%</h6>
                 <span className="font-semibold text-xs">Avg. Present</span>
               </div>
             </Card>
@@ -1183,7 +1232,7 @@ const EmployeesListing = () => {
                 <TbUserExclamation size={24} />
               </div>
               <div>
-                <h6 className="text-orange-500">345</h6>
+                <h6 className="text-orange-500">{Employees?.counts?.late_arrivals || 0}</h6>
                 <span className="font-semibold text-xs">Late Arrivals</span>
               </div>
             </Card>
@@ -1193,7 +1242,7 @@ const EmployeesListing = () => {
                 <TbUserScreen size={24} />
               </div>
               <div>
-                <h6 className="text-green-500">879</h6>
+                <h6 className="text-green-500">{Employees?.counts?.training_rate || 0}</h6>
                 <span className="font-semibold text-xs">Training Rate</span>
               </div>
             </Card>
@@ -1202,7 +1251,7 @@ const EmployeesListing = () => {
                 <TbUserShare size={24} />
               </div>
               <div>
-                <h6 className="text-red-500">78</h6>
+                <h6 className="text-red-500">{Employees?.counts?.offboarding || 0}</h6>
                 <span className="font-semibold text-xs">Offboarding</span>
               </div>
             </Card>

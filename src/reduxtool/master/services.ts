@@ -2861,3 +2861,13 @@ export const editTaskListAsync = async (formData: FormData) => {
     return isAxiosError(err);
   }
 };
+
+
+export const getEmployeeListAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/employee`)
+    return response.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
