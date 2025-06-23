@@ -656,13 +656,19 @@ const EditTaskPage = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {attachments.map(file => (
                           <Card key={file.id} bodyClass="p-2" className={`shadow-sm ${file.isDeleted ? 'opacity-50 border-red-500 border-dashed' : ''}`}>
-                            {file.src.startsWith('blob:') && file.file?.type.startsWith('image/') ? (
-                              <img className="max-w-full h-24 object-contain rounded-md mx-auto mb-2" alt={file.name} src={file.src.replace('?deleted=true','')} />
-                            ) : ( // Generic file icon or placeholder for non-image blobs and server files
+                            {(file.src.startsWith('blob:') && file.file?.type.startsWith('image/')) ||
+                            file.src.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
+                              <img
+                                className="max-w-full h-24 object-contain rounded-md mx-auto mb-2"
+                                alt={file.name}
+                                src={file.src.replace('?deleted=true', '')}
+                              />
+                            ) : (
                               <div className="h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-600 rounded-md mb-2 text-4xl text-gray-400 dark:text-gray-500">
                                 <TbPaperclip />
                               </div>
                             )}
+
                             <div className="text-xs">
                               <div className="font-semibold text-gray-900 dark:text-gray-100 truncate" title={file.name}>{file.name}</div>
                               <span className="text-gray-500 dark:text-gray-400">{file.size}</span>
