@@ -2862,12 +2862,42 @@ export const editTaskListAsync = async (formData: FormData) => {
   }
 };
 
-
 export const getEmployeeListAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/employee`)
     return response.data
   } catch (err) {
     return isAxiosError(err)
+  }
+}
+
+export const addEmployeeListAsync = async (payload) => {
+  try {
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/employee`, payload);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+export const editEmployeeListAsync = async (payload) => {
+  try {
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/employee/${payload?.id}`, payload);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
+
+export const apiGetEmployeeByIdAsync = async (id) => {
+  try {
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/employee/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
   }
 }

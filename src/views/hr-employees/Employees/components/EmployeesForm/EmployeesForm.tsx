@@ -1,154 +1,132 @@
 import { useEffect, useState } from 'react'
-import { Form } from '@/components/ui/Form'
-import Card from '@/components/ui/Card' // Keep Card
+import { useDispatch } from 'react-redux'
+import { useParams, useNavigate } from 'react-router-dom'
+import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById } from '@/reduxtool/master/middleware'
+// import { apiGetEmployeeById } from '@/services/EmployeeService'
+import toast from '@/components/ui/toast'
+import Notification from '@/components/ui/Notification'
+import Spinner from '@/components/ui/Spinner'
 import Container from '@/components/shared/Container'
-import EmployeesDetails from './components/DocumentSubmission'
-// import TradeInformation from './components/TradeInformation'
-import Navigator, { NavigationItem } from './components/Navigator'
-// import useLayoutGap from '@/utils/hooks/useLayoutGap' // Not needed for this change
-// import useResponsive from '@/utils/hooks/useResponsive' // Not needed for this change
-import isEmpty from 'lodash/isEmpty'
-import { useForm } from 'react-hook-form'
-import type { ReactNode } from 'react'
+import EmployeeForm from './EmployeeForm'
 import type { EmployeeFormSchema } from './types'
-import type { CommonProps } from '@/@types/common'
-import RoleResponsibilitySection from './components/RoleResponsibility'
-import AccessibilitySection from './components/Registration'
-import MemberManagementSection from './components/PersonalInformation'
-import TrainingSection from './components/Training'
-import TimeAttendance from './components/TimeAttendance'
-import OffBoardingSection from './components/OffBoarding'
-import EquipmentsAssetsSection from './components/EquipmentsAssets'
-import { NavLink } from 'react-router-dom'
-import { BiChevronRight } from 'react-icons/bi'
-import { Button } from '@/components/ui'
-type EmployeeFormProps = {
-    children: ReactNode
-    onFormSubmit: (values: EmployeeFormSchema) => void
-    defaultValues?: EmployeeFormSchema
-    newEmployees?: boolean
-} & CommonProps
 
-type FormSectionKey =
-    | 'registration'
-    | 'personalInformation'
-    | 'documentSubmission'
-    | 'roleResponsibility'
-    | 'training'
-    | 'equipmentsAssetsProvided'
-    | 'timeAttendence'
-    | 'offBoarding'
+// Helper to format the flat API data into the nested structure the form expects
+const formatApiDataToFormSchema = (apiData: any): Partial<EmployeeFormSchema> => {
+    return {
+        id: apiData.id,
+        registration: {
+            fullName: apiData.name,
+            dateOfJoining: apiData.date_of_joining,
+            mobileNumber: apiData.mobile_number,
+            mobileNumberCode: apiData.mobile_number_code,
+            email: apiData.email,
+            experience: apiData.experience,
+        },
+        personalInformation: {
+            status: apiData.status,
+            dateOfBirth: apiData.date_of_birth,
+            age: apiData.age,
+            gender: apiData.gender,
+            nationalityId: apiData.nationality_id,
+            bloodGroup: apiData.blood_group,
+            permanentAddress: apiData.permanent_address,
+            localAddress: apiData.local_address,
+            maritalStatus: apiData.marital_status || '',
+        },
+        roleResponsibility: {
+            roleId: apiData.role_id,
+            departmentId: apiData.department_id,
+            designationId: apiData.designation_id,
+            countryId: apiData.country_id,
+            categoryId: apiData.category_id,
+            subcategoryId: apiData.subcategory_id,
+            brandId: apiData.brand_id,
+            productServiceId: apiData.product_service_id,
+            reportingHrId: apiData.reporting_hr_id,
+            reportingHeadId: apiData.reporting_head_id,
+        },
+        training: {
+            training_date_of_completion: apiData.training_date_of_completion,
+            training_remark: apiData.training_remark,
+            specific_training_date_of_completion: apiData.specific_training_date_of_completion,
+            specific_training_remark: apiData.specific_training_remark,
+        },
+        offBoarding: {
+            exit_interview_conducted: apiData.exit_interview_conducted ? 'yes' : 'no',
+            exit_interview_remark: apiData.exit_interview_remark,
+            resignation_letter_received: apiData.resignation_letter_received ? 'yes' : 'no',
+            resignation_letter_remark: apiData.resignation_letter_remark,
+            company_assets_returned: apiData.company_assets_returned,
+            assets_returned_remarks: apiData.assets_returned_remarks,
+            full_and_final_settlement: apiData.full_and_final_settlement ? 'yes' : 'no',
+            fnf_remarks: apiData.fnf_remarks,
+            notice_period_status: apiData.notice_period_status,
+            notice_period_remarks: apiData.notice_period_remarks,
+        },
+        equipmentsAssetsProvided: {
+            items: apiData.equipments_assets_issued || [],
+        },
+        // Document submission is not pre-filled with file objects for security reasons
+        documentSubmission: {},
+    }
+}
 
+const EmployeePage = () => {
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+    const { employeeId } = useParams()
+    const isEditMode = !!employeeId
 
-
-const EmployeeForm = (props: EmployeeFormProps) => {
-    const { onFormSubmit, children, defaultValues } = props
-
-    const [activeSection, setActiveSection] = useState<FormSectionKey>('registration');
-
+    const [employeeData, setEmployeeData] = useState<Partial<EmployeeFormSchema> | null>(null)
+    const [isLoading, setIsLoading] = useState(isEditMode) // Only load if in edit mode
 
     useEffect(() => {
-        if (!isEmpty(defaultValues)) {
-            reset(defaultValues)
+        if (isEditMode) {
+            apiGetEmployeeById(employeeId)
+                .then((resp) => {
+                    const formattedData = formatApiDataToFormSchema(resp.data)
+                    setEmployeeData(formattedData)
+                })
+                .catch(console.error)
+                .finally(() => setIsLoading(false))
         }
-    }, [defaultValues])
+    }, [employeeId, isEditMode])
 
-    const onSubmit = (values: EmployeeFormSchema) => {
-        onFormSubmit?.(values)
+    const handleFormSubmit = (formData: FormData, id?: string) => {
+        const action = isEditMode && id
+            ? editEmployeesAction({ employeeId: id, data: formData })
+            : addEmployeesAction(formData)
+
+        // @ts-ignore
+        dispatch(action).unwrap()
+            .then((res) => {
+                if (res.status) {
+                    toast.push(<Notification title={'Success'} type="success" children={`Employee ${isEditMode ? 'updated' : 'added'} successfully.`} />)
+                    navigate('/hr-employees/employees')
+                } else {
+                    console.log(JSON.stringify(res?.errors), "resresresres");
+                    
+                    toast.push(<Notification title={'error'} type="error" title={JSON.stringify(res?.errors)} />)
+                }
+            })
+            .catch((err: any) => {
+                toast.push(<Notification title={'Error'} type="danger" children={err.message || 'An error occurred.'} />)
+            })
     }
 
-    const {
-        handleSubmit,
-        reset,
-        formState: { errors },
-        control,
-    } = useForm<EmployeeFormSchema>({
-        defaultValues: {
-            ...(defaultValues ? defaultValues : {}),
-        },
-    })
-
-    const renderActiveSection = () => {
-        switch (activeSection) {
-            case 'registration':
-                return <AccessibilitySection control={control} errors={errors} />
-            case 'personalInformation':
-                return <MemberManagementSection control={control} errors={errors} />
-            case 'documentSubmission':
-                return <EmployeesDetails control={control} errors={errors} />
-            case 'roleResponsibility':
-                return <RoleResponsibilitySection control={control} errors={errors}/>
-            case 'training':
-                return <TrainingSection control={control} errors={errors}/>
-            case 'equipmentsAssetsProvided':
-                return <EquipmentsAssetsSection control={control} errors={errors}/>
-            case 'timeAttendence':
-                return <TimeAttendance control={control} errors={errors}/>
-            case 'offBoarding':
-                return <OffBoardingSection control={control} errors={errors}/>
-            default:
-                return <EmployeesDetails control={control} errors={errors} />
-        }
+    if (isLoading) {
+        return (
+            <Container className="h-full"><div className="h-full flex flex-col items-center justify-center"><Spinner size={40} /><h3>Loading...</h3></div></Container>
+        )
     }
-
 
     return (
-        <div>
-            <Form
-                className="flex flex-col"
-                onSubmit={handleSubmit(onSubmit)}
-            >
-                <Container>
-                    {/* Horizontal Navigator within Card */}
-                    {/* Add padding to the Card's body using bodyClass or directly if supported */}
-
-                    <div className='flex gap-1 items-end mb-3 '>
-                        <NavLink to="/business-entities/employees">
-                            <h6 className='font-semibold hover:text-primary'>Employees</h6>
-                        </NavLink>
-                        <BiChevronRight size={22} color='black'/>
-                        <h6 className='font-semibold text-primary'>Add New Employee</h6>
-                    </div>
-
-                    <Card 
-                        className="mb-6" 
-                        // Option 1: If your Card component has a bodyClass prop for internal padding
-                        bodyClass="px-4 md:px-6 py-2" // Example: Add horizontal padding
-                        // Option 2: If Card doesn't have bodyClass, you might need to wrap Navigator
-                        // or hope the Card's default padding is sufficient.
-                    >
-                        {/* 
-                            If Card's default padding isn't what you want and bodyClass isn't available,
-                            you could add a div wrapper here:
-                            <div className="px-4 md:px-6"> 
-                        */}
-                        <Navigator
-                            activeSection={activeSection}
-                            onNavigate={(sectionKey) => setActiveSection(sectionKey as FormSectionKey)}
-                        />
-                        {/* 
-                            </div> 
-                        */}
-                    </Card>
-
-                    {/* Form Sections Area */}
-                    <div className="flex flex-col gap-4">
-                        {renderActiveSection()}
-                    </div>
-                    {/* {children}  */}
-                </Container>
-            </Form>
-            {/* Footer with Save and Cancel buttons */}
-            <Card bodyClass="flex justify-end gap-2" className='mt-4'>
-                <Button type="button" className="px-4 py-2">Cancel</Button>
-                <Button type="button" className="px-4 py-2">Previous</Button>
-                <Button type="button" className="px-4 py-2">Next</Button>
-                <Button type="button" className="px-4 py-2">Draft</Button>
-                <Button type="submit" className="px-4 py-2" variant="solid">Save</Button>
-            </Card>
-
-        </div>
+        <EmployeeForm
+            isEdit={isEditMode}
+            defaultValues={isEditMode ? employeeData : {}}
+            onFormSubmit={handleFormSubmit}
+        />
     )
 }
 
-export default EmployeeForm
+export default EmployeePage

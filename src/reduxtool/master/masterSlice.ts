@@ -6,11 +6,13 @@ import {
   addCountryAction,
   addCurrencyAction,
   addDocumentTypeAction,
+  addEmployeesAction,
   addInquiriesAction,
   addMemberAction,
   addpartnerAction,
   addPaymentTermAction,
   addUnitAction,
+  apiGetEmployeeById,
   deleteAllcompanyAction,
   deleteAllMemberAction,
   deleteAllpartnerAction,
@@ -29,6 +31,7 @@ import {
   editCountryAction,
   editCurrencyAction,
   editDocumentTypeAction,
+  editEmployeesAction,
   editInquiriesAction,
   editMemberAction,
   editpartnerAction,
@@ -175,6 +178,9 @@ const INITIAL_STATE: any = {
   Employees: [],
   AllCompanyData: [],
   EmployeesList: [],
+  addEmployees: {},
+  editEmployees: {},
+  getEmployeesdata: {},
   getwallItemsData:  {}
 };
 
@@ -643,6 +649,18 @@ const masterSlice = createSlice({
     builder.addCase(getAllCompany.fulfilled, (state, { payload }) => ({
       ...state,
       AllCompanyData: payload,
+    }));
+    builder.addCase(addEmployeesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      addEmployees: payload,
+    }));
+    builder.addCase(editEmployeesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      editEmployees: payload,
+    }));
+    builder.addCase(apiGetEmployeeById.fulfilled, (state, { payload }) => ({
+      ...state,
+      getEmployeesdata: payload,
     }));
 
   },
