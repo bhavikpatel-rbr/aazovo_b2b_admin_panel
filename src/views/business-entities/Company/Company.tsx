@@ -1725,12 +1725,12 @@ const CompanyListTable = () => {
         size: 220,
         cell: ({ row }) => {
           const {
-            name,
-            type,
+            company_name,
+            ownership_type,
             country,
             city,
             state,
-            company_photo,
+            company_logo,
             company_code,
           } = row.original;
           return (
@@ -1739,7 +1739,7 @@ const CompanyListTable = () => {
               <div className="flex items-center gap-2">
                 {" "}
                 <Avatar
-                  src={company_photo}
+                  src={`https://aazovo.codefriend.in/${company_logo}`}
                   size="md"
                   shape="circle"
                   icon={<TbUserCircle />}
@@ -1747,11 +1747,11 @@ const CompanyListTable = () => {
                 <div>
                   {" "}
                   <h6 className="text-xs font-semibold">{company_code}</h6>{" "}
-                  <span className="text-xs font-semibold">{name}</span>{" "}
+                  <span className="text-xs font-semibold">{company_name}</span>{" "}
                 </div>{" "}
               </div>{" "}
               <span className="text-xs mt-1">
-                <b>Type:</b> {type}
+                <b>Type:</b> {ownership_type}
               </span>{" "}
               <span className="text-xs">
                 <b>Business:</b> {row.original.business_type}
@@ -1770,26 +1770,26 @@ const CompanyListTable = () => {
         size: 180,
         cell: (props) => {
           const {
-            company_owner,
-            company_contact_number,
-            company_email,
+            owner_name,
+            primary_contact_number,
+            primary_email_id,
             company_website,
           } = props.row.original;
           return (
             <div className="text-xs flex flex-col gap-0.5">
               {" "}
-              {company_owner && (
+              {owner_name && (
                 <span>
-                  <b>Owner: </b> {company_owner}
+                  <b>Owner: </b> {owner_name}
                 </span>
               )}{" "}
-              {company_contact_number && <span>{company_contact_number}</span>}{" "}
-              {company_email && (
+              {primary_contact_number && <span>{primary_contact_number}</span>}{" "}
+              {primary_email_id && (
                 <a
-                  href={`mailto:${company_email}`}
+                  href={`mailto:${primary_email_id}`}
                   className="text-blue-600 hover:underline"
                 >
-                  {company_email}
+                  {primary_email_id}
                 </a>
               )}{" "}
               {company_website && (
@@ -1858,14 +1858,14 @@ const CompanyListTable = () => {
               <div className="flex gap-1 items-center">
                 {" "}
                 <Tooltip title={`KYC: ${kyc_verified}`}>
-                  {kyc_verified === "Yes" ? (
+                  {kyc_verified ? (
                     <MdCheckCircle className="text-green-500 text-lg" />
                   ) : (
                     <MdCancel className="text-red-500 text-lg" />
                   )}
                 </Tooltip>{" "}
                 <Tooltip title={`Billing: ${enable_billing}`}>
-                  {enable_billing === "Yes" ? (
+                  {enable_billing ? (
                     <MdCheckCircle className="text-green-500 text-lg" />
                   ) : (
                     <MdCancel className="text-red-500 text-lg" />

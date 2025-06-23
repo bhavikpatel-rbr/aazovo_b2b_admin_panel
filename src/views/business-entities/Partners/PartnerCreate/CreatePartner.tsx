@@ -498,7 +498,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, data: any = [])
     // ),
     partner_references: apiData.partner_references?.map((ref) => ({
       person_name: ref.person_name,
-      referenced_partner_id: data?.find((value: any) => value.value == ref.referenced_partner_id) ?? ref.referenced_partner_id,
+      referenced_partner_id: data?.find((value: any) => value.value == ref.partner_id) ?? ref.partner_id,
       number: ref.number,
       remark: ref.remark,
     })),
@@ -1689,7 +1689,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                   render={({ field }) => (
                     <Checkbox checked={!!field.value} onChange={field.onChange}>
                       {" "}
-                      {doc.label} (Verified){" "}<span className="text-red-500"> * </span>
+                      {doc.label} (Verified){" "}
                     </Checkbox>
                   )}
                 />{" "}

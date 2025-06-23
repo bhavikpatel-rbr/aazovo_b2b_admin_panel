@@ -1701,7 +1701,7 @@ const KYCDetailSection = ({
                   render={({ field }) => (
                     <Checkbox checked={!!field.value} onChange={field.onChange}>
                       {" "}
-                      {doc.label} (Verified){" "}<span className="text-red-500"> * </span>
+                      {doc.label} (Verified){" "}
                     </Checkbox>
                   )}
                 />{" "}
