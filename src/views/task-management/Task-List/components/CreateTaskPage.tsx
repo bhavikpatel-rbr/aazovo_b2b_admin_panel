@@ -108,17 +108,12 @@ type AttachmentFile = { id: string; name: string; size: string; src: string; fil
 type Comment = { id: string; name: string; src: string; date: Date; message: string; user_id?: string | number };
 
 const LINK_TO_OPTIONS = [
-  "Company", "Member", "Partner", "Inquiries", "Brand", "Categories",
-  "Products", "Wall Listing", "Opportunity", "Offer & Demand", "Leads",
-  "Request & Feedback", "campaign", "Teams", "CMS", "Others"
+  "Company"
 ] as const;
 type LinkToOption = typeof LINK_TO_OPTIONS[number];
 
 const MODULE_ID_MAP: Record<LinkToOption, string> = {
-    "Company": "2", "Member": "3", "Partner": "4", "Inquiries": "5", "Brand": "6",
-    "Categories": "7", "Products": "8", "Wall Listing": "9", "Opportunity": "10",
-    "Offer & Demand": "11", "Leads": "12", "Request & Feedback": "13", "campaign": "14",
-    "Teams": "15", "CMS": "16", "Others": "99",
+    "Company": "2"
 };
 
 const taskStatusLabelsApi = ["Pending", "On_Hold", "In_Progress", "Completed", "Cancelled"] as const;
@@ -228,6 +223,8 @@ const CreateTaskPage = () => {
 
   useEffect(() => {
     const taskData = taskToEditFromState;
+    console.log("taskData",taskData);
+    
     if (isEditMode && taskData && taskData._originalData && String(taskData.id) === taskId && boardMembersOptions.length > 0) {
       const original = taskData._originalData;
       const assignedUserIds = (Array.isArray(original.assign_to_users)
@@ -293,7 +290,7 @@ const CreateTaskPage = () => {
           id: String(att.id),
           name: att.attachment_name,
           size: "N/A",
-          src: att.attachment_path,
+          src: 'https://aazovo.codefriend.in/storage/' + att.attachment_path,
           type: att.attachment_type,
         }))
       );
