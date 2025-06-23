@@ -4601,6 +4601,9 @@ export const addTaskAction = createAsyncThunk<any, any>(
   "auth/addtask",
   async (data, { rejectWithValue, dispatch }) => {
     try {
+
+      console.log("data", data);
+
       const response: AxiosResponse<any> = await addTaskListAsync(data)
 
       console.log("name", response);
