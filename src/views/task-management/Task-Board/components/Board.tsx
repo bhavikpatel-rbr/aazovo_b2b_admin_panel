@@ -1,7 +1,7 @@
-import React, { lazy, Suspense, useState, useEffect, useRef, ChangeEvent, CSSProperties, Ref } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef, ChangeEvent, CSSProperties, Ref, useMemo } from 'react';
 import Dialog from '@/components/ui/Dialog';
 import Spinner from '@/components/ui/Spinner';
-import AdaptiveCard from '@/components/shared/AdaptiveCard';
+// import AdaptiveCard from '@/components/shared/AdaptiveCard'; // Using Card directly for main board container
 import reorderDragable from '@/utils/reorderDragable';
 import sleep from '@/utils/sleep';
 import reoderArray from '@/utils/reoderArray'; // Note: Original file has 'reoderArray', assuming typo for 'reorderArray'
@@ -48,20 +48,20 @@ import Tag from '@/components/ui/Tag';
 import Tabs from '@/components/ui/Tabs';
 import Badge from '@/components/ui/Badge';
 import Tooltip from '@/components/ui/Tooltip';
-import Textarea from '@/views/ui-components/forms/Input/Textarea'; // Assuming this path is correct
+import Segment from '@/components/ui/Segment'; // Added for view switcher
 
 // Shared Components
 import IconText from '@/components/shared/IconText';
 import UsersAvatarGroup from '@/components/shared/UsersAvatarGroup';
 
 // Icons
-import { TbPaperclip, TbMessageCircle, TbSearch, TbPencil, TbCirclePlus, TbTrash, TbCircleXFilled, TbPlus, TbUserPlus, TbSettings, TbDownload } from 'react-icons/tb';
+import { TbPaperclip, TbMessageCircle, TbSearch, TbPencil, TbCirclePlus, TbTrash, TbCircleXFilled, TbPlus, TbUserPlus, TbSettings, TbDownload, TbLayoutGridAdd, TbUserSearch, TbList, TbLayoutKanban, TbEye } from 'react-icons/tb';
 
 // Store
 import { useScrumBoardStore } from '../store/scrumBoardStore';
 
 // Utils & Assets
-import { createCardObject, taskLabelColors, labelList, createUID } from '../utils';
+import { createCardObject, labelList as originalLabelList, createUID } from '../utils'; // Renamed originalLabelList
 import NoMedia from '@/assets/svg/NoMedia';
 import { getAllTaskAction, getAllTaskByStatuesAction, updateTaskStatusAPI } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
@@ -76,14 +76,13 @@ export type Member = {
     name: string;
     email: string;
     img: string;
-    // Potentially other fields if used by Ticket's member structure
 };
 export type Comment = {
     id: string;
     name: string;
     src: string;
     message: string;
-    date: string | Date; // Assuming it can be string from API, then Date object
+    date: string | Date; 
 };
 export type Attachment = {
     id: string;
@@ -96,19 +95,61 @@ export type Ticket = {
     name: string;
     description?: string;
     dueDate?: string | Date;
-    labels?: string[];
+    labels?: string[]; // These are for the card display (e.g., status, "Bug", "Feature")
     members: Member[];
     comments?: Comment[];
     attachments?: Attachment[];
-    // Any other ticket properties
+    priority?: string; // For detailed view
+    category?: string; // For detailed view
+    _originalApiData?: any; // To store the original API task if needed
 };
 export type Columns = Record<string, Ticket[]>;
-export type AllMembers = Member[]; // From GetProjectMembersResponse
-export type ParticipantMembers = Member[]; // From GetProjectMembersResponse
+export type AllMembers = Member[]; 
+export type ParticipantMembers = Member[]; 
 export type GetProjectMembersResponse = {
     allMembers: AllMembers;
     participantMembers: ParticipantMembers;
 };
+
+// For TaskListView
+export interface TaskWithStatus extends Ticket {
+    status: string;
+}
+
+// Modernized taskLabelColors
+export const taskLabelColors: Record<string, string> = {
+    // Priority specific tags (can be used in detail view or on card if needed)
+    'Urgent': 'bg-rose-100 text-rose-700 dark:bg-rose-700/30 dark:text-rose-200 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'High': 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'Medium': 'bg-amber-100 text-amber-700 dark:bg-amber-700/30 dark:text-amber-200 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'Low': 'bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200 px-2.5 py-1 rounded-full text-xs font-semibold',
+    
+    // Generic labels (examples from original labelList)
+    'Feature Request': 'bg-purple-100 text-purple-700 dark:bg-purple-700/30 dark:text-purple-200 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'Bug': 'bg-pink-100 text-pink-700 dark:bg-pink-700/30 dark:text-pink-200 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'Improvement': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-700/30 dark:text-indigo-200 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'Task': 'bg-gray-100 text-gray-700 dark:bg-gray-600/30 dark:text-gray-200 px-2.5 py-1 rounded-full text-xs font-semibold',
+
+    // Status tags for board cards (transformed from API)
+    'Not Started': 'bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-100 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'Pending': 'bg-yellow-200 text-yellow-700 dark:bg-yellow-600/40 dark:text-yellow-100 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'In Progress': 'bg-blue-200 text-blue-700 dark:bg-blue-600/40 dark:text-blue-100 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'On Hold': 'bg-orange-200 text-orange-700 dark:bg-orange-600/40 dark:text-orange-100 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'Review': 'bg-teal-200 text-teal-700 dark:bg-teal-600/40 dark:text-teal-100 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'Completed': 'bg-green-200 text-green-700 dark:bg-green-600/40 dark:text-green-100 px-2.5 py-1 rounded-full text-xs font-semibold',
+    'Cancelled': 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-full text-xs font-semibold line-through',
+    // Fallback for any other labels
+    'default': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full text-xs font-semibold'
+};
+
+// Updated labelList for "Add Label" dropdown in TicketContent
+const labelList = [
+    { value: 'Feature Request', label: 'Feature Request', color: taskLabelColors['Feature Request'] },
+    { value: 'Bug', label: 'Bug', color: taskLabelColors['Bug'] },
+    { value: 'Improvement', label: 'Improvement', color: taskLabelColors['Improvement'] },
+    { value: 'Task', label: 'Task', color: taskLabelColors['Task'] },
+    { value: 'Urgent', label: 'Urgent', color: taskLabelColors['Urgent'] }, // Priority example
+];
 
 
 // Props for the main Board component
@@ -129,59 +170,11 @@ export type EntityType =
 
 type AddNewColumnFormSchema = {
   title: string;
-  // entityType: EntityType;
-  // selectedEntityId?: string;
-  // selectedOptions?: string[]; // This will effectively not be used if checkboxes are removed
 };
 
 const addNewColumnValidationSchema: ZodType<AddNewColumnFormSchema> = z.object({
-  title: z.string().min(1, "Column title is required!"),
-  // entityType: z.enum(['company', 'member', 'partner', 'lead', 'wall_listing'], {
-  //     required_error: 'Please select an entity type.',
-  // }),
-  // selectedEntityId: z.string().optional(), // Make optional, then refine
-  // selectedOptions: z.array(z.string()).optional(), // Will be unused but keep in schema for now
+  title: z.string().min(1, "Column title is required!").max(50, "Title is too long (max 50 chars)"),
 });
-// .refine(data => {
-//     if (data.entityType && !data.selectedEntityId) {
-//         return false; // selectedEntityId is required if entityType is chosen
-//     }
-//     return true;
-// }, {
-//     message: "Please select an item from the list.",
-//     path: ["selectedEntityId"], // Error applies to selectedEntityId
-// });
-
-const entityTypeOptions = [
-  { value: "company", label: "Company" },
-  { value: "member", label: "Member" },
-  { value: "partner", label: "Partner" },
-  { value: "lead", label: "Lead" },
-  { value: "wall_listing", label: "Wall Listing" },
-];
-
-const selectOptionsMap: Record<
-  EntityType,
-  Array<{ value: string; label: string }>
-> = {
-  company: [
-    { value: "compA", label: "Company Alpha" },
-    { value: "compB", label: "Company Beta" },
-  ],
-  member: [
-    { value: "mem1", label: "Member John" },
-    { value: "mem2", label: "Member Jane" },
-  ],
-  partner: [
-    /* ... partner options ... */
-  ],
-  lead: [
-    /* ... lead options ... */
-  ],
-  wall_listing: [
-    /* ... wall_listing options ... */
-  ],
-};
 
 const ActualAddNewColumnContent = () => {
   const {
@@ -197,145 +190,62 @@ const ActualAddNewColumnContent = () => {
     control,
     formState: { errors },
     handleSubmit,
-    // watch, // Not used
-    // resetField, // Not used
-    // setValue, // Not used
   } = useForm<AddNewColumnFormSchema>({
-    defaultValues: {
-      title: "",
-      // selectedEntityId: undefined,
-      // selectedOptions: [], // Keep for schema, will be empty
-    },
+    defaultValues: { title: "" },
     resolver: zodResolver(addNewColumnValidationSchema),
   });
 
-  // const watchedEntityType = watch('entityType'); // Commented out in original
-  // const watchedSelectedEntityId = watch('selectedEntityId'); // Commented out in original
-
-  // useEffect(() => { // Commented out in original
-  //     if (watchedEntityType) {
-  //         setValue('selectedEntityId', undefined, { shouldValidate: true });
-  //     }
-  // }, [watchedEntityType, setValue]);
-
-  // const currentSelectOptions = watchedEntityType ? selectOptionsMap[watchedEntityType] : []; // Commented out in original
-
   const onFormSubmit = async (data: AddNewColumnFormSchema) => {
-    console.log("Form Data:", data);
+    const newColumnTitle = data.title.trim() || "Untitled Board";
+    if (ordered.includes(newColumnTitle)) {
+        // Handle error: column title already exists (e.g., using react-hook-form setError or a toast)
+        console.error("Column title already exists");
+        // Example: setError("title", { type: "manual", message: "This title already exists." });
+        return;
+    }
 
-    const newColumnTitle = data.title || "Untitled Board";
     const currentColumns = cloneDeep(columns);
-    
-    let tasks: Ticket[] = []; // Ensure tasks is of type Ticket[]
-    // if (data.selectedEntityId) { // Commented out in original
-    //     const entityTypeLabel = entityTypeOptions.find(opt => opt.value === data.entityType)?.label;
-    //     const selectedItemLabel = currentSelectOptions.find(opt => opt.value === data.selectedEntityId)?.label;
-    //     tasks.push({
-    //         id: `item-${Date.now()}`,
-    //         name: `Selected: ${entityTypeLabel} - ${selectedItemLabel}`, // Ensure name is present
-    //         members: [], // Add other required Ticket fields
-    //     });
-    // }
-
-    currentColumns[newColumnTitle] = tasks;
+    currentColumns[newColumnTitle] = []; // New column starts empty
 
     const newOrdered = [...ordered, newColumnTitle];
     const newColumnsState: Columns = {};
     newOrdered.forEach((elm) => {
-      newColumnsState[elm] = currentColumns[elm];
+      newColumnsState[elm] = currentColumns[elm] || [];
     });
-console.log("newColumnsState",newColumnsState);
 
     updateColumns(newColumnsState);
     updateOrdered(newOrdered);
     closeDialog();
-    await sleep(500);
+    await sleep(300); // Shorter sleep
     resetView();
   };
 
   return (
-    <div>
-      <h5>Add New Column</h5>
-      <div className="mt-4">
-        <Form layout="vertical" onSubmit={handleSubmit(onFormSubmit)}>
-          <FormItem
-            label="Column title"
-            invalid={Boolean(errors.title)}
-            errorMessage={errors.title?.message as string}
-            className="mb-4"
-          >
-            <Controller
-              name="title"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  type="text"
-                  autoComplete="off"
-                  placeholder="Enter column title"
-                  {...field}
-                />
-              )}
-            />
-          </FormItem>
-
-          {/* <FormItem
-              label="Select Type"
-              invalid={Boolean(errors.entityType)}
-              errorMessage={errors.entityType?.message}
-              className="mb-4"
-          >
-              <Controller
-                  name="entityType"
-                  control={control}
-                  render={({ field }) => (
-                      <Radio.Group
-                          value={field.value}
-                          onChange={(val) => {
-                              field.onChange(val);
-                              setValue('selectedEntityId', undefined, { shouldValidate: true });
-                          }}
-                      >
-                          {entityTypeOptions.map((option) => (
-                              <Radio key={option.value} value={option.value}>
-                                  {option.label}
-                              </Radio>
-                          ))}
-                      </Radio.Group>
-                  )}
+    <div className="p-1">
+      <h5 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-6">Add New Status Column</h5>
+      <Form layout="vertical" onSubmit={handleSubmit(onFormSubmit)}>
+        <FormItem
+          label="Column Title"
+          invalid={Boolean(errors.title)}
+          errorMessage={errors.title?.message as string}
+          className="mb-6"
+        >
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input
+                placeholder="E.g., 'Backlog' or 'Testing'"
+                {...field}
+                className="w-full rounded-md border-slate-300 dark:border-slate-600 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-slate-700/60"
               />
-          </FormItem> */}
-
-          {/* {watchedEntityType && (
-              <FormItem
-                  label={`Select ${entityTypeOptions.find(opt => opt.value === watchedEntityType)?.label || 'Item'}`}
-                  invalid={Boolean(errors.selectedEntityId)}
-                  errorMessage={errors.selectedEntityId?.message}
-                  className="mb-4"
-              >
-                  <Controller
-                      name="selectedEntityId"
-                      control={control}
-                      render={({ field }) => (
-                          <Select
-                              placeholder={`Select a ${watchedEntityType}...`}
-                              options={currentSelectOptions}
-                              value={currentSelectOptions.find(option => option.value === field.value)}
-                              onChange={(option) => {
-                                  field.onChange(option?.value);
-                              }}
-                          />
-                      )}
-                  />
-              </FormItem>
-          )} */}
-          
-          <FormItem>
-            <Button variant="solid" type="submit" className="mt-4">
-              Add Status
-            </Button>
-          </FormItem>
-        </Form>
-      </div>
+            )}
+          />
+        </FormItem>
+        <Button variant="solid" type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white">
+          Add Column
+        </Button>
+      </Form>
     </div>
   );
 };
@@ -343,105 +253,96 @@ console.log("newColumnsState",newColumnsState);
 // --- AddNewMemberContent Component ---
 const ActualAddNewMemberContent = () => {
     const inputRef = useRef<HTMLInputElement>(null);
+    const { allMembers, boardMembers, updateBoardMembers, closeDialog } = useScrumBoardStore();
+    const [memberList, setMemberList] = useState(allMembers);
 
-    const { allMembers, boardMembers, updateBoardMembers, closeDialog } =
-        useScrumBoardStore()
-
-    const [memberList, setMemberList] = useState(allMembers)
-
-    const debounceFn = debounce(handleDebounceFn, 500)
+    const debounceFn = debounce(handleDebounceFn, 300);
 
     function handleDebounceFn(query: string) {
-        const data = wildCardSearch(allMembers, query)
-        setMemberList(data as Member[])
+        const data = wildCardSearch(allMembers, query);
+        setMemberList(data as Member[]);
     }
 
     const onSearch = (e: ChangeEvent<HTMLInputElement>) => {
-        debounceFn(e.target.value)
-    }
+        debounceFn(e.target.value);
+    };
 
-    const existingMember = (id: string) => {
-        return boardMembers.some((member) => member.id === id)
-    }
+    const existingMember = (id: string) => boardMembers.some((member) => member.id === id);
 
     const onAddMember = (member: Member) => {
-        const data = cloneDeep(boardMembers)
-        data.push(member)
-        updateBoardMembers(data)
-    }
+        if (!existingMember(member.id)) {
+            updateBoardMembers([...boardMembers, member]);
+        }
+    };
 
     const onRemoveMember = (id: string) => {
-        const data = cloneDeep(boardMembers).filter(
-            (member) => member.id !== id,
-        )
-        updateBoardMembers(data)
-    }
-
-    const onDone = () => {
-        closeDialog()
-    }
+        updateBoardMembers(boardMembers.filter((member) => member.id !== id));
+    };
 
     return (
-        <div>
+        <div className="p-1">
             <div className="text-center mb-6">
-                <h4 className="mb-1">Add people</h4>
-                <p>Invite existing team member to this project.</p>
+                <TbUserSearch className="text-sky-500 text-4xl mx-auto mb-2" />
+                <h4 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-1">Invite Members</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Search and add members to this board.</p>
             </div>
             <Input
                 ref={inputRef}
-                prefix={<TbSearch className="text-lg" />}
-                placeholder="Quick search member"
+                prefix={<TbSearch className="text-lg text-slate-400 dark:text-slate-500" />}
+                placeholder="Search by name or email"
                 onChange={onSearch}
+                className="w-full rounded-md border-slate-300 dark:border-slate-600 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-slate-700/60"
             />
-            <div className="mt-4">
-                <p className="font-semibold uppercase text-xs mb-4">
-                    {memberList.length} members available
+            <div className="mt-6">
+                <p className="font-semibold uppercase text-xs text-slate-500 dark:text-slate-400 mb-3 tracking-wider">
+                    {memberList.length} member(s) found
                 </p>
-                <div className="mb-6">
-                    <ScrollBar className={classNames('overflow-y-auto h-80')}>
-                        {memberList.map((member) => (
-                            <div
-                                key={member.id}
-                                className="py-3 pr-5 rounded-lg flex items-center justify-between"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Avatar shape="circle" src={member.img} />
-                                    <div>
-                                        <p className="heading-text font-bold">
-                                            {member.name}
-                                        </p>
-                                        <p>{member.email}</p>
-                                    </div>
+                <ScrollBar className="overflow-y-auto h-72 pr-1 -mr-2"> {/* Negative margin to hide system scrollbar if custom one is thin */}
+                    {memberList.map((member) => (
+                        <div
+                            key={member.id}
+                            className="p-3 pr-4 mb-2 rounded-lg flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <Avatar shape="circle" size={40} src={member.img} name={member.name}/>
+                                <div>
+                                    <p className="font-semibold text-sm text-slate-700 dark:text-slate-200">
+                                        {member.name}
+                                    </p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">{member.email}</p>
                                 </div>
-                                {existingMember(member.id) ? (
-                                    <Button
-                                        size="xs"
-                                        onClick={() =>
-                                            onRemoveMember(member.id)
-                                        }
-                                    >
-                                        <span className="text-red-500">
-                                            Remove
-                                        </span>
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        size="xs"
-                                        onClick={() => onAddMember(member)}
-                                    >
-                                        Add
-                                    </Button>
-                                )}
                             </div>
-                        ))}
-                    </ScrollBar>
-                </div>
-                <Button block variant="solid" onClick={onDone}>
-                    Done
-                </Button>
+                            {existingMember(member.id) ? (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-500 text-red-500 hover:bg-red-50 dark:border-red-500 dark:hover:bg-red-500/10"
+                                    onClick={() => onRemoveMember(member.id)}
+                                >
+                                    Remove
+                                </Button>
+                            ) : (
+                                <Button
+                                    size="sm"
+                                    variant="solid"
+                                    className="bg-sky-600 hover:bg-sky-700 text-white"
+                                    onClick={() => onAddMember(member)}
+                                >
+                                    Add
+                                </Button>
+                            )}
+                        </div>
+                    ))}
+                    {memberList.length === 0 && (
+                        <p className="text-center text-slate-500 dark:text-slate-400 py-10">No members match your search.</p>
+                    )}
+                </ScrollBar>
             </div>
+            <Button block variant="solid" onClick={closeDialog} className="mt-6 bg-sky-600 hover:bg-sky-700 text-white">
+                Done
+            </Button>
         </div>
-    )
+    );
 }
 
 // --- AddNewTicketContent Component ---
@@ -450,74 +351,63 @@ type AddNewTicketFormSchema = {
 }
 
 const addNewTicketValidationSchema: ZodType<AddNewTicketFormSchema> = z.object({
-    title: z.string().min(1, 'Task title is required!'),
+    title: z.string().min(1, 'Task title is required!').max(100, "Title is too long (max 100 chars)"),
 })
 
 const ActualAddNewTicketContent = () => {
-    const { columns, board, closeDialog, updateColumns, setSelectedBoard } =
-        useScrumBoardStore()
+    const { columns, board, closeDialog, updateColumns, setSelectedBoard } = useScrumBoardStore();
 
-    const {
-        control,
-        formState: { errors },
-        handleSubmit,
-    } = useForm<AddNewTicketFormSchema>({
-        defaultValues: {
-            title: '',
-        },
+    const { control, formState: { errors }, handleSubmit } = useForm<AddNewTicketFormSchema>({
+        defaultValues: { title: '' },
         resolver: zodResolver(addNewTicketValidationSchema),
-    })
+    });
 
     const onFormSubmit = async ({ title }: AddNewTicketFormSchema) => {
-        const data = columns
-        const newCard = createCardObject()
-        newCard.name = title ? title : 'Untitled Card'
+        const data = columns;
+        const newCard = createCardObject();
+        newCard.name = title.trim() || 'Untitled Task';
 
-        const newData = cloneDeep(data)
-        if (newData[board]) { // Check if board exists
-            newData[board].push(newCard)
+        const newData = cloneDeep(data);
+        if (newData[board]) {
+            newData[board].push(newCard);
         } else {
-            newData[board] = [newCard] // Create board if it doesn't exist
+            newData[board] = [newCard];
         }
         
-        updateColumns(newData)
-        closeDialog()
-        await sleep(1000) // Original sleep was 1000, not 500
-        setSelectedBoard('')
-    }
+        updateColumns(newData);
+        closeDialog();
+        await sleep(300);
+        setSelectedBoard('');
+    };
 
     return (
-        <div>
-            <h5>Add New Task</h5>
-            <div className="mt-8">
-                <Form layout="inline" onSubmit={handleSubmit(onFormSubmit)}>
-                    <FormItem
-                        label="Task Name"
-                        invalid={Boolean(errors.title)}
-                        errorMessage={errors.title?.message as string}
-                    >
-                        <Controller
-                            name="title"
-                            control={control}
-                            rules={{ required: true }}
-                            render={({ field }) => (
-                                <Input
-                                    type="text"
-                                    autoComplete="off"
-                                    {...field}
-                                />
-                            )}
-                        />
-                    </FormItem>
-                    <FormItem>
-                        <Button variant="solid" type="submit">
-                            Add
-                        </Button>
-                    </FormItem>
-                </Form>
-            </div>
+        <div className="p-1">
+            <h5 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-6">Add New Task</h5>
+            <Form layout="vertical" onSubmit={handleSubmit(onFormSubmit)}>
+                <FormItem
+                    label="Task Title"
+                    invalid={Boolean(errors.title)}
+                    errorMessage={errors.title?.message as string}
+                    className="mb-4"
+                >
+                    <Controller
+                        name="title"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                placeholder="E.g., 'Design homepage mockups'"
+                                {...field}
+                                className="w-full rounded-md border-slate-300 dark:border-slate-600 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-slate-700/60"
+                            />
+                        )}
+                    />
+                </FormItem>
+                <Button variant="solid" type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white">
+                    Add Task
+                </Button>
+            </Form>
         </div>
-    )
+    );
 }
 
 // --- TicketContent Component ---
@@ -528,502 +418,402 @@ interface TransformedComment extends Omit<Comment, 'date'> {
 const createCommentObject = (message: string): TransformedComment => {
     return {
         id: createUID(10),
-        name: 'Angelina Gotelli', // Example user, consider making dynamic
+        name: 'Angelina Gotelli', // Example user
         src: '/img/avatars/thumb-1.jpg', // Example avatar
         message: message,
         date: new Date(),
-    }
-}
+    };
+};
 
-const AddMoreMemberButton = () => { // Renamed to avoid conflict if used elsewhere
+const AddMoreMemberButton = () => {
     return (
-        <Tooltip title="Add More" wrapperClass="flex">
+        <Tooltip title="Add Assignee" placement="top">
             <Button
-                icon={<TbPlus />}
-                // customColorClass={() => // customColorClass was removed or changed in Button component
-                //     'border-2 border-dashed hover:ring-0 h-[30px] w-[30px] text-sm'
-                // }
-                className="border-2 border-dashed hover:ring-0 h-[30px] w-[30px] text-sm" // Use className for styling
+                icon={<TbUserPlus />}
+                className="border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-sky-500 hover:text-sky-500 dark:hover:border-sky-400 dark:hover:text-sky-400 text-slate-500 dark:text-slate-400 transition-colors"
                 size="sm"
                 shape="circle"
             />
         </Tooltip>
-    )
-}
+    );
+};
 
 const ActualTicketContent = ({ onTicketClose }: { onTicketClose: () => void }) => {
-    const { updateColumns, ticketId, columns, boardMembers } =
-        useScrumBoardStore()
-
-    const [ticketData, setTicketData] = useState<
-        Partial<Omit<Ticket, 'comments'> & { comments: TransformedComment[] }>
-    >({})
-    const [loading, setLoading] = useState(false)
-
-    const commentInput = useRef<HTMLInputElement>(null) // HTMLInputElement, but used on Textarea
+    const { updateColumns, ticketId, columns, boardMembers } = useScrumBoardStore();
+    const [ticketData, setTicketData] = useState<Partial<Ticket & { comments: TransformedComment[] }>>({});
+    const [loading, setLoading] = useState(false);
+    const commentInputRef = useRef<HTMLTextAreaElement>(null); // Changed to HTMLTextAreaElement for Textarea
 
     const getTicketDetail = async () => {
-        setLoading(true)
-        let ticketDetail: Partial<Ticket> = {} // Ensure type consistency
+        setLoading(true);
+        await sleep(200); // Simulate API delay
+        let ticketDetail: Partial<Ticket> = {};
         for (const key in columns) {
             if (Object.hasOwnProperty.call(columns, key)) {
-                const board = columns[key]
-                const result = board.find((ticket) => ticket.id === ticketId)
+                const board = columns[key];
+                const result = board.find((ticket) => ticket.id === ticketId);
                 if (result) {
-                    ticketDetail = result
-                    break; // Found ticket, no need to continue loop
+                    ticketDetail = result;
+                    break;
                 }
             }
         }
-        // Transform comment dates if necessary
         if (ticketDetail.comments) {
-            const transformedComments = ticketDetail.comments.map(c => ({...c, date: new Date(c.date)}));
-            setTicketData({...ticketDetail, comments: transformedComments as TransformedComment[]});
+            const transformedComments = ticketDetail.comments.map(c => ({...c, date: new Date(c.date)})) as TransformedComment[];
+            setTicketData({...ticketDetail, comments: transformedComments});
         } else {
-            setTicketData(ticketDetail);
+            setTicketData({...ticketDetail, comments: []});
         }
-        setLoading(false)
-    }
-
+        setLoading(false);
+    };
+    
     useEffect(() => {
-        if (ticketId && isEmpty(ticketData) || (ticketData.id !== ticketId)) {
+        if (ticketId && (isEmpty(ticketData) || ticketData.id !== ticketId)) {
             getTicketDetail();
-        } else if (!isEmpty(ticketData) && ticketData.id === ticketId) { // Avoid infinite loop by checking if ticketData actually changed
-            onUpdateColumn();
         }
+        // No dependency on ticketData here to prevent loop on internal updates
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ticketId, columns]); // Added columns to dependencies for updates, removed ticketData to prevent loop
+    }, [ticketId, columns]);
 
-     useEffect(() => { // Separate effect for updating column when ticketData changes internally
-        if (!isEmpty(ticketData) && ticketData.id === ticketId) {
-            onUpdateColumn();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ticketData]);
-
-
-    const submitComment = () => {
-        if (commentInput.current) {
-            const message = commentInput.current.value
-            if (message.trim() === '') return; // Don't submit empty comment
-            const comment = createCommentObject(message)
-            const comments = cloneDeep(ticketData.comments || [])
-            comments?.push(comment)
-            setTicketData((prevState) => ({
-                ...prevState,
-                comments: comments,
-            }))
-            commentInput.current.value = ''
-        }
-    }
-
-    const handleTicketClose = () => {
-        onTicketClose?.()
-    }
-
-    const onUpdateColumn = () => {
-        if (isEmpty(ticketData) || !ticketData.id) return; // Do not update if no data
-        const data = cloneDeep(columns)
+    const onUpdateTicketField = (field: keyof Ticket, value: any) => {
+        setTicketData(prev => ({...prev, [field]: value}));
+    };
+    
+    const onSaveChanges = () => {
+        if (isEmpty(ticketData) || !ticketData.id) return;
+        const data = cloneDeep(columns);
         let updated = false;
         for (const key in data) {
             if (Object.hasOwnProperty.call(data, key)) {
-                const board = data[key]
-                const ticketIndex = board.findIndex(ticket => ticket.id === ticketData.id);
+                const board = data[key];
+                const ticketIndex = board.findIndex(t => t.id === ticketData.id);
                 if (ticketIndex !== -1) {
-                    data[key][ticketIndex] = ticketData as Ticket;
+                    // Ensure all fields are correctly typed for Ticket
+                    const finalTicketData: Ticket = {
+                        id: ticketData.id!,
+                        name: ticketData.name || "Untitled Ticket",
+                        members: ticketData.members || [],
+                        description: ticketData.description,
+                        dueDate: ticketData.dueDate,
+                        labels: ticketData.labels,
+                        comments: (ticketData.comments || []).map(c => ({...c, date: c.date.toISOString()})), // Convert Date back to string for storage
+                        attachments: ticketData.attachments,
+                        priority: ticketData.priority,
+                        category: ticketData.category,
+                        _originalApiData: ticketData._originalApiData
+                    };
+                    data[key][ticketIndex] = finalTicketData;
                     updated = true;
-                    break; 
+                    break;
                 }
             }
         }
         if(updated) updateColumns(data);
-    }
+        onTicketClose();
+    };
 
-    const onAddMemberClick = (id: string) => {
-        const newMember = boardMembers.find((member) => member.id === id)
+    const submitComment = () => {
+        if (commentInputRef.current) {
+            const message = commentInputRef.current.value.trim();
+            if (!message) return;
+            const comment = createCommentObject(message);
+            setTicketData(prev => ({
+                ...prev,
+                comments: [...(prev.comments || []), comment],
+            }));
+            commentInputRef.current.value = '';
+        }
+    };
+
+    const onAddMemberClick = (memberId: string) => {
+        const newMember = boardMembers.find((m) => m.id === memberId);
         if (!newMember) return;
-        const members = cloneDeep(ticketData.members || [])
-        if (!members.find(m => m.id === newMember.id)) { // Avoid adding duplicates
-            members?.push(newMember as Member)
-            setTicketData((prevState) => ({
-                ...prevState,
-                members: members,
-            }))
+        const currentMembers = ticketData.members || [];
+        if (!currentMembers.find(m => m.id === newMember.id)) {
+            setTicketData(prev => ({ ...prev, members: [...currentMembers, newMember] }));
         }
+    };
+
+    const onAddLabelClick = (labelValue: string) => {
+        const currentLabels = ticketData.labels || [];
+        if (!currentLabels.includes(labelValue)) {
+            setTicketData(prev => ({ ...prev, labels: [...currentLabels, labelValue] }));
+        }
+    };
+    
+    const { TabNav, TabList, TabContent } = Tabs;
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center min-h-[400px] p-6">
+                <Spinner size={40} className="text-sky-500" />
+            </div>
+        );
     }
 
-    const onAddLabelClick = (label: string) => {
-        const labels = cloneDeep(ticketData.labels || [])
-        if (!labels.includes(label)) { // Avoid adding duplicates
-             labels?.push(label)
-            setTicketData((prevState) => ({ ...prevState, labels: labels } ))
-        }
+    if (isEmpty(ticketData) || !ticketData.id) {
+        return (
+            <div className="flex flex-col justify-center items-center min-h-[400px] p-6 text-center">
+                 <TbCircleXFilled className="text-red-500 text-5xl mb-4" />
+                <p className="text-slate-700 dark:text-slate-200 text-lg font-semibold">Ticket Not Found</p>
+                <p className="text-slate-500 dark:text-slate-400">The requested ticket could not be loaded.</p>
+            </div>
+        );
     }
-    
-    const { TabNav, TabList, TabContent } = Tabs // Destructure Tabs locally
 
     return (
-        <>
-            {loading ? (
-                <div className="flex justify-center items-center min-h-[300px]">
-                    <Spinner size={40} />
-                </div>
-            ) : isEmpty(ticketData) ? (
-                <div className="flex justify-center items-center min-h-[300px]">
-                    <p>Ticket not found or no data available.</p>
-                </div>
-            ) : (
-                <>
-                    <div className="flex gap-2 mb-10">
-                        <div className="w-full">
-                            <div className="flex justify-between">
-                                <h4>{ticketData.name}</h4>
-                                <div>
-                                    <CloseButton onClick={handleTicketClose} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <ScrollBar className="max-h-[380px] overflow-y-auto pr-2"> {/* Added pr-2 for scrollbar visibility */}
-                        <div className="flex flex-col gap-6">
-                            <div className=''>
-                                <div className="font-semibold mb-2 text-gray-900 dark:text-gray-100 min-w-[150px]">
-                                    Link to:
-                                </div>
-                                <div className="grid grid-cols-3 items-center gap-4">
-                                    <label><Checkbox className='mr-1'/> Company</label>
-                                    <label><Checkbox className='mr-1'/> Member</label>
-                                    <label><Checkbox className='mr-1'/> Partner </label>
-                                    <label><Checkbox className='mr-1'/> Inquiries</label>
-                                    <label><Checkbox className='mr-1'/> Brand</label>
-                                    <label><Checkbox className='mr-1'/> Categories</label>
-                                    <label><Checkbox className='mr-1'/> Products</label>
-                                    <label><Checkbox className='mr-1'/> Wall Listing</label>
-                                    <label><Checkbox className='mr-1'/> Opportunity</label>
-                                    <label><Checkbox className='mr-1'/> Offer & Demand</label>
-                                    <label><Checkbox className='mr-1'/> Leads</label>
-                                    <label><Checkbox className='mr-1'/> Request & Feedback</label>
-                                    <label><Checkbox className='mr-1'/> campaign</label>
-                                    <label><Checkbox className='mr-1'/> Teams</label>
-                                    <label><Checkbox className='mr-1'/> CMS</label>
-                                    <label><Checkbox className='mr-1'/> Others</label>
-                                </div>
-                            </div>
-                            <div className='flex'>
-                                <label className="font-semibold mb-2 text-gray-900 dark:text-gray-100 min-w-[150px] pt-2">
-                                   Select Link :
-                                </label>
-                                <div className="w-full">
-                                    <Select placeholder="Select link..." options={[
-                                        {label: "Lead 1", value: "Lead 1"},
-                                        {label: "Lead 2", value: "Lead 2"},
-                                    ]}/>
-                                </div>
-                            </div>
-                            <div className="flex items-center min-h-[30px]">
-                                <div className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px]">
-                                    Assigned to:
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <UsersAvatarGroup
-                                        className="gap-1"
-                                        avatarProps={{
-                                            className: 'cursor-pointer',
-                                            size: 30, // Explicit size
-                                        }}
-                                        avatarGroupProps={{ maxCount: 4 }}
-                                        // chained={false} // chained is not a prop for UsersAvatarGroup in some versions
-                                        users={ticketData.members || []}
-                                    />
-                                    {boardMembers.length !==
-                                        (ticketData.members?.length || 0) && (
-                                        <Dropdown
-                                            renderTitle={<AddMoreMemberButton />}
-                                        >
-                                            {boardMembers.map(
-                                                (member) =>
-                                                    !ticketData.members?.some(
-                                                        (m) =>
-                                                            m.id === member.id,
-                                                    ) && (
-                                                        <Dropdown.Item
-                                                            key={member.id} // Use id for key
-                                                            eventKey={member.id} // Use id for eventKey
-                                                            onSelect={() => onAddMemberClick(member.id) } // Pass member.id to onSelect
-                                                        >
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center">
-                                                                    <Avatar
-                                                                        shape="circle"
-                                                                        size={22}
-                                                                        src={member.img}
-                                                                    />
-                                                                    <span className="ml-2 rtl:mr-2">
-                                                                        {member.name}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </Dropdown.Item>
-                                                    ),
-                                            )}
-                                        </Dropdown>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex items-center min-h-[30px]">
-                                <div className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px]">
-                                    Status:
-                                </div>
-                                <div className="flex items-center gap-1 flex-wrap"> {/* Added flex-wrap */}
-                                    {ticketData.labels?.map((label) => (
-                                        <Tag
-                                            key={label}
-                                            className={taskLabelColors[label] || 'bg-gray-500 text-white'} // Fallback color
-                                        >
-                                            {label}
-                                        </Tag>
-                                    ))}
-                                    <Dropdown
-                                        renderTitle={
-                                            <Tag
-                                                className="border-dashed cursor-pointer border-2 bg-transparent dark:bg-transparent border-gray-300 dark:border-gray-500 hover:border-primary-600 hover:text-primary-600" // Adjusted hover color
-                                                prefix={<TbPlus />}
-                                            >
-                                                Add Label
-                                            </Tag>
-                                        }
-                                        placement="bottom-end"
-                                    >
-                                        {labelList.map(
-                                            (labelObj) => // Assuming labelList is an array of objects {label: string, color: string} or similar
-                                                !ticketData.labels?.includes(labelObj.label) && (
-                                                    <Dropdown.Item
-                                                        key={labelObj.label}
-                                                        eventKey={labelObj.label}
-                                                        onSelect={() => onAddLabelClick(labelObj.label)}
-                                                    >
-                                                        <div className="flex items-center">
-                                                            <Badge
-                                                                className="mr-2" // Added margin
-                                                                innerClass={`${taskLabelColors[labelObj.label] || 'bg-gray-200'}`} // Fallback color
-                                                            />
-                                                            <span className="ml-2 rtl:mr-2">
-                                                                {labelObj.label}
-                                                            </span>
-                                                        </div>
-                                                    </Dropdown.Item>
-                                                ),
-                                        )}
-                                    </Dropdown>
-                                </div>
-                            </div>
-                            <div className='flex'>
-                                <label className="font-semibold mb-2 text-gray-900 dark:text-gray-100 min-w-[150px] pt-2">
-                                   Priority :
-                                </label>
-                                <div className="w-full">
-                                    <Select placeholder="Select priority..." options={[
-                                        {label: "Low", value: "Low"},
-                                        {label: "Medium", value: "Medium"},
-                                        {label: "High", value: "High"},
-                                        {label: "Urgent", value: "Urgent"},
-                                    ]}/>
-                                </div>
-                            </div>
-                            <div className='flex'>
-                                <label className="font-semibold mb-2 text-gray-900 dark:text-gray-100 min-w-[150px] pt-2">
-                                   Category :
-                                </label>
-                                <div className="w-full">
-                                    <Select placeholder="Select category..." options={[
-                                        {label: "Electronics", value: "Electronics"},
-                                        {label: "Plastic", value: "Plastic"},
-                                    ]}/>
-                                </div>
-                            </div>
-                            <div className="flex items-center min-h-[30px]">
-                                <div className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px]">
-                                    Due date:
-                                </div>
-                                <span className="font-semibold">
-                                    {ticketData.dueDate ? dayjs(ticketData.dueDate).format('MMMM DD, YYYY') : 'Not set'}
-                                </span>
-                            </div>
-                            {ticketData.description && (
-                                <div className="flex">
-                                    <div className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px]">
-                                        Note:
-                                    </div>
-                                    <div className="w-full">
-                                        {/* Using Input component with textArea prop, ensure it works like a <textarea> */}
-                                        <Input textArea rows={4} defaultValue={ticketData.description} />
-                                    </div>
-                                </div>
+        <div className="p-1"> {/* Reduced padding as inner elements will handle it */}
+            <div className="flex justify-between items-start mb-6 px-5 pt-5">
+                <h4 className="text-xl font-semibold text-slate-800 dark:text-slate-100">{ticketData.name}</h4>
+                <CloseButton onClick={onTicketClose} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200" />
+            </div>
+
+            <ScrollBar className="max-h-[calc(80vh-180px)] overflow-y-auto px-5 pb-1">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6 mb-6">
+                    {/* Assigned to */}
+                    <div className="md:col-span-1">
+                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Assigned to</label>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <UsersAvatarGroup
+                                avatarProps={{ size: 30 }}
+                                users={ticketData.members || []}
+                            />
+                            {boardMembers.length > (ticketData.members?.length || 0) && (
+                                <Dropdown renderTitle={<AddMoreMemberButton />}>
+                                    {boardMembers
+                                        .filter(member => !ticketData.members?.some(m => m.id === member.id))
+                                        .map(member => (
+                                            <Dropdown.Item key={member.id} eventKey={member.id} onSelect={() => onAddMemberClick(member.id)}>
+                                                <div className="flex items-center">
+                                                    <Avatar shape="circle" size={22} src={member.img} name={member.name} />
+                                                    <span className="ml-2 rtl:mr-2 text-sm text-slate-700 dark:text-slate-200">{member.name}</span>
+                                                </div>
+                                            </Dropdown.Item>
+                                        ))}
+                                </Dropdown>
                             )}
                         </div>
-                        <Tabs className="mt-6" defaultValue="comments">
-                            <TabList>
-                                <TabNav value="comments">Activity Notes</TabNav>
-                                <TabNav value="attachments">Attachments</TabNav>
-                            </TabList>
-                            <div className="p-4">
-                                <TabContent value="comments">
-                                    <div className="w-full">
-                                        {ticketData.comments &&
-                                            ticketData.comments.length > 0 && (
-                                                <>
-                                                    {ticketData.comments.map(
-                                                        (comment) => (
-                                                            <div
-                                                                key={comment.id}
-                                                                className="mb-3 flex"
-                                                            >
-                                                                <div className="mt-2">
-                                                                    <Avatar
-                                                                        shape="circle"
-                                                                        src={comment.src}
-                                                                    />
-                                                                </div>
-                                                                <div className="ml-2 rtl:mr-2 p-3 rounded-sm flex-1 bg-gray-50 dark:bg-gray-700"> {/* Added bg for contrast */}
-                                                                    <div className="flex items-center mb-2">
-                                                                        <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                                                            {comment.name}
-                                                                        </span>
-                                                                        <span className="mx-1 text-xs text-gray-500 dark:text-gray-400">
-                                                                            |
-                                                                        </span>
-                                                                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                                            {dayjs(comment.date).format('DD MMMM YYYY, h:mm A')}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="mb-0 whitespace-pre-wrap"> {/* Preserve line breaks */}
-                                                                        {comment.message}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        ),
-                                                    )}
-                                                </>
-                                            )}
-                                        <div className="mb-3 flex gap-2">
-                                            <Avatar
-                                                shape="circle"
-                                                src="/img/avatars/thumb-1.jpg" // Current user avatar
-                                            />
-                                            <div className="w-full relative">
-                                                {/* Using Input with textArea prop; ensure 'ref' is compatible or use 'Textarea' component if available and more suitable */}
-                                                <Input
-                                                    ref={commentInput as any} // Cast if needed for Input component
-                                                    textArea
-                                                    rows={3}
-                                                    placeholder="Write comment..."
-                                                />
-                                                <div className="absolute bottom-3 right-3"> {/* Adjusted position */}
-                                                    <Button
-                                                        size="sm"
-                                                        variant="solid"
-                                                        onClick={() => submitComment()}
-                                                    >
-                                                        Send
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </TabContent>
-                                <TabContent value="attachments">
-                                    {ticketData.attachments &&
-                                    ticketData.attachments.length > 0 ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                                            {ticketData.attachments.map(
-                                                (file) => (
-                                                    <Card
-                                                        key={file.id}
-                                                        bodyClass="px-3 pt-3 pb-1"
-                                                        className="bg-gray-100 dark:bg-gray-700 shadow-none"
-                                                        bordered={false} // bordered is not a standard Card prop, use border class if needed
-                                                    >
-                                                        <img
-                                                            className="max-w-full rounded-lg h-32 object-cover" // Added fixed height and object-cover
-                                                            alt={file.name}
-                                                            src={file.src}
-                                                        />
-                                                        <div className="mt-1 flex justify-between items-center">
-                                                            <div>
-                                                                <div className="font-semibold text-gray-900 dark:text-gray-100 truncate w-36" title={file.name}> {/* Added truncate */}
-                                                                    {file.name}
-                                                                </div>
-                                                                <span className="text-xs">
-                                                                    {file.size}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex items-center">
-                                                                <Tooltip title="Download">
-                                                                    <Button
-                                                                        variant="plain"
-                                                                        size="xs"
-                                                                        icon={<TbDownload />}
-                                                                    />
-                                                                </Tooltip>
-                                                                <Tooltip title="Delete">
-                                                                    <Button
-                                                                        variant="plain"
-                                                                        size="xs"
-                                                                        icon={<TbTrash />}
-                                                                        className="text-red-500 hover:text-red-700" // Added color
-                                                                    />
-                                                                </Tooltip>
-                                                            </div>
-                                                        </div>
-                                                    </Card>
-                                                ),
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col gap-2 items-center justify-center py-10"> {/* Added padding */}
-                                            <NoMedia height={150} width={150} />
-                                            <p className="font-semibold">
-                                                No attachments
-                                            </p>
-                                        </div>
-                                    )}
-                                </TabContent>
-                            </div>
-                        </Tabs>
-                    </ScrollBar>
-                    <div className="text-right mt-4">
-                        <Button
-                            className="mr-2 rtl:ml-2"
-                            size="sm"
-                            // variant="plain" // Plain variant might not exist, use default or outline
-                            onClick={() => handleTicketClose()}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="solid"
-                            size="sm"
-                            onClick={() => handleTicketClose()}
-                        >
-                            Save Changes
-                        </Button>
                     </div>
-                </>
-            )}
-        </>
-    )
-}
+
+                    {/* Status / Labels */}
+                    <div className="md:col-span-2">
+                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Labels</label>
+                        <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                            {(ticketData.labels || []).map((label) => (
+                                <Tag key={label} className={taskLabelColors[label] || taskLabelColors.default}>
+                                    {label}
+                                </Tag>
+                            ))}
+                            <Dropdown
+                                renderTitle={
+                                    <Tag className="border-dashed cursor-pointer border-2 bg-transparent dark:bg-transparent border-slate-300 dark:border-slate-500 hover:border-sky-500 hover:text-sky-500 dark:hover:border-sky-400 dark:hover:text-sky-400 text-slate-500 dark:text-slate-400 transition-colors" prefix={<TbPlus size={14}/>}>
+                                        Add Label
+                                    </Tag>
+                                }
+                                placement="bottom-end"
+                            >
+                                {labelList
+                                    .filter(labelObj => !ticketData.labels?.includes(labelObj.value))
+                                    .map(labelObj => (
+                                        <Dropdown.Item key={labelObj.value} eventKey={labelObj.value} onSelect={() => onAddLabelClick(labelObj.value)}>
+                                            <div className="flex items-center">
+                                                <Badge className="mr-2" innerClass={`${(taskLabelColors[labelObj.value] || taskLabelColors.default).split(' ')[0]}`} /> {/* Extract bg color for badge */}
+                                                <span className="ml-2 rtl:mr-2 text-sm text-slate-700 dark:text-slate-200">{labelObj.label}</span>
+                                            </div>
+                                        </Dropdown.Item>
+                                    ))}
+                            </Dropdown>
+                        </div>
+                    </div>
+                
+                    {/* Due Date */}
+                     <div className="md:col-span-1">
+                        <label htmlFor="dueDate" className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Due Date</label>
+                        {/* Replace with a DatePicker component if available */}
+                        <Input 
+                            type="date" 
+                            id="dueDate"
+                            value={ticketData.dueDate ? dayjs(ticketData.dueDate).format('YYYY-MM-DD') : ''}
+                            onChange={(e) => onUpdateTicketField('dueDate', e.target.value ? new Date(e.target.value) : undefined)}
+                            className="mt-1.5 w-full rounded-md border-slate-300 dark:border-slate-600 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-slate-700/60"
+                        />
+                    </div>
+
+
+                    {/* Priority */}
+                    <div className="md:col-span-1">
+                        <label htmlFor="priority" className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Priority</label>
+                        <Select
+                            id="priority"
+                            placeholder="Select priority..."
+                            options={[
+                                {label: "Low", value: "Low"}, {label: "Medium", value: "Medium"},
+                                {label: "High", value: "High"}, {label: "Urgent", value: "Urgent"},
+                            ]}
+                            value={ticketData.priority ? {label: ticketData.priority, value: ticketData.priority} : null}
+                            onChange={(option) => onUpdateTicketField('priority', option?.value)}
+                            className="mt-1.5"
+                            styles={{ // Example for react-select like styling
+                                control: (provided) => ({ ...provided, backgroundColor: 'var(--tw-bg-opacity)', borderColor: 'var(--tw-border-color)'}),
+                                singleValue: (provided) => ({...provided, color: 'var(--tw-text-color)'}),
+                                menu: (provided) => ({ ...provided, backgroundColor: 'var(--tw-bg-menu)'})
+                            }}
+                             // Custom class for Select wrapper if needed by your component library for Tailwind
+                            // selectClassName="bg-white dark:bg-slate-700/60 border-slate-300 dark:border-slate-600" 
+                        />
+                    </div>
+
+                    {/* Category */}
+                    <div className="md:col-span-1">
+                        <label htmlFor="category" className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</label>
+                        <Select
+                            id="category"
+                            placeholder="Select category..."
+                            options={[ {label: "Electronics", value: "Electronics"}, {label: "Plastic", value: "Plastic"} ]} // Example options
+                            value={ticketData.category ? {label: ticketData.category, value: ticketData.category} : null}
+                            onChange={(option) => onUpdateTicketField('category', option?.value)}
+                            className="mt-1.5"
+                        />
+                    </div>
+                </div>
+
+                {/* Description */}
+                <div className="mb-6">
+                    <label htmlFor="description" className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Description</label>
+                    <Input
+                        id="description"
+                        textArea
+                        rows={4}
+                        placeholder="Add a detailed description for this task..."
+                        value={ticketData.description || ''}
+                        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onUpdateTicketField('description', e.target.value)}
+                        className="mt-1.5 w-full rounded-md border-slate-300 dark:border-slate-600 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-slate-700/60 placeholder-slate-400 dark:placeholder-slate-500"
+                    />
+                </div>
+                
+                {/* Link To - Original Checkbox section, styled for better appearance */}
+                 <div className="mb-6">
+                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">Link to Entities</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
+                        {['Company', 'Member', 'Partner', 'Inquiries', 'Brand', 'Categories', 'Products', 'Wall Listing', 'Opportunity', 'Offer & Demand', 'Leads', 'Request & Feedback', 'Campaign', 'Teams', 'CMS', 'Others'].map(item => (
+                            <label key={item} className="flex items-center space-x-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
+                                <Checkbox value={item} /> <span>{item}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+                <div className="mb-8">
+                    <label htmlFor="selectLink" className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Select Link Item</label>
+                     <Select
+                        id="selectLink"
+                        placeholder="Select linked item..."
+                        options={[{label: "Lead 1", value: "Lead 1"}, {label: "Lead 2", value: "Lead 2"}]}
+                        className="mt-1.5"
+                    />
+                </div>
+
+
+                <Tabs defaultValue="comments" className="mb-6">
+                    <TabList className="border-b border-slate-200 dark:border-slate-700">
+                        <TabNav value="comments" className="hover:text-sky-600 dark:hover:text-sky-400 focus:text-sky-600 dark:focus:text-sky-400 aria-selected:border-sky-600 dark:aria-selected:border-sky-400 aria-selected:text-sky-600 dark:aria-selected:text-sky-400">Activity Notes</TabNav>
+                        <TabNav value="attachments" className="hover:text-sky-600 dark:hover:text-sky-400 focus:text-sky-600 dark:focus:text-sky-400 aria-selected:border-sky-600 dark:aria-selected:border-sky-400 aria-selected:text-sky-600 dark:aria-selected:text-sky-400">Attachments ({ticketData.attachments?.length || 0})</TabNav>
+                    </TabList>
+                    <div className="py-5">
+                        <TabContent value="comments">
+                            {(ticketData.comments || []).map((comment) => (
+                                <div key={comment.id} className="mb-5 flex items-start space-x-3">
+                                    <Avatar shape="circle" size={32} src={comment.src} name={comment.name} />
+                                    <div className="flex-1 p-3.5 rounded-lg bg-slate-100 dark:bg-slate-700/70">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="font-semibold text-sm text-slate-800 dark:text-slate-100">{comment.name}</span>
+                                            <span className="text-xs text-slate-500 dark:text-slate-400">{dayjs(comment.date).format('MMM DD, YYYY h:mm A')}</span>
+                                        </div>
+                                        <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{comment.message}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            <div className="mt-5 flex items-start space-x-3">
+                                <Avatar shape="circle" size={32} src="/img/avatars/thumb-1.jpg" /> {/* Current user avatar */}
+                                <div className="flex-1 relative">
+                                    <Input
+                                        ref={commentInputRef as any} // Cast if Input doesn't directly support HTMLTextAreaElement ref
+                                        textArea
+                                        rows={3}
+                                        placeholder="Add a comment..."
+                                        className="w-full rounded-md border-slate-300 dark:border-slate-600 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-slate-700/60 placeholder-slate-400 dark:placeholder-slate-500"
+                                    />
+                                    <div className="absolute bottom-2.5 right-2.5">
+                                        <Button size="sm" variant="solid" className="bg-sky-600 hover:bg-sky-700 text-white" onClick={submitComment}>
+                                            Send
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </TabContent>
+                        <TabContent value="attachments">
+                            {(ticketData.attachments || []).length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {ticketData.attachments?.map((file) => (
+                                        <Card
+                                            key={file.id}
+                                            bodyClass="p-3"
+                                            className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-700 shadow-sm"
+                                        >
+                                            {/* Basic image preview or icon based on file type */}
+                                            {file.src.match(/\.(jpeg|jpg|gif|png)$/) ? (
+                                                 <img className="w-full h-32 object-cover rounded-md mb-2" alt={file.name} src={file.src} />
+                                            ) : (
+                                                <div className="w-full h-32 flex items-center justify-center bg-slate-100 dark:bg-slate-600 rounded-md mb-2">
+                                                    <TbPaperclip className="text-4xl text-slate-400 dark:text-slate-500" />
+                                                </div>
+                                            )}
+                                            <div className="font-medium text-sm text-slate-700 dark:text-slate-200 truncate" title={file.name}>{file.name}</div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">{file.size}</div>
+                                            <div className="flex items-center space-x-2">
+                                                <Button size="xs" icon={<TbDownload size={14} />} variant='outline' className="text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600">Download</Button>
+                                                <Button size="xs" icon={<TbTrash size={14} />} variant='outline' className="text-red-500 border-red-300 dark:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-500/10">Delete</Button>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12 text-center">
+                                    <NoMedia height={120} width={120} className="text-slate-400 dark:text-slate-500 mb-4" />
+                                    <p className="font-semibold text-slate-600 dark:text-slate-300">No Attachments Yet</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Upload files related to this task.</p>
+                                    <Button variant="solid" className="mt-4 bg-sky-600 hover:bg-sky-700 text-white" leftIcon={<TbCirclePlus />}>
+                                        Upload File
+                                    </Button>
+                                </div>
+                            )}
+                        </TabContent>
+                    </div>
+                </Tabs>
+            </ScrollBar>
+
+            <div className="px-5 pb-5 pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-end space-x-3">
+                <Button size="sm" onClick={onTicketClose} className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200">
+                    Cancel
+                </Button>
+                <Button variant="solid" size="sm" onClick={onSaveChanges} className="bg-sky-600 hover:bg-sky-700 text-white">
+                    Save Changes
+                </Button>
+            </div>
+        </div>
+    );
+};
+
 
 // --- BoardCard Component ---
 interface BoardCardProps extends CardProps {
     data: Ticket;
-    ref?: Ref<HTMLDivElement>; // Keep ref for Draggable
+    ref?: Ref<HTMLDivElement>;
 }
 
 const BoardCard = React.forwardRef<HTMLDivElement, BoardCardProps>((props, ref) => {
     const { openDialog, updateDialogView, setSelectedTicketId } = useScrumBoardStore();
     const { data, ...rest } = props;
-    const { id, name, comments, attachments, members, labels } = data;
+    const { id, name, comments, attachments, members, labels, priority } = data;
 
     const onCardClick = () => {
         openDialog();
@@ -1035,40 +825,40 @@ const BoardCard = React.forwardRef<HTMLDivElement, BoardCardProps>((props, ref) 
         <Card
             ref={ref}
             clickable
-            className="hover:shadow-lg rounded-lg mb-4 border-0 dark:bg-gray-700" // Added dark mode bg
+            className="hover:shadow-xl transition-shadow duration-200 rounded-lg mb-4 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
             bodyClass="p-4"
-            // onClick={onCardClick}
+            onClick={onCardClick} // Restored onClick
             {...rest}
         >
-            <div className="mb-2 font-bold heading-text text-base text-gray-800 dark:text-gray-100">{name}</div>
-            {labels && labels.length > 0 && (
-                <div className="mb-2 flex flex-wrap gap-1"> {/* Added flex-wrap and gap */}
-                    {labels.map((label, index) => (
-                        <Tag
-                            key={label + index}
-                            className={`mr-0 rtl:ml-0 ${taskLabelColors[label] || 'bg-gray-500 text-white'}`} // Fallback color
-                        >
+            <div className="mb-2.5">
+                <h6 className="font-semibold text-base text-slate-800 dark:text-slate-100 leading-tight break-words">{name}</h6>
+            </div>
+
+            {(labels && labels.length > 0 || priority) && (
+                <div className="mb-3 flex flex-wrap gap-1.5 items-center">
+                    {priority && (
+                        <Tag className={taskLabelColors[priority] || taskLabelColors.default}>
+                           Priority: {priority}
+                        </Tag>
+                    )}
+                    {labels?.map((label) => ( // Show only first status-like label on card, others in detail
+                        <Tag key={label} className={`${taskLabelColors[label] || taskLabelColors.default}`}>
                             {label}
                         </Tag>
                     ))}
                 </div>
             )}
-            <div className="flex items-center justify-between mt-3">
-                <UsersAvatarGroup avatarProps={{ size: 25 }} users={members || []} />
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+
+            <div className="flex items-center justify-between mt-auto pt-2"> {/* mt-auto pushes to bottom if card has fixed height */}
+                <UsersAvatarGroup avatarProps={{ size: 28, className:"ring-1 ring-white dark:ring-slate-800" }} users={members || []} />
+                <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
                     {comments && comments.length > 0 && (
-                        <IconText
-                            className="font-semibold gap-1"
-                            icon={<TbMessageCircle className="text-base" />}
-                        >
+                        <IconText className="gap-1 items-center" icon={<TbMessageCircle className="text-base" />}>
                             {comments.length}
                         </IconText>
                     )}
                     {attachments && attachments.length > 0 && (
-                        <IconText
-                            icon={<TbPaperclip className="text-base" />} // Removed className, icon itself has size
-                            className="gap-1" // Added gap
-                        >
+                        <IconText className="gap-1 items-center" icon={<TbPaperclip className="text-base" />}>
                             {attachments.length}
                         </IconText>
                     )}
@@ -1101,37 +891,35 @@ interface BoardCardListProps extends BaseBoardProps {
 type InnerListProps = {
     dropProvided: DroppableProvided;
     contents?: Ticket[];
-    // Pass down other props if BoardCard needs them from BoardCardList
     useClone?: DraggableChildrenFn;
     isCombineEnabled?: boolean;
 };
 
-// Memoize InnerList and BoardCard to prevent unnecessary re-renders during drag
 const InnerList = React.memo(function InnerList(props: InnerListProps) {
     const { dropProvided, contents, ...rest } = props;
 
     return (
-        <div ref={dropProvided.innerRef} className="board-dropzone h-full">
-            <div className="px-5 h-full"> {/* Original has px-5 */}
+        <div ref={dropProvided.innerRef} className="board-dropzone h-full pt-1"> {/* Added pt-1 for slight space from title */}
+            <div className="px-3.5 h-full"> {/* Adjusted padding */}
                 {contents?.map((item, index) => (
-                    <Draggable
-                        key={item.id}
-                        draggableId={item.id}
-                        index={index}
-                    >
+                    <Draggable key={item.id} draggableId={item.id} index={index}>
                         {(dragProvided, dragSnapshot) => (
                             <BoardCard
                                 ref={dragProvided.innerRef}
                                 data={item}
-                                {...rest} // Pass down useClone, isCombineEnabled if needed by BoardCard directly
+                                {...rest}
                                 {...dragProvided.draggableProps}
                                 {...dragProvided.dragHandleProps}
-                                style={{...dragProvided.draggableProps.style, opacity: dragSnapshot.isDragging ? 0.8 : 1}} // Example style change on drag
+                                style={{
+                                    ...dragProvided.draggableProps.style,
+                                    opacity: dragSnapshot.isDragging ? 0.85 : 1,
+                                    transform: dragSnapshot.isDragging ? `${dragProvided.draggableProps.style?.transform} rotate(1deg)` : dragProvided.draggableProps.style?.transform, // Slight tilt
+                                }}
                             />
                         )}
                     </Draggable>
                 ))}
-                {dropProvided.placeholder} {/* Moved placeholder inside the scrollable content for better layout */}
+                {dropProvided.placeholder}
             </div>
         </div>
     );
@@ -1139,59 +927,35 @@ const InnerList = React.memo(function InnerList(props: InnerListProps) {
 
 const BoardCardList = (props: BoardCardListProps) => {
     const {
-        ignoreContainerClipping,
-        internalScroll,
-        scrollContainerStyle,
-        isDropDisabled,
-        isCombineEnabled,
-        listId = 'LIST',
-        style,
-        listType,
-        contents,
-        useClone,
-        className, // Added className to props
+        ignoreContainerClipping, internalScroll, scrollContainerStyle, isDropDisabled,
+        isCombineEnabled, listId = 'LIST', style, listType, contents, useClone, className,
     } = props;
 
     return (
         <Droppable
-            droppableId={listId}
-            type={listType}
-            ignoreContainerClipping={ignoreContainerClipping}
-            isDropDisabled={isDropDisabled}
-            isCombineEnabled={isCombineEnabled}
-            renderClone={useClone}
+            droppableId={listId} type={listType} ignoreContainerClipping={ignoreContainerClipping}
+            isDropDisabled={isDropDisabled} isCombineEnabled={isCombineEnabled} renderClone={useClone}
         >
             {(dropProvided, dropSnapshot) => (
                 <div
                     style={style}
                     className={classNames(
-                        "board-wrapper overflow-hidden flex-auto",
-                        className, // Apply passed className
-                        dropSnapshot.isDraggingOver ? 'bg-blue-50 dark:bg-gray-800' : '' // Example visual feedback
+                        "board-wrapper flex-auto transition-colors duration-200", // Removed overflow-hidden, scrollbar handles it
+                        className,
+                        dropSnapshot.isDraggingOver ? 'bg-sky-50 dark:bg-sky-900/30' : 'bg-transparent'
                     )}
                     {...dropProvided.droppableProps}
                 >
                     {internalScroll ? (
-                        <div
-                            className="board-scrollContainer overflow-y-auto h-full" // Added overflow-y-auto and h-full
+                        <ScrollBar
+                            className="board-scrollContainer overflow-y-auto h-full"
                             style={scrollContainerStyle}
                         >
-                            <InnerList
-                                contents={contents}
-                                dropProvided={dropProvided}
-                                useClone={useClone}
-                                isCombineEnabled={isCombineEnabled}
-                            />
-                        </div>
+                            <InnerList contents={contents} dropProvided={dropProvided} useClone={useClone} isCombineEnabled={isCombineEnabled} />
+                        </ScrollBar>
                     ) : (
-                        <InnerList
-                            contents={contents}
-                            dropProvided={dropProvided}
-                            useClone={useClone}
-                            isCombineEnabled={isCombineEnabled}
-                        />
+                        <InnerList contents={contents} dropProvided={dropProvided} useClone={useClone} isCombineEnabled={isCombineEnabled} />
                     )}
-                    {/* Placeholder is now inside InnerList if not internalScroll, or if internalScroll, it's inside the scroll container by InnerList */}
                 </div>
             )}
         </Droppable>
@@ -1203,11 +967,10 @@ const BoardCardList = (props: BoardCardListProps) => {
 type BoardTitleProps = {
     dragHandleProps?: DraggableProvidedDragHandleProps | null;
     title: string;
+    taskCount: number;
 };
 
-type RenameBoardFormSchema = { // Renamed to avoid conflict
-    title: string;
-};
+type RenameBoardFormSchema = { title: string };
 
 type RenameFormProps = {
     title: string;
@@ -1217,109 +980,66 @@ type RenameFormProps = {
     onEnter: (newColumns: Columns, newOrder: string[]) => void;
 };
 
-const RenameForm = ({
-    title,
-    closeRenameForm,
-    columns = {},
-    ordered,
-    onEnter,
-}: RenameFormProps) => {
-    
-    const { control, handleSubmit, setFocus } = useForm<RenameBoardFormSchema>({
-        defaultValues: {
-            title,
-        },
+const RenameForm = ({ title, closeRenameForm, columns = {}, ordered, onEnter }: RenameFormProps) => {
+    const { control, handleSubmit, setFocus, formState: { errors } } = useForm<RenameBoardFormSchema>({
+        defaultValues: { title },
+        resolver: zodResolver(z.object({ title: z.string().min(1, "Required").max(50, "Too long") }))
     });
 
-    useEffect(() => {
-        setFocus('title');
-    }, [setFocus]);
+    useEffect(() => { setFocus('title') }, [setFocus]);
 
     const onFormSubmit = (value: RenameBoardFormSchema) => {
         const newTitle = value.title.trim();
-
-        if (!newTitle || newTitle === title) { // Check if title is empty or unchanged
+        if (!newTitle || newTitle === title) {
             closeRenameForm();
             return;
         }
-
         if (ordered.some((elm) => elm === newTitle)) {
-            // Handle error: title already exists (e.g., show a toast)
+            // setError('title', { type: 'manual', message: 'Title exists' }); // Using react-hook-form error
             console.error("Column title already exists");
-            closeRenameForm(); // Or keep open and show error
+            closeRenameForm(); 
             return;
         }
-
-        const newColumns: Columns = { ...columns }; // Create a new object for immutability
+        const newColumns: Columns = { ...columns };
         if (newColumns[title]) {
             newColumns[newTitle] = newColumns[title];
             delete newColumns[title];
         }
-
-
-        const newOrder = ordered.map((elm) => {
-            if (elm === title) {
-                return newTitle;
-            }
-            return elm;
-        });
+        const newOrder = ordered.map((elm) => (elm === title ? newTitle : elm));
         onEnter(newColumns, newOrder);
         closeRenameForm();
     };
 
-
     return (
-        <Form onSubmit={handleSubmit(onFormSubmit)} className="w-full">
+        <Form onSubmit={handleSubmit(onFormSubmit)} className="w-full flex items-center">
             <Controller
                 name="title"
                 control={control}
-                rules={{ required: true }}
                 render={({ field }) => (
-                    <Input 
-                        type="text" 
-                        autoComplete="off" 
-                        {...field} 
-                        onBlur={handleSubmit(onFormSubmit)} // Submit on blur
-                        className="text-base font-semibold" // Match heading style
+                    <Input
+                        size="sm" // Smaller input for header
+                        autoComplete="off"
+                        {...field}
+                        onBlur={handleSubmit(onFormSubmit)}
+                        className="text-base font-semibold bg-white dark:bg-slate-700 border-sky-500 dark:border-sky-400 ring-1 ring-sky-500 dark:ring-sky-400"
                     />
                 )}
             />
+            {errors.title && <span className="text-xs text-red-500 ml-2">{errors.title.message}</span>}
         </Form>
     );
 };
 
 const BoardTitle = (props: BoardTitleProps) => {
-    const { dragHandleProps, title } = props;
-
-    const {
-        columns,
-        ordered,
-        openDialog,
-        updateColumns,
-        updateDialogView,
-        setSelectedBoard,
-        updateOrdered,
-        deleteBoard, // Assuming a deleteBoard action in store
-    } = useScrumBoardStore();
-
+    const { dragHandleProps, title, taskCount } = props;
+    const { columns, ordered, openDialog, updateColumns, updateDialogView, setSelectedBoard, updateOrdered, deleteBoard } = useScrumBoardStore();
     const [renameActive, setRenameActive] = useState(false);
     const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(false);
 
-    const onRenameActive = () => {
-        setRenameActive(true);
-    };
-
-    const onRenameDeactivate = () => {
-        setRenameActive(false);
-    };
-
-    const onConfirmDeleteOpen = () => { // Renamed for clarity
-        setConfirmDeleteDialog(true);
-    };
-    
-    const onConfirmDeleteClose = () => {
-        setConfirmDeleteDialog(false);
-    };
+    const onRenameActive = () => setRenameActive(true);
+    const onRenameDeactivate = () => setRenameActive(false);
+    const onConfirmDeleteOpen = () => setConfirmDeleteDialog(true);
+    const onConfirmDeleteClose = () => setConfirmDeleteDialog(false);
 
     const onAddNewTicket = () => {
         openDialog();
@@ -1327,88 +1047,64 @@ const BoardTitle = (props: BoardTitleProps) => {
         setSelectedBoard(title);
     };
 
-    const onDeleteConfirmed = () => { // Renamed for clarity
-        // Original logic:
-        // const newOrder = ordered.filter((elm) => elm !== title);
-        // const newColumns: Columns = {};
-        // Object.assign(newColumns, columns);
-        // delete newColumns[title];
-        // updateOrdered(newOrder);
-        // updateColumns(newColumns); // Added this based on typical store patterns
-
-        // Using store action if available:
+    const onDeleteConfirmed = () => {
         if (deleteBoard) {
-             deleteBoard(title);
-        } else { // Fallback to original manual update
+            deleteBoard(title);
+        } else {
             const newOrder = ordered.filter((elm) => elm !== title);
             const newColumnsState = { ...columns };
             delete newColumnsState[title];
             updateOrdered(newOrder);
             updateColumns(newColumnsState);
         }
-        setConfirmDeleteDialog(false); // Close dialog after deletion
+        setConfirmDeleteDialog(false);
     };
 
-    const handleRenameEnter = (newColumns: Columns, newOrder: string[]) => {
-        updateColumns(newColumns);
-        updateOrdered(newOrder);
+    const handleRenameEnter = (newCols: Columns, newOrd: string[]) => {
+        updateColumns(newCols);
+        updateOrdered(newOrd);
     };
 
     return (
         <div
-            className="board-title px-4 py-3 flex justify-between items-center border-b dark:border-gray-700" // Adjusted padding and border
+            className="board-title px-3.5 py-3 flex justify-between items-center border-b border-slate-200 dark:border-slate-700/50 cursor-grab"
             {...dragHandleProps}
         >
             {renameActive ? (
                 <div className="flex items-center w-full gap-2">
-                    <RenameForm
-                        title={title}
-                        closeRenameForm={onRenameDeactivate}
-                        columns={columns as Columns}
-                        ordered={ordered}
-                        onEnter={handleRenameEnter}
-                    />
-                    <TbCircleXFilled
-                        className="cursor-pointer text-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        onClick={onRenameDeactivate}
-                    />
+                    <RenameForm title={title} closeRenameForm={onRenameDeactivate} columns={columns} ordered={ordered} onEnter={handleRenameEnter} />
+                    <TbCircleXFilled className="cursor-pointer text-xl text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300" onClick={onRenameDeactivate} />
                 </div>
             ) : (
                 <>
-                    <h6 className="truncate" title={title}>{title}</h6> {/* Added truncate and title for long names */}
+                    <div className="flex items-center gap-2">
+                        <h6 className="font-semibold text-base text-slate-700 dark:text-slate-200 truncate max-w-[150px]" title={title}>{title}</h6>
+                        <Badge innerClass="bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200">{taskCount}</Badge>
+                    </div>
                     <Dropdown
                         placement="bottom-end"
-                        renderTitle={<EllipsisButton />}
+                        renderTitle={<EllipsisButton className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"/>}
                     >
-                        <Dropdown.Item eventKey="renameBoard" onClick={onRenameActive} className="gap-2">
-                            <TbPencil />
-                            <span>Rename</span>
+                        <Dropdown.Item eventKey="renameBoard" onClick={onRenameActive} className="gap-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <TbPencil size={16}/><span>Rename</span>
                         </Dropdown.Item>
-                        <Dropdown.Item eventKey="addTicket" onClick={onAddNewTicket} className="gap-2">
-                            <TbPlus />
-                            <span>Add Task</span>
+                        <Dropdown.Item eventKey="addTicket" onClick={onAddNewTicket} className="gap-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <TbPlus size={16}/><span>Add Task</span>
                         </Dropdown.Item>
-                        <Dropdown.Item eventKey="deleteBoard" onClick={onConfirmDeleteOpen} className="gap-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
-                            <TbTrash />
-                            <span>Delete Board</span>
+                        <Dropdown.Item eventKey="deleteBoard" onClick={onConfirmDeleteOpen} className="gap-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
+                            <TbTrash size={16}/><span>Delete Board</span>
                         </Dropdown.Item>
                     </Dropdown>
                 </>
             )}
             <ConfirmDialog
-                isOpen={confirmDeleteDialog}
-                type="danger"
-                title="Delete Board"
-                confirmButtonColor="red-600"
-                onClose={onConfirmDeleteClose}
-                onRequestClose={onConfirmDeleteClose} // for ESC key or overlay click
-                onCancel={onConfirmDeleteClose}
+                isOpen={confirmDeleteDialog} type="danger" title="Delete Board"
+                confirmButtonColor="red-600" onClose={onConfirmDeleteClose}
+                onRequestClose={onConfirmDeleteClose} onCancel={onConfirmDeleteClose}
                 onConfirm={onDeleteConfirmed}
             >
-                <p>
-                    Are you sure you want to delete this board? All the tasks
-                    under this board will be deleted as well. This action cannot
-                    be undone.
+                <p className="text-slate-600 dark:text-slate-300">
+                    Are you sure you want to delete the board "<strong>{title}</strong>"? All tasks within this board will also be removed. This action cannot be undone.
                 </p>
             </ConfirmDialog>
         </div>
@@ -1425,6 +1121,7 @@ interface BoardColumnProps extends BaseBoardProps {
 
 const BoardColumn = (props: BoardColumnProps) => {
     const { title, contents, index, isScrollable, isCombineEnabled, useClone } = props;
+    const taskCount = contents?.length || 0;
 
     return (
         <Draggable draggableId={title} index={index}>
@@ -1432,25 +1129,25 @@ const BoardColumn = (props: BoardColumnProps) => {
                 <div
                     ref={provided.innerRef}
                     className={classNames(
-                        "board-column flex flex-col mb-3 min-w-[300px] w-[300px] max-w-[300px] p-0 dark:bg-gray-800 bg-gray-100 rounded-lg shadow-sm", // Adjusted bg, rounded, shadow
-                        snapshot.isDragging ? "shadow-lg" : ""
+                        "board-column flex flex-col min-w-[320px] w-[320px] max-w-[320px] rounded-xl shadow-sm transition-shadow duration-200",
+                        "bg-slate-100 dark:bg-slate-800/60 border border-transparent", // Base background
+                        snapshot.isDragging ? "shadow-2xl border-sky-400 dark:border-sky-600 ring-2 ring-sky-300 dark:ring-sky-700 bg-slate-200 dark:bg-slate-800" : "hover:shadow-md"
                     )}
                     {...provided.draggableProps}
-                    // dragHandleProps is applied by BoardTitle
                 >
                     <BoardTitle
                         title={title}
+                        taskCount={taskCount}
                         dragHandleProps={provided.dragHandleProps}
                     />
                     <BoardCardList
                         listId={title}
-                        listType="CONTENT" // Ensure this matches Droppable type in Board
-                        className={snapshot.isDragging ? 'is-dragging' : ''} // This className seems for the list, not column
+                        listType="CONTENT"
                         contents={contents}
                         internalScroll={isScrollable}
                         isCombineEnabled={isCombineEnabled}
                         useClone={useClone}
-                        scrollContainerStyle={{ maxHeight: isScrollable ? 'calc(100vh - 250px)' : undefined, paddingBottom: '8px' }} // Example max height
+                        scrollContainerStyle={{ maxHeight: isScrollable ? 'calc(100vh - 280px)' : undefined, paddingBottom: '8px' }}
                     />
                 </div>
             )}
@@ -1459,9 +1156,14 @@ const BoardColumn = (props: BoardColumnProps) => {
 };
 
 
-// --- ScrumBoardHeader Component ---
-const ScrumBoardHeader = ({ boardMembers = [] }: { boardMembers: Member[] }) => {
-    const navigate = useNavigate();
+// --- ScrumBoardHeader Component (Updated) ---
+interface ScrumBoardHeaderProps {
+    boardMembers?: Member[];
+    currentView: 'board' | 'list';
+    onViewChange: (view: 'board' | 'list') => void;
+}
+
+const ScrumBoardHeader = ({ boardMembers = [], currentView, onViewChange }: ScrumBoardHeaderProps) => {
     const { updateDialogView, openDialog } = useScrumBoardStore();
 
     const onAddMember = () => {
@@ -1474,13 +1176,37 @@ const ScrumBoardHeader = ({ boardMembers = [] }: { boardMembers: Member[] }) => 
         openDialog();
     };
 
+    const viewOptions = [
+        { value: 'board', label: 'Board', icon: <TbLayoutKanban className="text-lg" /> },
+        { value: 'list', label: 'List', icon: <TbList className="text-lg" /> },
+    ];
+
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-                <h3 className="text-xl font-bold dark:text-white">Task Board</h3>
-                {/* <p className="font-semibold">Add Task</p> */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 px-1">
+            <div className="flex-1">
+                <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-2 ml-5">Task Board</h3>
+               
             </div>
-           
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex-shrink-0">
+                    <Segment 
+                        value={currentView} 
+                        onChange={(val) => onViewChange(val as 'board' | 'list')} 
+                        size="sm"
+                        className="min-w-[180px]" // Ensure segment has enough width
+                    >
+                        {viewOptions.map(option => (
+                            <Segment.Item key={option.value} value={option.value}>
+                                <span className="flex items-center justify-center gap-2">
+                                    {option.icon}
+                                    {option.label}
+                                </span>
+                            </Segment.Item>
+                        ))}
+                    </Segment>
+                </div>
+                
+            </div>
         </div>
     );
 };
@@ -1490,8 +1216,8 @@ const transformApiTaskToTicket = (apiTask: any): Ticket => {
     const members: Member[] = (apiTask.assign_to_users || []).map((user: any) => ({
         id: user.id.toString(),
         name: user.name,
-        email: user.email || `user-${user.id}@example.com`, // Fallback email
-        img: user.profile_pic_path || '', // Provide a fallback avatar if needed
+        email: user.email || `user-${user.id}@example.com`,
+        img: user.profile_pic_path || '',
     }));
 
     const comments: Comment[] = (apiTask.activity_notes || []).map((note: any) => ({
@@ -1499,31 +1225,29 @@ const transformApiTaskToTicket = (apiTask: any): Ticket => {
         name: note.user.name,
         src: note.user.profile_pic_path || '',
         message: note.activity_comment,
-        date: new Date(note.created_at),
+        date: new Date(note.created_at).toISOString(), // Store as ISO string
     }));
 
     const attachments: Attachment[] = (apiTask.attachments || []).map((att: any) => ({
         id: att.id.toString(),
         name: att.attachment_name,
-        src: att.attachment_path, // Ensure this is a full URL or prefix with base URL if needed
-        size: att.attachment_type, // API provides type, can be displayed or converted
+        src: att.attachment_path,
+        size: att.attachment_type,
     }));
 
-    // Labels for board card display - typically status and priority
     const cardLabels: string[] = [];
-    if (apiTask.status) {
+    if (apiTask.status) { // Primary label for the card, usually status
         cardLabels.push(apiTask.status);
     }
-    // if (apiTask.priority) { // Decided to show priority separately in ticket detail
-    //     cardLabels.push(apiTask.priority);
-    // }
+    // Additional labels could be pushed here if desired on the card itself
+    // e.g., if (apiTask.tags) cardLabels.push(...apiTask.tags);
 
     return {
         id: apiTask.id.toString(),
         name: apiTask.task_title,
         description: apiTask.additional_description || apiTask.note_remark || '',
-        dueDate: apiTask.due_data ? new Date(apiTask.due_data) : undefined,
-        labels: cardLabels, // These are the tags shown on the card
+        dueDate: apiTask.due_data ? new Date(apiTask.due_data).toISOString() : undefined,
+        labels: cardLabels,
         members: members,
         comments: comments,
         attachments: attachments,
@@ -1533,307 +1257,322 @@ const transformApiTaskToTicket = (apiTask: any): Ticket => {
     };
 };
 
-// --- Main Board Component ---
-const Board = (props: BoardProps) => {
+// --- TaskListView Component (New) ---
+// This should ideally be in its own file, e.g., TaskListView.tsx
+interface TaskListViewProps {
+    tasks: TaskWithStatus[];
+}
 
+const ActualTaskListView: React.FC<TaskListViewProps> = ({ tasks }) => {
+    const { openDialog, updateDialogView, setSelectedTicketId } = useScrumBoardStore();
+
+    const handleViewTicket = (ticketId: string) => {
+        openDialog();
+        updateDialogView('TICKET');
+        setSelectedTicketId(ticketId);
+    };
+
+ 
+
+    if (!tasks || tasks.length === 0) {
+        return (
+            <Card className="mt-6">
+                <div className="text-center py-10 text-slate-500 dark:text-slate-400">
+                    No tasks to display in list view.
+                </div>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="mt-6 shadow-sm border border-slate-200 dark:border-slate-700" bodyClass="p-0">
+            <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                    <thead className="bg-slate-50 dark:bg-slate-800">
+                        <tr>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Task Title</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Priority</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Assignees</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Due Date</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-slate-800/80 divide-y divide-slate-200 dark:divide-slate-700">
+                        {tasks.map((task) => (
+                            <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <div 
+                                        className="text-sm font-medium text-slate-800 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 cursor-pointer"
+                                        onClick={() => handleViewTicket(task.id)}
+                                    >
+                                        {task.name}
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <Tag className={taskLabelColors[task.status] || taskLabelColors.default}>
+                                        {task.status}
+                                    </Tag>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    {task.priority ? (
+                                        <Tag className={taskLabelColors[task.priority] || taskLabelColors.default}>
+                                            {task.priority}
+                                        </Tag>
+                                    ) : (
+                                        <span className="text-xs text-slate-400 dark:text-slate-500">-</span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    {task.members && task.members.length > 0 ? (
+                                        <UsersAvatarGroup avatarProps={{ size: 28, className:"ring-1 ring-white dark:ring-slate-800" }} users={task.members} />
+                                    ) : (
+                                        <span className="text-xs text-slate-400 dark:text-slate-500">Unassigned</span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                    {task.dueDate ? dayjs(task.dueDate).format('MMM DD, YYYY') : '-'}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <Tooltip title="View Details">
+                                        <Button
+                                            shape="circle"
+                                            size="sm"
+                                            variant="plain"
+                                            icon={<TbEye />}
+                                            onClick={() => handleViewTicket(task.id)}
+                                            className="text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-500"
+                                        />
+                                    </Tooltip>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </Card>
+    );
+};
+
+// --- Main Board Component (Updated) ---
+const Board = (props: BoardProps) => {
     const navigate = useNavigate();
-      const dispatch = useAppDispatch();
+    const dispatch = useAppDispatch();
     const {
-        columns,
-        ordered,
-        boardMembers,
-        updateOrdered,
-        updateColumns,
-        updateBoardMembers,
-        updateAllMembers,
-        closeDialog,
-        resetView,
-        dialogView,
-        dialogOpen,
+        columns, ordered, boardMembers, updateOrdered, updateColumns,
+        updateBoardMembers, updateAllMembers, closeDialog, resetView,
+        dialogView, dialogOpen, ticketId, setSelectedBoard // Added setSelectedBoard for store access
     } = useScrumBoardStore();
 
-    const {
-        containerHeight, // default false
-        useClone, // default undefined
-        isCombineEnabled, // default false
-        withScrollableColumns, // default false
-    } = props;
-const DEFAULT_BOARD_STATUSES = [
-    "Not Started", 
-    "Pending", 
-    "In Progress", 
-    "On Hold", 
-    "Review", 
-    "Completed", 
-    "Cancelled"
-];
-   const { AllTaskDataByStatues = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
+    const { containerHeight, useClone, isCombineEnabled, withScrollableColumns } = props;
+
+    const [currentView, setCurrentView] = useState<'board' | 'list'>('board');
+
+    const DEFAULT_BOARD_STATUSES = [
+        "Not Started", "Pending", "In Progress", "On Hold", "Review", "Completed", "Cancelled"
+    ];
+    const { AllTaskDataByStatues = {}, status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
 
     useEffect(() => { dispatch(getAllTaskByStatuesAction()); }, [dispatch]);
-    console.log("AllTaskDataByStatues",AllTaskDataByStatues);
     
-  useEffect(() => {
-    // Only process when loading is complete (or an attempt to load has finished)
-    if (masterLoadingStatus === 'idle') {
-        const newColumns: Columns = {}; // Assuming Columns is something like Record<string, Ticket[]>
+    useEffect(() => {
+        if (masterLoadingStatus === 'succeeded' || (masterLoadingStatus === 'idle' && !isEmpty(AllTaskDataByStatues))) {
+            const newColumns: Columns = {};
+            const safeApiData = (AllTaskDataByStatues && typeof AllTaskDataByStatues === 'object' && !Array.isArray(AllTaskDataByStatues))
+                ? AllTaskDataByStatues
+                : {};
 
-        // Safely access API data, defaulting to an empty object if it's not a valid object
-        const safeApiData = (AllTaskDataByStatues && typeof AllTaskDataByStatues === 'object' && !Array.isArray(AllTaskDataByStatues))
-            ? AllTaskDataByStatues
-            : {};
-
-        // Log a warning if the API data was not in the expected format
-        if (AllTaskDataByStatues && (typeof AllTaskDataByStatues !== 'object' || Array.isArray(AllTaskDataByStatues))) {
-            console.warn(
-                "AllTaskDataByStatues from API/Redux was not in the expected object format. Will initialize boards as empty or with partial data if possible. Data received:", 
-                AllTaskDataByStatues
-            );
-        }
-
-        // Iterate over the definitive list of statuses to ensure all are present
-        DEFAULT_BOARD_STATUSES.forEach(statusKey => {
-            const apiTasksForStatus: any[] = safeApiData[statusKey];
-
-            if (Array.isArray(apiTasksForStatus)) {
-                // If API provides an array for this status (even an empty one), map it
-                newColumns[statusKey] = apiTasksForStatus.map(apiTask => transformApiTaskToTicket(apiTask));
-            } else {
-                // If statusKey is not in safeApiData OR safeApiData[statusKey] is not an array,
-                // initialize this column as empty.
-                newColumns[statusKey] = []; 
-                
-                // Optionally, log if the key existed in API data but wasn't an array
-                if (safeApiData.hasOwnProperty(statusKey) && !Array.isArray(apiTasksForStatus)) {
-                    console.warn(
-                        `Data for status "${statusKey}" was expected to be an array but was not:`, 
-                        apiTasksForStatus
-                    );
+            DEFAULT_BOARD_STATUSES.forEach(statusKey => {
+                const apiTasksForStatus: any[] = safeApiData[statusKey];
+                if (Array.isArray(apiTasksForStatus)) {
+                    newColumns[statusKey] = apiTasksForStatus.map(transformApiTaskToTicket);
+                } else {
+                    newColumns[statusKey] = []; 
+                    if (safeApiData.hasOwnProperty(statusKey) && !Array.isArray(apiTasksForStatus)) {
+                        console.warn(`Data for status "${statusKey}" was not an array:`, apiTasksForStatus);
+                    }
                 }
-            }
-        });
-        
-        // Optional: Log any statuses received from the API that are NOT in DEFAULT_BOARD_STATUSES
-        // These statuses will be ignored by the current setup.
-        Object.keys(safeApiData).forEach(apiStatusKey => {
-            if (!DEFAULT_BOARD_STATUSES.includes(apiStatusKey)) {
-                console.warn(
-                    `API returned status "${apiStatusKey}" which is not in the predefined DEFAULT_BOARD_STATUSES list. This status and its tasks will be ignored.`
-                );
-            }
-        });
+            });
+            
+            Object.keys(safeApiData).forEach(apiStatusKey => {
+                if (!DEFAULT_BOARD_STATUSES.includes(apiStatusKey) && safeApiData[apiStatusKey]?.length > 0) { // Only warn if there are tasks in unknown status
+                    console.warn(`API returned unknown status "${apiStatusKey}" with tasks. These tasks will not be displayed on the board unless the status is added to DEFAULT_BOARD_STATUSES or handled.`);
+                }
+            });
 
-        updateColumns(newColumns);
-        // The 'ordered' state will be directly from our definitive list, ensuring correct order and inclusion
-        updateOrdered([...DEFAULT_BOARD_STATUSES]); // Use a copy to be safe
-
-    } 
-    // You might have other conditions for 'masterLoadingStatus' (e.g., 'loading', 'failed')
-    // to set loading states or display errors, but this useEffect specifically handles 'idle'.
-
-}, [
-    AllTaskDataByStatues, 
-    masterLoadingStatus, 
-    updateColumns, 
-    updateOrdered, 
-    // transformApiTaskToTicket // Add if it's a prop or defined in a way that its reference can change
-]);
+            updateColumns(newColumns);
+            updateOrdered([...DEFAULT_BOARD_STATUSES]);
+        }
+    }, [AllTaskDataByStatues, masterLoadingStatus, updateColumns, updateOrdered, dispatch]);
 
     const TicketContent = lazy(() => Promise.resolve({ default: ActualTicketContent }));
     const AddNewTicketContent = lazy(() => Promise.resolve({ default: ActualAddNewTicketContent }));
     const AddNewMemberContent = lazy(() => Promise.resolve({ default: ActualAddNewMemberContent }));
     const AddNewColumnContent = lazy(() => Promise.resolve({ default: ActualAddNewColumnContent }));
+    const TaskListView = lazy(() => Promise.resolve({ default: ActualTaskListView }));
 
+
+    const allTicketsFlat: TaskWithStatus[] = useMemo(() => {
+        if (isEmpty(columns) || !ordered || ordered.length === 0) {
+            return [];
+        }
+        return ordered.reduce((acc, statusKey) => {
+            const tasksInStatus = columns[statusKey] || [];
+            const tasksWithStatus = tasksInStatus.map(task => ({ ...task, status: statusKey }));
+            return acc.concat(tasksWithStatus);
+        }, [] as TaskWithStatus[]);
+    }, [columns, ordered]);
 
     const onDialogClose = async () => {
         closeDialog();
-        await sleep(200); // Wait for dialog close animation
+        await sleep(200);
         resetView();
     };
 
-   
+    const onDragEnd = async (result: DropResult) => {
+        const { source, destination, combine, type, draggableId } = result;
 
-    const onDragEnd = async (result: DropResult) => { // Make the handler async
-    const { source, destination, combine, type, draggableId } = result;
-
-    // 1. Handling combining items
-    if (combine) {
-        if (type === 'COLUMN') {
-            const shallow = [...ordered];
-            shallow.splice(source.index, 1);
-            updateOrdered(shallow);
-
-            // Also remove the column from 'columns' state
-            // IMPORTANT: If 'ordered' contains IDs that are keys in 'columns'
-            const columnIdToRemove = ordered[source.index]; // Get the ID *before* splicing 'ordered'
-            if (columnIdToRemove) {
-                const newColumns = { ...columns };
-                delete newColumns[columnIdToRemove];
-                updateColumns(newColumns);
-            } else {
-                console.warn("Could not determine column ID to remove for combine operation.");
+        if (combine) {
+            if (type === 'COLUMN') {
+                const newOrder = [...ordered];
+                const columnIdToRemove = newOrder.splice(source.index, 1)[0];
+                updateOrdered(newOrder);
+                if (columnIdToRemove) {
+                    const newCols = { ...columns };
+                    delete newCols[columnIdToRemove];
+                    updateColumns(newCols);
+                }
+            } else { // Ticket combining
+                const column = columns[source.droppableId];
+                if (column) {
+                    const withRemoved = [...column];
+                    withRemoved.splice(source.index, 1);
+                    updateColumns({ ...columns, [source.droppableId]: withRemoved });
+                }
             }
             return;
         }
 
-        // Ticket combining (if implemented)
-        const column = columns[source.droppableId];
-        if (column) {
-            const withQuoteRemoved = [...column];
-            withQuoteRemoved.splice(source.index, 1);
-            const newColumns = {
-                ...columns,
-                [source.droppableId]: withQuoteRemoved,
-            };
-            updateColumns(newColumns);
-            // NOTE: You might want an API call here too if combining means a status change or deletion.
-        }
-        return;
-    }
+        if (!destination) return;
+        if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    // 2. Item dropped outside a droppable area
-    if (!destination) {
-        return;
-    }
-
-    // 3. Item dropped in the same place
-    if (
-        source.droppableId === destination.droppableId &&
-        source.index === destination.index
-    ) {
-        return;
-    }
-
-    // 4. Reordering Columns
-    if (type === 'COLUMN') {
-        const newOrdered = reoderArray( // Assuming reoderArray is reorderArray
-            ordered,
-            source.index,
-            destination.index,
-        );
-        updateOrdered(newOrdered as string[]); // Ensure type
-        return;
-    }
-
-    // 5. Reordering or Moving Tickets (this is where the main logic for tickets goes)
-    // At this point, type is not 'COLUMN', so it's a ticket.
-
-    const oldColumnsState = { ...columns }; // Save old state for potential revert on API failure
-
-    const data = reorderDragable<Record<string, Ticket[]>>({
-        quoteMap: columns, // current columns
-        source,
-        destination,
-    });
-
-    updateColumns(data.quoteMap); // Optimistically update the UI
-console.log("source.droppableId !== destination.droppableId",source.droppableId !== destination.droppableId);
-
-    // Check if the ticket moved to a DIFFERENT column
-    if (source.droppableId !== destination.droppableId) {
-        // This is where you call your API
-        const taskId = parseInt(draggableId, 10); // Assuming draggableId is the string version of task_id
-        const newStatus = destination.droppableId; // This is the ID of the column (e.g., "Start", "InProgress")
-
-        if (isNaN(taskId)) {
-            console.error("Invalid draggableId, cannot parse to taskId:", draggableId);
-            // Optionally revert UI
-            // updateColumns(oldColumnsState);
+        if (type === 'COLUMN') {
+            const newOrdered = reoderArray(ordered, source.index, destination.index);
+            updateOrdered(newOrdered as string[]);
             return;
         }
 
-        const payload = {
-            user_id: 53, // Get this from your app's auth state
-            task_id: taskId,
-            status: newStatus,
-        };
+        const data = reorderDragable<Record<string, Ticket[]>>({ quoteMap: columns, source, destination });
+        updateColumns(data.quoteMap); // Optimistic UI update
 
-        console.log("Calling API task-status-update with:", payload);
-        // const success = await updateTaskStatusAPI(payload);
-const success = await dispatch(updateTaskStatusAPI(payload)).unwrap();
-        if (!success) {
-            // API call failed, consider reverting the optimistic UI update
-            console.warn("API call failed. Reverting UI change.");
-            // To revert, you'd need to re-apply the state before the drag
-            // This can get complex if you allow multiple quick drags.
-            // A simple revert would be:
-            // updateColumns(oldColumnsState); // This might not be perfectly accurate if other changes happened
-            // For a more robust solution, you might need to re-fetch or use a more sophisticated state management.
-            alert("Failed to update task status. The change has been reverted (or please refresh).");
-            // For a simple revert of *this specific move*, you can reconstruct the previous state
-            // by moving the item back programmatically, but that's more involved.
-            // Simplest for now is to inform the user and potentially revert to `oldColumnsState`.
-            // Let's assume for now, we just log the error and the optimistic update stays.
+        if (source.droppableId !== destination.droppableId) {
+            const taskId = parseInt(draggableId, 10);
+            const newStatus = destination.droppableId;
+            if (isNaN(taskId)) {
+                console.error("Invalid draggableId for API update:", draggableId);
+                return;
+            }
+            // Ensure user_id is dynamically fetched from auth store or context
+            const payload = { user_id: 53, task_id: taskId, status: newStatus }; 
+            try {
+                const actionResult = await dispatch(updateTaskStatusAPI(payload)).unwrap();
+                if (!actionResult) { 
+                     console.warn("API task status update failed. UI may be inconsistent.");
+                    // Consider re-fetching to ensure data consistency
+                    // dispatch(getAllTaskByStatuesAction()); 
+                }
+            } catch (error) {
+                console.error("Error updating task status via API:", error);
+                // Revert or re-fetch state on error
+                // dispatch(getAllTaskByStatuesAction());
+            }
         }
-    }
-    // If it's just reordering within the same column (source.droppableId === destination.droppableId),
-    // the UI is already updated by updateColumns(data.quoteMap), and no API call for status change is needed.
-    // You might have a different API for reordering tasks within a list, if that's required.
-};
-     
+    };
 
+    const handleViewChange = (view: 'board' | 'list') => {
+        setCurrentView(view);
+    };
+     
     return (
-        <>
-            <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col"> {/* Added padding */}
-                <ScrumBoardHeader boardMembers={boardMembers} />
-                <DragDropContext onDragEnd={onDragEnd}>
-                    <Droppable
-                        droppableId="board" // This ID should be unique for the board itself
-                        type="COLUMN" // This Droppable accepts COLUMN Draggables
-                        direction="horizontal"
-                        ignoreContainerClipping={Boolean(containerHeight)} // Ensure boolean
-                        isCombineEnabled={isCombineEnabled}
-                    >
-                        {(provided) => (
-                            <div
-                                ref={provided.innerRef}
-                                className="scrumboard flex flex-col flex-auto w-full mb-2" // Original class
-                                {...provided.droppableProps}
-                            >
-                                <div className="scrumboard-body flex flex-nowrap max-w-full overflow-x-auto h-full mt-4 gap-4 pb-2"> {/* Added flex-nowrap and pb-2 */}
-                                    {ordered.map((key, index) => (
-                                        columns[key] ? ( // Ensure column data exists
-                                            <BoardColumn
-                                                key={key}
-                                                index={index}
-                                                title={key}
-                                                contents={columns[key]}
-                                                isScrollable={withScrollableColumns}
-                                                isCombineEnabled={isCombineEnabled}
-                                                useClone={useClone}
-                                            />
-                                        ) : null
-                                    ))}
-                                    {provided.placeholder}
-                                </div>
-                            </div>
+        <div className="p-4 sm:p-6 md:p-8 bg-slate-50 dark:bg-slate-900 min-h-screen">
+            <Card className="h-full shadow-none bg-transparent" bodyClass="h-full flex flex-col p-0">
+                <ScrumBoardHeader 
+                    boardMembers={boardMembers} 
+                    currentView={currentView}
+                    onViewChange={handleViewChange}
+                />
+                {masterLoadingStatus === 'loading' && currentView === 'board' && ( // Show general loading for board view
+                     <div className="flex justify-center items-center py-20">
+                        <Spinner size={50} className="text-sky-500"/>
+                        <p className="ml-3 text-slate-600 dark:text-slate-300">Loading board...</p>
+                    </div>
+                )}
+                 {/* List view has its own loading/empty state handling */}
+                 {(masterLoadingStatus !== 'loading' || currentView === 'list') && ( 
+                    <>
+                        {currentView === 'board' && (
+                            <DragDropContext onDragEnd={onDragEnd}>
+                                <Droppable droppableId="board" type="COLUMN" direction="horizontal" ignoreContainerClipping={Boolean(containerHeight)} isCombineEnabled={isCombineEnabled}>
+                                    {(provided) => (
+                                        <div ref={provided.innerRef} className="scrumboard flex flex-auto w-full" {...provided.droppableProps}>
+                                            <div className="scrumboard-body flex flex-nowrap overflow-x-auto pb-4 gap-5 items-start">
+                                                {ordered.map((key, index) => (
+                                                    columns[key] ? (
+                                                        <BoardColumn
+                                                            key={key} index={index} title={key}
+                                                            contents={columns[key]}
+                                                            isScrollable={withScrollableColumns}
+                                                            isCombineEnabled={isCombineEnabled}
+                                                            useClone={useClone}
+                                                        />
+                                                    ) : null
+                                                ))}
+                                                {provided.placeholder}
+                                            </div>
+                                        </div>
+                                    )}
+                                </Droppable>
+                            </DragDropContext>
                         )}
-                    </Droppable>
-                </DragDropContext>
-            </AdaptiveCard>
+                        {currentView === 'list' && (
+                            <Suspense fallback={
+                                <div className="flex justify-center items-center py-20">
+                                    <Spinner size={40} className="text-sky-500" />
+                                    <p className="ml-3 text-slate-600 dark:text-slate-300">Loading list view...</p>
+                                </div>
+                            }>
+                                <TaskListView tasks={allTicketsFlat} />
+                            </Suspense>
+                        )}
+                    </>
+                 )}
+            </Card>
             <Dialog
                 isOpen={dialogOpen}
-                width={dialogView === 'TICKET' ? 800 : 520} // Increased width for TICKET view
-                closable={dialogView !== 'TICKET'} // Tickets might have custom close logic
+                width={dialogView === 'TICKET' ? 850 : (dialogView === 'ADD_MEMBER' ? 600 : 480)}
+                contentClassName={classNames(
+                    "shadow-xl rounded-xl",
+                    dialogView === 'TICKET' ? "max-h-[90vh] flex flex-col" : "" 
+                )}
+                dialogStyle={{ content: { padding: 0 } }} 
+                closable={true}
                 onClose={onDialogClose}
-                onRequestClose={onDialogClose} // Handles ESC and overlay click
-                // bodyOpenClassName="overflow-hidden" // Prevent body scroll when dialog is open
+                onRequestClose={onDialogClose}
             >
                 <Suspense
                     fallback={
-                        <div className="flex justify-center items-center h-60"> {/* Added h-60 */}
-                            <Spinner size={40}/>
+                        <div className="flex justify-center items-center h-80 p-6">
+                            <Spinner size={40} className="text-sky-500"/>
                         </div>
                     }
                 >
-                    {dialogView === 'TICKET' && ticketId && ( // Ensure ticketId is present
-                        <TicketContent onTicketClose={onDialogClose} />
-                    )}
-                    {dialogView === 'NEW_TICKET' && <AddNewTicketContent />}
-                    {dialogView === 'NEW_COLUMN' && <AddNewColumnContent />}
-                    {dialogView === 'ADD_MEMBER' && <AddNewMemberContent />}
+                    {dialogView === 'TICKET' && ticketId && <TicketContent onTicketClose={onDialogClose} />}
+                    {dialogView === 'NEW_TICKET' && <div className="p-6"><AddNewTicketContent /></div>}
+                    {dialogView === 'NEW_COLUMN' && <div className="p-6"><AddNewColumnContent /></div>}
+                    {dialogView === 'ADD_MEMBER' && <div className="p-6"><AddNewMemberContent /></div>}
                 </Suspense>
             </Dialog>
-        </>
+        </div>
     );
 };
 

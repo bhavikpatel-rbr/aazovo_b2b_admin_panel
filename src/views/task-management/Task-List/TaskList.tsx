@@ -25,7 +25,8 @@ import {
     FormItem as UiFormItem,
 } from '@/components/ui/Form'
 import Badge from '@/components/ui/Badge'
-import { DatePicker, Drawer, Dropdown, Select, Input } from '@/components/ui'
+// MODIFIED: Replaced Drawer with Dialog
+import { DatePicker, Dialog, Dropdown, Select, Input, Drawer } from '@/components/ui'
 
 // Icons
 import {
@@ -275,19 +276,26 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
     if (!task) return null
 
     return (
-        <Drawer
-            title={
+        // MODIFIED: Replaced Drawer with Dialog
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            onRequestClose={onClose} // Assuming Dialog supports this similar to Drawer/ConfirmDialog
+            title={ // Assuming Dialog supports a title prop
                 <span className="truncate max-w-md">
                     Task Details: {task.note}
                 </span>
             }
-            isOpen={isOpen}
-            onClose={onClose}
-            onRequestClose={onClose}
-            width={600}
-            bodyClass="overflow-y-auto"
+            // Removed width={600} from Drawer. Dialog might have default sizing or accept className for panel.
+            // For example, contentClassName="w-full max-w-2xl" if Dialog supports it.
+            // Assuming Dialog provides a reasonably sized modal by default.
         >
-            <div className="p-1 sm:p-4 space-y-3">
+            {/* 
+              The content that was previously the direct child of Drawer.
+              Now, this div itself handles padding, spacing, and scrolling behavior for the modal content.
+              Added overflow-y-auto and max-h-[75vh] for scrollability within the modal.
+            */}
+            <div className="p-1 sm:p-4 space-y-3 overflow-y-auto max-h-[75vh]">
                 <div className="border-b pb-3">
                     <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1">
                         General Information
@@ -454,7 +462,7 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                     <p className="text-sm text-gray-500 text-center py-4">No additional details, comments, or attachments for this task.</p>
                 )}
             </div>
-        </Drawer>
+        </Dialog>
     )
 }
 
@@ -676,6 +684,7 @@ export const TaskFilter = ({
                     />
                 )}
             </Button>
+            {/* MODIFIED: This Drawer is for filters, not the TaskView. Kept as is. */}
             <Drawer
                 title="Filters"
                 isOpen={dialogIsOpen}

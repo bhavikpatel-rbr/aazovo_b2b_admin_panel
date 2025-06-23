@@ -447,7 +447,9 @@ const CreateTaskPage = () => {
             formDataPayload.append("activity_note[activity_type]", "created_task");
             formDataPayload.append("activity_note[activity_comment]", `Task "${data.task_title}" created.`);
         }
+
     } else {
+      formDataPayload.append("id",taskId );
         const newUiComments = comments.filter(c => c.id.startsWith('temp-'));
         newUiComments.forEach((comment, index) => {
             const parts = comment.message.split(': ');
@@ -470,7 +472,7 @@ const CreateTaskPage = () => {
 
     try {
         if (isEditMode && taskId) {
-            await dispatch(addTaskAction({ taskId: String(taskId), data: formDataPayload })).unwrap();
+            await dispatch(addTaskAction(formDataPayload )).unwrap();
             toast.push(<Notification title="Task Updated" type="success" />);
         } else {
             await dispatch(addTaskAction(formDataPayload)).unwrap();
