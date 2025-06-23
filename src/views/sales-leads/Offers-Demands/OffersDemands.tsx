@@ -168,11 +168,6 @@ export type ActualApiOfferShape = {
   numberOfSellers?: number;
   updated_by_name?: string;
   updated_by_role?: string;
-  // For preserving raw user objects if needed, e.g. updated_by_user for ID.
-  // This depends on how Redux middleware populates 'updated_by_name/role'
-  // vs. providing the full updated_by_user object.
-  // For simplicity, assuming updated_by_name/role are directly on the object.
-  // If not, 'originalApiItem.updated_by_user.id' would be used.
 };
 
 export type ActualApiDemandShape = {
@@ -222,7 +217,8 @@ export type OfferDemandItem = {
   health_score?: number;
 };
 
-const TABS = { OFFER: "offer", DEMAND: "demand" };
+// FIX: Added 'ALL' to the TABS constant so it can be used in logic and UI rendering.
+const TABS = { ALL: "all", OFFER: "offer", DEMAND: "demand" };
 
 // ============================================================================
 // --- MODALS SECTION (ASSUMED UNCHANGED as per instructions) ---
@@ -621,15 +617,6 @@ const OffersDemands = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  // const offerDemandCounts = {
-  //   total: 1250,
-  //   offer: 720,
-  //   demand: 530,
-  //   todayTotal: 45,
-  //   todayOffer: 25,
-  //   todayDemand: 20,
-  // };
-
   const offerDemandCounts= useSelector(masterSelector).Offers.counts;
   const offersStoreData = useSelector(masterSelector).Offers?.data;
   const demandsStoreData = useSelector(masterSelector).Demands;
@@ -638,9 +625,7 @@ const OffersDemands = () => {
   const offersError = useSelector(masterSelector).offersError;
   const demandsError = useSelector(masterSelector).demandsError;
 
-  // console.log("offersStoreData", offersStoreCount);
-
-  const [currentTab, setCurrentTab] = useState<string>(TABS.OFFER);
+  const [currentTab, setCurrentTab] = useState<string>(TABS.ALL); // FIX: Default to the 'all' tab
   const initialTableQueries: TableQueries = { pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" };
   const [offerTableConfig, setOfferTableConfig] = useState<TableQueries>(initialTableQueries);
   const [demandTableConfig, setDemandTableConfig] = useState<TableQueries>(initialTableQueries);
@@ -669,14 +654,14 @@ const OffersDemands = () => {
     if (currentTab === TABS.ALL) return allTableConfig;
     if (currentTab === TABS.OFFER) return offerTableConfig;
     if (currentTab === TABS.DEMAND) return demandTableConfig;
-    return offerTableConfig;
+    return allTableConfig; // Default to 'all' config
   }, [currentTab, allTableConfig, offerTableConfig, demandTableConfig]);
 
   const setCurrentTableConfig = useMemo(() => {
     if (currentTab === TABS.ALL) return setAllTableConfig;
     if (currentTab === TABS.OFFER) return setOfferTableConfig;
     if (currentTab === TABS.DEMAND) return setDemandTableConfig;
-    return setOfferTableConfig;
+    return setAllTableConfig; // Default to 'all' config setter
   }, [currentTab]);
 
   const currentSelectedItems = useMemo(() => {
@@ -690,7 +675,7 @@ const OffersDemands = () => {
     if (currentTab === TABS.ALL) return setSelectedAll;
     if (currentTab === TABS.OFFER) return setSelectedOffers;
     if (currentTab === TABS.DEMAND) return setSelectedDemands;
-    return setSelectedOffers;
+    return setSelectedAll; // Default to 'all' setter
   }, [currentTab]);
 
   const prepareApiParams = useCallback((tableConfig: TableQueries, filters: FilterFormData, forExport: boolean = false) => {
@@ -699,12 +684,12 @@ const OffersDemands = () => {
     };
 
     if (forExport) {
-      params.fetch_all = true; // Or use a very large per_page if fetch_all is not supported
+      params.fetch_all = true;
     } else {
       params.page = tableConfig.pageIndex;
-      params.per_page = tableConfig.pageSize; // Use per_page
+      params.per_page = tableConfig.pageSize;
       if (tableConfig.sort.key && tableConfig.sort.order) {
-        params.sortBy = tableConfig.sort.key; // Ensure these match backend (e.g., created_at)
+        params.sortBy = tableConfig.sort.key;
         params.sortOrder = tableConfig.sort.order;
       }
     }
@@ -714,13 +699,14 @@ const OffersDemands = () => {
     if (filters.updatedDateRange?.[0]) params.updated_from = dayjs(filters.updatedDateRange[0]).format('YYYY-MM-DD');
     if (filters.updatedDateRange?.[1]) params.updated_to = dayjs(filters.updatedDateRange[1]).format('YYYY-MM-DD');
 
-    // Send as comma-separated strings
     if (filters.creatorIds?.length) params.created_by = filters.creatorIds.join(',');
     if (filters.assigneeIds?.length) params.assign_user = filters.assigneeIds.join(',');
 
-    // Item type filter is mainly for TABS.ALL. For specific tabs, it's implicit.
-    // If backend supports type filter even on specific endpoints, you can add it:
-    // if (filters.itemType) params.item_type = filters.itemType;
+    // FIX: This parameter is now sent to the backend when a type is selected in the filter.
+    // This is crucial for filtering on the "All" tab.
+    if (filters.itemType) {
+        params.item_type = filters.itemType.toLowerCase(); // Assuming backend expects 'offer' or 'demand'
+    }
 
     return params;
   }, []);
@@ -729,12 +715,16 @@ const OffersDemands = () => {
   const fetchData = useCallback(() => {
     const params = prepareApiParams(currentTableConfig, filterCriteria);
 
-    if (currentTab === TABS.OFFER || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Offer"))) {
+    const shouldFetchOffers = currentTab === TABS.OFFER || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Offer"));
+    const shouldFetchDemands = currentTab === TABS.DEMAND || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Demand"));
+
+    if (shouldFetchOffers) {
       dispatch(getOffersAction(params));
     }
-    if (currentTab === TABS.DEMAND || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Demand"))) {
+    if (shouldFetchDemands) {
       dispatch(getDemandsAction(params));
     }
+
   }, [dispatch, currentTab, currentTableConfig, filterCriteria, prepareApiParams]);
 
   useEffect(() => {
@@ -748,12 +738,10 @@ const OffersDemands = () => {
     let itemsToDisplay: OfferDemandItem[] = [];
     let currentTotal = 0;
 
-    const safeOffersItems = Array.isArray(offersStoreData) ? offersStoreData : []; // Assuming API response is data.data
+    const safeOffersItems = Array.isArray(offersStoreData) ? offersStoreData : [];
     const safeDemandsItems = Array.isArray(demandsStoreData?.data) ? demandsStoreData.data : [];
-    const safeOffersTotal = typeof offersStoreData?.total === 'number' ? offersStoreData.total : 0; // API total
+    const safeOffersTotal = typeof offersStoreData?.total === 'number' ? offersStoreData.total : 0;
     const safeDemandsTotal = typeof demandsStoreData?.total === 'number' ? demandsStoreData.total : 0;
-
-    // debugger
 
     if (currentTab === TABS.OFFER) {
       itemsToDisplay = safeOffersItems.map(transformApiOffer);
@@ -767,11 +755,11 @@ const OffersDemands = () => {
       if (!filterCriteria.itemType || filterCriteria.itemType === "Demand") { combined.push(...safeDemandsItems.map(transformApiDemand)); }
 
       itemsToDisplay = combined;
+
       if (filterCriteria.itemType === "Offer") currentTotal = safeOffersTotal;
       else if (filterCriteria.itemType === "Demand") currentTotal = safeDemandsTotal;
-      else currentTotal = safeOffersTotal + safeDemandsTotal; // This sum is an approximation if pages are fetched separately
+      else currentTotal = safeOffersTotal + safeDemandsTotal;
 
-      // Client-side sort for ALL tab if sort key is present, as server sorts per type
       const { order, key } = allTableConfig.sort as OnSortParam;
       if (order && key && itemsToDisplay.length > 0) {
         itemsToDisplay.sort((a, b) => {
@@ -810,10 +798,11 @@ const OffersDemands = () => {
   }, [setCurrentSelectedItems]);
 
   const handleEdit = useCallback((item: OfferDemandItem) => {
-    const bP = item.type === "Offer" ? "offers" : "demands";
-    // if (bP === "offers") navigate(`/sales-leads/offers/create`, { state: item });
-    // else navigate(`/sales-leads/${bP}/edit/${(item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id}`);
-     navigate(`/sales-leads/${bP}/create`, { state: item });
+    const baseRoute = item.type === "Offer" ? "offers" : "demands";
+    const itemId = (item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id;
+    // FIX: Correctly navigate to an edit route with the item's ID.
+    // The previous implementation navigated to 'create', which was incorrect for editing.
+    navigate(`/sales-leads/${baseRoute}/edit/${itemId}`, { state: { itemData: item } });
   }, [navigate]);
   const handleDeleteClick = useCallback((item: OfferDemandItem) => setItemToDeleteConfirm(item), []);
 
@@ -866,10 +855,10 @@ const OffersDemands = () => {
     let allOffersForExport: ActualApiOfferShape[] = []; let allDemandsForExport: ActualApiDemandShape[] = [];
     try {
       if (currentTab === TABS.OFFER || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Offer"))) {
-        const offerRes = await dispatch(getOffersAction(exportParams)).unwrap(); allOffersForExport = offerRes?.data || []; // Assuming data.data
+        const offerRes = await dispatch(getOffersAction(exportParams)).unwrap(); allOffersForExport = offerRes?.data || [];
       }
       if (currentTab === TABS.DEMAND || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Demand"))) {
-        const demandRes = await dispatch(getDemandsAction(exportParams)).unwrap(); allDemandsForExport = demandRes?.data || []; // Assuming data.data
+        const demandRes = await dispatch(getDemandsAction(exportParams)).unwrap(); allDemandsForExport = demandRes?.data || [];
       }
       const transformedO = allOffersForExport.map(transformApiOffer); const transformedD = allDemandsForExport.map(transformApiDemand);
       let dataToExport: OfferDemandItem[] = [];
@@ -900,11 +889,9 @@ const OffersDemands = () => {
     const safeOItems = Array.isArray(offersStoreData?.data) ? offersStoreData.data : [];
     const safeDItems = Array.isArray(demandsStoreData?.data) ? demandsStoreData.data : [];
 
-    // This assumes offersStoreData.data items are ActualApiOfferShape-like
     safeOItems.forEach((o: ActualApiOfferShape) => {
       if (o.created_by) users.set(String(o.created_by.id), o.created_by.name);
       if (o.assign_user) users.set(String(o.assign_user.id), o.assign_user.name);
-      // Add updated_by users if available and relevant for filtering
     });
     safeDItems.forEach((d: ActualApiDemandShape) => {
       if (d.created_by) users.set(String(d.created_by.id), d.created_by.name);
@@ -926,104 +913,44 @@ const OffersDemands = () => {
           <div className="lg:flex items-center justify-between mb-4"><h5 className="mb-4 lg:mb-0">Offers & Demands</h5><ItemActionTools onRefresh={() => fetchData()} onOpenFilter={openFilterDrawer} /></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
             {/* Card 1: Total */}
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-blue-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                <TbListDetails size={24} />
-              </div>
-              <div>
-                <h6 className="text-blue-500">{offerDemandCounts?.total ?? 0}</h6>
-                <span className="font-semibold text-xs">Total</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={24} /></div>
+              <div><h6 className="text-blue-500">{offerDemandCounts?.total ?? 0}</h6><span className="font-semibold text-xs">Total</span></div>
             </Card>
 
             {/* Card 2: Offer */}
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-green-300"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                <TbArrowUpRight size={24} />
-              </div>
-              <div>
-                <h6 className="text-green-500">
-                  {offerDemandCounts?.offers ?? 0}
-                </h6>
-                <span className="font-semibold text-xs">Offers</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbArrowUpRight size={24} /></div>
+              <div><h6 className="text-green-500">{offerDemandCounts?.offers ?? 0}</h6><span className="font-semibold text-xs">Offers</span></div>
             </Card>
 
             {/* Card 3: Demand */}
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-violet-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                <TbArrowDownLeft size={24} />
-              </div>
-              <div>
-                <h6 className="text-violet-500">
-                  {offerDemandCounts?.demands ?? 0}
-                </h6>
-                <span className="font-semibold text-xs">Demands</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
+              <div><h6 className="text-violet-500">{offerDemandCounts?.demands ?? 0}</h6><span className="font-semibold text-xs">Demands</span></div>
             </Card>
-
-            {/* Card 4: Today Total
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-amber-300"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500">
-                <TbClockHour4 size={24} />
-              </div>
-              <div>
-                <h6 className="text-amber-500">
-                  {offerDemandCounts?.todayTotal ?? 0}
-                </h6> 
-                <span className="font-semibold text-xs">Today</span>
-              </div>
-            </Card> */}
-
+            
             {/* Card 5: Today Offers */}
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-teal-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500">
-                <TbCalendarUp size={24} />
-              </div>
-              <div>
-                <h6 className="text-teal-500">
-                  {offerDemandCounts?.today_offers ?? 0}
-                </h6>
-                <span className="font-semibold text-xs">Today Offers</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-teal-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
+              <div><h6 className="text-teal-500">{offerDemandCounts?.today_offers ?? 0}</h6><span className="font-semibold text-xs">Today Offers</span></div>
             </Card>
 
             {/* Card 6: Today Demands */}
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-rose-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500">
-                <TbCalendarDown size={24} />
-              </div>
-              <div>
-                <h6 className="text-rose-500">
-                  {offerDemandCounts?.today_demands ?? 0}
-                </h6>
-                <span className="font-semibold text-xs">Today Demands</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-rose-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div>
+              <div><h6 className="text-rose-500">{offerDemandCounts?.today_demands ?? 0}</h6><span className="font-semibold text-xs">Today Demands</span></div>
             </Card>
           </div>
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-              {[TABS.OFFER, TABS.DEMAND].map((tabKey) =>
+              {/* FIX: Added TABS.ALL to the array to render all three tabs. */}
+              {[TABS.ALL, TABS.OFFER, TABS.DEMAND].map((tabKey) =>
               (<button key={tabKey} onClick={() => handleTabChange(tabKey)} className={classNames("whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize",
-                currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>{tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}</button>))}</nav></div>
+                currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>
+                  {/* FIX: This logic now correctly displays "All Items" for the 'all' tab. */}
+                  {tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}
+                </button>))}</nav></div>
           <div className="mb-4">
             <ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchQuery={currentTableConfig.query} /></div>
           <div className="flex-grow overflow-auto">
@@ -1048,7 +975,10 @@ const OffersDemands = () => {
       ><Form id="exportReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2"><FormItem label="Reason for exporting:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
       <Drawer title="Filter Options" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="flex justify-end gap-2 w-full"><Button size="sm" onClick={onClearFilters}>Clear All</Button><Button size="sm" variant="solid" form="filterForm" type="submit">Apply</Button></div>}>
         <Form id="filterForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-y-6 p-4 h-full overflow-y-auto">
-          <FormItem label="Type"><Controller name="itemType" control={filterFormMethods.control} render={({ field }) => (<Select placeholder="Offer/Demand" options={itemTypeOptions} value={itemTypeOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option?.value || null)} isClearable />)} /></FormItem>
+          {/* FIX: Conditionally render the Type filter only when the 'All' tab is active to avoid confusion. */}
+          {currentTab === TABS.ALL && (
+            <FormItem label="Type"><Controller name="itemType" control={filterFormMethods.control} render={({ field }) => (<Select placeholder="Filter by Offer/Demand" options={itemTypeOptions} value={itemTypeOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option?.value || null)} isClearable />)} /></FormItem>
+          )}
           <FormItem label="Created Date"><Controller name="createdDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange} placeholder="Start - End" inputFormat="DD MMM YYYY" />)} /></FormItem>
           <FormItem label="Updated Date"><Controller name="updatedDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange} placeholder="Start - End" inputFormat="DD MMM YYYY" />)} /></FormItem>
           <FormItem label="Creator"><Controller name="creatorIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Creator(s)" options={allApiUsersForFilterDropdown} value={allApiUsersForFilterDropdown.filter(opt => field.value?.includes(opt.value))} onChange={(options) => field.onChange(options?.map(opt => opt.value) || [])} />)} /></FormItem>
