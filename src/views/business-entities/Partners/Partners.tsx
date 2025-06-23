@@ -222,7 +222,7 @@ const useCompanyList = (): CompanyListStore => {
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { partnerData, CountriesData, ContinentsData } = useSelector(masterSelector);
+  const { partnerData, CountriesData, ContinentsData  } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
 
   // FIX: Initialize state assuming partnerData?.data is an object like { data: [], total: 0 }
@@ -1237,7 +1237,7 @@ const CompanyActionColumn = ({
 const CompanyListTable = () => {
   const navigate = useNavigate();
   // With the provider fixed, companyList is now a guaranteed array.
-  const { companyList, selectedCompanies, setSelectedCompanies, partnercount } =
+  const { companyList, selectedCompanies, setSelectedCompanies, partnercount, CountriesData, ContinentsData } =
     useCompanyList();
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
@@ -1603,21 +1603,15 @@ const CompanyListTable = () => {
       })),
     [companyList]
   );
+
   const continentOptions = useMemo(
-    () =>
-      Array.from(new Set(companyList.map((c) => c.continent))).map((co) => ({
-        value: co,
-        label: co,
-      })),
-    [companyList]
+    () => ContinentsData.map((co) => ({ value: co.name, label: co.name })),
+    [ContinentsData]
   );
+
   const countryOptions = useMemo(
-    () =>
-      Array.from(new Set(companyList.map((c) => c.country))).map((cy) => ({
-        value: cy,
-        label: cy,
-      })),
-    [companyList]
+    () => CountriesData.map((ct) => ({ value: ct.name, label: ct.name })),
+    [CountriesData]
   );
   const stateOptions = useMemo(
     () =>
