@@ -1,31 +1,32 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { useNavigate, NavLink } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { NavLink, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
+import { Button, Input, Radio, Select as UiSelect } from "@/components/ui";
 import Card from "@/components/ui/Card";
-import { Input, Select as UiSelect, Button, Radio } from "@/components/ui";
 import { Form, FormItem } from "@/components/ui/Form";
 import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
 import Spinner from "@/components/ui/Spinner";
+import toast from "@/components/ui/toast";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
 import { TbCopy } from "react-icons/tb";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addOfferAction,
-  getUsersAction,
   getAllProductAction,
   getMembersAction,
+  getProductsAction,
+  getUsersAction,
 } from "@/reduxtool/master/middleware";
+import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // --- Zod Schema for Create Offer Form ---
 const offerFormSchema = z.object({
@@ -57,20 +58,22 @@ const CreateOffer = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // --- MODIFICATION: State for editable price list table ---
-  const [priceListData, setPriceListData] = useState(staticPriceListData);
+  const [priceListData, setPriceListData] = useState([{}]);
 
   useEffect(() => {
     dispatch(getUsersAction());
     dispatch(getAllProductAction());
     dispatch(getMembersAction());
+    dispatch(getProductsAction());
   }, [dispatch]);
 
   const {
     usersData = [],
     productsMasterData = [],
     memberData = [],
+    ProductsData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
 
@@ -87,7 +90,7 @@ const CreateOffer = () => {
     return productsMasterData.map((p: any) => ({
       value: p.id,
       label: p.name,
-    }));
+    }))
   }, [productsMasterData]);
 
   const memberOptions = useMemo(() => {
@@ -317,68 +320,68 @@ const CreateOffer = () => {
               {/* --- MODIFICATION START: Reordered Layout --- */}
               {/* --- Seller and Buyer Selection --- */}
               <div className="grid md:grid-cols-2 gap-4 mt-4">
-                  <Card>
-                    <h5>Seller Section</h5>
-                    <div className="mt-4">
-                      <FormItem
-                        label="Sellers"
-                        invalid={!!errors.sellers}
-                        errorMessage={errors.sellers?.message}
-                      >
-                        <Controller
-                          name="sellers"
-                          control={control}
-                          render={({ field }) => (
-                            <UiSelect
-                              isMulti
-                              placeholder="Select Sellers"
-                              options={memberOptions}
-                              value={memberOptions.filter((opt) =>
-                                field.value?.includes(opt.value as number)
-                              )}
-                              onChange={(options: readonly OptionType[]) =>
-                                field.onChange(
-                                  options ? options.map((opt) => opt.value) : []
-                                )
-                              }
-                              isLoading={isLoading}
-                            />
-                          )}
-                        />
-                      </FormItem>
-                    </div>
-                  </Card>
-                  <Card>
-                    <h5>Buyer Section</h5>
-                    <div className="mt-4">
-                      <FormItem
-                        label="Buyers"
-                        invalid={!!errors.buyers}
-                        errorMessage={errors.buyers?.message}
-                      >
-                        <Controller
-                          name="buyers"
-                          control={control}
-                          render={({ field }) => (
-                            <UiSelect
-                              isMulti
-                              placeholder="Select Buyers"
-                              options={memberOptions}
-                              value={memberOptions.filter((opt) =>
-                                field.value?.includes(opt.value as number)
-                              )}
-                              onChange={(options: readonly OptionType[]) =>
-                                field.onChange(
-                                  options ? options.map((opt) => opt.value) : []
-                                )
-                              }
-                              isLoading={isLoading}
-                            />
-                          )}
-                        />
-                      </FormItem>
-                    </div>
-                  </Card>
+                <Card>
+                  <h5>Seller Section</h5>
+                  <div className="mt-4">
+                    <FormItem
+                      label="Sellers"
+                      invalid={!!errors.sellers}
+                      errorMessage={errors.sellers?.message}
+                    >
+                      <Controller
+                        name="sellers"
+                        control={control}
+                        render={({ field }) => (
+                          <UiSelect
+                            isMulti
+                            placeholder="Select Sellers"
+                            options={memberOptions}
+                            value={memberOptions.filter((opt) =>
+                              field.value?.includes(opt.value as number)
+                            )}
+                            onChange={(options: readonly OptionType[]) =>
+                              field.onChange(
+                                options ? options.map((opt) => opt.value) : []
+                              )
+                            }
+                            isLoading={isLoading}
+                          />
+                        )}
+                      />
+                    </FormItem>
+                  </div>
+                </Card>
+                <Card>
+                  <h5>Buyer Section</h5>
+                  <div className="mt-4">
+                    <FormItem
+                      label="Buyers"
+                      invalid={!!errors.buyers}
+                      errorMessage={errors.buyers?.message}
+                    >
+                      <Controller
+                        name="buyers"
+                        control={control}
+                        render={({ field }) => (
+                          <UiSelect
+                            isMulti
+                            placeholder="Select Buyers"
+                            options={memberOptions}
+                            value={memberOptions.filter((opt) =>
+                              field.value?.includes(opt.value as number)
+                            )}
+                            onChange={(options: readonly OptionType[]) =>
+                              field.onChange(
+                                options ? options.map((opt) => opt.value) : []
+                              )
+                            }
+                            isLoading={isLoading}
+                          />
+                        )}
+                      />
+                    </FormItem>
+                  </div>
+                </Card>
               </div>
 
               {/* --- Price List Table View (Moved) --- */}
@@ -395,14 +398,19 @@ const CreateOffer = () => {
                           placeholder="Select a Product"
                           options={productOptions}
                           value={productOptions.find((o) => o.value === field.value)}
-                          onChange={(option: OptionType | null) =>
+                          onChange={(option: OptionType | null) => {
                             field.onChange(option ? option.value : null)
+                            const colorData = ProductsData.data?.filter((data) => {
+                              return parseInt(data.id) === parseInt(option?.value)
+                            })
+                            setPriceListData([{ id: colorData[0]?.id, color: colorData[0]?.color, qty: colorData[0]?.qty, price: colorData[0]?.price }])
+                          }
                           }
                         />
                       )}
                     />
                   </FormItem>
-                  
+
                   <FormItem label="Status">
                     <Controller
                       name="productStatus"
@@ -452,28 +460,28 @@ const CreateOffer = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {priceListData.map((item, index) => (
+                      {priceListData?.map((item, index) => (
                         <tr key={item.id}>
                           <td className="px-4 py-3 whitespace-nowrap">{index + 1}</td>
                           <td className="px-4 py-3 whitespace-nowrap">{item.color}</td>
                           {/* --- MODIFICATION: Qty as Input --- */}
                           <td className="px-2 py-1 whitespace-nowrap">
                             <Input
-                                type="number"
-                                size="sm"
-                                value={item.qty}
-                                onChange={(e) => handlePriceListChange(index, 'qty', e.target.value)}
+                              type="number"
+                              size="sm"
+                              value={item.qty}
+                              onChange={(e) => handlePriceListChange(index, 'qty', e.target.value)}
                             />
                           </td>
                           {/* --- MODIFICATION: Price as Input --- */}
                           <td className="px-2 py-1 whitespace-nowrap">
                             <Input
-                                type="number"
-                                size="sm"
-                                step="0.01"
-                                value={item.price}
-                                onChange={(e) => handlePriceListChange(index, 'price', e.target.value)}
-                                prefix="$"
+                              type="number"
+                              size="sm"
+                              step="0.01"
+                              value={item.price}
+                              onChange={(e) => handlePriceListChange(index, 'price', e.target.value)}
+                              prefix="$"
                             />
                           </td>
                         </tr>
@@ -501,82 +509,82 @@ const CreateOffer = () => {
               {/* --- Group Notes --- */}
               <div className="grid md:grid-cols-2 gap-4 mt-4">
                 <Card>
-                    <h5>Group A Notes</h5>
-                    <div className="mt-4">
-                      <FormItem
-                        invalid={!!errors.groupA_notes}
-                        errorMessage={errors.groupA_notes?.message}
-                      >
-                        <Controller
-                          name="groupA_notes"
-                          control={control}
-                          render={({ field }) => (
-                            <Input
-                              {...field}
-                              value={field.value ?? ""}
-                              textArea
-                              placeholder="Enter notes for Group A (Optional)"
-                              rows={3}
-                            />
-                          )}
-                        />
-                      </FormItem>
-                      <div className="text-right mt-1">
-                        <Button
-                          type="button"
-                          icon={<TbCopy />}
-                          onClick={() => {
-                            navigator.clipboard.writeText(
-                              getValues("groupA_notes") || ""
-                            );
-                            toast.push(
-                              <Notification title="Copied" type="info">
-                                Group A notes copied to clipboard.
-                              </Notification>
-                            );
-                          }}
-                        />
-                      </div>
+                  <h5>Group A Notes</h5>
+                  <div className="mt-4">
+                    <FormItem
+                      invalid={!!errors.groupA_notes}
+                      errorMessage={errors.groupA_notes?.message}
+                    >
+                      <Controller
+                        name="groupA_notes"
+                        control={control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            value={field.value ?? ""}
+                            textArea
+                            placeholder="Enter notes for Group A (Optional)"
+                            rows={3}
+                          />
+                        )}
+                      />
+                    </FormItem>
+                    <div className="text-right mt-1">
+                      <Button
+                        type="button"
+                        icon={<TbCopy />}
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            getValues("groupA_notes") || ""
+                          );
+                          toast.push(
+                            <Notification title="Copied" type="info">
+                              Group A notes copied to clipboard.
+                            </Notification>
+                          );
+                        }}
+                      />
                     </div>
+                  </div>
                 </Card>
                 <Card>
-                    <h5>Group B Notes</h5>
-                    <div className="mt-4">
-                      <FormItem
-                        invalid={!!errors.groupB_notes}
-                        errorMessage={errors.groupB_notes?.message}
-                      >
-                        <Controller
-                          name="groupB_notes"
-                          control={control}
-                          render={({ field }) => (
-                            <Input
-                              {...field}
-                              value={field.value ?? ""}
-                              textArea
-                              placeholder="Enter notes for Group B (Optional)"
-                              rows={3}
-                            />
-                          )}
-                        />
-                      </FormItem>
-                      <div className="text-right mt-1">
-                        <Button
-                          type="button"
-                          icon={<TbCopy />}
-                          onClick={() => {
-                            navigator.clipboard.writeText(
-                              getValues("groupB_notes") || ""
-                            );
-                            toast.push(
-                              <Notification title="Copied" type="info">
-                                Group B notes copied to clipboard.
-                              </Notification>
-                            );
-                          }}
-                        />
-                      </div>
+                  <h5>Group B Notes</h5>
+                  <div className="mt-4">
+                    <FormItem
+                      invalid={!!errors.groupB_notes}
+                      errorMessage={errors.groupB_notes?.message}
+                    >
+                      <Controller
+                        name="groupB_notes"
+                        control={control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            value={field.value ?? ""}
+                            textArea
+                            placeholder="Enter notes for Group B (Optional)"
+                            rows={3}
+                          />
+                        )}
+                      />
+                    </FormItem>
+                    <div className="text-right mt-1">
+                      <Button
+                        type="button"
+                        icon={<TbCopy />}
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            getValues("groupB_notes") || ""
+                          );
+                          toast.push(
+                            <Notification title="Copied" type="info">
+                              Group B notes copied to clipboard.
+                            </Notification>
+                          );
+                        }}
+                      />
                     </div>
+                  </div>
                 </Card>
               </div>
               {/* --- MODIFICATION END: Reordered Layout --- */}
