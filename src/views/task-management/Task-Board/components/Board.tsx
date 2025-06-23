@@ -63,6 +63,10 @@ import { useScrumBoardStore } from '../store/scrumBoardStore';
 // Utils & Assets
 import { createCardObject, taskLabelColors, labelList, createUID } from '../utils';
 import NoMedia from '@/assets/svg/NoMedia';
+import { getAllTaskAction, getAllTaskByStatuesAction, updateTaskStatusAPI } from '@/reduxtool/master/middleware';
+import { useAppDispatch } from '@/reduxtool/store';
+import { useSelector } from 'react-redux';
+import { masterSelector } from '@/reduxtool/master/masterSlice';
 
 
 // Types from '../types' (as imported in original files)
@@ -240,6 +244,7 @@ const ActualAddNewColumnContent = () => {
     newOrdered.forEach((elm) => {
       newColumnsState[elm] = currentColumns[elm];
     });
+console.log("newColumnsState",newColumnsState);
 
     updateColumns(newColumnsState);
     updateOrdered(newOrdered);
@@ -1032,7 +1037,7 @@ const BoardCard = React.forwardRef<HTMLDivElement, BoardCardProps>((props, ref) 
             clickable
             className="hover:shadow-lg rounded-lg mb-4 border-0 dark:bg-gray-700" // Added dark mode bg
             bodyClass="p-4"
-            onClick={onCardClick}
+            // onClick={onCardClick}
             {...rest}
         >
             <div className="mb-2 font-bold heading-text text-base text-gray-800 dark:text-gray-100">{name}</div>
@@ -1475,43 +1480,64 @@ const ScrumBoardHeader = ({ boardMembers = [] }: { boardMembers: Member[] }) => 
                 <h3 className="text-xl font-bold dark:text-white">Task Board</h3>
                 {/* <p className="font-semibold">Add Task</p> */}
             </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2"> {/* Adjusted gap and alignment */}
-                <UsersAvatarGroup
-                    avatarProps={{ size: 35 }}
-                    users={boardMembers}
-                />
-                <Button
-                    size="sm"
-                    icon={<TbUserPlus />}
-                    onClick={onAddMember}
-                    className="mr-2"
-                >
-                    Add Member
-                </Button>
-                 <Button
-                    size="sm"
-                    variant="solid" // More prominent for adding a column
-                    icon={<TbPlus />}
-                    onClick={handleAddNewColumn}
-                >
-                    Add Status
-                </Button>
-                {/* Settings button example */}
-                {/* <Button
-                    size="sm"
-                    icon={<TbSettings />}
-                    onClick={() => navigate('/app/account/settings/profile')}
-                    variant="plain" // Less prominent
-                    className="hidden md:inline-flex" // Hide on small screens
-                /> */}
-            </div>
+           
         </div>
     );
 };
 
 
+const transformApiTaskToTicket = (apiTask: any): Ticket => {
+    const members: Member[] = (apiTask.assign_to_users || []).map((user: any) => ({
+        id: user.id.toString(),
+        name: user.name,
+        email: user.email || `user-${user.id}@example.com`, // Fallback email
+        img: user.profile_pic_path || '', // Provide a fallback avatar if needed
+    }));
+
+    const comments: Comment[] = (apiTask.activity_notes || []).map((note: any) => ({
+        id: note.id.toString(),
+        name: note.user.name,
+        src: note.user.profile_pic_path || '',
+        message: note.activity_comment,
+        date: new Date(note.created_at),
+    }));
+
+    const attachments: Attachment[] = (apiTask.attachments || []).map((att: any) => ({
+        id: att.id.toString(),
+        name: att.attachment_name,
+        src: att.attachment_path, // Ensure this is a full URL or prefix with base URL if needed
+        size: att.attachment_type, // API provides type, can be displayed or converted
+    }));
+
+    // Labels for board card display - typically status and priority
+    const cardLabels: string[] = [];
+    if (apiTask.status) {
+        cardLabels.push(apiTask.status);
+    }
+    // if (apiTask.priority) { // Decided to show priority separately in ticket detail
+    //     cardLabels.push(apiTask.priority);
+    // }
+
+    return {
+        id: apiTask.id.toString(),
+        name: apiTask.task_title,
+        description: apiTask.additional_description || apiTask.note_remark || '',
+        dueDate: apiTask.due_data ? new Date(apiTask.due_data) : undefined,
+        labels: cardLabels, // These are the tags shown on the card
+        members: members,
+        comments: comments,
+        attachments: attachments,
+        priority: apiTask.priority, // For detailed view
+        category: apiTask.department_info?.name || apiTask.module_name, // For detailed view
+        _originalApiData: apiTask,
+    };
+};
+
 // --- Main Board Component ---
 const Board = (props: BoardProps) => {
+
+    const navigate = useNavigate();
+      const dispatch = useAppDispatch();
     const {
         columns,
         ordered,
@@ -1532,52 +1558,85 @@ const Board = (props: BoardProps) => {
         isCombineEnabled, // default false
         withScrollableColumns, // default false
     } = props;
+const DEFAULT_BOARD_STATUSES = [
+    "Not Started", 
+    "Pending", 
+    "In Progress", 
+    "On Hold", 
+    "Review", 
+    "Completed", 
+    "Cancelled"
+];
+   const { AllTaskDataByStatues = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
 
-    // SWR hook for fetching boards
-    useSWR<GetScrumBoardsResponse, Error>( // Added types for SWR
-        '/api/projects/scrum-board', // Key can be a string
-        () => apiGetScrumBoards<GetScrumBoardsResponse>(),
-        {
-            revalidateOnFocus: false,
-            revalidateIfStale: false,
-            revalidateOnReconnect: false,
-            onSuccess: (data) => {
-                if (data && typeof data === 'object' && !Array.isArray(data)) { // Ensure data is an object
-                    updateOrdered(Object.keys(data));
-                    updateColumns(data);
-                } else {
-                    console.error("apiGetScrumBoards returned invalid data format:", data);
-                    updateOrdered([]); // Reset on error
-                    updateColumns({});
-                }
-            },
-            onError: (err) => {
-                console.error("Failed to fetch scrum boards:", err);
-            }
-        },
-    );
+    useEffect(() => { dispatch(getAllTaskByStatuesAction()); }, [dispatch]);
+    console.log("AllTaskDataByStatues",AllTaskDataByStatues);
+    
+  useEffect(() => {
+    // Only process when loading is complete (or an attempt to load has finished)
+    if (masterLoadingStatus === 'idle') {
+        const newColumns: Columns = {}; // Assuming Columns is something like Record<string, Ticket[]>
 
-    // SWR hook for fetching members
-    useSWR<GetProjectMembersResponse, Error>( // Added types for SWR
-        '/api/projects/scrum-board/members', // Key can be a string
-        () => apiGetProjectMembers<GetProjectMembersResponse>(),
-        {
-            revalidateOnFocus: false,
-            revalidateIfStale: false,
-            revalidateOnReconnect: false,
-            onSuccess: (data) => {
-                if (data && data.participantMembers && data.allMembers) {
-                    updateBoardMembers(data.participantMembers);
-                    updateAllMembers(data.allMembers);
-                } else {
-                     console.error("apiGetProjectMembers returned invalid data format:", data);
+        // Safely access API data, defaulting to an empty object if it's not a valid object
+        const safeApiData = (AllTaskDataByStatues && typeof AllTaskDataByStatues === 'object' && !Array.isArray(AllTaskDataByStatues))
+            ? AllTaskDataByStatues
+            : {};
+
+        // Log a warning if the API data was not in the expected format
+        if (AllTaskDataByStatues && (typeof AllTaskDataByStatues !== 'object' || Array.isArray(AllTaskDataByStatues))) {
+            console.warn(
+                "AllTaskDataByStatues from API/Redux was not in the expected object format. Will initialize boards as empty or with partial data if possible. Data received:", 
+                AllTaskDataByStatues
+            );
+        }
+
+        // Iterate over the definitive list of statuses to ensure all are present
+        DEFAULT_BOARD_STATUSES.forEach(statusKey => {
+            const apiTasksForStatus: any[] = safeApiData[statusKey];
+
+            if (Array.isArray(apiTasksForStatus)) {
+                // If API provides an array for this status (even an empty one), map it
+                newColumns[statusKey] = apiTasksForStatus.map(apiTask => transformApiTaskToTicket(apiTask));
+            } else {
+                // If statusKey is not in safeApiData OR safeApiData[statusKey] is not an array,
+                // initialize this column as empty.
+                newColumns[statusKey] = []; 
+                
+                // Optionally, log if the key existed in API data but wasn't an array
+                if (safeApiData.hasOwnProperty(statusKey) && !Array.isArray(apiTasksForStatus)) {
+                    console.warn(
+                        `Data for status "${statusKey}" was expected to be an array but was not:`, 
+                        apiTasksForStatus
+                    );
                 }
-            },
-             onError: (err) => {
-                console.error("Failed to fetch project members:", err);
             }
-        },
-    );
+        });
+        
+        // Optional: Log any statuses received from the API that are NOT in DEFAULT_BOARD_STATUSES
+        // These statuses will be ignored by the current setup.
+        Object.keys(safeApiData).forEach(apiStatusKey => {
+            if (!DEFAULT_BOARD_STATUSES.includes(apiStatusKey)) {
+                console.warn(
+                    `API returned status "${apiStatusKey}" which is not in the predefined DEFAULT_BOARD_STATUSES list. This status and its tasks will be ignored.`
+                );
+            }
+        });
+
+        updateColumns(newColumns);
+        // The 'ordered' state will be directly from our definitive list, ensuring correct order and inclusion
+        updateOrdered([...DEFAULT_BOARD_STATUSES]); // Use a copy to be safe
+
+    } 
+    // You might have other conditions for 'masterLoadingStatus' (e.g., 'loading', 'failed')
+    // to set loading states or display errors, but this useEffect specifically handles 'idle'.
+
+}, [
+    AllTaskDataByStatues, 
+    masterLoadingStatus, 
+    updateColumns, 
+    updateOrdered, 
+    // transformApiTaskToTicket // Add if it's a prop or defined in a way that its reference can change
+]);
 
     const TicketContent = lazy(() => Promise.resolve({ default: ActualTicketContent }));
     const AddNewTicketContent = lazy(() => Promise.resolve({ default: ActualAddNewTicketContent }));
@@ -1591,68 +1650,126 @@ const Board = (props: BoardProps) => {
         resetView();
     };
 
-    const onDragEnd = (result: DropResult) => {
-        if (result.combine) {
-            if (result.type === 'COLUMN') {
-                const shallow = [...ordered];
-                shallow.splice(result.source.index, 1);
-                updateOrdered(shallow);
-                // Also remove the column from 'columns' state
+   
+
+    const onDragEnd = async (result: DropResult) => { // Make the handler async
+    const { source, destination, combine, type, draggableId } = result;
+
+    // 1. Handling combining items
+    if (combine) {
+        if (type === 'COLUMN') {
+            const shallow = [...ordered];
+            shallow.splice(source.index, 1);
+            updateOrdered(shallow);
+
+            // Also remove the column from 'columns' state
+            // IMPORTANT: If 'ordered' contains IDs that are keys in 'columns'
+            const columnIdToRemove = ordered[source.index]; // Get the ID *before* splicing 'ordered'
+            if (columnIdToRemove) {
                 const newColumns = { ...columns };
-                delete newColumns[ordered[result.source.index]]; // Assuming 'ordered' holds the key of the column
+                delete newColumns[columnIdToRemove];
                 updateColumns(newColumns);
-                return;
-            }
-
-            // Ticket combining (if implemented)
-            const column = columns[result.source.droppableId];
-            if (column) {
-                const withQuoteRemoved = [...column];
-                withQuoteRemoved.splice(result.source.index, 1);
-                const newColumns = {
-                    ...columns,
-                    [result.source.droppableId]: withQuoteRemoved,
-                };
-                updateColumns(newColumns);
+            } else {
+                console.warn("Could not determine column ID to remove for combine operation.");
             }
             return;
         }
 
-        if (!result.destination) {
+        // Ticket combining (if implemented)
+        const column = columns[source.droppableId];
+        if (column) {
+            const withQuoteRemoved = [...column];
+            withQuoteRemoved.splice(source.index, 1);
+            const newColumns = {
+                ...columns,
+                [source.droppableId]: withQuoteRemoved,
+            };
+            updateColumns(newColumns);
+            // NOTE: You might want an API call here too if combining means a status change or deletion.
+        }
+        return;
+    }
+
+    // 2. Item dropped outside a droppable area
+    if (!destination) {
+        return;
+    }
+
+    // 3. Item dropped in the same place
+    if (
+        source.droppableId === destination.droppableId &&
+        source.index === destination.index
+    ) {
+        return;
+    }
+
+    // 4. Reordering Columns
+    if (type === 'COLUMN') {
+        const newOrdered = reoderArray( // Assuming reoderArray is reorderArray
+            ordered,
+            source.index,
+            destination.index,
+        );
+        updateOrdered(newOrdered as string[]); // Ensure type
+        return;
+    }
+
+    // 5. Reordering or Moving Tickets (this is where the main logic for tickets goes)
+    // At this point, type is not 'COLUMN', so it's a ticket.
+
+    const oldColumnsState = { ...columns }; // Save old state for potential revert on API failure
+
+    const data = reorderDragable<Record<string, Ticket[]>>({
+        quoteMap: columns, // current columns
+        source,
+        destination,
+    });
+
+    updateColumns(data.quoteMap); // Optimistically update the UI
+console.log("source.droppableId !== destination.droppableId",source.droppableId !== destination.droppableId);
+
+    // Check if the ticket moved to a DIFFERENT column
+    if (source.droppableId !== destination.droppableId) {
+        // This is where you call your API
+        const taskId = parseInt(draggableId, 10); // Assuming draggableId is the string version of task_id
+        const newStatus = destination.droppableId; // This is the ID of the column (e.g., "Start", "InProgress")
+
+        if (isNaN(taskId)) {
+            console.error("Invalid draggableId, cannot parse to taskId:", draggableId);
+            // Optionally revert UI
+            // updateColumns(oldColumnsState);
             return;
         }
 
-        const source = result.source;
-        const destination = result.destination;
+        const payload = {
+            user_id: 53, // Get this from your app's auth state
+            task_id: taskId,
+            status: newStatus,
+        };
 
-        if (
-            source.droppableId === destination.droppableId &&
-            source.index === destination.index
-        ) {
-            return;
+        console.log("Calling API task-status-update with:", payload);
+        // const success = await updateTaskStatusAPI(payload);
+const success = await dispatch(updateTaskStatusAPI(payload)).unwrap();
+        if (!success) {
+            // API call failed, consider reverting the optimistic UI update
+            console.warn("API call failed. Reverting UI change.");
+            // To revert, you'd need to re-apply the state before the drag
+            // This can get complex if you allow multiple quick drags.
+            // A simple revert would be:
+            // updateColumns(oldColumnsState); // This might not be perfectly accurate if other changes happened
+            // For a more robust solution, you might need to re-fetch or use a more sophisticated state management.
+            alert("Failed to update task status. The change has been reverted (or please refresh).");
+            // For a simple revert of *this specific move*, you can reconstruct the previous state
+            // by moving the item back programmatically, but that's more involved.
+            // Simplest for now is to inform the user and potentially revert to `oldColumnsState`.
+            // Let's assume for now, we just log the error and the optimistic update stays.
         }
-
-        if (result.type === 'COLUMN') {
-            const newOrdered = reoderArray( // Assuming reoderArray is reorderArray
-                ordered,
-                source.index,
-                destination.index,
-            );
-            updateOrdered(newOrdered as string[]); // Ensure type
-            return;
-        }
-
-        // Ticket reordering
-        const data = reorderDragable<Record<string, Ticket[]>>({
-            quoteMap: columns,
-            source,
-            destination,
-        });
-
-        updateColumns(data.quoteMap);
-    };
-
-    
+    }
+    // If it's just reordering within the same column (source.droppableId === destination.droppableId),
+    // the UI is already updated by updateColumns(data.quoteMap), and no API call for status change is needed.
+    // You might have a different API for reordering tasks within a list, if that's required.
+};
+     
 
     return (
         <>

@@ -28,10 +28,25 @@ export const createCardObject = (): Ticket => {
 }
 
 export const taskLabelColors: Record<string, string> = {
-    'Live issue': 'bg-rose-200 dark:bg-rose-200 dark:text-gray-900',
-    Task: 'bg-blue-200 dark:bg-blue-200 dark:text-gray-900',
-    Bug: 'bg-amber-200 dark:bg-amber-200 dark:text-gray-900',
-    'Low priority': 'bg-purple-200 dark:bg-purple-200 dark:text-gray-900',
+    'Pending': 'bg-yellow-500 text-white',
+    'In Progress': 'bg-blue-500 text-white', // Example, adjust if your API uses different terms
+    'Completed': 'bg-green-500 text-white',
+    'Done': 'bg-green-600 text-white', // If "Done" is a status
+    'To Do': 'bg-gray-500 text-white', // If "To Do" is a status
+    'Review': 'bg-purple-500 text-white',
+    'On Hold': 'bg-orange-400 text-black',
+
+
+    // Priorities from API
+    'High': 'bg-red-600 text-white',
+    'Medium': 'bg-orange-500 text-white',
+    'Low': 'bg-teal-500 text-white',
+    'Urgent': 'bg-pink-600 text-white',
+
+    // Other generic labels (if any)
+    'Bug': 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+    'Feature': 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+    'Improvement': 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100',
 }
 
 export const labelList = ['Task', 'Bug', 'Live issue', 'Low priority']

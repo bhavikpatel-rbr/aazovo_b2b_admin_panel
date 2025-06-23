@@ -424,6 +424,18 @@ export const getAllTaskAsync = async () => {
   }
 }
 
+
+export const getAllTaskByStatuesAsync = async () => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/get-all-task-by-status`, {
+      "user_id": 53
+    })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const addBrandAsync = async (unitData: FormData) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
@@ -2236,7 +2248,7 @@ export const addpartnerAsync = async (unitData: any) => {
 
 export const editpartnerAsync = async (id: string | number, formData: FormData) => {
   try {
-      formData.append("_method", "PUT");
+    formData.append("_method", "PUT");
     const response = await axiosInstance.post(
       `${config.apiURL}/partner/${id}`,
       formData,
@@ -2810,6 +2822,16 @@ export const addTaskListAsync = async (unitData: FormData) => {
         'Content-Type': 'multipart/form-data'
       }
     });
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+};
+
+export const updateTaskStatusAsync = async (unitData: FormData) => {
+  try {
+    // For FormData, we need to set the correct headers (or let Axios set them automatically)
+    const response = await axiosInstance.post(`${config.apiURL}/task-status-update`, unitData);
     return response;
   } catch (err) {
     return isAxiosError(err);
