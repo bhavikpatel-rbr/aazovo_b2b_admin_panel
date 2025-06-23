@@ -75,7 +75,7 @@ interface CompanyBankDetailItemFE {
 
 interface CertificateItemFE {
   id?: string;
-  certificate_id?: string | { label: string; value: string }; // Keep as string or object
+  certificate_id?: string ; // Keep as string or object
   certificate_name?: string;
   upload_certificate?: File | string | null;
 }
@@ -174,11 +174,11 @@ export interface CompanyFormSchema {
   other_document_remark_enabled?: boolean;
 
   primary_account_number?: string;
-  primary_bank_name?: string | { label: string; value: string } | null;
+  primary_bank_name?: string;
   primary_ifsc_code?: string;
   primary_bank_verification_photo?: File | string | null;
   secondary_account_number?: string;
-  secondary_bank_name?: string | { label: string; value: string } | null;
+  secondary_bank_name?: string;
   secondary_ifsc_code?: string;
   secondary_bank_verification_photo?: File | string | null;
   company_bank_details?: CompanyBankDetailItemFE[];
@@ -399,7 +399,7 @@ const transformApiToFormSchema = (
     notification_email: apiData.notification_email || '',
 
     company_certificate: apiData.company_certificate?.map(cert => ({
-        certificate_id: cert.certificate_id ? { label: cert.certificate_name || `ID: ${cert.certificate_id}`, value: cert.certificate_id } : undefined, // Assuming API sends ID, label needs construction or fetching
+        certificate_id: cert.certificate_id, // Assuming API sends ID, label needs construction or fetching
         certificate_name: cert.certificate_name || '',
         upload_certificate: cert.upload_certificate_path || cert.upload_certificate || null,
     })) || [],
@@ -447,11 +447,11 @@ const transformApiToFormSchema = (
 
 
     primary_account_number: apiData.primary_account_number || '',
-    primary_bank_name: apiData.primary_bank_name ? { label: apiData.primary_bank_name, value: apiData.primary_bank_name } : null, // Assuming free text for now
+    primary_bank_name: apiData.primary_bank_name || null, // Assuming free text for now
     primary_ifsc_code: apiData.primary_ifsc_code || '',
     primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
     secondary_account_number: apiData.secondary_account_number || '',
-    secondary_bank_name: apiData.secondary_bank_name ? { label: apiData.secondary_bank_name, value: apiData.secondary_bank_name } : null,
+    secondary_bank_name: apiData.secondary_bank_name || null,
     secondary_ifsc_code: apiData.secondary_ifsc_code || '',
     secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
     company_bank_details: apiData.company_bank_details?.map(bank => ({
@@ -573,12 +573,9 @@ const preparePayloadForApi = (
 
   // Certificates
   data.company_certificate?.forEach((cert: CertificateItemFE, index: number) => {
-    const certIdValue = typeof cert.certificate_id === 'object' ? cert.certificate_id?.value : cert.certificate_id;
-    if (certIdValue) {
-      apiPayload.append(`company_certificate[${index}][certificate_id]`, String(certIdValue));
+      apiPayload.append(`company_certificate[${index}][certificate_id]`, cert.certificate_id || "");
       apiPayload.append(`company_certificate[${index}][certificate_name]`, cert.certificate_name || "");
       appendFileIfExists(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
-    }
   });
 
   // Office Info
@@ -615,12 +612,12 @@ const preparePayloadForApi = (
 
   // Bank Details
   appendField("primary_account_number", data.primary_account_number);
-  appendField("primary_bank_name", typeof data.primary_bank_name === 'object' ? data.primary_bank_name?.value : data.primary_bank_name);
+  appendField("primary_bank_name", data.primary_bank_name);
   appendField("primary_ifsc_code", data.primary_ifsc_code);
   appendFileIfExists("primary_bank_verification_photo", data.primary_bank_verification_photo);
 
   appendField("secondary_account_number", data.secondary_account_number);
-  appendField("secondary_bank_name", typeof data.secondary_bank_name === 'object' ? data.secondary_bank_name?.value : data.secondary_bank_name);
+  appendField("secondary_bank_name", data.secondary_bank_name);
   appendField("secondary_ifsc_code", data.secondary_ifsc_code);
   appendFileIfExists("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
 
@@ -1418,10 +1415,10 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
       <h4 className="mb-6">Accessibility & Configuration</h4>
       <div className="grid grid-cols-1 gap-y-6">
         <div className="flex items-center gap-x-8">
-          <FormItem label={<div>Enable Billing<span className="text-red-500"> * </span></div>} invalid={!!errors.BILLING_FIELD} errorMessage={errors.BILLING_FIELD?.message as string}>
+          <FormItem label={<div>Enable Billing</div>} invalid={!!errors.BILLING_FIELD} errorMessage={errors.BILLING_FIELD?.message as string}>
             <Controller name="BILLING_FIELD" control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange}> Enabled </Checkbox>)} />
           </FormItem>
-          <FormItem label={<div>User Access<span className="text-red-500"> * </span></div>} invalid={!!errors.USER_ACCESS} errorMessage={errors.USER_ACCESS?.message as string}>
+          <FormItem label={<div>User Access</div>} invalid={!!errors.USER_ACCESS} errorMessage={errors.USER_ACCESS?.message as string}>
             <Controller name="USER_ACCESS" control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange}> Enabled </Checkbox>)} />
           </FormItem>
         </div>
@@ -1463,9 +1460,9 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
   const dispatch = useAppDispatch();
   const { memberData } = useSelector(masterSelector); // Assuming memberData is { data: { data: [] } } or { data: [] }
   const { fields, append, remove } = useFieldArray({ control, name: "member" });
-
+  
   const memberOptions = useMemo(() => {
-    const data = memberData?.data?.data || memberData?.data || []; // Handle both structures
+    const data = memberData || []; // Handle both structures
     return Array.isArray(data)
       ? data.map((m: any) => ({
           value: String(m.id),
@@ -1622,11 +1619,11 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     other_document_remark_enabled: z.boolean().optional(),
 
     primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_bank_name: z.union([z.string(), z.object({ label: z.string(), value: z.string() })]).optional().nullable(),
+    primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_bank_verification_photo: z.any().optional().nullable(),
     secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_bank_name: z.union([z.string(), z.object({ label: z.string(), value: z.string() })]).optional().nullable(),
+    secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_bank_verification_photo: z.any().optional().nullable(),
     company_bank_details: z.array(z.object({
