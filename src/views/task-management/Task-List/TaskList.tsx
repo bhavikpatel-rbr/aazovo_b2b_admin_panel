@@ -513,46 +513,48 @@ export const ActionColumn = ({
                     <TbEye />
                 </div>
             </Tooltip>
-            <Dropdown
-                renderTitle={
-                    <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
-                }
-            >
-                <Dropdown.Item className="flex items-center gap-2" onClick={onChangeStatus}>
-                    <TbChecks size={18} />{' '}
-                    <span className="text-xs">Mark as Completed</span>
-                </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
-                    <TbBell size={18} />{' '}
-                    <span className="text-xs">Add as Notification</span>
-                </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
-                    <TbTagStarred size={18} />{' '}
-                    <span className="text-xs">Mark as Active</span>
-                </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
-                    <TbCalendarEvent size={18} />{' '}
-                    <span className="text-xs">Add to Calendar</span>
-                </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
-                    <TbMail size={18} />{' '}
-                    <span className="text-xs"> Send Email</span>
-                </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
-                    <TbBrandWhatsapp size={18} />{' '}
-                    <span className="text-xs">Send on Whatsapp</span>
-                </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
-                    <TbActivity size={18} />{' '}
-                    <span className="text-xs">Add Activity</span>
-                </Dropdown.Item>
-                {onDelete && (
-                     <Dropdown.Item className="flex items-center gap-2 text-red-600" onClick={onDelete}>
-                        <TbX size={18} /> {/* Using TbX for delete, could be TbTrash */}
-                        <span className="text-xs">Delete Task</span>
-                    </Dropdown.Item>
-                )}
-            </Dropdown>
+<Dropdown
+  renderTitle={
+    <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+  }
+>
+  {/* 1. Send Email */}
+  <Dropdown.Item className="flex items-center gap-2">
+    <TbMail size={18} />
+    <span className="text-xs">Send Email</span>
+  </Dropdown.Item>
+
+  {/* 2. Send WhatsApp */}
+  <Dropdown.Item className="flex items-center gap-2">
+    <TbBrandWhatsapp size={18} />
+    <span className="text-xs">Send Whatsapp</span>
+  </Dropdown.Item>
+
+  {/* 3. Add Notification */}
+  <Dropdown.Item className="flex items-center gap-2">
+    <TbBell size={18} />
+    <span className="text-xs">Add Notification</span>
+  </Dropdown.Item>
+
+  {/* 4. Add Schedule */}
+  <Dropdown.Item className="flex items-center gap-2">
+    <TbCalendarEvent size={18} />
+    <span className="text-xs">Add Schedule</span>
+  </Dropdown.Item>
+
+  {/* 5. Add Active */}
+  <Dropdown.Item className="flex items-center gap-2">
+    <TbTagStarred size={18} />
+    <span className="text-xs">Add Active</span>
+  </Dropdown.Item>
+
+  {/* 6. Add/View Activity */}
+  <Dropdown.Item className="flex items-center gap-2">
+    <TbActivity size={18} />
+    <span className="text-xs">Add / View Activity</span>
+  </Dropdown.Item>
+</Dropdown>
+
         </div>
     )
 }
