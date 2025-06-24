@@ -543,13 +543,14 @@ function exportToCsv(filename: string, rows: CompanyItem[]) {
 
 // --- Status Colors & Context ---
 const companyStatusColors: Record<string, string> = {
-  Active: "bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300",
-  Verified: "bg-blue-200 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
-  Pending: "bg-orange-200 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
-  Inactive: "bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300",
-  active: "bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300",
-  inactive: "bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300",
-  "Non Verified": "bg-yellow-200 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
+  Active: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+  Verified: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+  // Verified: "bg-blue-200 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
+  Pending: "border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
+  Inactive: "border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+  // active: "border border-green-300 bg-green-300 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+  // inactive: "border border-red-300 bg-red-300 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+  "Non Verified": "border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
 };
 const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
   if (!statusValue) return "bg-gray-200 text-gray-600";
@@ -1526,19 +1527,19 @@ const CompanyListTable = () => {
               <div className="flex items-center gap-2">
                 <Avatar
                   src={company_logo ? `https://aazovo.codefriend.in/${company_logo}` : undefined} // UPDATED src logic
-                  size="md"
+                  size="sm"
                   shape="circle"
                   className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
                   onClick={() => company_logo && openImageViewer(company_logo)}
                   icon={<TbUserCircle />}
                 />
                 <div>
-                  <h6 className="text-xs font-semibold">{company_code}</h6>
-                  <span className="text-xs font-semibold">{company_name}</span>
+                  <h6 className="text-xs font-semibold"><em className="text-blue-600">{company_code || "Company Code"}</em></h6>
+                  <span className="text-xs font-semibold leading-1">{company_name}</span>
                 </div>
               </div>
               <span className="text-xs mt-1">
-                <b>Type:</b> {ownership_type}
+                <b>Ownership Type:</b> {ownership_type}
               </span>
               <div className="text-xs text-gray-500">
                 {city}, {state}, {country?.name || 'N/A'} {/* UPDATED country access */}
@@ -1570,10 +1571,10 @@ const CompanyListTable = () => {
         cell: ({ row }) => {
           const { gst_number, pan_number, status } = row.original;
           return (
-            <div className="flex flex-col gap-1 text-[10px]">
+            <div className="flex flex-col gap-0.5 text-[11px]">
               {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>}
               {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>}
-              <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[10px] px-1.5 py-0.5`}>
+              <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>
                 {status}
               </Tag>
             </div>
@@ -1586,8 +1587,13 @@ const CompanyListTable = () => {
         size: 190,
         cell: ({ row }) => {
           const { members_count = 0, teams_count = 0, profile_completion = 0, kyc_verified, enable_billing, due_after_3_months_date } = row.original;
+          const formattedDate = due_after_3_months_date
+            ? `${new Date(due_after_3_months_date).getDate()} 
+              ${new Date(due_after_3_months_date).toLocaleString("en-US", { month: "short" })}, 
+              ${new Date(due_after_3_months_date).getFullYear()}`
+            : "N/A";
           return (
-            <div className="flex flex-col gap-1.5 text-xs">
+            <div className="flex flex-col gap-1 text-xs">
               <span><b>Members:</b> {members_count}</span>
               <span><b>Teams:</b> {teams_count}</span>
               <div className="flex gap-1 items-center">
@@ -1603,7 +1609,11 @@ const CompanyListTable = () => {
                 </Tooltip>
               </div>
               <span>
-                <b>Billing Due:</b> {due_after_3_months_date ? new Date(due_after_3_months_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ /g, "/") : "N/A"}
+                <b>Billing Due:</b> 
+                {/* {due_after_3_months_date ? 
+                new Date(due_after_3_months_date).toLocaleDateString("en-GB", 
+                { day: "numeric", month: "short", year: "numeric" }).replace(/ /g, "/") : "N/A"} */}
+                {formattedDate}
               </span>
               <Tooltip title={`Profile Completion ${profile_completion}%`}>
                 <div className="h-2.5 w-full rounded-full bg-gray-300">
