@@ -42,19 +42,49 @@ import Tooltip from "@/components/ui/Tooltip";
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlarm, TbAlertTriangle, TbBell, TbBookmark, TbBox, TbBoxOff, TbBrandWhatsapp,
-  TbBulb, TbCalendar, TbCalendarEvent, TbCancel, TbChecks, TbCircleCheck,
-  TbCloudDownload, TbCloudUpload, TbCopy, TbCurrencyDollar,
+  TbAlarm,
+  TbAlertTriangle,
+  TbBell,
+  TbBookmark,
+  TbBox,
+  TbBoxOff,
+  TbBrandWhatsapp,
+  TbBulb,
+  TbCalendar,
+  TbCalendarEvent,
+  TbCancel,
+  TbChecks,
+  TbCircleCheck,
+  TbCloudDownload,
+  TbCloudUpload,
+  TbCopy,
+  TbCurrencyDollar,
   TbEye,
   TbFilter,
-  TbListDetails, TbMail, TbMessageCircle, TbPackageExport, TbPencil, TbPhoto, TbPlus,
+  TbListDetails,
+  TbMail,
+  TbMessageCircle,
+  TbPackageExport,
+  TbPencil,
+  TbPhoto,
+  TbPlus,
   TbProgress,
-  TbReload, TbSearch, TbShare, TbStack2, TbTagStarred, TbUser
+  TbReload,
+  TbSearch,
+  TbShare,
+  TbStack2,
+  TbTagStarred,
+  TbUser,
 } from "react-icons/tb";
 
 // Types
 import type { TableQueries } from "@/@types/common";
-import type { CellContext, ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
+import type {
+  CellContext,
+  ColumnDef,
+  OnSortParam,
+  Row,
+} from "@/components/shared/DataTable";
 
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -78,7 +108,14 @@ import { z } from "zod";
 // --- Type Definitions ---
 export type ApiWallItemFromSource = any;
 
-export type WallRecordStatus = "Pending" | "Approved" | "Rejected" | "Expired" | "Fulfilled" | "Active" | string;
+export type WallRecordStatus =
+  | "Pending"
+  | "Approved"
+  | "Rejected"
+  | "Expired"
+  | "Fulfilled"
+  | "Active"
+  | string;
 export type WallIntent = "Buy" | "Sell" | "Exchange";
 export type WallProductCondition = "New" | "Used" | "Refurbished" | string;
 
@@ -152,215 +189,675 @@ const filterFormSchema = z.object({
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 const exportReasonSchema = z.object({
-  reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
+  reason: z
+    .string()
+    .min(1, "Reason for export is required.")
+    .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- Status Colors and Options ---
 const recordStatusColor: Record<WallRecordStatus, string> = {
-  Pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
-  Approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  Pending:
+    "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
+  Approved:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
   Rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
   Expired: "bg-gray-100 text-gray-700 dark:bg-gray-600/20 dark:text-gray-100",
   Fulfilled: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
-  Active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  Active:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
 };
-const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({ value: s, label: s }));
+const recordStatusOptions = Object.keys(recordStatusColor).map((s) => ({
+  value: s,
+  label: s,
+}));
 
 const intentTagColor: Record<WallIntent, string> = {
   Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
   Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
-  Exchange: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
+  Exchange:
+    "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
 };
 const intentOptions: { value: WallIntent; label: string }[] = [
-  { value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" },
+  { value: "Buy", label: "Buy" },
+  { value: "Sell", label: "Sell" },
+  { value: "Exchange", label: "Exchange" },
 ];
 
 const productApiStatusColor: Record<string, string> = {
-  available: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100",
-  "low stock": "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
-  "out of stock": "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
+  available:
+    "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-100",
+  "low stock":
+    "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-100",
+  "out of stock":
+    "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
   discontinued: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
-  "non-active": "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100",
+  "non-active":
+    "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100",
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100",
 };
 
 // --- Dummy Data ---
-export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }];
+export const dummyCartoonTypes = [
+  { id: 1, name: "Master Carton" },
+  { id: 2, name: "Inner Carton" },
+];
 
 // ============================================================================
 // --- MODALS SECTION (No Changes) ---
 // ============================================================================
-export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "alert" | "share";
-export interface WallModalState { isOpen: boolean; type: WallModalType | null; data: WallItem | null; }
-interface WallModalsProps { modalState: WallModalState; onClose: () => void; }
+export type WallModalType =
+  | "email"
+  | "whatsapp"
+  | "notification"
+  | "task"
+  | "active"
+  | "calendar"
+  | "alert"
+  | "share";
+export interface WallModalState {
+  isOpen: boolean;
+  type: WallModalType | null;
+  data: WallItem | null;
+}
+interface WallModalsProps {
+  modalState: WallModalState;
+  onClose: () => void;
+}
 
-const dummyUsers = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },];
-const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
-const eventTypeOptions = [{ value: "meeting", label: "Meeting" }, { value: "call", label: "Follow-up Call" }, { value: "deadline", label: "Project Deadline" },];
-const dummyAlerts = [{ id: 1, severity: "warning", message: "Listing will expire in 3 days.", time: "4 days ago", }, { id: 2, severity: "info", message: "New inquiry received from John Doe.", time: "2 hours ago", },];
+const dummyUsers = [
+  { value: "user1", label: "Alice Johnson" },
+  { value: "user2", label: "Bob Williams" },
+  { value: "user3", label: "Charlie Brown" },
+];
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+const eventTypeOptions = [
+  { value: "meeting", label: "Meeting" },
+  { value: "call", label: "Follow-up Call" },
+  { value: "deadline", label: "Project Deadline" },
+];
+const dummyAlerts = [
+  {
+    id: 1,
+    severity: "warning",
+    message: "Listing will expire in 3 days.",
+    time: "4 days ago",
+  },
+  {
+    id: 2,
+    severity: "info",
+    message: "New inquiry received from John Doe.",
+    time: "2 hours ago",
+  },
+];
 
 const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose }) => {
   const { type, data: wallItem, isOpen } = modalState;
   if (!isOpen || !wallItem) return null;
   const renderModalContent = () => {
     switch (type) {
-      case "email": return <SendEmailDialog wallItem={wallItem} onClose={onClose} />;
-      case "whatsapp": return <SendWhatsAppDialog wallItem={wallItem} onClose={onClose} />;
-      case "notification": return <AddNotificationDialog wallItem={wallItem} onClose={onClose} />;
-      case "task": return <AssignTaskDialog wallItem={wallItem} onClose={onClose} />;
-      case "calendar": return <AddScheduleDialog wallItem={wallItem} onClose={onClose} />;
-      case "alert": return <ViewAlertDialog wallItem={wallItem} onClose={onClose} />;
-      case "share": return <ShareWallLinkDialog wallItem={wallItem} onClose={onClose} />;
-      default: return <GenericActionDialog type={type} wallItem={wallItem} onClose={onClose} />;
+      case "email":
+        return <SendEmailDialog wallItem={wallItem} onClose={onClose} />;
+      case "whatsapp":
+        return <SendWhatsAppDialog wallItem={wallItem} onClose={onClose} />;
+      case "notification":
+        return <AddNotificationDialog wallItem={wallItem} onClose={onClose} />;
+      case "task":
+        return <AssignTaskDialog wallItem={wallItem} onClose={onClose} />;
+      case "calendar":
+        return <AddScheduleDialog wallItem={wallItem} onClose={onClose} />;
+      case "alert":
+        return <ViewAlertDialog wallItem={wallItem} onClose={onClose} />;
+      case "share":
+        return <ShareWallLinkDialog wallItem={wallItem} onClose={onClose} />;
+      default:
+        return (
+          <GenericActionDialog
+            type={type}
+            wallItem={wallItem}
+            onClose={onClose}
+          />
+        );
     }
   };
   return <>{renderModalContent()}</>;
 };
-const SendEmailDialog: React.FC<{ wallItem: WallItem; onClose: () => void }> = ({ wallItem, onClose }) => {
+const SendEmailDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { subject: "", message: "" } });
+  const { control, handleSubmit } = useForm({
+    defaultValues: { subject: "", message: "" },
+  });
   const onSendEmail = (data: { subject: string; message: string }) => {
-    setIsLoading(true); console.log("Sending email to", wallItem.member_email, "with data:", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Email Sent Successfully" />); setIsLoading(false); onClose(); }, 1000);
+    setIsLoading(true);
+    console.log("Sending email to", wallItem.member_email, "with data:", data);
+    setTimeout(() => {
+      toast.push(
+        <Notification type="success" title="Email Sent Successfully" />
+      );
+      setIsLoading(false);
+      onClose();
+    }, 1000);
   };
-  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-    <h5 className="mb-4">Send Email to {wallItem.member_name}</h5>
-    <form onSubmit={handleSubmit(onSendEmail)}>
-      <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => (<Input {...field} placeholder={`Regarding: ${wallItem.product_name}`} />)} /></FormItem>
-      <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} /></FormItem>
-      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send</Button></div>
-    </form>
-  </Dialog>);
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send Email to {wallItem.member_name}</h5>
+      <form onSubmit={handleSubmit(onSendEmail)}>
+        <FormItem label="Subject">
+          <Controller
+            name="subject"
+            control={control}
+            render={({ field }) => (
+              <Input
+                {...field}
+                placeholder={`Regarding: ${wallItem.product_name}`}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => (
+              <RichTextEditor value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
 };
-const SendWhatsAppDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-  const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi ${wallItem.member_name}, I'm interested in your listing for "${wallItem.product_name}".` } });
+const SendWhatsAppDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      message: `Hi ${wallItem.member_name}, I'm interested in your listing for "${wallItem.product_name}".`,
+    },
+  });
   const onSendMessage = (data: { message: string }) => {
     const phone = wallItem.member_phone?.replace(/\D/g, "");
-    if (!phone) { toast.push(<Notification type="danger" title="Invalid Phone Number" />); return; }
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(data.message)}`;
-    window.open(url, "_blank"); toast.push(<Notification type="success" title="Redirecting to WhatsApp" />); onClose();
+    if (!phone) {
+      toast.push(<Notification type="danger" title="Invalid Phone Number" />);
+      return;
+    }
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
+      data.message
+    )}`;
+    window.open(url, "_blank");
+    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+    onClose();
   };
-  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-    <h5 className="mb-4">Send WhatsApp to {wallItem.member_name}</h5>
-    <form onSubmit={handleSubmit(onSendMessage)}>
-      <FormItem label="Message Template"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
-      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit">Open WhatsApp</Button></div>
-    </form>
-  </Dialog>);
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send WhatsApp to {wallItem.member_name}</h5>
+      <form onSubmit={handleSubmit(onSendMessage)}>
+        <FormItem label="Message Template">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit">
+            Open WhatsApp
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
 };
-const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
+const AddNotificationDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { title: "", users: [], message: "" } });
+  const { control, handleSubmit } = useForm({
+    defaultValues: { title: "", users: [], message: "" },
+  });
   const onSend = (data: any) => {
-    setIsLoading(true); console.log("Sending in-app notification for", wallItem.product_name, "with data:", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000);
+    setIsLoading(true);
+    console.log(
+      "Sending in-app notification for",
+      wallItem.product_name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Notification Sent" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
   };
-  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-    <h5 className="mb-4">Add Notification for "{wallItem.product_name}"</h5>
-    <form onSubmit={handleSubmit(onSend)}>
-      <FormItem label="Notification Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-      <FormItem label="Send to Users"><Controller name="users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={dummyUsers} {...field} />)} /></FormItem>
-      <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
-      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send Notification</Button></div>
-    </form>
-  </Dialog>);
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for "{wallItem.product_name}"</h5>
+      <form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Send to Users">
+          <Controller
+            name="users"
+            control={control}
+            render={({ field }) => (
+              <Select
+                isMulti
+                placeholder="Select Users"
+                options={dummyUsers}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Send Notification
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
 };
-const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
+const AssignTaskDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { title: "", assignee: null, dueDate: null, priority: null, description: "" } });
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      title: "",
+      assignee: null,
+      dueDate: null,
+      priority: null,
+      description: "",
+    },
+  });
   const onAssignTask = (data: any) => {
-    setIsLoading(true); console.log("Assigning task for", wallItem.product_name, "with data:", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Task Assigned" />); setIsLoading(false); onClose(); }, 1000);
+    setIsLoading(true);
+    console.log(
+      "Assigning task for",
+      wallItem.product_name,
+      "with data:",
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Task Assigned" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
   };
-  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-    <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
-    <form onSubmit={handleSubmit(onAssignTask)}>
-      <FormItem label="Task Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Follow up on listing" />)} /></FormItem>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => (<Select placeholder="Select User" options={dummyUsers} {...field} />)} /></FormItem>
-        <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} {...field} />)} /></FormItem>
-      </div>
-      <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />)} /></FormItem>
-      <FormItem label="Description"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Assign Task</Button></div>
-    </form>
-  </Dialog>);
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
+      <form onSubmit={handleSubmit(onAssignTask)}>
+        <FormItem label="Task Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder="e.g., Follow up on listing" />
+            )}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Assign To">
+            <Controller
+              name="assignee"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select User"
+                  options={dummyUsers}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Priority">
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Priority"
+                  options={priorityOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Due Date">
+          <Controller
+            name="dueDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                placeholder="Select date"
+                value={field.value as Date}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Description">
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Assign Task
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
 };
-const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
+const AddScheduleDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { title: "", eventType: null, startDate: null, notes: "" } });
+  const { control, handleSubmit } = useForm({
+    defaultValues: { title: "", eventType: null, startDate: null, notes: "" },
+  });
   const onAddEvent = (data: any) => {
-    setIsLoading(true); console.log("Adding event for", wallItem.product_name, "with data:", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Event Scheduled" />); setIsLoading(false); onClose(); }, 1000);
+    setIsLoading(true);
+    console.log("Adding event for", wallItem.product_name, "with data:", data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Event Scheduled" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
   };
-  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-    <h5 className="mb-4">Add Schedule for "{wallItem.product_name}"</h5>
-    <form onSubmit={handleSubmit(onAddEvent)}>
-      <FormItem label="Event Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Call about listing" />)} /></FormItem>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormItem label="Event Type"><Controller name="eventType" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} {...field} />)} /></FormItem>
-        <FormItem label="Date & Time"><Controller name="startDate" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value as Date} onChange={field.onChange} />)} /></FormItem>
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for "{wallItem.product_name}"</h5>
+      <form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem label="Event Title">
+          <Controller
+            name="title"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder="e.g., Call about listing" />
+            )}
+          />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Event Type">
+            <Controller
+              name="eventType"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Type"
+                  options={eventTypeOptions}
+                  {...field}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Date & Time">
+            <Controller
+              name="startDate"
+              control={control}
+              render={({ field }) => (
+                <DatePicker.DateTimepicker
+                  placeholder="Select date and time"
+                  value={field.value as Date}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </FormItem>
+        </div>
+        <FormItem label="Notes">
+          <Controller
+            name="notes"
+            control={control}
+            render={({ field }) => <Input textArea {...field} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Save Event
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+const ViewAlertDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
+  const alertColors: Record<string, string> = {
+    danger: "red",
+    warning: "amber",
+    info: "blue",
+  };
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Alerts for "{wallItem.product_name}"</h5>
+      <div className="mt-4 flex flex-col gap-3">
+        {dummyAlerts.length > 0 ? (
+          dummyAlerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`p-3 rounded-lg border-l-4 border-${
+                alertColors[alert.severity]
+              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
+                alertColors[alert.severity]
+              }-500/10`}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex items-start gap-2">
+                  <TbAlertTriangle
+                    className={`text-${alertColors[alert.severity]}-500 mt-1`}
+                    size={20}
+                  />
+                  <p className="text-sm">{alert.message}</p>
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap">
+                  {alert.time}
+                </span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p>No active alerts for this item.</p>
+        )}
       </div>
-      <FormItem label="Notes"><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Save Event</Button></div>
-    </form>
-  </Dialog>);
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </Dialog>
+  );
 };
-const ViewAlertDialog: React.FC<{ wallItem: WallItem; onClose: () => void }> = ({ wallItem, onClose }) => {
-  const alertColors: Record<string, string> = { danger: "red", warning: "amber", info: "blue", };
-  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-    <h5 className="mb-4">Alerts for "{wallItem.product_name}"</h5>
-    <div className="mt-4 flex flex-col gap-3">{dummyAlerts.length > 0 ? (dummyAlerts.map((alert) => (<div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`}><div className="flex justify-between items-start"><div className="flex items-start gap-2"><TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} /><p className="text-sm">{alert.message}</p></div><span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span></div></div>))) : (<p>No active alerts for this item.</p>)}</div>
-    <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-  </Dialog>);
-};
-const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
+const ShareWallLinkDialog: React.FC<{
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ wallItem, onClose }) => {
   const linkToShare = wallItem.listing_url || "No URL available for this item.";
-  const handleCopy = () => { if (wallItem.listing_url) { navigator.clipboard.writeText(linkToShare).then(() => { toast.push(<Notification title="Copied to Clipboard" type="success" />); }); } };
-  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-    <h5 className="mb-4">Share Link for "{wallItem.product_name}"</h5>
-    <p className="mb-2 text-sm">Use the link below to share this listing:</p>
-    <div className="flex items-center gap-2"><Input readOnly value={linkToShare} /><Tooltip title="Copy Link"><Button shape="circle" icon={<TbCopy />} onClick={handleCopy} disabled={!wallItem.listing_url} /></Tooltip></div>
-    <div className="text-right mt-6"><Button onClick={onClose}>Close</Button></div>
-  </Dialog>);
-};
-const GenericActionDialog: React.FC<{ type: WallModalType | null; wallItem: WallItem; onClose: () => void; }> = ({ type, wallItem, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : "Confirm Action";
-  const handleConfirm = () => {
-    setIsLoading(true); console.log(`Performing action '${type}' for wall item ${wallItem.product_name}`);
-    setTimeout(() => { toast.push(<Notification type="success" title="Action Completed" />); setIsLoading(false); onClose(); }, 1000);
+  const handleCopy = () => {
+    if (wallItem.listing_url) {
+      navigator.clipboard.writeText(linkToShare).then(() => {
+        toast.push(<Notification title="Copied to Clipboard" type="success" />);
+      });
+    }
   };
-  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-    <h5 className="mb-2">{title}</h5>
-    <p>Are you sure you want to perform this action for <span className="font-semibold">{wallItem.product_name}</span>?</p>
-    <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button></div>
-  </Dialog>);
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Share Link for "{wallItem.product_name}"</h5>
+      <p className="mb-2 text-sm">Use the link below to share this listing:</p>
+      <div className="flex items-center gap-2">
+        <Input readOnly value={linkToShare} />
+        <Tooltip title="Copy Link">
+          <Button
+            shape="circle"
+            icon={<TbCopy />}
+            onClick={handleCopy}
+            disabled={!wallItem.listing_url}
+          />
+        </Tooltip>
+      </div>
+      <div className="text-right mt-6">
+        <Button onClick={onClose}>Close</Button>
+      </div>
+    </Dialog>
+  );
+};
+const GenericActionDialog: React.FC<{
+  type: WallModalType | null;
+  wallItem: WallItem;
+  onClose: () => void;
+}> = ({ type, wallItem, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const title = type
+    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
+    : "Confirm Action";
+  const handleConfirm = () => {
+    setIsLoading(true);
+    console.log(
+      `Performing action '${type}' for wall item ${wallItem.product_name}`
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Action Completed" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-2">{title}</h5>
+      <p>
+        Are you sure you want to perform this action for{" "}
+        <span className="font-semibold">{wallItem.product_name}</span>?
+      </p>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
+          Confirm
+        </Button>
+      </div>
+    </Dialog>
+  );
 };
 
 // --- CSV Export ---
-const CSV_WALL_HEADERS = ["ID", "Product Name", "Company Name", "Member Name", "Category", "Subcategory", "Product Status", "Quantity", "Price", "Intent", "Created Date", "Record Status"];
-const CSV_WALL_KEYS: (keyof WallItem)[] = ["id", "product_name", "company_name", "member_name", "product_category", "product_subcategory", "product_status", "quantity", "price", "want_to", "created_date", "recordStatus"];
+const CSV_WALL_HEADERS = [
+  "ID",
+  "Product Name",
+  "Company Name",
+  "Member Name",
+  "Category",
+  "Subcategory",
+  "Product Status",
+  "Quantity",
+  "Price",
+  "Intent",
+  "Created Date",
+  "Record Status",
+];
+const CSV_WALL_KEYS: (keyof WallItem)[] = [
+  "id",
+  "product_name",
+  "company_name",
+  "member_name",
+  "product_category",
+  "product_subcategory",
+  "product_status",
+  "quantity",
+  "price",
+  "want_to",
+  "created_date",
+  "recordStatus",
+];
 
 function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
   if (!rows || !rows.length) {
-    toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+    toast.push(
+      <Notification title="No Data" type="info">
+        Nothing to export.
+      </Notification>
+    );
     return false;
   }
   const separator = ",";
-  const csvContent = CSV_WALL_HEADERS.join(separator) + "\n" + rows.map((row) => {
-    return CSV_WALL_KEYS.map((k) => {
-      let cell = row[k] as any;
-      if (cell === null || cell === undefined) cell = "";
-      else if (k === "created_date" && cell instanceof Date) cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
-      else cell = String(cell).replace(/"/g, '""');
-      if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-      return cell;
-    }).join(separator);
-  }).join("\n");
+  const csvContent =
+    CSV_WALL_HEADERS.join(separator) +
+    "\n" +
+    rows
+      .map((row) => {
+        return CSV_WALL_KEYS.map((k) => {
+          let cell = row[k] as any;
+          if (cell === null || cell === undefined) cell = "";
+          else if (k === "created_date" && cell instanceof Date)
+            cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
+          else cell = String(cell).replace(/"/g, '""');
+          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+          return cell;
+        }).join(separator);
+      })
+      .join("\n");
 
-  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
   const link = document.createElement("a");
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
@@ -371,25 +868,247 @@ function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
+    toast.push(
+      <Notification title="Export Successful" type="success">
+        Data exported to {filename}.
+      </Notification>
+    );
     return true;
   }
-  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+  toast.push(
+    <Notification title="Export Failed" type="danger">
+      Browser does not support this feature.
+    </Notification>
+  );
   return false;
 }
 
 // --- Child Components ---
-const StyledActionColumn = ({ onEdit, onViewDetail, onOpenModal, rowData, }: { onEdit: () => void; onViewDetail: () => void; onOpenModal: (type: WallModalType, data: WallItem) => void; rowData: WallItem; }) => (<div className="flex items-center justify-center"><Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 rounded-md" role="button" onClick={onEdit}><TbPencil /></div></Tooltip><Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md" role="button" onClick={onViewDetail}><TbEye /></div></Tooltip><Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}><Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbBulb size={18} /> <span className="text-xs">Match Opportunity</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("share", rowData)} className="flex items-center gap-2"><TbShare size={18} /> <span className="text-xs">Share Wall Link</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item></Dropdown></div>);
-interface WallSearchProps { onInputChange: (value: string) => void; }
-const WallSearch = React.forwardRef<HTMLInputElement, WallSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch />} onChange={(e) => onInputChange(e.target.value)} />));
-WallSearch.displayName = "WallSearch";
-interface WallTableToolsProps { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onAddNew: () => void; onImport: () => void; onClearFilters: () => void; }
-const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, }: WallTableToolsProps) => (<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"><div className="flex-grow"><WallSearch onInputChange={onSearchChange} /></div><div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"><Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip><Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button><Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button><Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button></div></div>);
-interface WallTableProps { columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: WallItem[]; onPaginationChange: (page: number) => void; onSelectChange: (size: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void; }
-const WallTable = (props: WallTableProps) => (<DataTable selectable columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
-interface WallSelectedFooterProps { selectedItems: WallItem[]; deleteConfirmOpen: boolean; setDeleteConfirmOpen: (open: boolean) => void; onConfirmDelete: () => void; isDeleting: boolean; }
-const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirmOpen, onConfirmDelete, isDeleting, }: WallSelectedFooterProps) => { if (selectedItems.length === 0) return null; return (<><StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t px-8"><div className="flex items-center justify-between w-full"><span className="flex items-center gap-2"><TbChecks className="text-xl text-primary-500" /><span className="font-semibold">{selectedItems.length} item{selectedItems.length > 1 ? "s" : ""}{" "}selected</span></span><Button size="sm" variant="plain" className="text-red-500 hover:text-red-700" onClick={() => setDeleteConfirmOpen(true)}>Delete Selected</Button></div></StickyFooter><ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title="Delete Selected Wall Items" onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={onConfirmDelete} loading={isDeleting}><p>Are you sure you want to delete {selectedItems.length} selected item{selectedItems.length > 1 ? "s" : ""}?{" "}</p></ConfirmDialog></>); };
+const StyledActionColumn = ({
+  onEdit,
+  onViewDetail,
+  onOpenModal,
+  rowData,
+}: {
+  onEdit: () => void;
+  onViewDetail: () => void;
+  onOpenModal: (type: WallModalType, data: WallItem) => void;
+  rowData: WallItem;
+}) => (
+  <div className="flex items-center justify-center">
+    <Tooltip title="Edit">
+      <div
+        className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 rounded-md"
+        role="button"
+        onClick={onEdit}
+      >
+        <TbPencil />
+      </div>
+    </Tooltip>
+    <Tooltip title="View">
+      <div
+        className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md"
+        role="button"
+        onClick={onViewDetail}
+      >
+        <TbEye />
+      </div>
+    </Tooltip>
+   <Dropdown
+  renderTitle={
+    <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+  }
+>
+  {/* 1. Send Email */}
+  <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2">
+    <TbMail size={18} /> <span className="text-xs">Send Email</span>
+  </Dropdown.Item>
 
+  {/* 2. Send WhatsApp */}
+  <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2">
+    <TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span>
+  </Dropdown.Item>
+
+  {/* 3. Add Notification */}
+  <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2">
+    <TbBell size={18} /> <span className="text-xs">Add Notification</span>
+  </Dropdown.Item>
+
+  {/* 4. Assign Task */}
+  <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2">
+    <TbUser size={18} /> <span className="text-xs">Assign Task</span>
+  </Dropdown.Item>
+
+  {/* 5. Add Schedule */}
+  <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2">
+    <TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span>
+  </Dropdown.Item>
+
+  {/* 6. Add Active */}
+  <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2">
+    <TbTagStarred size={18} /> <span className="text-xs">Add Active</span>
+  </Dropdown.Item>
+
+  {/* 7. Match Opportunities */}
+  <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2">
+    <TbBulb size={18} /> <span className="text-xs">Match Opportunity</span>
+  </Dropdown.Item>
+
+  {/* 8. Share Wall Link */}
+  <Dropdown.Item onClick={() => onOpenModal("share", rowData)} className="flex items-center gap-2">
+    <TbShare size={18} /> <span className="text-xs">Share Wall Link</span>
+  </Dropdown.Item>
+</Dropdown>
+
+  </div>
+);
+interface WallSearchProps {
+  onInputChange: (value: string) => void;
+}
+const WallSearch = React.forwardRef<HTMLInputElement, WallSearchProps>(
+  ({ onInputChange }, ref) => (
+    <DebouceInput
+      ref={ref}
+      className="w-full"
+      placeholder="Quick Search..."
+      suffix={<TbSearch />}
+      onChange={(e) => onInputChange(e.target.value)}
+    />
+  )
+);
+WallSearch.displayName = "WallSearch";
+interface WallTableToolsProps {
+  onSearchChange: (query: string) => void;
+  onFilter: () => void;
+  onExport: () => void;
+  onAddNew: () => void;
+  onImport: () => void;
+  onClearFilters: () => void;
+}
+const WallTableTools = ({
+  onSearchChange,
+  onFilter,
+  onExport,
+  onImport,
+  onClearFilters,
+}: WallTableToolsProps) => (
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+    <div className="flex-grow">
+      <WallSearch onInputChange={onSearchChange} />
+    </div>
+    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      <Tooltip title="Clear Filters">
+        <Button icon={<TbReload />} onClick={onClearFilters}></Button>
+      </Tooltip>
+      <Button
+        icon={<TbFilter />}
+        onClick={onFilter}
+        className="w-full sm:w-auto"
+      >
+        Filter
+      </Button>
+      <Button
+        icon={<TbCloudDownload />}
+        onClick={onImport}
+        className="w-full sm:w-auto"
+      >
+        Import
+      </Button>
+      <Button
+        icon={<TbCloudUpload />}
+        onClick={onExport}
+        className="w-full sm:w-auto"
+      >
+        Export
+      </Button>
+    </div>
+  </div>
+);
+interface WallTableProps {
+  columns: ColumnDef<WallItem>[];
+  data: WallItem[];
+  loading: boolean;
+  pagingData: { total: number; pageIndex: number; pageSize: number };
+  selectedItems: WallItem[];
+  onPaginationChange: (page: number) => void;
+  onSelectChange: (size: number) => void;
+  onSort: (sort: OnSortParam) => void;
+  onRowSelect: (checked: boolean, row: WallItem) => void;
+  onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void;
+}
+const WallTable = (props: WallTableProps) => (
+  <DataTable
+    selectable
+    columns={props.columns}
+    data={props.data}
+    loading={props.loading}
+    pagingData={props.pagingData}
+    checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)}
+    onPaginationChange={props.onPaginationChange}
+    onSelectChange={props.onSelectChange}
+    onSort={props.onSort}
+    onCheckBoxChange={props.onRowSelect}
+    onIndeterminateCheckBoxChange={props.onAllRowSelect}
+    noData={!props.loading && props.data.length === 0}
+  />
+);
+interface WallSelectedFooterProps {
+  selectedItems: WallItem[];
+  deleteConfirmOpen: boolean;
+  setDeleteConfirmOpen: (open: boolean) => void;
+  onConfirmDelete: () => void;
+  isDeleting: boolean;
+}
+const WallSelectedFooter = ({
+  selectedItems,
+  deleteConfirmOpen,
+  setDeleteConfirmOpen,
+  onConfirmDelete,
+  isDeleting,
+}: WallSelectedFooterProps) => {
+  if (selectedItems.length === 0) return null;
+  return (
+    <>
+      <StickyFooter
+        className="flex items-center justify-between py-4"
+        stickyClass="-mx-4 sm:-mx-8 border-t px-8"
+      >
+        <div className="flex items-center justify-between w-full">
+          <span className="flex items-center gap-2">
+            <TbChecks className="text-xl text-primary-500" />
+            <span className="font-semibold">
+              {selectedItems.length} item{selectedItems.length > 1 ? "s" : ""}{" "}
+              selected
+            </span>
+          </span>
+          <Button
+            size="sm"
+            variant="plain"
+            className="text-red-500 hover:text-red-700"
+            onClick={() => setDeleteConfirmOpen(true)}
+          >
+            Delete Selected
+          </Button>
+        </div>
+      </StickyFooter>
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        type="danger"
+        title="Delete Selected Wall Items"
+        onClose={() => setDeleteConfirmOpen(false)}
+        onRequestClose={() => setDeleteConfirmOpen(false)}
+        onCancel={() => setDeleteConfirmOpen(false)}
+        onConfirm={onConfirmDelete}
+        loading={isDeleting}
+      >
+        <p>
+          Are you sure you want to delete {selectedItems.length} selected item
+          {selectedItems.length > 1 ? "s" : ""}?{" "}
+        </p>
+      </ConfirmDialog>
+    </>
+  );
+};
 
 // --- Main Component ---
 const WallListing = () => {
@@ -398,25 +1117,40 @@ const WallListing = () => {
 
   // --- Redux State ---
   const {
-    wallListing, AllProductsData, AllCategorysData, subCategoriesForSelectedCategoryData,
-    BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData,
-    status: masterLoadingStatus
+    wallListing,
+    AllProductsData,
+    AllCategorysData,
+    subCategoriesForSelectedCategoryData,
+    BrandData,
+    MemberTypeData,
+    ProductSpecificationsData,
+    Employees,
+    AllCompanyData,
+    status: masterLoadingStatus,
   } = useSelector(masterSelector);
 
   // --- Component State ---
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WallItem | null>(null);
-  const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] = useState(false);
+  const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] =
+    useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
-  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
   const [selectedItems, setSelectedItems] = useState<WallItem[]>([]);
-  const [modalState, setModalState] = useState<WallModalState>({ isOpen: false, type: null, data: null });
+  const [modalState, setModalState] = useState<WallModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
 
   // --- Table and Filter State ---
   // This state holds the raw filter values from the filter form
-  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
+    filterFormSchema.parse({})
+  );
   // This state holds the table's operational state (pagination, sorting, search)
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -426,59 +1160,70 @@ const WallListing = () => {
   });
 
   // --- Forms ---
-  const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
-  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
+  const filterFormMethods = useForm<FilterFormData>({
+    resolver: zodResolver(filterFormSchema),
+    defaultValues: filterCriteria,
+  });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   // --- Data Mapping ---
-  const mapApiToWallItem = useCallback((apiItem: ApiWallItemFromSource): WallItem => ({
-    id: apiItem.id as number,
-    productId: apiItem.product_id,
-    product_name: apiItem.product_name,
-    company_name: apiItem.company_name || "",
-    companyId: apiItem.company_id_from_api || undefined,
-    member_name: apiItem.member_name,
-    memberId: String(apiItem.member_id_from_api || ""),
-    memberTypeId: apiItem.member_type_id,
-    member_email: apiItem.member_email || "",
-    member_phone: apiItem.member_phone || "",
-    product_category: apiItem.product_category || "",
-    productCategoryId: apiItem.product_category_id,
-    product_subcategory: apiItem.product_subcategory || "",
-    subCategoryId: apiItem.subcategory_id,
-    product_description: apiItem.product_description || "",
-    product_specs: apiItem.product_specs || "",
-    productSpecId: apiItem.product_spec_id,
-    product_status: apiItem.product_status,
-    quantity: Number(apiItem.quantity) || 0,
-    price: Number(apiItem.price) || 0,
-    want_to: apiItem.want_to as WallIntent | string,
-    listing_type: apiItem.listing_type || "",
-    shipping_options: apiItem.shipping_options || "",
-    payment_method: apiItem.payment_method || "",
-    warranty: apiItem.warranty || "",
-    return_policy: apiItem.return_policy || "",
-    listing_url: apiItem.listing_url || "",
-    brand: apiItem.brand || "",
-    brandId: apiItem.brand_id,
-    product_images: apiItem.product_images || [],
-    created_date: new Date(apiItem.created_date),
-    updated_at: new Date(apiItem.updated_at),
-    visibility: apiItem.visibility || "",
-    priority: apiItem.priority || "",
-    assigned_to: apiItem.assigned_to || "",
-    interaction_type: apiItem.interaction_type || "",
-    action: apiItem.action || "",
-    recordStatus: apiItem.status as WallRecordStatus,
-    cartoonTypeId: apiItem.cartoon_type_id,
-    deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null,
-    inquiry_count: Number(apiItem.inquiry_count) || 0,
-    share_count: Number(apiItem.share_count) || 0,
-    is_bookmarked: apiItem.is_bookmarked,
-    updated_by_name: apiItem.updated_by_name,
-    updated_by_role: apiItem.updated_by_role,
-    createdById: apiItem.created_by,
-    member: apiItem?.member || null,
-  }), []);
+  const mapApiToWallItem = useCallback(
+    (apiItem: ApiWallItemFromSource): WallItem => ({
+      id: apiItem.id as number,
+      productId: apiItem.product_id,
+      product_name: apiItem.product_name,
+      company_name: apiItem.company_name || "",
+      companyId: apiItem.company_id_from_api || undefined,
+      member_name: apiItem.member_name,
+      memberId: String(apiItem.member_id_from_api || ""),
+      memberTypeId: apiItem.member_type_id,
+      member_email: apiItem.member_email || "",
+      member_phone: apiItem.member_phone || "",
+      product_category: apiItem.product_category || "",
+      productCategoryId: apiItem.product_category_id,
+      product_subcategory: apiItem.product_subcategory || "",
+      subCategoryId: apiItem.subcategory_id,
+      product_description: apiItem.product_description || "",
+      product_specs: apiItem.product_specs || "",
+      productSpecId: apiItem.product_spec_id,
+      product_status: apiItem.product_status,
+      quantity: Number(apiItem.quantity) || 0,
+      price: Number(apiItem.price) || 0,
+      want_to: apiItem.want_to as WallIntent | string,
+      listing_type: apiItem.listing_type || "",
+      shipping_options: apiItem.shipping_options || "",
+      payment_method: apiItem.payment_method || "",
+      warranty: apiItem.warranty || "",
+      return_policy: apiItem.return_policy || "",
+      listing_url: apiItem.listing_url || "",
+      brand: apiItem.brand || "",
+      brandId: apiItem.brand_id,
+      product_images: apiItem.product_images || [],
+      created_date: new Date(apiItem.created_date),
+      updated_at: new Date(apiItem.updated_at),
+      visibility: apiItem.visibility || "",
+      priority: apiItem.priority || "",
+      assigned_to: apiItem.assigned_to || "",
+      interaction_type: apiItem.interaction_type || "",
+      action: apiItem.action || "",
+      recordStatus: apiItem.status as WallRecordStatus,
+      cartoonTypeId: apiItem.cartoon_type_id,
+      deviceCondition:
+        (apiItem.device_condition as WallProductCondition | null) || null,
+      inquiry_count: Number(apiItem.inquiry_count) || 0,
+      share_count: Number(apiItem.share_count) || 0,
+      is_bookmarked: apiItem.is_bookmarked,
+      updated_by_name: apiItem.updated_by_name,
+      updated_by_role: apiItem.updated_by_role,
+      createdById: apiItem.created_by,
+      member: apiItem?.member || null,
+    }),
+    []
+  );
 
   // ✅ CORRECT: This `useMemo` is the core of the server-side filtering logic.
   // It combines table state (pagination, sort, search) and filter state into a single
@@ -487,7 +1232,7 @@ const WallListing = () => {
     // Helper to format array of react-select options into comma-separated strings for the API
     const formatMultiSelect = (items: { value: any }[] | undefined) => {
       if (!items || items.length === 0) return undefined;
-      return items.map(item => item.value).join(',');
+      return items.map((item) => item.value).join(",");
     };
 
     const params: any = {
@@ -510,13 +1255,20 @@ const WallListing = () => {
       source: formatMultiSelect(filterCriteria.source),
     };
 
-    if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) {
-      params.start_date = filterCriteria.dateRange[0] ? dayjs(filterCriteria.dateRange[0]).format('YYYY-MM-DD') : undefined;
-      params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format('YYYY-MM-DD') : undefined;
+    if (
+      filterCriteria.dateRange &&
+      (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])
+    ) {
+      params.start_date = filterCriteria.dateRange[0]
+        ? dayjs(filterCriteria.dateRange[0]).format("YYYY-MM-DD")
+        : undefined;
+      params.end_date = filterCriteria.dateRange[1]
+        ? dayjs(filterCriteria.dateRange[1]).format("YYYY-MM-DD")
+        : undefined;
     }
 
     // Remove any undefined/null properties before sending to the API
-    Object.keys(params).forEach(key => {
+    Object.keys(params).forEach((key) => {
       if (params[key] === undefined || params[key] === null) {
         delete params[key];
       }
@@ -524,7 +1276,6 @@ const WallListing = () => {
 
     return params;
   }, [tableData, filterCriteria]);
-
 
   // ✅ CORRECT: This useEffect is now the primary data fetching trigger.
   // It runs on initial load and whenever `apiParams` changes, ensuring the
@@ -548,7 +1299,9 @@ const WallListing = () => {
   // ✅ CORRECT: Data for the table is directly from the Redux store's paginated response.
   // No client-side processing is needed.
   const pageData = useMemo(() => {
-    return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : [];
+    return Array.isArray(wallListing?.data?.data)
+      ? wallListing.data.data.map(mapApiToWallItem)
+      : [];
   }, [wallListing, mapApiToWallItem]);
 
   // ✅ CORRECT: Total item count now comes directly from the API response metadata.
@@ -557,37 +1310,77 @@ const WallListing = () => {
   // REMOVED: The large `useMemo` block for client-side filtering, sorting, and pagination is gone.
 
   // --- Handlers ---
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
-  const openAddDrawer = useCallback(() => navigate("/sales-leads/wall-item/add"), [navigate]);
-  const openEditDrawer = useCallback((item: WallItem) => navigate("/sales-leads/wall-item/add", { state: item?.id }), [navigate]);
-  const openViewDrawer = useCallback((item: WallItem) => { setEditingItem(item); setIsViewDrawerOpen(true); }, []);
-  const closeViewDrawer = useCallback(() => { setIsViewDrawerOpen(false); setEditingItem(null); }, []);
-  const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
+  const handleSetTableData = useCallback(
+    (data: Partial<TableQueries>) =>
+      setTableData((prev) => ({ ...prev, ...data })),
+    []
+  );
+  const openAddDrawer = useCallback(
+    () => navigate("/sales-leads/wall-item/add"),
+    [navigate]
+  );
+  const openEditDrawer = useCallback(
+    (item: WallItem) =>
+      navigate("/sales-leads/wall-item/add", { state: item?.id }),
+    [navigate]
+  );
+  const openViewDrawer = useCallback((item: WallItem) => {
+    setEditingItem(item);
+    setIsViewDrawerOpen(true);
+  }, []);
+  const closeViewDrawer = useCallback(() => {
+    setIsViewDrawerOpen(false);
+    setEditingItem(null);
+  }, []);
+  const openFilterDrawer = useCallback(() => {
+    filterFormMethods.reset(filterCriteria);
+    setIsFilterDrawerOpen(true);
+  }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const handleOpenModal = (type: WallModalType, wallItem: WallItem) => setModalState({ isOpen: true, type, data: wallItem });
-  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
+  const handleOpenModal = (type: WallModalType, wallItem: WallItem) =>
+    setModalState({ isOpen: true, type, data: wallItem });
+  const handleCloseModal = () =>
+    setModalState({ isOpen: false, type: null, data: null });
 
   // ✅ CORRECT: The refetch after delete now uses the current `apiParams` to refresh the view.
   const onConfirmDeleteSelectedItems = useCallback(async () => {
-    if (selectedItems.length === 0) { toast.push(<Notification title="No items selected" type="info" >Please select items to delete.</Notification>); return; }
+    if (selectedItems.length === 0) {
+      toast.push(
+        <Notification title="No items selected" type="info">
+          Please select items to delete.
+        </Notification>
+      );
+      return;
+    }
     setDeleteSelectedConfirmOpen(false);
     const ids = selectedItems.map((item) => item.id).join(",");
     try {
       await dispatch(deleteAllWallAction({ ids })).unwrap();
-      toast.push(<Notification title="Success" type="success">{selectedItems.length} item(s) deleted.</Notification>);
+      toast.push(
+        <Notification title="Success" type="success">
+          {selectedItems.length} item(s) deleted.
+        </Notification>
+      );
       setSelectedItems([]);
       // Refetch the current page of data with the same filters.
       dispatch(getWallListingAction(apiParams));
     } catch (error: any) {
-      toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>);
+      toast.push(
+        <Notification title="Error" type="danger">
+          {error.message || "Bulk delete failed."}
+        </Notification>
+      );
     }
   }, [dispatch, selectedItems, apiParams]);
 
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
-    setFilterCriteria(data);
-    handleSetTableData({ pageIndex: 1 }); // Reset to first page on new filter
-    closeFilterDrawer();
-  }, [handleSetTableData, closeFilterDrawer]);
+  const onApplyFiltersSubmit = useCallback(
+    (data: FilterFormData) => {
+      setFilterCriteria(data);
+      handleSetTableData({ pageIndex: 1 }); // Reset to first page on new filter
+      closeFilterDrawer();
+    },
+    [handleSetTableData, closeFilterDrawer]
+  );
 
   const onClearFilters = useCallback(() => {
     const defaults = filterFormSchema.parse({});
@@ -598,7 +1391,11 @@ const WallListing = () => {
 
   const handleOpenExportReasonModal = useCallback(() => {
     if (total === 0) {
-      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
       return;
     }
     exportReasonFormMethods.reset({ reason: "" });
@@ -606,167 +1403,432 @@ const WallListing = () => {
   }, [total, exportReasonFormMethods]);
 
   // ✅ FIXED: Export now correctly dispatches a thunk to fetch all filtered data from the server.
-  const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
-    setIsSubmittingExportReason(true);
-    const moduleName = "WallListing";
-    const timestamp = dayjs().format('YYYY-MM-DD');
-    const fileName = `wall_listing_export_${timestamp}.csv`;
+  const handleConfirmExportWithReason = useCallback(
+    async (data: ExportReasonFormData) => {
+      setIsSubmittingExportReason(true);
+      const moduleName = "WallListing";
+      const timestamp = dayjs().format("YYYY-MM-DD");
+      const fileName = `wall_listing_export_${timestamp}.csv`;
 
-    try {
-      // 1. Submit the reason for auditing purposes.
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
-      toast.push(<Notification title="Reason Submitted" type="info" duration={2000} message="Now fetching data for export..." />);
+      try {
+        // 1. Submit the reason for auditing purposes.
+        await dispatch(
+          submitExportReasonAction({
+            reason: data.reason,
+            module: moduleName,
+            file_name: fileName,
+          })
+        ).unwrap();
+        toast.push(
+          <Notification
+            title="Reason Submitted"
+            type="info"
+            duration={2000}
+            message="Now fetching data for export..."
+          />
+        );
 
-      // debugger
-      // 2. Fetch ALL data matching the current filters for export.
-      // We create new params to fetch all items, overriding pagination.
-      const exportParams = { ...apiParams, per_page: 0, page: 1 };
-      // 3. **CRITICAL FIX**: Dispatch the thunk and `unwrap` the result to get the data or catch the error.
-      //    Do not call the thunk action creator directly.
-      const exportDataResponse = await dispatch(getWallListingAction(exportParams)).unwrap();
+        // debugger
+        // 2. Fetch ALL data matching the current filters for export.
+        // We create new params to fetch all items, overriding pagination.
+        const exportParams = { ...apiParams, per_page: 0, page: 1 };
+        // 3. **CRITICAL FIX**: Dispatch the thunk and `unwrap` the result to get the data or catch the error.
+        //    Do not call the thunk action creator directly.
+        const exportDataResponse = await dispatch(
+          getWallListingAction(exportParams)
+        ).unwrap();
 
-      // Assuming the unwrapped successful payload is an object like: { status: boolean, data: [], ... }
-      if (!exportDataResponse?.status) {
-        throw new Error(exportDataResponse?.message || "Failed to fetch data for export.");
+        // Assuming the unwrapped successful payload is an object like: { status: boolean, data: [], ... }
+        if (!exportDataResponse?.status) {
+          throw new Error(
+            exportDataResponse?.message || "Failed to fetch data for export."
+          );
+        }
+
+        const allFilteredData = (exportDataResponse?.data?.data || []).map(
+          mapApiToWallItem
+        );
+        const success = exportWallItemsToCsv(fileName, allFilteredData);
+        if (success) {
+          setIsExportReasonModalOpen(false);
+        }
+      } catch (error: any) {
+        toast.push(
+          <Notification
+            title="Failed to Export"
+            type="danger"
+            message={error.message || "An unknown error occurred"}
+          />
+        );
+      } finally {
+        setIsSubmittingExportReason(false);
       }
+    },
+    [apiParams, dispatch, mapApiToWallItem]
+  );
 
-      const allFilteredData = (exportDataResponse?.data?.data || []).map(mapApiToWallItem);
-      const success = exportWallItemsToCsv(fileName, allFilteredData);
-      if (success) {
-        setIsExportReasonModalOpen(false);
+  const handlePaginationChange = (page: number) =>
+    handleSetTableData({ pageIndex: page });
+  const handlePageSizeChange = (value: number) => {
+    handleSetTableData({ pageSize: value, pageIndex: 1 });
+    setSelectedItems([]);
+  };
+  const handleSort = (sort: OnSortParam) =>
+    handleSetTableData({ sort, pageIndex: 1 });
+  const handleSearchChange = (query: string) =>
+    handleSetTableData({ query, pageIndex: 1 });
+  const handleRowSelect = (checked: boolean, row: WallItem) =>
+    setSelectedItems((prev) =>
+      checked ? [...prev, row] : prev.filter((item) => item.id !== row.id)
+    );
+  const handleAllRowSelect = useCallback(
+    (checked: boolean, currentRows: Row<WallItem>[]) => {
+      const originals = currentRows.map((r) => r.original);
+      if (checked) {
+        setSelectedItems((prev) => {
+          const oldIds = new Set(prev.map((i) => i.id));
+          return [...prev, ...originals.filter((o) => !oldIds.has(o.id))];
+        });
+      } else {
+        const currentIds = new Set(originals.map((o) => o.id));
+        setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id)));
       }
-
-    } catch (error: any) {
-      toast.push(<Notification title="Failed to Export" type="danger" message={error.message || 'An unknown error occurred'} />);
-    } finally {
-      setIsSubmittingExportReason(false);
-    }
-  }, [apiParams, dispatch, mapApiToWallItem]);
-
-  const handlePaginationChange = (page: number) => handleSetTableData({ pageIndex: page });
-  const handlePageSizeChange = (value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); };
-  const handleSort = (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 });
-  const handleSearchChange = (query: string) => handleSetTableData({ query, pageIndex: 1 });
-  const handleRowSelect = (checked: boolean, row: WallItem) => setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id));
-  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<WallItem>[]) => {
-    const originals = currentRows.map((r) => r.original);
-    if (checked) {
-      setSelectedItems((prev) => {
-        const oldIds = new Set(prev.map((i) => i.id));
-        return [...prev, ...originals.filter((o) => !oldIds.has(o.id))];
-      });
-    } else {
-      const currentIds = new Set(originals.map((o) => o.id));
-      setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id)));
-    }
-  }, []);
+    },
+    []
+  );
   const handleImportData = useCallback(() => setImportDialogOpen(true), []);
-  const handleImportFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) { toast.push(<Notification title="Import Started" type="info">File processing initiated. (Dummy)</Notification>); setImportDialogOpen(false); }
-    if (event.target) event.target.value = "";
-  }, []);
+  const handleImportFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        toast.push(
+          <Notification title="Import Started" type="info">
+            File processing initiated. (Dummy)
+          </Notification>
+        );
+        setImportDialogOpen(false);
+      }
+      if (event.target) event.target.value = "";
+    },
+    []
+  );
 
   // --- Columns Definition ---
-  const columns: ColumnDef<WallItem>[] = useMemo(() => [
-    {
-      header: "Overview", accessorKey: "product_name", size: 280,
-      cell: ({ row }) => {
-        const { product_images, product_name, id, want_to } = row?.original || {};
-        const intent = want_to as WallIntent;
-        return (
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <Avatar size={33} shape="circle" src={product_images?.[0]} icon={!product_images?.[0] && (<TbPhoto className="text-gray-400" />)} />
-              <div className="font-semibold leading-normal text-xs text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">{product_name}</div>
+  const columns: ColumnDef<WallItem>[] = useMemo(
+    () => [
+      {
+        header: "Overview",
+        accessorKey: "product_name",
+        size: 280,
+        cell: ({ row }) => {
+          const { product_images, product_name, id, want_to } =
+            row?.original || {};
+          const intent = want_to as WallIntent;
+          return (
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <Avatar
+                  size={33}
+                  shape="circle"
+                  src={product_images?.[0]}
+                  icon={
+                    !product_images?.[0] && (
+                      <TbPhoto className="text-gray-400" />
+                    )
+                  }
+                />
+                <div className="font-semibold leading-normal text-xs text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
+                  {product_name}
+                </div>
+              </div>
+              <span className="text-xs mt-2">
+                <span className="font-semibold">ID :</span> {id || "N/A"}
+              </span>
+              <span className="text-xs">
+                {want_to && (
+                  <span>
+                    <b>Want To: </b>
+                    <Tag
+                      className={`capitalize text-xs px-1 py-0.5 ${
+                        intentTagColor[intent] || productApiStatusColor.default
+                      }`}
+                    >
+                      {want_to}
+                    </Tag>
+                  </span>
+                )}
+              </span>
             </div>
-            <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {id || "N/A"}</span>
-            <span className="text-xs">{want_to && (<span><b>Want To: </b><Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>{want_to}</Tag></span>)}</span>
-          </div>
-        );
-      }
-    },
-    {
-      header: "Company & Member", accessorKey: "company_name", size: 260,
-      cell: ({ row }) => {
-        const { name, id, member_email, member_phone } = row.original?.member || {};
-        return (
-          <div className="flex flex-col gap-0.5 text-xs">
-            {/* <div className="mb-1 w-full">{id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}<span className="font-semibold text-gray-800 dark:text-gray-100">{name || "N/A"}</span></div> */}
-            <div className="mt-1 pt-1 dark:border-gray-700 w-full">
-              {id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}
-              {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
-              {member_email && (<a href={`mailto:${member_email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{member_email}</a>)}
-              {member_phone && (<span className="block text-gray-600 dark:text-gray-300">{member_phone}</span>)}
-            </div>
-            {/* {listing_url && (<div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700"><a href={listing_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300 truncate max-w-[200px]">Listing URL</a></div>)} */}
-          </div>
-        );
-      }
-    },
-    {
-      header: "Details", accessorKey: "product_category", size: 280,
-      cell: ({ row }) => {
-        const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition } = row?.original || {};
-        const currentProductApiStatus = product_status?.toLowerCase() || "default";
-        const cartoonTypeName = dummyCartoonTypes.find(ct => ct.id === cartoonTypeId)?.name;
-        return (
-          <div className="flex flex-col gap-0.5 text-xs">
-            <span><span className="font-semibold text-gray-700 dark:text-gray-300">Category:</span> {product_category || "N/A"}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
-            {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[250px]"><span className="font-semibold text-gray-700 dark:text-gray-300">Specs:</span> {product_specs.length > 30 ? product_specs.substring(0, 30) + "..." : product_specs}</span></Tooltip>)}
-            {product_status && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Avail. Status:</span> <Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)}
-            {cartoonTypeName && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Cartoon:</span> {cartoonTypeName}</span>)}
-            {deviceCondition && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Condition:</span> {deviceCondition}</span>)}
-          </div>
-        );
+          );
+        },
       },
-    },
-    {
-      header: "Engagement", accessorKey: "price", size: 220,
-      cell: ({ row }) => {
-        const { price, quantity, inquiry_count, share_count, is_bookmarked, created_date, } = row.original;
-        return (
-          <div className="flex flex-col gap-1 text-xs">
-            <div className="flex items-center">
-              <TbCurrencyDollar className="text-base text-emerald-500 dark:text-emerald-400" /><span className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">{price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2, }) ?? "N/A"}</span>
-              <TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span>
+      {
+        header: "Company & Member",
+        accessorKey: "company_name",
+        size: 260,
+        cell: ({ row }) => {
+          const { name, id, member_email, member_phone } =
+            row.original?.member || {};
+          return (
+            <div className="flex flex-col gap-0.5 text-xs">
+              {/* <div className="mb-1 w-full">{id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}<span className="font-semibold text-gray-800 dark:text-gray-100">{name || "N/A"}</span></div> */}
+              <div className="mt-1 pt-1 dark:border-gray-700 w-full">
+                {id && (
+                  <span className="font-semibold text-gray-500 dark:text-gray-400">
+                    {id} | 
+                  </span>
+                )}
+                {name && (
+                  <span className="font-semibold text-gray-800 dark:text-gray-100">
+                    {name}
+                  </span>
+                )}
+                {member_email && (
+                  <a
+                    href={`mailto:${member_email}`}
+                    className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    {member_email}
+                  </a>
+                )}
+                {member_phone && (
+                  <span className="block text-gray-600 dark:text-gray-300">
+                    {member_phone}
+                  </span>
+                )}
+              </div>
+              {/* {listing_url && (<div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700"><a href={listing_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300 truncate max-w-[200px]">Listing URL</a></div>)} */}
             </div>
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
-              <Tooltip title="Inquiries"><span className="flex items-center gap-0.5"><TbMessageCircle className="text-gray-500 dark:text-gray-400" />{inquiry_count}</span></Tooltip>
-              <Tooltip title="Shares"><span className="flex items-center gap-0.5"><TbShare className="text-gray-500 dark:text-gray-400" />{share_count}</span></Tooltip>
-              <Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}><button onClick={() => { }} className="p-0 m-0 bg-transparent border-none cursor-pointer"><TbBookmark size={14} className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"} /></button></Tooltip>
-            </div>
-            {created_date && (<span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1"><TbCalendarEvent />{dayjs(created_date).format("MMM D, YYYY")}</span>)}
-          </div>
-        );
-      }
-    },
-    {
-      header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 180,
-      cell: (props) => {
-        const { updated_at, updated_by_name, updated_by_role } = props.row.original || {};
-        const formattedDate = updated_at ? dayjs(updated_at).format("MMM D, YYYY h:mm A") : "N/A";
-        return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
-      }
-    },
-    {
-      header: "Workflow Status", accessorKey: "recordStatus", enableSorting: true, size: 180,
-      cell: ({ row }) => {
-        const { recordStatus } = row.original;
-        return (
-          <div className="flex flex-col gap-1 text-xs">
-            {recordStatus && (<div><Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>{recordStatus}</Tag></div>)}
-          </div>
-        );
+          );
+        },
       },
-    },
-    {
-      header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" },
-      cell: (props: CellContext<WallItem, any>) => (<StyledActionColumn onViewDetail={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original} />),
-    },
-  ], [openViewDrawer, openEditDrawer, handleOpenModal]);
+      {
+        header: "Details",
+        accessorKey: "product_category",
+        size: 280,
+        cell: ({ row }) => {
+          const {
+            product_category,
+            product_subcategory,
+            product_specs,
+            product_status,
+            cartoonTypeId,
+            deviceCondition,
+          } = row?.original || {};
+          const currentProductApiStatus =
+            product_status?.toLowerCase() || "default";
+          const cartoonTypeName = dummyCartoonTypes.find(
+            (ct) => ct.id === cartoonTypeId
+          )?.name;
+          return (
+            <div className="flex flex-col gap-0.5 text-xs">
+              <span>
+                <span className="font-semibold text-gray-700 dark:text-gray-300">
+                  Category:
+                </span>{" "}
+                {product_category || "N/A"}
+                {product_subcategory ? ` / ${product_subcategory}` : ""}
+              </span>
+              {product_specs && (
+                <Tooltip title={product_specs}>
+                  <span className="truncate max-w-[250px]">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">
+                      Specs:
+                    </span>{" "}
+                    {product_specs.length > 30
+                      ? product_specs.substring(0, 30) + "..."
+                      : product_specs}
+                  </span>
+                </Tooltip>
+              )}
+              {product_status && (
+                <span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">
+                    Avail. Status:
+                  </span>{" "}
+                  <Tag
+                    className={`capitalize text-xs px-1 py-0.5 ${
+                      productApiStatusColor[currentProductApiStatus] ||
+                      productApiStatusColor.default
+                    }`}
+                  >
+                    {product_status}
+                  </Tag>
+                </span>
+              )}
+              {cartoonTypeName && (
+                <span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">
+                    Cartoon:
+                  </span>{" "}
+                  {cartoonTypeName}
+                </span>
+              )}
+              {deviceCondition && (
+                <span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">
+                    Condition:
+                  </span>{" "}
+                  {deviceCondition}
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        header: "Engagement",
+        accessorKey: "price",
+        size: 220,
+        cell: ({ row }) => {
+          const {
+            price,
+            quantity,
+            inquiry_count,
+            share_count,
+            is_bookmarked,
+            created_date,
+          } = row.original;
+          return (
+            <div className="flex flex-col gap-1 text-xs">
+              <div className="flex items-center">
+                <TbCurrencyDollar className="text-base text-emerald-500 dark:text-emerald-400" />
+                <span className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">
+                  {price?.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }) ?? "N/A"}
+                </span>
+                <TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" />
+                <span
+                  className="text-gray-700 dark:text-gray-300"
+                  style={{ minWidth: 35 }}
+                >
+                  Qty: {quantity ?? "N/A"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
+                <Tooltip title="Inquiries">
+                  <span className="flex items-center gap-0.5">
+                    <TbMessageCircle className="text-gray-500 dark:text-gray-400" />
+                    {inquiry_count}
+                  </span>
+                </Tooltip>
+                <Tooltip title="Shares">
+                  <span className="flex items-center gap-0.5">
+                    <TbShare className="text-gray-500 dark:text-gray-400" />
+                    {share_count}
+                  </span>
+                </Tooltip>
+                <Tooltip
+                  title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}
+                >
+                  <button
+                    onClick={() => {}}
+                    className="p-0 m-0 bg-transparent border-none cursor-pointer"
+                  >
+                    <TbBookmark
+                      size={14}
+                      className={
+                        is_bookmarked
+                          ? "text-amber-500 dark:text-amber-400"
+                          : "text-gray-500 dark:text-gray-400"
+                      }
+                    />
+                  </button>
+                </Tooltip>
+              </div>
+              {created_date && (
+                <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1">
+                  <TbCalendarEvent />
+                  {dayjs(created_date).format("MMM D, YYYY")}
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        size: 180,
+        cell: (props) => {
+          const { updated_at, updated_by_name, updated_by_role } =
+            props.row.original || {};
+          const formattedDate = updated_at
+            ? dayjs(updated_at).format("MMM D, YYYY h:mm A")
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span>
+                {updated_by_name || "N/A"}
+                {updated_by_role && (
+                  <>
+                    <br />
+                    <b>{updated_by_role}</b>
+                  </>
+                )}
+              </span>
+              <br />
+              <span>{formattedDate}</span>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Workflow Status",
+        accessorKey: "recordStatus",
+        enableSorting: true,
+        size: 180,
+        cell: ({ row }) => {
+          const { recordStatus } = row.original;
+          return (
+            <div className="flex flex-col gap-1 text-xs">
+              {recordStatus && (
+                <div>
+                  <Tag
+                    className={`${
+                      recordStatusColor[recordStatus] ||
+                      recordStatusColor.Pending
+                    } font-semibold capitalize`}
+                  >
+                    {recordStatus}
+                  </Tag>
+                </div>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        header: "Actions",
+        id: "actions",
+        size: 120,
+        meta: { HeaderClass: "text-center" },
+        cell: (props: CellContext<WallItem, any>) => (
+          <StyledActionColumn
+            onViewDetail={() => openViewDrawer(props.row.original)}
+            onEdit={() => openEditDrawer(props.row.original)}
+            onOpenModal={handleOpenModal}
+            rowData={props.row.original}
+          />
+        ),
+      },
+    ],
+    [openViewDrawer, openEditDrawer, handleOpenModal]
+  );
 
-  const counts = wallListing?.counts || { active: 0, buy: 0, non_active: 0, pending: 0, rejected: 0, sell: 0, today: 0, total: 0 };
+  const counts = wallListing?.counts || {
+    active: 0,
+    buy: 0,
+    non_active: 0,
+    pending: 0,
+    rejected: 0,
+    sell: 0,
+    today: 0,
+    total: 0,
+  };
 
   return (
     <>
@@ -775,30 +1837,133 @@ const WallListing = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
             <div className="flex gap-2">
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
-              <Button variant="solid" icon={<TbPlus />}>Add Multiple</Button>
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+                Add New
+              </Button>
+              <Button variant="solid" icon={<TbPlus />}>
+                Add Multiple
+              </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 mt-4 gap-2 ">
-            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-blue-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div className="flex flex-col"><b className="text-blue-500">{counts.total}</b><span className="font-semibold text-[11px]">Total</span></div></Card>
-            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-emerald-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCalendar size={20} /></div><div className="flex flex-col"><b className="text-emerald-500">{counts.today}</b><span className="font-semibold text-[11px]">Today</span></div></Card>
-            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-violet-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div><div className="flex flex-col"><b className="text-violet-500">{counts.buy}</b><span className="font-semibold text-[11px]">Buy</span></div></Card>
-            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-pink-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbPackageExport size={20} /></div><div className="flex flex-col"><b className="text-pink-500">{counts.sell}</b><span className="font-semibold text-[11px]">Sell</span></div></Card>
-            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-green-300" ><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div><div className="flex flex-col"><b className="text-green-500">{counts.active}</b><span className="font-semibold text-[11px]">Active</span></div></Card>
-            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-red-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.non_active}</b><span className="font-semibold text-[11px]">Non Active</span></div></Card>
-            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-orange-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbProgress size={20} /></div><div className="flex flex-col"><b className="text-orange-500">{counts.pending}</b><span className="font-semibold text-[11px]">Pending</span></div></Card>
-            <Card bodyClass="flex gap-2 p-1" className="rounded-sm border border-red-200"><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.rejected}</b><span className="font-semibold text-[11px]">Rejected</span></div></Card>
+            <Card
+              bodyClass="flex gap-2 p-1"
+              className="rounded-sm border border-blue-200"
+            >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                <TbListDetails size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-blue-500">{counts.total}</b>
+                <span className="font-semibold text-[11px]">Total</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-1"
+              className="rounded-sm border border-emerald-200"
+            >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
+                <TbCalendar size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-emerald-500">{counts.today}</b>
+                <span className="font-semibold text-[11px]">Today</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-1"
+              className="rounded-sm border border-violet-200"
+            >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                <TbBox size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-violet-500">{counts.buy}</b>
+                <span className="font-semibold text-[11px]">Buy</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-1"
+              className="rounded-sm border border-pink-200"
+            >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                <TbPackageExport size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-pink-500">{counts.sell}</b>
+                <span className="font-semibold text-[11px]">Sell</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-1"
+              className="rounded-sm border border-green-300"
+            >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                <TbCircleCheck size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-green-500">{counts.active}</b>
+                <span className="font-semibold text-[11px]">Active</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-1"
+              className="rounded-sm border border-red-200"
+            >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbCancel size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-red-500">{counts.non_active}</b>
+                <span className="font-semibold text-[11px]">Non Active</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-1"
+              className="rounded-sm border border-orange-200"
+            >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                <TbProgress size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-orange-500">{counts.pending}</b>
+                <span className="font-semibold text-[11px]">Pending</span>
+              </div>
+            </Card>
+            <Card
+              bodyClass="flex gap-2 p-1"
+              className="rounded-sm border border-red-200"
+            >
+              <div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                <TbBoxOff size={20} />
+              </div>
+              <div className="flex flex-col">
+                <b className="text-red-500">{counts.rejected}</b>
+                <span className="font-semibold text-[11px]">Rejected</span>
+              </div>
+            </Card>
           </div>
 
-          <WallTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onAddNew={openAddDrawer} onImport={handleImportData} onClearFilters={onClearFilters} />
+          <WallTableTools
+            onSearchChange={handleSearchChange}
+            onFilter={openFilterDrawer}
+            onExport={handleOpenExportReasonModal}
+            onAddNew={openAddDrawer}
+            onImport={handleImportData}
+            onClearFilters={onClearFilters}
+          />
 
           <div className="mt-4">
             <WallTable
               columns={columns}
               data={pageData}
               loading={masterLoadingStatus === "loading"}
-              pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
+              pagingData={{
+                total,
+                pageIndex: tableData.pageIndex as number,
+                pageSize: tableData.pageSize as number,
+              }}
               selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
               onSelectChange={handlePageSizeChange}
@@ -809,61 +1974,374 @@ const WallListing = () => {
           </div>
         </AdaptiveCard>
       </Container>
-      <WallSelectedFooter selectedItems={selectedItems} deleteConfirmOpen={deleteSelectedConfirmOpen} setDeleteConfirmOpen={setDeleteSelectedConfirmOpen} onConfirmDelete={onConfirmDeleteSelectedItems} isDeleting={masterLoadingStatus === 'loading'} />
+      <WallSelectedFooter
+        selectedItems={selectedItems}
+        deleteConfirmOpen={deleteSelectedConfirmOpen}
+        setDeleteConfirmOpen={setDeleteSelectedConfirmOpen}
+        onConfirmDelete={onConfirmDeleteSelectedItems}
+        isDeleting={masterLoadingStatus === "loading"}
+      />
       <WallModals modalState={modalState} onClose={handleCloseModal} />
 
-      <Drawer title="View Wall Item Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={700}>
+      <Drawer
+        title="View Wall Item Details"
+        isOpen={isViewDrawerOpen}
+        onClose={closeViewDrawer}
+        onRequestClose={closeViewDrawer}
+        width={700}
+      >
         {editingItem && (
           <div className="p-4 space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              {Object.entries(editingItem).filter(([key]) => !["product_images", "product_name", "id",].includes(key)).map(([key, value]) => (
-                <div key={key} className="border-b border-gray-200 dark:border-gray-700 pb-2">
-                  <strong className="capitalize text-gray-700 dark:text-gray-200">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}:</strong>{" "}
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {value instanceof Date ? dayjs(value).format("MMM D, YYYY h:mm A") : (value !== null && value !== "") ? String(value) : "N/A"}
-                  </span>
-                </div>
-              ))}
+              {Object.entries(editingItem)
+                .filter(
+                  ([key]) =>
+                    !["product_images", "product_name", "id"].includes(key)
+                )
+                .map(([key, value]) => (
+                  <div
+                    key={key}
+                    className="border-b border-gray-200 dark:border-gray-700 pb-2"
+                  >
+                    <strong className="capitalize text-gray-700 dark:text-gray-200">
+                      {key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}:
+                    </strong>{" "}
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {value instanceof Date
+                        ? dayjs(value).format("MMM D, YYYY h:mm A")
+                        : value !== null && value !== ""
+                        ? String(value)
+                        : "N/A"}
+                    </span>
+                  </div>
+                ))}
             </div>
           </div>
         )}
       </Drawer>
 
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={480}
-        footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear All</Button><Button size="sm" variant="solid" form="filterWallForm" type="submit">Apply</Button></div>} >
-        <Form id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col h-full">
+      <Drawer
+        title="Filters"
+        isOpen={isFilterDrawerOpen}
+        onClose={closeFilterDrawer}
+        onRequestClose={closeFilterDrawer}
+        width={480}
+        footer={
+          <div className="text-right w-full">
+            <Button
+              size="sm"
+              className="mr-2"
+              onClick={onClearFilters}
+              type="button"
+            >
+              Clear All
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="filterWallForm"
+              type="submit"
+            >
+              Apply
+            </Button>
+          </div>
+        }
+      >
+        <Form
+          id="filterWallForm"
+          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
+          className="flex flex-col h-full"
+        >
           <div className="overflow-y-auto p-1 flex-grow">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
-              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p) => ({ value: p.id, label: p.company_name, }))} {...field} />)} /></FormItem>
-              <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
-              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-              <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={AllCategorysData.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-              <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Sub Categories..." options={subCategoriesForSelectedCategoryData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-              <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-              <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s, }))} {...field} />)} /></FormItem>
-              <FormItem label="Created Date Range" className="col-span-2"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
-              <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" },]} {...field} />)} /></FormItem>
-              <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-              <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
-              <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p) => ({ value: p.id, label: p.name, }))} {...field} />)} /></FormItem>
+              <FormItem label="Workflow Status">
+                <Controller
+                  name="filterRecordStatuses"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Status..."
+                      options={recordStatusOptions}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Companies">
+                <Controller
+                  name="filterCompanyIds"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select companies..."
+                      options={AllCompanyData?.map((p) => ({
+                        value: p.id,
+                        label: p.company_name,
+                      }))}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Intent (Want to)">
+                <Controller
+                  name="filterIntents"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select intents..."
+                      options={intentOptions}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Products">
+                <Controller
+                  name="filterProductIds"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select products..."
+                      options={AllProductsData?.map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      }))}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Categories">
+                <Controller
+                  name="categories"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Categories..."
+                      options={AllCategorysData.map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      }))}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Sub Categories">
+                <Controller
+                  name="subcategories"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Sub Categories..."
+                      options={subCategoriesForSelectedCategoryData?.map(
+                        (p) => ({ value: p.id, label: p.name })
+                      )}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Brands">
+                <Controller
+                  name="brands"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Brands..."
+                      options={BrandData?.map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      }))}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Availability Status">
+                <Controller
+                  name="productStatus"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Availability..."
+                      options={Object.keys(productApiStatusColor)
+                        .filter((k) => k !== "default")
+                        .map((s) => ({
+                          label: s.charAt(0).toUpperCase() + s.slice(1),
+                          value: s,
+                        }))}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Created Date Range" className="col-span-2">
+                <Controller
+                  name="dateRange"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <DatePicker.DatePickerRange
+                      value={field.value as [Date | null, Date | null] | null}
+                      onChange={field.onChange}
+                      placeholder="Select date range"
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Source (Example)">
+                <Controller
+                  name="source"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Source..."
+                      options={[
+                        { label: "Web", value: "web" },
+                        { label: "App", value: "app" },
+                      ]}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Product Spec (Example)">
+                <Controller
+                  name="productSpec"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Product Spec..."
+                      options={ProductSpecificationsData?.map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      }))}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Member Type (Example)">
+                <Controller
+                  name="memberType"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Member Type..."
+                      options={MemberTypeData?.map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      }))}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label="Created By (Example)">
+                <Controller
+                  name="createdBy"
+                  control={filterFormMethods.control}
+                  render={({ field }) => (
+                    <UiSelect
+                      isMulti
+                      placeholder="Select Employee..."
+                      options={Employees?.map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      }))}
+                      {...field}
+                    />
+                  )}
+                />
+              </FormItem>
             </div>
           </div>
         </Form>
       </Drawer>
 
-      <Dialog isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)} title="Import Wall Items">
-        <div className="p-4"><p>Upload a CSV file to import Wall Items. (This is a dummy import)</p><FormItem label="CSV File"><Input type="file" accept=".csv" onChange={handleImportFileSelect} /></FormItem><div className="text-right mt-4"><Button size="sm" onClick={() => setImportDialogOpen(false)}>Cancel</Button></div></div>
+      <Dialog
+        isOpen={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onRequestClose={() => setImportDialogOpen(false)}
+        title="Import Wall Items"
+      >
+        <div className="p-4">
+          <p>
+            Upload a CSV file to import Wall Items. (This is a dummy import)
+          </p>
+          <FormItem label="CSV File">
+            <Input
+              type="file"
+              accept=".csv"
+              onChange={handleImportFileSelect}
+            />
+          </FormItem>
+          <div className="text-right mt-4">
+            <Button size="sm" onClick={() => setImportDialogOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
       </Dialog>
 
-      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export"
-        onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)}
-        onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
-        loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel"
-        confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason, }} >
-        <Form id="exportReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2">
-          <FormItem label="Please provide a reason for exporting this data:" isRequired invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
-            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
+      >
+        <Form
+          id="exportReasonForm"
+          onSubmit={(e) => e.preventDefault()}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <FormItem
+            label="Please provide a reason for exporting this data:"
+            isRequired
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
           </FormItem>
         </Form>
       </ConfirmDialog>

@@ -76,7 +76,7 @@ import {
   TbUser,
   TbUserCircle,
   TbUserSearch,
-  TbUsersGroup
+  TbUsersGroup,
 } from "react-icons/tb";
 
 // Types
@@ -204,7 +204,14 @@ export type CompanyItem = {
   id: number; // Changed to number based on JSON
   company_code: string | null;
   company_name: string;
-  status: "Verified" | "Non Verified" | "Active" | "Pending" | "Inactive" | "active" | "inactive"; // Extended to include new statuses
+  status:
+    | "Verified"
+    | "Non Verified"
+    | "Active"
+    | "Pending"
+    | "Inactive"
+    | "active"
+    | "inactive"; // Extended to include new statuses
   primary_email_id: string;
   primary_contact_number: string;
   primary_contact_number_code: string;
@@ -217,7 +224,7 @@ export type CompanyItem = {
   owner_name: string; // Replaces 'company_owner'
   company_address: string;
   continent_id: string; // Store ID, actual object is in `continent`
-  country_id: string;   // Store ID, actual object is in `country`
+  country_id: string; // Store ID, actual object is in `country`
   state: string;
   city: string;
   zip_code: string;
@@ -331,7 +338,6 @@ export type CompanyItem = {
   // company_email?: string; (use primary_email_id)
 };
 // --- END: Detailed CompanyItem and Sub-types ---
-
 
 // --- Zod Schema for Company Filter Form ---
 const companyFilterFormSchema = z.object({
@@ -488,8 +494,12 @@ function exportToCsv(filename: string, rows: CompanyItem[]) {
     company_website: row.company_website || "N/A",
     gst_number: row.gst_number || "N/A",
     pan_number: row.pan_number || "N/A",
-    brands_list: Array.isArray(row.brands_list) ? row.brands_list.join(", ") : "N/A",
-    category_list: Array.isArray(row.category_list) ? row.category_list.join(", ") : "N/A",
+    brands_list: Array.isArray(row.brands_list)
+      ? row.brands_list.join(", ")
+      : "N/A",
+    category_list: Array.isArray(row.category_list)
+      ? row.category_list.join(", ")
+      : "N/A",
   }));
 
   const separator = ",";
@@ -787,33 +797,69 @@ const ViewCompanyDetailDialog: React.FC<{
     if (value === null || value === undefined || value === "") return null;
     return (
       <div className="mb-3">
-        <span className="font-semibold text-gray-700 dark:text-gray-200">{label}: </span>
+        <span className="font-semibold text-gray-700 dark:text-gray-200">
+          {label}:{" "}
+        </span>
         {isHtml ? (
-            <span className="text-gray-600 dark:text-gray-400" dangerouslySetInnerHTML={{ __html: String(value) }} />
+          <span
+            className="text-gray-600 dark:text-gray-400"
+            dangerouslySetInnerHTML={{ __html: String(value) }}
+          />
         ) : (
-            <span className="text-gray-600 dark:text-gray-400">{String(value)}</span>
+          <span className="text-gray-600 dark:text-gray-400">
+            {String(value)}
+          </span>
         )}
       </div>
     );
   };
 
-  const renderVerificationStatus = (label: string, verified: boolean, remark?: string | null, file?: string | null) => {
+  const renderVerificationStatus = (
+    label: string,
+    verified: boolean,
+    remark?: string | null,
+    file?: string | null
+  ) => {
     return (
       <div className="mb-3 p-2 border rounded-md dark:border-gray-600">
         <div className="flex items-center justify-between">
-            <div>
-                <span className="font-semibold">{label}: </span>
-                {verified ? <Tag prefix prefixClass="bg-emerald-500">Verified</Tag> : <Tag prefix prefixClass="bg-red-500">Not Verified</Tag>}
-            </div>
-            {file && <a href={file} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View File</a>}
+          <div>
+            <span className="font-semibold">{label}: </span>
+            {verified ? (
+              <Tag prefix prefixClass="bg-emerald-500">
+                Verified
+              </Tag>
+            ) : (
+              <Tag prefix prefixClass="bg-red-500">
+                Not Verified
+              </Tag>
+            )}
+          </div>
+          {file && (
+            <a
+              href={file}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-500 hover:underline"
+            >
+              View File
+            </a>
+          )}
         </div>
-        {remark && <p className="text-xs text-gray-500 mt-1">Remark: {remark}</p>}
+        {remark && (
+          <p className="text-xs text-gray-500 mt-1">Remark: {remark}</p>
+        )}
       </div>
-    )
-  }
+    );
+  };
 
   return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={800} >
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={800}
+    >
       <div className="max-h-[80vh] overflow-y-auto pr-4">
         <h4 className="mb-6">Company Details: {company.company_name}</h4>
 
@@ -823,111 +869,239 @@ const ViewCompanyDetailDialog: React.FC<{
             {renderDetailItem("Company Code", company.company_code)}
             {renderDetailItem("Ownership Type", company.ownership_type)}
             {renderDetailItem("Owner Name", company.owner_name)}
-            {renderDetailItem("Status", <Tag className={`${getCompanyStatusClass(company.status)} capitalize`}>{company.status}</Tag>)}
+            {renderDetailItem(
+              "Status",
+              <Tag
+                className={`${getCompanyStatusClass(
+                  company.status
+                )} capitalize`}
+              >
+                {company.status}
+              </Tag>
+            )}
             {renderDetailItem("Establishment Year", company.establishment_year)}
             {renderDetailItem("No. of Employees", company.no_of_employees)}
-            {renderDetailItem("Primary Business Type", company.primary_business_type)}
-            {renderDetailItem("Profile Completion", `${company.profile_completion}%`)}
+            {renderDetailItem(
+              "Primary Business Type",
+              company.primary_business_type
+            )}
+            {renderDetailItem(
+              "Profile Completion",
+              `${company.profile_completion}%`
+            )}
           </div>
         </Card>
 
         <Card className="mb-4" bordered>
-            <h5 className="mb-2">Contact Information</h5>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                {renderDetailItem("Primary Email", company.primary_email_id)}
-                {renderDetailItem("Primary Contact", `${company.primary_contact_number_code} ${company.primary_contact_number}`)}
-                {renderDetailItem("Alternate Email", company.alternate_email_id)}
-                {renderDetailItem("Alternate Contact", company.alternate_contact_number ? `${company.alternate_contact_number_code} ${company.alternate_contact_number}` : 'N/A')}
-                {renderDetailItem("General Contact", company.general_contact_number ? `${company.general_contact_number_code} ${company.general_contact_number}`: 'N/A')}
-                {renderDetailItem("Support Email", company.support_email)}
-                {renderDetailItem("Notification Email", company.notification_email)}
-                {renderDetailItem("Website", company.company_website ? <a href={company.company_website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{company.company_website}</a> : 'N/A')}
-            </div>
-        </Card>
-        
-        <Card className="mb-4" bordered>
-            <h5 className="mb-2">Address & Location</h5>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                {renderDetailItem("Address", company.company_address)}
-                {renderDetailItem("City", company.city)}
-                {renderDetailItem("State", company.state)}
-                {renderDetailItem("Zip Code", company.zip_code)}
-                {renderDetailItem("Country", company.country?.name)}
-                {renderDetailItem("Continent", company.continent?.name)}
-            </div>
+          <h5 className="mb-2">Contact Information</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            {renderDetailItem("Primary Email", company.primary_email_id)}
+            {renderDetailItem(
+              "Primary Contact",
+              `${company.primary_contact_number_code} ${company.primary_contact_number}`
+            )}
+            {renderDetailItem("Alternate Email", company.alternate_email_id)}
+            {renderDetailItem(
+              "Alternate Contact",
+              company.alternate_contact_number
+                ? `${company.alternate_contact_number_code} ${company.alternate_contact_number}`
+                : "N/A"
+            )}
+            {renderDetailItem(
+              "General Contact",
+              company.general_contact_number
+                ? `${company.general_contact_number_code} ${company.general_contact_number}`
+                : "N/A"
+            )}
+            {renderDetailItem("Support Email", company.support_email)}
+            {renderDetailItem("Notification Email", company.notification_email)}
+            {renderDetailItem(
+              "Website",
+              company.company_website ? (
+                <a
+                  href={company.company_website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline"
+                >
+                  {company.company_website}
+                </a>
+              ) : (
+                "N/A"
+              )
+            )}
+          </div>
         </Card>
 
         <Card className="mb-4" bordered>
-            <h5 className="mb-2">Legal & Financial</h5>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                {renderDetailItem("GST Number", company.gst_number)}
-                {renderDetailItem("PAN Number", company.pan_number)}
-                {renderDetailItem("TRN Number", company.trn_number)}
-                {renderDetailItem("TAN Number", company.tan_number)}
-                {renderDetailItem("KYC Verified", company.kyc_verified ? <MdCheckCircle className="text-green-500 text-xl inline-block" /> : <MdCancel className="text-red-500 text-xl inline-block" />)}
-                {renderDetailItem("Billing Enabled", company.enable_billing ? <MdCheckCircle className="text-green-500 text-xl inline-block" /> : <MdCancel className="text-red-500 text-xl inline-block" />)}
-                {renderDetailItem("Billing Due Date", company.due_after_3_months_date ? new Date(company.due_after_3_months_date).toLocaleDateString() : 'N/A')}
-            </div>
+          <h5 className="mb-2">Address & Location</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            {renderDetailItem("Address", company.company_address)}
+            {renderDetailItem("City", company.city)}
+            {renderDetailItem("State", company.state)}
+            {renderDetailItem("Zip Code", company.zip_code)}
+            {renderDetailItem("Country", company.country?.name)}
+            {renderDetailItem("Continent", company.continent?.name)}
+          </div>
         </Card>
 
-        {company.company_bank_details && company.company_bank_details.length > 0 && (
+        <Card className="mb-4" bordered>
+          <h5 className="mb-2">Legal & Financial</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            {renderDetailItem("GST Number", company.gst_number)}
+            {renderDetailItem("PAN Number", company.pan_number)}
+            {renderDetailItem("TRN Number", company.trn_number)}
+            {renderDetailItem("TAN Number", company.tan_number)}
+            {renderDetailItem(
+              "KYC Verified",
+              company.kyc_verified ? (
+                <MdCheckCircle className="text-green-500 text-xl inline-block" />
+              ) : (
+                <MdCancel className="text-red-500 text-xl inline-block" />
+              )
+            )}
+            {renderDetailItem(
+              "Billing Enabled",
+              company.enable_billing ? (
+                <MdCheckCircle className="text-green-500 text-xl inline-block" />
+              ) : (
+                <MdCancel className="text-red-500 text-xl inline-block" />
+              )
+            )}
+            {renderDetailItem(
+              "Billing Due Date",
+              company.due_after_3_months_date
+                ? new Date(company.due_after_3_months_date).toLocaleDateString()
+                : "N/A"
+            )}
+          </div>
+        </Card>
+
+        {company.company_bank_details &&
+          company.company_bank_details.length > 0 && (
             <Card className="mb-4" bordered>
-                <h5 className="mb-2">Bank Details</h5>
-                {company.company_bank_details.map(bank => (
-                    <div key={bank.id} className="mb-3 p-2 border rounded-md dark:border-gray-600">
-                        {renderDetailItem("Bank Name", bank.bank_name)}
-                        {renderDetailItem("Account Number", bank.bank_account_number)}
-                        {renderDetailItem("IFSC Code", bank.ifsc_code)}
-                        {renderDetailItem("Type", bank.type || 'N/A')}
-                        {bank.verification_photo && renderDetailItem("Verification Photo", <a href={bank.verification_photo} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Photo</a>)}
-                    </div>
-                ))}
+              <h5 className="mb-2">Bank Details</h5>
+              {company.company_bank_details.map((bank) => (
+                <div
+                  key={bank.id}
+                  className="mb-3 p-2 border rounded-md dark:border-gray-600"
+                >
+                  {renderDetailItem("Bank Name", bank.bank_name)}
+                  {renderDetailItem("Account Number", bank.bank_account_number)}
+                  {renderDetailItem("IFSC Code", bank.ifsc_code)}
+                  {renderDetailItem("Type", bank.type || "N/A")}
+                  {bank.verification_photo &&
+                    renderDetailItem(
+                      "Verification Photo",
+                      <a
+                        href={bank.verification_photo}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-500 hover:underline"
+                      >
+                        View Photo
+                      </a>
+                    )}
+                </div>
+              ))}
             </Card>
-        )}
-        
-        <Card className="mb-4" bordered>
-            <h5 className="mb-2">Document Verification Status</h5>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                {renderVerificationStatus("Office Photo", company.office_photo_verified, company.office_photo_remark, company.office_photo_file)}
-                {renderVerificationStatus("GST Certificate", company.gst_certificate_verified, company.gst_certificate_remark, company.gst_certificate_file)}
-                {renderVerificationStatus("Authority Letter", company.authority_letter_verified, company.authority_letter_remark, company.authority_letter_file)}
-                {renderVerificationStatus("Visiting Card", company.visiting_card_verified, company.visiting_card_remark, company.visiting_card_file)}
-                {renderVerificationStatus("Cancel Cheque", company.cancel_cheque_verified, company.cancel_cheque_remark, company.cancel_cheque_file)}
-                {renderVerificationStatus("Aadhar Card", company.aadhar_card_verified, company.aadhar_card_remark, company.aadhar_card_file)}
-                {renderVerificationStatus("PAN Card", company.pan_card_verified, company.pan_card_remark, company.pan_card_file)}
-                {/* Add 206AB and ABCQ if needed, handle key names */}
-            </div>
-        </Card>
+          )}
 
+        <Card className="mb-4" bordered>
+          <h5 className="mb-2">Document Verification Status</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            {renderVerificationStatus(
+              "Office Photo",
+              company.office_photo_verified,
+              company.office_photo_remark,
+              company.office_photo_file
+            )}
+            {renderVerificationStatus(
+              "GST Certificate",
+              company.gst_certificate_verified,
+              company.gst_certificate_remark,
+              company.gst_certificate_file
+            )}
+            {renderVerificationStatus(
+              "Authority Letter",
+              company.authority_letter_verified,
+              company.authority_letter_remark,
+              company.authority_letter_file
+            )}
+            {renderVerificationStatus(
+              "Visiting Card",
+              company.visiting_card_verified,
+              company.visiting_card_remark,
+              company.visiting_card_file
+            )}
+            {renderVerificationStatus(
+              "Cancel Cheque",
+              company.cancel_cheque_verified,
+              company.cancel_cheque_remark,
+              company.cancel_cheque_file
+            )}
+            {renderVerificationStatus(
+              "Aadhar Card",
+              company.aadhar_card_verified,
+              company.aadhar_card_remark,
+              company.aadhar_card_file
+            )}
+            {renderVerificationStatus(
+              "PAN Card",
+              company.pan_card_verified,
+              company.pan_card_remark,
+              company.pan_card_file
+            )}
+            {/* Add 206AB and ABCQ if needed, handle key names */}
+          </div>
+        </Card>
 
         {company.office_info && company.office_info.length > 0 && (
-             <Card className="mb-4" bordered>
-                <h5 className="mb-2">Office Information</h5>
-                {company.office_info.map(office => (
-                    <div key={office.id} className="mb-3 p-2 border rounded-md dark:border-gray-600">
-                        {renderDetailItem("Office Name", office.office_name)}
-                        {renderDetailItem("Office Type", office.office_type)}
-                        {renderDetailItem("Address", office.address)}
-                        {renderDetailItem("City", office.city)}
-                        {renderDetailItem("State", office.state)}
-                        {renderDetailItem("Zip Code", office.zip_code)}
-                        {renderDetailItem("GST Number", office.gst_number)}
-                    </div>
-                ))}
-            </Card>
+          <Card className="mb-4" bordered>
+            <h5 className="mb-2">Office Information</h5>
+            {company.office_info.map((office) => (
+              <div
+                key={office.id}
+                className="mb-3 p-2 border rounded-md dark:border-gray-600"
+              >
+                {renderDetailItem("Office Name", office.office_name)}
+                {renderDetailItem("Office Type", office.office_type)}
+                {renderDetailItem("Address", office.address)}
+                {renderDetailItem("City", office.city)}
+                {renderDetailItem("State", office.state)}
+                {renderDetailItem("Zip Code", office.zip_code)}
+                {renderDetailItem("GST Number", office.gst_number)}
+              </div>
+            ))}
+          </Card>
         )}
-        
-        {company.company_certificate && company.company_certificate.length > 0 && (
+
+        {company.company_certificate &&
+          company.company_certificate.length > 0 && (
             <Card className="mb-4" bordered>
-                <h5 className="mb-2">Certificates</h5>
-                {company.company_certificate.map(cert => (
-                    <div key={cert.id} className="mb-2 flex justify-between items-center">
-                        <span>{cert.certificate_name} ({cert.certificate_id})</span>
-                        {cert.upload_certificate_path && <a href={cert.upload_certificate_path} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Certificate</a>}
-                    </div>
-                ))}
+              <h5 className="mb-2">Certificates</h5>
+              {company.company_certificate.map((cert) => (
+                <div
+                  key={cert.id}
+                  className="mb-2 flex justify-between items-center"
+                >
+                  <span>
+                    {cert.certificate_name} ({cert.certificate_id})
+                  </span>
+                  {cert.upload_certificate_path && (
+                    <a
+                      href={cert.upload_certificate_path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-500 hover:underline"
+                    >
+                      View Certificate
+                    </a>
+                  )}
+                </div>
+              ))}
             </Card>
-        )}
+          )}
 
         {/* Add more sections for:
             - company_references
@@ -938,7 +1112,6 @@ const ViewCompanyDetailDialog: React.FC<{
             - social media links (facebook_url etc.)
             - created_by_user, updated_by_user
         */}
-
       </div>
       <div className="text-right mt-6">
         <Button variant="solid" onClick={onClose}>
@@ -949,7 +1122,6 @@ const ViewCompanyDetailDialog: React.FC<{
   );
 };
 // --- END: ViewCompanyDetailDialog ---
-
 
 const CompanyModals: React.FC<CompanyModalsProps> = ({
   modalState,
@@ -966,10 +1138,10 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({
         return <SendWhatsAppDialog company={company} onClose={onClose} />;
       case "notification":
         return <AddNotificationDialog company={company} onClose={onClose} />;
-      case "task":
-        return <AssignTaskDialog company={company} onClose={onClose} />;
       case "calendar":
         return <AddScheduleDialog company={company} onClose={onClose} />;
+      case "task":
+        return <AssignTaskDialog company={company} onClose={onClose} />;
       case "members":
         return <ViewMembersDialog company={company} onClose={onClose} />; // This might need update based on new company_member_management
       case "alert":
@@ -1008,7 +1180,12 @@ const SendEmailDialog: React.FC<{
   });
   const onSendEmail = (data: { subject: string; message: string }) => {
     setIsLoading(true);
-    console.log("Sending email to", company.primary_email_id, "with data:", data); // Updated to primary_email_id
+    console.log(
+      "Sending email to",
+      company.primary_email_id,
+      "with data:",
+      data
+    ); // Updated to primary_email_id
     setTimeout(() => {
       toast.push(
         <Notification type="success" title="Email Sent Successfully" />
@@ -1019,7 +1196,8 @@ const SendEmailDialog: React.FC<{
   };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send Email to {company.company_name}</h5> {/* Updated to company_name */}
+      <h5 className="mb-4">Send Email to {company.company_name}</h5>{" "}
+      {/* Updated to company_name */}
       <form onSubmit={handleSubmit(onSendEmail)}>
         <FormItem label="Subject">
           <Controller
@@ -1070,7 +1248,10 @@ const SendWhatsAppDialog: React.FC<{
     }
     // Assuming primary_contact_number_code is like "+91" and phone is "9876543210"
     // WhatsApp typically needs the full number including country code without '+'
-    const fullPhone = `${company.primary_contact_number_code?.replace('+', '')}${phone}`;
+    const fullPhone = `${company.primary_contact_number_code?.replace(
+      "+",
+      ""
+    )}${phone}`;
     const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(
       data.message
     )}`;
@@ -1081,7 +1262,8 @@ const SendWhatsAppDialog: React.FC<{
   };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send WhatsApp to {company.company_name}</h5> {/* Updated */}
+      <h5 className="mb-4">Send WhatsApp to {company.company_name}</h5>{" "}
+      {/* Updated */}
       <form onSubmit={handleSubmit(onSendMessage)}>
         <FormItem label="Message Template">
           <Controller
@@ -1110,84 +1292,218 @@ const SendWhatsAppDialog: React.FC<{
 // the new detailed fields from CompanyItem if their dummy data is replaced by real data.
 // E.g., ViewMembersDialog would use company.company_member_management or company.company_team_members
 
-const AddNotificationDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => { /* ... uses company.company_name ... */ return <Dialog isOpen={true}><h5 className="mb-4">Add Notification for {company.company_name}</h5> {/* ...rest of the dialog... */} </Dialog>};
-const AssignTaskDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => { /* ... uses company.company_name ... */ return <Dialog isOpen={true}><h5 className="mb-4">Assign Task for {company.company_name}</h5> {/* ...rest of the dialog... */} </Dialog>};
-const AddScheduleDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => { /* ... uses company.company_name ... */ return <Dialog isOpen={true}><h5 className="mb-4">Add Schedule for {company.company_name}</h5> {/* ...rest of the dialog... */} </Dialog>};
-const ViewMembersDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
-    // TODO: Update to use company.company_member_management or company.company_team_members
-    return (
-      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-        <h5 className="mb-4">Members of {company.company_name}</h5>
-        {/* Replace dummyMembers with actual data from company object */}
-        <div className="mt-4 flex flex-col gap-4">
-          {(company.company_team_members && company.company_team_members.length > 0) ? company.company_team_members.map((member) => (
-            <div key={member.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+const AddNotificationDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+}> = ({ company, onClose }) => {
+  /* ... uses company.company_name ... */ return (
+    <Dialog isOpen={true}>
+      <h5 className="mb-4">Add Notification for {company.company_name}</h5>{" "}
+      {/* ...rest of the dialog... */}{" "}
+    </Dialog>
+  );
+};
+const AssignTaskDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+}> = ({ company, onClose }) => {
+  /* ... uses company.company_name ... */ return (
+    <Dialog isOpen={true}>
+      <h5 className="mb-4">Assign Task for {company.company_name}</h5>{" "}
+      {/* ...rest of the dialog... */}{" "}
+    </Dialog>
+  );
+};
+const AddScheduleDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+}> = ({ company, onClose }) => {
+  /* ... uses company.company_name ... */ return (
+    <Dialog isOpen={true}>
+      <h5 className="mb-4">Add Schedule for {company.company_name}</h5>{" "}
+      {/* ...rest of the dialog... */}{" "}
+    </Dialog>
+  );
+};
+const ViewMembersDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+}> = ({ company, onClose }) => {
+  // TODO: Update to use company.company_member_management or company.company_team_members
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Members of {company.company_name}</h5>
+      {/* Replace dummyMembers with actual data from company object */}
+      <div className="mt-4 flex flex-col gap-4">
+        {company.company_team_members &&
+        company.company_team_members.length > 0 ? (
+          company.company_team_members.map((member) => (
+            <div
+              key={member.id}
+              className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+            >
               <div className="flex items-center gap-3">
                 <Avatar shape="circle" icon={<TbUserCircle />} />
                 <div>
                   <div className="font-semibold">{member.person_name}</div>
-                  <div className="text-xs text-gray-500">{member.designation} ({member.team_name})</div>
+                  <div className="text-xs text-gray-500">
+                    {member.designation} ({member.team_name})
+                  </div>
                 </div>
               </div>
-              <Button size="xs">View Profile</Button> {/* This might be a future feature */}
+              <Button size="xs">View Profile</Button>{" "}
+              {/* This might be a future feature */}
             </div>
-          )) : <p>No team members listed.</p>}
-        </div>
-        <div className="text-right mt-6"> <Button variant="solid" onClick={onClose}> Close </Button> </div>
-      </Dialog>
-    );
+          ))
+        ) : (
+          <p>No team members listed.</p>
+        )}
+      </div>
+      <div className="text-right mt-6">
+        {" "}
+        <Button variant="solid" onClick={onClose}>
+          {" "}
+          Close{" "}
+        </Button>{" "}
+      </div>
+    </Dialog>
+  );
 };
-const ViewAlertDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => { /* ... uses company.company_name ... */ return <Dialog isOpen={true}><h5 className="mb-4">Alerts for {company.company_name}</h5> {/* ...rest of the dialog... */} </Dialog>};
-const TrackRecordDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => { /* ... uses company.company_name ... */ return <Dialog isOpen={true}><h5 className="mb-4">Track Record for {company.company_name}</h5> {/* ...rest of the dialog... */} </Dialog>};
-const ViewEngagementDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => { /* ... uses company.company_name ... */ return <Dialog isOpen={true}><h5 className="mb-4">Engagement for {company.company_name}</h5> {/* ...rest of the dialog... */} </Dialog>};
-const ViewTransactionDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => { /* ... uses company.company_name ... */ return <Dialog isOpen={true}><h5 className="mb-4">Transactions for {company.company_name}</h5> {/* ...rest of the dialog... */} </Dialog>};
-const DownloadDocumentDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
-    // TODO: Update to use company.billing_documents or company.company_certificate
-    const iconMap: Record<string, React.ReactElement> = {
-        pdf: <TbFileText className="text-red-500" />,
-        zip: <TbFileZip className="text-amber-500" />,
-    };
-    return (
-      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-        <h5 className="mb-4">Documents for {company.company_name}</h5>
-        <div className="flex flex-col gap-3 mt-4">
-          {company.billing_documents && company.billing_documents.map((doc) => (
-            <div key={doc.id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+const ViewAlertDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+}> = ({ company, onClose }) => {
+  /* ... uses company.company_name ... */ return (
+    <Dialog isOpen={true}>
+      <h5 className="mb-4">Alerts for {company.company_name}</h5>{" "}
+      {/* ...rest of the dialog... */}{" "}
+    </Dialog>
+  );
+};
+const TrackRecordDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+}> = ({ company, onClose }) => {
+  /* ... uses company.company_name ... */ return (
+    <Dialog isOpen={true}>
+      <h5 className="mb-4">Track Record for {company.company_name}</h5>{" "}
+      {/* ...rest of the dialog... */}{" "}
+    </Dialog>
+  );
+};
+const ViewEngagementDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+}> = ({ company, onClose }) => {
+  /* ... uses company.company_name ... */ return (
+    <Dialog isOpen={true}>
+      <h5 className="mb-4">Engagement for {company.company_name}</h5>{" "}
+      {/* ...rest of the dialog... */}{" "}
+    </Dialog>
+  );
+};
+const ViewTransactionDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+}> = ({ company, onClose }) => {
+  /* ... uses company.company_name ... */ return (
+    <Dialog isOpen={true}>
+      <h5 className="mb-4">Transactions for {company.company_name}</h5>{" "}
+      {/* ...rest of the dialog... */}{" "}
+    </Dialog>
+  );
+};
+const DownloadDocumentDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+}> = ({ company, onClose }) => {
+  // TODO: Update to use company.billing_documents or company.company_certificate
+  const iconMap: Record<string, React.ReactElement> = {
+    pdf: <TbFileText className="text-red-500" />,
+    zip: <TbFileZip className="text-amber-500" />,
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Documents for {company.company_name}</h5>
+      <div className="flex flex-col gap-3 mt-4">
+        {company.billing_documents &&
+          company.billing_documents.map((doc) => (
+            <div
+              key={doc.id}
+              className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+            >
               <div className="flex items-center gap-3">
-                {React.cloneElement(iconMap['pdf'] || <TbClipboardText />, { size: 28, })} {/* Assuming PDF for now */}
+                {React.cloneElement(iconMap["pdf"] || <TbClipboardText />, {
+                  size: 28,
+                })}{" "}
+                {/* Assuming PDF for now */}
                 <div>
                   <p className="font-semibold text-sm">{doc.document_name}</p>
                   {/* <p className="text-xs text-gray-400">{doc.size}</p> File size not available in new structure */}
                 </div>
               </div>
-              {doc.document && <Tooltip title="Download">
-                <a href={doc.document} target="_blank" rel="noopener noreferrer">
+              {doc.document && (
+                <Tooltip title="Download">
+                  <a
+                    href={doc.document}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Button shape="circle" size="sm" icon={<TbDownload />} />
-                </a>
-              </Tooltip>}
+                  </a>
+                </Tooltip>
+              )}
             </div>
           ))}
-           {company.company_certificate && company.company_certificate.map((cert) => (
-            <div key={cert.id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+        {company.company_certificate &&
+          company.company_certificate.map((cert) => (
+            <div
+              key={cert.id}
+              className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+            >
               <div className="flex items-center gap-3">
-                 {React.cloneElement(iconMap['pdf'] || <TbClipboardText />, { size: 28, })} {/* Assuming PDF */}
+                {React.cloneElement(iconMap["pdf"] || <TbClipboardText />, {
+                  size: 28,
+                })}{" "}
+                {/* Assuming PDF */}
                 <div>
-                  <p className="font-semibold text-sm">{cert.certificate_name}</p>
-                   <p className="text-xs text-gray-400">ID: {cert.certificate_id}</p>
+                  <p className="font-semibold text-sm">
+                    {cert.certificate_name}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    ID: {cert.certificate_id}
+                  </p>
                 </div>
               </div>
-              {cert.upload_certificate_path && <Tooltip title="Download">
-                 <a href={cert.upload_certificate_path} target="_blank" rel="noopener noreferrer">
+              {cert.upload_certificate_path && (
+                <Tooltip title="Download">
+                  <a
+                    href={cert.upload_certificate_path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Button shape="circle" size="sm" icon={<TbDownload />} />
-                </a>
-              </Tooltip>}
+                  </a>
+                </Tooltip>
+              )}
             </div>
           ))}
-          {(company.billing_documents?.length === 0 && company.company_certificate?.length === 0) && <p>No documents available.</p>}
-        </div>
-        <div className="text-right mt-6"> <Button onClick={onClose}>Close</Button> </div>
-      </Dialog>
-    );
+        {company.billing_documents?.length === 0 &&
+          company.company_certificate?.length === 0 && (
+            <p>No documents available.</p>
+          )}
+      </div>
+      <div className="text-right mt-6">
+        {" "}
+        <Button onClick={onClose}>Close</Button>{" "}
+      </div>
+    </Dialog>
+  );
 };
 
 const GenericActionDialog: React.FC<{
@@ -1201,7 +1517,9 @@ const GenericActionDialog: React.FC<{
     : "Confirm Action";
   const handleConfirm = () => {
     setIsLoading(true);
-    console.log(`Performing action '${type}' for company ${company.company_name}`); // Updated
+    console.log(
+      `Performing action '${type}' for company ${company.company_name}`
+    ); // Updated
     setTimeout(() => {
       toast.push(<Notification type="success" title="Action Completed" />);
       setIsLoading(false);
@@ -1213,7 +1531,8 @@ const GenericActionDialog: React.FC<{
       <h5 className="mb-2">{title}</h5>
       <p>
         Are you sure you want to perform this action for{" "}
-        <span className="font-semibold">{company.company_name}</span>? {/* Updated */}
+        <span className="font-semibold">{company.company_name}</span>?{" "}
+        {/* Updated */}
       </p>
       <div className="text-right mt-6">
         <Button className="mr-2" onClick={onClose}>
@@ -1252,7 +1571,7 @@ const CompanyActionColumn = ({
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600"
           role="button"
-          onClick={() => onOpenModal('viewDetail', rowData)} // MODIFIED
+          onClick={() => onOpenModal("viewDetail", rowData)} // MODIFIED
         >
           <TbEye />
         </div>
@@ -1263,24 +1582,103 @@ const CompanyActionColumn = ({
         }
       >
         {/* ... other dropdown items ... */}
-        <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"> <TbMail size={18} /> <span className="text-xs">Send Email</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"> <TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"> <TbBell size={18} /> <span className="text-xs">Add as Notification</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"> <TbUser size={18} /> <span className="text-xs">Assign to Task</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"> <TbTagStarred size={18} /> <span className="text-xs">Add to Active</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"> <TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("members", rowData)} className="flex items-center gap-2"> <TbUsersGroup size={18} /> <span className="text-xs">View Members</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"> <TbAlarm size={18} /> <span className="text-xs">View Alert</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("trackRecord", rowData)} className="flex items-center gap-2"> <TbFileSearch size={18} /> <span className="text-xs">Track Record</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("engagement", rowData)} className="flex items-center gap-2"> <TbUserSearch size={18} /> <span className="text-xs">Engagement</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("transaction", rowData)} className="flex items-center gap-2"> <TbReceipt size={18} /> <span className="text-xs">View Transaction</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"> <TbDownload size={18} /> <span className="text-xs">Download Document</span> </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("email", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbMail size={18} /> <span className="text-xs">Send Email</span>{" "}
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("whatsapp", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbBrandWhatsapp size={18} />{" "}
+          <span className="text-xs">Send Whatsapp</span>{" "}
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("notification", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbBell size={18} />{" "}
+          <span className="text-xs">Add Notification</span>{" "}
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbUser size={18} /> <span className="text-xs">Assign Task</span>{" "}
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("calendar", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbCalendarEvent size={18} />{" "}
+          <span className="text-xs">Add Schedule</span>{" "}
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("active", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbTagStarred size={18} />{" "}
+          <span className="text-xs">Add Active</span>{" "}
+        </Dropdown.Item>
 
+        <Dropdown.Item
+          onClick={() => onOpenModal("members", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbUsersGroup size={18} />{" "}
+          <span className="text-xs">View Members</span>{" "}
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("alert", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbAlarm size={18} /> <span className="text-xs">View Alert</span>{" "}
+        </Dropdown.Item>
+        {/* <Dropdown.Item
+          onClick={() => onOpenModal("trackRecord", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbFileSearch size={18} />{" "}
+          <span className="text-xs">Track Record</span>{" "}
+        </Dropdown.Item> */}
+        {/* <Dropdown.Item
+          onClick={() => onOpenModal("engagement", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbUserSearch size={18} /> <span className="text-xs">Engagement</span>{" "}
+        </Dropdown.Item> */}
+        <Dropdown.Item
+          onClick={() => onOpenModal("transaction", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbReceipt size={18} />{" "}
+          <span className="text-xs">View Transaction</span>{" "}
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("document", rowData)}
+          className="flex items-center gap-2"
+        >
+          {" "}
+          <TbDownload size={18} />{" "}
+          <span className="text-xs">Download Document</span>{" "}
+        </Dropdown.Item>
       </Dropdown>
     </div>
   );
 };
-
 
 const CompanyListTable = () => {
   const navigate = useNavigate();
@@ -1305,8 +1703,7 @@ const CompanyListTable = () => {
     filterCreatedDate: [null, null],
   });
 
-  const [isExportReasonModalOpen, setIsExportReasonModalOpen] =
-    useState(false);
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
@@ -1369,53 +1766,110 @@ const CompanyListTable = () => {
 
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
       const selectedStatuses = filterCriteria.filterStatus.map((s) => s.value);
-      filteredData = filteredData.filter((company) => selectedStatuses.includes(company.status));
+      filteredData = filteredData.filter((company) =>
+        selectedStatuses.includes(company.status)
+      );
     }
-    if (filterCriteria.filterCompanyType && filterCriteria.filterCompanyType.length > 0) {
-      const selectedTypes = filterCriteria.filterCompanyType.map((t) => t.value);
-      filteredData = filteredData.filter((company) => selectedTypes.includes(company.ownership_type));
+    if (
+      filterCriteria.filterCompanyType &&
+      filterCriteria.filterCompanyType.length > 0
+    ) {
+      const selectedTypes = filterCriteria.filterCompanyType.map(
+        (t) => t.value
+      );
+      filteredData = filteredData.filter((company) =>
+        selectedTypes.includes(company.ownership_type)
+      );
     }
-    if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) {
-      const selectedContinents = filterCriteria.filterContinent.map((c) => c.value);
-      filteredData = filteredData.filter((company) => company.continent && selectedContinents.includes(company.continent.name));
+    if (
+      filterCriteria.filterContinent &&
+      filterCriteria.filterContinent.length > 0
+    ) {
+      const selectedContinents = filterCriteria.filterContinent.map(
+        (c) => c.value
+      );
+      filteredData = filteredData.filter(
+        (company) =>
+          company.continent &&
+          selectedContinents.includes(company.continent.name)
+      );
     }
-    if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) {
-      const selectedCountries = filterCriteria.filterCountry.map((c) => c.value);
-      filteredData = filteredData.filter((company) => company.country && selectedCountries.includes(company.country.name));
+    if (
+      filterCriteria.filterCountry &&
+      filterCriteria.filterCountry.length > 0
+    ) {
+      const selectedCountries = filterCriteria.filterCountry.map(
+        (c) => c.value
+      );
+      filteredData = filteredData.filter(
+        (company) =>
+          company.country && selectedCountries.includes(company.country.name)
+      );
     }
     if (filterCriteria.filterState && filterCriteria.filterState.length > 0) {
       const selectedStates = filterCriteria.filterState.map((s) => s.value);
-      filteredData = filteredData.filter((company) => selectedStates.includes(company.state));
+      filteredData = filteredData.filter((company) =>
+        selectedStates.includes(company.state)
+      );
     }
     if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) {
       const selectedCities = filterCriteria.filterCity.map((c) => c.value);
-      filteredData = filteredData.filter((company) => selectedCities.includes(company.city));
+      filteredData = filteredData.filter((company) =>
+        selectedCities.includes(company.city)
+      );
     }
-    if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) {
-      const selectedKycValues = filterCriteria.filterKycVerified.map(k => k.value === "Yes");
-      filteredData = filteredData.filter(company => selectedKycValues.includes(company.kyc_verified));
+    if (
+      filterCriteria.filterKycVerified &&
+      filterCriteria.filterKycVerified.length > 0
+    ) {
+      const selectedKycValues = filterCriteria.filterKycVerified.map(
+        (k) => k.value === "Yes"
+      );
+      filteredData = filteredData.filter((company) =>
+        selectedKycValues.includes(company.kyc_verified)
+      );
     }
-    if (filterCriteria.filterEnableBilling && filterCriteria.filterEnableBilling.length > 0) {
-      const selectedBillingValues = filterCriteria.filterEnableBilling.map(b => b.value === "Yes");
-      filteredData = filteredData.filter(company => selectedBillingValues.includes(company.enable_billing));
+    if (
+      filterCriteria.filterEnableBilling &&
+      filterCriteria.filterEnableBilling.length > 0
+    ) {
+      const selectedBillingValues = filterCriteria.filterEnableBilling.map(
+        (b) => b.value === "Yes"
+      );
+      filteredData = filteredData.filter((company) =>
+        selectedBillingValues.includes(company.enable_billing)
+      );
     }
-    if (filterCriteria.filterCreatedDate && filterCriteria.filterCreatedDate[0] && filterCriteria.filterCreatedDate[1]) {
+    if (
+      filterCriteria.filterCreatedDate &&
+      filterCriteria.filterCreatedDate[0] &&
+      filterCriteria.filterCreatedDate[1]
+    ) {
       const [startDate, endDate] = filterCriteria.filterCreatedDate;
       const inclusiveEndDate = new Date(endDate as Date);
       inclusiveEndDate.setHours(23, 59, 59, 999);
       filteredData = filteredData.filter((company) => {
         const createdDate = new Date(company.created_at);
-        return createdDate >= (startDate as Date) && createdDate <= inclusiveEndDate;
+        return (
+          createdDate >= (startDate as Date) && createdDate <= inclusiveEndDate
+        );
       });
     }
 
     if (tableData.query) {
       filteredData = filteredData.filter((i) =>
         Object.values(i).some((v) => {
-            if (typeof v === 'object' && v !== null) { // Handle nested objects like country, continent
-                return Object.values(v).some(nestedV => String(nestedV).toLowerCase().includes(tableData.query.toLowerCase()));
-            }
-            return String(v).toLowerCase().includes(tableData.query.toLowerCase())
+          if (typeof v === "object" && v !== null) {
+            // Handle nested objects like country, continent
+            return Object.values(v).some((nestedV) =>
+              String(nestedV)
+                .toLowerCase()
+                .includes(tableData.query.toLowerCase())
+            );
+          }
+          return String(v)
+            .toLowerCase()
+            .includes(tableData.query.toLowerCase());
         })
       );
     }
@@ -1427,12 +1881,18 @@ const CompanyListTable = () => {
         let bv = b[key as keyof CompanyItem] as any;
 
         // Handle nested properties for sorting (e.g., country.name)
-        if (key.includes('.')) {
-            const keys = key.split('.');
-            av = keys.reduce((obj, k) => (obj && obj[k] !== 'undefined') ? obj[k] : undefined, a);
-            bv = keys.reduce((obj, k) => (obj && obj[k] !== 'undefined') ? obj[k] : undefined, b);
+        if (key.includes(".")) {
+          const keys = key.split(".");
+          av = keys.reduce(
+            (obj, k) => (obj && obj[k] !== "undefined" ? obj[k] : undefined),
+            a
+          );
+          bv = keys.reduce(
+            (obj, k) => (obj && obj[k] !== "undefined" ? obj[k] : undefined),
+            b
+          );
         }
-        
+
         av = av ?? "";
         bv = bv ?? "";
 
@@ -1443,7 +1903,17 @@ const CompanyListTable = () => {
           return order === "asc" ? av - bv : bv - av;
         }
         if (typeof av === "boolean" && typeof bv === "boolean") {
-            return order === "asc" ? (av === bv ? 0 : av ? -1 : 1) : (av === bv ? 0 : av ? 1 : -1);
+          return order === "asc"
+            ? av === bv
+              ? 0
+              : av
+              ? -1
+              : 1
+            : av === bv
+            ? 0
+            : av
+            ? 1
+            : -1;
         }
         return 0;
       });
@@ -1462,7 +1932,12 @@ const CompanyListTable = () => {
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
-      toast.push(<Notification title="No Data" type="info"> Nothing to export. </Notification>);
+      toast.push(
+        <Notification title="No Data" type="info">
+          {" "}
+          Nothing to export.{" "}
+        </Notification>
+      );
       return;
     }
     exportReasonFormMethods.reset({ reason: "" });
@@ -1475,31 +1950,67 @@ const CompanyListTable = () => {
     const timestamp = new Date().toISOString().split("T")[0];
     const fileName = `companies_export_${timestamp}.csv`;
     try {
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
-      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" />
+      );
       exportToCsv(fileName, allFilteredAndSortedData);
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
-      toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />);
+      toast.push(
+        <Notification
+          title="Failed to Submit Reason"
+          type="danger"
+          message={error.message}
+        />
+      );
     } finally {
       setIsSubmittingExportReason(false);
     }
   };
 
-  const handleEditCompany = (id: number) => // id is now number
-    navigate(`/business-entities/company-edit/${id}`);
-  
+  const handleEditCompany = (
+    id: number // id is now number
+  ) => navigate(`/business-entities/company-edit/${id}`);
+
   // This function is now replaced by handleOpenModal for view action
-  // const handleViewCompanyDetails = (id: number) => 
+  // const handleViewCompanyDetails = (id: number) =>
   //   handleOpenModal('viewDetail', companyList.find(c => c.id === id) as CompanyItem);
 
-
-  const handleSetTableData = useCallback((d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d })),[]);
-  const handlePaginationChange = useCallback((p: number) => handleSetTableData({ pageIndex: p }),[handleSetTableData]);
-  const handleSelectChange = useCallback((v: number) => handleSetTableData({ pageSize: v, pageIndex: 1 }),[handleSetTableData]);
-  const handleSort = useCallback((s: OnSortParam) => handleSetTableData({ sort: s, pageIndex: 1 }),[handleSetTableData]);
-  const handleRowSelect = useCallback((c: boolean, r: CompanyItem) => setSelectedCompanies((p) =>c ? [...p, r] : p.filter((i) => i.id !== r.id)),[setSelectedCompanies]);
-  const handleAllRowSelect = useCallback((c: boolean, r: Row<CompanyItem>[]) => setSelectedCompanies(c ? r.map((i) => i.original) : []),[setSelectedCompanies]);
+  const handleSetTableData = useCallback(
+    (d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d })),
+    []
+  );
+  const handlePaginationChange = useCallback(
+    (p: number) => handleSetTableData({ pageIndex: p }),
+    [handleSetTableData]
+  );
+  const handleSelectChange = useCallback(
+    (v: number) => handleSetTableData({ pageSize: v, pageIndex: 1 }),
+    [handleSetTableData]
+  );
+  const handleSort = useCallback(
+    (s: OnSortParam) => handleSetTableData({ sort: s, pageIndex: 1 }),
+    [handleSetTableData]
+  );
+  const handleRowSelect = useCallback(
+    (c: boolean, r: CompanyItem) =>
+      setSelectedCompanies((p) =>
+        c ? [...p, r] : p.filter((i) => i.id !== r.id)
+      ),
+    [setSelectedCompanies]
+  );
+  const handleAllRowSelect = useCallback(
+    (c: boolean, r: Row<CompanyItem>[]) =>
+      setSelectedCompanies(c ? r.map((i) => i.original) : []),
+    [setSelectedCompanies]
+  );
 
   const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
@@ -1521,7 +2032,15 @@ const CompanyListTable = () => {
         accessorKey: "company_name", // UPDATED
         size: 220,
         cell: ({ row }) => {
-          const { company_name, ownership_type, country, city, state, company_logo, company_code } = row.original;
+          const {
+            company_name,
+            ownership_type,
+            country,
+            city,
+            state,
+            company_logo,
+            company_code,
+          } = row.original;
           return (
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
@@ -1542,7 +2061,8 @@ const CompanyListTable = () => {
                 <b>Ownership Type:</b> {ownership_type}
               </span>
               <div className="text-xs text-gray-500">
-                {city}, {state}, {country?.name || 'N/A'} {/* UPDATED country access */}
+                {city}, {state}, {country?.name || "N/A"}{" "}
+                {/* UPDATED country access */}
               </div>
             </div>
           );
@@ -1553,13 +2073,43 @@ const CompanyListTable = () => {
         accessorKey: "owner_name", // UPDATED
         size: 180,
         cell: (props) => {
-          const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original;
+          const {
+            owner_name,
+            primary_contact_number,
+            primary_email_id,
+            company_website,
+            primary_contact_number_code,
+          } = props.row.original;
           return (
             <div className="text-xs flex flex-col gap-0.5">
-              {owner_name && <span><b>Owner: </b> {owner_name}</span>}
-              {primary_contact_number && <span>{primary_contact_number_code} {primary_contact_number}</span>}
-              {primary_email_id && <a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>}
-              {company_website && <a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>}
+              {owner_name && (
+                <span>
+                  <b>Owner: </b> {owner_name}
+                </span>
+              )}
+              {primary_contact_number && (
+                <span>
+                  {primary_contact_number_code} {primary_contact_number}
+                </span>
+              )}
+              {primary_email_id && (
+                <a
+                  href={`mailto:${primary_email_id}`}
+                  className="text-blue-600 hover:underline"
+                >
+                  {primary_email_id}
+                </a>
+              )}
+              {company_website && (
+                <a
+                  href={company_website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline truncate"
+                >
+                  {company_website}
+                </a>
+              )}
             </div>
           );
         },
@@ -1599,13 +2149,21 @@ const CompanyListTable = () => {
               <div className="flex gap-1 items-center">
                 <b>KYC Verified:</b>
                 <Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>
-                  {kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}
+                  {kyc_verified ? (
+                    <MdCheckCircle className="text-green-500 text-lg" />
+                  ) : (
+                    <MdCancel className="text-red-500 text-lg" />
+                  )}
                 </Tooltip>
               </div>
               <div className="flex gap-1 items-center">
                 <b>Billing:</b>
                 <Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>
-                  {enable_billing ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}
+                  {enable_billing ? (
+                    <MdCheckCircle className="text-green-500 text-lg" />
+                  ) : (
+                    <MdCancel className="text-red-500 text-lg" />
+                  )}
                 </Tooltip>
               </div>
               <span>
@@ -1617,7 +2175,10 @@ const CompanyListTable = () => {
               </span>
               <Tooltip title={`Profile Completion ${profile_completion}%`}>
                 <div className="h-2.5 w-full rounded-full bg-gray-300">
-                  <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div>
+                  <div
+                    className="rounded-full h-2.5 bg-blue-500"
+                    style={{ width: `${profile_completion}%` }}
+                  ></div>
                 </div>
               </Tooltip>
             </div>
@@ -1649,7 +2210,8 @@ const CompanyListTable = () => {
     [companyList]
   );
 
-  const companyTypeOptions = useMemo( // ownership_type
+  const companyTypeOptions = useMemo(
+    // ownership_type
     () =>
       Array.from(new Set(companyList.map((c) => c.ownership_type)))
         .filter(Boolean)
@@ -1681,8 +2243,14 @@ const CompanyListTable = () => {
         .map((ci) => ({ value: ci, label: ci })),
     [companyList]
   );
-  const kycOptions = [ { value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
-  const billingOptions = [ { value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
+  const kycOptions = [
+    { value: "Yes", label: "Yes" },
+    { value: "No", label: "No" },
+  ];
+  const billingOptions = [
+    { value: "Yes", label: "Yes" },
+    { value: "No", label: "No" },
+  ];
   const { DatePickerRange } = DatePicker;
 
   return (
@@ -1691,51 +2259,190 @@ const CompanyListTable = () => {
         <h5>Company</h5>
         <CompanyListActionTools />
       </div>
-       {/* Count Cards - Assumes companyCount keys match the new detailed structure if backend sends them */}
+      {/* Count Cards - Assumes companyCount keys match the new detailed structure if backend sends them */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-blue-200">
-            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"> <TbBuilding size={16} /> </div>
-            <div className="flex flex-col gap-0"> <b className="text-sm ">{companyCount?.total ?? 0}</b> <span className="text-[9px] font-semibold">Total</span> </div>
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-blue-200"
+        >
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+            {" "}
+            <TbBuilding size={16} />{" "}
+          </div>
+          <div className="flex flex-col gap-0">
+            {" "}
+            <b className="text-sm ">{companyCount?.total ?? 0}</b>{" "}
+            <span className="text-[9px] font-semibold">Total</span>{" "}
+          </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-green-200" >
-            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"> <TbBuildingBank size={16} /> </div>
-            <div className="flex flex-col gap-0"> <b className="text-sm pb-0 mb-0">{companyCount?.active ?? (companyList.filter(c => c.status === "Active" || c.status === "active").length)}</b> <span className="text-[9px] font-semibold">Active</span> </div>
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-green-200"
+        >
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+            {" "}
+            <TbBuildingBank size={16} />{" "}
+          </div>
+          <div className="flex flex-col gap-0">
+            {" "}
+            <b className="text-sm pb-0 mb-0">
+              {companyCount?.active ??
+                companyList.filter(
+                  (c) => c.status === "Active" || c.status === "active"
+                ).length}
+            </b>{" "}
+            <span className="text-[9px] font-semibold">Active</span>{" "}
+          </div>
         </Card>
-         <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200" >
-            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"> <TbCancel size={16} /> </div>
-            <div className="flex flex-col gap-0"> <b className="text-sm pb-0 mb-0">{companyCount?.disable ?? (companyList.filter(c => c.status === "Inactive" || c.status === "inactive").length)}</b> <span className="text-[9px] font-semibold">Disabled</span> </div>
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-red-200"
+        >
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+            {" "}
+            <TbCancel size={16} />{" "}
+          </div>
+          <div className="flex flex-col gap-0">
+            {" "}
+            <b className="text-sm pb-0 mb-0">
+              {companyCount?.disable ??
+                companyList.filter(
+                  (c) => c.status === "Inactive" || c.status === "inactive"
+                ).length}
+            </b>{" "}
+            <span className="text-[9px] font-semibold">Disabled</span>{" "}
+          </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-emerald-200" >
-            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"> <TbCircleCheck size={16} /> </div>
-            <div className="flex flex-col gap-0"> <b className="text-sm pb-0 mb-0">{companyCount?.verified ?? (companyList.filter(c => c.status === "Verified").length)}</b> <span className="text-[9px] font-semibold">Verified</span> </div>
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-emerald-200"
+        >
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
+            {" "}
+            <TbCircleCheck size={16} />{" "}
+          </div>
+          <div className="flex flex-col gap-0">
+            {" "}
+            <b className="text-sm pb-0 mb-0">
+              {companyCount?.verified ??
+                companyList.filter((c) => c.status === "Verified").length}
+            </b>{" "}
+            <span className="text-[9px] font-semibold">Verified</span>{" "}
+          </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-yellow-200" > {/* Changed color for Non Verified */}
-            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"> <TbCircleX size={16} /> </div>
-            <div className="flex flex-col gap-0"> <b className="text-sm pb-0 mb-0">{companyCount?.unverified ?? (companyList.filter(c => c.status === "Non Verified").length)}</b> <span className="text-[9px] font-semibold">Non Verified</span> </div>
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-yellow-200"
+        >
+          {" "}
+          {/* Changed color for Non Verified */}
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500">
+            {" "}
+            <TbCircleX size={16} />{" "}
+          </div>
+          <div className="flex flex-col gap-0">
+            {" "}
+            <b className="text-sm pb-0 mb-0">
+              {companyCount?.unverified ??
+                companyList.filter((c) => c.status === "Non Verified").length}
+            </b>{" "}
+            <span className="text-[9px] font-semibold">Non Verified</span>{" "}
+          </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-violet-200" >
-            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"> <TbShieldCheck size={16} /> </div>
-            <div className="flex flex-col gap-0"> <b className="text-sm pb-0 mb-0">{companyCount?.registered ?? 0}</b> <span className="text-[9px] font-semibold">Eligible</span> </div>
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-violet-200"
+        >
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+            {" "}
+            <TbShieldCheck size={16} />{" "}
+          </div>
+          <div className="flex flex-col gap-0">
+            {" "}
+            <b className="text-sm pb-0 mb-0">
+              {companyCount?.registered ?? 0}
+            </b>{" "}
+            <span className="text-[9px] font-semibold">Eligible</span>{" "}
+          </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-red-200" >
-            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"> <TbShieldX size={16} /> </div>
-            <div className="flex flex-col gap-0"> <b className="text-sm pb-0 mb-0">{companyCount?.unregistered ?? 0}</b> <span className="text-[9px] font-semibold">Not Eligible</span> </div>
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-red-200"
+        >
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+            {" "}
+            <TbShieldX size={16} />{" "}
+          </div>
+          <div className="flex flex-col gap-0">
+            {" "}
+            <b className="text-sm pb-0 mb-0">
+              {companyCount?.unregistered ?? 0}
+            </b>{" "}
+            <span className="text-[9px] font-semibold">Not Eligible</span>{" "}
+          </div>
         </Card>
-        <Card bodyClass="flex gap-2 p-1" className="rounded-md border border-orange-200" >
-            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"> <TbBuildingCommunity size={16} /> </div>
-            <div className="flex flex-col gap-0"> <b className="text-sm pb-0 mb-0">{companyCount?.members ?? 0}</b> <span className="text-[9px] font-semibold">Members</span> </div>
+        <Card
+          bodyClass="flex gap-2 p-1"
+          className="rounded-md border border-orange-200"
+        >
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+            {" "}
+            <TbBuildingCommunity size={16} />{" "}
+          </div>
+          <div className="flex flex-col gap-0">
+            {" "}
+            <b className="text-sm pb-0 mb-0">
+              {companyCount?.members ?? 0}
+            </b>{" "}
+            <span className="text-[9px] font-semibold">Members</span>{" "}
+          </div>
         </Card>
       </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <CompanyListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} />
+        <CompanyListSearch
+          onInputChange={(val) =>
+            handleSetTableData({ query: val, pageIndex: 1 })
+          }
+        />
         <div className="flex gap-2">
-          <Button icon={<TbFilter />} onClick={openFilterDrawer}> Filter </Button>
-          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData || allFilteredAndSortedData.length === 0} > Export </Button>
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>
+            {" "}
+            Filter{" "}
+          </Button>
+          <Button
+            icon={<TbCloudUpload />}
+            onClick={handleOpenExportReasonModal}
+            disabled={
+              !allFilteredAndSortedData || allFilteredAndSortedData.length === 0
+            }
+          >
+            {" "}
+            Export{" "}
+          </Button>
         </div>
       </div>
-      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600} >
+      <Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        width={600}
+      >
         <div className="flex justify-center items-center p-4">
-          {imageToView ? <img src={`https://aazovo.codefriend.in/${imageToView}`} alt="Company Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
+          {imageToView ? (
+            <img
+              src={`https://aazovo.codefriend.in/${imageToView}`}
+              alt="Company Logo Full View"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "80vh",
+                objectFit: "contain",
+              }}
+            />
+          ) : (
+            <p>No image to display.</p>
+          )}
         </div>
       </Dialog>
       <DataTable
@@ -1744,7 +2451,11 @@ const CompanyListTable = () => {
         data={pageData}
         noData={pageData.length === 0} // Corrected noData condition
         loading={isLoading}
-        pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
+        pagingData={{
+          total,
+          pageIndex: tableData.pageIndex as number,
+          pageSize: tableData.pageSize as number,
+        }}
         onPaginationChange={handlePaginationChange}
         onSelectChange={handleSelectChange}
         onSort={handleSort}
@@ -1757,36 +2468,164 @@ const CompanyListTable = () => {
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
         width={480}
-        footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}> Clear All </Button> <Button size="sm" variant="solid" form="filterCompanyForm" type="submit" > Apply </Button> </div> }
+        footer={
+          <div className="text-right w-full">
+            {" "}
+            <Button size="sm" className="mr-2" onClick={onClearFilters}>
+              {" "}
+              Clear All{" "}
+            </Button>{" "}
+            <Button
+              size="sm"
+              variant="solid"
+              form="filterCompanyForm"
+              type="submit"
+            >
+              {" "}
+              Apply{" "}
+            </Button>{" "}
+          </div>
+        }
       >
-        <UiForm id="filterCompanyForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} >
+        <UiForm
+          id="filterCompanyForm"
+          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
+        >
           <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
             <UiFormItem label="Status">
-              <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Status" options={statusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller
+                name="filterStatus"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Status"
+                    options={statusOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
-            <UiFormItem label="Ownership Type"> {/* Was Company Type */}
-              <Controller name="filterCompanyType" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Type" options={companyTypeOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+            <UiFormItem label="Ownership Type">
+              {" "}
+              {/* Was Company Type */}
+              <Controller
+                name="filterCompanyType"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Type"
+                    options={companyTypeOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Continent">
-              <Controller name="filterContinent" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Continent" options={continentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller
+                name="filterContinent"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Continent"
+                    options={continentOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Country">
-              <Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Country" options={countryOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller
+                name="filterCountry"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Country"
+                    options={countryOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="State">
-              <Controller name="filterState" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select State" options={stateOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller
+                name="filterState"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select State"
+                    options={stateOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="City">
-              <Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select City" options={cityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller
+                name="filterCity"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select City"
+                    options={cityOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="KYC Verified">
-              <Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Status" options={kycOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller
+                name="filterKycVerified"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Status"
+                    options={kycOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Enable Billing">
-              <Controller name="filterEnableBilling" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Status" options={billingOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller
+                name="filterEnableBilling"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <UiSelect
+                    isMulti
+                    placeholder="Select Status"
+                    options={billingOptions}
+                    value={field.value || []}
+                    onChange={(val) => field.onChange(val || [])}
+                  />
+                )}
+              />
             </UiFormItem>
             <UiFormItem label="Created Date" className="col-span-2">
-              <Controller name="filterCreatedDate" control={filterFormMethods.control} render={({ field }) => ( <DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} /> )} />
+              <Controller
+                name="filterCreatedDate"
+                control={filterFormMethods.control}
+                render={({ field }) => (
+                  <DatePickerRange
+                    placeholder="Select Date Range"
+                    value={field.value as [Date | null, Date | null]}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
             </UiFormItem>
           </div>
         </UiForm>
@@ -1799,15 +2638,49 @@ const CompanyListTable = () => {
         onClose={() => setIsExportReasonModalOpen(false)}
         onRequestClose={() => setIsExportReasonModalOpen(false)}
         onCancel={() => setIsExportReasonModalOpen(false)}
-        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
         loading={isSubmittingExportReason}
-        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
         cancelText="Cancel"
-        confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
       >
-        <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2" >
-          <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message} >
-            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => ( <Input textArea {...field} placeholder="Enter reason..." rows={3} /> )} />
+        <UiForm
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <UiFormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
           </UiFormItem>
         </UiForm>
       </ConfirmDialog>
@@ -1829,11 +2702,16 @@ const CompanyListSelected = () => {
     setIsDeleting(true);
     try {
       const ids = selectedCompanies.map((d) => String(d.id)); // Ensure IDs are strings
-      await dispatch(deleteAllcompanyAction({ ids: ids.join(',') })).unwrap(); // Send as comma-separated string
+      await dispatch(deleteAllcompanyAction({ ids: ids.join(",") })).unwrap(); // Send as comma-separated string
       toast.push(<Notification title="Company Deleted" type="success" />);
       dispatch(getCompanyAction()); // Refresh list
     } catch (error: any) {
-      toast.push(<Notification title="Failed to Delete" type="danger"> {error.message} </Notification>);
+      toast.push(
+        <Notification title="Failed to Delete" type="danger">
+          {" "}
+          {error.message}{" "}
+        </Notification>
+      );
     } finally {
       setIsDeleting(false);
       setSelectedCompanies([]);
@@ -1852,33 +2730,101 @@ const CompanyListSelected = () => {
   if (selectedCompanies.length === 0) return null;
   return (
     <>
-      <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8" >
+      <StickyFooter
+        className="flex items-center justify-between py-4"
+        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
+      >
         <div className="container mx-auto flex items-center justify-between">
           <span>
-            <span className="flex items-center gap-2"> <TbChecks className="text-lg text-primary-600" /> <span className="font-semibold">{selectedCompanies.length} Companies selected</span> </span>
+            <span className="flex items-center gap-2">
+              {" "}
+              <TbChecks className="text-lg text-primary-600" />{" "}
+              <span className="font-semibold">
+                {selectedCompanies.length} Companies selected
+              </span>{" "}
+            </span>
           </span>
           <div className="flex items-center">
-            <Button size="sm" className="ltr:mr-3 rtl:ml-3" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50" } onClick={handleDelete} > Delete </Button>
-            <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)} > Message </Button>
+            <Button
+              size="sm"
+              className="ltr:mr-3 rtl:ml-3"
+              customColorClass={() =>
+                "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50"
+              }
+              onClick={handleDelete}
+            >
+              {" "}
+              Delete{" "}
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              onClick={() => setSendMessageDialogOpen(true)}
+            >
+              {" "}
+              Message{" "}
+            </Button>
           </div>
         </div>
       </StickyFooter>
-      <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title="Remove Companies" onClose={handleCancelDelete} onConfirm={handleConfirmDelete} loading={isDeleting} >
-        <p>Are you sure you want to remove these companies? This action can't be undone.</p>
+      <ConfirmDialog
+        isOpen={deleteConfirmationOpen}
+        type="danger"
+        title="Remove Companies"
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        loading={isDeleting}
+      >
+        <p>
+          Are you sure you want to remove these companies? This action can't be
+          undone.
+        </p>
       </ConfirmDialog>
-      <Dialog isOpen={sendMessageDialogOpen} onClose={() => setSendMessageDialogOpen(false)} >
+      <Dialog
+        isOpen={sendMessageDialogOpen}
+        onClose={() => setSendMessageDialogOpen(false)}
+      >
         <h5 className="mb-2">Send Message</h5>
-        <Avatar.Group chained omittedAvatarTooltip className="mt-4" maxCount={4} >
+        <Avatar.Group
+          chained
+          omittedAvatarTooltip
+          className="mt-4"
+          maxCount={4}
+        >
           {selectedCompanies.map((c) => (
-            <Tooltip key={c.id} title={c.company_name}> {/* Updated */}
-              <Avatar src={c.company_logo ? `https://aazovo.codefriend.in/${c.company_logo}`: undefined} icon={<TbUserCircle />} /> {/* Updated */}
+            <Tooltip key={c.id} title={c.company_name}>
+              {" "}
+              {/* Updated */}
+              <Avatar
+                src={
+                  c.company_logo
+                    ? `https://aazovo.codefriend.in/${c.company_logo}`
+                    : undefined
+                }
+                icon={<TbUserCircle />}
+              />{" "}
+              {/* Updated */}
             </Tooltip>
           ))}
         </Avatar.Group>
-        <div className="my-4"> <RichTextEditor /> </div>
+        <div className="my-4">
+          {" "}
+          <RichTextEditor />{" "}
+        </div>
         <div className="text-right flex items-center gap-2">
-          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}> Cancel </Button>
-          <Button size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend} > Send </Button>
+          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>
+            {" "}
+            Cancel{" "}
+          </Button>
+          <Button
+            size="sm"
+            variant="solid"
+            loading={sendMessageLoading}
+            onClick={handleSend}
+          >
+            {" "}
+            Send{" "}
+          </Button>
         </div>
       </Dialog>
     </>

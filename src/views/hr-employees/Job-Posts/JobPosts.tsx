@@ -18,6 +18,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
+import Dialog from '@/components/ui/Dialog' // ADDED
 import {
     Card,
     Drawer,
@@ -50,6 +51,7 @@ import {
     TbMailShare,
     TbBrandWhatsapp,
     TbBell,
+    TbCalendarEvent, // ADDED
 } from 'react-icons/tb'
 
 // Types
@@ -304,14 +306,580 @@ function exportJobPostsToCsv(
     return false
 }
 
+// ============================================================================
+// --- MODALS SECTION ---
+// ============================================================================
+
+// --- Type Definitions for Modals ---
+export type ModalType =
+    | 'email'
+    | 'whatsapp'
+    | 'notification'
+    | 'task'
+    | 'schedule'
+    | 'active'
+    | 'share'
+
+export interface ModalState {
+    isOpen: boolean
+    type: ModalType | null
+    data: JobPostItem | null
+}
+
+interface JobPostModalsProps {
+    modalState: ModalState
+    onClose: () => void
+}
+
+// --- Helper Data for Modal Demos ---
+const dummyUsers = [
+    { value: 'user1', label: 'Alice Johnson' },
+    { value: 'user2', label: 'Bob Williams' },
+    { value: 'user3', label: 'Charlie Brown' },
+]
+const priorityOptions = [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+]
+const eventTypeOptions = [
+    { value: 'meeting', label: 'Meeting' },
+    { value: 'call', label: 'Follow-up Call' },
+    { value: 'deadline', label: 'Project Deadline' },
+]
+
+// --- Individual Dialog Components ---
+
+const SendEmailDialog: React.FC<{
+    jobPost: JobPostItem
+    onClose: () => void
+}> = ({ jobPost, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false)
+    const { control, handleSubmit } = useForm({
+        defaultValues: {
+            subject: `Regarding Job Post: ${jobPost.job_title}`,
+            message: '',
+        },
+    })
+    const onSendEmail = (data: { subject: string; message: string }) => {
+        setIsLoading(true)
+        console.log(
+            'Sending email for job post',
+            jobPost.id,
+            'with data:',
+            data,
+        )
+        setTimeout(() => {
+            toast.push(
+                <Notification type="success" title="Email Sent Successfully" />,
+            )
+            setIsLoading(false)
+            onClose()
+        }, 1000)
+    }
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Send Email about "{jobPost.job_title}"</h5>
+            <Form onSubmit={handleSubmit(onSendEmail)}>
+                <FormItem label="Subject">
+                    <Controller
+                        name="subject"
+                        control={control}
+                        render={({ field }) => <Input {...field} />}
+                    />
+                </FormItem>
+                <FormItem label="Message">
+                    <Controller
+                        name="message"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                textArea
+                                {...field}
+                                rows={5}
+                                placeholder="Compose your email..."
+                            />
+                        )}
+                    />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button variant="solid" type="submit" loading={isLoading}>
+                        Send
+                    </Button>
+                </div>
+            </Form>
+        </Dialog>
+    )
+}
+
+const SendWhatsAppDialog: React.FC<{
+    jobPost: JobPostItem
+    onClose: () => void
+}> = ({ jobPost, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false)
+    // Find a link from job platforms, preferrably a generic one
+    const jobLink =
+        typeof jobPost.job_plateforms === 'string'
+            ? ''
+            : jobPost.job_plateforms?.[0]?.link || ''
+    const { control, handleSubmit } = useForm({
+        defaultValues: {
+            message: `Hi, check out this job opportunity: ${jobPost.job_title}. Learn more and apply here: ${jobLink}`,
+        },
+    })
+    const onSendMessage = (data: { message: string }) => {
+        setIsLoading(true)
+        const url = `https://wa.me/?text=${encodeURIComponent(data.message)}`
+        window.open(url, '_blank')
+        toast.push(<Notification type="success" title="Opening WhatsApp" />)
+        setIsLoading(false)
+        onClose()
+    }
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Share "{jobPost.job_title}" on WhatsApp</h5>
+            <Form onSubmit={handleSubmit(onSendMessage)}>
+                <FormItem label="Message Template">
+                    <Controller
+                        name="message"
+                        control={control}
+                        render={({ field }) => (
+                            <Input textArea {...field} rows={4} />
+                        )}
+                    />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button variant="solid" type="submit" loading={isLoading}>
+                        Open WhatsApp
+                    </Button>
+                </div>
+            </Form>
+        </Dialog>
+    )
+}
+
+const AddNotificationDialog: React.FC<{
+    jobPost: JobPostItem
+    onClose: () => void
+}> = ({ jobPost, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false)
+    const { control, handleSubmit } = useForm({
+        defaultValues: { notificationMessage: '', users: [] },
+    })
+    const onSubmit = (data: any) => {
+        setIsLoading(true)
+        console.log(
+            'Creating notification for',
+            jobPost.job_title,
+            'with data:',
+            data,
+        )
+        setTimeout(() => {
+            toast.push(<Notification type="success" title="Notification Created" />)
+            setIsLoading(false)
+            onClose()
+        }, 1000)
+    }
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Add Notification for "{jobPost.job_title}"</h5>
+            <Form onSubmit={handleSubmit(onSubmit)}>
+                <FormItem label="Notify Users">
+                    <Controller
+                        name="users"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                isMulti
+                                options={dummyUsers}
+                                {...field}
+                                placeholder="Select users..."
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Message">
+                    <Controller
+                        name="notificationMessage"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                textArea
+                                {...field}
+                                placeholder="Enter notification message..."
+                            />
+                        )}
+                    />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button variant="solid" type="submit" loading={isLoading}>
+                        Create
+                    </Button>
+                </div>
+            </Form>
+        </Dialog>
+    )
+}
+
+const AssignTaskDialog: React.FC<{
+    jobPost: JobPostItem
+    onClose: () => void
+}> = ({ jobPost, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false)
+    const { control, handleSubmit } = useForm({
+        defaultValues: {
+            assignedTo: null,
+            priority: null,
+            dueDate: null,
+            description: '',
+        },
+    })
+    const onSubmit = (data: any) => {
+        setIsLoading(true)
+        console.log(
+            'Assigning task for',
+            jobPost.job_title,
+            'with data:',
+            data,
+        )
+        setTimeout(() => {
+            toast.push(<Notification type="success" title="Task Assigned" />)
+            setIsLoading(false)
+            onClose()
+        }, 1000)
+    }
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Assign Task for "{jobPost.job_title}"</h5>
+            <Form onSubmit={handleSubmit(onSubmit)}>
+                <FormItem label="Assign To">
+                    <Controller
+                        name="assignedTo"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                options={dummyUsers}
+                                {...field}
+                                placeholder="Select a user..."
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Priority">
+                    <Controller
+                        name="priority"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                options={priorityOptions}
+                                {...field}
+                                placeholder="Set priority..."
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Due Date">
+                    <Controller
+                        name="dueDate"
+                        control={control}
+                        render={({ field }) => <Input type="date" {...field} />}
+                    />
+                </FormItem>
+                <FormItem label="Description">
+                    <Controller
+                        name="description"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                textArea
+                                {...field}
+                                placeholder="Task details..."
+                            />
+                        )}
+                    />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button variant="solid" type="submit" loading={isLoading}>
+                        Assign
+                    </Button>
+                </div>
+            </Form>
+        </Dialog>
+    )
+}
+
+const AddScheduleDialog: React.FC<{
+    jobPost: JobPostItem
+    onClose: () => void
+}> = ({ jobPost, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false)
+    const { control, handleSubmit } = useForm({
+        defaultValues: {
+            eventType: null,
+            eventDate: null,
+            attendees: [],
+            notes: '',
+        },
+    })
+    const onSubmit = (data: any) => {
+        setIsLoading(true)
+        console.log(
+            'Adding schedule for',
+            jobPost.job_title,
+            'with data:',
+            data,
+        )
+        setTimeout(() => {
+            toast.push(<Notification type="success" title="Schedule Added" />)
+            setIsLoading(false)
+            onClose()
+        }, 1000)
+    }
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Add Schedule for "{jobPost.job_title}"</h5>
+            <Form onSubmit={handleSubmit(onSubmit)}>
+                <FormItem label="Event Type">
+                    <Controller
+                        name="eventType"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                options={eventTypeOptions}
+                                {...field}
+                                placeholder="Select event type..."
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Date & Time">
+                    <Controller
+                        name="eventDate"
+                        control={control}
+                        render={({ field }) => (
+                            <Input type="datetime-local" {...field} />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Attendees">
+                    <Controller
+                        name="attendees"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                isMulti
+                                options={dummyUsers}
+                                {...field}
+                                placeholder="Select attendees..."
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Notes">
+                    <Controller
+                        name="notes"
+                        control={control}
+                        render={({ field }) => (
+                            <Input
+                                textArea
+                                {...field}
+                                placeholder="Add notes..."
+                            />
+                        )}
+                    />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button variant="solid" type="submit" loading={isLoading}>
+                        Save
+                    </Button>
+                </div>
+            </Form>
+        </Dialog>
+    )
+}
+
+const SharePostLinksDialog: React.FC<{
+    jobPost: JobPostItem
+    onClose: () => void
+}> = ({ jobPost, onClose }) => {
+    let parsedPlatforms: JobPlatform[] = []
+    if (jobPost.job_plateforms) {
+        if (typeof jobPost.job_plateforms === 'string') {
+            try {
+                parsedPlatforms = JSON.parse(jobPost.job_plateforms)
+            } catch (e) {
+                /* ignore */
+            }
+        } else if (Array.isArray(jobPost.job_plateforms)) {
+            parsedPlatforms = jobPost.job_plateforms
+        }
+    }
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text).then(
+            () => {
+                toast.push(<Notification type="success" title="Link Copied!" />)
+            },
+            () => {
+                toast.push(
+                    <Notification type="danger" title="Failed to copy." />,
+                )
+            },
+        )
+    }
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Share Links for "{jobPost.job_title}"</h5>
+            <div className="flex flex-col gap-3 mt-4">
+                {parsedPlatforms.length > 0 ? (
+                    parsedPlatforms.map((platform, index) => (
+                        <div
+                            key={index}
+                            className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+                        >
+                            <div className="flex flex-col">
+                                <span className="font-semibold">
+                                    {platform.portal}
+                                </span>
+                                <a
+                                    href={platform.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-500 hover:underline break-all"
+                                >
+                                    {platform.link}
+                                </a>
+                            </div>
+                            <Button
+                                size="sm"
+                                onClick={() => copyToClipboard(platform.link)}
+                            >
+                                Copy
+                            </Button>
+                        </div>
+                    ))
+                ) : (
+                    <p>No shareable links available for this job post.</p>
+                )}
+            </div>
+            <div className="text-right mt-6">
+                <Button variant="solid" onClick={onClose}>
+                    Close
+                </Button>
+            </div>
+        </Dialog>
+    )
+}
+
+const GenericActionDialog: React.FC<{
+    type: ModalType | null
+    jobPost: JobPostItem
+    onClose: () => void
+}> = ({ type, jobPost, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false)
+    const title = type
+        ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
+        : 'Confirm Action'
+    const handleConfirm = () => {
+        setIsLoading(true)
+        console.log(`Performing action '${type}' for job post ${jobPost.job_title}`)
+        setTimeout(() => {
+            toast.push(<Notification type="success" title="Action Completed" />)
+            setIsLoading(false)
+            onClose()
+        }, 1000)
+    }
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-2">{title}</h5>
+            <p>
+                Are you sure you want to perform this action for{' '}
+                <span className="font-semibold">{jobPost.job_title}</span>?
+            </p>
+            <div className="text-right mt-6">
+                <Button type="button" className="mr-2" onClick={onClose}>
+                    Cancel
+                </Button>
+                <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
+                    Confirm
+                </Button>
+            </div>
+        </Dialog>
+    )
+}
+
+const JobPostModals: React.FC<JobPostModalsProps> = ({
+    modalState,
+    onClose,
+}) => {
+    const { type, data: jobPost, isOpen } = modalState
+    if (!isOpen || !jobPost) return null
+
+    const renderModalContent = () => {
+        switch (type) {
+            case 'email':
+                return <SendEmailDialog jobPost={jobPost} onClose={onClose} />
+            case 'whatsapp':
+                return (
+                    <SendWhatsAppDialog jobPost={jobPost} onClose={onClose} />
+                )
+            case 'notification':
+                return (
+                    <AddNotificationDialog
+                        jobPost={jobPost}
+                        onClose={onClose}
+                    />
+                )
+            case 'task':
+                return <AssignTaskDialog jobPost={jobPost} onClose={onClose} />
+            case 'schedule':
+                return (
+                    <AddScheduleDialog jobPost={jobPost} onClose={onClose} />
+                )
+            case 'share':
+                return (
+                    <SharePostLinksDialog jobPost={jobPost} onClose={onClose} />
+                )
+            case 'active': // Fallback to generic for now
+            default:
+                return (
+                    <GenericActionDialog
+                        type={type}
+                        jobPost={jobPost}
+                        onClose={onClose}
+                    />
+                )
+        }
+    }
+    return <>{renderModalContent()}</>
+}
+
 const ActionColumn = ({
     item,
     onEdit,
     onDelete,
+    onOpenModal,
 }: {
     item: JobPostItem
     onEdit: (item: JobPostItem) => void
     onDelete: (item: JobPostItem) => void
+    onOpenModal: (type: ModalType, data: JobPostItem) => void
     onChangeStatus?: (item: JobPostItem) => void
 }) => {
     const iconButtonClass =
@@ -332,43 +900,59 @@ const ActionColumn = ({
                     <TbPencil />
                 </div>
             </Tooltip>
-            {/* <Tooltip title="Delete Job Post">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400',
-                    )}
-                    role="button"
-                    onClick={() => onDelete(item)}
-                >
-                    <TbTrash />
-                </div>
-            </Tooltip> */}
             <Dropdown
                 renderTitle={
                     <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-lg" />
                 }
             >
-                <Dropdown.Item className="flex items-center gap-2">
-                    <TbLink size={18} />{' '}
-                    <span className="text-xs">Shared Link</span>
-                </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
+                <Dropdown.Item
+                    onClick={() => onOpenModal('email', item)}
+                    className="flex items-center gap-2"
+                >
                     <TbMailShare size={18} />{' '}
                     <span className="text-xs">Send Email</span>
                 </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
+                <Dropdown.Item
+                    onClick={() => onOpenModal('whatsapp', item)}
+                    className="flex items-center gap-2"
+                >
                     <TbBrandWhatsapp size={18} />{' '}
                     <span className="text-xs">Send Whatsapp</span>
                 </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
+                <Dropdown.Item
+                    onClick={() => onOpenModal('notification', item)}
+                    className="flex items-center gap-2"
+                >
                     <TbBell size={18} />{' '}
-                    <span className="text-xs">Add Notification </span>
+                    <span className="text-xs">Add Notification</span>
                 </Dropdown.Item>
-                <Dropdown.Item className="flex items-center gap-2">
+                <Dropdown.Item
+                    onClick={() => onOpenModal('task', item)}
+                    className="flex items-center gap-2"
+                >
                     <TbUser size={18} />{' '}
-                    <span className="text-xs">Assign to Task</span>
+                    <span className="text-xs">Assign Task</span>
+                </Dropdown.Item>
+                <Dropdown.Item
+                    onClick={() => onOpenModal('schedule', item)}
+                    className="flex items-center gap-2"
+                >
+                    <TbCalendarEvent size={18} />{' '}
+                    <span className="text-xs">Add Schedule</span>
+                </Dropdown.Item>
+                <Dropdown.Item
+                    onClick={() => onOpenModal('active', item)}
+                    className="flex items-center gap-2"
+                >
+                    <TbFileCheck size={18} />{' '}
+                    <span className="text-xs">Add Active</span>
+                </Dropdown.Item>
+                <Dropdown.Item
+                    onClick={() => onOpenModal('share', item)}
+                    className="flex items-center gap-2"
+                >
+                    <TbLink size={18} />{' '}
+                    <span className="text-xs">Share Post Links</span>
                 </Dropdown.Item>
             </Dropdown>
         </div>
@@ -582,6 +1166,20 @@ const JobPostsListing = () => {
     const [isSubmittingExportReason, setIsSubmittingExportReason] =
         useState(false)
 
+    // ADDED: Modal State
+    const [modalState, setModalState] = useState<ModalState>({
+        isOpen: false,
+        type: null,
+        data: null,
+    })
+
+    const handleOpenModal = (type: ModalType, jobPostData: JobPostItem) =>
+        setModalState({ isOpen: true, type, data: jobPostData })
+
+    const handleCloseModal = () =>
+        setModalState({ isOpen: false, type: null, data: null })
+    // END: Modal State
+
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
         filterStatus: [],
         filterDepartment: [],
@@ -610,7 +1208,7 @@ const JobPostsListing = () => {
             status: 'Active',
             job_plateforms: [
                 { portal: '', link: '', application_count: 0, id: null },
-            ], // MODIFIED: Add id: null
+            ],
         }),
         [departmentOptions],
     )
@@ -1209,11 +1807,12 @@ const JobPostsListing = () => {
                         item={props.row.original}
                         onEdit={openEditDrawer}
                         onDelete={handleDeleteClick}
+                        onOpenModal={handleOpenModal}
                     />
                 ),
             },
         ],
-        [departmentOptions, openEditDrawer, handleDeleteClick],
+        [departmentOptions, openEditDrawer, handleDeleteClick, handleOpenModal],
     )
 
     const renderDrawerForm = (
@@ -1572,7 +2171,7 @@ const JobPostsListing = () => {
                                         ?.roles?.[0]?.display_name || 'N/A'}
                                 </p>
                             </div>
-                            <div className='text-right'>
+                            <div className="text-right">
                                 <br />
                                 <span className="font-semibold">
                                     Created At:
@@ -1750,6 +2349,12 @@ const JobPostsListing = () => {
                 selectedItems={selectedItems}
                 onDeleteSelected={handleDeleteSelected}
                 isDeleting={isDeleting}
+            />
+
+            {/* ADDED: Render Modals */}
+            <JobPostModals
+                modalState={modalState}
+                onClose={handleCloseModal}
             />
 
             <Drawer
