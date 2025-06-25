@@ -1,6 +1,13 @@
 // src/views/your-path/PriceList.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
+import React, {
+    useState,
+    useMemo,
+    useCallback,
+    Ref,
+    useEffect,
+    useRef,
+} from 'react'
 import cloneDeep from 'lodash/cloneDeep'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -29,6 +36,7 @@ import {
     Input,
     Table,
     Tag,
+    Avatar,
 } from '@/components/ui' // Tag already imported
 import * as XLSX from 'xlsx'
 
@@ -59,12 +67,16 @@ import {
     TbBell,
     TbShare,
     TbFileDownload,
+    TbBox,
+    TbClipboardText,
+    TbDotsVertical,
 } from 'react-icons/tb'
 
 // Types
 import type {
     OnSortParam,
     ColumnDef,
+    CellContext,
     // Row, // No longer needed as onAllRowSelect is commented out
 } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
@@ -77,6 +89,9 @@ import {
     // deleteAllPriceListAction, // No longer used as handleDeleteSelected is commented out
     getAllProductAction,
     submitExportReasonAction, // Placeholder for future action
+    getCategoriesAction,
+    getBrandAction,
+    getSubcategoriesByCategoryIdAction,
 } from '@/reduxtool/master/middleware'
 import { useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
@@ -91,14 +106,18 @@ export type ProductMasterItem = {
     name: string
 }
 
-export type SelectOption = { value: string; label: string } // Added for clarity if not globally defined
+export type SelectOption = { value: any; label: string } // Changed value to 'any' for mixed types
 
 // --- Define PriceList Type (Matches API Response Structure) ---
 export type ApiProduct = {
     id: number
     name: string
-    icon_full_path?: string
+    thumb_image_full_path?: string
     product_images_array?: any[]
+    // [NEW] Added for filtering capabilities
+    category?: { id: number; name: string } | null
+    sub_category?: { id: number; name: string } | null
+    brand?: { id: number; name: string } | null
 }
 
 export type PriceListItem = {
@@ -160,9 +179,13 @@ const priceListFilterFormSchema = z.object({
     filterProductIds: z
         .array(z.object({ value: z.string(), label: z.string() }))
         .optional(),
-    filterStatus: z // Added status filter
+    filterStatus: z
         .array(z.object({ value: z.string(), label: z.string() }))
         .optional(),
+    // [NEW] Added filters based on Products.tsx
+    filterCategoryIds: z.array(z.number()).optional(),
+    filterSubCategoryIds: z.array(z.number()).optional(),
+    filterBrandIds: z.array(z.number()).optional(),
 })
 type PriceListFilterFormData = z.infer<typeof priceListFilterFormSchema>
 
@@ -422,8 +445,40 @@ const ActionColumn = ({
     onEdit: () => void
     onOpenModal: (type: PriceListModalType, data: PriceListItem) => void
 }) => {
+    // [NEW] Handler for copying details
+    const handleCopyDetails = (item: PriceListItem) => {
+        const details = [
+            `Product: ${item.product?.name}`,
+            `Price: ${item.price}`,
+            `Base Price: ${item.base_price}`,
+            `Sales Price: ${item.sales_price}`,
+            `Status: ${item.status}`,
+        ].join('\n')
+
+        navigator.clipboard.writeText(details).then(
+            () => {
+                toast.push(
+                    <Notification
+                        title="Copied to clipboard"
+                        type="success"
+                        duration={2000}
+                    />,
+                )
+            },
+            () => {
+                toast.push(
+                    <Notification
+                        title="Failed to copy"
+                        type="danger"
+                        duration={2000}
+                    />,
+                )
+            },
+        )
+    }
+
     return (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center gap-1">
             <Tooltip title="Edit">
                 <div
                     className={classNames(
@@ -450,6 +505,25 @@ const ActionColumn = ({
                     <TbBell />
                 </div>
             </Tooltip>
+            {/* [NEW] Dropdown for more actions */}
+            <Dropdown
+                placement="bottom-end"
+                renderTitle={
+                    <Tooltip title="More">
+                        <div className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100">
+                            <TbDotsVertical />
+                        </div>
+                    </Tooltip>
+                }
+            >
+                <Dropdown.Item
+                    onClick={() => handleCopyDetails(rowData)}
+                    className="flex items-center gap-2"
+                >
+                    <TbClipboardText size={18} />{' '}
+                    <span className="text-xs">Copy Details</span>
+                </Dropdown.Item>
+            </Dropdown>
         </div>
     )
 }
@@ -539,6 +613,9 @@ const PriceList = () => {
         priceListData = [],
         productsMasterData = [],
         status: masterLoadingStatus = 'idle',
+        CategoriesData: GlobalCategoriesData = [], // [NEW]
+        subCategoriesForSelectedCategoryData = [], // [NEW]
+        BrandData = [], // [NEW]
     } = useSelector(masterSelector)
 
     const productSelectOptions = useMemo(() => {
@@ -549,15 +626,38 @@ const PriceList = () => {
         }))
     }, [productsMasterData])
 
+    // [NEW] Options for filters
+    const categoryOptions = useMemo(
+        () =>
+            Array.isArray(GlobalCategoriesData)
+                ? GlobalCategoriesData.map((c: any) => ({
+                      value: c.id,
+                      label: c.name,
+                  }))
+                : [],
+        [GlobalCategoriesData],
+    )
+    const brandOptions = useMemo(
+        () =>
+            BrandData.length > 0 &&
+            BrandData?.map((b: any) => ({ value: b.id, label: b.name })) ||
+            [],
+        [BrandData],
+    )
+    const [subcategoryOptions, setSubcategoryOptions] = useState<SelectOption[]>(
+        [],
+    )
+
     // --- MODAL STATE AND HANDLERS (LIFTED UP) ---
     const [modalState, setModalState] = useState<PriceListModalState>({
         isOpen: false,
         type: null,
         data: null,
     })
+    // [FIXED] Correctly pass item data to the modal state
     const handleOpenModal = useCallback(
-        (type: PriceListModalType, priceListData: PriceListItem) =>
-            setModalState({ isOpen: true, type, data: priceListData?.data }),
+        (type: PriceListModalType, itemData: PriceListItem) =>
+            setModalState({ isOpen: true, type, data: itemData }),
         [],
     )
     const handleCloseModal = useCallback(
@@ -585,11 +685,16 @@ const PriceList = () => {
         useState<PriceListFilterFormData>({
             filterProductIds: [],
             filterStatus: [],
+            filterCategoryIds: [], // [NEW]
+            filterBrandIds: [], // [NEW]
+            filterSubCategoryIds: [], // [NEW]
         })
 
     useEffect(() => {
         dispatch(getPriceListAction())
         dispatch(getAllProductAction())
+        dispatch(getCategoriesAction()) // [NEW]
+        dispatch(getBrandAction()) // [NEW]
     }, [dispatch])
 
     const defaultFormValues: PriceListFormData = useMemo(
@@ -624,6 +729,42 @@ const PriceList = () => {
         defaultValues: { reason: '' },
         mode: 'onChange',
     })
+
+    // [NEW] Effect to handle dynamic subcategory loading for filter
+    const watchedFilterCategoryIds = filterFormMethods.watch(
+        'filterCategoryIds',
+    )
+    useEffect(() => {
+        if (isFilterDrawerOpen) {
+            if (
+                watchedFilterCategoryIds &&
+                watchedFilterCategoryIds.length === 1
+            ) {
+                dispatch(
+                    getSubcategoriesByCategoryIdAction(
+                        watchedFilterCategoryIds[0],
+                    ),
+                )
+            } else {
+                setSubcategoryOptions([])
+                const currentFilterSubCatIds =
+                    filterFormMethods.getValues('filterSubCategoryIds')
+                if (currentFilterSubCatIds && currentFilterSubCatIds.length > 0)
+                    filterFormMethods.setValue('filterSubCategoryIds', [])
+            }
+        }
+    }, [watchedFilterCategoryIds, isFilterDrawerOpen, dispatch])
+
+    useEffect(() => {
+        if (masterLoadingStatus !== 'loading') {
+            setSubcategoryOptions(
+                subCategoriesForSelectedCategoryData?.map((sc: any) => ({
+                    value: sc.id,
+                    label: sc.name,
+                })) || [],
+            )
+        }
+    }, [subCategoriesForSelectedCategoryData, masterLoadingStatus])
 
     const openAddDrawer = useCallback(() => {
         addFormMethods.reset(defaultFormValues)
@@ -728,12 +869,21 @@ const PriceList = () => {
         setFilterCriteria({
             filterProductIds: data.filterProductIds || [],
             filterStatus: data.filterStatus || [],
+            filterCategoryIds: data.filterCategoryIds || [], // [NEW]
+            filterBrandIds: data.filterBrandIds || [], // [NEW]
+            filterSubCategoryIds: data.filterSubCategoryIds || [], // [NEW]
         })
         handleSetTableData({ pageIndex: 1 })
         closeFilterDrawerCb()
     }
     const onClearFilters = () => {
-        const df = { filterProductIds: [], filterStatus: [] }
+        const df = {
+            filterProductIds: [],
+            filterStatus: [],
+            filterCategoryIds: [],
+            filterBrandIds: [],
+            filterSubCategoryIds: [],
+        }
         filterFormMethods.reset(df)
         setFilterCriteria(df)
         handleSetTableData({ pageIndex: 1 })
@@ -756,6 +906,32 @@ const PriceList = () => {
             : []
 
         let processedData: PriceListItem[] = cloneDeep(sourceData)
+
+        // [NEW] Apply category, sub-category, and brand filters
+        if (filterCriteria.filterCategoryIds?.length) {
+            const selectedIds = new Set(filterCriteria.filterCategoryIds)
+            processedData = processedData.filter(
+                (item) =>
+                    item.product?.category?.id &&
+                    selectedIds.has(item.product.category.id),
+            )
+        }
+        if (filterCriteria.filterSubCategoryIds?.length) {
+            const selectedIds = new Set(filterCriteria.filterSubCategoryIds)
+            processedData = processedData.filter(
+                (item) =>
+                    item.product?.sub_category?.id &&
+                    selectedIds.has(item.product.sub_category.id),
+            )
+        }
+        if (filterCriteria.filterBrandIds?.length) {
+            const selectedIds = new Set(filterCriteria.filterBrandIds)
+            processedData = processedData.filter(
+                (item) =>
+                    item.product?.brand?.id &&
+                    selectedIds.has(item.product.brand.id),
+            )
+        }
 
         if (filterCriteria.filterProductIds?.length) {
             const selectedIds = filterCriteria.filterProductIds.map(
@@ -936,12 +1112,32 @@ const PriceList = () => {
         () => [
             // { header: "ID", accessorKey: "id", enableSorting: true, size: 60 },
             {
-                header: 'Product Name',
-                accessorFn: (row) => row.product?.name,
-                id: 'product.name',
+                // [NEW] Enhanced product column with Avatar
+                header: 'Product',
+                accessorKey: 'product.name',
                 enableSorting: true,
-                size: 240,
-                cell: (props) => props.row.original.product?.name || 'N/A',
+                size: 280,
+                cell: (props: CellContext<PriceListItem, any>) => {
+                    const row = props.row.original
+                    return (
+                        <div className="flex items-center gap-3">
+                            <Avatar
+                                size={40}
+                                shape="circle"
+                                src={row.product?.thumb_image_full_path || undefined}
+                                icon={<TbBox />}
+                            />
+                            <div className="truncate">
+                                <span className="font-semibold">
+                                    {row.product?.name || 'N/A'}
+                                </span>
+                                {/* <div className="text-xs text-gray-500">
+                                    Cat: {row.product?.category?.name || '-'}
+                                </div> */}
+                            </div>
+                        </div>
+                    )
+                },
             },
             {
                 header: 'Price Breakup',
@@ -1662,6 +1858,83 @@ const PriceList = () => {
                             )}
                         />
                     </FormItem>
+                    {/* [NEW] Filter fields */}
+                    <FormItem label="Categories">
+                        <Controller
+                            name="filterCategoryIds"
+                            control={filterFormMethods.control}
+                            render={({ field }) => (
+                                <Select
+                                    isMulti
+                                    placeholder="Select Categories"
+                                    options={categoryOptions}
+                                    value={categoryOptions.filter((o) =>
+                                        field.value?.includes(o.value),
+                                    )}
+                                    onChange={(opts) =>
+                                        field.onChange(
+                                            opts?.map((o) => o.value) || [],
+                                        )
+                                    }
+                                />
+                            )}
+                        />
+                    </FormItem>
+                    <FormItem label="Sub Categories">
+                        <Controller
+                            name="filterSubCategoryIds"
+                            control={filterFormMethods.control}
+                            render={({ field }) => (
+                                <Select
+                                    isMulti
+                                    placeholder={
+                                        !watchedFilterCategoryIds ||
+                                        watchedFilterCategoryIds.length !== 1
+                                            ? 'Select one category first'
+                                            : subcategoryOptions.length === 0
+                                              ? 'No subcategories found'
+                                              : 'Select Sub Categories'
+                                    }
+                                    options={subcategoryOptions}
+                                    value={subcategoryOptions.filter((o) =>
+                                        field.value?.includes(o.value),
+                                    )}
+                                    onChange={(opts) =>
+                                        field.onChange(
+                                            opts?.map((o) => o.value) || [],
+                                        )
+                                    }
+                                    isDisabled={
+                                        !watchedFilterCategoryIds ||
+                                        watchedFilterCategoryIds.length !== 1 ||
+                                        (subcategoryOptions.length === 0 &&
+                                            masterLoadingStatus !== 'loading')
+                                    }
+                                />
+                            )}
+                        />
+                    </FormItem>
+                    <FormItem label="Brands">
+                        <Controller
+                            name="filterBrandIds"
+                            control={filterFormMethods.control}
+                            render={({ field }) => (
+                                <Select
+                                    isMulti
+                                    placeholder="Select Brands"
+                                    options={brandOptions}
+                                    value={brandOptions.filter((o) =>
+                                        field.value?.includes(o.value),
+                                    )}
+                                    onChange={(opts) =>
+                                        field.onChange(
+                                            opts?.map((o) => o.value) || [],
+                                        )
+                                    }
+                                />
+                            )}
+                        />
+                    </FormItem>
                     <FormItem label="Status">
                         <Controller
                             name="filterStatus"
@@ -1885,8 +2158,12 @@ const PriceList = () => {
                             <Table.TBody>
                                 {todayPriceListData?.map((item) => (
                                     <Table.Tr key={item.id}>
-                                        <Table.Td>{item.product?.name}</Table.Td>
-                                        <Table.Td>${item.sales_price}</Table.Td>
+                                        <Table.Td>
+                                            {item.product?.name}
+                                        </Table.Td>
+                                        <Table.Td>
+                                            ${item.sales_price}
+                                        </Table.Td>
                                         <Table.Td>
                                             <Tag
                                                 className={classNames(

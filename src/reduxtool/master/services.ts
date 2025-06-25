@@ -1155,7 +1155,7 @@ export const editDesignationAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/designation/${unitData?.id}`, { _method: "PUT", name: unitData?.name, department_id: unitData?.department_id })
+    const response = await axiosInstance.post(`${config.apiURL}/master/designation/${unitData?.id}`, { _method: "PUT", name: unitData?.name, department_id: unitData?.department_id, reporting_manager: unitData?.reporting_manager, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)

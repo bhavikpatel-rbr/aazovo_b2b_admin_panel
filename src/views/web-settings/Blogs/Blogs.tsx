@@ -15,12 +15,12 @@ import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
-import Select from "@/components/ui/Select"; // RHF-compatible Select
+import Select from "@/components/ui/Select";
 import Avatar from "@/components/ui/Avatar";
 import Tag from "@/components/ui/Tag";
-// import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Assuming this is not needed as Input can be textArea
 import { Card, Drawer, Form, FormItem, Input } from "@/components/ui";
 import Dialog from "@/components/ui/Dialog";
+import { RichTextEditor } from "@/components/shared";
 
 // Icons
 import {
@@ -33,13 +33,8 @@ import {
   TbCloudUpload,
   TbFileText,
   TbX,
-  // TbCopy, // Commented out for now, can be re-added if clone functionality is desired
-  // TbCloudDownload, // Commented out, import functionality not implemented
   TbReload,
   TbUser,
-  TbCalendarUp,
-  TbUserUp,
-  TbBookUpload,
   TbMessageStar,
   TbMessageShare,
   TbMessageUser,
@@ -64,20 +59,20 @@ import {
   editBlogAction,
   deleteBlogAction,
   deleteAllBlogsAction,
-  submitExportReasonAction, // Placeholder
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-// import dayjs from "dayjs"; // Not used directly, can be removed if not needed for other formatting
 import { Link } from "react-router-dom";
-import { RichTextEditor } from "@/components/shared";
 
 // --- Define Blog Type ---
 export type BlogItem = {
   id: number;
   title: string;
   slug: string;
-  blog_descr: string | null;
+  blog_descr: any;
+  author: string | null;
+  tags: string | null;
   icon: string | null;
   status: "Published" | "Unpublished" | "Draft";
   meta_title: string | null;
@@ -86,8 +81,8 @@ export type BlogItem = {
   created_at: string;
   updated_at: string;
   icon_full_path: string | null;
-  updated_by_name?: string; // Added
-  updated_by_role?: string; // Added
+  updated_by_name?: string;
+  updated_by_role?: string;
 };
 
 // --- Zod Schema for Add/Edit Blog Form ---
@@ -102,7 +97,9 @@ const blogFormSchema = z.object({
     .max(255, "Slug cannot exceed 255 characters.")
     .optional()
     .nullable(),
-  blog_descr: z.string().optional().nullable(),
+  blog_descr: z.any().optional().nullable(),
+  author: z.string().optional().nullable(),
+  tags: z.string().optional().nullable(),
   icon: z.preprocess(
     (arg) => (arg === "" || arg === undefined ? null : arg),
     z
@@ -137,7 +134,7 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 const exportReasonSchema = z.object({
   reason: z
     .string()
-    .min(1, "Reason for export is required.")
+    .min(10, "Reason for export is required.")
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
@@ -154,13 +151,16 @@ const blogStatusColor: Record<BlogItem["status"], string> = {
     "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500 border-1",
   Unpublished:
     "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100 border-amber-300 dark:border-amber-500 border-1",
-  Draft: "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-gray-300 dark:border-gray-500 border-1",
+  Draft:
+    "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-gray-300 dark:border-gray-500 border-1",
 };
 
 // --- CSV Exporter Utility ---
 const CSV_HEADERS = [
   "ID",
   "Title",
+  "Author",
+  "Tags",
   "Slug",
   "Status",
   "Meta Title",
@@ -168,8 +168,8 @@ const CSV_HEADERS = [
   "Meta Keywords",
   "Icon Full Path",
   "Created At",
-  "Updated By", // Added
-  "Updated Role", // Added
+  "Updated By",
+  "Updated Role",
   "Updated At",
 ];
 type BlogExportItem = Omit<BlogItem, "created_at" | "updated_at"> & {
@@ -180,6 +180,8 @@ type BlogExportItem = Omit<BlogItem, "created_at" | "updated_at"> & {
 const CSV_KEYS_EXPORT: (keyof BlogExportItem)[] = [
   "id",
   "title",
+  "author",
+  "tags",
   "slug",
   "status",
   "meta_title",
@@ -192,10 +194,7 @@ const CSV_KEYS_EXPORT: (keyof BlogExportItem)[] = [
   "updated_at_formatted",
 ];
 
-function exportToCsvBlog(
-  filename: string,
-  rows: BlogItem[]
-): boolean {
+function exportToCsvBlog(filename: string, rows: BlogItem[]): boolean {
   if (!rows || !rows.length) {
     toast.push(
       <Notification title="No Data" type="info">
@@ -208,6 +207,8 @@ function exportToCsvBlog(
   const preparedRows: BlogExportItem[] = rows.map((row) => ({
     id: row.id,
     title: row.title,
+    author: row.author || "N/A",
+    tags: row.tags || "N/A",
     icon_full_path: row.icon_full_path || "N/A",
     blog_descr: row.blog_descr || "N/A",
     status: row.status || "N/A",
@@ -282,7 +283,6 @@ function exportToCsvBlog(
   return false;
 }
 
-
 // --- ActionColumn ---
 const ActionColumn = ({
   onEdit,
@@ -291,7 +291,6 @@ const ActionColumn = ({
   onEdit: () => void;
   onDelete: () => void;
 }) => {
-  // Removed onClone
   const iconButtonClass =
     "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
@@ -310,9 +309,19 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete">
-        <div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400")} role="button" onClick={onDelete}><TbTrash /></div>
-      </Tooltip> */}
+      <Tooltip title="Delete">
+        <div
+          className={classNames(
+            iconButtonClass,
+            hoverBgClass,
+            "text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+          )}
+          role="button"
+          onClick={onDelete}
+        >
+          <TbTrash />
+        </div>
+      </Tooltip>
     </div>
   );
 };
@@ -349,7 +358,6 @@ const BlogsTableTools = ({
   onExport: () => void;
   onClearFilters: () => void;
 }) => {
-  // Removed onImport
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
       <div className="flex-grow">
@@ -361,7 +369,6 @@ const BlogsTableTools = ({
           icon={<TbReload />}
           onClick={onClearFilters}
         ></Button>{" "}
-        {/* Changed onClick */}
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
@@ -431,13 +438,12 @@ type BlogsSelectedFooterProps = {
   selectedItems: BlogItem[];
   onDeleteSelected: () => void;
   isDeleting: boolean;
-}; // Added isDeleting
+};
 const BlogsSelectedFooter = ({
   selectedItems,
   onDeleteSelected,
   isDeleting,
 }: BlogsSelectedFooterProps) => {
-  // Added isDeleting
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const handleDeleteClick = () => setDeleteConfirmationOpen(true);
   const handleCancelDelete = () => setDeleteConfirmationOpen(false);
@@ -472,7 +478,6 @@ const BlogsSelectedFooter = ({
             >
               Delete Selected
             </Button>{" "}
-            {/* Added loading */}
           </div>
         </div>
       </StickyFooter>
@@ -488,8 +493,6 @@ const BlogsSelectedFooter = ({
         onConfirm={handleConfirmDelete}
         loading={isDeleting}
       >
-        {" "}
-        {/* Added loading */}
         <p>
           Are you sure you want to delete the selected blog
           {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
@@ -507,12 +510,10 @@ const Blogs = () => {
   const [isEditDrawerOpen, setEditDrawerOpen] = useState(false);
   const [editingBlog, setEditingBlog] = useState<BlogItem | null>(null);
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
-  // const [importDialogOpen, setImportDialogOpen] = useState(false); // Commented out as per instructions
 
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [blogToDelete, setBlogToDelete] = useState<BlogItem | null>(null);
 
-  // --- Export Reason Modal State ---
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
@@ -525,7 +526,7 @@ const Blogs = () => {
   const [imageToView, setImageToView] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false); // Changed from isProcessing
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const {
     BlogsData = [],
@@ -543,7 +544,7 @@ const Blogs = () => {
     masterLoading === true ||
     masterLoading === "idle" ||
     isSubmitting ||
-    isDeleting; // Adjusted condition
+    isDeleting;
 
   useEffect(() => {
     dispatch(getBlogsAction());
@@ -567,6 +568,8 @@ const Blogs = () => {
     title: "",
     slug: null,
     blog_descr: null,
+    author: null,
+    tags: null,
     icon: null,
     status: "Draft",
     meta_title: null,
@@ -643,7 +646,14 @@ const Blogs = () => {
     const formDataToSend = new FormData();
     formDataToSend.append("title", data.title);
     if (data.slug) formDataToSend.append("slug", data.slug);
-    if (data.blog_descr) formDataToSend.append("blog_descr", data.blog_descr);
+    // --- FIX START: Serialize the rich text editor content to a JSON string ---
+    if (data.blog_descr) {
+      formDataToSend.append("blog_descr", data.blog_descr); // <-- remove JSON.stringify()
+    }
+
+    // --- FIX END ---
+    if (data.author) formDataToSend.append("author", data.author);
+    if (data.tags) formDataToSend.append("tags", data.tags);
     if (data.status) formDataToSend.append("status", data.status);
     if (data.icon instanceof File) formDataToSend.append("icon", data.icon);
     if (data.meta_title) formDataToSend.append("meta_title", data.meta_title);
@@ -687,12 +697,12 @@ const Blogs = () => {
 
   const openEditDrawer = (blog: BlogItem) => {
     setEditingBlog(blog);
-    console.log("blog0", blog);
-
     editFormMethods.reset({
       title: blog.title,
       slug: blog.slug || null,
       blog_descr: blog.blog_descr || null,
+      author: blog.author || null,
+      tags: blog.tags || null,
       icon: null,
       status: blog.status,
       meta_title: blog.meta_title || null,
@@ -732,7 +742,17 @@ const Blogs = () => {
       const value = data[key];
       if (key === "icon") {
         if (value instanceof File) formData.append(key, value);
-      } else {
+      }
+      // --- FIX START: Add special handling for blog_descr to serialize it ---
+      else if (key === "blog_descr") {
+        if (value) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, "");
+        }
+      }
+      // --- FIX END ---
+      else {
         if (value === null) formData.append(key, "");
         else if (value !== undefined) formData.append(key, String(value));
       }
@@ -768,15 +788,13 @@ const Blogs = () => {
     }
   };
 
-  // const handleCloneBlog = (blog: BlogItem) => { /* ... Clone logic if needed ... */ }; // Commented out
-
   const handleDeleteClick = (blog: BlogItem) => {
     setBlogToDelete(blog);
     setSingleDeleteConfirmOpen(true);
   };
   const onConfirmSingleDelete = async () => {
     if (!blogToDelete?.id) return;
-    setIsDeleting(true); // Changed from setIsProcessing
+    setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
       const result = await dispatch(deleteBlogAction({ id: blogToDelete.id }));
@@ -806,7 +824,7 @@ const Blogs = () => {
         </Notification>
       );
     } finally {
-      setIsDeleting(false); // Changed from setIsProcessing
+      setIsDeleting(false);
     }
   };
 
@@ -819,7 +837,7 @@ const Blogs = () => {
       );
       return;
     }
-    setIsDeleting(true); // Changed from setIsProcessing
+    setIsDeleting(true);
     const idsToDelete = selectedItems.map((item) => item.id).join(",");
     try {
       const result = await dispatch(deleteAllBlogsAction({ ids: idsToDelete }));
@@ -850,7 +868,7 @@ const Blogs = () => {
         </Notification>
       );
     } finally {
-      setIsDeleting(false); // Changed from setIsProcessing
+      setIsDeleting(false);
     }
   };
 
@@ -873,14 +891,12 @@ const Blogs = () => {
     setFilterDrawerOpen(false);
   };
 
-  // const handleImportData = () => setImportDialogOpen(true); // Commented out
-
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
     sort: { order: "desc", key: "created_at" },
     query: "",
-  }); // Default sort
+  });
   const [selectedItems, setSelectedItems] = useState<BlogItem[]>([]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
@@ -900,7 +916,9 @@ const Blogs = () => {
           item.title?.toLowerCase().includes(query) ||
           String(item.id).toLowerCase().includes(query) ||
           item.slug?.toLowerCase().includes(query) ||
-          (item.updated_by_name?.toLowerCase() ?? "").includes(query) // Search by updated_by_name
+          (item.author?.toLowerCase() ?? "").includes(query) ||
+          (item.tags?.toLowerCase() ?? "").includes(query) ||
+          (item.updated_by_name?.toLowerCase() ?? "").includes(query)
       );
     }
     const { order, key } = tableData.sort as OnSortParam;
@@ -910,6 +928,8 @@ const Blogs = () => {
       [
         "id",
         "title",
+        "author",
+        "tags",
         "slug",
         "status",
         "created_at",
@@ -917,7 +937,6 @@ const Blogs = () => {
         "updated_by_name",
       ].includes(key)
     ) {
-      // Added new sort keys
       processedData.sort((a, b) => {
         let aValue: any, bValue: any;
         if (key === "created_at" || key === "updated_at") {
@@ -964,27 +983,22 @@ const Blogs = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Blogs";
-    const timestamp = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+    const timestamp = new Date().toISOString().split("T")[0];
     const fileName = `blogs_export_${timestamp}.csv`;
     try {
-      await dispatch(submitExportReasonAction({
-        reason: data.reason,
-        module: moduleName,
-        file_name: fileName,
-      })).unwrap();
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
       toast.push(
         <Notification title="Export Reason Submitted" type="success" />
       );
       exportToCsvBlog(fileName, allFilteredAndSortedData);
-      // Optional:
-      toast.push(
-        <Notification title="Data Exported" type="success">
-          Blogs data exported.
-        </Notification>
-      );
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
-      console.log(error);
       toast.push(
         <Notification
           title="Operation Failed"
@@ -1064,7 +1078,6 @@ const Blogs = () => {
 
   const columns: ColumnDef<BlogItem>[] = useMemo(
     () => [
-      // { header: "ID", accessorKey: "id", enableSorting: true, size: 60, meta: { tdClass: "text-center", thClass: "text-center" } },
       {
         header: "Icon",
         accessorKey: "icon_full_path",
@@ -1073,9 +1086,6 @@ const Blogs = () => {
         meta: { headerClass: "text-center", cellClass: "text-center" },
         cell: (props) => {
           const iconPath = props.row.original.icon_full_path;
-          const titleInitial = props.row.original.title
-            ?.charAt(0)
-            .toUpperCase();
           return (
             <Avatar
               size={40}
@@ -1089,7 +1099,9 @@ const Blogs = () => {
                   : ""
               }
             >
-              {!iconPath ? titleInitial : null}
+              {!iconPath
+                ? props.row.original.title?.charAt(0).toUpperCase()
+                : null}
             </Avatar>
           );
         },
@@ -1099,7 +1111,40 @@ const Blogs = () => {
         accessorKey: "title",
         enableSorting: true,
         size: 240,
-        cell: (props) => <span className="">{props.getValue<string>()}</span>,
+        cell: (props) => <span>{props.getValue<string>()}</span>,
+      },
+      {
+        header: "Author",
+        accessorKey: "author",
+        enableSorting: true,
+        size: 150,
+        cell: (props) => <span>{props.getValue<string>() || "N/A"}</span>,
+      },
+      {
+        header: "Tags",
+        accessorKey: "tags",
+        enableSorting: true,
+        size: 180,
+        cell: (props) => {
+          const tags = props.getValue<string | null>();
+          if (!tags) return <span>-</span>;
+          return (
+            <div className="flex flex-wrap gap-1 max-w-[170px]">
+              {tags
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter(Boolean)
+                .map((t) => (
+                  <Tag
+                    key={t}
+                    className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-xs"
+                  >
+                    {t}
+                  </Tag>
+                ))}
+            </div>
+          );
+        },
       },
       { header: "Slug", accessorKey: "slug", enableSorting: true, size: 240 },
       {
@@ -1127,8 +1172,7 @@ const Blogs = () => {
         enableSorting: true,
         size: 170,
         cell: (props) => {
-          const { updated_at, updated_by_user, updated_by_role } =
-            props.row.original;
+          const { updated_at, updated_by_user } = props.row.original;
           const formattedDate = updated_at
             ? `${new Date(updated_at).getDate()} ${new Date(
                 updated_at
@@ -1160,17 +1204,16 @@ const Blogs = () => {
         header: "Actions",
         id: "action",
         meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 80, // Reduced size as Clone is removed
+        size: 80,
         cell: (props) => (
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
             onDelete={() => handleDeleteClick(props.row.original)}
           />
-        ), // Removed onClone
+        ),
       },
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     ],
-    [openImageViewer, openEditDrawer, handleDeleteClick] // Removed handleCloneBlog
+    []
   );
 
   useEffect(() => {
@@ -1254,7 +1297,6 @@ const Blogs = () => {
                 <span className="font-semibold text-xs">Total Views</span>
               </div>
             </Card>
-
             <Card
               bodyClass="flex gap-2 p-2"
               className="rounded-md border border-green-300"
@@ -1283,7 +1325,6 @@ const Blogs = () => {
                 <span className="font-semibold text-xs">Unpublished</span>
               </div>
             </Card>
-
             <Card
               bodyClass="flex gap-2 p-2"
               className="rounded-md border border-gray-200"
@@ -1303,7 +1344,6 @@ const Blogs = () => {
             onExport={handleOpenExportReasonModal}
             onClearFilters={onClearFilters}
           />{" "}
-          {/* Changed onExport */}
           <div className="mt-4 flex-grow overflow-y-auto">
             <BlogsTable
               columns={columns}
@@ -1328,8 +1368,7 @@ const Blogs = () => {
         selectedItems={selectedItems}
         onDeleteSelected={handleDeleteSelected}
         isDeleting={isDeleting}
-      />{" "}
-      {/* Added isDeleting */}
+      />
       {[
         {
           type: "add",
@@ -1360,7 +1399,7 @@ const Blogs = () => {
           isOpen={drawer.isOpen}
           onClose={drawer.closeFn}
           onRequestClose={drawer.closeFn}
-          width={520} // Matched width
+          width={1000}
           footer={
             <div className="text-right w-full">
               <Button
@@ -1390,8 +1429,6 @@ const Blogs = () => {
             onSubmit={drawer.methods.handleSubmit(drawer.onSubmit as any)}
             className="flex flex-col gap-4 relative"
           >
-            {" "}
-            {/* Added relative pb-28 */}
             <FormItem
               label={
                 <div>
@@ -1414,66 +1451,104 @@ const Blogs = () => {
                 )}
               />
             </FormItem>
-            {
-              <div className="grid grid-cols-2 gap-2">
-                <FormItem
-                  label="Slug / URL"
-                  invalid={!!drawer.methods.formState.errors.slug}
-                  errorMessage={
-                    drawer.methods.formState.errors.slug?.message as
-                      | string
-                      | undefined
-                  }
-                >
-                  <Controller
-                    name="slug"
-                    control={drawer.methods.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        placeholder="e.g., my-awesome-blog-post"
-                      />
-                    )}
-                  />
-                </FormItem>
-                <FormItem
-                  label={
-                    <div>
-                      Status<span className="text-red-500"> * </span>
-                    </div>
-                  }
-                  invalid={!!drawer.methods.formState.errors.status}
-                  errorMessage={
-                    drawer.methods.formState.errors.status?.message as
-                      | string
-                      | undefined
-                  }
-                  isRequired
-                >
-                  <Controller
-                    name="status"
-                    control={drawer.methods.control}
-                    render={({ field }) => (
-                      <Select
-                        placeholder="Select Status"
-                        options={blogStatusOptions}
-                        value={blogStatusOptions.find(
-                          (opt) => opt.value === field.value
-                        )}
-                        onChange={(opt) => field.onChange(opt?.value)}
-                      />
-                    )}
-                  />
-                </FormItem>
-              </div>
-            }
+            <div className="grid grid-cols-2 gap-4">
+              <FormItem
+                label="Slug / URL"
+                invalid={!!drawer.methods.formState.errors.slug}
+                errorMessage={
+                  drawer.methods.formState.errors.slug?.message as
+                    | string
+                    | undefined
+                }
+              >
+                <Controller
+                  name="slug"
+                  control={drawer.methods.control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      placeholder="e.g., my-awesome-blog-post"
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem
+                label={
+                  <div>
+                    Status<span className="text-red-500"> * </span>
+                  </div>
+                }
+                invalid={!!drawer.methods.formState.errors.status}
+                errorMessage={
+                  drawer.methods.formState.errors.status?.message as
+                    | string
+                    | undefined
+                }
+                isRequired
+              >
+                <Controller
+                  name="status"
+                  control={drawer.methods.control}
+                  render={({ field }) => (
+                    <Select
+                      placeholder="Select Status"
+                      options={blogStatusOptions}
+                      value={blogStatusOptions.find(
+                        (opt) => opt.value === field.value
+                      )}
+                      onChange={(opt) => field.onChange(opt?.value)}
+                    />
+                  )}
+                />
+              </FormItem>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormItem
+                label="Author"
+                invalid={!!drawer.methods.formState.errors.author}
+                errorMessage={
+                  drawer.methods.formState.errors.author?.message as
+                    | string
+                    | undefined
+                }
+              >
+                <Controller
+                  name="author"
+                  control={drawer.methods.control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      placeholder="Enter author name"
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem
+                label="Blog Tags (comma-separated)"
+                invalid={!!drawer.methods.formState.errors.tags}
+                errorMessage={
+                  drawer.methods.formState.errors.tags?.message as
+                    | string
+                    | undefined
+                }
+              >
+                <Controller
+                  name="tags"
+                  control={drawer.methods.control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      placeholder="e.g., tech, react, news"
+                    />
+                  )}
+                />
+              </FormItem>
+            </div>
             <FormItem
-              label={
-                <div>
-                  Description<span className="text-red-500"> * </span>
-                </div>
-              }
+              label="Description"
               invalid={!!drawer.methods.formState.errors.blog_descr}
               errorMessage={
                 drawer.methods.formState.errors.blog_descr?.message as
@@ -1481,82 +1556,62 @@ const Blogs = () => {
                   | undefined
               }
             >
-              {/* <Controller name="blog_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="Enter main blog content..." rows={5} />)} /> */}
               <Controller
                 name="blog_descr"
                 control={drawer.methods.control}
                 render={({ field }) => (
-                  // <RichTextEditor
-                  //   {...field}
-                  //   value={field.value ?? ""}
-                  //   onChange={({ html }) => {
-                  //     field.onChange(html)
-                  //   }}
-                  //   placeholder="Enter main blog content..."
-                  // />
-                  <Controller
-                    name="blog_descr"
-                    control={drawer.methods.control}
-                    render={({ field }) => (
-                      <Input
-                        textArea
-                        {...field}
-                        value={field.value ?? ""}
-                        placeholder="SEO Description (max 160 chars)"
-                        rows={3}
-                      />
-                    )}
+                  <RichTextEditor
+                    content={field.value}
+                    onChange={(val) => field.onChange(val.html)} // 👈 Store only HTML
+                    placeholder="Enter main blog content..."
                   />
                 )}
               />
             </FormItem>
-            {/* <FormItem style={{ fontWeight: "bold", color: "#000" }} label="Meta Options "></FormItem> */}
-            {
-              <div className="grid grid-cols-2 gap-2">
-                <FormItem
-                  label="Meta Title"
-                  invalid={!!drawer.methods.formState.errors.meta_title}
-                  errorMessage={
-                    drawer.methods.formState.errors.meta_title?.message as
-                      | string
-                      | undefined
-                  }
-                >
-                  <Controller
-                    name="meta_title"
-                    control={drawer.methods.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        placeholder="SEO Title (max 70 chars)"
-                      />
-                    )}
-                  />
-                </FormItem>
-                <FormItem
-                  label="Meta Keywords"
-                  invalid={!!drawer.methods.formState.errors.meta_keyword}
-                  errorMessage={
-                    drawer.methods.formState.errors.meta_keyword?.message as
-                      | string
-                      | undefined
-                  }
-                >
-                  <Controller
-                    name="meta_keyword"
-                    control={drawer.methods.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        placeholder="Comma-separated keywords"
-                      />
-                    )}
-                  />
-                </FormItem>
-              </div>
-            }
+            <div className="grid grid-cols-2 gap-4">
+              <FormItem
+                label="Meta Title"
+                invalid={!!drawer.methods.formState.errors.meta_title}
+                errorMessage={
+                  drawer.methods.formState.errors.meta_title?.message as
+                    | string
+                    | undefined
+                }
+              >
+                <Controller
+                  name="meta_title"
+                  control={drawer.methods.control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      placeholder="SEO Title (max 70 chars)"
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem
+                label="Meta Keywords"
+                invalid={!!drawer.methods.formState.errors.meta_keyword}
+                errorMessage={
+                  drawer.methods.formState.errors.meta_keyword?.message as
+                    | string
+                    | undefined
+                }
+              >
+                <Controller
+                  name="meta_keyword"
+                  control={drawer.methods.control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      value={field.value ?? ""}
+                      placeholder="Comma-separated keywords"
+                    />
+                  )}
+                />
+              </FormItem>
+            </div>
             <FormItem
               label="Meta Description"
               invalid={!!drawer.methods.formState.errors.meta_descr}
@@ -1585,8 +1640,8 @@ const Blogs = () => {
                 drawer.type === "edit" &&
                 editingBlog?.icon_full_path &&
                 iconPreview === editingBlog.icon_full_path
-                  ? " Change ?"
-                  : " "
+                  ? " (Change?)"
+                  : ""
               }`}
               invalid={!!drawer.methods.formState.errors.icon}
               errorMessage={
@@ -1602,9 +1657,9 @@ const Blogs = () => {
                     <img
                       src={iconPreview}
                       alt="Current Icon"
-                      className="w-[460px] h-[auto] border p-1 rounded-md mt-2"
+                      className="w-[460px] h-[auto] border p-1 rounded-md mt-2 mb-2"
                     />
-                    <Button
+                    {/* <Button
                       icon={<TbX />}
                       size="xs"
                       color="red"
@@ -1619,7 +1674,7 @@ const Blogs = () => {
                       }}
                     >
                       Remove Current Icon
-                    </Button>
+                    </Button> */}
                   </div>
                 )}
               {iconPreview &&
@@ -1637,8 +1692,7 @@ const Blogs = () => {
                 editingBlog?.icon_full_path &&
                 !drawer.methods.watch("icon") && (
                   <p className="text-xs text-gray-500 mb-1">
-                    Current icon will be removed as "Remove Current Icon" was
-                    clicked.
+                    Current icon will be removed. Upload a new one if needed.
                   </p>
                 )}
               <Input
@@ -1649,9 +1703,7 @@ const Blogs = () => {
               />
             </FormItem>
             {drawer.type === "edit" && editingBlog && (
-              <div className="bottom-[4%] w-full">
-                {" "}
-                {/* Positioned audit info */}
+              <div className="w-full">
                 <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                   <div>
                     <b className="mt-3 mb-3 font-semibold text-primary">
@@ -1659,7 +1711,6 @@ const Blogs = () => {
                     </b>
                     <br />
                     <p className="text-sm font-semibold">
-                      {" "}
                       {editingBlog.updated_by_user?.name || "N/A"}
                     </p>
                     <p>
@@ -1667,16 +1718,20 @@ const Blogs = () => {
                         "N/A"}
                     </p>
                   </div>
-                  <div className='text-right'>
+                  <div className="text-right">
                     <br />
                     <span className="font-semibold">Created At:</span>{" "}
                     <span>
                       {editingBlog.created_at
-                        ? `${new Date(editingBlog.created_at).getDate()} ${new Date(
+                        ? `${new Date(
+                            editingBlog.created_at
+                          ).getDate()} ${new Date(
                             editingBlog.created_at
                           ).toLocaleString("en-US", {
                             month: "short",
-                          })} ${new Date(editingBlog.created_at).getFullYear()}, ${new Date(
+                          })} ${new Date(
+                            editingBlog.created_at
+                          ).getFullYear()}, ${new Date(
                             editingBlog.created_at
                           ).toLocaleTimeString("en-US", {
                             hour: "numeric",
@@ -1689,11 +1744,15 @@ const Blogs = () => {
                     <span className="font-semibold">Updated At:</span>{" "}
                     <span>
                       {editingBlog.updated_at
-                        ? `${new Date(editingBlog.updated_at).getDate()} ${new Date(
+                        ? `${new Date(
+                            editingBlog.updated_at
+                          ).getDate()} ${new Date(
                             editingBlog.updated_at
                           ).toLocaleString("en-US", {
                             month: "short",
-                          })} ${new Date(editingBlog.updated_at).getFullYear()}, ${new Date(
+                          })} ${new Date(
+                            editingBlog.updated_at
+                          ).getFullYear()}, ${new Date(
                             editingBlog.updated_at
                           ).toLocaleTimeString("en-US", {
                             hour: "numeric",
@@ -1714,7 +1773,7 @@ const Blogs = () => {
         isOpen={isFilterDrawerOpen}
         onClose={closeFilterDrawer}
         onRequestClose={closeFilterDrawer}
-        width={400} // Matched width
+        width={400}
         footer={
           <div className="text-right w-full">
             <Button
@@ -1724,8 +1783,7 @@ const Blogs = () => {
               type="button"
             >
               Clear
-            </Button>{" "}
-            {/* Applied onClearFilters */}
+            </Button>
             <Button
               size="sm"
               variant="solid"
@@ -1759,7 +1817,6 @@ const Blogs = () => {
           </FormItem>
         </Form>
       </Drawer>
-      {/* <Drawer title="Import Blogs" isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)}> ... </Drawer> // Commented out */}
       <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
@@ -1785,17 +1842,36 @@ const Blogs = () => {
             blogToDelete?.id === itemBeingDeleted)
         }
       >
-        {" "}
-        {/* Changed isProcessing to isDeleting */}
         <p>
           Are you sure you want to delete the blog "
-          <strong>{blogToDelete?.title}</strong>"? This action cannot be undone.
+          <strong>{blogToDelete?.title}</strong>"? This action cannot be
+          undone.
         </p>
       </ConfirmDialog>
-      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
-        <div className="flex justify-center items-center p-4">{imageToView ? (<img src={imageToView} alt="Slider Image Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}</div>
+      <Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        width={600}
+      >
+        <div className="flex justify-center items-center p-4">
+          {imageToView ? (
+            <img
+              src={imageToView}
+              alt="Slider Image Full View"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "80vh",
+                objectFit: "contain",
+              }}
+            />
+          ) : (
+            <p>No image to display.</p>
+          )}
+        </div>
       </Dialog>
-      {/* --- Export Reason Modal --- */}
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"
@@ -1818,12 +1894,10 @@ const Blogs = () => {
         }}
       >
         <Form
-          id="exportBlogsReasonForm" // Unique ID
+          id="exportBlogsReasonForm"
           onSubmit={(e) => {
             e.preventDefault();
-            exportReasonFormMethods.handleSubmit(
-              handleConfirmExportWithReason
-            )();
+            exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)();
           }}
           className="flex flex-col gap-4 mt-2"
         >
@@ -1838,12 +1912,7 @@ const Blogs = () => {
               name="reason"
               control={exportReasonFormMethods.control}
               render={({ field }) => (
-                <Input
-                  textArea
-                  {...field}
-                  placeholder="Enter reason..."
-                  rows={3}
-                />
+                <Input textArea {...field} placeholder="Enter reason..." rows={3} />
               )}
             />
           </FormItem>

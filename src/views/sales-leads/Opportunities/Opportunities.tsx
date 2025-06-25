@@ -196,7 +196,7 @@ export type OpportunityItem = {
 const exportReasonSchema = z.object({
   reason: z
     .string()
-    .min(1, "Reason for export is required.")
+    .min(10, "Reason for export is required.")
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
