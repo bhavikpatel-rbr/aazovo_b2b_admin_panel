@@ -1740,8 +1740,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
 
                                 <div className='mt-8 block  gap-2'>
                                     <div className='flex justify-between items-center'>
-                                        <h6 className='mb-6'>Members Leaderboard</h6>
-                                        <div className='flex gap-2 items-center text-sm'>
+                                        <h6 className='mb-3'>Members Leaderboard</h6>
+                                        {/* <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Activity Level</h6>
                                             <Select
                                                 className="min-w-[140px]"
@@ -1754,8 +1754,14 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
                                             />
-                                        </div>
+                                        </div> */}
                                     </div>
+                                    <DebouceInput
+                                            // ref={ref}
+                                            className="w-full mb-2"
+                                            placeholder="Quick Search..."
+                                            suffix={<TbSearch className="text-lg" />}
+                                          />
                                     <DataTable
                                         columns={memberColumns}
                                         data={memberData}
@@ -1846,7 +1852,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
 
                                 <div className='mt-8 block  gap-2'>
                                     <div className='flex justify-between items-center'>
-                                        <h6 className='mb-6'>Products Leaderboard</h6>
+                                        <h6 className='mb-3'>Products Leaderboard</h6>
                                         {/* <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Engagement Score</h6>
                                             <Select
@@ -1862,6 +1868,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             />
                                         </div> */}
                                     </div>
+                                    <DebouceInput
+                                            // ref={ref}
+                                            className="w-full mb-2"
+                                            placeholder="Quick Search..."
+                                            suffix={<TbSearch className="text-lg" />}
+                                          />
                                     <DataTable
                                         columns={productColumns}
                                         data={productData}
@@ -2096,7 +2108,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
 
                                 <div className='mt-8 block  gap-2'>
                                     <div className='flex justify-between items-center'>
-                                        <h6 className='mb-6'>Partners Leaderboard</h6>
+                                        <h6 className='mb-3'>Partners Leaderboard</h6>
                                         {/* <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Trust Score</h6>
                                             <Select
@@ -2112,6 +2124,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                             />
                                         </div> */}
                                     </div>
+                                    <DebouceInput
+                                            // ref={ref}
+                                            className="w-full mb-2"
+                                            placeholder="Quick Search..."
+                                            suffix={<TbSearch className="text-lg" />}
+                                          />
                                     <DataTable
                                         columns={partnerColumns}
                                         data={wallListingData}
