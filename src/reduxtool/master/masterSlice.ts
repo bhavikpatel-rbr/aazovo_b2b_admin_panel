@@ -93,6 +93,7 @@ import {
   getProductsAction,
   getProductsDataAsync,
   getProductSpecificationsAction,
+  getReportingTo,
   getRequestFeedbacksAction,
   getRolesAction,
   getRowDataAction,
@@ -181,6 +182,7 @@ const INITIAL_STATE: any = {
   addEmployees: {},
   editEmployees: {},
   getEmployeesdata: {},
+  reportingTo: [],
   getwallItemsData:  {}
 };
 
@@ -662,7 +664,10 @@ const masterSlice = createSlice({
       ...state,
       getEmployeesdata: payload,
     }));
-
+    builder.addCase(getReportingTo.fulfilled, (state, { payload }) => ({
+      ...state,
+      reportingTo: payload,
+    }));
   },
 });
 

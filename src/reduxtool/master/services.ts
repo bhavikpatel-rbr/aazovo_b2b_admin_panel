@@ -2901,3 +2901,12 @@ export const apiGetEmployeeByIdAsync = async (id) => {
     return isAxiosError(err);
   }
 }
+
+export const getReportingToAsync = async (department_id: any) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/reporting_to?department_id=${department_id}`);
+    return response.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
