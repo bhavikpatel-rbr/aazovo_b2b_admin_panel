@@ -821,7 +821,7 @@ const ActionColumn = React.memo(
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Change Status">
+      {/* <Tooltip title="Change Status">
         <div
           className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
           role="button"
@@ -829,7 +829,7 @@ const ActionColumn = React.memo(
         >
           <TbSwitchHorizontal />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Dropdown
         placement="bottom-end"
         renderTitle={
@@ -878,12 +878,12 @@ const ActionColumn = React.memo(
         >
           <TbTagStarred size={18} /> <span className="text-xs">Add Active</span>
         </Dropdown.Item>
-        <Dropdown.Item
+        {/* <Dropdown.Item
           onClick={onDelete}
           className="flex items-center gap-2 text-red-600 hover:!bg-red-50 dark:hover:!bg-red-500/10"
         >
           <TbTrash size={18} /> <span className="text-sm">Delete</span>
-        </Dropdown.Item>
+        </Dropdown.Item> */}
       </Dropdown>
     </div>
   )
