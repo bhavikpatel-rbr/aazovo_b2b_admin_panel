@@ -44,13 +44,13 @@ const UserProfileCard = ({
   newAvatarPreview: string | null;
 }) => {
   const avatarSrc =
-    newAvatarPreview || userData?.avatar || "/img/avatars/default-user.jpg";
-
+    userData?.profile_pic_path;
+    // console.log("Avatar Source:", avatarSrc);
   return (
     <div>
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
         <div className="relative flex-shrink-0">
-          <Avatar shape="round" size={100} src={avatarSrc} />
+          {/* <Avatar shape="round" size={100} src={userData?.profile_pic_path} /> */}
           <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800"></div>
         </div>
         <div className="flex flex-col gap-4 w-full">
@@ -128,7 +128,7 @@ const _UserDropdown = () => {
   const [newAvatarPreview, setNewAvatarPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const avatarSrc = userData?.avatar || "/img/avatars/default-user.jpg";
+  const avatarSrc = userData?.profile_pic_path || "/img/avatars/default-user.jpg";
   const avatarProps = { src: avatarSrc };
 
   const handleAvatarClick = () => {
