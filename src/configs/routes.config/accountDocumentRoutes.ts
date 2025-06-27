@@ -13,6 +13,15 @@ const accountDocumentRoutes: Routes = [
       pageContainerType: "contained",
     },
   },
+  {
+    key: "accountDocuments",
+    path: `/fill-up-form`,
+    component: lazy(() => import("@/views/Account-Documents/components/LogisticFrom")),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
 ];
 
 export default accountDocumentRoutes;
