@@ -179,7 +179,7 @@ const NavigatorComponent: FC<{
 const PiSection: FC<FormSectionBaseProps> = ({ control }) => (
   <Card id="pi">
     {/* <h4 className="mb-4">Proforma Invoice (PI) Details</h4> */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-4 mt-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 mt-2">
       <CheckableFormField control={control} name="pi.pi_date" label="PI Date" />
       <CheckableFormField control={control} name="pi.pi_no" label="PI No" />
       <CheckableFormField control={control} name="pi.company_name" label="Company Name" />
@@ -218,7 +218,7 @@ const PiSection: FC<FormSectionBaseProps> = ({ control }) => (
 const InvoiceSection: FC<FormSectionBaseProps> = ({ control }) => (
   <Card id="invoice">
     {/* <h4 className="mb-4">Invoice Details</h4> */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-4 mt-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 mt-2">
       <CheckableFormField control={control} name="invoice.company_name" label="Company Name" />
       <CheckableFormField control={control} name="invoice.gst_no" label="GST No" />
       <CheckableFormField control={control} name="invoice.pan_no" label="PAN No" />
@@ -252,7 +252,7 @@ const InvoiceSection: FC<FormSectionBaseProps> = ({ control }) => (
 const ImeiSection: FC<FormSectionBaseProps> = ({ control }) => (
   <Card id="imei">
     {/* <h4 className="mb-4">IMEI Details</h4> */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
       <FormItem label="Scan IMEI as file">
         <Controller name="imei.scan_imei" control={control} render={({ field: { onChange, ...rest } }) => (
           <Input type="file" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />
@@ -284,7 +284,7 @@ const ImeiSection: FC<FormSectionBaseProps> = ({ control }) => (
 const EwayBillSection: FC<FormSectionBaseProps> = ({ control }) => (
     <Card id="eway_bill">
         {/* <h4 className="mb-4">E-Way Bill Details</h4> */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-4 mt-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 mt-2">
             <FormItem label="E-Way Bill No">
                 <Controller name="eway_bill.eway_bill_no" control={control} render={({ field }) => <Input {...field} placeholder="E-Way Bill Number" />} />
             </FormItem>
@@ -328,7 +328,7 @@ const EwayBillSection: FC<FormSectionBaseProps> = ({ control }) => (
 const DocateSection: FC<FormSectionBaseProps> = ({ control }) => (
   <Card id="docate">
     {/* <h4 className="mb-4">Docate / Lorry Receipt Details</h4> */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-4 mt-2">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 mt-2">
       <CheckableFormField control={control} name="docate.bill_to_company_name_address" label="Bill to Company Name & Address" />
       <CheckableFormField control={control} name="docate.ship_to_company_name_address" label="Ship to Company Name & Address" />
       <CheckableFormField control={control} name="docate.docate_no" label="Docate No" />
@@ -469,7 +469,7 @@ const LogisticsForm = () => {
                 }}>
                 <div className="space-y-4">
                 {documentImages.map((img, index) => (
-                    <div key={index} className="cursor-pointer border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-500 rounded-md overflow-hidden" onClick={() => handleImageClick(img)}>
+                    <div key={index} className="cursor-pointer border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-200 rounded-md overflow-hidden" onClick={() => handleImageClick(img)}>
                         <img src={img} alt={`Document ${index + 1}`} className="w-full h-auto object-cover" />
                     </div>
                 ))}
@@ -502,21 +502,29 @@ const LogisticsForm = () => {
       </Card>
       
       <Drawer
-        title="Document Viewer"
-        isOpen={isImageDrawerOpen}
-        onClose={closeImageDrawer}
-        onRequestClose={closeImageDrawer}
-        placement="left" // Assuming your Drawer component supports placement
-        width={500}
-      >
-        <div className="p-4 h-full overflow-y-auto"  style={{
-                    scrollbarWidth: 'none', // Only works in Firefox
-                }}>
-            {selectedImage && (
-                <img src={selectedImage} alt="Selected Document" className="w-full h-auto" />
-            )}
-        </div>
-      </Drawer>
+            title="Document Viewer"
+            isOpen={isImageDrawerOpen}
+            onClose={closeImageDrawer}
+            onRequestClose={closeImageDrawer}
+            placement="left"
+            width={500}
+            >
+            <div
+                className="p-4 h-full overflow-y-auto"
+                style={{
+                scrollbarWidth: "none", // Firefox only
+                }}
+            >
+                {selectedImage && (
+                <img
+                    src={selectedImage}
+                    alt="Selected Document"
+                    className="w-full h-auto border border-indigo-200 rounded-md"
+                />
+                )}
+            </div>
+        </Drawer>
+
     </>
   )
 }
