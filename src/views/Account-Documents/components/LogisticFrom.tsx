@@ -495,7 +495,7 @@ const LogisticsForm = () => {
       
       {/* Footer and Drawer */}
       <Card className="mt-6 bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex justify-end items-center p-4 gap-2">
+        <div className="flex justify-end items-center gap-2">
             <Button>Cancel</Button>
             <Button variant="solid" type="submit" onClick={handleSubmit(onFormSubmit)}>Save</Button>
         </div>
