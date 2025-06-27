@@ -409,6 +409,10 @@ const documentImages = [
     '/public/img/documents/invoice.avif',
     '/public/img/documents/invoice.avif',
     '/public/img/documents/invoice.avif',
+    '/public/img/documents/invoice.avif',
+    '/public/img/documents/invoice.avif',
+    '/public/img/documents/invoice.avif',
+    '/public/img/documents/invoice.avif',
 ]
 
 const LogisticsForm = () => {
