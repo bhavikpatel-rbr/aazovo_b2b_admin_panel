@@ -3,46 +3,13 @@ import Select from '@/components/ui/Select'
 import { FormItem } from '@/components/ui/Form'
 import { Controller } from 'react-hook-form'
 import type { FormSectionBaseProps } from '../types' // Assuming this path is correct
-import { getCountriesAction, getDepartmentsAction, getDesignationsAction, getRolesAction } from '@/reduxtool/master/middleware'
+import { getAllProductsAction, getBrandAction, getCategoriesAction, getCountriesAction, getDepartmentsAction, getDesignationsAction, getMemberAction, getRolesAction, getSubcategoriesByIdAction } from '@/reduxtool/master/middleware'
 import { useSelector } from 'react-redux'
 import { useEffect, useMemo } from 'react'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { useAppDispatch } from '@/reduxtool/store'
 
 // --- Mock Options Data (Replace with real data or fetch from API as needed) ---
-
-
-const categoryOptions = [
-    { value: 'technology', label: 'Technology' },
-    { value: 'healthcare', label: 'Healthcare' },
-    { value: 'finance', label: 'Finance' },
-    { value: 'retail', label: 'Retail' },
-    { value: 'manufacturing', label: 'Manufacturing' },
-    // ... other categories
-]
-
-const subCategoryOptions = [ // These would ideally be dependent on the selected category
-    { value: 'software_dev', label: 'Software Development' }, // Tech
-    { value: 'it_infra', label: 'IT Infrastructure' },       // Tech
-    { value: 'pharmaceuticals', label: 'Pharmaceuticals' },   // Healthcare
-    { value: 'medical_devices', label: 'Medical Devices' },   // Healthcare
-    { value: 'banking', label: 'Banking' },                 // Finance
-    // ... other sub-categories
-]
-
-const brandOptions = [ // These would be highly company-specific
-    { value: 'internal_brand_a', label: 'Internal Brand A' },
-    { value: 'internal_brand_b', label: 'Internal Brand B' },
-    { value: 'client_brand_x', label: 'Client Brand X' },
-    // ... other brands
-]
-
-const productOptions = [ // Also highly company-specific or market-specific
-    { value: 'product_alpha', label: 'Product Alpha' },
-    { value: 'service_beta', label: 'Service Beta' },
-    { value: 'platform_gamma', label: 'Platform Gamma' },
-    // ... other products/services
-]
 
 const reportingPersonnelOptions = [ // Example list of employees/managers
     { value: 'emp001', label: 'John Smith (Manager)' },
@@ -81,21 +48,47 @@ const RoleResponsibilitySection = ({
 }: RoleResponsibilitySectionProps) => {
     const dispatch = useAppDispatch();
 
-    const { Roles = [], departmentsData = [], designationsData = [],CountriesData =[] } = useSelector(masterSelector);
+    const { Roles = [], departmentsData = [], designationsData = [], CountriesData = [],
+        BrandData = [],
+        CategoriesData = [],
+        subCategoriesData = [],
+        AllProducts = [],
+        memberData=[],
+
+    } = useSelector(masterSelector);
 
     useEffect(() => {
         dispatch(getRolesAction());
         dispatch(getDepartmentsAction());
         dispatch(getDesignationsAction());
         dispatch(getCountriesAction());
-        
+        dispatch(getBrandAction());
+        dispatch(getCategoriesAction());
+        dispatch(getSubcategoriesByIdAction('0'));
+        dispatch(getAllProductsAction());
+        dispatch(getMemberAction());
     }, [dispatch])
 
     const countryOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((country: any) => ({ value: String(country.id), label: country.name })) : [], [Roles]);
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: any) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
     const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: any) => ({ value: String(d.id), label: d.name })) : [], [designationsData?.data]);
-
+    const brandOptions = BrandData.map((b: any) => ({ value: b.id, label: b.name, }));
+    const categoryOptions = CategoriesData.map((c: any) => ({ value: c.id, label: c.name, }));
+    const subCategoryOptions = subCategoriesData.map((sc: any) => ({ value: sc.id, label: sc.name, }));
+    const productOptions = AllProducts.map((sc: any) => ({
+        value: parseInt(sc.id),
+        label: sc.name,
+    }));
+  const reportingPersonnelOptions = useMemo(() => {
+    const data = memberData?.data?.data || memberData;
+    return Array.isArray(data)
+      ? data.map((m: any) => ({
+        value: String(m.id),
+        label: `${m.name} (ID:${m.id})`,
+      }))
+      : [];
+  }, [memberData]);
     return (
         <Card id="roleResponsibility">
             <h4 className="mb-6">Role & Responsibility</h4>
