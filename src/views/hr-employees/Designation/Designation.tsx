@@ -56,7 +56,8 @@ import {
   deleteAllDesignationsAction,
   getEmployeesAction,
   getDepartmentsAction,
-  submitExportReasonAction, // <-- ADDED
+  submitExportReasonAction,
+  getReportingTo, // <-- ADDED
 } from "@/reduxtool/master/middleware";
 import { useSelector, shallowEqual } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -119,7 +120,7 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 const exportReasonSchema = z.object({
   reason: z
     .string()
-    .min(1, "Reason for export is required.")
+    .min(10, "Reason for export is required.")
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
@@ -370,7 +371,7 @@ const DesignationListing = () => {
   const dispatch = useAppDispatch();
   const {
     designationsData: rawDesignationsData = {},
-    Employees = [],
+    reportingTo = [],
     departmentsData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
@@ -419,13 +420,13 @@ const DesignationListing = () => {
 
   const employeeOptions: SelectOption[] = useMemo(
     () =>
-      Array.isArray(Employees)
-        ? Employees.map((emp: GeneralListItem) => ({
+      Array.isArray(reportingTo.data)
+        ? reportingTo.data.map((emp: GeneralListItem) => ({
             value: String(emp.id),
             label: emp.name,
           }))
         : [],
-    [Employees]
+    [reportingTo.data]
   );
   const departmentOptions: SelectOption[] = useMemo(
     () =>
@@ -451,6 +452,13 @@ const DesignationListing = () => {
     defaultValues: { reason: "" },
     mode: "onChange",
   });
+
+  const watchedDepartmentId = formMethods.watch("department_id");
+  useEffect(() => {
+    if (watchedDepartmentId) {
+      dispatch(getReportingTo(watchedDepartmentId));
+    }
+  }, [watchedDepartmentId, dispatch]);
 
   const openAddDrawer = useCallback(() => {
     formMethods.reset({

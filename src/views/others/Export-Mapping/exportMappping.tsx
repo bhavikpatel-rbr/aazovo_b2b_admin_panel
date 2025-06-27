@@ -7,6 +7,7 @@ import React, {
   Suspense,
   useEffect,
   useRef,
+  ChangeEvent,
 } from "react";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
@@ -35,6 +36,8 @@ import {
   Select,
   DatePicker,
   Input,
+  Dropdown,
+  Checkbox,
 } from "@/components/ui";
 
 // Redux Actions
@@ -43,7 +46,7 @@ import { useAppDispatch } from "@/reduxtool/store";
 
 // Icons
 import { IoEyeOutline } from "react-icons/io5";
-import { TbSearch, TbCloudDownload, TbFilter, TbCloudUpload, TbCalendarUp, TbUserUp, TbBookUpload, TbReload } from "react-icons/tb";
+import { TbSearch, TbCloudDownload, TbFilter, TbCloudUpload, TbCalendarUp, TbUserUp, TbBookUpload, TbReload, TbColumns } from "react-icons/tb";
 import userIconPlaceholder from "/img/avatars/thumb-1.jpg";
 
 // Types
@@ -85,7 +88,7 @@ export type ExportMappingItem = {
 const exportReasonSchema = z.object({
   reason: z
     .string()
-    .min(1, "Reason for export is required.")
+    .min(10, "Reason for export is required.")
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
@@ -241,6 +244,8 @@ type ExportMappingFilterSchema = {
 };
 
 const ExportMappingTableTools = ({
+  columns,
+  setFilteredColumns,
   onSearchChange,
   allExportMappings,
   onApplyFilters,
@@ -248,6 +253,8 @@ const ExportMappingTableTools = ({
   onExport,
   isDataReady,
 }: {
+  columns: ColumnDef<ExportMappingItem>[],
+  setFilteredColumns : React.Dispatch<React.SetStateAction<ColumnDef<ExportMappingItem>[]>>,
   onSearchChange: (query: string) => void;
   allExportMappings: ExportMappingItem[];
   onApplyFilters: (filters: Partial<ExportMappingFilterSchema>) => void;
@@ -334,6 +341,22 @@ const ExportMappingTableTools = ({
     []
   );
 
+  const toggleColumn = (value:boolean, e: ChangeEvent)=> {
+    if(value){
+      setFilteredColumns(cols => {
+        const currentCol = columns.filter(col => col.header === e.target.name)
+        const currentColIndex = columns.findIndex(col => col.header === e.target.name)
+        
+        let updatedCols = [...cols]
+        updatedCols.splice(currentColIndex, 0, currentCol[0])
+        return updatedCols
+      })
+    }else{
+      setFilteredColumns(cols => cols.filter(col => col.header !== e.target.name))
+    }
+
+  }
+
   return (
     <div className="md:flex items-center justify-between w-full gap-2">
       <div className="flex-grow mb-2 md:mb-0">
@@ -346,6 +369,23 @@ const ExportMappingTableTools = ({
         />
       </div>
       <div className="flex gap-2">
+        
+        <Dropdown 
+          renderTitle={<Button title="Filter Columns" icon={<TbColumns />}/>}
+          className=""
+          style={{padding: "0px"}}
+        >
+          <div className="flex flex-col">
+            {
+              columns.map(col => (
+                <div key={col.header} className="flex items-center gap-2 hover:bg-gray-100 rounded-md py-2.5 px-2"> 
+                  <Checkbox defaultChecked name={col.header} onChange={toggleColumn} /> 
+                  {col.header}
+                </div>
+              ))
+            }
+          </div>
+        </Dropdown>
         <Button
         title="Clear Filters"
         icon={<TbReload />}
@@ -355,6 +395,7 @@ const ExportMappingTableTools = ({
         }}
         disabled={!isDataReady}
         />
+        
         <Button
           icon={<TbFilter />}
           onClick={openFilterDrawer}
@@ -786,8 +827,7 @@ const ExportMapping = () => {
   ], []);
 
 
-  const columns: ColumnDef<ExportMappingItem>[] = useMemo(
-    () => [
+  const columns: ColumnDef<ExportMappingItem>[] = [
       {
         header: "Exported By",
         accessorKey: "userName",
@@ -878,9 +918,8 @@ const ExportMapping = () => {
         meta: { cellClass: "text-center" },
         cell: (props) => <ActionColumn data={props.row.original} />,
       },
-    ],
-    []
-  );
+  ]
+  const [ filteredColumns, setFilteredColumns ] = useState(columns)
 
   return (
     <>
@@ -929,6 +968,8 @@ const ExportMapping = () => {
         </div>
         <div className="mb-4">
           <ExportMappingTableTools
+            columns={columns}
+            setFilteredColumns={setFilteredColumns}
             onSearchChange={handleSearchChange}
             allExportMappings={exportMappings}
             onApplyFilters={handleApplyFilters}
@@ -940,7 +981,7 @@ const ExportMapping = () => {
 
         <div className="flex-grow overflow-auto">
           <DataTable
-            columns={columns}
+            columns={filteredColumns}
             data={pageData}
             loading={tableLoading}
             pagingData={{

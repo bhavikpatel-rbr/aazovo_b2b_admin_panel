@@ -34,6 +34,7 @@ import {
   Tag,
   Dialog,
   Card,
+  DatePicker,
 } from "@/components/ui";
 import Dropdown from "@/components/ui/Dropdown";
 import Spinner from "@/components/ui/Spinner";
@@ -69,6 +70,10 @@ import {
   TbRefresh,
   TbProgress,
   TbCircleX,
+  TbBell,
+  TbUser,
+  TbCalendarEvent,
+  TbTagStarred,
 } from "react-icons/tb";
 
 // Types
@@ -164,6 +169,8 @@ export type ProductItem = {
   id: number;
   name: string;
   email: string | null;
+  contactNumber: string | null;
+  contactNumberCode: string | null;
   slug: string;
   skuCode: string | null;
   status: ProductStatus;
@@ -213,7 +220,13 @@ type ExportType = "products" | "keywords";
 // ============================================================================
 
 // --- Type Definitions for Modals ---
-export type ProductsModalType = "email";
+export type ProductsModalType =
+  | "email"
+  | "whatsapp"
+  | "notification"
+  | "task"
+  | "calendar"
+  | "active";
 
 export interface ProductsModalState {
   isOpen: boolean;
@@ -225,7 +238,23 @@ interface ProductsModalsProps {
   onClose: () => void;
 }
 
-// --- Helper Data for Modal Demos ---
+// --- Helper Data for Modal Demos (from reference) ---
+const dummyUsers = [
+  { value: "user1", label: "Alice Johnson" },
+  { value: "user2", label: "Bob Williams" },
+  { value: "user3", label: "Charlie Brown" },
+];
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+const eventTypeOptions = [
+  { value: "meeting", label: "Meeting" },
+  { value: "call", label: "Follow-up Call" },
+  { value: "deadline", label: "Project Deadline" },
+];
+
 const SendEmailDialog: React.FC<{
   item: ProductItem;
   onClose: () => void;
@@ -280,6 +309,288 @@ const SendEmailDialog: React.FC<{
     </Dialog>
   );
 };
+
+const SendWhatsAppDialog: React.FC<{
+  item: ProductItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      message: `Hi, I'm interested in your product: ${item.name}.`,
+    },
+  });
+  const onSendMessage = (data: { message: string }) => {
+    setIsLoading(true);
+    const phone = item.contactNumber?.replace(/\D/g, "");
+    if (!phone) {
+      toast.push(<Notification type="danger" title="Invalid Phone Number" />);
+      setIsLoading(false);
+      return;
+    }
+    const fullPhone = `${item.contactNumberCode?.replace("+", "")}${phone}`;
+    const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(
+      data.message
+    )}`;
+    window.open(url, "_blank");
+    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+    setIsLoading(false);
+    onClose();
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send WhatsApp about {item.name}</h5>
+      <form onSubmit={handleSubmit(onSendMessage)}>
+        <FormItem label="Message Template">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Open WhatsApp
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddNotificationDialog: React.FC<{
+  item: ProductItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { message: "", users: [] },
+  });
+  const onSubmit = (data: any) => {
+    setIsLoading(true);
+    console.log("Adding notification for", item.name, "with data:", data);
+    setTimeout(() => {
+      toast.push(
+        <Notification type="success" title="Notification Added" />
+      );
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for {item.name}</h5>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <FormItem label="Notify Users">
+          <Controller
+            name="users"
+            control={control}
+            render={({ field }) => (
+              <UiSelect isMulti options={dummyUsers} {...field} />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Add
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AssignTaskDialog: React.FC<{
+  item: ProductItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      assignTo: null,
+      taskDescription: "",
+      priority: null,
+      dueDate: null,
+    },
+  });
+  const onSubmit = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      `Assigning task related to "${item.name}" with data:`,
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Task Assigned" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for {item.name}</h5>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <FormItem label="Assign To">
+          <Controller
+            name="assignTo"
+            control={control}
+            render={({ field }) => <UiSelect options={dummyUsers} {...field} />}
+          />
+        </FormItem>
+        <FormItem label="Task Description">
+          <Controller
+            name="taskDescription"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <FormItem label="Priority">
+          <Controller
+            name="priority"
+            control={control}
+            render={({ field }) => (
+              <UiSelect options={priorityOptions} {...field} />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Due Date">
+          <Controller
+            name="dueDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker placeholder="Pick a date" {...field} />
+            )}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Assign
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddScheduleDialog: React.FC<{
+  item: ProductItem;
+  onClose: () => void;
+}> = ({ item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      eventType: null,
+      eventDate: null,
+      description: "",
+    },
+  });
+  const onSubmit = (data: any) => {
+    setIsLoading(true);
+    console.log(
+      `Adding schedule related to "${item.name}" with data:`,
+      data
+    );
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Schedule Added" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for {item.name}</h5>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <FormItem label="Event Type">
+          <Controller
+            name="eventType"
+            control={control}
+            render={({ field }) => (
+              <UiSelect options={eventTypeOptions} {...field} />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Event Date & Time">
+          <Controller
+            name="eventDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker placeholder="Pick a date" {...field} />
+            )}
+          />
+        </FormItem>
+        <FormItem label="Description / Notes">
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={3} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading}>
+            Add Schedule
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const GenericActionDialog: React.FC<{
+  type: ProductsModalType | null;
+  item: ProductItem;
+  onClose: () => void;
+}> = ({ type, item, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const title = type
+    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
+    : "Confirm Action";
+
+  const handleConfirm = () => {
+    setIsLoading(true);
+    console.log(`Performing action '${type}' for product ${item.name}`);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Action Completed" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-2">{title}</h5>
+      <p>
+        Are you sure you want to perform this action for product{" "}
+        <span className="font-semibold">{item.name}</span>?
+      </p>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
+          Confirm
+        </Button>
+      </div>
+    </Dialog>
+  );
+};
+
 const ProductsModals: React.FC<ProductsModalsProps> = ({
   modalState,
   onClose,
@@ -291,13 +602,23 @@ const ProductsModals: React.FC<ProductsModalsProps> = ({
     switch (type) {
       case "email":
         return <SendEmailDialog item={item} onClose={onClose} />;
+      case "whatsapp":
+        return <SendWhatsAppDialog item={item} onClose={onClose} />;
+      case "notification":
+        return <AddNotificationDialog item={item} onClose={onClose} />;
+      case "task":
+        return <AssignTaskDialog item={item} onClose={onClose} />;
+      case "calendar":
+        return <AddScheduleDialog item={item} onClose={onClose} />;
+      case "active":
+        return <GenericActionDialog type={type} item={item} onClose={onClose} />;
       default:
-        // Fallback or other modals can be handled here
         return null;
     }
   };
   return <>{renderModalContent()}</>;
 };
+
 
 // --- Form & Filter Schemas ---
 const productFormSchema = z.object({
@@ -367,7 +688,7 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 const exportReasonSchema = z.object({
   reason: z
     .string()
-    .min(1, "Reason for export is required.")
+    .min(10, "Reason for export is required.")
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
@@ -500,7 +821,7 @@ const ActionColumn = React.memo(
           <TbPencil />
         </div>
       </Tooltip>
-      <Tooltip title="Change Status">
+      {/* <Tooltip title="Change Status">
         <div
           className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
           role="button"
@@ -508,7 +829,7 @@ const ActionColumn = React.memo(
         >
           <TbSwitchHorizontal />
         </div>
-      </Tooltip>
+      </Tooltip> */}
       <Dropdown
         placement="bottom-end"
         renderTitle={
@@ -519,14 +840,44 @@ const ActionColumn = React.memo(
           </Tooltip>
         }
       >
-        <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
-        {/* <Dropdown.Item
+        <Dropdown.Item
           onClick={() => onOpenModal("email", rowData)}
           className="flex items-center gap-2"
         >
-          <TbMail size={18} /> <span className="text-sm">Send Email</span>
-        </Dropdown.Item> */}
+          <TbMail size={18} /> <span className="text-xs">Send Email</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("whatsapp", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBrandWhatsapp size={18} />{" "}
+          <span className="text-xs">Send Whatsapp</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("notification", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBell size={18} /> <span className="text-xs">Add Notification</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUser size={18} /> <span className="text-xs">Assign Task</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("calendar", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbCalendarEvent size={18} />{" "}
+          <span className="text-xs">Add Schedule</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("active", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbTagStarred size={18} /> <span className="text-xs">Add Active</span>
+        </Dropdown.Item>
         {/* <Dropdown.Item
           onClick={onDelete}
           className="flex items-center gap-2 text-red-600 hover:!bg-red-50 dark:hover:!bg-red-500/10"
@@ -1040,6 +1391,8 @@ const Products = () => {
         id: apiItem.id,
         name: apiItem.name,
         email: "product.support@example.com", // Dummy email for modal demo
+        contactNumber: "19876543210", // Dummy number for WhatsApp
+        contactNumberCode: "+1", // Dummy code for WhatsApp
         subject: `Inquiry about: ${apiItem.name}`, // Dummy subject for modal demo
         type: "Product Inquiry", // Dummy type for modal demo
         slug: apiItem.slug,

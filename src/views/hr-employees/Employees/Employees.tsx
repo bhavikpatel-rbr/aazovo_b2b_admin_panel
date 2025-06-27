@@ -14,9 +14,11 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
+import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Card,
+  DatePicker,
   Drawer,
   Dropdown,
   Form,
@@ -35,13 +37,18 @@ import Tooltip from "@/components/ui/Tooltip";
 // Icons
 import {
   TbActivity,
+  TbAlarm,
   TbBell,
   TbBrandWhatsapp,
   TbCalendarEvent,
   TbChecks,
+  TbClipboardText,
   TbCloudUpload,
   TbDownload,
   TbEye,
+  TbFileSearch,
+  TbFileText,
+  TbFileZip,
   TbFilter,
   TbKey,
   TbMail,
@@ -201,19 +208,39 @@ const initialDummyEmployees: EmployeeItem[] = [
 ];
 // --- End Constants ---
 
-// --- Reusable ActionColumn, EmployeeTable, EmployeeSearch, EmployeeSelectedFooter (mostly unchanged, minor prop adjustments if needed) ---
-// ActionColumn definition remains the same from your example.
+// --- Modal Type Definitions ---
+export type ModalType =
+  | 'email'
+  | 'whatsapp'
+  | 'notification'
+  | 'task'
+  | 'schedule'
+  | 'active'
+  | 'documents'
+  | 'activityLog'
+  | 'alert';
+
+export interface ModalState {
+  isOpen: boolean;
+  type: ModalType | null;
+  data: EmployeeItem | null;
+}
+
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
+  rowData,
   onEdit,
   onDelete,
-  onChangeStatus,
+  onChangePassword,
   onView,
+  onOpenModal,
 }: {
+  rowData: EmployeeItem;
   onEdit: () => void;
   onDelete: () => void;
-  onChangeStatus: () => void;
+  onChangePassword: () => void;
   onView: () => void;
+  onOpenModal: (type: ModalType, data: EmployeeItem) => void;
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
@@ -239,19 +266,60 @@ const ActionColumn = ({
         <div
           className={`text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`}
           role="button"
+          onClick={onChangePassword}
         >
           <TbKey />
         </div>
       </Tooltip>
-      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add as Notification</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Schedule Meeting</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbActivity size={18} /> <span className="text-xs">View Activity Log</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Documents</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs"> Send Email</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span></Dropdown.Item>
+      <Dropdown
+        renderTitle={
+          <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+        }
+      >
+        <Dropdown.Item onClick={() => onOpenModal('email', rowData)} className="flex items-center gap-2">
+          <TbMail size={18} />
+          <span className="text-xs">Send Email</span>
+        </Dropdown.Item>
+
+        <Dropdown.Item onClick={() => onOpenModal('whatsapp', rowData)} className="flex items-center gap-2">
+          <TbBrandWhatsapp size={18} />
+          <span className="text-xs">Send Whatsapp</span>
+        </Dropdown.Item>
+
+        <Dropdown.Item onClick={() => onOpenModal('notification', rowData)} className="flex items-center gap-2">
+          <TbBell size={18} />
+          <span className="text-xs">Add Notification</span>
+        </Dropdown.Item>
+
+        <Dropdown.Item onClick={() => onOpenModal('task', rowData)} className="flex items-center gap-2">
+          <TbUser size={18} />
+          <span className="text-xs">Assign Task</span>
+        </Dropdown.Item>
+
+        <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2">
+          <TbCalendarEvent size={18} />
+          <span className="text-xs">Add Schedule</span>
+        </Dropdown.Item>
+
+        <Dropdown.Item onClick={() => onOpenModal('active', rowData)} className="flex items-center gap-2">
+          <TbTagStarred size={18} />
+          <span className="text-xs">Add Activity</span>
+        </Dropdown.Item>
+
+        <Dropdown.Item onClick={() => onOpenModal('documents', rowData)} className="flex items-center gap-2">
+          <TbDownload size={18} />
+          <span className="text-xs">Download Documents</span>
+        </Dropdown.Item>
+
+        <Dropdown.Item onClick={() => onOpenModal('activityLog', rowData)} className="flex items-center gap-2">
+          <TbActivity size={18} />
+          <span className="text-xs">View Activity Log</span>
+        </Dropdown.Item>
+
+        <Dropdown.Item onClick={() => onOpenModal('alert', rowData)} className="flex items-center gap-2">
+          <TbAlarm size={18} />
+          <span className="text-xs">View Alerts</span>
+        </Dropdown.Item>
       </Dropdown>
     </div>
   );
@@ -393,8 +461,257 @@ const EmployeeSelected = ({
   );
 };
 // --- End EmployeeSelected ---
-// DetailViewDialog and ChangePasswordDialog remain the same.
-// --- Detail/Password Change Dialogs (Example placeholders) ---
+
+// ============================================================================
+// --- MODALS SECTION (ADAPTED FROM COMPANY MODULE) ---
+// ============================================================================
+
+// --- Helper Data for Modal Demos ---
+const dummyUsers = [
+  { value: "user1", label: "Alice Johnson" },
+  { value: "user2", label: "Bob Williams" },
+  { value: "user3", label: "Charlie Brown" },
+];
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+];
+const eventTypeOptions = [
+  { value: "meeting", label: "Meeting" },
+  { value: "call", label: "Follow-up Call" },
+  { value: "deadline", label: "Project Deadline" },
+];
+const dummyTimeline = [
+  { id: 1, icon: <TbMail />, title: "Onboarding Email Sent", desc: "Sent welcome kit and setup instructions.", time: "2023-10-25" },
+  { id: 2, icon: <TbCalendarEvent />, title: "Performance Review", desc: "Scheduled Q3 performance review.", time: "2023-09-15" },
+  { id: 3, icon: <TbPencil />, title: "Role Changed", desc: "Promoted to Senior Developer.", time: "2023-07-01" },
+];
+const dummyDocs = [
+  { id: "doc1", name: "Offer_Letter.pdf", type: "pdf", size: "1.2 MB" },
+  { id: "doc2", name: "Employee_Handbook.pdf", type: "pdf", size: "3.5 MB" },
+  { id: "doc3", name: "ID_Documents.zip", type: "zip", size: "5.1 MB" },
+];
+
+// --- Individual Dialog Components ---
+
+const SendEmailDialog: React.FC<{ employee: EmployeeItem; onClose: () => void }> = ({ employee, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({ defaultValues: { subject: "", message: "" } });
+  const onSendEmail = (data: { subject: string; message: string }) => {
+    setIsLoading(true);
+    console.log("Sending email to", employee.email, "with data:", data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Email Sent Successfully" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send Email to {employee.name}</h5>
+      <form onSubmit={handleSubmit(onSendEmail)}>
+        <FormItem label="Subject">
+          <Controller name="subject" control={control} render={({ field }) => <Input {...field} />} />
+        </FormItem>
+        <FormItem label="Message">
+          <Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading}>Send</Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const SendWhatsAppDialog: React.FC<{ employee: EmployeeItem; onClose: () => void }> = ({ employee, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi ${employee.name}, ` } });
+  const onSendMessage = (data: { message: string }) => {
+    setIsLoading(true);
+    const phone = employee.mobile?.replace(/\D/g, "");
+    if (!phone) {
+      toast.push(<Notification type="danger" title="Invalid Phone Number" />);
+      setIsLoading(false);
+      return;
+    }
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(data.message)}`;
+    window.open(url, "_blank");
+    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+    setIsLoading(false);
+    onClose();
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Send WhatsApp to {employee.name}</h5>
+      <form onSubmit={handleSubmit(onSendMessage)}>
+        <FormItem label="Message Template">
+          <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={onClose}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading}>Open WhatsApp</Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const AddNotificationDialog: React.FC<{ employee: EmployeeItem; onClose: () => void }> = ({ employee, onClose }) => {
+  // A simplified version
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for {employee.name}</h5>
+      <Input textArea placeholder="Enter notification message..." rows={3} />
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>Cancel</Button>
+        <Button variant="solid" onClick={onClose}>Submit</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const AssignTaskDialog: React.FC<{ employee: EmployeeItem; onClose: () => void }> = ({ employee, onClose }) => {
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task to {employee.name}</h5>
+      <FormItem label="Task Title">
+        <Input placeholder="e.g., Complete Q3 report" />
+      </FormItem>
+      <FormItem label="Assign To">
+        <UiSelect placeholder="Select a team member" options={dummyUsers} />
+      </FormItem>
+      <FormItem label="Priority">
+        <UiSelect placeholder="Select priority" options={priorityOptions} />
+      </FormItem>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>Cancel</Button>
+        <Button variant="solid" onClick={onClose}>Assign</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const AddScheduleDialog: React.FC<{ employee: EmployeeItem; onClose: () => void }> = ({ employee, onClose }) => {
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for {employee.name}</h5>
+      <FormItem label="Event Type">
+        <UiSelect options={eventTypeOptions} />
+      </FormItem>
+      <FormItem label="Date & Time">
+        <DatePicker placeholder="Pick a date & time" />
+      </FormItem>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>Cancel</Button>
+        <Button variant="solid" onClick={onClose}>Add Schedule</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const DownloadDocumentDialog: React.FC<{ employee: EmployeeItem; onClose: () => void }> = ({ employee, onClose }) => {
+  const iconMap: Record<string, React.ReactElement> = {
+    pdf: <TbFileText className="text-red-500" />,
+    zip: <TbFileZip className="text-amber-500" />,
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Documents for {employee.name}</h5>
+      <div className="flex flex-col gap-3 mt-4">
+        {dummyDocs.map(doc => (
+          <div key={doc.id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+            <div className="flex items-center gap-3">
+              {React.cloneElement(iconMap[doc.type] || <TbClipboardText />, { size: 28 })}
+              <div>
+                <p className="font-semibold text-sm">{doc.name}</p>
+                <p className="text-xs text-gray-400">{doc.size}</p>
+              </div>
+            </div>
+            <Tooltip title="Download">
+              <Button shape="circle" size="sm" icon={<TbDownload />} />
+            </Tooltip>
+          </div>
+        ))}
+      </div>
+      <div className="text-right mt-6"> <Button onClick={onClose}>Close</Button> </div>
+    </Dialog>
+  );
+};
+
+const ActivityLogDialog: React.FC<{ employee: EmployeeItem; onClose: () => void }> = ({ employee, onClose }) => {
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Activity Log for {employee.name}</h5>
+      <div className="mt-4">
+        {dummyTimeline.map(item => (
+          <div key={item.id} className="flex gap-4 relative">
+            <div className="bg-gray-200 dark:bg-gray-600 w-10 h-10 rounded-full flex items-center justify-center">
+              {React.cloneElement(item.icon, { size: 20 })}
+            </div>
+            <div className="pb-8">
+              <p className="font-semibold">{item.title}</p>
+              <p className="text-sm">{item.desc}</p>
+              <p className="text-xs text-gray-400 mt-1">{item.time}</p>
+            </div>
+            {dummyTimeline[dummyTimeline.length - 1].id !== item.id && (
+              <div className="absolute left-5 top-10 h-full w-px bg-gray-200 dark:bg-gray-600"></div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>Close</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+const GenericActionDialog: React.FC<{ type: ModalType | null; employee: EmployeeItem; onClose: () => void; }> = ({ type, employee, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : "Confirm Action";
+  const handleConfirm = () => {
+    setIsLoading(true);
+    console.log(`Performing action '${type}' for employee ${employee.name}`);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Action Completed" />);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-2">{title}</h5>
+      <p>Are you sure you want to perform this action for <span className="font-semibold">{employee.name}</span>?</p>
+      <div className="text-right mt-6">
+        <Button className="mr-2" onClick={onClose}>Cancel</Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button>
+      </div>
+    </Dialog>
+  );
+};
+
+// --- Main Modal Router Component ---
+const EmployeeModals: React.FC<{ modalState: ModalState; onClose: () => void; }> = ({ modalState, onClose }) => {
+  const { type, data: employee, isOpen } = modalState;
+  if (!isOpen || !employee) return null;
+
+  switch (type) {
+    case 'email': return <SendEmailDialog employee={employee} onClose={onClose} />;
+    case 'whatsapp': return <SendWhatsAppDialog employee={employee} onClose={onClose} />;
+    case 'notification': return <AddNotificationDialog employee={employee} onClose={onClose} />;
+    case 'schedule': return <AddScheduleDialog employee={employee} onClose={onClose} />;
+    case 'task': return <AssignTaskDialog employee={employee} onClose={onClose} />;
+    case 'documents': return <DownloadDocumentDialog employee={employee} onClose={onClose} />;
+    case 'activityLog': return <ActivityLogDialog employee={employee} onClose={onClose} />;
+    case 'alert':
+    case 'active':
+    default: return <GenericActionDialog type={type} employee={employee} onClose={onClose} />;
+  }
+};
+
 // --- Detail/Password Change Dialogs (Example placeholders) ---
 const EmployeeDetailViewDialog = ({
   isOpen,
@@ -654,26 +971,21 @@ function exportToCsvEmployees(filename: string, rows: EmployeeItem[]) {
 
 // --- Main EmployeesListing Component ---
 const EmployeesListing = () => {
-  const navigate = useNavigate('hr-employees/employees/add'); // Not used for add/edit if using drawers
+  const navigate = useNavigate(); // Now used for Add and Edit navigation
 
   // --- State ---
   const [employees, setEmployees] = useState([]);
   const [masterLoadingStatus, setMasterLoadingStatus] = useState<
-    "idle" | "idle"
+    "idle" | "loading"
   >("idle"); // Mimicking Redux status
 
-  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<EmployeeItem | null>(
-    null
-  );
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<EmployeeItem | null>(null); // Renamed from countryToDelete
+  const [itemToDelete, setItemToDelete] = useState<EmployeeItem | null>(null);
 
   const [filterCriteria, setFilterCriteria] = useState<EmployeeFilterFormData>(
     {}
@@ -686,24 +998,24 @@ const EmployeesListing = () => {
   });
   const [selectedEmployees, setSelectedEmployees] = useState<EmployeeItem[]>(
     []
-  ); // Renamed from selectedItems
+  );
 
-  // Detail/Password Dialog States (from original component)
+  // Dialog States
   const [detailViewOpen, setDetailViewOpen] = useState(false);
   const [changePwdOpen, setChangePwdOpen] = useState(false);
   const [currentItemForDialog, setCurrentItemForDialog] =
     useState<EmployeeItem | null>(null);
+
+  // Modal State for action dropdown
+  const [modalState, setModalState] = useState<ModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+
   const dispatch = useAppDispatch();
 
   // React Hook Form instances
-  const addFormMethods = useForm<EmployeeFormData>({
-    resolver: zodResolver(employeeFormSchema),
-    mode: "onChange",
-  });
-  const editFormMethods = useForm<EmployeeFormData>({
-    resolver: zodResolver(employeeFormSchema),
-    mode: "onChange",
-  });
   const filterFormMethods = useForm<EmployeeFilterFormData>({
     resolver: zodResolver(employeeFilterFormSchema),
     defaultValues: filterCriteria,
@@ -727,79 +1039,17 @@ const EmployeesListing = () => {
     dispatch(getDesignationsAction());
   }, [dispatch])
 
-  // --- CRUD and Drawer Handlers ---
-  const openAddDrawer = () => {
-    addFormMethods.reset({
-      name: "",
-      email: "",
-      mobile: "",
-      department: "",
-      designation: "",
-      status: "active",
-      roles: [],
-      joiningDate: null,
-      bio: "",
-    });
-    setIsAddDrawerOpen(true);
+  // --- Modal Handlers ---
+  const handleOpenModal = (type: ModalType, employee: EmployeeItem) => {
+    setModalState({ isOpen: true, type, data: employee });
   };
-  const closeAddDrawer = () => {
-    addFormMethods.reset();
-    setIsAddDrawerOpen(false);
-  };
-  const onAddEmployeeSubmit = async (data: EmployeeFormData) => {
-    setIsSubmitting(true);
-    setMasterLoadingStatus("idle");
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API
-    const newEmployee: EmployeeItem = {
-      id: `EMP${Date.now()}`,
-      ...data,
-      avatar: null, // Default avatar or handle upload
-      createdAt: new Date(),
-      joiningDate: data.joiningDate ? new Date(data.joiningDate) : null,
-    };
-    setEmployees((prev) => [newEmployee, ...prev]);
-    toast.push(
-      <Notification
-        title="Employee Added"
-        type="success"
-      >{`Employee "${data.name}" added.`}</Notification>
-    );
-    closeAddDrawer();
-    setIsSubmitting(false);
-    setMasterLoadingStatus("idle");
+  const handleCloseModal = () => {
+    setModalState({ isOpen: false, type: null, data: null });
   };
 
+  // --- CRUD and Page Navigation Handlers ---
   const openEditPage = (employee: EmployeeItem) => {
-    console.log('test');
-  };
-  const closeEditDrawer = () => {
-    setEditingEmployee(null);
-    editFormMethods.reset();
-    setIsEditDrawerOpen(false);
-  };
-  const onEditEmployeeSubmit = async (data: EmployeeFormData) => {
-    if (!editingEmployee) return;
-    setIsSubmitting(true);
-    setMasterLoadingStatus("idle");
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API
-    const updatedEmployee: EmployeeItem = {
-      ...editingEmployee,
-      ...data,
-      joiningDate: data.joiningDate ? new Date(data.joiningDate) : null,
-      // Avatar update would be handled separately
-    };
-    setEmployees((prev) =>
-      prev.map((emp) => (emp.id === editingEmployee.id ? updatedEmployee : emp))
-    );
-    toast.push(
-      <Notification
-        title="Employee Updated"
-        type="success"
-      >{`Employee "${data.name}" updated.`}</Notification>
-    );
-    closeEditDrawer();
-    setIsSubmitting(false);
-    setMasterLoadingStatus("idle");
+    navigate(`/hr-employees/employees/edit/${employee.id}`);
   };
 
   const handleDeleteClick = (employee: EmployeeItem) => {
@@ -807,10 +1057,9 @@ const EmployeesListing = () => {
     setSingleDeleteConfirmOpen(true);
   };
   const onConfirmSingleDelete = async () => {
-    // Adapted from your original handleDelete
     if (!itemToDelete) return;
     setIsDeleting(true);
-    setMasterLoadingStatus("idle");
+    setMasterLoadingStatus("loading");
     setSingleDeleteConfirmOpen(false);
     await new Promise((resolve) => setTimeout(resolve, 500));
     setEmployees((current) => current.filter((e) => e.id !== itemToDelete.id));
@@ -829,7 +1078,6 @@ const EmployeesListing = () => {
   };
 
   const handleDeleteSelected = async () => {
-    // Adapted from your original
     if (selectedEmployees.length === 0) {
       toast.push(
         <Notification title="No Selection" type="info">
@@ -839,7 +1087,7 @@ const EmployeesListing = () => {
       return;
     }
     setIsDeleting(true);
-    setMasterLoadingStatus("idle");
+    setMasterLoadingStatus("loading");
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const selectedIds = new Set(selectedEmployees.map((e) => e.id));
     setEmployees((current) => current.filter((e) => !selectedIds.has(e.id)));
@@ -1030,7 +1278,7 @@ const EmployeesListing = () => {
     navigate(`/hr-employees/employees/view/${employee.id}`);
     // setCurrentItemForDialog(employee);
     // setDetailViewOpen(true);
-  }, []);
+  }, [navigate]);
   const handleCloseDetailView = useCallback(() => {
     setDetailViewOpen(false);
     setCurrentItemForDialog(null);
@@ -1052,8 +1300,6 @@ const EmployeesListing = () => {
         accessorKey: "status",
         /* ... (keep original cell) ... */ cell: (props) => {
           const { status } = props.row.original || {};
-          console.log(status, "statusstatus");
-
           const displayStatus = status
             .replace(/_/g, " ")
             .replace(/\b\w/g, (l) => l.toLowerCase());
@@ -1095,14 +1341,11 @@ const EmployeesListing = () => {
         header: "Designation", accessorKey: "designation", size: 200,
          /* ... (keep original cell) ... */ cell: (props) => {
           const data = props.row.original || {};
-          console.log(data, "datadatadatadata");
 
           return (
             <div className="flex items-center">
               <div className="ml-2 rtl:mr-2">
                 <span className="font-semibold">{data?.designation_id ?? ""}</span>
-                {/* <div className="text-xs text-gray-500">{data?.designation_id ?? ""}</div> */}
-                {/* <div className="text-xs text-gray-500">{mobile}</div> */}
               </div>
             </div>
           );
@@ -1112,7 +1355,6 @@ const EmployeesListing = () => {
         header: "Department",
         accessorKey: "department",
         size: 200,
-
          /* ... (keep original cell) ... */ cell: (props) => {
           const { department } = props.row.original || {};
 
@@ -1120,8 +1362,6 @@ const EmployeesListing = () => {
             <div className="flex items-center">
               <div className="ml-2 rtl:mr-2">
                 <span className="font-semibold">{department?.name ?? ""}</span>
-                {/* <div className="text-xs text-gray-500">{department?.id ?? ""}</div> */}
-                {/* <div className="text-xs text-gray-500">{mobile}</div> */}
               </div>
             </div>
           );
@@ -1133,7 +1373,6 @@ const EmployeesListing = () => {
         cell: (props) => {
 
           const { roles } = props.row.original || {};
-          console.log(roles, "datadatadatadata");
 
           return (
             <div className="flex flex-wrap gap-1 text-xs">
@@ -1163,22 +1402,24 @@ const EmployeesListing = () => {
         meta: { HeaderClass: "text-center" },
         cell: (props) => (
           <ActionColumn
+            rowData={props.row.original}
             onView={() => handleViewDetails(props.row.original)}
             onEdit={() => openEditPage(props.row.original)}
             onDelete={() => handleDeleteClick(props.row.original)}
             onChangePassword={() => handleChangePassword(props.row.original)}
+            onOpenModal={handleOpenModal}
           />
         ),
       },
     ],
-    [handleViewDetails, handleChangePassword, openEditPage, handleDeleteClick]
-  ); // Added openEditPage, handleDeleteClick to deps
+    [handleViewDetails, handleChangePassword, openEditPage, handleDeleteClick, handleOpenModal]
+  ); // Added openEditPage, handleDeleteClick, handleOpenModal to deps
 
   // Options for Filter Dropdowns
   const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
   const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: any) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
   const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: any) => ({ value: String(d.id), label: d.name })) : [], [designationsData?.data]);
-  const statusOptionsForFilter = useMemo(() =>EMPLOYEE_STATUS_OPTIONS.map((s) => ({ value: s.value, label: s.label })),[]);
+  const statusOptionsForFilter = useMemo(() => EMPLOYEE_STATUS_OPTIONS.map((s) => ({ value: s.value, label: s.label })), []);
 
   return (
     <>
@@ -1186,7 +1427,6 @@ const EmployeesListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Employees Listing</h5>
-            {/* Modified "Add New" button to open drawer */}
             <Button variant="solid" icon={<TbPlus />} onClick={() => navigate('/hr-employees/employees/add')}>
               Add New
             </Button>
@@ -1295,6 +1535,7 @@ const EmployeesListing = () => {
         onClose={handleCloseChangePwd}
         employee={currentItemForDialog}
       />
+      <EmployeeModals modalState={modalState} onClose={handleCloseModal} />
 
       {/* Filter Drawer */}
       <Drawer
@@ -1416,8 +1657,3 @@ const EmployeesListing = () => {
 };
 
 export default EmployeesListing;
-
-// Helper function (if not globally available)
-// function classNames(...classes: (string | boolean | undefined)[]) {
-//     return classes.filter(Boolean).join(' ');
-// }

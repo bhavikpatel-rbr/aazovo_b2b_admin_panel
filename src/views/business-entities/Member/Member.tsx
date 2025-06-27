@@ -176,7 +176,7 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 const exportReasonSchema = z.object({
   reason: z
     .string()
-    .min(1, "Reason for export is required.")
+    .min(10, "Reason for export is required.")
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
@@ -1485,89 +1485,78 @@ const ActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        <Dropdown.Item
-          onClick={() => onOpenModal("notification", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbBell size={18} />{" "}
-          <span className="text-xs">Add as Notification</span>
-        </Dropdown.Item>
-
-        <Dropdown.Item
-          onClick={() => onOpenModal("active", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbTagStarred size={18} />{" "}
-          <span className="text-xs">Mark as Active</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("calendar", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbCalendarEvent size={18} />{" "}
-          <span className="text-xs">Add to Calendar</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("task", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("alert", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
-        </Dropdown.Item>
-
-        <Dropdown.Item
-          onClick={() => onOpenModal("trackRecord", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbFileSearch size={18} />{" "}
-          <span className="text-xs">View Company</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("engagement", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbUserSearch size={18} /> <span className="text-xs">Engagement</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("document", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbDownload size={18} />{" "}
-          <span className="text-xs">Download Document</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("feedback", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbMessageReport size={18} />{" "}
-          <span className="text-xs">View Request & Feedback</span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => onOpenModal("wallLink", rowData)}
-          className="flex items-center gap-2"
-        >
-          <TbLink size={18} /> <span className="text-xs">Add Wall Link</span>
-        </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbKey size={18} /> <span className="text-xs">Reset Password</span>
-        </Dropdown.Item>
+        {/* 1. Send E-mail */}
         <Dropdown.Item
           onClick={() => onOpenModal("email", rowData)}
           className="flex items-center gap-2"
         >
           <TbMail size={18} /> <span className="text-xs">Send Email</span>
         </Dropdown.Item>
+
+        {/* 2. Send WhatsApp */}
         <Dropdown.Item
           onClick={() => onOpenModal("whatsapp", rowData)}
           className="flex items-center gap-2"
         >
-          <TbBrandWhatsapp size={18} />{" "}
-          <span className="text-xs">Send on Whatsapp</span>
+          <TbBrandWhatsapp size={18} />
+          <span className="text-xs">Send Whatsapp</span>
+        </Dropdown.Item>
+
+        {/* 3. Add Notification */}
+        <Dropdown.Item
+          onClick={() => onOpenModal("notification", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBell size={18} />
+          <span className="text-xs">Add Notification</span>
+        </Dropdown.Item>
+
+        {/* 4. Assign Task */}
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUser size={18} /> <span className="text-xs">Assign Task</span>
+        </Dropdown.Item>
+
+        {/* 5. Add Schedule */}
+        <Dropdown.Item
+          onClick={() => onOpenModal("calendar", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbCalendarEvent size={18} />
+          <span className="text-xs">Add Schedule</span>
+        </Dropdown.Item>
+
+        {/* 6. Add Active */}
+        <Dropdown.Item
+          onClick={() => onOpenModal("active", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbTagStarred size={18} />
+          <span className="text-xs">Add Active</span>
+        </Dropdown.Item>
+
+        {/* 7. View Company */}
+        <Dropdown.Item
+          onClick={() => onOpenModal("trackRecord", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbFileSearch size={18} />
+          <span className="text-xs">View Company</span>
+        </Dropdown.Item>
+
+        {/* 8. View Brand Profile */}
+        <Dropdown.Item
+          onClick={() => onOpenModal("trackRecord", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUserSearch size={18} /> <span className="text-xs">View Brand Profile</span>
+        </Dropdown.Item>
+
+        {/* 9. Reset Passwords */}
+        <Dropdown.Item className="flex items-center gap-2">
+          <TbKey size={18} /> <span className="text-xs">Reset Password</span>
         </Dropdown.Item>
       </Dropdown>
     </div>

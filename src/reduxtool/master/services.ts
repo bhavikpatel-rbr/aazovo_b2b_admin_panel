@@ -1155,7 +1155,7 @@ export const editDesignationAsync = async (unitData: any) => {
   console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/designation/${unitData?.id}`, { _method: "PUT", name: unitData?.name })
+    const response = await axiosInstance.post(`${config.apiURL}/master/designation/${unitData?.id}`, { _method: "PUT", name: unitData?.name, department_id: unitData?.department_id, reporting_manager: unitData?.reporting_manager, status: unitData?.status })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2899,5 +2899,14 @@ export const apiGetEmployeeByIdAsync = async (id) => {
     return response;
   } catch (err) {
     return isAxiosError(err);
+  }
+}
+
+export const getReportingToAsync = async (department_id: any) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/reporting_to?department_id=${department_id}`);
+    return response.data
+  } catch (err) {
+    return isAxiosError(err)
   }
 }
