@@ -205,13 +205,13 @@ export type CompanyItem = {
   company_code: string | null;
   company_name: string;
   status:
-    | "Verified"
-    | "Non Verified"
-    | "Active"
-    | "Pending"
-    | "Inactive"
-    | "active"
-    | "inactive"; // Extended to include new statuses
+  | "Verified"
+  | "Non Verified"
+  | "Active"
+  | "Pending"
+  | "Inactive"
+  | "active"
+  | "inactive"; // Extended to include new statuses
   primary_email_id: string;
   primary_contact_number: string;
   primary_contact_number_code: string;
@@ -869,16 +869,21 @@ const ViewCompanyDetailDialog: React.FC<{
             {renderDetailItem("Company Code", company.company_code)}
             {renderDetailItem("Ownership Type", company.ownership_type)}
             {renderDetailItem("Owner Name", company.owner_name)}
-            {renderDetailItem(
-              "Status",
-              <Tag
-                className={`${getCompanyStatusClass(
-                  company.status
-                )} capitalize`}
-              >
-                {company.status}
-              </Tag>
-            )}
+            <div className="mb-3">
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                Status:{" "}
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+                <Tag
+                  className={`${getCompanyStatusClass(
+                    company.status
+                  )} capitalize`}
+                >
+                  {company.status}
+                </Tag>
+              </span>
+
+            </div>
             {renderDetailItem("Establishment Year", company.establishment_year)}
             {renderDetailItem("No. of Employees", company.no_of_employees)}
             {renderDetailItem(
@@ -915,9 +920,12 @@ const ViewCompanyDetailDialog: React.FC<{
             )}
             {renderDetailItem("Support Email", company.support_email)}
             {renderDetailItem("Notification Email", company.notification_email)}
-            {renderDetailItem(
-              "Website",
-              company.company_website ? (
+             <div className="mb-3">
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                Website:{" "}
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+               {company.company_website ? (
                 <a
                   href={company.company_website}
                   target="_blank"
@@ -928,8 +936,10 @@ const ViewCompanyDetailDialog: React.FC<{
                 </a>
               ) : (
                 "N/A"
-              )
-            )}
+              )}
+              </span>
+           
+          </div>
           </div>
         </Card>
 
@@ -952,22 +962,33 @@ const ViewCompanyDetailDialog: React.FC<{
             {renderDetailItem("PAN Number", company.pan_number)}
             {renderDetailItem("TRN Number", company.trn_number)}
             {renderDetailItem("TAN Number", company.tan_number)}
-            {renderDetailItem(
-              "KYC Verified",
-              company.kyc_verified ? (
+            <div className="mb-3">
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                KYC Verified:{" "}
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+               { company.kyc_verified ? (
                 <MdCheckCircle className="text-green-500 text-xl inline-block" />
               ) : (
                 <MdCancel className="text-red-500 text-xl inline-block" />
-              )
-            )}
-            {renderDetailItem(
-              "Billing Enabled",
-              company.enable_billing ? (
+              )}
+              </span>
+           
+          </div>
+              <div className="mb-3">
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                Billing Enabled:{" "}
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+               {  company.enable_billing ? (
                 <MdCheckCircle className="text-green-500 text-xl inline-block" />
               ) : (
                 <MdCancel className="text-red-500 text-xl inline-block" />
-              )
-            )}
+              )}
+              </span>
+           
+          </div>
+           
             {renderDetailItem(
               "Billing Due Date",
               company.due_after_3_months_date
@@ -1341,7 +1362,7 @@ const ViewMembersDialog: React.FC<{
       {/* Replace dummyMembers with actual data from company object */}
       <div className="mt-4 flex flex-col gap-4">
         {company.company_team_members &&
-        company.company_team_members.length > 0 ? (
+          company.company_team_members.length > 0 ? (
           company.company_team_members.map((member) => (
             <div
               key={member.id}
@@ -1907,13 +1928,13 @@ const CompanyListTable = () => {
             ? av === bv
               ? 0
               : av
-              ? -1
-              : 1
+                ? -1
+                : 1
             : av === bv
-            ? 0
-            : av
-            ? 1
-            : -1;
+              ? 0
+              : av
+                ? 1
+                : -1;
         }
         return 0;
       });
@@ -2059,7 +2080,7 @@ const CompanyListTable = () => {
                 </div>
               </div>
               <span className="text-xs mt-1">
-                <b>Ownership Type:</b> {ownership_type|| "N/A"}
+                <b>Ownership Type:</b> {ownership_type || "N/A"}
               </span>
               <span className="text-xs mt-1">
                 <b>Primary Business Type:</b> {primary_business_type || "N/A"}
@@ -2171,7 +2192,7 @@ const CompanyListTable = () => {
                 </Tooltip>
               </div>
               <span>
-                <b>Billing Due:</b> 
+                <b>Billing Due:</b>
                 {/* {due_after_3_months_date ? 
                 new Date(due_after_3_months_date).toLocaleDateString("en-GB", 
                 { day: "numeric", month: "short", year: "numeric" }).replace(/ /g, "/") : "N/A"} */}

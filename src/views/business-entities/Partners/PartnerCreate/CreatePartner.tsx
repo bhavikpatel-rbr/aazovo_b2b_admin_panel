@@ -29,12 +29,9 @@ import {
   addpartnerAction,
   deletepartnerAction,
   editpartnerAction,
-  getBrandAction,
-  getCategoriesAction,
+  getCompanyAction, 
   getContinentsAction,
   getCountriesAction,
-  getMemberAction,
-  getMembersAction,
   getpartnerAction,
   getpartnerByIdAction
 } from "@/reduxtool/master/middleware";
@@ -49,14 +46,12 @@ import { z } from "zod";
 
 interface MemberItem {
   id?: string;
-  member_id?: string | { label: string; value: string };
   designation?: string;
   person_name?: string;
+  company_name?: string;
+  email?: string;
   number?: string;
-  type?: string;
-  team_name?: string;
 }
-
 
 interface CompanyBankDetailItemFE {
     id?: string;
@@ -76,17 +71,20 @@ interface CertificateItemFE {
 
 interface BranchItemFE {
     id?: string;
-    office_type?: string | { label: string; value: string };
+    office_type?: { label: string; value: string };
     office_name?: string;
     address?: string;
-    country_id?: string | { label: string; value: string };
+    country_id?: { label: string; value: string };
     state?: string;
     city?: string;
     zip_code?: string;
     gst_number?: string;
+    contact_person?: string;
+    office_email?: string;
+    office_phone?: string;
 }
 
-interface BillingDocItemFE {
+interface OtherDocItemFE {
     id?: string;
     document_name?: string;
     document?: File | string | null;
@@ -94,16 +92,15 @@ interface BillingDocItemFE {
 
 interface ReferenceItemFE {
     id?: string;
-    person_name?: string;
-    referenced_partner_id?: string | { label: string; value: string };
+    referenced_partner_id?: { label: string; value: string };
+    company_id?: { label: string; value: string };
+    email?: string;
     number?: string;
     remark?: string;
 }
 
 export interface CompanyFormSchema {
   id?: string | number;
-  company_profile_settings_id?: any;
-
   partner_name?: string;
   primary_contact_number?: string;
   primary_contact_number_code?: { label: string; value: string };
@@ -121,8 +118,8 @@ export interface CompanyFormSchema {
   zip_code?: string;
   country_id?: { label: string; value: string };
   continent_id?: { label: string; value: string };
-  join_us_as?: { label: string; value: string };
-  industrial_expertise?: { label: string; value: string };
+  join_us_as?: { label: string; value: string },
+  industrial_expertise?: { label: string; value: string },
   gst_number?: string;
   pan_number?: string;
   trn_number?: string;
@@ -131,17 +128,10 @@ export interface CompanyFormSchema {
   no_of_employees?: number | string;
   partner_website?: string;
   partner_logo?: File | string | null;
-  primary_business_type?: { label: string; value: string };
-  primary_business_category?: string;
-  sub_category?: Array<{ label: string; value: string }>;
-  interested_in?: { label: string; value: string };
-
+  
   partner_certificate?: CertificateItemFE[];
   office_info?: BranchItemFE[];
 
-  declaration_206ab?: File | string | null;
-  declaration_206ab_remark?: string;
-  declaration_206ab_remark_enabled?: boolean;
   agreement_file?: File | string | null;
   agreement_remark?: string;
   agreement_verified?: boolean;
@@ -171,35 +161,24 @@ export interface CompanyFormSchema {
   other_document_verified?: boolean;
 
   primary_account_number?: any;
-  primary_bank_name?: string | { label: string; value: string };
+  primary_bank_name?: string;
   primary_ifsc_code?: string;
   primary_bank_verification_photo?: File | string | null;
   secondary_account_number?: string;
-  secondary_bank_name?: string | { label: string; value: string };
+  secondary_bank_name?: string;
   secondary_ifsc_code?: string;
   secondary_bank_verification_photo?: File | string | null;
   partner_bank_details?: CompanyBankDetailItemFE[];
 
   USER_ACCESS?: boolean;
   BILLING_FIELD?: boolean;
-  billing_documents?: BillingDocItemFE[];
-  DOMAIN_MANAGEMENT_FIELD?: Array<{ label: string; value: string }>;
+  billing_cycle?: number | string;
+  other_documents?: OtherDocItemFE[];
 
   member?: MemberItem[];
 
   status?: { label: string; value: string };
-  brands?: Array<{ label: string; value: string }>;
-  category?: Array<{ label: string; value: string }>;
   support_email?: string;
-  mobile?: string;
-  company_type?: { label: string; value: string };
-
-  facebook?: string;
-  instagram?: string;
-  linkedin?: string;
-  youtube?: string;
-  twitter?: string;
-
   notification_email?: string;
   partner_references?: ReferenceItemFE[];
 }
@@ -235,6 +214,7 @@ interface ApiSingleCompanyItem {
     continent?: { name: string };
     kyc_verified?: boolean | "Yes" | "No" | "1" | "0";
     enable_billing?: boolean | "Yes" | "No" | "1" | "0";
+    billing_cycle?: number;
     primary_account_number?: string;
     primary_bank_name?: string;
     primary_ifsc_code?: string;
@@ -285,12 +265,16 @@ interface ApiSingleCompanyItem {
     office_info?: any[];
     partner_certificate?: any[];
     partner_references?: any[];
-    billing_documents?: any[];
+    other_documents?: any[];
 }
 
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
-const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, partnerOptions: any[] = []): Partial<CompanyFormSchema> => {
+const transformApiToFormSchema = (
+    apiData: ApiSingleCompanyItem,
+    partnerOptions: { label: string; value: any }[],
+    companyOptions: { label: string; value: any }[]
+  ): Partial<CompanyFormSchema> => {
   const toBoolean = (value: any): boolean => {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') {
@@ -343,7 +327,6 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, partnerOptions:
     partner_logo: apiData.partner_logo,
     status: toSelectObject(apiData.status),
     
-    // KYC Docs
     agreement_file: apiData.agreement_file,
     agreement_verified: toBoolean(apiData.agreement_verified),
     agreement_remark: apiData.agreement_remark,
@@ -371,8 +354,7 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, partnerOptions:
     other_document_file: apiData.other_document_file,
     other_document_verified: toBoolean(apiData.other_document_verified),
     other_document_remark: apiData.other_document_remark,
-    
-    // Bank Details
+
     primary_account_number: apiData.primary_account_number,
     primary_bank_name: apiData.primary_bank_name,
     primary_ifsc_code: apiData.primary_ifsc_code,
@@ -389,7 +371,6 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, partnerOptions:
       verification_photo: b.verification_photo,
     })),
     
-    // Nested Arrays
     partner_certificate: apiData.partner_certificate,
     office_info: apiData.office_info?.map((b: any) => ({
       office_type: toSelectObject(b.office_type),
@@ -400,29 +381,32 @@ const transformApiToFormSchema = (apiData: ApiSingleCompanyItem, partnerOptions:
       city: b.city,
       zip_code: b.zip_code,
       gst_number: b.gst_number,
+      contact_person: b.contact_person,
+      office_email: b.office_email,
+      office_phone: b.office_phone
     })),
     member: apiData.partner_team_members?.map((m: any) => ({
-      type: "team",
-      team_name: m.team_name,
-      designation: m.designation,
       person_name: m.person_name,
+      company_name: m.company_name,
+      email: m.email,
+      designation: m.designation,
       number: m.number,
     })),
-    billing_documents: apiData.billing_documents,
+    other_documents: apiData.other_documents,
     partner_references: apiData.partner_references?.map((ref: any) => ({
-      person_name: ref.person_name,
-      referenced_partner_id: partnerOptions?.find((opt) => opt.value === ref.partner_id) || toSelectObject(ref.partner_id),
-      number: ref.number,
-      remark: ref.remark,
+        referenced_partner_id: partnerOptions.find(p => p.value === ref.referenced_partner_id),
+        company_id: companyOptions.find(c => c.value === ref.company_id),
+        email: ref.email,
+        number: ref.number,
+        remark: ref.remark,
     })),
-
-    // Accessibility
     USER_ACCESS: toBoolean(apiData.kyc_verified),
     BILLING_FIELD: toBoolean(apiData.enable_billing),
+    billing_cycle: apiData.billing_cycle,
   };
 };
 
-// Helper to prepare payload for API submission (both ADD and EDIT)
+// Helper to prepare payload for API submission
 const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean): FormData => {
   const apiPayload = new FormData();
   const data: any = { ...formData };
@@ -467,6 +451,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     "establishment_year", "no_of_employees", "partner_website", "notification_email",
     "primary_account_number", "primary_bank_name", "primary_ifsc_code",
     "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code",
+    "billing_cycle"
   ];
   simpleFields.forEach(key => append(key, data[key]));
 
@@ -512,22 +497,24 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
   });
 
   (data.member || []).forEach((member: any, index: number) => {
-      append(`partner_team_members[${index}][team_name]`, member.team_name);
-      append(`partner_team_members[${index}][designation]`, member.designation);
       append(`partner_team_members[${index}][person_name]`, member.person_name);
+      append(`partner_team_members[${index}][company_name]`, member.company_name);
+      append(`partner_team_members[${index}][email]`, member.email);
+      append(`partner_team_members[${index}][designation]`, member.designation);
       append(`partner_team_members[${index}][number]`, member.number);
   });
 
   (data.partner_references || []).forEach((ref: any, index: number) => {
-      append(`partner_references[${index}][person_name]`, ref.person_name);
-      append(`partner_references[${index}][referenced_partner_id]`, ref.referenced_partner_id);
+      append(`partner_references[${index}][referenced_partner_id]`, ref.referenced_partner_id?.value);
+      append(`partner_references[${index}][company_id]`, ref.company_id?.value);
+      append(`partner_references[${index}][email]`, ref.email);
       append(`partner_references[${index}][number]`, ref.number);
       append(`partner_references[${index}][remark]`, ref.remark);
   });
 
-  (data.billing_documents || []).forEach((doc: any, index: number) => {
-      append(`billing_documents[${index}][document_name]`, doc.document_name);
-      appendFileIfExists(`billing_documents[${index}][document]`, doc.document);
+  (data.other_documents || []).forEach((doc: any, index: number) => {
+      append(`other_documents[${index}][document_name]`, doc.document_name);
+      appendFileIfExists(`other_documents[${index}][document]`, doc.document);
   });
 
   (data.office_info || []).forEach((office: any, index: number) => {
@@ -539,6 +526,9 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
       append(`office_info[${index}][zip_code]`, office.zip_code);
       append(`office_info[${index}][gst_number]`, office.gst_number);
       append(`office_info[${index}][address]`, office.address);
+      append(`office_info[${index}][contact_person]`, office.contact_person);
+      append(`office_info[${index}][office_email]`, office.office_email);
+      append(`office_info[${index}][office_phone]`, office.office_phone);
   });
 
   return apiPayload;
@@ -588,16 +578,10 @@ const NavigatorComponent = (props: NavigatorComponentProps) => {
 };
 
 // --- CompanyDetails Section ---
-const CompanyDetailsSection = ({
-  control,
-  errors,
-  formMethods,
-}: FormSectionBaseProps) => {
+const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const {
     CountriesData = [],
     ContinentsData = [],
-    BrandData,
-    CategoriesData,
   } = useSelector(masterSelector);
   const { watch } = formMethods;
   const countryOptions = CountriesData.map((value: any) => ({
@@ -1218,6 +1202,9 @@ const CompanyDetailsSection = ({
               state: "",
               zip_code: "",
               gst_number: "",
+              contact_person: "",
+              office_email: "",
+              office_phone: ""
             })
           }
         >
@@ -1226,93 +1213,31 @@ const CompanyDetailsSection = ({
       </div>
       {branchFields.map((item, index) => (
         <Card key={item.id} className="mb-4 border rounded-md border-black relative">
-          <div className="grid md:grid-cols-3 gap-3">
-            <FormItem label="Office Type">
-              <Controller
-                name={`office_info.${index}.office_type`}
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    placeholder="Select Office Type"
-                    options={officeTypeOptions}
-                    {...field}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem label="Office Name">
-              <Controller
-                name={`office_info.${index}.office_name`}
-                control={control}
-                render={({ field }) => (
-                  <Input placeholder="e.g. Main Office" {...field} />
-                )}
-              />
-            </FormItem>
-            <FormItem label="GST/REG Number">
-              <Controller
-                name={`office_info.${index}.gst_number`}
-                control={control}
-                render={({ field }) => (
-                  <Input placeholder="GST or Registration Number" {...field} />
-                )}
-              />
-            </FormItem>
-            <div className="col-span-3 sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <FormItem label="Country">
-                <Controller
-                  name={`office_info.${index}.country_id`}
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      placeholder="Select Country"
-                      options={countryOptions}
-                      {...field}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem label="State">
-                <Controller
-                  name={`office_info.${index}.state`}
-                  control={control}
-                  render={({ field }) => (
-                    <Input placeholder="Enter state" {...field} />
-                  )}
-                />
-              </FormItem>
-              <FormItem label="ZIP Code">
-                <Controller
-                  name={`office_info.${index}.zip_code`}
-                  control={control}
-                  render={({ field }) => (
-                    <Input placeholder="ZIP Code" {...field} />
-                  )}
-                />
-              </FormItem>
+          <div className="grid md:grid-cols-4 gap-4 p-4">
+            <FormItem label="Office Type"><Controller name={`office_info.${index}.office_type`} control={control} render={({ field }) => <Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />} /></FormItem>
+            <FormItem label="Office Name"><Controller name={`office_info.${index}.office_name`} control={control} render={({ field }) => <Input placeholder="e.g. Main Office" {...field} />} /></FormItem>
+            <FormItem label="Contact Person"><Controller name={`office_info.${index}.contact_person`} control={control} render={({ field }) => <Input placeholder="Contact Person Name" {...field} />} /></FormItem>
+            <FormItem label="Office Email"><Controller name={`office_info.${index}.office_email`} control={control} render={({ field }) => <Input type="email" placeholder="office@example.com" {...field} />} /></FormItem>
+            <FormItem label="Office Phone"><Controller name={`office_info.${index}.office_phone`} control={control} render={({ field }) => <Input type="tel" placeholder="Office Phone" {...field} />} /></FormItem>
+            <FormItem label="GST/REG Number"><Controller name={`office_info.${index}.gst_number`} control={control} render={({ field }) => <Input placeholder="GST or Registration Number" {...field} />} /></FormItem>
+            <div className="col-span-4 grid md:grid-cols-4 gap-4 border-t pt-4 mt-2">
+                <FormItem label="Country"><Controller name={`office_info.${index}.country_id`} control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} /></FormItem>
+                <FormItem label="State"><Controller name={`office_info.${index}.state`} control={control} render={({ field }) => <Input placeholder="Enter state" {...field} />} /></FormItem>
+                <FormItem label="City"><Controller name={`office_info.${index}.city`} control={control} render={({ field }) => <Input placeholder="Enter city" {...field} />} /></FormItem>
+                <FormItem label="ZIP Code"><Controller name={`office_info.${index}.zip_code`} control={control} render={({ field }) => <Input placeholder="ZIP Code" {...field} />} /></FormItem>
+                <FormItem label="Address" className="md:col-span-4"><Controller name={`office_info.${index}.address`} control={control} render={({ field }) => <Input placeholder="Full Address" {...field} />} /></FormItem>
             </div>
-
-            <FormItem label="Address" className="md:col-span-3">
-              <Controller
-                name={`office_info.${index}.address`}
-                control={control}
-                render={({ field }) => (
-                  <Input placeholder="Full Address" {...field} />
-                )}
-              />
-            </FormItem>
-            <div className="md:col-span-3 flex justify-end absolute right-2 top-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="plain"
-                className="text-xs"
-                icon={<TbTrash size={16} />}
-                onClick={() => removeBranch(index)}
-              >
-                Remove
-              </Button>
-            </div>
+          </div>
+          <div className="absolute right-2 top-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="plain"
+              icon={<TbTrash size={16} />}
+              onClick={() => removeBranch(index)}
+            >
+              Remove
+            </Button>
           </div>
         </Card>
       ))}
@@ -1672,210 +1597,107 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 
 // --- ReferenceSection ---
 const ReferenceSection = ({ control }: FormSectionBaseProps) => {
-  const { partnerData = {} } = useSelector(masterSelector);
-  const dispatch = useAppDispatch();
-  useEffect(() => {
-    dispatch(getpartnerAction());
-  }, [dispatch]);
-
-  const companyOptions = useMemo(() => {
+    const dispatch = useAppDispatch();
+    const { partnerData, CompanyData } = useSelector(masterSelector);
+  
+    // FIX: Removed `dispatch` from dependency array and added conditional fetch
+    useEffect(() => {
+      if (!partnerData?.data || partnerData.data.length === 0) {
+        dispatch(getpartnerAction());
+      }
+      if (!CompanyData?.data || CompanyData.data.length === 0) {
+        dispatch(getCompanyAction());
+      }
+    }, [partnerData, CompanyData]); // Dependency on data, not dispatch
+  
+    const partnerOptions = useMemo(() => {
       const data = partnerData?.data || [];
       return Array.isArray(data)
-        ? data.map((c: any) => ({
-            value: String(c.id),
-            label: c.partner_name,
-          }))
+        ? data.map((p: any) => ({ value: p.id, label: p.partner_name }))
         : [];
-  }, [partnerData]);
+    }, [partnerData]);
   
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "partner_references",
-  });
-
-  return (
-    <Card id="reference">
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="mb-0">References</h4>
-        <Button
-          type="button"
-          icon={<TbPlus />}
-          size="sm"
-          onClick={() =>
-            append({
-              person_name: "",
-              referenced_partner_id: undefined,
-              number: "",
-              remark: "",
-            })
-          }
-        >
-          Add Reference
-        </Button>
-      </div>
-      {fields.map((item, index) => (
-        <Card key={item.id} className="mb-4 border-black relative rounded-md">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-2 gap-x-4 items-start">
-            <FormItem label="Person Name">
-              <Controller
-                name={`partner_references.${index}.person_name`}
-                control={control}
-                render={({ field }) => (
-                  <Input placeholder="Person's Name" {...field} />
-                )}
-              />
-            </FormItem>
-            <FormItem label="partner Name">
-              <Controller
-                name={`partner_references.${index}.referenced_partner_id`}
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    placeholder="partner Name"
-                    options={companyOptions}
-                    {...field}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem label="Contact Number">
-              <Controller
-                name={`partner_references.${index}.number`}
-                control={control}
-                render={({ field }) => (
-                  <Input placeholder="Contact Number" {...field} />
-                )}
-              />
-            </FormItem>
-            <FormItem label="Remark" className="sm:col-span-3">
-              <Controller
-                name={`partner_references.${index}.remark`}
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    placeholder="Add remarks here..."
-                    {...field}
-                  />
-                )}
-              />
-            </FormItem>
-          </div>
-          <div className="md:col-span-3 flex justify-end absolute right-2 top-2">
-            <Button
-              type="button"
-              variant="plain"
-              size="sm"
-              icon={<TbTrash size={16} />}
-              onClick={() => remove(index)}
-            >Remove
-            </Button>
-          </div>
-        </Card>
-      ))}
-    </Card>
-  );
-};
+    const companyOptions = useMemo(() => {
+      const data = CompanyData?.data || [];
+      return Array.isArray(data)
+        ? data.map((c: any) => ({ value: c.id, label: c.company_name }))
+        : [];
+    }, [CompanyData]);
+  
+    const { fields, append, remove } = useFieldArray({
+      control,
+      name: "partner_references",
+    });
+  
+    return (
+      <Card id="reference">
+        <div className="flex justify-between items-center mb-4">
+          <h4 className="mb-0">References</h4>
+          <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ referenced_partner_id: undefined, company_id: undefined, email: "", number: "", remark: "" })}>
+            Add Reference
+          </Button>
+        </div>
+        {fields.map((item, index) => (
+          <Card key={item.id} className="mb-4 border-black relative rounded-md">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 p-4">
+              <FormItem label="Person Name (from Partner)">
+                  <Controller name={`partner_references.${index}.referenced_partner_id`} control={control} render={({ field }) => <Select placeholder="Select Partner" options={partnerOptions} {...field} />} />
+              </FormItem>
+              <FormItem label="Company Name (from Company)">
+                  <Controller name={`partner_references.${index}.company_id`} control={control} render={({ field }) => <Select placeholder="Select Company" options={companyOptions} {...field} />} />
+              </FormItem>
+              <FormItem label="Email"><Controller name={`partner_references.${index}.email`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
+              <FormItem label="Contact Number"><Controller name={`partner_references.${index}.number`} control={control} render={({ field }) => <Input placeholder="Contact Number" {...field} />} /></FormItem>
+              <FormItem label="Remark" className="sm:col-span-full"><Controller name={`partner_references.${index}.remark`} control={control} render={({ field }) => <Input placeholder="Add remarks here..." {...field} />} /></FormItem>
+            </div>
+            <div className="absolute right-2 top-2">
+              <Button type="button" variant="plain" size="sm" icon={<TbTrash size={16} />} onClick={() => remove(index)}>Remove</Button>
+            </div>
+          </Card>
+        ))}
+      </Card>
+    );
+  };
 
 // --- AccessibilitySection ---
 const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "billing_documents",
+    name: "other_documents",
   });
+  const isBillingEnabled = watch("BILLING_FIELD");
 
   return (
     <Card id="accessibility">
       <h4 className="mb-6">Accessibility & Configuration</h4>
       <div className="grid grid-cols-1 gap-y-6">
         <div className="flex items-center gap-x-8">
-          <FormItem label={<div>Enable Billing<span className="text-red-500"> * </span></div>}>
-            <Controller
-              name="BILLING_FIELD"
-              control={control}
-              render={({ field }) => (
-                <Checkbox checked={!!field.value} onChange={field.onChange}>
-                  Enabled
-                </Checkbox>
-              )}
-            />
+          <FormItem label="Enable Billing">
+            <Controller name="BILLING_FIELD" control={control} render={({ field }) => <Checkbox checked={!!field.value} onChange={field.onChange}>Enabled</Checkbox>} />
           </FormItem>
-          <FormItem label={<div>User Access<span className="text-red-500"> * </span></div>}>
-            <Controller
-              name="USER_ACCESS"
-              control={control}
-              render={({ field }) => (
-                <Checkbox checked={!!field.value} onChange={field.onChange}>
-                  Enabled
-                </Checkbox>
-              )}
-            />
-          </FormItem>
+          {isBillingEnabled && (
+             <FormItem label="Billing Cycle (Days)">
+                <Controller name="billing_cycle" control={control} render={({ field }) => <NumericInput placeholder="e.g., 30" {...field} />} />
+             </FormItem>
+          )}
+          <FormItem label="User Access"><Controller name="USER_ACCESS" control={control} render={({ field }) => <Checkbox checked={!!field.value} onChange={field.onChange}>Enabled</Checkbox>} /></FormItem>
         </div>
         <hr />
         <div className="flex justify-between items-center">
-          <h5 className="mb-0">Transaction Documents</h5>
-          <Button
-            type="button"
-            icon={<TbPlus />}
-            size="sm"
-            onClick={() =>
-              append({ document_name: "", document: undefined })
-            }
-          >
-            Add Transaction Doc
-          </Button>
+          <h5 className="mb-0">Other Documents</h5>
+          <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: "", document: undefined })}>Add Document</Button>
         </div>
-        {fields.map((item, index) => {
-          const docFileValue = watch(`billing_documents.${index}.document`);
-          return (
-            <Card key={item.id} className=" border-black rounded-md" bodyClass="p-4">
+        {fields.map((item, index) => (
+            <Card key={item.id} className="border-black rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-center">
-                <FormItem label="Document Name" className="md:col-span-4">
-                  <Controller
-                    name={`billing_documents.${index}.document_name`}
-                    control={control}
-                    render={({ field }) => (
-                      <Input placeholder="e.g., Invoice Template" {...field} />
-                    )}
-                  />
-                </FormItem>
-                <FormItem label="Upload Document" className="md:col-span-4">
-                  <Controller
-                    name={`billing_documents.${index}.document`}
-                    control={control}
-                    render={({ field: { onChange, ref } }) => (
-                      <Input
-                        type="file"
-                        ref={ref}
-                        accept="image/*,application/pdf"
-                        onChange={(e) => onChange(e.target.files?.[0])}
-                      />
-                    )}
-                  />
-                  {typeof docFileValue === "string" && docFileValue && (
-                    <a
-                      href={`https://aazovo.codefriend.in/${docFileValue}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-500 hover:underline mt-1 inline-block"
-                    >
-                      View Uploaded
-                    </a>
-                  )}
-                </FormItem>
-                <Button
-                  type="button"
-                  shape="circle"
-                  size="sm"
-                  className="mt-2"
-                  icon={<TbTrash />}
-                  onClick={() => remove(index)}
-                />
+                <FormItem label="Document Name" className="md:col-span-4"><Controller name={`other_documents.${index}.document_name`} control={control} render={({ field }) => <Input placeholder="e.g., NDA" {...field} />} /></FormItem>
+                <FormItem label="Upload Document" className="md:col-span-4"><Controller name={`other_documents.${index}.document`} control={control} render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} />} /></FormItem>
+                <Button type="button" shape="circle" size="sm" className="mt-2" icon={<TbTrash />} onClick={() => remove(index)} />
               </div>
             </Card>
-          );
-        })}
+          )
+        )}
       </div>
     </Card>
   );
@@ -1883,101 +1705,29 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
 
 // --- MemberManagementSection ---
 const MemberManagementSection = ({ control }: FormSectionBaseProps) => {
-  const dispatch = useAppDispatch();
-  const { memberData } = useSelector(masterSelector);
   const { fields, append, remove } = useFieldArray({
     control,
     name: "member",
   });
-
-  const memberOptions = useMemo(() => {
-    const data = memberData?.data?.data || memberData?.data || [];
-    return Array.isArray(data)
-      ? data.map((m: any) => ({
-        value: String(m.id),
-        label: `${m.name} (ID:${m.id})`,
-      }))
-      : [];
-  }, [memberData]);
-
-  useEffect(() => {
-    dispatch(getMemberAction());
-  }, [dispatch]);
 
   return (
     <Card id="memberManagement">
       <div className="flex justify-between items-center mb-4">
         <h4 className="mb-0">Team Management</h4>
         <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            icon={<TbPlus />}
-            onClick={() =>
-              append({
-                type: "team",
-                member_id: undefined,
-                designation: "",
-                person_name: "",
-                number: "",
-                team_name: ""
-              })
-            }
-          >
-            Add Team
-          </Button>
+          <Button type="button" size="sm" icon={<TbPlus />} onClick={() => append({ person_name: "", company_name: "", email: "", designation: "", number: "" })}>Add Team Member</Button>
         </div>
       </div>
       {fields.map((item, index) => (
         <Card key={item.id} className="mb-4 border-black relative rounded-md">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
-            <FormItem label={item.type === "team" ? "Team Name" : "Member"}>
-              <Controller
-                name={`member.${index}.team_name`}
-                control={control}
-                render={({ field }) => (
-                  <Input placeholder="Team Name" {...field} />
-                )}
-              />
-            </FormItem>
-            <FormItem label="Designation">
-              <Controller
-                name={`member.${index}.designation`}
-                control={control}
-                render={({ field }) => (
-                  <Input placeholder="e.g., CEO" {...field} />
-                )}
-              />
-            </FormItem>
-            <FormItem label="Person Name">
-              <Controller
-                name={`member.${index}.person_name`}
-                control={control}
-                render={({ field }) => (
-                  <Input placeholder="Person Name" {...field} />
-                )}
-              />
-            </FormItem>
-            <FormItem label="Contact Number">
-              <Controller
-                name={`member.${index}.number`}
-                control={control}
-                render={({ field }) => (
-                  <Input type="tel" placeholder="Contact Number" {...field} />
-                )}
-              />
-            </FormItem>
-            <div className="absolute right-0 top-2">
-              <Button
-                type="button"
-                variant="plain"
-                size="sm"
-                className="text-xs"
-                icon={<TbTrash size={16} />}
-                onClick={() => remove(index)}
-              >
-                Remove
-              </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-4 items-start">
+            <FormItem label="Person Name"><Controller name={`member.${index}.person_name`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} /></FormItem>
+            <FormItem label="Company Name"><Controller name={`member.${index}.company_name`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} /></FormItem>
+            <FormItem label="Email ID"><Controller name={`member.${index}.email`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
+            <FormItem label="Designation"><Controller name={`member.${index}.designation`} control={control} render={({ field }) => <Input placeholder="e.g., CEO" {...field} />} /></FormItem>
+            <FormItem label="Contact Number"><Controller name={`member.${index}.number`} control={control} render={({ field }) => <Input type="tel" placeholder="Contact Number" {...field} />} /></FormItem>
+            <div className="absolute right-2 top-2">
+              <Button type="button" variant="plain" size="sm" icon={<TbTrash size={16} />} onClick={() => remove(index)}>Remove</Button>
             </div>
           </div>
         </Card>
@@ -1997,11 +1747,9 @@ type CompanyFormComponentProps = {
 
 const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const { onFormSubmit, defaultValues, isEditMode, onDelete, isSubmitting } = props;
-  
   const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
 
   const selectObjectSchema = z.object({ value: z.any(), label: z.any() }).nullable().optional();
-
   const companySchema = z.object({
       partner_name: z.string().trim().min(1, "Partner Name is required"),
       owner_name: z.string().trim().min(1, "Owner/Director Name is required"),
@@ -2016,9 +1764,6 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       city: z.string().trim().min(1, "City is required"),
       partner_address: z.string().trim().min(1, "Partner Address is required"),
       status: selectObjectSchema.refine(val => val?.value, "Status is required"),
-      alternate_email_id: z.string().email("Invalid alternate email format").optional().or(z.literal('')),
-      support_email: z.string().email("Invalid support email").optional().or(z.literal('')),
-      partner_website: z.string().url("Invalid website URL").optional().or(z.literal('')),
     }).passthrough();
 
   const formMethods = useForm<CompanyFormSchema>({
@@ -2026,31 +1771,24 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     mode: 'onTouched',
     defaultValues: defaultValues,
   });
-  const {
-    handleSubmit,
-    reset,
-    formState: { errors },
-    control,
-  } = formMethods;
+  const { handleSubmit, reset, formState: { errors }, control } = formMethods;
 
-  useEffect(() => {
-    reset(defaultValues);
-  }, [defaultValues, reset]);
+  useEffect(() => { reset(defaultValues); }, [defaultValues, reset]);
 
   const internalFormSubmit = (values: CompanyFormSchema) => {
     onFormSubmit?.(values, formMethods);
   };
-
+  
   const navigationKeys = companyNavigationList.map((item) => item.link);
   const handleNext = () => {
     const currentIndex = navigationKeys.indexOf(activeSection);
-    if (currentIndex < navigationKeys.length - 1)
-      setActiveSection(navigationKeys[currentIndex + 1]);
+    if (currentIndex < navigationKeys.length - 1) setActiveSection(navigationKeys[currentIndex + 1]);
   };
   const handlePrevious = () => {
     const currentIndex = navigationKeys.indexOf(activeSection);
     if (currentIndex > 0) setActiveSection(navigationKeys[currentIndex - 1]);
   };
+
   const renderActiveSection = () => {
     const sectionProps = { errors, control, formMethods };
     switch (activeSection) {
@@ -2067,37 +1805,18 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   return (
     <>
       <div className="flex gap-1 items-end mb-3">
-        <NavLink to="/business-entities/partner">
-          <h6 className="font-semibold hover:text-primary-600">Partner</h6>
-        </NavLink>
-        <BiChevronRight size={22} />
-        <h6 className="font-semibold text-primary">
-          {isEditMode ? "Edit Partner" : "Add New Partner"}
-        </h6>
+        <NavLink to="/business-entities/partner"><h6 className="font-semibold hover:text-primary-600">Partner</h6></NavLink>
+        <BiChevronRight size={22} /><h6 className="font-semibold text-primary">{isEditMode ? "Edit Partner" : "Add New Partner"}</h6>
       </div>
-      <Card className="mb-6" bodyClass="px-4 py-2 md:px-6">
-        <NavigatorComponent activeSection={activeSection} onNavigate={setActiveSection} />
-      </Card>
+      <Card className="mb-6" bodyClass="px-4 py-2 md:px-6"><NavigatorComponent activeSection={activeSection} onNavigate={setActiveSection} /></Card>
       <div className="flex flex-col gap-4 pb-20">{renderActiveSection()}</div>
       <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center p-4">
-          <div>
-            {isEditMode && onDelete && (
-              <Button type="button" variant="outline" color="red" icon={<TbTrash />} onClick={onDelete} disabled={isSubmitting}>
-                Delete Partner
-              </Button>
-            )}
-          </div>
+          <div>{isEditMode && onDelete && <Button type="button" variant="outline" color="red" icon={<TbTrash />} onClick={onDelete} disabled={isSubmitting}>Delete Partner</Button>}</div>
           <div className="flex items-center gap-2">
-            <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0}>
-              Previous
-            </Button>
-            <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1}>
-              Next
-            </Button>
-            <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit, (err) => console.log("Validation Errors:", err))} disabled={isSubmitting}>
-              {isEditMode ? "Update Partner" : "Create Partner"}
-            </Button>
+            <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0}>Previous</Button>
+            <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1}>Next</Button>
+            <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit)} disabled={isSubmitting}>{isEditMode ? "Update Partner" : "Create Partner"}</Button>
           </div>
         </div>
       </Card>
@@ -2105,7 +1824,6 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   );
 };
 
-// --- CreatePartner Page (Main Component) ---
 const CreatePartner = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -2117,34 +1835,33 @@ const CreatePartner = () => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { partnerData = {}, CompanyData = {} } = useSelector(masterSelector);
+
+  const partnerOptions = useMemo(() => {
+    const data = partnerData?.data || [];
+    return Array.isArray(data) ? data.map((p: any) => ({ value: p.id, label: p.partner_name })) : [];
+  }, [partnerData]);
+
+  const companyOptions = useMemo(() => {
+    const data = CompanyData?.data || [];
+    return Array.isArray(data) ? data.map((c: any) => ({ value: c.id, label: c.company_name })) : [];
+  }, [CompanyData]);
+
   useEffect(() => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
-    dispatch(getBrandAction());
-    dispatch(getCategoriesAction());
-    dispatch(getMembersAction());
     dispatch(getpartnerAction());
+    dispatch(getCompanyAction());
   }, [dispatch]);
-
-  const { partnerData = {} } = useSelector(masterSelector);
-  const partnerOptions = useMemo(() => {
-    const data = partnerData?.data || [];
-    return Array.isArray(data) ? data.map((c: any) => ({
-      value: String(c.id),
-      label: c.partner_name,
-    })) : [];
-  }, [partnerData]);
-
 
   useEffect(() => {
     if (isEditMode && id) {
-      const fetchCompanyData = async () => {
+      const fetchPartnerData = async () => {
         setPageLoading(true);
         try {
           const actionResult = await dispatch(getpartnerByIdAction(id)).unwrap();
           if (actionResult) {
-            const transformed = transformApiToFormSchema(actionResult, partnerOptions);
-            setInitialData(transformed);
+            setInitialData(transformApiToFormSchema(actionResult, partnerOptions, companyOptions));
           } else {
             toast.push(<Notification type="danger" title="Fetch Error">Partner data not found.</Notification>);
             navigate("/business-entities/partner");
@@ -2156,17 +1873,16 @@ const CreatePartner = () => {
           setPageLoading(false);
         }
       };
-      fetchCompanyData();
+      fetchPartnerData();
     } else {
       setInitialData({});
       setPageLoading(false);
     }
-  }, [id, isEditMode, navigate, dispatch, partnerOptions]);
+  }, [id, isEditMode, navigate, dispatch, partnerOptions, companyOptions]);
 
   const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
     const payload = preparePayloadForApi(formValues, isEditMode);
-
     try {
       if (isEditMode && id) {
         await dispatch(editpartnerAction({ id, payload })).unwrap();
@@ -2196,26 +1912,21 @@ const CreatePartner = () => {
   };
 
   const openDeleteDialog = () => setDeleteConfirmationOpen(true);
-  const closeDeleteDialog = () => setDeleteConfirmationOpen(false);
   const handleConfirmDelete = async () => {
     if (!id) return;
-    closeDeleteDialog();
+    setDeleteConfirmationOpen(false);
     try {
       await dispatch(deletepartnerAction({ id })).unwrap();
-      toast.push(<Notification title="Partner Deleted" type="success">The partner entry has been deleted.</Notification>);
+      toast.push(<Notification title="Partner Deleted" type="success" />);
       dispatch(getpartnerAction());
       navigate("/business-entities/partner");
     } catch (e: any) {
-      toast.push(<Notification title="Delete Failed" type="danger">{(e as Error).message || 'An unknown error occurred'}</Notification>);
+      toast.push(<Notification title="Delete Failed" type="danger">{(e as Error).message}</Notification>);
     }
   };
 
   if (pageLoading || !initialData) {
-    return (
-      <Container className="h-full flex justify-center items-center">
-        <p>Loading Partner details...</p>
-      </Container>
-    );
+    return <Container className="h-full flex justify-center items-center"><p>Loading Partner details...</p></Container>;
   }
 
   return (
@@ -2234,9 +1945,9 @@ const CreatePartner = () => {
           isOpen={deleteConfirmationOpen}
           type="danger"
           title="Delete Partner"
-          onClose={closeDeleteDialog}
-          onRequestClose={closeDeleteDialog}
-          onCancel={closeDeleteDialog}
+          onClose={() => setDeleteConfirmationOpen(false)}
+          onRequestClose={() => setDeleteConfirmationOpen(false)}
+          onCancel={() => setDeleteConfirmationOpen(false)}
           onConfirm={handleConfirmDelete}
           confirmButtonColor="red-600"
         >
