@@ -2035,6 +2035,7 @@ const CompanyListTable = () => {
           const {
             company_name,
             ownership_type,
+            primary_business_type,
             country,
             city,
             state,
@@ -2058,7 +2059,10 @@ const CompanyListTable = () => {
                 </div>
               </div>
               <span className="text-xs mt-1">
-                <b>Ownership Type:</b> {ownership_type}
+                <b>Ownership Type:</b> {ownership_type|| "N/A"}
+              </span>
+              <span className="text-xs mt-1">
+                <b>Primary Business Type:</b> {primary_business_type || "N/A"}
               </span>
               <div className="text-xs text-gray-500">
                 {city}, {state}, {country?.name || "N/A"}{" "}

@@ -97,8 +97,8 @@ interface BranchItemFE {
   zip_code?: string;
   gst_number?: string;
   contact_person?: string; // New
-  email?: string; // New
-  phone?: string; // New
+  office_email?: string; // New
+  office_phone?: string; // New
 }
 
 interface BillingDocItemFE {
@@ -247,7 +247,7 @@ interface ApiSingleCompanyItem {
   enable_billing?: boolean | string;
 
   company_certificate?: Array<{ certificate_id: string; certificate_name: string; upload_certificate: string | null; upload_certificate_path?: string; }>;
-  office_info?: Array<{ office_type: string; office_name: string; address: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; contact_person?: string; email?: string; phone?: string; }>;
+  office_info?: Array<{ office_type: string; office_name: string; address: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; contact_person?: string; office_email?: string; office_phone?: string; }>;
 
   declaration_206AB_url?: string | null;
   declaration_206AB_verify?: boolean | string;
@@ -322,7 +322,7 @@ const transformApiToFormSchema = (
 
   const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
   const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
-
+  
   return {
     id: apiData.id,
     company_name: apiData.company_name || '',
@@ -370,8 +370,8 @@ const transformApiToFormSchema = (
         zip_code: office.zip_code || '',
         gst_number: office.gst_number || '',
         contact_person: office.contact_person || '',
-        email: office.email || '',
-        phone: office.phone || '',
+        office_email: office.office_email || '',
+        office_phone: office.office_phone || '',
     })) || [],
 
     declaration_206ab: apiData.declaration_206AB_url || null,
@@ -515,6 +515,8 @@ const preparePayloadForApi = (
   });
 
   // Office Info
+  
+  console.log(data, 'apiData');
   data.office_info?.forEach((office: BranchItemFE, index: number) => {
     appendField(`office_info[${index}][office_type]`, office.office_type);
     appendField(`office_info[${index}][office_name]`, office.office_name);
@@ -525,8 +527,8 @@ const preparePayloadForApi = (
     appendField(`office_info[${index}][zip_code]`, office.zip_code);
     appendField(`office_info[${index}][gst_number]`, office.gst_number);
     appendField(`office_info[${index}][contact_person]`, office.contact_person);
-    appendField(`office_info[${index}][email]`, office.email);
-    appendField(`office_info[${index}][phone]`, office.phone);
+    appendField(`office_info[${index}][office_email]`, office.office_email);
+    appendField(`office_info[${index}][office_phone]`, office.office_phone);
   });
 
   // KYC Documents
@@ -863,7 +865,7 @@ const CompanyDetailsSection = ({
       <hr className="my-6" />
       <div className="flex justify-between items-center mb-4">
         <h4 className="mb-0">Office Information</h4>
-        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendBranch({ office_type: undefined, office_name: "", address: "", country_id: undefined, state: "", city: "", zip_code: "", gst_number: "", contact_person: "", email: "", phone: "" })}> Add Office </Button>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendBranch({ office_type: undefined, office_name: "", address: "", country_id: undefined, state: "", city: "", zip_code: "", gst_number: "", contact_person: "", office_email: "", office_phone: "" })}> Add Office </Button>
       </div>
       {branchFields.map((item, index) => (
         <Card key={item.id} className="mb-4 border dark:border-gray-600 rounded-md relative" bodyClass="p-4">
@@ -881,11 +883,11 @@ const CompanyDetailsSection = ({
             <FormItem label={`Contact Person ${index + 1}`} invalid={!!errors.office_info?.[index]?.contact_person} errorMessage={errors.office_info?.[index]?.contact_person?.message as string}>
                 <Controller name={`office_info.${index}.contact_person`} control={control} render={({ field }) => (<Input placeholder="John Doe" {...field} />)} />
             </FormItem>
-            <FormItem label={`Email ${index + 1}`} invalid={!!errors.office_info?.[index]?.email} errorMessage={errors.office_info?.[index]?.email?.message as string}>
-                <Controller name={`office_info.${index}.email`} control={control} render={({ field }) => (<Input type="email" placeholder="office.contact@example.com" {...field} />)} />
+            <FormItem label={`Email ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_email} errorMessage={errors.office_info?.[index]?.office_email?.message as string}>
+                <Controller name={`office_info.${index}.office_email`} control={control} render={({ field }) => (<Input type="email" placeholder="office.contact@example.com" {...field} />)} />
             </FormItem>
-            <FormItem label={`Phone ${index + 1}`} invalid={!!errors.office_info?.[index]?.phone} errorMessage={errors.office_info?.[index]?.phone?.message as string}>
-                <Controller name={`office_info.${index}.phone`} control={control} render={({ field }) => (<Input type="tel" placeholder="Office Phone Number" {...field} />)} />
+            <FormItem label={`Phone ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_phone} errorMessage={errors.office_info?.[index]?.office_phone?.message as string}>
+                <Controller name={`office_info.${index}.office_phone`} control={control} render={({ field }) => (<Input type="tel" placeholder="Office Phone Number" {...field} />)} />
             </FormItem>
             
             <div className="md:col-span-4 border-t dark:border-gray-600 pt-4 mt-2">
@@ -1364,9 +1366,9 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         city: z.string().trim().min(1, "City is required."),
         zip_code: z.string().trim().min(1, "ZIP Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
         gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
-        // contact_person: z.string().trim().min(1, "Contact person is required."),
-        // email: z.string().trim().min(1, "Email is required.").email("Invalid email format."),
-        // phone: z.string().trim().min(1, "Phone number is required.").regex(/^\d{7,15}$/, "Invalid phone number format."),
+        contact_person: z.string().trim().nullable(),
+        office_email: z.string().trim().email("Invalid email format.").nullable(),
+        office_phone: z.string().trim().max(10, "Invalid phone number.").regex(/^\d{7,15}$/, "Invalid phone number format.").nullable(),
     })).optional(),
     
     // KYC Documents are optional and validated by their structure if present
