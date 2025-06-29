@@ -1,13 +1,7 @@
-// This is my listing page
 // src/views/your-path/WallListing.tsx
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
-// REMOVED: Unnecessary dayjs plugins for client-side filtering
-// import isBetween from "dayjs/plugin/isBetween";
-// import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-// import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-// REMOVED: cloneDeep is no longer needed as all processing is server-side
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -89,8 +83,10 @@ import type {
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addNotificationAction,
   deleteAllWallAction,
   getAllCompany,
+  getAllUsersAction,
   getBrandAction,
   getCategoriesData,
   getEmployeesAction,
@@ -102,7 +98,7 @@ import {
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { useSelector } from "react-redux";
+import { shallowEqual, useSelector } from "react-redux";
 import { z } from "zod";
 
 // --- Type Definitions ---
@@ -245,7 +241,7 @@ export const dummyCartoonTypes = [
 ];
 
 // ============================================================================
-// --- MODALS SECTION (No Changes) ---
+// --- MODALS SECTION ---
 // ============================================================================
 export type WallModalType =
   | "email"
@@ -264,6 +260,7 @@ export interface WallModalState {
 interface WallModalsProps {
   modalState: WallModalState;
   onClose: () => void;
+  getAllUserDataOptions: { value: any, label: string }[];
 }
 
 const dummyUsers = [
@@ -296,7 +293,7 @@ const dummyAlerts = [
   },
 ];
 
-const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose }) => {
+const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const { type, data: wallItem, isOpen } = modalState;
   if (!isOpen || !wallItem) return null;
   const renderModalContent = () => {
@@ -306,7 +303,7 @@ const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose }) => {
       case "whatsapp":
         return <SendWhatsAppDialog wallItem={wallItem} onClose={onClose} />;
       case "notification":
-        return <AddNotificationDialog wallItem={wallItem} onClose={onClose} />;
+        return <AddNotificationDialog wallItem={wallItem} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
       case "task":
         return <AssignTaskDialog wallItem={wallItem} onClose={onClose} />;
       case "calendar":
@@ -431,51 +428,76 @@ const SendWhatsAppDialog: React.FC<{
 const AddNotificationDialog: React.FC<{
   wallItem: WallItem;
   onClose: () => void;
-}> = ({ wallItem, onClose }) => {
+  getAllUserDataOptions: { value: any, label: string }[];
+}> = ({ wallItem, onClose, getAllUserDataOptions }) => {
+  const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({
-    defaultValues: { title: "", users: [], message: "" },
+  const notificationSchema = z.object({
+    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+    send_users: z.array(z.number()).min(1, "Please select at least one user."),
+    message: z.string().min(10, "Message must be at least 10 characters long."),
   });
-  const onSend = (data: any) => {
+
+  type NotificationFormData = z.infer<typeof notificationSchema>;
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+        notification_title: `Regarding Wall Listing: ${wallItem.product_name}`,
+        send_users: [],
+        message: `This is a notification for the wall listing: "${wallItem.product_name}".`
+    },
+    mode: 'onChange'
+  });
+
+  const onSend = async (formData: NotificationFormData) => {
     setIsLoading(true);
-    console.log(
-      "Sending in-app notification for",
-      wallItem.product_name,
-      "with data:",
-      data
-    );
-    setTimeout(() => {
-      toast.push(<Notification type="success" title="Notification Sent" />);
-      setIsLoading(false);
-      onClose();
-    }, 1000);
+    const payload = {
+        send_users: formData.send_users,
+        notification_title: formData.notification_title,
+        message: formData.message,
+        module_id: String(wallItem.id),
+        module_name: 'WallListing',
+    };
+
+    try {
+        await dispatch(addNotificationAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+        onClose();
+    } catch (error: any) {
+        toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+        setIsLoading(false);
+    }
   };
+  
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Notification for "{wallItem.product_name}"</h5>
-      <form onSubmit={handleSubmit(onSend)}>
-        <FormItem label="Notification Title">
+      <Form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
           <Controller
-            name="title"
+            name="notification_title"
             control={control}
             render={({ field }) => <Input {...field} />}
           />
         </FormItem>
-        <FormItem label="Send to Users">
+        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
           <Controller
-            name="users"
+            name="send_users"
             control={control}
             render={({ field }) => (
-              <Select
+              <UiSelect
                 isMulti
                 placeholder="Select Users"
-                options={dummyUsers}
-                {...field}
+                options={getAllUserDataOptions}
+                value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
+                onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])}
               />
             )}
           />
         </FormItem>
-        <FormItem label="Message">
+        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
           <Controller
             name="message"
             control={control}
@@ -486,11 +508,11 @@ const AddNotificationDialog: React.FC<{
           <Button className="mr-2" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
             Send Notification
           </Button>
         </div>
-      </form>
+      </Form>
     </Dialog>
   );
 };
@@ -919,42 +941,34 @@ const StyledActionColumn = ({
     <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
   }
 >
-  {/* 1. Send Email */}
   <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2">
     <TbMail size={18} /> <span className="text-xs">Send Email</span>
   </Dropdown.Item>
 
-  {/* 2. Send WhatsApp */}
   <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2">
     <TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span>
   </Dropdown.Item>
 
-  {/* 3. Add Notification */}
   <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2">
     <TbBell size={18} /> <span className="text-xs">Add Notification</span>
   </Dropdown.Item>
 
-  {/* 4. Assign Task */}
   <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2">
     <TbUser size={18} /> <span className="text-xs">Assign Task</span>
   </Dropdown.Item>
 
-  {/* 5. Add Schedule */}
   <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2">
     <TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span>
   </Dropdown.Item>
 
-  {/* 6. Add Active */}
   <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2">
     <TbTagStarred size={18} /> <span className="text-xs">Add Active</span>
   </Dropdown.Item>
 
-  {/* 7. Match Opportunities */}
   <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2">
     <TbBulb size={18} /> <span className="text-xs">Match Opportunity</span>
   </Dropdown.Item>
 
-  {/* 8. Share Wall Link */}
   <Dropdown.Item onClick={() => onOpenModal("share", rowData)} className="flex items-center gap-2">
     <TbShare size={18} /> <span className="text-xs">Share Wall Link</span>
   </Dropdown.Item>
@@ -1126,8 +1140,9 @@ const WallListing = () => {
     ProductSpecificationsData,
     Employees,
     AllCompanyData,
+    getAllUserData,
     status: masterLoadingStatus,
-  } = useSelector(masterSelector);
+  } = useSelector(masterSelector, shallowEqual);
 
   // --- Component State ---
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
@@ -1147,11 +1162,9 @@ const WallListing = () => {
   });
 
   // --- Table and Filter State ---
-  // This state holds the raw filter values from the filter form
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
     filterFormSchema.parse({})
   );
-  // This state holds the table's operational state (pagination, sorting, search)
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
@@ -1225,11 +1238,7 @@ const WallListing = () => {
     []
   );
 
-  // ✅ CORRECT: This `useMemo` is the core of the server-side filtering logic.
-  // It combines table state (pagination, sort, search) and filter state into a single
-  // object that can be sent to the API.
   const apiParams = useMemo(() => {
-    // Helper to format array of react-select options into comma-separated strings for the API
     const formatMultiSelect = (items: { value: any }[] | undefined) => {
       if (!items || items.length === 0) return undefined;
       return items.map((item) => item.value).join(",");
@@ -1266,8 +1275,6 @@ const WallListing = () => {
         ? dayjs(filterCriteria.dateRange[1]).format("YYYY-MM-DD")
         : undefined;
     }
-
-    // Remove any undefined/null properties before sending to the API
     Object.keys(params).forEach((key) => {
       if (params[key] === undefined || params[key] === null) {
         delete params[key];
@@ -1277,14 +1284,10 @@ const WallListing = () => {
     return params;
   }, [tableData, filterCriteria]);
 
-  // ✅ CORRECT: This useEffect is now the primary data fetching trigger.
-  // It runs on initial load and whenever `apiParams` changes, ensuring the
-  // table is always in sync with the state (filters, pagination, sort, search).
   useEffect(() => {
     dispatch(getWallListingAction(apiParams));
   }, [dispatch, apiParams]);
 
-  // This useEffect fetches data for the filter dropdowns only once on component mount.
   useEffect(() => {
     dispatch(getProductsDataAsync());
     dispatch(getCategoriesData());
@@ -1294,22 +1297,17 @@ const WallListing = () => {
     dispatch(getProductSpecificationsAction());
     dispatch(getEmployeesAction());
     dispatch(getAllCompany());
+    dispatch(getAllUsersAction());
   }, [dispatch]);
 
-  // ✅ CORRECT: Data for the table is directly from the Redux store's paginated response.
-  // No client-side processing is needed.
   const pageData = useMemo(() => {
     return Array.isArray(wallListing?.data?.data)
       ? wallListing.data.data.map(mapApiToWallItem)
       : [];
   }, [wallListing, mapApiToWallItem]);
 
-  // ✅ CORRECT: Total item count now comes directly from the API response metadata.
   const total = wallListing?.data?.total || 0;
 
-  // REMOVED: The large `useMemo` block for client-side filtering, sorting, and pagination is gone.
-
-  // --- Handlers ---
   const handleSetTableData = useCallback(
     (data: Partial<TableQueries>) =>
       setTableData((prev) => ({ ...prev, ...data })),
@@ -1342,7 +1340,6 @@ const WallListing = () => {
   const handleCloseModal = () =>
     setModalState({ isOpen: false, type: null, data: null });
 
-  // ✅ CORRECT: The refetch after delete now uses the current `apiParams` to refresh the view.
   const onConfirmDeleteSelectedItems = useCallback(async () => {
     if (selectedItems.length === 0) {
       toast.push(
@@ -1362,7 +1359,6 @@ const WallListing = () => {
         </Notification>
       );
       setSelectedItems([]);
-      // Refetch the current page of data with the same filters.
       dispatch(getWallListingAction(apiParams));
     } catch (error: any) {
       toast.push(
@@ -1402,7 +1398,6 @@ const WallListing = () => {
     setIsExportReasonModalOpen(true);
   }, [total, exportReasonFormMethods]);
 
-  // ✅ FIXED: Export now correctly dispatches a thunk to fetch all filtered data from the server.
   const handleConfirmExportWithReason = useCallback(
     async (data: ExportReasonFormData) => {
       setIsSubmittingExportReason(true);
@@ -1411,7 +1406,6 @@ const WallListing = () => {
       const fileName = `wall_listing_export_${timestamp}.csv`;
 
       try {
-        // 1. Submit the reason for auditing purposes.
         await dispatch(
           submitExportReasonAction({
             reason: data.reason,
@@ -1428,17 +1422,11 @@ const WallListing = () => {
           />
         );
 
-        // debugger
-        // 2. Fetch ALL data matching the current filters for export.
-        // We create new params to fetch all items, overriding pagination.
         const exportParams = { ...apiParams, per_page: 0, page: 1 };
-        // 3. **CRITICAL FIX**: Dispatch the thunk and `unwrap` the result to get the data or catch the error.
-        //    Do not call the thunk action creator directly.
         const exportDataResponse = await dispatch(
           getWallListingAction(exportParams)
         ).unwrap();
 
-        // Assuming the unwrapped successful payload is an object like: { status: boolean, data: [], ... }
         if (!exportDataResponse?.status) {
           throw new Error(
             exportDataResponse?.message || "Failed to fetch data for export."
@@ -1571,7 +1559,6 @@ const WallListing = () => {
             row.original?.member || {};
           return (
             <div className="flex flex-col gap-0.5 text-xs">
-              {/* <div className="mb-1 w-full">{id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}<span className="font-semibold text-gray-800 dark:text-gray-100">{name || "N/A"}</span></div> */}
               <div className="mt-1 pt-1 dark:border-gray-700 w-full">
                 {id && (
                   <span className="font-semibold text-gray-500 dark:text-gray-400">
@@ -1597,7 +1584,6 @@ const WallListing = () => {
                   </span>
                 )}
               </div>
-              {/* {listing_url && (<div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-700"><a href={listing_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300 truncate max-w-[200px]">Listing URL</a></div>)} */}
             </div>
           );
         },
@@ -1981,7 +1967,7 @@ const WallListing = () => {
         onConfirmDelete={onConfirmDeleteSelectedItems}
         isDeleting={masterLoadingStatus === "loading"}
       />
-      <WallModals modalState={modalState} onClose={handleCloseModal} />
+      <WallModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={useMemo(() => getAllUserData.map((user: any) => ({value: user.id, label: user.name})), [getAllUserData])} />
 
       <Drawer
         title="View Wall Item Details"
@@ -2076,7 +2062,7 @@ const WallListing = () => {
                     <UiSelect
                       isMulti
                       placeholder="Select companies..."
-                      options={AllCompanyData?.map((p) => ({
+                      options={AllCompanyData?.map((p: any) => ({
                         value: p.id,
                         label: p.company_name,
                       }))}
@@ -2107,7 +2093,7 @@ const WallListing = () => {
                     <UiSelect
                       isMulti
                       placeholder="Select products..."
-                      options={AllProductsData?.map((p) => ({
+                      options={AllProductsData?.map((p: any) => ({
                         value: p.id,
                         label: p.name,
                       }))}
@@ -2124,7 +2110,7 @@ const WallListing = () => {
                     <UiSelect
                       isMulti
                       placeholder="Select Categories..."
-                      options={AllCategorysData.map((p) => ({
+                      options={AllCategorysData.map((p: any) => ({
                         value: p.id,
                         label: p.name,
                       }))}
@@ -2142,7 +2128,7 @@ const WallListing = () => {
                       isMulti
                       placeholder="Select Sub Categories..."
                       options={subCategoriesForSelectedCategoryData?.map(
-                        (p) => ({ value: p.id, label: p.name })
+                        (p: any) => ({ value: p.id, label: p.name })
                       )}
                       {...field}
                     />
@@ -2157,7 +2143,7 @@ const WallListing = () => {
                     <UiSelect
                       isMulti
                       placeholder="Select Brands..."
-                      options={BrandData?.map((p) => ({
+                      options={BrandData?.map((p: any) => ({
                         value: p.id,
                         label: p.name,
                       }))}
@@ -2223,7 +2209,7 @@ const WallListing = () => {
                     <UiSelect
                       isMulti
                       placeholder="Select Product Spec..."
-                      options={ProductSpecificationsData?.map((p) => ({
+                      options={ProductSpecificationsData?.map((p: any) => ({
                         value: p.id,
                         label: p.name,
                       }))}
@@ -2240,7 +2226,7 @@ const WallListing = () => {
                     <UiSelect
                       isMulti
                       placeholder="Select Member Type..."
-                      options={MemberTypeData?.map((p) => ({
+                      options={MemberTypeData?.map((p: any) => ({
                         value: p.id,
                         label: p.name,
                       }))}
@@ -2257,7 +2243,7 @@ const WallListing = () => {
                     <UiSelect
                       isMulti
                       placeholder="Select Employee..."
-                      options={Employees?.map((p) => ({
+                      options={Employees?.map((p: any) => ({
                         value: p.id,
                         label: p.name,
                       }))}
