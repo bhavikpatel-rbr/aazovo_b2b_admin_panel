@@ -368,7 +368,7 @@ const ExportMapping = () => {
         { header: 'Exported From', accessorKey: 'exportFrom', enableSorting: true, size: 220, cell: (props) => { const { exportFrom, fileName } = props.row.original; return (<div className="flex flex-col"><span className="font-semibold truncate max-w-[180px]">{exportFrom}</span><Tooltip title={fileName} placement="top"><span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] block">{fileName || 'N/A'}</span></Tooltip></div>) }, },
         { header: 'Reason', accessorKey: 'reason', enableSorting: false, size: 250, cell: (props) => (<Tooltip title={props.row.original.reason || ''} placement="top"><span className="truncate block max-w-[230px] text-justify">{props.row.original.reason || '–'}</span></Tooltip>), },
         { header: 'Date', accessorKey: 'exportDate', enableSorting: true, size: 220, cell: (props) => { const date = new Date(props.row.original.exportDate); return (<span className="text-sm">{!isNaN(date.getTime()) ? `${date.getDate()} ${date.toLocaleString('en-US', { month: 'short' })} ${date.getFullYear()}, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'Invalid Date'}</span>) }, },
-        { header: 'Action', id: 'action', size: 60, meta: { cellClass: "text-center" }, cell: (props) => <ActionColumn data={props.row.original} />, },
+        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center"  },     cell: (props) => <ActionColumn data={props.row.original} />, },
     ], []);
     
     const [filteredColumns, setFilteredColumns] = useState(columns);
