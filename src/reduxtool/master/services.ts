@@ -320,23 +320,48 @@ export const getcountryAsync = async () => {
     return isAxiosError(err)
   }
 }
-export const addcountryAsync = async (unitData: any) => {
-  try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/country`, unitData)
-    return response
-  } catch (err) {
-    return isAxiosError(err)
-  }
-}
+export const addcountryAsync = async (formData: FormData) => {
+    try {
+        const response = await axiosInstance.post(
+            `${config.apiURL}/master/country`,
+            formData, // Pass FormData directly
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+        return response;
+    } catch (err) {
+        // Re-throw the error to be caught by the Redux thunk's catch block
+        throw err;
+    }
+};
 
-export const editcountryAsync = async (unitData: any) => {
-  try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/country/${unitData?.id}`, { _method: "PUT", name: unitData?.name, iso_code: unitData?.iso_code, phone_code: unitData?.phone_code, region: unitData?.region, status: unitData?.status })
-    return response
-  } catch (err) {
-    return isAxiosError(err)
-  }
-}
+export const editcountryAsync = async ({
+    id,
+    data,
+}: {
+    id: string | number;
+    data: FormData; // Expecting FormData now
+}) => {
+    try {
+        const response = await axiosInstance.post(
+            `${config.apiURL}/master/country/${id}`,
+            data, // Pass the FormData object directly as the request body
+            {
+                headers: {
+                    // Axios usually sets this automatically for FormData, but it's good to be explicit
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+        return response;
+    } catch (err) {
+        // Re-throw the error to be caught by the Redux thunk's catch block
+        throw err;
+    }
+};
 
 export const deletcountryAsync = async (unitData: any) => {
   try {

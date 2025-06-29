@@ -1,6 +1,6 @@
 // src/views/your-path/Countries.tsx
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import cloneDeep from 'lodash/cloneDeep'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -21,7 +21,7 @@ import Select from '@/components/ui/Select'
 import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog } from '@/components/ui'
 
 // Icons
-import { TbPencil, TbTrash, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbWorld, TbWorldCheck, TbWorldX, TbUserCircle, TbUpload } from 'react-icons/tb'
+import { TbPencil, TbTrash, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbWorld, TbWorldCheck, TbWorldX, TbUserCircle } from 'react-icons/tb'
 
 // Types
 import type { OnSortParam, ColumnDef } from '@/components/shared/DataTable'
@@ -39,82 +39,6 @@ import {
     submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
 
-// --- REUSABLE IMAGE UPLOADER COMPONENT ---
-type ImageUploaderProps = {
-    value?: File | string | null
-    onChange: (file: File | null) => void
-}
-const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange }) => {
-    const [preview, setPreview] = useState<string | null>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
-
-    useEffect(() => {
-        if (!value) {
-            setPreview(null)
-            return
-        }
-        if (typeof value === 'string') {
-            setPreview(value)
-        } else if (value instanceof File) {
-            const objectUrl = URL.createObjectURL(value)
-            setPreview(objectUrl)
-            return () => URL.revokeObjectURL(objectUrl)
-        }
-    }, [value])
-
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0]
-        onChange(file || null)
-    }
-
-    const handleRemoveImage = () => {
-        onChange(null)
-        if (fileInputRef.current) {
-            fileInputRef.current.value = ''
-        }
-    }
-
-    return (
-        <div>
-            <div
-                className="w-full h-40 border-2 border-dashed rounded-md flex items-center justify-center cursor-pointer hover:border-indigo-500 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-            >
-                {preview ? (
-                    <div className="relative w-full h-full p-2">
-                        <img src={preview} alt="Preview" className="w-full h-full object-contain rounded-md" />
-                        <Button
-                            shape="circle"
-                            size="xs"
-                            variant="solid"
-                            color="red-600"
-                            icon={<TbX />}
-                            className="absolute top-2 right-2"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                handleRemoveImage()
-                            }}
-                        />
-                    </div>
-                ) : (
-                    <div className="text-center text-gray-500">
-                        <TbUpload size={30} className="mx-auto" />
-                        <p>Click to upload an image</p>
-                        <p className="text-xs">PNG, JPG, SVG, WEBP (Max 5MB)</p>
-                    </div>
-                )}
-            </div>
-            <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/png, image/jpeg, image/svg+xml, image/webp"
-                onChange={handleFileChange}
-            />
-        </div>
-    )
-}
-
 // --- FEATURE-SPECIFIC TYPES & SCHEMAS ---
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/svg+xml"];
@@ -129,9 +53,9 @@ const countryFormSchema = z.object({
     iso_code: z.string().min(1, 'ISO code is required.').max(10, "ISO code max 10 characters."),
     phone_code: z.string().min(1, 'Phone code is required.').max(10, "Phone code max 10 characters."),
     flag: z.any()
-        .refine((value) => !value || typeof value === 'string' || (value instanceof File && value.size <= MAX_FILE_SIZE), `Max image size is 5MB.`)
+        .refine((value) => !value || (value instanceof File && value.size <= MAX_FILE_SIZE), `Max image size is 5MB.`)
         .refine(
-            (value) => !value || typeof value === 'string' || (value instanceof File && ACCEPTED_IMAGE_TYPES.includes(value.type)),
+            (value) => !value || (value instanceof File && ACCEPTED_IMAGE_TYPES.includes(value.type)),
             "Only .jpg, .jpeg, .png, .svg and .webp formats are supported."
         ).optional().nullable(),
     status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." })
@@ -231,6 +155,8 @@ const Countries = () => {
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
     const [isImageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageToView, setImageToView] = useState<string | null>(null);
+    const [addFormFlagPreviewUrl, setAddFormFlagPreviewUrl] = useState<string | null>(null);
+    const [editFormFlagPreviewUrl, setEditFormFlagPreviewUrl] = useState<string | null>(null);
 
     const { CountriesData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
     
@@ -244,26 +170,55 @@ const Countries = () => {
 
     useEffect(() => { dispatch(getCountriesAction()); }, [dispatch]);
 
+    useEffect(() => {
+        return () => {
+            if (addFormFlagPreviewUrl) URL.revokeObjectURL(addFormFlagPreviewUrl);
+            if (editFormFlagPreviewUrl) URL.revokeObjectURL(editFormFlagPreviewUrl);
+        };
+    }, [addFormFlagPreviewUrl, editFormFlagPreviewUrl]);
+
     const openImageViewer = useCallback((imageUrl: string | null | undefined) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } }, []);
     const closeImageViewer = useCallback(() => { setImageViewerOpen(false); setImageToView(null); }, []);
     
     const openEditDrawer = useCallback((country: CountryItem) => {
         setEditingCountry(country);
-        formMethods.reset({ name: country.name, region: country.region || "", iso_code: country.iso_code, phone_code: country.phone_code, flag: country.flag_path || null, status: country.status });
+        formMethods.reset({ name: country.name, region: country.region || "", iso_code: country.iso_code, phone_code: country.phone_code, flag: null, status: country.status });
+        if (editFormFlagPreviewUrl) URL.revokeObjectURL(editFormFlagPreviewUrl);
+        setEditFormFlagPreviewUrl(null);
         setIsEditDrawerOpen(true);
-    }, [formMethods]);
+    }, [formMethods, editFormFlagPreviewUrl]);
     
     const handleDeleteClick = useCallback((country: CountryItem) => { setCountryToDelete(country); setSingleDeleteConfirmOpen(true); }, []);
 
     const columns: ColumnDef<CountryItem>[] = useMemo(() => [
-        { header: "Flag", accessorKey: "flag_path", size: 60, cell: props => props.row.original.flag_path ? <Avatar src={props.row.original.flag_path} size="sm" shape="square" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(props.row.original.flag_path)}/> : <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-md flex items-center justify-center text-gray-400">?</div> },
+        {
+            header: 'Flag',
+            accessorKey: 'flag_path',
+            enableSorting: false,
+            size: 80,
+            cell: (props) => {
+                const { flag_path } = props.row.original
+                return flag_path ? (
+                    <Avatar
+                        src={flag_path}
+                        size={30}
+                        shape="circle"
+                        icon={<TbWorld />}
+                        className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                        onClick={() => openImageViewer(flag_path)}
+                    />
+                ) : (
+                    <Avatar size={30} shape="circle" icon={<TbWorld />} />
+                )
+            },
+        },
         { header: "Country Name", accessorKey: "name", enableSorting: true, size: 200 },
         { header: "Continent", accessorKey: "region", enableSorting: true, size: 150 },
         { header: "ISO", accessorKey: "iso_code", enableSorting: true, size: 80 },
         { header: "Phone Code", accessorKey: "phone_code", enableSorting: true, size: 120 },
         { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
-        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip><Tooltip title="Delete"><div className="text-lg p-1.5 cursor-pointer hover:text-red-500" onClick={() => handleDeleteClick(props.row.original)}><TbTrash /></div></Tooltip></div>) },
+        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
     ], [openImageViewer, openEditDrawer, handleDeleteClick]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<CountryItem>[]>(columns);
@@ -331,36 +286,37 @@ const Countries = () => {
         else { setActiveFilters({ status: [status] }); }
     };
 
-    const openAddDrawer = () => { formMethods.reset({ name: "", region: "", iso_code: "", phone_code: "", flag: null, status: 'Active' }); setIsAddDrawerOpen(true); };
-    const closeAddDrawer = () => setIsAddDrawerOpen(false);
+    const openAddDrawer = () => {
+        formMethods.reset({ name: "", region: "", iso_code: "", phone_code: "", flag: null, status: 'Active' });
+        if (addFormFlagPreviewUrl) URL.revokeObjectURL(addFormFlagPreviewUrl);
+        setAddFormFlagPreviewUrl(null);
+        setIsAddDrawerOpen(true);
+    };
+    const closeAddDrawer = () => {
+        if (addFormFlagPreviewUrl) URL.revokeObjectURL(addFormFlagPreviewUrl);
+        setAddFormFlagPreviewUrl(null);
+        setIsAddDrawerOpen(false);
+    };
     
     const prepareFormData = (data: CountryFormData) => {
         const formData = new FormData();
-        Object.keys(data).forEach(key => {
-            const value = data[key as keyof CountryFormData];
+        (Object.keys(data) as Array<keyof CountryFormData>).forEach((key) => {
+            const value = data[key];
             if (key === 'flag') {
                 if (value instanceof File) {
                     formData.append('flag', value);
-                } else if (value === null) {
-                    // Signal to the backend to remove the image.
-                    // This could be an empty string or a specific flag.
-                    formData.append('flag', '');
                 }
-                // If `value` is a string (existing URL), we don't append it, 
-                // as we only need to send a new file if it's changed.
             } else if (value !== null && value !== undefined) {
                 formData.append(key, value as string);
             }
         });
         return formData;
-    }
+    };
     
     const onAddCountrySubmit = async (data: CountryFormData) => { 
         setIsSubmitting(true); 
         const formData = prepareFormData(data);
         try { 
-            // IMPORTANT: Your `addCountryAction` and API service must be updated
-            // to accept and send `FormData` (multipart/form-data).
             await dispatch(addCountryAction(formData as any)).unwrap(); 
             toast.push(<Notification title="Country Added" type="success">{`Country "${data.name}" was successfully added.`}</Notification>); 
             closeAddDrawer(); 
@@ -372,21 +328,21 @@ const Countries = () => {
         } 
     };
     
-    const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingCountry(null); };
+    const closeEditDrawer = () => {
+        if (editFormFlagPreviewUrl) URL.revokeObjectURL(editFormFlagPreviewUrl);
+        setEditFormFlagPreviewUrl(null);
+        setIsEditDrawerOpen(false);
+        setEditingCountry(null);
+    };
     
     const onEditCountrySubmit = async (data: CountryFormData) => { 
         if (!editingCountry?.id) return; 
         setIsSubmitting(true); 
         const formData = prepareFormData(data);
 
-        // For PUT requests with FormData, some backends require a POST request with a _method field.
-        // Check your backend API's requirements.
-        // formData.append('_method', 'PUT'); 
+        formData.append('_method', 'PUT'); 
 
         try { 
-            // IMPORTANT: Your `editCountryAction` must be updated to accept { id, data: formData }
-            // and send the data as multipart/form-data.
-            formData
             await dispatch(editCountryAction({ id: editingCountry.id, data: formData })).unwrap(); 
             toast.push(<Notification title="Country Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); 
             closeEditDrawer(); 
@@ -442,24 +398,68 @@ const Countries = () => {
             </Container>
 
             {/* --- ADD/EDIT DRAWERS --- */}
-            {[ { isEdit: false, isOpen: isAddDrawerOpen, closeFn: closeAddDrawer, onSubmit: onAddCountrySubmit, title: 'Add Country', formId: 'addCountryForm', submitText: 'Adding...', saveText: 'Save' }, { isEdit: true, isOpen: isEditDrawerOpen, closeFn: closeEditDrawer, onSubmit: onEditCountrySubmit, title: 'Edit Country', formId: 'editCountryForm', submitText: 'Saving...', saveText: 'Save' } ].map(d => (
+            {[ { isEdit: false, isOpen: isAddDrawerOpen, closeFn: closeAddDrawer, onSubmit: onAddCountrySubmit, title: 'Add Country', formId: 'addCountryForm', submitText: 'Adding...', saveText: 'Save' }, { isEdit: true, isOpen: isEditDrawerOpen, closeFn: closeEditDrawer, onSubmit: onEditCountrySubmit, title: 'Edit Country', formId: 'editCountryForm', submitText: 'Saving...', saveText: 'Save' } ].map(d => {
+                const previewUrl = d.isEdit ? editFormFlagPreviewUrl : addFormFlagPreviewUrl;
+                const setPreviewUrl = d.isEdit ? setEditFormFlagPreviewUrl : setAddFormFlagPreviewUrl;
+                
+                return (
                 <Drawer key={d.formId} title={d.title} isOpen={d.isOpen} onClose={d.closeFn} onRequestClose={d.closeFn} width={480} bodyClass="relative" footer={ <div className="text-right w-full"><Button size="sm" className="mr-2" onClick={d.closeFn} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form={d.formId} type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? d.submitText : d.saveText}</Button></div> }>
                     <Form id={d.formId} onSubmit={formMethods.handleSubmit(d.onSubmit as any)} className="flex flex-col gap-4">
                         <FormItem label={<div>Country Name <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Country Name" />)} /></FormItem>
                         <FormItem label={<div>Continent <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.region} errorMessage={formMethods.formState.errors.region?.message}><Controller name="region" control={formMethods.control} render={({ field }) => (<Select placeholder="Select Continent" options={regionOptions} value={regionOptions.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : "")} />)} /></FormItem>
                         <FormItem label={<div>ISO Code <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.iso_code} errorMessage={formMethods.formState.errors.iso_code?.message}><Controller name="iso_code" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., USA" />)} /></FormItem>
                         <FormItem label={<div>Phone Code <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.phone_code} errorMessage={formMethods.formState.errors.phone_code?.message}><Controller name="phone_code" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., +1" />)} /></FormItem>
-                        <FormItem label="Flag Image" invalid={!!formMethods.formState.errors.flag} errorMessage={formMethods.formState.errors.flag?.message as string}>
-                            <Controller name="flag" control={formMethods.control} render={({ field }) => (
-                                <ImageUploader value={field.value} onChange={field.onChange} />
-                            )} />
+                        <FormItem
+                            label="Flag Image"
+                            invalid={!!formMethods.formState.errors.flag}
+                            errorMessage={formMethods.formState.errors.flag?.message as string}
+                        >
+                            {d.isEdit && editingCountry?.flag_path && !previewUrl && (
+                                <div className="mb-2">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Flag:</p>
+                                    <Avatar src={editingCountry.flag_path} size={60} shape="circle" icon={<TbWorld />} />
+                                </div>
+                            )}
+                            {previewUrl && (
+                                <div className="mt-2 mb-2">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                        {d.isEdit ? 'New Flag Preview:' : 'Flag Preview:'}
+                                    </p>
+                                    <Avatar src={previewUrl} size={60} shape="circle" icon={<TbWorld />} />
+                                </div>
+                            )}
+                            <Controller
+                                name="flag"
+                                control={formMethods.control}
+                                render={({ field: { onChange: rhfOnChange, onBlur, name, ref: fieldRef } }) => (
+                                    <Input
+                                        type="file"
+                                        name={name}
+                                        ref={fieldRef}
+                                        onBlur={onBlur}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                            const file = e.target.files?.[0] || null;
+                                            rhfOnChange(file);
+                                            if (previewUrl) URL.revokeObjectURL(previewUrl);
+                                            setPreviewUrl(file ? URL.createObjectURL(file) : null);
+                                            formMethods.trigger('flag');
+                                        }}
+                                        accept="image/png, image/jpeg, image/svg+xml, image/webp"
+                                    />
+                                )}
+                            />
+                            {d.isEdit && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {editingCountry?.flag_path
+                                        ? 'Leave blank to keep current flag, or select a new file to replace it.'
+                                        : 'Upload a flag image.'}
+                                </p>
+                            )}
                         </FormItem>
                         <FormItem label={<div>Status <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : "")} />)} /></FormItem>
                     </Form>
                     {d.isEdit && editingCountry && (
-                        // <div className="absolute bottom-[3%] w-[90%]">
                             <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                                {/* First div (will be narrower) - Removed inline style={{flex:0.4}} */}
                                 <div>
                                     <b className="mt-3 mb-3 font-semibold text-primary">
                                         Latest Update:
@@ -474,10 +474,8 @@ const Countries = () => {
                                             ?.roles[0]?.display_name || 'N/A'}
                                     </p>
                                 </div>
-                                {/* Second div (will be wider) - Removed inline style={{flex:0.6}} */}
                                 <div className='text-right'>
-                                    <br />{' '}
-                                    {/* This <br /> is for spacing, consider if padding/margin is more appropriate */}
+                                    <br />
                                     <span className="font-semibold">
                                         Created At:
                                     </span>{' '}
@@ -517,11 +515,9 @@ const Countries = () => {
                                     </span>
                                 </div>
                             </div>
-                        // </div>
                     )}
-                    {/* {d.isEdit && editingCountry && (<div className="absolute bottom-4 right-4 left-4"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-gray-900 dark:text-gray-100">Latest Update:</b><br /><p className="font-semibold">{editingCountry.updated_by_user?.name || "N/A"}</p><p>{editingCountry.updated_by_user?.roles[0]?.display_name || "N/A"}</p></div><div className="text-right"><b className="font-semibold text-gray-900 dark:text-gray-100"></b><br /><span className="font-semibold">Created:</span> <span>{editingCountry.created_at ? new Date(editingCountry.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated:</span> <span>{editingCountry.updated_at ? new Date(editingCountry.updated_at).toLocaleString() : "N/A"}</span></div></div></div>)} */}
                 </Drawer>
-            ))}
+            )})}
 
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
                 <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">

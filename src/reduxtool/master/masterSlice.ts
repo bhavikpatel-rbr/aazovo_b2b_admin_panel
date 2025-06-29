@@ -9,7 +9,7 @@ import {
   addEmployeesAction,
   addInquiriesAction,
   addMemberAction,
-  addNotificationAction,
+  // addNotificationAction,
   addpartnerAction,
   addPaymentTermAction,
   addUnitAction,
@@ -676,10 +676,10 @@ const masterSlice = createSlice({
       ...state,
       getNotification: payload,
     }));
-    builder.addCase(addNotificationAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      addNotification: payload,
-    }));
+    // builder.addCase(addNotificationAction.fulfilled, (state, { payload }) => ({
+    //   ...state,
+    //   addNotification: payload,
+    // }));
   },
 });
 

@@ -570,42 +570,52 @@ export const getCountriesAction = createAsyncThunk(
   }
 )
 
-export const addCountryAction = createAsyncThunk<any, any>(
-  "auth/addcountry",
-  async (data, { rejectWithValue, dispatch }) => {
-    try {
-      const response: AxiosResponse<any> = await addcountryAsync(data)
-      if (response?.data?.status === true) {
-        dispatch(getCountriesAction())
+export const addCountryAction = createAsyncThunk<
+    any,
+    FormData // The payload from the component is a FormData object
+>(
+    'auth/addcountry',
+    async (formData, { rejectWithValue, dispatch }) => {
+        try {
+            // The `formData` argument is passed directly from the component's dispatch call
+            const response: AxiosResponse<any> = await addcountryAsync(formData);
 
-        return response?.data?.data
-      }
+            if (response?.data?.status === true) {
+                dispatch(getCountriesAction());
+                return response?.data?.data;
+            }
 
-      return rejectWithValue(response)
-    } catch (error: unknown) {
-      return rejectWithValue(error as Error)
+            return rejectWithValue(response);
+        } catch (error: unknown) {
+            // This now correctly catches the error thrown from the updated `addcountryAsync`
+            return rejectWithValue(error as Error);
+        }
     }
-  }
-)
+);
 
 
-export const editCountryAction = createAsyncThunk<any, any>(
-  "auth/editcountry",
-  async (data, { rejectWithValue, dispatch }) => {
-    try {
-      const response: AxiosResponse<any> = await editcountryAsync(data)
-      if (response?.data?.status === true) {
-        dispatch(getCountriesAction())
+export const editCountryAction = createAsyncThunk<
+    any,
+    { id: string | number; data: FormData } // The payload from the component
+>(
+    'auth/editcountry',
+    async (payload, { rejectWithValue, dispatch }) => {
+        try {
+            // `payload` is the object { id, data } which `editcountryAsync` now expects.
+            const response: AxiosResponse<any> = await editcountryAsync(payload);
+            
+            if (response?.data?.status === true) {
+                dispatch(getCountriesAction());
+                return response?.data?.data;
+            }
 
-        return response?.data?.data
-      }
-
-      return rejectWithValue(response)
-    } catch (error: unknown) {
-      return rejectWithValue(error as Error)
+            return rejectWithValue(response);
+        } catch (error: unknown) {
+            // This now correctly catches the error thrown from the updated `editcountryAsync`
+            return rejectWithValue(error as Error);
+        }
     }
-  }
-)
+);
 
 export const deleteCountryAction = createAsyncThunk<any, any>(
   "auth/deleteCountry", // Corrected: "deletcountry"

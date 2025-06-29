@@ -46,7 +46,7 @@ import {
     getCategoriesAction,
     getBrandAction,
     getSubcategoriesByCategoryIdAction,
-    addNotificationAction,
+    // addNotificationAction,
 } from '@/reduxtool/master/middleware'
 import { Link } from 'react-router-dom'
 
@@ -193,7 +193,7 @@ const AddNotificationDialog: React.FC<{ PriceList: PriceListItem; onClose: () =>
     const onSend = async (data: any) => {
         setIsLoading(true);
         setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000);
-        await dispatch(addNotificationAction(data)).unwrap();
+        // await dispatch(addNotificationAction(data)).unwrap();
     };
     return (
         <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
