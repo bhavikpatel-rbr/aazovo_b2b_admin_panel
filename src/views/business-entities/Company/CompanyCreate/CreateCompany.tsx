@@ -1245,9 +1245,9 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
   return (
     <Card id="memberManagement">
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <h4 className="mb-0">Linked Member Management</h4>
+        <h4 className="mb-0">Member Management</h4>
         <div className="flex gap-2">
-            <Button type="button" size="sm" icon={<TbPlus />} onClick={() => append({ member_id: undefined, designation: "", person_name: "", number: "" })}>Link Member</Button>
+            <Button type="button" size="sm" icon={<TbPlus />} onClick={() => append({ member_id: undefined, designation: "", person_name: "", number: "" })}>Add Member</Button>
             <Button as={NavLink} to="/business-entities/member-create" type="button" size="sm" icon={<TbPlus />}>Create New Member</Button>
         </div>
       </div>

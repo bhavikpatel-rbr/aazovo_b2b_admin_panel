@@ -580,7 +580,7 @@ const PartnerListTable = () => {
           {imageToView ? <img src={`https://aazovo.codefriend.in/${imageToView}`} alt="Partner Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
         </div>
       </Dialog>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-4 gap-2">
         <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div><div><h6>{partnerCount?.total ?? 0}</h6><span className="text-xs font-semibold">Total</span></div></Card>
         <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUser size={24} /></div><div><h6>{partnerCount?.active ?? 0}</h6><span className="text-xs font-semibold">Active</span></div></Card>
         <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserCancel size={24} /></div><div><h6>{partnerCount?.disabled ?? 0}</h6><span className="text-xs font-semibold">Disabled</span></div></Card>
