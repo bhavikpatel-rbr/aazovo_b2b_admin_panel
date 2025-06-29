@@ -2910,3 +2910,14 @@ export const getReportingToAsync = async (department_id: any) => {
     return isAxiosError(err)
   }
 }
+
+
+export const deleteAllExportMappingsAsync = async () => {
+  try {
+
+    const response = await axiosInstance.post(`${config.apiURL}/other/export_mapping/delete-all`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
