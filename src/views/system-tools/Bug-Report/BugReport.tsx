@@ -1,10 +1,22 @@
 // src/views/your-path/BugReportListing.tsx
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import classNames from "@/utils/classNames";
+import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import cloneDeep from "lodash/cloneDeep";
 import React, { Ref, useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { BsThreeDotsVertical } from "react-icons/bs";
+import { shallowEqual, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import { z } from "zod";
+
+dayjs.extend(isBetween);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -14,20 +26,21 @@ import DataTable from "@/components/shared/DataTable";
 import DebounceInput from "@/components/shared/DebouceInput";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
+  Button,
   Card,
+  DatePicker,
   Dialog,
   Drawer,
   Dropdown,
   Form,
   FormItem,
   Input,
+  Select,
   Tag,
+  Tooltip
 } from "@/components/ui";
-import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
-import Select from "@/components/ui/Select";
 import toast from "@/components/ui/toast";
-import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
@@ -57,7 +70,7 @@ import {
   TbSearch,
   TbTagStarred,
   TbUser,
-  TbUserCircle,
+  TbUserCircle
 } from "react-icons/tb";
 
 // Types
@@ -65,7 +78,7 @@ import type { TableQueries } from "@/@types/common";
 import type {
   ColumnDef,
   OnSortParam,
-  Row,
+  Row
 } from "@/components/shared/DataTable";
 
 // Redux
@@ -73,23 +86,20 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addBugReportAction,
   addNotificationAction,
+  addScheduleAction,
   deleteAllBugReportsAction,
   deleteBugReportAction,
   editBugReportAction,
   getAllUsersAction,
   getBugReportsAction,
-  submitExportReasonAction,
+  submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import classNames from "@/utils/classNames";
-import { BsThreeDotsVertical } from "react-icons/bs";
-import { shallowEqual, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
 
 // --- Define Types ---
 export type BugReportStatusApi = "Read" | "Unread" | string;
 export type BugReportStatusForm = "Read" | "Unread";
-export type BugReportSeverity = "Low" | "Medium" | "High"; // ADDED
+export type BugReportSeverity = "Low" | "Medium" | "High";
 
 export type BugReportItem = {
   id: string | number;
@@ -99,7 +109,7 @@ export type BugReportItem = {
   report: string;
   attachment?: string | null;
   status: BugReportStatusApi;
-  severity?: BugReportSeverity; // ADDED
+  severity?: BugReportSeverity;
   created_at?: string;
   updated_at?: string;
   updated_by_name?: string;
@@ -165,76 +175,57 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- CSV Exporter ---
-const CSV_HEADERS_BUG = [
-  "ID",
-  "Name",
-  "Email",
-  "Mobile No",
-  "Report",
-  "Attachment",
-  "Status",
-  "Created At",
-  "Updated By",
-  "Updated Role",
-  "Updated At",
+// --- Zod Schema for Schedule Form ---
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
+// --- Constants for Schedule Form ---
+const eventTypeOptions = [
+    { value: 'Meeting', label: 'Meeting' },
+    { value: 'Call', label: 'Follow-up Call' },
+    { value: 'Deadline', label: 'Project Deadline' },
+    { value: 'Reminder', label: 'Reminder' },
 ];
 
+// --- CSV Exporter ---
+const CSV_HEADERS_BUG = [
+  "ID", "Name", "Email", "Mobile No", "Report", "Attachment", "Status", "Created At", "Updated By", "Updated Role", "Updated At"
+];
 type BugReportExportItem = Omit<BugReportItem, "created_at" | "updated_at"> & {
   created_at_formatted?: string;
   updated_at_formatted?: string;
 };
-
 const CSV_KEYS_BUG_EXPORT: (keyof BugReportExportItem)[] = [
-  "id",
-  "name",
-  "email",
-  "mobile_no",
-  "report",
-  "attachment",
-  "status",
-  "created_at_formatted",
-  "updated_by_name",
-  "updated_by_role",
-  "updated_at_formatted",
+  "id", "name", "email", "mobile_no", "report", "attachment", "status", "created_at_formatted", "updated_by_name", "updated_by_role", "updated_at_formatted"
 ];
-
 function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
   if (!rows || rows.length === 0) return false;
-
   const preparedRows: BugReportExportItem[] = rows.map((row) => ({
     ...row,
     mobile_no: row.mobile_no || "N/A",
     attachment: row.attachment || "N/A",
-    created_at_formatted: row.created_at
-      ? new Date(row.created_at).toLocaleString()
-      : "N/A",
+    created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : "N/A",
     updated_by_name: row.updated_by_name || "N/A",
     updated_by_role: row.updated_by_role || "N/A",
-    updated_at_formatted: row.updated_at
-      ? new Date(row.updated_at).toLocaleString()
-      : "N/A",
+    updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A",
   }));
-
   const separator = ",";
-  const csvContent =
-    CSV_HEADERS_BUG.join(separator) +
-    "\n" +
-    preparedRows
-      .map((row) =>
-        CSV_KEYS_BUG_EXPORT.map((k) => {
-          let cell = row[k as keyof BugReportExportItem];
-          if (cell === null || cell === undefined) cell = "";
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-          return cell;
-        }).join(separator)
-      )
-      .join("\n");
-
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const csvContent = CSV_HEADERS_BUG.join(separator) + "\n" + preparedRows.map((row) =>
+    CSV_KEYS_BUG_EXPORT.map((k) => {
+      let cell = row[k as keyof BugReportExportItem];
+      if (cell === null || cell === undefined) cell = "";
+      else cell = String(cell).replace(/"/g, '""');
+      if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+      return cell;
+    }).join(separator)
+  ).join("\n");
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
@@ -247,11 +238,7 @@ function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
     URL.revokeObjectURL(url);
     return true;
   }
-  toast.push(
-    <Notification title="Export Failed" type="danger">
-      Browser does not support this feature.
-    </Notification>
-  );
+  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
   return false;
 }
 
@@ -260,10 +247,12 @@ const ActionColumn = ({
   onEdit,
   onViewDetail,
   onAddNotification,
+  onAddSchedule,
 }: {
   onEdit: () => void;
   onViewDetail: () => void;
   onAddNotification: () => void;
+  onAddSchedule: () => void;
 }) => {
   return (
     <div className="flex items-center justify-center text-center">
@@ -286,190 +275,89 @@ const ActionColumn = ({
         </button>
       </Tooltip>
       <Dropdown
-        renderTitle={
-          <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
-        }
+        renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}
       >
-        <Dropdown.Item
-          className="flex items-center gap-2"
-          onClick={onAddNotification}
-        >
-          <TbBell size={18} />{" "}
-          <span className="text-xs">Add Notification </span>
+        <Dropdown.Item className="flex items-center gap-2" onClick={onAddNotification}>
+          <TbBell size={18} /> <span className="text-xs">Add Notification </span>
         </Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2">
-          <TbUser size={18} />{" "}
-          <Link to="/task/task-list/create">
-            <span className="text-xs">Assign to Task</span>
-          </Link>
+          <TbUser size={18} /> <Link to="/task/task-list/create"><span className="text-xs">Assign to Task</span></Link>
         </Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2">
           <TbMailShare size={18} /> <span className="text-xs">Send Email</span>
         </Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2">
-          <TbBrandWhatsapp size={18} />{" "}
-          <span className="text-xs">Send Whatsapp</span>
+          <TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span>
         </Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2">
-          <TbTagStarred size={18} />{" "}
-          <span className="text-xs">Add to Active </span>
+          <TbTagStarred size={18} /> <span className="text-xs">Add to Active </span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbCalendarClock size={18} />{" "}
-          <span className="text-xs">Add Schedule </span>
+        <Dropdown.Item className="flex items-center gap-2" onClick={onAddSchedule}>
+          <TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span>
         </Dropdown.Item>
       </Dropdown>
     </div>
   );
 };
 
-type ItemSearchProps = {
-  onInputChange: (value: string) => void;
-  ref?: Ref<HTMLInputElement>;
-};
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
-  ({ onInputChange }, ref) => (
-    <DebounceInput
-      ref={ref}
-      className="w-full"
-      placeholder="Quick Search..."
-      suffix={<TbSearch className="text-lg" />}
-      onChange={(e) => onInputChange(e.target.value)}
-    />
-  )
-);
+type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement> };
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (
+  <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
+));
 ItemSearch.displayName = "ItemSearch";
 
-type ItemTableToolsProps = {
-  onSearchChange: (query: string) => void;
-  onFilter: () => void;
-  onExport: () => void;
-  onClearFilters: () => void;
-};
-const ItemTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-  onClearFilters,
-}: ItemTableToolsProps) => (
+type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; };
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
       <ItemSearch onInputChange={onSearchChange} />
     </div>
     <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Button
-        icon={<TbReload />}
-        onClick={onClearFilters}
-        title="Clear Filters"
-      ></Button>
-      <Button
-        icon={<TbFilter />}
-        onClick={onFilter}
-        className="w-full sm:w-auto"
-      >
-        Filter
-      </Button>
-      <Button
-        icon={<TbCloudUpload />}
-        onClick={onExport}
-        className="w-full sm:w-auto"
-      >
-        Export
-      </Button>
+      <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
+      <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
     </div>
   </div>
 );
 
-type BugReportsSelectedFooterProps = {
-  selectedItems: BugReportItem[];
-  onDeleteSelected: () => void;
-  isDeleting: boolean;
-};
-const BugReportsSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-  isDeleting,
-}: BugReportsSelectedFooterProps) => {
+type BugReportsSelectedFooterProps = { selectedItems: BugReportItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
+const BugReportsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: BugReportsSelectedFooterProps) => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   if (selectedItems.length === 0) return null;
   return (
     <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
+      <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
         <div className="flex items-center justify-between w-full px-4 sm:px-8">
           <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
+            <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
             <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
               <span className="heading-text">{selectedItems.length}</span>
               <span>Report{selectedItems.length > 1 ? "s" : ""} selected</span>
             </span>
           </span>
-          <Button
-            size="sm"
-            variant="plain"
-            className="text-red-600 hover:text-red-500"
-            onClick={() => setDeleteConfirmOpen(true)}
-            loading={isDeleting}
-          >
+          <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteConfirmOpen(true)} loading={isDeleting}>
             Delete Selected
           </Button>
         </div>
       </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Report${selectedItems.length > 1 ? "s" : ""
-          }`}
-        onClose={() => setDeleteConfirmOpen(false)}
-        onRequestClose={() => setDeleteConfirmOpen(false)}
-        onCancel={() => setDeleteConfirmOpen(false)}
-        onConfirm={() => {
-          onDeleteSelected();
-          setDeleteConfirmOpen(false);
-        }}
-        loading={isDeleting}
-      >
-        <p>
-          Are you sure you want to delete the selected report
-          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
-        </p>
+      <ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Report${selectedItems.length > 1 ? "s" : ""}`} onClose={() => setDeleteConfirmOpen(false)} onRequestClose={() => setDeleteConfirmOpen(false)} onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteConfirmOpen(false); }} loading={isDeleting}>
+        <p>Are you sure you want to delete the selected report{selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.</p>
       </ConfirmDialog>
     </>
   );
 };
 
 // --- Notification Dialog for Bug Reports ---
-const BugReportNotificationDialog = ({
-  bugReport,
-  onClose,
-  getAllUserDataOptions,
-}: {
-  bugReport: BugReportItem;
-  onClose: () => void;
-  getAllUserDataOptions: { value: number; label: string }[];
-}) => {
+const BugReportNotificationDialog = ({ bugReport, onClose, getAllUserDataOptions }: { bugReport: BugReportItem; onClose: () => void; getAllUserDataOptions: { value: number; label: string }[]; }) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
-
   const notificationSchema = z.object({
-    notification_title: z
-      .string()
-      .min(3, "Title must be at least 3 characters long."),
+    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
     send_users: z.array(z.number()).min(1, "Please select at least one user."),
     message: z.string().min(10, "Message must be at least 10 characters long."),
   });
-
   type NotificationFormData = z.infer<typeof notificationSchema>;
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useForm<NotificationFormData>({
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
     resolver: zodResolver(notificationSchema),
     defaultValues: {
       notification_title: `Warning: Regarding Bug Report by ${bugReport.name}`,
@@ -478,10 +366,8 @@ const BugReportNotificationDialog = ({
     },
     mode: "onChange",
   });
-
   const onSend = async (formData: NotificationFormData) => {
     setIsLoading(true);
-
     const payload = {
       send_users: formData.send_users,
       notification_title: formData.notification_title,
@@ -489,21 +375,73 @@ const BugReportNotificationDialog = ({
       module_id: String(bugReport.id),
       module_name: "BugReport",
     };
-
     try {
       await dispatch(addNotificationAction(payload)).unwrap();
-      toast.push(
-        <Notification type="success" title="Notification Sent Successfully!" />
-      );
+      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
       onClose();
     } catch (error: any) {
-      toast.push(
-        <Notification
-          type="danger"
-          title="Failed to Send Notification"
-          children={error?.message || "An unknown error occurred."}
-        />
-      );
+      toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || "An unknown error occurred."} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Notify User about Bug: {bugReport.name}</h5>
+      <Form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+          <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
+        </FormItem>
+        <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+          <Controller name="send_users" control={control} render={({ field }) => (<Select isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} />
+        </FormItem>
+        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+          <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={6} />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
+        </div>
+      </Form>
+    </Dialog>
+  );
+};
+
+// --- Schedule Dialog for Bug Reports ---
+const BugReportScheduleDialog: React.FC<{ bugReport: BugReportItem; onClose: () => void; }> = ({ bugReport, onClose }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: {
+      event_title: `Review bug report from ${bugReport.name}`,
+      event_type: undefined,
+      date_time: null as any,
+      remind_from: null,
+      notes: `Regarding bug report: "${bugReport.report.substring(0, 50)}..."`,
+    },
+    mode: 'onChange',
+  });
+
+  const onAddEvent = async (data: ScheduleFormData) => {
+    setIsLoading(true);
+    const payload = {
+      module_id: Number(bugReport.id),
+      module_name: 'BugReport',
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+      notes: data.notes || '',
+    };
+
+    try {
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for bug report.`} />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
     } finally {
       setIsLoading(false);
     }
@@ -511,70 +449,34 @@ const BugReportNotificationDialog = ({
 
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Notify User about Bug: {bugReport.name}</h5>
-      <Form onSubmit={handleSubmit(onSend)}>
-        <FormItem
-          label="Title"
-          invalid={!!errors.notification_title}
-          errorMessage={errors.notification_title?.message}
-        >
-          <Controller
-            name="notification_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
+      <h5 className="mb-4">Add Schedule for Bug Report</h5>
+      <Form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
         </FormItem>
-        <FormItem
-          label="Send To"
-          invalid={!!errors.send_users}
-          errorMessage={errors.send_users?.message}
-        >
-          <Controller
-            name="send_users"
-            control={control}
-            render={({ field }) => (
-              <Select
-                isMulti
-                placeholder="Select User(s)"
-                options={getAllUserDataOptions}
-                value={getAllUserDataOptions.filter((o) =>
-                  field.value?.includes(o.value)
-                )}
-                onChange={(options) =>
-                  field.onChange(options?.map((o) => o.value) || [])
-                }
-              />
-            )}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <Controller name="event_type" control={control} render={({ field }) => (
+              <Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </FormItem>
+          <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <Controller name="date_time" control={control} render={({ field }) => (
+              <DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />
+            )} />
+          </FormItem>
+        </div>
+        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <Controller name="remind_from" control={control} render={({ field }) => (
+            <DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />
+          )} />
         </FormItem>
-        <FormItem
-          label="Message"
-          invalid={!!errors.message}
-          errorMessage={errors.message?.message}
-        >
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={6} />}
-          />
+        <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
         </FormItem>
         <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            type="submit"
-            loading={isLoading}
-            disabled={!isValid || isLoading}
-          >
-            Send Notification
-          </Button>
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
         </div>
       </Form>
     </Dialog>
@@ -584,15 +486,9 @@ const BugReportNotificationDialog = ({
 // --- Main Component: BugReportListing ---
 const BugReportListing = () => {
   const dispatch = useAppDispatch();
-  const {
-    bugReportsData: rawBugReportsData = [],
-    status: masterLoadingStatus = "idle",
-    getAllUserData = [],
-  } = useSelector(masterSelector, shallowEqual);
-
+  const { bugReportsData: rawBugReportsData = [], status: masterLoadingStatus = "idle", getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
 
   const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
-
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -607,23 +503,15 @@ const BugReportListing = () => {
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [notificationItem, setNotificationItem] = useState<BugReportItem | null>(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleItem, setScheduleItem] = useState<BugReportItem | null>(null);
 
-  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
-    filterStatus: [],
-    filterReportedBy: "",
-  });
-  const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: "desc", key: "created_at" },
-    query: "",
-  });
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterStatus: [], filterReportedBy: "" });
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<BugReportItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
-  const [isSubmittingExportReason, setIsSubmittingExportReason] =
-    useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
 
   useEffect(() => {
     dispatch(getAllUsersAction())
@@ -632,93 +520,26 @@ const BugReportListing = () => {
 
   const bugReportsData: BugReportItem[] = useMemo(() => {
     if (!Array.isArray(rawBugReportsData?.data)) return [];
-    return rawBugReportsData?.data.map((item: any) => ({
-      ...item,
-      updated_by_name: item.updated_by_user?.name || item.updated_by_name,
-      updated_by_role:
-        item.updated_by_user?.roles?.[0]?.display_name || item.updated_by_role,
-    }));
+    return rawBugReportsData?.data.map((item: any) => ({ ...item, updated_by_name: item.updated_by_user?.name || item.updated_by_name, updated_by_role: item.updated_by_user?.roles?.[0]?.display_name || item.updated_by_role }));
   }, [rawBugReportsData?.data]);
   const itemPath = (filename: any) => {
     const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
-    return filename
-      ? `${baseUrl}/storage/attachments/bug_reports/${filename}`
-      : "#";
+    return filename ? `${baseUrl}/storage/attachments/bug_reports/${filename}` : "#";
   };
-
-  const defaultAddFormValues: BugReportFormData = {
-    name: "",
-    email: "",
-    mobile_no: "",
-    report: "",
-    severity: "Low",
-    status: "Unread",
-    attachment: undefined,
-  };
-
-  const formMethods = useForm<BugReportFormData>({
-    resolver: zodResolver(bugReportFormSchema),
-    defaultValues: defaultAddFormValues,
-    mode: "onChange",
-  });
-  const filterFormMethods = useForm<FilterFormData>({
-    resolver: zodResolver(filterFormSchema),
-    defaultValues: filterCriteria,
-  });
-  const exportReasonFormMethods = useForm<ExportReasonFormData>({
-    resolver: zodResolver(exportReasonSchema),
-    defaultValues: { reason: "" },
-    mode: "onChange",
-  });
-
-  const openAddDrawer = useCallback(() => {
-    formMethods.reset(defaultAddFormValues);
-    setSelectedFile(null);
-    setEditingItem(null);
-    setIsAddDrawerOpen(true);
-  }, [formMethods, defaultAddFormValues]);
+  const defaultAddFormValues: BugReportFormData = { name: "", email: "", mobile_no: "", report: "", severity: "Low", status: "Unread", attachment: undefined };
+  const formMethods = useForm<BugReportFormData>({ resolver: zodResolver(bugReportFormSchema), defaultValues: defaultAddFormValues, mode: "onChange" });
+  const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
+  const openAddDrawer = useCallback(() => { formMethods.reset(defaultAddFormValues); setSelectedFile(null); setEditingItem(null); setIsAddDrawerOpen(true); }, [formMethods, defaultAddFormValues]);
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
-
-  const openEditDrawer = useCallback(
-    (item: BugReportItem) => {
-      setEditingItem(item);
-      setSelectedFile(null);
-      formMethods.reset({
-        name: item.name,
-        email: item.email,
-        mobile_no: item.mobile_no || "",
-        report: item.report,
-        severity: item.severity || "Low",
-        status: item.status as BugReportStatusForm,
-        attachment: undefined,
-      });
-      setIsEditDrawerOpen(true);
-    },
-    [formMethods]
-  );
-
-  const closeEditDrawer = useCallback(() => {
-    setEditingItem(null);
-    setIsEditDrawerOpen(false);
-  }, []);
-  const openViewDrawer = useCallback((item: BugReportItem) => {
-    setViewingItem(item);
-    setIsViewDrawerOpen(true);
-  }, []);
-  const closeViewDrawer = useCallback(() => {
-    setViewingItem(null);
-    setIsViewDrawerOpen(false);
-  }, []);
-
-  const openNotificationModal = useCallback((item: BugReportItem) => {
-    setNotificationItem(item);
-    setIsNotificationModalOpen(true);
-  }, []);
-
-  const closeNotificationModal = useCallback(() => {
-    setNotificationItem(null);
-    setIsNotificationModalOpen(false);
-  }, []);
+  const openEditDrawer = useCallback((item: BugReportItem) => { setEditingItem(item); setSelectedFile(null); formMethods.reset({ name: item.name, email: item.email, mobile_no: item.mobile_no || "", report: item.report, severity: item.severity || "Low", status: item.status as BugReportStatusForm, attachment: undefined }); setIsEditDrawerOpen(true); }, [formMethods]);
+  const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
+  const openViewDrawer = useCallback((item: BugReportItem) => { setViewingItem(item); setIsViewDrawerOpen(true); }, []);
+  const closeViewDrawer = useCallback(() => { setViewingItem(null); setIsViewDrawerOpen(false); }, []);
+  const openNotificationModal = useCallback((item: BugReportItem) => { setNotificationItem(item); setIsNotificationModalOpen(true); }, []);
+  const closeNotificationModal = useCallback(() => { setNotificationItem(null); setIsNotificationModalOpen(false); }, []);
+  const openScheduleModal = useCallback((item: BugReportItem) => { setScheduleItem(item); setIsScheduleModalOpen(true); }, []);
+  const closeScheduleModal = useCallback(() => { setScheduleItem(null); setIsScheduleModalOpen(false); }, []);
 
   const onSubmitHandler = async (data: BugReportFormData) => {
     setIsSubmitting(true);
@@ -734,100 +555,58 @@ const BugReportListing = () => {
     try {
       if (editingItem) {
         formDataPayload.append("_method", "PUT");
-        await dispatch(
-          editBugReportAction({ id: editingItem.id, formData: formDataPayload })
-        ).unwrap();
+        await dispatch(editBugReportAction({ id: editingItem.id, formData: formDataPayload })).unwrap();
         toast.push(<Notification title="Bug Report Updated" type="success" />);
         closeEditDrawer();
       } else {
         await dispatch(addBugReportAction(formDataPayload)).unwrap();
-        toast.push(
-          <Notification title="Bug Report Submitted" type="success">
-            Thank you for your report!
-          </Notification>
-        );
+        toast.push(<Notification title="Bug Report Submitted" type="success">Thank you for your report!</Notification>);
         closeAddDrawer();
       }
       dispatch(getBugReportsAction());
     } catch (error: any) {
-      toast.push(
-        <Notification
-          title={editingItem ? "Update Failed" : "Submission Failed"}
-          type="danger"
-        >
-          {(error as Error).message || "Operation failed."}
-        </Notification>
-      );
+      toast.push(<Notification title={editingItem ? "Update Failed" : "Submission Failed"} type="danger">{(error as Error).message || "Operation failed."}</Notification>);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleChangeStatus = useCallback(
-    async (item: BugReportItem, newStatus: BugReportStatusForm) => {
-      setIsChangingStatus(true);
-      const formData = new FormData();
-      formData.append("name", item.name);
-      formData.append("email", item.email);
-      if (item.mobile_no) formData.append("mobile_no", item.mobile_no);
-      formData.append("report", item.report);
-      formData.append("severity", item.severity || "Low");
-      formData.append("status", newStatus);
-      formData.append("_method", "PUT");
-
-      try {
-        await dispatch(editBugReportAction({ id: item.id, formData })).unwrap();
-        toast.push(
-          <Notification
-            title="Status Changed"
-            type="success"
-          >{`Report status changed to ${newStatus}.`}</Notification>
-        );
-        dispatch(getBugReportsAction());
-        if (viewingItem?.id === item.id) {
-          setViewingItem((prev) =>
-            prev ? { ...prev, status: newStatus } : null
-          );
-        }
-      } catch (error: any) {
-        toast.push(
-          <Notification title="Status Change Failed" type="danger">
-            {(error as Error).message}
-          </Notification>
-        );
-      } finally {
-        setIsChangingStatus(false);
+  const handleChangeStatus = useCallback(async (item: BugReportItem, newStatus: BugReportStatusForm) => {
+    setIsChangingStatus(true);
+    const formData = new FormData();
+    formData.append("name", item.name);
+    formData.append("email", item.email);
+    if (item.mobile_no) formData.append("mobile_no", item.mobile_no);
+    formData.append("report", item.report);
+    formData.append("severity", item.severity || "Low");
+    formData.append("status", newStatus);
+    formData.append("_method", "PUT");
+    try {
+      await dispatch(editBugReportAction({ id: item.id, formData })).unwrap();
+      toast.push(<Notification title="Status Changed" type="success">{`Report status changed to ${newStatus}.`}</Notification>);
+      dispatch(getBugReportsAction());
+      if (viewingItem?.id === item.id) {
+        setViewingItem((prev) => prev ? { ...prev, status: newStatus } : null);
       }
-    },
-    [dispatch, viewingItem]
-  );
+    } catch (error: any) {
+      toast.push(<Notification title="Status Change Failed" type="danger">{(error as Error).message}</Notification>);
+    } finally {
+      setIsChangingStatus(false);
+    }
+  }, [dispatch, viewingItem]);
 
-  const handleDeleteClick = useCallback((item: BugReportItem) => {
-    if (!item.id) return;
-    setItemToDelete(item);
-    setSingleDeleteConfirmOpen(true);
-  }, []);
-
+  const handleDeleteClick = useCallback((item: BugReportItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
   const onConfirmSingleDelete = useCallback(async () => {
     if (!itemToDelete?.id) return;
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
       await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap();
-      toast.push(
-        <Notification
-          title="Report Deleted"
-          type="success"
-        >{`Report by "${itemToDelete.name}" deleted.`}</Notification>
-      );
+      toast.push(<Notification title="Report Deleted" type="success">{`Report by "${itemToDelete.name}" deleted.`}</Notification>);
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id));
       dispatch(getBugReportsAction());
     } catch (error: any) {
-      toast.push(
-        <Notification title="Delete Failed" type="danger">
-          {(error as Error).message}
-        </Notification>
-      );
+      toast.push(<Notification title="Delete Failed" type="danger">{(error as Error).message}</Notification>);
     } finally {
       setIsDeleting(false);
       setItemToDelete(null);
@@ -839,514 +618,125 @@ const BugReportListing = () => {
     setIsDeleting(true);
     const idsToDelete = selectedItems.map((item) => String(item.id));
     try {
-      await dispatch(
-        deleteAllBugReportsAction({ ids: idsToDelete.join(",") })
-      ).unwrap();
-      toast.push(
-        <Notification
-          title="Deletion Successful"
-          type="success"
-        >{`${idsToDelete.length} report(s) deleted.`}</Notification>
-      );
+      await dispatch(deleteAllBugReportsAction({ ids: idsToDelete.join(",") })).unwrap();
+      toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} report(s) deleted.`}</Notification>);
       setSelectedItems([]);
       dispatch(getBugReportsAction());
     } catch (error: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger">
-          {(error as Error).message}
-        </Notification>
-      );
+      toast.push(<Notification title="Deletion Failed" type="danger">{(error as Error).message}</Notification>);
     } finally {
       setIsDeleting(false);
     }
   }, [dispatch, selectedItems]);
 
-  const openFilterDrawer = useCallback(() => {
-    filterFormMethods.reset(filterCriteria);
-    setIsFilterDrawerOpen(true);
-  }, [filterFormMethods, filterCriteria]);
+  const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-
-  const onApplyFiltersSubmit = useCallback(
-    (data: FilterFormData) => {
-      setFilterCriteria({
-        filterStatus: data.filterStatus || [],
-        filterReportedBy: data.filterReportedBy || "",
-      });
-      handleSetTableData({ pageIndex: 1 });
-      closeFilterDrawer();
-    },
-    [closeFilterDrawer]
-  );
-
-  const onClearFilters = useCallback(() => {
-    setFilterCriteria({ filterStatus: [], filterReportedBy: "" });
-    formMethods.reset({ filterStatus: [], filterReportedBy: "" });
-    handleSetTableData({ query: "", pageIndex: 1 });
-    dispatch(getBugReportsAction());
-    setIsFilterDrawerOpen(false);
-  }, [formMethods]);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterReportedBy: data.filterReportedBy || "" }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [closeFilterDrawer]);
+  const onClearFilters = useCallback(() => { setFilterCriteria({ filterStatus: [], filterReportedBy: "" }); formMethods.reset({ filterStatus: [], filterReportedBy: "" }); handleSetTableData({ query: "", pageIndex: 1 }); dispatch(getBugReportsAction()); setIsFilterDrawerOpen(false); }, [formMethods]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: BugReportItem[] = cloneDeep(bugReportsData);
-
     if (filterCriteria.filterStatus?.length) {
       const statusValues = filterCriteria.filterStatus.map((s) => s.value);
-      processedData = processedData.filter((item) =>
-        statusValues.includes(item.status)
-      );
+      processedData = processedData.filter((item) => statusValues.includes(item.status));
     }
     if (filterCriteria.filterReportedBy) {
-      const reportedByQuery = filterCriteria.filterReportedBy
-        .toLowerCase()
-        .trim();
-      processedData = processedData.filter(
-        (item) =>
-          item.name.toLowerCase().includes(reportedByQuery) ||
-          item.email.toLowerCase().includes(reportedByQuery)
-      );
+      const reportedByQuery = filterCriteria.filterReportedBy.toLowerCase().trim();
+      processedData = processedData.filter((item) => item.name.toLowerCase().includes(reportedByQuery) || item.email.toLowerCase().includes(reportedByQuery));
     }
     if (tableData.query) {
       const queryLower = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter(
-        (item) =>
-          item.name.toLowerCase().includes(queryLower) ||
-          item.email.toLowerCase().includes(queryLower) ||
-          item.report.toLowerCase().includes(queryLower) ||
-          (item.mobile_no &&
-            item.mobile_no.toLowerCase().includes(queryLower)) ||
-          (item.updated_by_name?.toLowerCase() ?? "").includes(queryLower)
-      );
+      processedData = processedData.filter((item) => item.name.toLowerCase().includes(queryLower) || item.email.toLowerCase().includes(queryLower) || item.report.toLowerCase().includes(queryLower) || (item.mobile_no && item.mobile_no.toLowerCase().includes(queryLower)) || (item.updated_by_name?.toLowerCase() ?? "").includes(queryLower));
     }
-
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       processedData.sort((a, b) => {
         let aVal: any, bVal: any;
         if (key === "created_at" || key === "updated_at") {
-          const dateA = a[key as "created_at" | "updated_at"]
-            ? new Date(a[key as "created_at" | "updated_at"]!).getTime()
-            : 0;
-          const dateB = b[key as "created_at" | "updated_at"]
-            ? new Date(b[key as "created_at" | "updated_at"]!).getTime()
-            : 0;
+          const dateA = a[key as "created_at" | "updated_at"] ? new Date(a[key as "created_at" | "updated_at"]!).getTime() : 0;
+          const dateB = b[key as "created_at" | "updated_at"] ? new Date(b[key as "created_at" | "updated_at"]!).getTime() : 0;
           return order === "asc" ? dateA - dateB : dateB - dateA;
         } else {
           aVal = a[key as keyof BugReportItem] ?? "";
           bVal = b[key as keyof BugReportItem] ?? "";
         }
-        if (typeof aVal === "number" && typeof bVal === "number")
-          return order === "asc" ? aVal - bVal : bVal - aVal;
-        return order === "asc"
-          ? String(aVal).localeCompare(String(bVal))
-          : String(bVal).localeCompare(String(aVal));
+        if (typeof aVal === "number" && typeof bVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal;
+        return order === "asc" ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
       });
     }
-
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
-    return {
-      pageData: processedData.slice(
-        (pageIndex - 1) * pageSize,
-        pageIndex * pageSize
-      ),
-      total: processedData.length,
-      allFilteredAndSortedData: processedData,
-    };
+    return { pageData: processedData.slice((pageIndex - 1) * pageSize, pageIndex * pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
   }, [bugReportsData, tableData, filterCriteria]);
 
-  const handleSetTableData = useCallback(
-    (data: Partial<TableQueries>) =>
-      setTableData((prev) => ({ ...prev, ...data })),
-    []
-  );
-  const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
-    [handleSetTableData]
-  );
-  const handleSelectChange = useCallback(
-    (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
-    },
-    [handleSetTableData]
-  );
-  const handleSort = useCallback(
-    (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
+  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+  const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
-      toast.push(
-        <Notification title="No Data" type="info">
-          Nothing to export.
-        </Notification>
-      );
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
       return;
     }
     exportReasonFormMethods.reset({ reason: "" });
     setIsExportReasonModalOpen(true);
   };
-
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Bug Reports";
     const date = new Date().toISOString().split("T")[0];
-    const fileName = `bug-reports_${date}.csv`; // Dynamic filename
+    const fileName = `bug-reports_${date}.csv`;
     try {
       await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
       const success = exportBugReportsToCsv(fileName, allFilteredAndSortedData);
       if (success) {
-        toast.push(
-          <Notification title="Data Exported" type="success">
-            Bug reports data exported successfully.
-          </Notification>
-        );
+        toast.push(<Notification title="Data Exported" type="success">Bug reports data exported successfully.</Notification>);
       }
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
-      toast.push(
-        <Notification
-          title="Operation Failed"
-          type="danger"
-          message={error.message || "Could not complete export."}
-        />
-      );
+      toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
     } finally {
       setIsSubmittingExportReason(false);
     }
   };
-
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: BugReportItem) => {
-      setSelectedItems((prev) => {
-        if (checked)
-          return prev.some((item) => item.id === row.id)
-            ? prev
-            : [...prev, row];
-        return prev.filter((item) => item.id !== row.id);
-      });
-    },
-    []
-  );
-
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<BugReportItem>[]) => {
-      const cPOR = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((pS) => {
-          const pSIds = new Set(pS.map((i) => i.id));
-          const nRTA = cPOR.filter((r) => r.id && !pSIds.has(r.id));
-          return [...pS, ...nRTA];
-        });
-      } else {
-        const cPRIds = new Set(
-          cPOR.map((r) => r.id).filter((id) => id !== undefined)
-        );
-        setSelectedItems((pS) => pS.filter((i) => i.id && !cPRIds.has(i.id)));
-      }
-    },
-    []
-  );
-
-  const columns: ColumnDef<BugReportItem>[] = useMemo(
-    () => [
-      {
-        header: "Reported By",
-        accessorKey: "name",
-        size: 180,
-        enableSorting: true,
-        cell: (props) => (
-          <span className="font-semibold">{props.getValue<string>()}</span>
-        ),
-      },
-      {
-        header: "Contact",
-        accessorKey: "mobile_no",
-        size: 200,
-        cell: (props) => (
-          <div>
-            <span>{props.row.original.email}</span> <br />
-            <span>{props.row.original.mobile_no}</span>
-          </div>
-        ),
-      },
-      {
-        header: "Reported On",
-        accessorKey: "created_at",
-        size: 200,
-        enableSorting: true,
-        cell: (props) => (
-          <div className="text-xs">
-            {new Date(props.getValue()).toLocaleString("en-US", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-          </div>
-        ),
-      },
-      {
-        header: "Severity",
-        accessorKey: "severity",
-        size: 200,
-        cell: (props) => (
-          <div>
-            <span>{props.row.original.severity}</span> <br />
-          </div>
-        ),
-      },
-      {
-        header: "Updated Info",
-        accessorKey: "updated_at",
-        enableSorting: true,
-        size: 200,
-        cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } =
-            props.row.original;
-          const formattedDate = updated_at
-            ? new Date(updated_at).toLocaleString("en-US", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            })
-            : "N/A";
-          return (
-            <div className="text-xs">
-              <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && (
-                  <>
-                    <br />
-                    <b>{updated_by_role}</b>
-                  </>
-                )}
-              </span>
-              <br />
-              <span>{formattedDate}</span>
-            </div>
-          );
-        },
-      },
-      {
-        header: "Status",
-        accessorKey: "status",
-        size: 120,
-        enableSorting: true,
-        cell: (props) => {
-          const statusVal = props.getValue<BugReportStatusApi>();
-          return (
-            <Tag
-              className={classNames(
-                "capitalize whitespace-nowrap min-w-[60px] text-center",
-                bugStatusColor[statusVal] ||
-                "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
-              )}
-            >
-              {statusVal || "N/A"}
-            </Tag>
-          );
-        },
-      },
-      {
-        header: "Actions",
-        id: "actions",
-        meta: { HeaderClass: "text-center", cellClass: "text-center" },
-        size: 100,
-        cell: (props) => (
-          <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-            onViewDetail={() => openViewDrawer(props.row.original)}
-            onAddNotification={() => openNotificationModal(props.row.original)}
-          />
-        ),
-      },
-    ],
-    [openEditDrawer, openViewDrawer, handleChangeStatus, openNotificationModal]
-  );
+  const handleRowSelect = useCallback((checked: boolean, row: BugReportItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<BugReportItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => r.id && !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id).filter((id) => id !== undefined)); setSelectedItems((pS) => pS.filter((i) => i.id && !cPRIds.has(i.id))); } }, []);
+  const columns: ColumnDef<BugReportItem>[] = useMemo(() => [
+    { header: "Reported By", accessorKey: "name", size: 180, enableSorting: true, cell: (props) => (<span className="font-semibold">{props.getValue<string>()}</span>) },
+    { header: "Contact", accessorKey: "mobile_no", size: 200, cell: (props) => (<div><span>{props.row.original.email}</span> <br /><span>{props.row.original.mobile_no}</span></div>) },
+    { header: "Reported On", accessorKey: "created_at", size: 200, enableSorting: true, cell: (props) => (<div className="text-xs">{new Date(props.getValue()).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</div>) },
+    { header: "Severity", accessorKey: "severity", size: 200, cell: (props) => (<div><span>{props.row.original.severity}</span> <br /></div>) },
+    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_name, updated_by_role } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) : "N/A"; return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>); } },
+    { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => { const statusVal = props.getValue<BugReportStatusApi>(); return (<Tag className={classNames("capitalize whitespace-nowrap min-w-[60px] text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || "N/A"}</Tag>); } },
+    { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => (
+      <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDrawer(props.row.original)} onAddNotification={() => openNotificationModal(props.row.original)} onAddSchedule={() => openScheduleModal(props.row.original)} />
+    ) },
+  ], [openEditDrawer, openViewDrawer, openNotificationModal, openScheduleModal]);
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <FormItem
-        label={
-          <div>
-            Name<span className="text-red-500"> *</span>
-          </div>
-        }
-        className="md:col-span-1"
-        invalid={!!currentFormMethods.formState.errors.name}
-        errorMessage={currentFormMethods.formState.errors.name?.message}
-      >
-        <Controller
-          name="name"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              prefix={<TbUserCircle className="text-lg" />}
-              placeholder="Your Name"
-            />
-          )}
-        />
+      <FormItem label={<div>Name<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}>
+        <Controller name="name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle className="text-lg" />} placeholder="Your Name" />)} />
       </FormItem>
-      <FormItem
-        label={
-          <div>
-            Email<span className="text-red-500"> *</span>
-          </div>
-        }
-        className="md:col-span-1"
-        invalid={!!currentFormMethods.formState.errors.email}
-        errorMessage={currentFormMethods.formState.errors.email?.message}
-      >
-        <Controller
-          name="email"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              type="email"
-              prefix={<TbMail className="text-lg" />}
-              placeholder="your.email@example.com"
-            />
-          )}
-        />
+      <FormItem label={<div>Email<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.email} errorMessage={currentFormMethods.formState.errors.email?.message}>
+        <Controller name="email" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail className="text-lg" />} placeholder="your.email@example.com" />)} />
       </FormItem>
-      <FormItem
-        label="Mobile No."
-        className="md:col-span-1"
-        invalid={!!currentFormMethods.formState.errors.mobile_no}
-        errorMessage={currentFormMethods.formState.errors.mobile_no?.message}
-      >
-        <Controller
-          name="mobile_no"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              type="tel"
-              prefix={<TbPhone className="text-lg" />}
-              placeholder="+XX-XXXXXXXXXX"
-            />
-          )}
-        />
+      <FormItem label="Mobile No." className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.mobile_no} errorMessage={currentFormMethods.formState.errors.mobile_no?.message}>
+        <Controller name="mobile_no" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone className="text-lg" />} placeholder="+XX-XXXXXXXXXX" />)} />
       </FormItem>
-      <FormItem
-        label="Severity"
-        className="md:col-span-1"
-        invalid={!!currentFormMethods.formState.errors.severity}
-        errorMessage={currentFormMethods.formState.errors.severity?.message}
-      >
-        <Controller
-          name="severity"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              placeholder="Select Severity"
-              value={[
-                { label: "Low", value: "Low" },
-                { label: "Medium", value: "Medium" },
-                { label: "High", value: "High" },
-              ].find((opt) => opt.value === field.value)}
-              options={[
-                { label: "Low", value: "Low" },
-                { label: "Medium", value: "Medium" },
-                { label: "High", value: "High" },
-              ]}
-              onChange={(opt) => field.onChange(opt?.value)}
-            />
-          )}
-        />
+      <FormItem label="Severity" className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.severity} errorMessage={currentFormMethods.formState.errors.severity?.message}>
+        <Controller name="severity" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Severity" value={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }].find((opt) => opt.value === field.value)} options={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }]} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
-      <FormItem
-        label={
-          <div>
-            Status<span className="text-red-500"> *</span>
-          </div>
-        }
-        className="md:col-span-1"
-        invalid={!!currentFormMethods.formState.errors.status}
-        errorMessage={currentFormMethods.formState.errors.status?.message}
-      >
-        <Controller
-          name="status"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              placeholder="Select Status"
-              value={BUG_REPORT_STATUS_OPTIONS_FORM.find(
-                (opt) => opt.value === field.value
-              )}
-              options={BUG_REPORT_STATUS_OPTIONS_FORM}
-              onChange={(opt) => field.onChange(opt?.value)}
-            />
-          )}
-        />
+      <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
+        <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" value={BUG_REPORT_STATUS_OPTIONS_FORM.find((opt) => opt.value === field.value)} options={BUG_REPORT_STATUS_OPTIONS_FORM} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
-      <FormItem
-        label="Report Description"
-        className="md:col-span-2"
-        invalid={!!currentFormMethods.formState.errors.report}
-        errorMessage={currentFormMethods.formState.errors.report?.message}
-      >
-        <Controller
-          name="report"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input
-              textArea
-              {...field}
-              rows={6}
-              prefix={<TbFileDescription className="text-lg mt-2.5" />}
-              placeholder="Please describe the bug in detail..."
-            />
-          )}
-        />
+      <FormItem label="Report Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.report} errorMessage={currentFormMethods.formState.errors.report?.message}>
+        <Controller name="report" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} rows={6} prefix={<TbFileDescription className="text-lg mt-2.5" />} placeholder="Please describe the bug in detail..." />)} />
       </FormItem>
-      <FormItem
-        label="Attachment"
-        className="md:col-span-2"
-        invalid={!!currentFormMethods.formState.errors.attachment}
-        errorMessage={currentFormMethods.formState.errors.attachment?.message as string}
-      >
-        <Controller
-          name="attachment"
-          control={currentFormMethods.control}
-          render={({ field: { onChange, onBlur, name, ref } }) => (
-            <Input
-              type="file"
-              name={name}
-              ref={ref}
-              onBlur={onBlur}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                onChange(file);
-                setSelectedFile(file || null);
-              }}
-              prefix={<TbPaperclip className="text-lg" />}
-            />
-          )}
-        />
-        {editingItem?.attachment && !selectedFile && (
-          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Current:{" "}
-            <a
-              href={itemPath(editingItem.attachment)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary-600 hover:underline"
-            >
-              {editingItem.attachment}
-            </a>
-          </div>
-        )}
+      <FormItem label="Attachment" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.attachment} errorMessage={currentFormMethods.formState.errors.attachment?.message as string}>
+        <Controller name="attachment" control={currentFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); }} prefix={<TbPaperclip className="text-lg" />} />)} />
+        {editingItem?.attachment && !selectedFile && (<div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Current:{" "}<a href={itemPath(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{editingItem.attachment}</a></div>)}
       </FormItem>
     </div>
   );
@@ -1357,93 +747,50 @@ const BugReportListing = () => {
         <div className="flex items-start">
           <TbInfoCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              Status
-            </h6>
-            <Tag
-              className={classNames(
-                "capitalize text-sm",
-                bugStatusColor[item.status] ||
-                "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
-              )}
-            >
-              {item.status}
-            </Tag>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</h6>
+            <Tag className={classNames("capitalize text-sm", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{item.status}</Tag>
           </div>
         </div>
-        <Button
-          size="xs"
-          variant="twoTone"
-          onClick={() =>
-            handleChangeStatus(item, item.status === "Read" ? "Unread" : "Read")
-          }
-          loading={isChangingStatus && viewingItem?.id === item.id}
-          disabled={isChangingStatus && viewingItem?.id === item.id}
-        >
+        <Button size="xs" variant="twoTone" onClick={() => handleChangeStatus(item, item.status === "Read" ? "Unread" : "Read")} loading={isChangingStatus && viewingItem?.id === item.id} disabled={isChangingStatus && viewingItem?.id === item.id}>
           Mark as {item.status === "Read" ? "Unread" : "Read"}
         </Button>
       </div>
       <div className="flex items-start">
         <TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
         <div>
-          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            Name
-          </h6>
-          <p className="text-gray-800 dark:text-gray-100 text-base">
-            {item.name}
-          </p>
+          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Name</h6>
+          <p className="text-gray-800 dark:text-gray-100 text-base">{item.name}</p>
         </div>
       </div>
       <div className="flex items-start">
         <TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
         <div>
-          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            Email
-          </h6>
-          <p className="text-gray-800 dark:text-gray-100 text-base">
-            {item.email}
-          </p>
+          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Email</h6>
+          <p className="text-gray-800 dark:text-gray-100 text-base">{item.email}</p>
         </div>
       </div>
       {item.mobile_no && (
         <div className="flex items-start">
           <TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              Mobile No.
-            </h6>
-            <p className="text-gray-800 dark:text-gray-100 text-base">
-              {item.mobile_no}
-            </p>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Mobile No.</h6>
+            <p className="text-gray-800 dark:text-gray-100 text-base">{item.mobile_no}</p>
           </div>
         </div>
       )}
       <div className="flex items-start">
         <TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
         <div>
-          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            Report Description
-          </h6>
-          <p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">
-            {item.report}
-          </p>
+          <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Report Description</h6>
+          <p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">{item.report}</p>
         </div>
       </div>
       {item.attachment && (
         <div className="flex items-start">
           <TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              Attachment
-            </h6>
-            <a
-              href={itemPath(item.attachment)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary-600 hover:underline break-all text-base"
-            >
-              {item.attachment}
-            </a>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Attachment</h6>
+            <a href={itemPath(item.attachment)} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline break-all text-base">{item.attachment}</a>
           </div>
         </div>
       )}
@@ -1451,19 +798,8 @@ const BugReportListing = () => {
         <div className="flex items-start">
           <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              Reported On
-            </h6>
-            <p className="text-gray-800 dark:text-gray-100 text-base">
-              {new Date(item.created_at).toLocaleString("en-US", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
-            </p>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reported On</h6>
+            <p className="text-gray-800 dark:text-gray-100 text-base">{new Date(item.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>
           </div>
         </div>
       )}
@@ -1471,19 +807,8 @@ const BugReportListing = () => {
         <div className="flex items-start">
           <TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              Last Updated
-            </h6>
-            <p className="text-gray-800 dark:text-gray-100 text-base">
-              {new Date(item.updated_at).toLocaleString("en-US", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
-            </p>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Last Updated</h6>
+            <p className="text-gray-800 dark:text-gray-100 text-base">{new Date(item.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>
           </div>
         </div>
       )}
@@ -1491,24 +816,15 @@ const BugReportListing = () => {
         <div className="flex items-start">
           <TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" />
           <div>
-            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              Last Updated By
-            </h6>
-            <p className="text-gray-800 dark:text-gray-100 text-base">
-              {item.updated_by_name || "N/A"}{" "}
-              {item.updated_by_role && `(${item.updated_by_role})`}
-            </p>
+            <h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Last Updated By</h6>
+            <p className="text-gray-800 dark:text-gray-100 text-base">{item.updated_by_name || "N/A"}{" "}{item.updated_by_role && `(${item.updated_by_role})`}</p>
           </div>
         </div>
       )}
     </div>
   );
 
-  const tableLoading =
-    masterLoadingStatus === "pending" ||
-    isSubmitting ||
-    isDeleting ||
-    isChangingStatus;
+  const tableLoading = masterLoadingStatus === "pending" || isSubmitting || isDeleting || isChangingStatus;
 
   return (
     <>
@@ -1516,398 +832,72 @@ const BugReportListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Bug Reports</h5>
-
-            <Button
-              variant="solid"
-              icon={<TbPlus />}
-              onClick={openAddDrawer}
-              disabled={tableLoading}
-            >
-              Add New
-            </Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
           </div>
           <div className="grid grid-cols-6 mb-4 gap-2">
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-blue-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                <TbBug size={24} />
-              </div>
-              <div>
-                <h6 className="text-blue-500">
-                  {rawBugReportsData?.counts?.total ?? "..."}
-                </h6>
-                <span className="font-semibold text-xs">Total</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBug size={24} /></div>
+              <div><h6 className="text-blue-500">{rawBugReportsData?.counts?.total ?? "..."}</h6><span className="font-semibold text-xs">Total</span></div>
             </Card>
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-violet-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                <TbCalendarWeek size={24} />
-              </div>
-              <div>
-                <h6 className="text-violet-500">
-                  {rawBugReportsData?.counts?.today ?? "..."}
-                </h6>
-                <span className="font-semibold text-xs">Today</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendarWeek size={24} /></div>
+              <div><h6 className="text-violet-500">{rawBugReportsData?.counts?.today ?? "..."}</h6><span className="font-semibold text-xs">Today</span></div>
             </Card>
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-pink-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                <TbMailPlus size={24} />
-              </div>
-              <div>
-                <h6 className="text-pink-500">
-                  {rawBugReportsData?.counts?.new ?? "..."}
-                </h6>
-                <span className="font-semibold text-xs">New</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbMailPlus size={24} /></div>
+              <div><h6 className="text-pink-500">{rawBugReportsData?.counts?.new ?? "..."}</h6><span className="font-semibold text-xs">New</span></div>
             </Card>
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-orange-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                <TbLoader size={24} />
-              </div>
-              <div>
-                <h6 className="text-orange-500">
-                  {rawBugReportsData?.counts?.under_review ?? "..."}
-                </h6>
-                <span className="font-semibold text-xs">Under Review</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbLoader size={24} /></div>
+              <div><h6 className="text-orange-500">{rawBugReportsData?.counts?.under_review ?? "..."}</h6><span className="font-semibold text-xs">Under Review</span></div>
             </Card>
-
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-green-300"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                <TbCircleCheck size={24} />
-              </div>
-              <div>
-                <h6 className="text-green-500">
-                  {rawBugReportsData?.counts?.resolved ?? "..."}
-                </h6>
-                <span className="font-semibold text-xs">Resolved</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={24} /></div>
+              <div><h6 className="text-green-500">{rawBugReportsData?.counts?.resolved ?? "..."}</h6><span className="font-semibold text-xs">Resolved</span></div>
             </Card>
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-red-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                <TbCircleX size={24} />
-              </div>
-              <div>
-                <h6 className="text-red-500">
-                  {rawBugReportsData?.counts?.unresolved ?? "..."}
-                </h6>
-                <span className="font-semibold text-xs">Unresolved</span>
-              </div>
+            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCircleX size={24} /></div>
+              <div><h6 className="text-red-500">{rawBugReportsData?.counts?.unresolved ?? "..."}</h6><span className="font-semibold text-xs">Unresolved</span></div>
             </Card>
           </div>
-          <ItemTableTools
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal}
-            onClearFilters={onClearFilters}
-          />
+          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} />
           <div className="mt-4">
-            <DataTable
-              columns={columns}
-              noData={!tableLoading && pageData.length === 0}
-              data={pageData}
-              loading={tableLoading}
-              pagingData={{
-                total: total,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
-              selectable
-              checkboxChecked={(row: BugReportItem) =>
-                selectedItems.some((selected) => selected.id === row.id)
-              }
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort}
-              onCheckBoxChange={handleRowSelect}
-              onIndeterminateCheckBoxChange={handleAllRowSelect}
-            />
+            <DataTable columns={columns} noData={!tableLoading && pageData.length === 0} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectable checkboxChecked={(row: BugReportItem) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>
-
-      <BugReportsSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-        isDeleting={isDeleting}
-      />
-
-      <Drawer
-        title={editingItem ? "Edit Bug Report" : "Report New Bug"}
-        isOpen={isAddDrawerOpen || isEditDrawerOpen}
-        onClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
-        width={520}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={editingItem ? closeEditDrawer : closeAddDrawer}
-              disabled={isSubmitting}
-              type="button"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="bugReportForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!formMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting
-                ? editingItem
-                  ? "Saving..."
-                  : "Submitting..."
-                : editingItem
-                  ? "Save"
-                  : "Submit"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="bugReportForm"
-          onSubmit={formMethods.handleSubmit(onSubmitHandler)}
-          className="flex flex-col gap-4 relative pb-28"
-        >
+      <BugReportsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
+      <Drawer title={editingItem ? "Edit Bug Report" : "Report New Bug"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="bugReportForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? editingItem ? "Saving..." : "Submitting..." : editingItem ? "Save" : "Submit"}</Button></div>}>
+        <Form id="bugReportForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28">
           {renderDrawerForm(formMethods)}
-          {editingItem && (
-            <div className="absolute bottom-[4%] w-full left-1/2 transform -translate-x-1/2">
-              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4">
-                <div>
-                  <b className="font-semibold text-primary">Latest Update:</b>
-                  <p className="text-sm font-semibold mt-1">{editingItem.updated_by_user?.name || "N/A"}</p>
-                  <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
-                </div>
-                <div className="text-right">
-                  <br />
-                  <span className="font-semibold">Created At:</span>{" "}
-                  <span>
-                    {editingItem.created_at
-                      ? `${new Date(editingItem.created_at).getDate()} ${new Date(
-                        editingItem.created_at
-                      ).toLocaleString("en-US", {
-                        month: "short",
-                      })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
-                        editingItem.created_at
-                      ).toLocaleTimeString("en-US", {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}`
-                      : "N/A"}
-                  </span>
-                  <br />
-                  <span className="font-semibold">Updated At:</span>{" "}
-                  <span>
-                    {editingItem.updated_at
-                      ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
-                        editingItem.updated_at
-                      ).toLocaleString("en-US", {
-                        month: "short",
-                      })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
-                        editingItem.updated_at
-                      ).toLocaleTimeString("en-US", {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}`
-                      : "N/A"}
-                  </span>
-
-                </div>
-              </div>
-            </div>
-          )}
+          {editingItem && (<div className="absolute bottom-[4%] w-full left-1/2 transform -translate-x-1/2"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4"><div><b className="font-semibold text-primary">Latest Update:</b><p className="text-sm font-semibold mt-1">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span>{" "}<span>{editingItem.created_at ? `${new Date(editingItem.created_at).getDate()} ${new Date(editingItem.created_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(editingItem.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A"}</span><br /><span className="font-semibold">Updated At:</span>{" "}<span>{editingItem.updated_at ? `${new Date(editingItem.updated_at).getDate()} ${new Date(editingItem.updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(editingItem.updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A"}</span></div></div></div>)}
         </Form>
       </Drawer>
-
-      <Drawer
-        title="Bug Report Details"
-        isOpen={isViewDrawerOpen}
-        onClose={closeViewDrawer}
-        onRequestClose={closeViewDrawer}
-        width={600}
-        footer={
-          <div className="text-right w-full">
-            <Button size="sm" variant="solid" onClick={closeViewDrawer}>
-              Close
-            </Button>
-          </div>
-        }
-      >
+      <Drawer title="Bug Report Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={600} footer={<div className="text-right w-full"><Button size="sm" variant="solid" onClick={closeViewDrawer}>Close</Button></div>}>
         {viewingItem && renderViewDetails(viewingItem)}
       </Drawer>
-
-      <Drawer
-        title="Filters"
-        isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={onClearFilters}
-              type="button"
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterBugReportForm"
-              type="submit"
-            >
-              Apply
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="filterBugReportForm"
-          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-4"
-        >
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterBugReportForm" type="submit">Apply</Button></div>}>
+        <Form id="filterBugReportForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Status">
-            <Controller
-              name="filterStatus"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Any Status"
-                  options={BUG_REPORT_STATUS_OPTIONS_FORM.map((s) => ({
-                    value: s.value,
-                    label: s.label,
-                  }))}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
+            <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={BUG_REPORT_STATUS_OPTIONS_FORM.map((s) => ({ value: s.value, label: s.label }))} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
           </FormItem>
           <FormItem label="Reported By (Name/Email)">
-            <Controller
-              name="filterReportedBy"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Input {...field} placeholder="Enter name or email to filter" />
-              )}
-            />
+            <Controller name="filterReportedBy" control={filterFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter name or email to filter" />)} />
           </FormItem>
         </Form>
       </Drawer>
-
-      <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Bug Report"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
-        confirmButtonColor="red-600"
-      >
-        <p>
-          Are you sure you want to delete the report by "
-          <strong>{itemToDelete?.name}</strong>"? This action cannot be undone.
-        </p>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Bug Report" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting} confirmButtonColor="red-600">
+        <p>Are you sure you want to delete the report by "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p>
       </ConfirmDialog>
-
-      <ConfirmDialog
-        isOpen={isExportReasonModalOpen}
-        type="info"
-        title="Reason for Exporting Bug Reports"
-        onClose={() => setIsExportReasonModalOpen(false)}
-        onRequestClose={() => setIsExportReasonModalOpen(false)}
-        onCancel={() => setIsExportReasonModalOpen(false)}
-        onConfirm={exportReasonFormMethods.handleSubmit(
-          handleConfirmExportWithReason
-        )}
-        loading={isSubmittingExportReason}
-        confirmText={
-          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
-        }
-        cancelText="Cancel"
-        confirmButtonProps={{
-          disabled:
-            !exportReasonFormMethods.formState.isValid ||
-            isSubmittingExportReason,
-        }}
-      >
-        <Form
-          id="exportBugReportsReasonForm"
-          onSubmit={(e) => {
-            e.preventDefault();
-            exportReasonFormMethods.handleSubmit(
-              handleConfirmExportWithReason
-            )();
-          }}
-          className="flex flex-col gap-4 mt-2"
-        >
-          <FormItem
-            label="Please provide a reason for exporting this data:"
-            invalid={!!exportReasonFormMethods.formState.errors.reason}
-            errorMessage={
-              exportReasonFormMethods.formState.errors.reason?.message
-            }
-          >
-            <Controller
-              name="reason"
-              control={exportReasonFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  textArea
-                  {...field}
-                  placeholder="Enter reason..."
-                  rows={3}
-                />
-              )}
-            />
+      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Exporting Bug Reports" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
+        <Form id="exportBugReportsReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
+          <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
           </FormItem>
         </Form>
       </ConfirmDialog>
-
-      {isNotificationModalOpen && notificationItem && (
-        <BugReportNotificationDialog
-          bugReport={notificationItem}
-          onClose={closeNotificationModal}
-          getAllUserDataOptions={getAllUserDataOptions}
-        />
-      )}
+      {isNotificationModalOpen && notificationItem && (<BugReportNotificationDialog bugReport={notificationItem} onClose={closeNotificationModal} getAllUserDataOptions={getAllUserDataOptions} />)}
+      {isScheduleModalOpen && scheduleItem && (<BugReportScheduleDialog bugReport={scheduleItem} onClose={closeScheduleModal} />)}
     </>
   );
 };

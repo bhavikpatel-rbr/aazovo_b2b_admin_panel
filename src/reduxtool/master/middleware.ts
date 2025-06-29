@@ -4843,7 +4843,7 @@ export const addScheduleAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addScheduleAsync(data)
       if (response) {
-        // dispatch(getAllNotificationAction());
+        dispatch(getAllScheduleAction());
         return response
       }
 
