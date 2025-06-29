@@ -1,74 +1,73 @@
 // src/views/your-path/ExportMapping.tsx
 
+import { masterSelector } from '@/reduxtool/master/masterSlice'
+import { zodResolver } from '@hookform/resolvers/zod'
+import classNames from 'classnames'
 import React, {
-    useState,
-    useMemo,
     useCallback,
     useEffect,
+    useMemo,
     useRef,
+    useState,
 } from 'react'
-import { masterSelector } from '@/reduxtool/master/masterSlice'
-import { useSelector } from 'react-redux'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { CSVLink } from 'react-csv'
-import classNames from 'classnames'
+import { Controller, useForm } from 'react-hook-form'
+import { useSelector } from 'react-redux'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
+import DebounceInput from '@/components/shared/DebouceInput'
+import {
+    Avatar,
+    Card,
+    Checkbox,
+    DatePicker,
+    Dialog,
+    Drawer,
+    Dropdown,
+    Form,
+    FormItem,
+    Input,
+    Select,
+    Tag,
+} from '@/components/ui'
 import Button from '@/components/ui/Button'
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import DebounceInput from '@/components/shared/DebouceInput'
-import {
-    Card,
-    Drawer,
-    Tag,
-    Form,
-    FormItem,
-    Select,
-    DatePicker,
-    Input,
-    Dropdown,
-    Checkbox,
-    Avatar,
-    Dialog,
-} from '@/components/ui'
+import Tooltip from '@/components/ui/Tooltip'
 
 // Redux Actions
 import {
+    deleteAllExportMappingsAction,
     getExportMappingsAction,
     submitExportReasonAction,
-    deleteAllExportMappingsAction, // <-- Assumed action for deleting all records
 } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
 
 // Icons
 import { IoEyeOutline } from 'react-icons/io5'
 import {
-    TbSearch,
-    TbCloudDownload,
-    TbFilter,
-    TbCloudUpload,
-    TbCalendarUp,
-    TbUserUp,
     TbBookUpload,
-    TbReload,
+    TbCalendarUp,
+    TbCloudUpload,
     TbColumns,
-    TbX,
-    TbUserCircle,
+    TbFilter,
+    TbReload,
+    TbSearch,
     TbTrash,
+    TbUserCircle,
+    TbUserUp,
+    TbX
 } from 'react-icons/tb'
 import userIconPlaceholder from '/img/avatars/thumb-1.jpg'
 
 // Types
-import type { OnSortParam, ColumnDef } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+import type { ColumnDef, OnSortParam } from '@/components/shared/DataTable'
 
 // --- API & Frontend Types ---
 export type ApiExportMapping = {
@@ -161,7 +160,7 @@ const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
                 <div className="px-1">
                     <h6 className="text-base font-semibold">Exported By</h6>
                     <figure className="flex gap-2 items-center mt-2">
-                        <img src={data.profile_pic_path || userIconPlaceholder} alt={data.userName} className="h-9 w-9 rounded-full"/>
+                        <img src={data.profile_pic_path || userIconPlaceholder} alt={data.userName} className="h-9 w-9 rounded-full" />
                         <figcaption className="flex flex-col"><span className="font-semibold text-black dark:text-white">{data.userName}</span><span className="text-xs text-gray-600 dark:text-gray-400">{data.userRole}</span></figcaption>
                     </figure>
                     <h6 className="text-base font-semibold mt-4">Exported From</h6>
@@ -188,20 +187,23 @@ const ExportMappingTableTools = React.forwardRef(({
     allExportMappings, searchInputValue,
 }, ref) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
-    const { control, handleSubmit, setValue } = useForm<ExportMappingFilterSchema>({ defaultValues: { userRole: [], exportFrom: [], fileExtensions: [], exportDate: null }});
+    const { control, handleSubmit, setValue } = useForm<ExportMappingFilterSchema>({ defaultValues: { userRole: [], exportFrom: [], fileExtensions: [], exportDate: null } });
     useEffect(() => { setValue('userRole', activeFilters.userRole || []); setValue('exportFrom', activeFilters.exportFrom || []); setValue('fileExtensions', activeFilters.fileExtensions || []); setValue('exportDate', activeFilters.exportDate || null); }, [activeFilters, setValue]);
     const exportFiltersSubmitHandler = (data: ExportMappingFilterSchema) => { onApplyFilters(data); setIsFilterDrawerOpen(false); };
     const handleClearFormInDrawer = () => { onApplyFilters({}); setIsFilterDrawerOpen(false); };
     const userRoles = useMemo(() => { if (!isDataReady || !allExportMappings.length) return []; const roles = new Set(allExportMappings.map(item => item.userRole).filter(Boolean)); return Array.from(roles).sort().map(role => ({ value: role, label: role })); }, [allExportMappings, isDataReady]);
     const exportFromOptions = useMemo(() => { if (!isDataReady || !allExportMappings.length) return []; const froms = new Set(allExportMappings.map(item => item.exportFrom).filter(Boolean)); return Array.from(froms).sort().map(from => ({ value: from, label: from })); }, [allExportMappings, isDataReady]);
-    const fileExtensionsOptions = useMemo(() => [ { value: '.csv', label: 'CSV (.csv)' }, { value: '.xlsx', label: 'Excel (.xlsx)' }, { value: '.json', label: 'JSON (.json)' }, { value: '.pdf', label: 'PDF (.pdf)' }, { value: '.log', label: 'Log (.log)' }, { value: '.bak', label: 'Backup (.bak)' }, ], []);
+    const fileExtensionsOptions = useMemo(() => [{ value: '.csv', label: 'CSV (.csv)' }, { value: '.xlsx', label: 'Excel (.xlsx)' }, { value: '.json', label: 'JSON (.json)' }, { value: '.pdf', label: 'PDF (.pdf)' }, { value: '.log', label: 'Log (.log)' }, { value: '.bak', label: 'Backup (.bak)' },], []);
     const toggleColumn = (checked: boolean, colHeader: string) => { if (checked) { setFilteredColumns(currentCols => { const newVisibleHeaders = [...currentCols.map(c => c.header as string), colHeader]; return columns.filter(c => newVisibleHeaders.includes(c.header as string)); }); } else { setFilteredColumns(currentCols => currentCols.filter(c => c.header !== colHeader)); } };
     const isColumnVisible = (header: string) => filteredColumns.some(c => c.header === header);
 
     return (
         <div className="md:flex items-center justify-between w-full gap-2">
             <div className="flex-grow mb-2 md:mb-0">
-                <DebounceInput value={searchInputValue} placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onSearchChange(e.target.value)} />
+                <DebounceInput value={searchInputValue} placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => {
+                    onSearchChange(e.target.value)
+                }
+                } />
             </div>
             <div className="flex gap-2">
                 <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
@@ -279,7 +281,7 @@ const ExportMapping = () => {
             setExportMappings([]);
         }
     }, [apiExportMappings?.data, masterLoadingStatus]);
-    
+
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         if (!isDataReady) { return { pageData: [], total: 0, allFilteredAndSortedData: [] } }
         let processedData = [...exportMappings];
@@ -304,7 +306,7 @@ const ExportMapping = () => {
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
     const handleSelectChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
     const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
-    const handleSearchChange = useCallback((query: string) => handleSetTableData(prev => ({ ...prev, query, pageIndex: 1 })), [handleSetTableData]);
+    const handleSearchChange = (query: string) => { handleSetTableData(prev => ({ ...prev, query, pageIndex: 1 })) }
     const handleApplyFilters = useCallback((filters: Partial<ExportMappingFilterSchema>) => { setActiveFilters(filters); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
     const handleRemoveFilter = useCallback((key: keyof ExportMappingFilterSchema, value: string) => {
         setActiveFilters(prev => { const newFilters = { ...prev }; if (key === 'exportDate') { delete newFilters.exportDate; } else { const currentValues = prev[key] as string[] | undefined; if (currentValues) { const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } } } return newFilters; });
@@ -312,7 +314,6 @@ const ExportMapping = () => {
     }, [handleSetTableData]);
     const onClearFiltersAndReload = () => { setActiveFilters({}); handleSetTableData({ pageIndex: 1, query: '' }); dispatch(getExportMappingsAction()); };
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
-    
     const handleCardClick = (filterType: 'today' | 'topUser' | 'topModule' | 'total') => {
         setActiveFilters({});
         handleSetTableData({ query: '', pageIndex: 1 });
@@ -323,7 +324,7 @@ const ExportMapping = () => {
             default: break;
         }
     };
-    
+
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">There is no data to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: '' }); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
         setIsSubmittingExportReason(true);
@@ -335,7 +336,8 @@ const ExportMapping = () => {
             setExportData({ data: dataToExport, filename: fileName });
             setIsExportReasonModalOpen(false);
             dispatch(getExportMappingsAction());
-        } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
         } finally { setIsSubmittingExportReason(false); }
     };
 
@@ -346,7 +348,7 @@ const ExportMapping = () => {
     const onConfirmDeleteAll = async () => {
         setIsDeletingAll(true);
         try {
-            await dispatch(deleteAllExportMappingsAction({id:1})).unwrap();
+            await dispatch(deleteAllExportMappingsAction({ id: 1 })).unwrap();
             toast.push(<Notification title="All Logs Deleted" type="success">All export mapping logs have been successfully deleted.</Notification>);
             dispatch(getExportMappingsAction()); // Re-fetch the now empty list
         } catch (error: any) {
@@ -356,21 +358,21 @@ const ExportMapping = () => {
             setIsDeleteAllConfirmOpen(false);
         }
     };
-    
-    const csvHeaders = useMemo(() => [{ label: 'Record ID', key: 'id' }, { label: 'User Name', key: 'userName' }, { label: 'User Role', key: 'userRole' }, { label: 'Exported From Module', key: 'exportFrom' }, { label: 'File Name', key: 'fileName' }, { label: 'Reason', key: 'reason' }, { label: 'Export Date (UTC)', key: 'exportDate' }, ], []);
+
+    const csvHeaders = useMemo(() => [{ label: 'Record ID', key: 'id' }, { label: 'User Name', key: 'userName' }, { label: 'User Role', key: 'userRole' }, { label: 'Exported From Module', key: 'exportFrom' }, { label: 'File Name', key: 'fileName' }, { label: 'Reason', key: 'reason' }, { label: 'Export Date (UTC)', key: 'exportDate' },], []);
     const [isImageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageToView, setImageToView] = useState<string | null>(null);
     const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
     const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
-    
+
     const columns: ColumnDef<ExportMappingItem>[] = useMemo(() => [
         { header: 'Exported By', accessorKey: 'userName', enableSorting: true, size: 200, cell: (props) => { const { userName, userRole, profile_pic_path } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={profile_pic_path || userIconPlaceholder} size="sm" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(profile_pic_path || userIconPlaceholder)} icon={<TbUserCircle />} /><div><span className="font-semibold block truncate max-w-[150px]">{userName}</span><span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">{userRole}</span></div></div>) }, },
         { header: 'Exported From', accessorKey: 'exportFrom', enableSorting: true, size: 220, cell: (props) => { const { exportFrom, fileName } = props.row.original; return (<div className="flex flex-col"><span className="font-semibold truncate max-w-[180px]">{exportFrom}</span><Tooltip title={fileName} placement="top"><span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] block">{fileName || 'N/A'}</span></Tooltip></div>) }, },
         { header: 'Reason', accessorKey: 'reason', enableSorting: false, size: 250, cell: (props) => (<Tooltip title={props.row.original.reason || ''} placement="top"><span className="truncate block max-w-[230px] text-justify">{props.row.original.reason || '–'}</span></Tooltip>), },
         { header: 'Date', accessorKey: 'exportDate', enableSorting: true, size: 220, cell: (props) => { const date = new Date(props.row.original.exportDate); return (<span className="text-sm">{!isNaN(date.getTime()) ? `${date.getDate()} ${date.toLocaleString('en-US', { month: 'short' })} ${date.getFullYear()}, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'Invalid Date'}</span>) }, },
-        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center"  },     cell: (props) => <ActionColumn data={props.row.original} />, },
+        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn data={props.row.original} />, },
     ], []);
-    
+
     const [filteredColumns, setFilteredColumns] = useState(columns);
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
@@ -426,7 +428,7 @@ const ExportMapping = () => {
                 </AdaptiveCard>
                 <CSVLink ref={csvLinkRef} data={exportData.data} headers={csvHeaders} filename={exportData.filename} className="hidden" uFEFF={true} />
             </Container>
-            
+
             <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
                 <div className="flex justify-center items-center p-4">
                     {imageToView ? (<img src={imageToView} alt="Profile" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
@@ -452,7 +454,7 @@ const ExportMapping = () => {
                 confirmButtonColor="red-600"
             >
                 <p className="mt-2">
-                    Are you sure you want to delete <strong>ALL</strong> export mapping records? 
+                    Are you sure you want to delete <strong>ALL</strong> export mapping records?
                     This action is permanent and cannot be undone.
                 </p>
             </ConfirmDialog>

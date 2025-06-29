@@ -19,6 +19,7 @@ const DebouceInput = (props: DebouceInputProps) => {
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         debounceFn(e)
+        props.onChange?.(e)
     }
 
     return <Input ref={ref} {...rest} size='xs' onChange={handleInputChange} />

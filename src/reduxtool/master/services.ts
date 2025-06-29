@@ -1,6 +1,6 @@
 import { AxiosResponse } from "axios";
-import axiosInstance, { isAxiosError } from "../../services/api/api"
-import { config } from "../../utils/config"
+import axiosInstance, { isAxiosError } from "../../services/api/api";
+import { config } from "../../utils/config";
 interface ApiParams {
   page?: number;
   per_page?: number;
@@ -2917,6 +2917,17 @@ export const deleteAllExportMappingsAsync = async () => {
 
     const response = await axiosInstance.post(`${config.apiURL}/other/export_mapping/delete-all`)
     return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const getAllNotificationAsync = async () => {
+  try {
+    const getUserIDFromLocalStorage = JSON.parse(localStorage.getItem("@secure:UserData"))?.id;
+    const response = await axiosInstance.post(`${config.apiURL}/get-all-notification-message`, { "user_id": getUserIDFromLocalStorage })
+    return response?.data
   } catch (err) {
     return isAxiosError(err)
   }
