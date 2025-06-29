@@ -1,25 +1,21 @@
 // src/views/your-path/BugReportListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import cloneDeep from "lodash/cloneDeep";
+import React, { Ref, useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
-import Button from "@/components/ui/Button";
-import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput";
-import Select from "@/components/ui/Select";
+import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Card,
+  Dialog,
   Drawer,
   Dropdown,
   Form,
@@ -27,61 +23,68 @@ import {
   Input,
   Tag,
 } from "@/components/ui";
+import Button from "@/components/ui/Button";
+import Notification from "@/components/ui/Notification";
+import Select from "@/components/ui/Select";
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-  TbPencil,
-  TbChecks,
-  TbSearch,
-  TbFilter,
-  TbPlus,
-  TbCloudUpload,
-  TbMail,
-  TbPhone,
-  TbEye,
-  TbUserCircle,
-  TbFileDescription,
-  TbPaperclip,
-  TbCalendarEvent,
-  TbInfoCircle,
-  TbReload,
+  TbBell,
+  TbBrandWhatsapp,
   TbBug,
+  TbCalendarClock,
+  TbCalendarEvent,
   TbCalendarWeek,
-  TbMailPlus,
-  TbLoader,
+  TbChecks,
   TbCircleCheck,
   TbCircleX,
-  TbUser,
+  TbCloudUpload,
+  TbEye,
+  TbFileDescription,
+  TbFilter,
+  TbInfoCircle,
+  TbLoader,
+  TbMail,
+  TbMailPlus,
   TbMailShare,
-  TbBrandWhatsapp,
-  TbBell,
+  TbPaperclip,
+  TbPencil,
+  TbPhone,
+  TbPlus,
+  TbReload,
+  TbSearch,
   TbTagStarred,
-  TbCalendarClock,
+  TbUser,
+  TbUserCircle,
 } from "react-icons/tb";
 
 // Types
+import type { TableQueries } from "@/@types/common";
 import type {
-  OnSortParam,
   ColumnDef,
+  OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
-import { shallowEqual, useSelector } from "react-redux";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  getBugReportsAction,
   addBugReportAction,
-  editBugReportAction,
-  deleteBugReportAction,
+  addNotificationAction,
   deleteAllBugReportsAction,
+  deleteBugReportAction,
+  editBugReportAction,
+  getAllUsersAction,
+  getBugReportsAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { useAppDispatch } from "@/reduxtool/store";
 import classNames from "@/utils/classNames";
-import { Link } from "react-router-dom";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { shallowEqual, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 
 // --- Define Types ---
 export type BugReportStatusApi = "Read" | "Unread" | string;
@@ -111,9 +114,9 @@ const BUG_REPORT_STATUS_OPTIONS_FORM: {
   value: BugReportStatusForm;
   label: string;
 }[] = [
-  { value: "Unread", label: "Unread" },
-  { value: "Read", label: "Read" },
-];
+    { value: "Unread", label: "Unread" },
+    { value: "Read", label: "Read" },
+  ];
 
 const bugStatusColor: Record<BugReportStatusApi, string> = {
   Unread:
@@ -256,9 +259,11 @@ function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
 const ActionColumn = ({
   onEdit,
   onViewDetail,
+  onAddNotification,
 }: {
   onEdit: () => void;
   onViewDetail: () => void;
+  onAddNotification: () => void;
 }) => {
   return (
     <div className="flex items-center justify-center text-center">
@@ -285,7 +290,10 @@ const ActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          className="flex items-center gap-2"
+          onClick={onAddNotification}
+        >
           <TbBell size={18} />{" "}
           <span className="text-xs">Add Notification </span>
         </Dropdown.Item>
@@ -414,9 +422,8 @@ const BugReportsSelectedFooter = ({
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         type="danger"
-        title={`Delete ${selectedItems.length} Report${
-          selectedItems.length > 1 ? "s" : ""
-        }`}
+        title={`Delete ${selectedItems.length} Report${selectedItems.length > 1 ? "s" : ""
+          }`}
         onClose={() => setDeleteConfirmOpen(false)}
         onRequestClose={() => setDeleteConfirmOpen(false)}
         onCancel={() => setDeleteConfirmOpen(false)}
@@ -435,13 +442,157 @@ const BugReportsSelectedFooter = ({
   );
 };
 
+// --- Notification Dialog for Bug Reports ---
+const BugReportNotificationDialog = ({
+  bugReport,
+  onClose,
+  getAllUserDataOptions,
+}: {
+  bugReport: BugReportItem;
+  onClose: () => void;
+  getAllUserDataOptions: { value: number; label: string }[];
+}) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const notificationSchema = z.object({
+    notification_title: z
+      .string()
+      .min(3, "Title must be at least 3 characters long."),
+    send_users: z.array(z.number()).min(1, "Please select at least one user."),
+    message: z.string().min(10, "Message must be at least 10 characters long."),
+  });
+
+  type NotificationFormData = z.infer<typeof notificationSchema>;
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<NotificationFormData>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+      notification_title: `Regarding Bug Report by ${bugReport.name}`,
+      send_users: [],
+      message: `A bug report has been submitted by "${bugReport.name}" with the following details:\n\nReport: ${bugReport.report}\nSeverity: ${bugReport.severity}\nStatus: ${bugReport.status}\n\nPlease review.`,
+    },
+    mode: "onChange",
+  });
+
+  const onSend = async (formData: NotificationFormData) => {
+    setIsLoading(true);
+
+    const payload = {
+      send_users: formData.send_users,
+      notification_title: formData.notification_title,
+      message: formData.message,
+      module_id: String(bugReport.id),
+      module_name: "BugReport",
+    };
+
+    try {
+      await dispatch(addNotificationAction(payload)).unwrap();
+      toast.push(
+        <Notification type="success" title="Notification Sent Successfully!" />
+      );
+      onClose();
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title="Failed to Send Notification"
+          children={error?.message || "An unknown error occurred."}
+        />
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Notify User about Bug: {bugReport.name}</h5>
+      <Form onSubmit={handleSubmit(onSend)}>
+        <FormItem
+          label="Title"
+          invalid={!!errors.notification_title}
+          errorMessage={errors.notification_title?.message}
+        >
+          <Controller
+            name="notification_title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </FormItem>
+        <FormItem
+          label="Send To"
+          invalid={!!errors.send_users}
+          errorMessage={errors.send_users?.message}
+        >
+          <Controller
+            name="send_users"
+            control={control}
+            render={({ field }) => (
+              <Select
+                isMulti
+                placeholder="Select User(s)"
+                options={getAllUserDataOptions}
+                value={getAllUserDataOptions.filter((o) =>
+                  field.value?.includes(o.value)
+                )}
+                onChange={(options) =>
+                  field.onChange(options?.map((o) => o.value) || [])
+                }
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Message"
+          invalid={!!errors.message}
+          errorMessage={errors.message?.message}
+        >
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={6} />}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button
+            type="button"
+            className="mr-2"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="solid"
+            type="submit"
+            loading={isLoading}
+            disabled={!isValid || isLoading}
+          >
+            Send Notification
+          </Button>
+        </div>
+      </Form>
+    </Dialog>
+  );
+};
+
 // --- Main Component: BugReportListing ---
 const BugReportListing = () => {
   const dispatch = useAppDispatch();
   const {
     bugReportsData: rawBugReportsData = [],
     status: masterLoadingStatus = "idle",
+    getAllUserData = [],
   } = useSelector(masterSelector, shallowEqual);
+
+
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -454,6 +605,8 @@ const BugReportListing = () => {
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<BugReportItem | null>(null);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [notificationItem, setNotificationItem] = useState<BugReportItem | null>(null);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterStatus: [],
@@ -473,6 +626,7 @@ const BugReportListing = () => {
     useState(false);
 
   useEffect(() => {
+    dispatch(getAllUsersAction())
     dispatch(getBugReportsAction());
   }, [dispatch]);
 
@@ -554,6 +708,16 @@ const BugReportListing = () => {
   const closeViewDrawer = useCallback(() => {
     setViewingItem(null);
     setIsViewDrawerOpen(false);
+  }, []);
+
+  const openNotificationModal = useCallback((item: BugReportItem) => {
+    setNotificationItem(item);
+    setIsNotificationModalOpen(true);
+  }, []);
+
+  const closeNotificationModal = useCallback(() => {
+    setNotificationItem(null);
+    setIsNotificationModalOpen(false);
   }, []);
 
   const onSubmitHandler = async (data: BugReportFormData) => {
@@ -835,7 +999,7 @@ const BugReportListing = () => {
     const date = new Date().toISOString().split("T")[0];
     const fileName = `bug-reports_${date}.csv`; // Dynamic filename
     try {
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName , file_name:fileName })).unwrap();
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
       const success = exportBugReportsToCsv(fileName, allFilteredAndSortedData);
       if (success) {
         toast.push(
@@ -946,13 +1110,13 @@ const BugReportListing = () => {
             props.row.original;
           const formattedDate = updated_at
             ? new Date(updated_at).toLocaleString("en-US", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
             : "N/A";
           return (
             <div className="text-xs">
@@ -983,7 +1147,7 @@ const BugReportListing = () => {
               className={classNames(
                 "capitalize whitespace-nowrap min-w-[60px] text-center",
                 bugStatusColor[statusVal] ||
-                  "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
+                "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
               )}
             >
               {statusVal || "N/A"}
@@ -1000,11 +1164,12 @@ const BugReportListing = () => {
           <ActionColumn
             onEdit={() => openEditDrawer(props.row.original)}
             onViewDetail={() => openViewDrawer(props.row.original)}
+            onAddNotification={() => openNotificationModal(props.row.original)}
           />
         ),
       },
     ],
-    [openEditDrawer, openViewDrawer, handleChangeStatus]
+    [openEditDrawer, openViewDrawer, handleChangeStatus, openNotificationModal]
   );
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
@@ -1199,7 +1364,7 @@ const BugReportListing = () => {
               className={classNames(
                 "capitalize text-sm",
                 bugStatusColor[item.status] ||
-                  "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
+                "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100"
               )}
             >
               {item.status}
@@ -1515,8 +1680,8 @@ const BugReportListing = () => {
                   ? "Saving..."
                   : "Submitting..."
                 : editingItem
-                ? "Save"
-                : "Submit"}
+                  ? "Save"
+                  : "Submit"}
             </Button>
           </div>
         }
@@ -1530,7 +1695,7 @@ const BugReportListing = () => {
           {editingItem && (
             <div className="absolute bottom-[4%] w-full left-1/2 transform -translate-x-1/2">
               <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4">
-                                <div>
+                <div>
                   <b className="font-semibold text-primary">Latest Update:</b>
                   <p className="text-sm font-semibold mt-1">{editingItem.updated_by_user?.name || "N/A"}</p>
                   <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
@@ -1541,16 +1706,16 @@ const BugReportListing = () => {
                   <span>
                     {editingItem.created_at
                       ? `${new Date(editingItem.created_at).getDate()} ${new Date(
-                          editingItem.created_at
-                        ).toLocaleString("en-US", {
-                          month: "short",
-                        })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
-                          editingItem.created_at
-                        ).toLocaleTimeString("en-US", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}`
+                        editingItem.created_at
+                      ).toLocaleString("en-US", {
+                        month: "short",
+                      })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
+                        editingItem.created_at
+                      ).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}`
                       : "N/A"}
                   </span>
                   <br />
@@ -1558,16 +1723,16 @@ const BugReportListing = () => {
                   <span>
                     {editingItem.updated_at
                       ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
-                          editingItem.updated_at
-                        ).toLocaleString("en-US", {
-                          month: "short",
-                        })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
-                          editingItem.updated_at
-                        ).toLocaleTimeString("en-US", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}`
+                        editingItem.updated_at
+                      ).toLocaleString("en-US", {
+                        month: "short",
+                      })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
+                        editingItem.updated_at
+                      ).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}`
                       : "N/A"}
                   </span>
 
@@ -1735,6 +1900,14 @@ const BugReportListing = () => {
           </FormItem>
         </Form>
       </ConfirmDialog>
+
+      {isNotificationModalOpen && notificationItem && (
+        <BugReportNotificationDialog
+          bugReport={notificationItem}
+          onClose={closeNotificationModal}
+          getAllUserDataOptions={getAllUserDataOptions}
+        />
+      )}
     </>
   );
 };

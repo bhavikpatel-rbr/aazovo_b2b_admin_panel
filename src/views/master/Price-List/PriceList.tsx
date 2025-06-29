@@ -326,10 +326,43 @@ const PriceList = () => {
     const editFormMethods = useForm<PriceListFormData>({ resolver: zodResolver(priceListFormSchema), mode: 'onChange' });
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
-    const openImageViewer = (imageUrl: string | null | undefined) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
-    const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
-    const handleOpenModal = useCallback((type: PriceListModalType, itemData: PriceListItem) => setModalState({ isOpen: true, type, data: itemData }), []);
-    const handleCloseModal = useCallback(() => setModalState({ isOpen: false, type: null, data: null }), []);
+    const openImageViewer = useCallback((imageUrl: string | null | undefined) => {
+        if (imageUrl) {
+            setImageToView(imageUrl);
+            setIsImageViewerOpen(true);
+        }
+    }, []);
+
+    const closeImageViewer = useCallback(() => {
+        setIsImageViewerOpen(false);
+        setImageToView(null);
+    }, []);
+
+    const handleOpenModal = useCallback((type: PriceListModalType, itemData: PriceListItem) => {
+        setModalState({ isOpen: true, type, data: itemData })
+    }, []);
+
+    const handleCloseModal = useCallback(() => {
+        setModalState({ isOpen: false, type: null, data: null })
+    }, []);
+
+    const onAddPriceListSubmit = async (data: PriceListFormData) => { setIsSubmitting(true); try { await dispatch(addPriceListAction(data)).unwrap(); toast.push(<Notification title="Price Item Added" type="success" />); closeAddDrawer(); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add" type="danger">{error.message}</Notification>); } finally { setIsSubmitting(false); } };
+    
+    const openAddDrawer = useCallback(() => { addFormMethods.reset(); setIsAddDrawerOpen(true); }, [addFormMethods]);
+    const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
+
+    const onEditPriceListSubmit = async (data: PriceListFormData) => { if (!editingPriceListItem) return; setIsSubmitting(true); try { await dispatch(editPriceListAction({ id: editingPriceListItem.id, ...data })).unwrap(); toast.push(<Notification title="Price Item Updated" type="success" />); closeEditDrawer(); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message}</Notification>); } finally { setIsSubmitting(false); } };
+
+    const openEditDrawer = useCallback((item: PriceListItem) => {
+        setEditingPriceListItem(item);
+        editFormMethods.reset({ product_id: String(item.product_id), price: item.price, usd_rate: item.usd_rate, expance: item.expance, margin: item.margin, status: item.status });
+        setIsEditDrawerOpen(true);
+    }, [editFormMethods]);
+
+    const closeEditDrawer = useCallback(() => {
+        setIsEditDrawerOpen(false);
+        setEditingPriceListItem(null);
+    }, []);
 
     const columns: ColumnDef<PriceListItem>[] = useMemo(() => [
         { header: 'Product', accessorKey: 'product.name', enableSorting: true, size: 280, cell: (props: CellContext<PriceListItem, any>) => { const row = props.row.original; return (<div className="flex items-center gap-3"><Avatar size={40} shape="circle" src={row.product?.thumb_image_full_path} icon={<TbBox />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.product?.thumb_image_full_path)} /><div className="truncate"><span className="font-semibold">{row.product?.name || 'N/A'}</span></div></div>) } },
@@ -339,7 +372,7 @@ const PriceList = () => {
         { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
         { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100': props.row.original.status === 'Active', 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100': props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Actions', id: 'action', size: 120, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} />) },
-    ], [handleOpenModal]);
+    ], [handleOpenModal, openEditDrawer, openImageViewer]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<PriceListItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -376,7 +409,7 @@ const PriceList = () => {
         handleSetTableData({ pageIndex: 1 });
     }, []);
     const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getPriceListAction()); };
-    const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
+    const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [dispatch, tableData]);
 
     const handleCardClick = (filterType: 'status' | 'date' | 'all', value?: any) => {
         setTableData(prev => ({ ...prev, query: '', pageIndex: 1 }));
@@ -384,13 +417,6 @@ const PriceList = () => {
         else if (filterType === 'status') { setActiveFilters({ status: [value] }); }
         else if (filterType === 'date') { setActiveFilters({ date: [new Date(), new Date()] }); }
     };
-
-    const openAddDrawer = () => { addFormMethods.reset(); setIsAddDrawerOpen(true); };
-    const closeAddDrawer = () => setIsAddDrawerOpen(false);
-    const onAddPriceListSubmit = async (data: PriceListFormData) => { setIsSubmitting(true); try { await dispatch(addPriceListAction(data)).unwrap(); toast.push(<Notification title="Price Item Added" type="success" />); closeAddDrawer(); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add" type="danger">{error.message}</Notification>); } finally { setIsSubmitting(false); } };
-    const openEditDrawer = (item: PriceListItem) => { setEditingPriceListItem(item); editFormMethods.reset({ product_id: String(item.product_id), price: item.price, usd_rate: item.usd_rate, expance: item.expance, margin: item.margin, status: item.status }); setIsEditDrawerOpen(true); };
-    const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingPriceListItem(null); };
-    const onEditPriceListSubmit = async (data: PriceListFormData) => { if (!editingPriceListItem) return; setIsSubmitting(true); try { await dispatch(editPriceListAction({ id: editingPriceListItem.id, ...data })).unwrap(); toast.push(<Notification title="Price Item Updated" type="success" />); closeEditDrawer(); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message}</Notification>); } finally { setIsSubmitting(false); } };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) return; exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `price_list_export_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "PriceList", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsSubmittingExportReason(false); } };
@@ -488,7 +514,11 @@ const PriceList = () => {
             <ConfirmDialog isOpen={isTodayExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsTodayExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleTodayConfirmExportWithReason)} loading={isTodaySubmittingExportReason} confirmText={isTodaySubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isTodaySubmittingExportReason }} >
                 <Form onSubmit={(e) => e.preventDefault()}><FormItem label="Reason"><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => <Input textArea {...field} />} /></FormItem></Form>
             </ConfirmDialog>
-            <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer}><div className="flex justify-center items-center p-4"><img src={imageToView || ''} alt="View" style={{ maxWidth: "100%", maxHeight: "80vh" }} /></div></Dialog>
+            <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
+                <div className="flex justify-center items-center p-4">
+                    {imageToView ? (<img src={imageToView} alt="View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
+                </div>
+            </Dialog>
             <PriceListModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
         </>
     );
