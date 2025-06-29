@@ -32,22 +32,22 @@ const othersNavigationConfig: NavigationTree[] = [
                 },
                 subMenu: [],
             },
-            {
-                key: 'others.logout',
-                path: `/logout`,
-                title: 'Logout',
-                translateKey: 'nav.others.logout',
-                icon: 'logout',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN, USER],
-                meta: {
-                    description: {
-                        translateKey: 'nav.others.logoutDesc',
-                        label: 'Logout from the system',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'others.logout',
+            //     path: `/logout`,
+            //     title: 'Logout',
+            //     translateKey: 'nav.others.logout',
+            //     icon: 'logout',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN, USER],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.others.logoutDesc',
+            //             label: 'Logout from the system',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
         ],
     },
 ];
