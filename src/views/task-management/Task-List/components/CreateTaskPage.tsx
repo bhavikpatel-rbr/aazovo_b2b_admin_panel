@@ -201,7 +201,7 @@ const CreateTaskPage = () => {
   }, [dispatch]);
 
   const boardMembersOptions: FormUser[] = useMemo(() =>
-    usersData.map((user: ApiUser) => ({
+   usersData.length > 0 &&  usersData?.map((user: ApiUser) => ({
       id: String(user.id), name: user.name, img: user.profile_pic_path || `/img/avatars/default-avatar.png`
     })), [usersData]);
 
@@ -267,7 +267,7 @@ const CreateTaskPage = () => {
         activity_type: original.activity_type || "",
       });
 
-      const assigned = boardMembersOptions.filter(member => assignedUserIds.includes(member.id));
+      const assigned =boardMembersOptions.length > 0 && boardMembersOptions.filter(member => assignedUserIds.includes(member.id));
       setAssignedMembers(assigned);
       setCurrentDisplayStatus(original.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) as TaskStatusDisplay || "Pending");
 
@@ -487,7 +487,7 @@ const CreateTaskPage = () => {
     label: displayLabel, value: taskStatusLabelsApi[index], colorClass: taskLabelColors[taskStatusLabelsApi[index]] || 'bg-gray-200',
   }));
   const availableMembersToAdd = useMemo(() =>
-    boardMembersOptions.filter(member => !assignedMembers.some(m => m.id === member.id)),
+    boardMembersOptions.length > 0 && boardMembersOptions.filter(member => !assignedMembers.some(m => m.id === member.id)),
   [boardMembersOptions, assignedMembers]);
 
   if (masterLoadingStatus === 'loading' && !isEditMode && !usersData.length) {

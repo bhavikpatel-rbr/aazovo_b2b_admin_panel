@@ -4,6 +4,7 @@ import { AxiosResponse } from "axios"
 import { loginWithEmailAsync } from "./services"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
+import { logOutAsync } from "../master/services"
 
 /**
  * Logout Action
@@ -21,14 +22,17 @@ export const logoutAction = createAsyncThunk<
       // For example: await logoutFromApi();
 
       // MODIFIED: Dispatch success message on logout
-      dispatch(
-        showMessage({
-          ...defaultMessageObj,
-          type: "success",
-          messageText: "You have been successfully logged out.",
-        })
-      )
-      return true;
+      const response: AxiosResponse<any> = await logOutAsync();
+      if (response) {
+        dispatch(
+          showMessage({
+            ...defaultMessageObj,
+            type: "success",
+            messageText: "You have been successfully logged out.",
+          })
+        )
+        return true;
+      }
     } catch (error: unknown) {
       // MODIFIED: Dispatch error message on logout failure
       dispatch(
