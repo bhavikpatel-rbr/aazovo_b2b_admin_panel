@@ -678,21 +678,10 @@ const masterSlice = createSlice({
       ...state,
       getNotification: payload,
     }));
-<<<<<<< HEAD
     // builder.addCase(addNotificationAction.fulfilled, (state, { payload }) => ({
     //   ...state,
     //   addNotification: payload,
     // }));
-=======
-    builder.addCase(addNotificationAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      addNotification: payload,
-    }));
-    builder.addCase(getAllUsersAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      getAllUserData: payload,
-    }));
->>>>>>> c0094f6c0b0a70aee75304a0410ffee32d19e65a
   },
 });
 
