@@ -209,7 +209,6 @@ export interface FormSectionBaseProps {
   getValues: UseFormReturn<CompanyFormSchema>['getValues'];
 }
 
-// Interface for the single company item from API
 interface ApiSingleCompanyItem {
   id: number;
   company_name?: string;
@@ -245,10 +244,8 @@ interface ApiSingleCompanyItem {
   notification_email?: string | null;
   kyc_verified?: boolean | string;
   enable_billing?: boolean | string;
-
   company_certificate?: Array<{ certificate_id: string; certificate_name: string; upload_certificate: string | null; upload_certificate_path?: string; }>;
   office_info?: Array<{ office_type: string; office_name: string; address: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; contact_person?: string; office_email?: string; office_phone?: string; }>;
-
   declaration_206AB_url?: string | null;
   declaration_206AB_verify?: boolean | string;
   declaration_206AB_remark?: string | null;
@@ -279,7 +276,6 @@ interface ApiSingleCompanyItem {
   other_document_file?: string | null;
   other_document_verified?: boolean | string;
   other_document_remark?: string | null;
-
   primary_account_number?: string | null;
   primary_bank_name?: string | null;
   primary_ifsc_code?: string | null;
@@ -289,7 +285,6 @@ interface ApiSingleCompanyItem {
   secondary_ifsc_code?: string | null;
   secondary_bank_verification_photo?: string | null;
   company_bank_details?: Array<{ bank_account_number: string; bank_name: string; ifsc_code: string; type: string; verification_photo: string | null; }>;
-
   billing_documents?: Array<{ document_name: string; document: string | null; }>;
   company_member_management?: Array<{ member_id: string; designation: string; person_name: string; number: string; }>;
   company_team_members?: Array<{ team_name: string; designation: string; person_name: string; number: string; }>;
@@ -305,298 +300,295 @@ const transformApiToFormSchema = (
   allMembers: Array<{ value: string; label: string }>,
   allCompaniesForRef: Array<{ value: string; label: string }>
 ): Partial<CompanyFormSchema> => {
+    const stringToBoolean = (value: boolean | string | undefined | null): boolean => {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string') {
+          const lowerVal = value.toLowerCase();
+          return lowerVal === '1' || lowerVal === 'true' || lowerVal === 'yes';
+        }
+        return false;
+    };
+    
+    const findOptionByValue = (options: Array<{ value: string; label: string }>, value?: string | null) => {
+        if (!value) return undefined;
+        return options.find(opt => String(opt.value) === String(value));
+    };
 
-  const stringToBoolean = (value: boolean | string | undefined | null): boolean => {
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'string') {
-      const lowerVal = value.toLowerCase();
-      return lowerVal === '1' || lowerVal === 'true' || lowerVal === 'yes';
-    }
-    return false;
-  };
-
-  const findOptionByValue = (options: Array<{ value: string; label: string }>, value?: string | null) => {
-    if (!value) return undefined;
-    return options.find(opt => String(opt.value) === String(value));
-  };
-
-  const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
-  const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
-  
-  return {
-    id: apiData.id,
-    company_name: apiData.company_name || '',
-    primary_contact_number: apiData.primary_contact_number || '',
-    primary_contact_number_code: apiData.primary_contact_number_code ? { label: apiData.primary_contact_number_code, value: apiData.primary_contact_number_code } : undefined,
-    general_contact_number: apiData.general_contact_number || '',
-    general_contact_number_code: apiData.general_contact_number_code ? { label: apiData.general_contact_number_code, value: apiData.general_contact_number_code } : undefined,
-    alternate_contact_number: apiData.alternate_contact_number || '',
-    alternate_contact_number_code: apiData.alternate_contact_number_code ? { label: apiData.alternate_contact_number_code, value: apiData.alternate_contact_number_code } : null,
-    primary_email_id: apiData.primary_email_id || '',
-    alternate_email_id: apiData.alternate_email_id || '',
-    ownership_type: apiData.ownership_type ? { label: apiData.ownership_type, value: apiData.ownership_type } : undefined,
-    owner_name: apiData.owner_name || '',
-    company_address: apiData.company_address || '',
-    city: apiData.city || '',
-    state: apiData.state || '',
-    zip_code: apiData.zip_code || '',
-    country_id: findOptionByValue(mapCountries, apiData.country_id) || (apiData.country?.name ? {label: apiData.country.name, value: String(apiData.country_id)} : undefined),
-    continent_id: findOptionByValue(mapContinents, apiData.continent_id) || (apiData.continent?.name ? {label: apiData.continent.name, value: String(apiData.continent_id)} : null),
-    gst_number: apiData.gst_number || '',
-    pan_number: apiData.pan_number || '',
-    trn_number: apiData.trn_number || '',
-    tan_number: apiData.tan_number || '',
-    establishment_year: apiData.establishment_year || '',
-    no_of_employees: apiData.no_of_employees || '',
-    company_website: apiData.company_website || '',
-    company_logo: apiData.company_logo || null,
-    primary_business_type: apiData.primary_business_type ? { label: apiData.primary_business_type, value: apiData.primary_business_type } : null,
-    status: apiData.status ? { label: apiData.status, value: apiData.status } : undefined,
-    support_email: apiData.support_email || '',
-    notification_email: apiData.notification_email || '',
-
-    company_certificate: apiData.company_certificate?.map(cert => ({
-        certificate_id: cert.certificate_id,
-        certificate_name: cert.certificate_name || '',
-        upload_certificate: cert.upload_certificate_path || cert.upload_certificate || null,
-    })) || [],
-    office_info: apiData.office_info?.map(office => ({
-        office_type: office.office_type ? { label: office.office_type, value: office.office_type } : undefined,
-        office_name: office.office_name || '',
-        address: office.address || '',
-        country_id: findOptionByValue(mapCountries, office.country_id),
-        state: office.state || '',
-        city: office.city || '',
-        zip_code: office.zip_code || '',
-        gst_number: office.gst_number || '',
-        contact_person: office.contact_person || '',
-        office_email: office.office_email || '',
-        office_phone: office.office_phone || '',
-    })) || [],
-
-    declaration_206ab: apiData.declaration_206AB_url || null,
-    declaration_206ab_remark: apiData.declaration_206AB_remark || '',
-    declaration_206ab_remark_enabled: stringToBoolean(apiData.declaration_206AB_verify),
-    ABCQ_file: apiData.ABCQ_file || null,
-    ABCQ_remark: apiData.ABCQ_remark || '',
-    ABCQ_remark_enabled: stringToBoolean(apiData.ABCQ_verified),
-    office_photo_file: apiData.office_photo_file || null,
-    office_photo_remark: apiData.office_photo_remark || "",
-    office_photo_remark_enabled: stringToBoolean(apiData.office_photo_verified),
-    gst_certificate_file: apiData.gst_certificate_file || null,
-    gst_certificate_remark: apiData.gst_certificate_remark || "",
-    gst_certificate_remark_enabled: stringToBoolean(apiData.gst_certificate_verified),
-    authority_letter_file: apiData.authority_letter_file || null,
-    authority_letter_remark: apiData.authority_letter_remark || "",
-    authority_letter_remark_enabled: stringToBoolean(apiData.authority_letter_verified),
-    visiting_card_file: apiData.visiting_card_file || null,
-    visiting_card_remark: apiData.visiting_card_remark || "",
-    visiting_card_remark_enabled: stringToBoolean(apiData.visiting_card_verified),
-    cancel_cheque_file: apiData.cancel_cheque_file || null,
-    cancel_cheque_remark: apiData.cancel_cheque_remark || "",
-    cancel_cheque_remark_enabled: stringToBoolean(apiData.cancel_cheque_verified),
-    aadhar_card_file: apiData.aadhar_card_file || null,
-    aadhar_card_remark: apiData.aadhar_card_remark || "",
-    aadhar_card_remark_enabled: stringToBoolean(apiData.aadhar_card_verified),
-    pan_card_file: apiData.pan_card_file || null,
-    pan_card_remark: apiData.pan_card_remark || "",
-    pan_card_remark_enabled: stringToBoolean(apiData.pan_card_verified),
-    other_document_file: apiData.other_document_file || null,
-    other_document_remark: apiData.other_document_remark || "",
-    other_document_remark_enabled: stringToBoolean(apiData.other_document_verified),
-
-    primary_account_number: apiData.primary_account_number || '',
-    primary_bank_name: apiData.primary_bank_name || null,
-    primary_ifsc_code: apiData.primary_ifsc_code || '',
-    primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
-    secondary_account_number: apiData.secondary_account_number || '',
-    secondary_bank_name: apiData.secondary_bank_name || null,
-    secondary_ifsc_code: apiData.secondary_ifsc_code || '',
-    secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
-    company_bank_details: apiData.company_bank_details?.map(bank => ({
-        bank_account_number: bank.bank_account_number || '',
-        bank_name: bank.bank_name || undefined,
-        ifsc_code: bank.ifsc_code || '',
-        type: bank.type ? { label: bank.type, value: bank.type } : undefined,
-        verification_photo: bank.verification_photo || null,
-    })) || [],
-
-    USER_ACCESS: stringToBoolean(apiData.kyc_verified),
-    BILLING_FIELD: stringToBoolean(apiData.enable_billing),
-    billing_documents: apiData.billing_documents?.map(doc => ({
-        document_name: doc.document_name || '',
-        document: doc.document || null,
-    })) || [],
-
-    company_members: apiData.company_member_management?.map(m => ({
-        member_id: findOptionByValue(allMembers, m.member_id),
-        designation: m.designation || '',
-        person_name: m.person_name || '',
-        number: m.number || '',
-    })) || [],
-    company_teams: apiData.company_team_members?.map(m => ({
-        team_name: m.team_name || '',
-        designation: m.designation || '',
-        person_name: m.person_name || '',
-        number: m.number || '',
-    })) || [],
-
-    company_spot_verification: apiData.company_spot_verification?.map(item => ({
-        verified: stringToBoolean(item.verified),
-        verified_by_name: item.verified_by_name || '',
-        photo_upload: item.photo_upload_path || item.photo_upload || null,
-        remark: item.remark || '',
-    })) || [],
-    company_references: apiData.company_references?.map(ref => ({
-        person_name: ref.person_name || '',
-        company_id: findOptionByValue(allCompaniesForRef, ref.company_id),
-        number: ref.number || '',
-        remark: ref.remark || '',
-    })) || [],
-  };
+    const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
+    const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
+    
+    return {
+        id: apiData.id,
+        company_name: apiData.company_name || '',
+        primary_contact_number: apiData.primary_contact_number || '',
+        primary_contact_number_code: apiData.primary_contact_number_code ? { label: apiData.primary_contact_number_code, value: apiData.primary_contact_number_code } : undefined,
+        general_contact_number: apiData.general_contact_number || '',
+        general_contact_number_code: apiData.general_contact_number_code ? { label: apiData.general_contact_number_code, value: apiData.general_contact_number_code } : undefined,
+        alternate_contact_number: apiData.alternate_contact_number || '',
+        alternate_contact_number_code: apiData.alternate_contact_number_code ? { label: apiData.alternate_contact_number_code, value: apiData.alternate_contact_number_code } : null,
+        primary_email_id: apiData.primary_email_id || '',
+        alternate_email_id: apiData.alternate_email_id || '',
+        ownership_type: apiData.ownership_type ? { label: apiData.ownership_type, value: apiData.ownership_type } : undefined,
+        owner_name: apiData.owner_name || '',
+        company_address: apiData.company_address || '',
+        city: apiData.city || '',
+        state: apiData.state || '',
+        zip_code: apiData.zip_code || '',
+        country_id: findOptionByValue(mapCountries, apiData.country_id) || (apiData.country?.name ? {label: apiData.country.name, value: String(apiData.country_id)} : undefined),
+        continent_id: findOptionByValue(mapContinents, apiData.continent_id) || (apiData.continent?.name ? {label: apiData.continent.name, value: String(apiData.continent_id)} : null),
+        gst_number: apiData.gst_number || '',
+        pan_number: apiData.pan_number || '',
+        trn_number: apiData.trn_number || '',
+        tan_number: apiData.tan_number || '',
+        establishment_year: apiData.establishment_year || '',
+        no_of_employees: apiData.no_of_employees || '',
+        company_website: apiData.company_website || '',
+        company_logo: apiData.company_logo || null,
+        primary_business_type: apiData.primary_business_type ? { label: apiData.primary_business_type, value: apiData.primary_business_type } : null,
+        status: apiData.status ? { label: apiData.status, value: apiData.status } : undefined,
+        support_email: apiData.support_email || '',
+        notification_email: apiData.notification_email || '',
+    
+        company_certificate: apiData.company_certificate?.map(cert => ({
+            certificate_id: cert.certificate_id,
+            certificate_name: cert.certificate_name || '',
+            upload_certificate: cert.upload_certificate_path || cert.upload_certificate || null,
+        })) || [],
+        office_info: apiData.office_info?.map(office => ({
+            office_type: office.office_type ? { label: office.office_type, value: office.office_type } : undefined,
+            office_name: office.office_name || '',
+            address: office.address || '',
+            country_id: findOptionByValue(mapCountries, office.country_id),
+            state: office.state || '',
+            city: office.city || '',
+            zip_code: office.zip_code || '',
+            gst_number: office.gst_number || '',
+            contact_person: office.contact_person || '',
+            office_email: office.office_email || '',
+            office_phone: office.office_phone || '',
+        })) || [],
+    
+        declaration_206ab: apiData.declaration_206AB_url || null,
+        declaration_206ab_remark: apiData.declaration_206AB_remark || '',
+        declaration_206ab_remark_enabled: stringToBoolean(apiData.declaration_206AB_verify),
+        ABCQ_file: apiData.ABCQ_file || null,
+        ABCQ_remark: apiData.ABCQ_remark || '',
+        ABCQ_remark_enabled: stringToBoolean(apiData.ABCQ_verified),
+        office_photo_file: apiData.office_photo_file || null,
+        office_photo_remark: apiData.office_photo_remark || "",
+        office_photo_remark_enabled: stringToBoolean(apiData.office_photo_verified),
+        gst_certificate_file: apiData.gst_certificate_file || null,
+        gst_certificate_remark: apiData.gst_certificate_remark || "",
+        gst_certificate_remark_enabled: stringToBoolean(apiData.gst_certificate_verified),
+        authority_letter_file: apiData.authority_letter_file || null,
+        authority_letter_remark: apiData.authority_letter_remark || "",
+        authority_letter_remark_enabled: stringToBoolean(apiData.authority_letter_verified),
+        visiting_card_file: apiData.visiting_card_file || null,
+        visiting_card_remark: apiData.visiting_card_remark || "",
+        visiting_card_remark_enabled: stringToBoolean(apiData.visiting_card_verified),
+        cancel_cheque_file: apiData.cancel_cheque_file || null,
+        cancel_cheque_remark: apiData.cancel_cheque_remark || "",
+        cancel_cheque_remark_enabled: stringToBoolean(apiData.cancel_cheque_verified),
+        aadhar_card_file: apiData.aadhar_card_file || null,
+        aadhar_card_remark: apiData.aadhar_card_remark || "",
+        aadhar_card_remark_enabled: stringToBoolean(apiData.aadhar_card_verified),
+        pan_card_file: apiData.pan_card_file || null,
+        pan_card_remark: apiData.pan_card_remark || "",
+        pan_card_remark_enabled: stringToBoolean(apiData.pan_card_verified),
+        other_document_file: apiData.other_document_file || null,
+        other_document_remark: apiData.other_document_remark || "",
+        other_document_remark_enabled: stringToBoolean(apiData.other_document_verified),
+    
+        primary_account_number: apiData.primary_account_number || '',
+        primary_bank_name: apiData.primary_bank_name || null,
+        primary_ifsc_code: apiData.primary_ifsc_code || '',
+        primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
+        secondary_account_number: apiData.secondary_account_number || '',
+        secondary_bank_name: apiData.secondary_bank_name || null,
+        secondary_ifsc_code: apiData.secondary_ifsc_code || '',
+        secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
+        company_bank_details: apiData.company_bank_details?.map(bank => ({
+            bank_account_number: bank.bank_account_number || '',
+            bank_name: bank.bank_name || undefined,
+            ifsc_code: bank.ifsc_code || '',
+            type: bank.type ? { label: bank.type, value: bank.type } : undefined,
+            verification_photo: bank.verification_photo || null,
+        })) || [],
+    
+        USER_ACCESS: stringToBoolean(apiData.kyc_verified),
+        BILLING_FIELD: stringToBoolean(apiData.enable_billing),
+        billing_documents: apiData.billing_documents?.map(doc => ({
+            document_name: doc.document_name || '',
+            document: doc.document || null,
+        })) || [],
+    
+        company_members: apiData.company_member_management?.map(m => ({
+            member_id: findOptionByValue(allMembers, m.member_id),
+            designation: m.designation || '',
+            person_name: m.person_name || '',
+            number: m.number || '',
+        })) || [],
+        company_teams: apiData.company_team_members?.map(m => ({
+            team_name: m.team_name || '',
+            designation: m.designation || '',
+            person_name: m.person_name || '',
+            number: m.number || '',
+        })) || [],
+    
+        company_spot_verification: apiData.company_spot_verification?.map(item => ({
+            verified: stringToBoolean(item.verified),
+            verified_by_name: item.verified_by_name || '',
+            photo_upload: item.photo_upload_path || item.photo_upload || null,
+            remark: item.remark || '',
+        })) || [],
+        company_references: apiData.company_references?.map(ref => ({
+            person_name: ref.person_name || '',
+            company_id: findOptionByValue(allCompaniesForRef, ref.company_id),
+            number: ref.number || '',
+            remark: ref.remark || '',
+        })) || [],
+      };
 };
 
 const preparePayloadForApi = (
   formData: CompanyFormSchema,
   isEditMode: boolean
 ): FormData => {
-  const apiPayload = new FormData();
-  const data: any = { ...formData };
-
-  const appendField = (key: string, value: any) => {
-    if (value === null || value === undefined) {
-      apiPayload.append(key, "");
-    } else if (typeof value === 'boolean') {
-      apiPayload.append(key, value ? "1" : "0");
-    } else if (typeof value === 'object' && !Array.isArray(value) && value.value !== undefined && value.label !== undefined) {
-      apiPayload.append(key, value.value);
-    } else if (value instanceof File) {
-      apiPayload.append(key, value);
-    }
-     else {
-      apiPayload.append(key, String(value));
-    }
-  };
+    const apiPayload = new FormData();
+    const data: any = { ...formData };
   
-  const appendFileIfExists = (key: string, value: any) => {
-    if (value instanceof File) {
+    const appendField = (key: string, value: any) => {
+      if (value === null || value === undefined) {
+        apiPayload.append(key, "");
+      } else if (typeof value === 'boolean') {
+        apiPayload.append(key, value ? "1" : "0");
+      } else if (typeof value === 'object' && !Array.isArray(value) && value.value !== undefined && value.label !== undefined) {
+        apiPayload.append(key, value.value);
+      } else if (value instanceof File) {
         apiPayload.append(key, value);
-    } else if (value === null || value === '') {
-        apiPayload.append(key, '');
+      }
+       else {
+        apiPayload.append(key, String(value));
+      }
+    };
+    
+    const appendFileIfExists = (key: string, value: any) => {
+      if (value instanceof File) {
+          apiPayload.append(key, value);
+      } else if (value === null || value === '') {
+          apiPayload.append(key, '');
+      }
+    };
+  
+    if (isEditMode && data.id) {
+      apiPayload.append("id", String(data.id));
+      apiPayload.append("_method", "PUT");
     }
-  };
-
-  if (isEditMode && data.id) {
-    apiPayload.append("id", String(data.id));
-    apiPayload.append("_method", "PUT");
-  }
-
-  const simpleFields: (keyof CompanyFormSchema)[] = [
-      "company_name", "primary_contact_number", "primary_contact_number_code", "general_contact_number", "general_contact_number_code",
-      "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
-      "company_address", "city", "state", "zip_code", "country_id", "continent_id", "gst_number", "pan_number", "trn_number", "tan_number",
-      "establishment_year", "no_of_employees", "company_website", "primary_business_type", "status", "support_email", "notification_email",
-      "primary_account_number", "primary_bank_name", "primary_ifsc_code", "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code"
-  ];
-  simpleFields.forEach(field => appendField(field, data[field]));
-
-  appendField("kyc_verified", data.USER_ACCESS);
-  appendField("enable_billing", data.BILLING_FIELD);
-
-  appendFileIfExists("company_logo", data.company_logo);
-  appendFileIfExists("primary_bank_verification_photo", data.primary_bank_verification_photo);
-  appendFileIfExists("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
-
-  // Certificates
-  data.company_certificate?.forEach((cert: CertificateItemFE, index: number) => {
-      apiPayload.append(`company_certificate[${index}][certificate_id]`, cert.certificate_id || "");
-      apiPayload.append(`company_certificate[${index}][certificate_name]`, cert.certificate_name || "");
-      appendFileIfExists(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
-  });
-
-  // Office Info
   
-  console.log(data, 'apiData');
-  data.office_info?.forEach((office: BranchItemFE, index: number) => {
-    appendField(`office_info[${index}][office_type]`, office.office_type);
-    appendField(`office_info[${index}][office_name]`, office.office_name);
-    appendField(`office_info[${index}][address]`, office.address);
-    appendField(`office_info[${index}][country_id]`, office.country_id);
-    appendField(`office_info[${index}][state]`, office.state);
-    appendField(`office_info[${index}][city]`, office.city);
-    appendField(`office_info[${index}][zip_code]`, office.zip_code);
-    appendField(`office_info[${index}][gst_number]`, office.gst_number);
-    appendField(`office_info[${index}][contact_person]`, office.contact_person);
-    appendField(`office_info[${index}][office_email]`, office.office_email);
-    appendField(`office_info[${index}][office_phone]`, office.office_phone);
-  });
-
-  // KYC Documents
-  const kycDocsConfig = [
-    { feFileKey: "declaration_206ab", beFileKey: "declaration_206AB_file", feVerifyKey: "declaration_206ab_remark_enabled", beVerifyKey: "declaration_206AB_verify", feRemarkKey: "declaration_206ab_remark", beRemarkKey: "declaration_206AB_remark" },
-    { feFileKey: "ABCQ_file", beFileKey: "ABCQ_file", feVerifyKey: "ABCQ_remark_enabled", beVerifyKey: "ABCQ_verified", feRemarkKey: "ABCQ_remark", beRemarkKey: "ABCQ_remark" },
-    { feFileKey: "office_photo_file", beFileKey: "office_photo_file", feVerifyKey: "office_photo_remark_enabled", beVerifyKey: "office_photo_verified", feRemarkKey: "office_photo_remark", beRemarkKey: "office_photo_remark" },
-    { feFileKey: "gst_certificate_file", beFileKey: "gst_certificate_file", feVerifyKey: "gst_certificate_remark_enabled", beVerifyKey: "gst_certificate_verified", feRemarkKey: "gst_certificate_remark", beRemarkKey: "gst_certificate_remark" },
-    { feFileKey: "authority_letter_file", beFileKey: "authority_letter_file", feVerifyKey: "authority_letter_remark_enabled", beVerifyKey: "authority_letter_verified", feRemarkKey: "authority_letter_remark", beRemarkKey: "authority_letter_remark" },
-    { feFileKey: "visiting_card_file", beFileKey: "visiting_card_file", feVerifyKey: "visiting_card_remark_enabled", beVerifyKey: "visiting_card_verified", feRemarkKey: "visiting_card_remark", beRemarkKey: "visiting_card_remark" },
-    { feFileKey: "cancel_cheque_file", beFileKey: "cancel_cheque_file", feVerifyKey: "cancel_cheque_remark_enabled", beVerifyKey: "cancel_cheque_verified", feRemarkKey: "cancel_cheque_remark", beRemarkKey: "cancel_cheque_remark" },
-    { feFileKey: "aadhar_card_file", beFileKey: "aadhar_card_file", feVerifyKey: "aadhar_card_remark_enabled", beVerifyKey: "aadhar_card_verified", feRemarkKey: "aadhar_card_remark", beRemarkKey: "aadhar_card_remark" },
-    { feFileKey: "pan_card_file", beFileKey: "pan_card_file", feVerifyKey: "pan_card_remark_enabled", beVerifyKey: "pan_card_verified", feRemarkKey: "pan_card_remark", beRemarkKey: "pan_card_remark" },
-    { feFileKey: "other_document_file", beFileKey: "other_document_file", feVerifyKey: "other_document_remark_enabled", beVerifyKey: "other_document_verified", feRemarkKey: "other_document_remark", beRemarkKey: "other_document_remark" },
-  ];
-  kycDocsConfig.forEach(doc => {
-    appendFileIfExists(doc.beFileKey, data[doc.feFileKey]);
-    apiPayload.append(doc.beVerifyKey, data[doc.feVerifyKey] ? "1" : "0");
-    apiPayload.append(doc.beRemarkKey, data[doc.feRemarkKey] || "");
-  });
-
-  // Bank Details
-  data.company_bank_details?.forEach((bank: CompanyBankDetailItemFE, index: number) => {
-    apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
-    apiPayload.append(`company_bank_details[${index}][bank_name]`,bank.bank_name || '');
-    apiPayload.append(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code || '');
-    apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
-    appendFileIfExists(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
-  });
-
-  // Billing Documents
-  data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
-    apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name || "");
-    appendFileIfExists(`billing_documents[${index}][document]`, doc.document);
-  });
-
-  // Member Management
-  data.company_members?.forEach((member: CompanyMemberItemFE, index: number) => {
-      apiPayload.append(`company_member_management[${index}][member_id]`, member.member_id?.value || '');
-      apiPayload.append(`company_member_management[${index}][designation]`, member.designation || '');
-      apiPayload.append(`company_member_management[${index}][person_name]`, member.person_name || '');
-      apiPayload.append(`company_member_management[${index}][number]`, member.number || '');
-  });
-  // Team Management
-  data.company_teams?.forEach((member: CompanyTeamItemFE, index: number) => {
-      apiPayload.append(`company_team_members[${index}][team_name]`, member.team_name || '');
-      apiPayload.append(`company_team_members[${index}][designation]`, member.designation || '');
-      apiPayload.append(`company_team_members[${index}][person_name]`, member.person_name || '');
-      apiPayload.append(`company_team_members[${index}][number]`, member.number || '');
-  });
-
-  // Spot Verifications
-  data.company_spot_verification?.forEach((item: SpotVerificationItemFE, index: number) => {
-    apiPayload.append(`company_spot_verification[${index}][verified]`, item.verified ? "1" : "0");
-    apiPayload.append(`company_spot_verification[${index}][verified_by_name]`, item.verified_by_name || "");
-    apiPayload.append(`company_spot_verification[${index}][remark]`, item.remark || "");
-    appendFileIfExists(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
-  });
-
-  // References
-  data.company_references?.forEach((ref: ReferenceItemFE, index: number) => {
-    apiPayload.append(`company_references[${index}][person_name]`, ref.person_name || "");
-    apiPayload.append(`company_references[${index}][company_id]`, ref.company_id?.value || "");
-    apiPayload.append(`company_references[${index}][number]`, ref.number || "");
-    apiPayload.append(`company_references[${index}][remark]`, ref.remark || "");
-  });
+    const simpleFields: (keyof CompanyFormSchema)[] = [
+        "company_name", "primary_contact_number", "primary_contact_number_code", "general_contact_number", "general_contact_number_code",
+        "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
+        "company_address", "city", "state", "zip_code", "country_id", "continent_id", "gst_number", "pan_number", "trn_number", "tan_number",
+        "establishment_year", "no_of_employees", "company_website", "primary_business_type", "status", "support_email", "notification_email",
+        "primary_account_number", "primary_bank_name", "primary_ifsc_code", "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code"
+    ];
+    simpleFields.forEach(field => appendField(field, data[field]));
   
-  return apiPayload;
+    appendField("kyc_verified", data.USER_ACCESS);
+    appendField("enable_billing", data.BILLING_FIELD);
+  
+    appendFileIfExists("company_logo", data.company_logo);
+    appendFileIfExists("primary_bank_verification_photo", data.primary_bank_verification_photo);
+    appendFileIfExists("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
+  
+    // Certificates
+    data.company_certificate?.forEach((cert: CertificateItemFE, index: number) => {
+        apiPayload.append(`company_certificate[${index}][certificate_id]`, cert.certificate_id || "");
+        apiPayload.append(`company_certificate[${index}][certificate_name]`, cert.certificate_name || "");
+        appendFileIfExists(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
+    });
+  
+    // Office Info
+    data.office_info?.forEach((office: BranchItemFE, index: number) => {
+      appendField(`office_info[${index}][office_type]`, office.office_type);
+      appendField(`office_info[${index}][office_name]`, office.office_name);
+      appendField(`office_info[${index}][address]`, office.address);
+      appendField(`office_info[${index}][country_id]`, office.country_id);
+      appendField(`office_info[${index}][state]`, office.state);
+      appendField(`office_info[${index}][city]`, office.city);
+      appendField(`office_info[${index}][zip_code]`, office.zip_code);
+      appendField(`office_info[${index}][gst_number]`, office.gst_number);
+      appendField(`office_info[${index}][contact_person]`, office.contact_person);
+      appendField(`office_info[${index}][office_email]`, office.office_email);
+      appendField(`office_info[${index}][office_phone]`, office.office_phone);
+    });
+  
+    // KYC Documents
+    const kycDocsConfig = [
+      { feFileKey: "declaration_206ab", beFileKey: "declaration_206AB_file", feVerifyKey: "declaration_206ab_remark_enabled", beVerifyKey: "declaration_206AB_verify", feRemarkKey: "declaration_206ab_remark", beRemarkKey: "declaration_206AB_remark" },
+      { feFileKey: "ABCQ_file", beFileKey: "ABCQ_file", feVerifyKey: "ABCQ_remark_enabled", beVerifyKey: "ABCQ_verified", feRemarkKey: "ABCQ_remark", beRemarkKey: "ABCQ_remark" },
+      { feFileKey: "office_photo_file", beFileKey: "office_photo_file", feVerifyKey: "office_photo_remark_enabled", beVerifyKey: "office_photo_verified", feRemarkKey: "office_photo_remark", beRemarkKey: "office_photo_remark" },
+      { feFileKey: "gst_certificate_file", beFileKey: "gst_certificate_file", feVerifyKey: "gst_certificate_remark_enabled", beVerifyKey: "gst_certificate_verified", feRemarkKey: "gst_certificate_remark", beRemarkKey: "gst_certificate_remark" },
+      { feFileKey: "authority_letter_file", beFileKey: "authority_letter_file", feVerifyKey: "authority_letter_remark_enabled", beVerifyKey: "authority_letter_verified", feRemarkKey: "authority_letter_remark", beRemarkKey: "authority_letter_remark" },
+      { feFileKey: "visiting_card_file", beFileKey: "visiting_card_file", feVerifyKey: "visiting_card_remark_enabled", beVerifyKey: "visiting_card_verified", feRemarkKey: "visiting_card_remark", beRemarkKey: "visiting_card_remark" },
+      { feFileKey: "cancel_cheque_file", beFileKey: "cancel_cheque_file", feVerifyKey: "cancel_cheque_remark_enabled", beVerifyKey: "cancel_cheque_verified", feRemarkKey: "cancel_cheque_remark", beRemarkKey: "cancel_cheque_remark" },
+      { feFileKey: "aadhar_card_file", beFileKey: "aadhar_card_file", feVerifyKey: "aadhar_card_remark_enabled", beVerifyKey: "aadhar_card_verified", feRemarkKey: "aadhar_card_remark", beRemarkKey: "aadhar_card_remark" },
+      { feFileKey: "pan_card_file", beFileKey: "pan_card_file", feVerifyKey: "pan_card_remark_enabled", beVerifyKey: "pan_card_verified", feRemarkKey: "pan_card_remark", beRemarkKey: "pan_card_remark" },
+      { feFileKey: "other_document_file", beFileKey: "other_document_file", feVerifyKey: "other_document_remark_enabled", beVerifyKey: "other_document_verified", feRemarkKey: "other_document_remark", beRemarkKey: "other_document_remark" },
+    ];
+    kycDocsConfig.forEach(doc => {
+      appendFileIfExists(doc.beFileKey, data[doc.feFileKey]);
+      apiPayload.append(doc.beVerifyKey, data[doc.feVerifyKey] ? "1" : "0");
+      apiPayload.append(doc.beRemarkKey, data[doc.feRemarkKey] || "");
+    });
+  
+    // Bank Details
+    data.company_bank_details?.forEach((bank: CompanyBankDetailItemFE, index: number) => {
+      apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
+      apiPayload.append(`company_bank_details[${index}][bank_name]`,bank.bank_name || '');
+      apiPayload.append(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code || '');
+      apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
+      appendFileIfExists(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
+    });
+  
+    // Billing Documents
+    data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
+      apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name || "");
+      appendFileIfExists(`billing_documents[${index}][document]`, doc.document);
+    });
+  
+    // Member Management
+    data.company_members?.forEach((member: CompanyMemberItemFE, index: number) => {
+        apiPayload.append(`company_member_management[${index}][member_id]`, member.member_id?.value || '');
+        apiPayload.append(`company_member_management[${index}][designation]`, member.designation || '');
+        apiPayload.append(`company_member_management[${index}][person_name]`, member.person_name || '');
+        apiPayload.append(`company_member_management[${index}][number]`, member.number || '');
+    });
+    // Team Management
+    data.company_teams?.forEach((member: CompanyTeamItemFE, index: number) => {
+        apiPayload.append(`company_team_members[${index}][team_name]`, member.team_name || '');
+        apiPayload.append(`company_team_members[${index}][designation]`, member.designation || '');
+        apiPayload.append(`company_team_members[${index}][person_name]`, member.person_name || '');
+        apiPayload.append(`company_team_members[${index}][number]`, member.number || '');
+    });
+  
+    // Spot Verifications
+    data.company_spot_verification?.forEach((item: SpotVerificationItemFE, index: number) => {
+      apiPayload.append(`company_spot_verification[${index}][verified]`, item.verified ? "1" : "0");
+      apiPayload.append(`company_spot_verification[${index}][verified_by_name]`, item.verified_by_name || "");
+      apiPayload.append(`company_spot_verification[${index}][remark]`, item.remark || "");
+      appendFileIfExists(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
+    });
+  
+    // References
+    data.company_references?.forEach((ref: ReferenceItemFE, index: number) => {
+      apiPayload.append(`company_references[${index}][person_name]`, ref.person_name || "");
+      apiPayload.append(`company_references[${index}][company_id]`, ref.company_id?.value || "");
+      apiPayload.append(`company_references[${index}][number]`, ref.number || "");
+      apiPayload.append(`company_references[${index}][remark]`, ref.remark || "");
+    });
+    
+    return apiPayload;
 };
 
 // --- Navigator Component ---
@@ -861,63 +853,63 @@ const CompanyDetailsSection = ({
           </Card>
         );
       })}
-
-      <hr className="my-6" />
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="mb-0">Office Information</h4>
-        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendBranch({ office_type: undefined, office_name: "", address: "", country_id: undefined, state: "", city: "", zip_code: "", gst_number: "", contact_person: "", office_email: "", office_phone: "" })}> Add Office </Button>
-      </div>
-      {branchFields.map((item, index) => (
-        <Card key={item.id} className="mb-4 border dark:border-gray-600 rounded-md relative" bodyClass="p-4">
-           <Button type="button" size="xs" variant="plain" icon={<TbTrash size={16} />} onClick={() => removeBranch(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" > Remove </Button>
-          <div className="grid md:grid-cols-4 gap-4">
-            <FormItem label={`Office Type ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_type} errorMessage={(errors.office_info?.[index]?.office_type as any)?.message as string}>
-              <Controller name={`office_info.${index}.office_type`} control={control} render={({ field }) => (<Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />)} />
-            </FormItem>
-            <FormItem label={`Office Name ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_name} errorMessage={errors.office_info?.[index]?.office_name?.message as string}>
-              <Controller name={`office_info.${index}.office_name`} control={control} render={({ field }) => (<Input placeholder="e.g. Main Office" {...field} />)} />
-            </FormItem>
-            <FormItem label={`GST/REG Number ${index + 1}`}>
-              <Controller name={`office_info.${index}.gst_number`} control={control} render={({ field }) => (<Input placeholder="GST or Registration Number" {...field} />)} />
-            </FormItem>
-            <FormItem label={`Contact Person ${index + 1}`} invalid={!!errors.office_info?.[index]?.contact_person} errorMessage={errors.office_info?.[index]?.contact_person?.message as string}>
-                <Controller name={`office_info.${index}.contact_person`} control={control} render={({ field }) => (<Input placeholder="John Doe" {...field} />)} />
-            </FormItem>
-            <FormItem label={`Email ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_email} errorMessage={errors.office_info?.[index]?.office_email?.message as string}>
-                <Controller name={`office_info.${index}.office_email`} control={control} render={({ field }) => (<Input type="email" placeholder="office.contact@example.com" {...field} />)} />
-            </FormItem>
-            <FormItem label={`Phone ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_phone} errorMessage={errors.office_info?.[index]?.office_phone?.message as string}>
-                <Controller name={`office_info.${index}.office_phone`} control={control} render={({ field }) => (<Input type="tel" placeholder="Office Phone Number" {...field} />)} />
-            </FormItem>
-            
-            <div className="md:col-span-4 border-t dark:border-gray-600 pt-4 mt-2">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <FormItem label={`Country ${index + 1}`} invalid={!!errors.office_info?.[index]?.country_id} errorMessage={(errors.office_info?.[index]?.country_id as any)?.message as string}>
-                    <Controller name={`office_info.${index}.country_id`} control={control} render={({ field }) => (<Select placeholder="Select Country" options={countryOptions} {...field} />)} />
-                </FormItem>
-                <FormItem label={`State ${index + 1}`} invalid={!!errors.office_info?.[index]?.state} errorMessage={errors.office_info?.[index]?.state?.message as string}>
-                    <Controller name={`office_info.${index}.state`} control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
-                </FormItem>
-                <FormItem label={`City ${index + 1}`} invalid={!!errors.office_info?.[index]?.city} errorMessage={errors.office_info?.[index]?.city?.message as string}>
-                    <Controller name={`office_info.${index}.city`} control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
-                </FormItem>
-                <FormItem label={`ZIP Code ${index + 1}`} invalid={!!errors.office_info?.[index]?.zip_code} errorMessage={errors.office_info?.[index]?.zip_code?.message as string}>
-                    <Controller name={`office_info.${index}.zip_code`} control={control} render={({ field }) => (<Input placeholder="ZIP Code" {...field} />)} />
-                </FormItem>
+  
+        <hr className="my-6" />
+        <div className="flex justify-between items-center mb-4">
+          <h4 className="mb-0">Office Information</h4>
+          <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendBranch({ office_type: undefined, office_name: "", address: "", country_id: undefined, state: "", city: "", zip_code: "", gst_number: "", contact_person: "", office_email: "", office_phone: "" })}> Add Office </Button>
+        </div>
+        {branchFields.map((item, index) => (
+          <Card key={item.id} className="mb-4 border dark:border-gray-600 rounded-md relative" bodyClass="p-4">
+             <Button type="button" size="xs" variant="plain" icon={<TbTrash size={16} />} onClick={() => removeBranch(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" > Remove </Button>
+            <div className="grid md:grid-cols-4 gap-4">
+              <FormItem label={`Office Type ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_type} errorMessage={(errors.office_info?.[index]?.office_type as any)?.message as string}>
+                <Controller name={`office_info.${index}.office_type`} control={control} render={({ field }) => (<Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />)} />
+              </FormItem>
+              <FormItem label={`Office Name ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_name} errorMessage={errors.office_info?.[index]?.office_name?.message as string}>
+                <Controller name={`office_info.${index}.office_name`} control={control} render={({ field }) => (<Input placeholder="e.g. Main Office" {...field} />)} />
+              </FormItem>
+              <FormItem label={`GST/REG Number ${index + 1}`}>
+                <Controller name={`office_info.${index}.gst_number`} control={control} render={({ field }) => (<Input placeholder="GST or Registration Number" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Contact Person ${index + 1}`} invalid={!!errors.office_info?.[index]?.contact_person} errorMessage={errors.office_info?.[index]?.contact_person?.message as string}>
+                  <Controller name={`office_info.${index}.contact_person`} control={control} render={({ field }) => (<Input placeholder="John Doe" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Email ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_email} errorMessage={errors.office_info?.[index]?.office_email?.message as string}>
+                  <Controller name={`office_info.${index}.office_email`} control={control} render={({ field }) => (<Input type="email" placeholder="office.contact@example.com" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Phone ${index + 1}`} invalid={!!errors.office_info?.[index]?.office_phone} errorMessage={errors.office_info?.[index]?.office_phone?.message as string}>
+                  <Controller name={`office_info.${index}.office_phone`} control={control} render={({ field }) => (<Input type="tel" placeholder="Office Phone Number" {...field} />)} />
+              </FormItem>
+              
+              <div className="md:col-span-4 border-t dark:border-gray-600 pt-4 mt-2">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <FormItem label={`Country ${index + 1}`} invalid={!!errors.office_info?.[index]?.country_id} errorMessage={(errors.office_info?.[index]?.country_id as any)?.message as string}>
+                      <Controller name={`office_info.${index}.country_id`} control={control} render={({ field }) => (<Select placeholder="Select Country" options={countryOptions} {...field} />)} />
+                  </FormItem>
+                  <FormItem label={`State ${index + 1}`} invalid={!!errors.office_info?.[index]?.state} errorMessage={errors.office_info?.[index]?.state?.message as string}>
+                      <Controller name={`office_info.${index}.state`} control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
+                  </FormItem>
+                  <FormItem label={`City ${index + 1}`} invalid={!!errors.office_info?.[index]?.city} errorMessage={errors.office_info?.[index]?.city?.message as string}>
+                      <Controller name={`office_info.${index}.city`} control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
+                  </FormItem>
+                  <FormItem label={`ZIP Code ${index + 1}`} invalid={!!errors.office_info?.[index]?.zip_code} errorMessage={errors.office_info?.[index]?.zip_code?.message as string}>
+                      <Controller name={`office_info.${index}.zip_code`} control={control} render={({ field }) => (<Input placeholder="ZIP Code" {...field} />)} />
+                  </FormItem>
+                </div>
               </div>
+              <FormItem label={`Address ${index + 1}`} className="md:col-span-4" invalid={!!errors.office_info?.[index]?.address} errorMessage={errors.office_info?.[index]?.address?.message as string}>
+                <Controller name={`office_info.${index}.address`} control={control} render={({ field }) => (<Input placeholder="Full Address" {...field} />)} />
+              </FormItem>
             </div>
-            <FormItem label={`Address ${index + 1}`} className="md:col-span-4" invalid={!!errors.office_info?.[index]?.address} errorMessage={errors.office_info?.[index]?.address?.message as string}>
-              <Controller name={`office_info.${index}.address`} control={control} render={({ field }) => (<Input placeholder="Full Address" {...field} />)} />
-            </FormItem>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        ))}
     </Card>
   );
 };
 
 // --- KYCDetailSection ---
-const KYCDetailSection = ({ control, errors, formMethods, getValues }: FormSectionBaseProps) => {
+const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const kycDocs = [
     { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const },
@@ -1219,7 +1211,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
   );
 };
 
-// --- MemberManagementSection (for Linked Members) ---
+// --- MemberManagementSection ---
 const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const dispatch = useAppDispatch();
   const { MemberData } = useSelector(masterSelector);
@@ -1232,6 +1224,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
       ? data.map((m: any) => ({
           value: String(m.id),
           label: `${m.name || 'N/A'} (ID:${m.id})`,
+          status: m.status, 
         }))
       : [];
   }, [MemberData]);
@@ -1256,7 +1249,30 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
             <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10">Remove</Button>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
                 <FormItem label={`Member ${index+1}`} invalid={!!errors.company_members?.[index]?.member_id} errorMessage={(errors.company_members?.[index]?.member_id as any)?.message as string}>
-                    <Controller name={`company_members.${index}.member_id`} control={control} render={({ field }) => (<Select placeholder="Select Member" options={memberOptions} {...field} />)} />
+                    <Controller 
+                      name={`company_members.${index}.member_id`} 
+                      control={control} 
+                      render={({ field }) => (
+                        <Select 
+                          placeholder="Select Member" 
+                          options={memberOptions} 
+                          value={field.value}
+                          onChange={(selectedOption) => {
+                            field.onChange(selectedOption); 
+                            
+                            const fullMember = memberOptions.find(opt => opt.value === selectedOption?.value);
+                            
+                            if (fullMember && fullMember.status?.toLowerCase() !== 'active') {
+                                toast.push(
+                                    <Notification type="warning" title="Member Inactive" duration={4000}>
+                                        The selected member '{fullMember.label}' is currently not active.
+                                    </Notification>
+                                );
+                            }
+                          }} 
+                        />
+                      )} 
+                    />
                 </FormItem>
                 <FormItem label={`Designation ${index+1}`} invalid={!!errors.company_members?.[index]?.designation} errorMessage={errors.company_members?.[index]?.designation?.message as string}>
                     <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="Designation in this company" {...field} />)} />
@@ -1274,7 +1290,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
   );
 };
 
-// --- TeamManagementSection (for Ad-hoc Teams) ---
+// --- TeamManagementSection ---
 const TeamManagementSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { fields, append, remove } = useFieldArray({ control, name: "company_teams" });
 
@@ -1307,6 +1323,7 @@ const TeamManagementSection = ({ control, errors, formMethods }: FormSectionBase
   );
 };
 
+
 // --- CompanyFormComponent ---
 type CompanyFormComponentProps = {
   onFormSubmit: (values: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => void;
@@ -1317,208 +1334,206 @@ type CompanyFormComponentProps = {
 };
 
 const CompanyFormComponent = (props: CompanyFormComponentProps) => {
-  const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
-  const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
-
-  const companySchema = z.object({
-    id: z.union([z.string(), z.number()]).optional(),
-    company_name: z.string().trim().min(1, "Company Name is required."),
-    primary_contact_number: z.string().trim().min(1, "Primary Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
-    primary_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
-    general_contact_number: z.string().trim().min(1, "General Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
-    general_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
-    alternate_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
-    alternate_contact_number_code: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-    primary_email_id: z.string().trim().min(1, "Primary Email is required.").email("Invalid email format."),
-    alternate_email_id: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
-    ownership_type: z.object({ label: z.string(), value: z.string().min(1, "Ownership Type is required.") }, { required_error: "Ownership Type is required." }),
-    owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
-    company_address: z.string().trim().min(1, "Company Address is required."),
-    city: z.string().trim().min(1, "City is required."),
-    state: z.string().trim().min(1, "State is required."),
-    zip_code: z.string().trim().min(1, "ZIP/Postal Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
-    country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
-    continent_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-    gst_number: z.string().trim().min(1, "GST Number is required.").regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format."),
-    pan_number: z.string().trim().min(1, "PAN Number is required.").regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format."),
-    trn_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    tan_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
-    no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d+$/).optional().nullable(), z.literal("")]).optional().nullable(),
-    company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
-    company_logo: z.any().optional().nullable(),
-    primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-    status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
-    support_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
-    notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
-
-    company_certificate: z.array(z.object({
-        certificate_id: z.any().refine(val => val && (typeof val === 'string' ? val.trim() !== '' : val.value && String(val.value).trim() !== ''), { message: "Certificate ID is required if row is added." }),
-        certificate_name: z.string().trim().min(1, "Certificate Name is required."),
-        upload_certificate: z.any().optional().nullable(),
-    })).optional(),
-    office_info: z.array(z.object({
-        office_type: z.object({ label: z.string(), value: z.string().min(1, "Office type is required.") }, { required_error: "Office type is required." }),
-        office_name: z.string().trim().min(1, "Office name is required."),
-        address: z.string().trim().min(1, "Address is required."),
-        country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
-        state: z.string().trim().min(1, "State is required."),
+    const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
+    const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
+  
+    const companySchema = z.object({
+        id: z.union([z.string(), z.number()]).optional(),
+        company_name: z.string().trim().min(1, "Company Name is required."),
+        primary_contact_number: z.string().trim().min(1, "Primary Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
+        primary_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
+        general_contact_number: z.string().trim().min(1, "General Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
+        general_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
+        alternate_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
+        alternate_contact_number_code: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+        primary_email_id: z.string().trim().min(1, "Primary Email is required.").email("Invalid email format."),
+        alternate_email_id: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
+        ownership_type: z.object({ label: z.string(), value: z.string().min(1, "Ownership Type is required.") }, { required_error: "Ownership Type is required." }),
+        owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
+        company_address: z.string().trim().min(1, "Company Address is required."),
         city: z.string().trim().min(1, "City is required."),
-        zip_code: z.string().trim().min(1, "ZIP Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
-        gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
-        contact_person: z.string().trim().nullable(),
-        office_email: z.string().trim().email("Invalid email format.").nullable(),
-        office_phone: z.string().trim().max(10, "Invalid phone number.").regex(/^\d{7,15}$/, "Invalid phone number format.").nullable(),
-    })).optional(),
+        state: z.string().trim().min(1, "State is required."),
+        zip_code: z.string().trim().min(1, "ZIP/Postal Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
+        country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
+        continent_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+        gst_number: z.string().trim().min(1, "GST Number is required.").regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format."),
+        pan_number: z.string().trim().min(1, "PAN Number is required.").regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format."),
+        trn_number: z.string().trim().optional().or(z.literal("")).nullable(),
+        tan_number: z.string().trim().optional().or(z.literal("")).nullable(),
+        establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
+        no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d+$/).optional().nullable(), z.literal("")]).optional().nullable(),
+        company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
+        company_logo: z.any().optional().nullable(),
+        primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+        status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
+        support_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
+        notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     
-    // KYC Documents are optional and validated by their structure if present
-    declaration_206ab: z.any().optional().nullable(), declaration_206ab_remark: z.string().optional().or(z.literal("")).nullable(), declaration_206ab_remark_enabled: z.boolean().optional(),
-    ABCQ_file: z.any().optional().nullable(), ABCQ_remark: z.string().optional().or(z.literal("")).nullable(), ABCQ_remark_enabled: z.boolean().optional(),
-    office_photo_file: z.any().optional().nullable(), office_photo_remark: z.string().optional().or(z.literal("")).nullable(), office_photo_remark_enabled: z.boolean().optional(),
-    gst_certificate_file: z.any().optional().nullable(), gst_certificate_remark: z.string().optional().or(z.literal("")).nullable(), gst_certificate_remark_enabled: z.boolean().optional(),
-    authority_letter_file: z.any().optional().nullable(), authority_letter_remark: z.string().optional().or(z.literal("")).nullable(), authority_letter_remark_enabled: z.boolean().optional(),
-    visiting_card_file: z.any().optional().nullable(), visiting_card_remark: z.string().optional().or(z.literal("")).nullable(), visiting_card_remark_enabled: z.boolean().optional(),
-    cancel_cheque_file: z.any().optional().nullable(), cancel_cheque_remark: z.string().optional().or(z.literal("")).nullable(), cancel_cheque_remark_enabled: z.boolean().optional(),
-    aadhar_card_file: z.any().optional().nullable(), aadhar_card_remark: z.string().optional().or(z.literal("")).nullable(), aadhar_card_remark_enabled: z.boolean().optional(),
-    pan_card_file: z.any().optional().nullable(), pan_card_remark: z.string().optional().or(z.literal("")).nullable(), pan_card_remark_enabled: z.boolean().optional(),
-    other_document_file: z.any().optional().nullable(), other_document_remark: z.string().optional().or(z.literal("")).nullable(), other_document_remark_enabled: z.boolean().optional(),
-
-    primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_bank_verification_photo: z.any().optional().nullable(),
-    secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_bank_verification_photo: z.any().optional().nullable(),
-    company_bank_details: z.array(z.object({
-        bank_account_number: z.string().trim().min(1,"Account number required if bank entry added"),
-        bank_name: z.string().min(1,"Bank name required"),
-        ifsc_code: z.string().trim().min(1,"IFSC code required"),
-        verification_photo: z.any().optional().nullable(),
-        type: z.object({ label: z.string(), value: z.string().min(1, "Bank type required") }, {required_error: "Bank type is required"}),
-    })).optional(),
-
-    USER_ACCESS: z.boolean({required_error: "User Access selection is required"}),
-    BILLING_FIELD: z.boolean({required_error: "Billing Field selection is required"}),
-    billing_documents: z.array(z.object({
-        document_name: z.string().trim().min(1, "Document name is required."),
-        document: z.any().optional().nullable(),
-    })).optional(),
+        company_certificate: z.array(z.object({
+            certificate_id: z.any().refine(val => val && (typeof val === 'string' ? val.trim() !== '' : val.value && String(val.value).trim() !== ''), { message: "Certificate ID is required if row is added." }),
+            certificate_name: z.string().trim().min(1, "Certificate Name is required."),
+            upload_certificate: z.any().optional().nullable(),
+        })).optional(),
+        office_info: z.array(z.object({
+            office_type: z.object({ label: z.string(), value: z.string().min(1, "Office type is required.") }, { required_error: "Office type is required." }),
+            office_name: z.string().trim().min(1, "Office name is required."),
+            address: z.string().trim().min(1, "Address is required."),
+            country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
+            state: z.string().trim().min(1, "State is required."),
+            city: z.string().trim().min(1, "City is required."),
+            zip_code: z.string().trim().min(1, "ZIP Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
+            gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
+            contact_person: z.string().trim().nullable(),
+            office_email: z.string().trim().email("Invalid email format.").nullable(),
+            office_phone: z.string().trim().max(10, "Invalid phone number.").regex(/^\d{7,15}$/, "Invalid phone number format.").nullable(),
+        })).optional(),
+        
+        declaration_206ab: z.any().optional().nullable(), declaration_206ab_remark: z.string().optional().or(z.literal("")).nullable(), declaration_206ab_remark_enabled: z.boolean().optional(),
+        ABCQ_file: z.any().optional().nullable(), ABCQ_remark: z.string().optional().or(z.literal("")).nullable(), ABCQ_remark_enabled: z.boolean().optional(),
+        office_photo_file: z.any().optional().nullable(), office_photo_remark: z.string().optional().or(z.literal("")).nullable(), office_photo_remark_enabled: z.boolean().optional(),
+        gst_certificate_file: z.any().optional().nullable(), gst_certificate_remark: z.string().optional().or(z.literal("")).nullable(), gst_certificate_remark_enabled: z.boolean().optional(),
+        authority_letter_file: z.any().optional().nullable(), authority_letter_remark: z.string().optional().or(z.literal("")).nullable(), authority_letter_remark_enabled: z.boolean().optional(),
+        visiting_card_file: z.any().optional().nullable(), visiting_card_remark: z.string().optional().or(z.literal("")).nullable(), visiting_card_remark_enabled: z.boolean().optional(),
+        cancel_cheque_file: z.any().optional().nullable(), cancel_cheque_remark: z.string().optional().or(z.literal("")).nullable(), cancel_cheque_remark_enabled: z.boolean().optional(),
+        aadhar_card_file: z.any().optional().nullable(), aadhar_card_remark: z.string().optional().or(z.literal("")).nullable(), aadhar_card_remark_enabled: z.boolean().optional(),
+        pan_card_file: z.any().optional().nullable(), pan_card_remark: z.string().optional().or(z.literal("")).nullable(), pan_card_remark_enabled: z.boolean().optional(),
+        other_document_file: z.any().optional().nullable(), other_document_remark: z.string().optional().or(z.literal("")).nullable(), other_document_remark_enabled: z.boolean().optional(),
     
-    company_members: z.array(z.object({
-        member_id: z.object({ label: z.string(), value: z.string() }, {required_error: "Member selection is required."}),
-        designation: z.string().trim().min(1, "Designation is required."),
-        person_name: z.string().trim().optional().nullable(),
-        number: z.string().trim().optional().nullable(),
-    })).optional(),
-
-    company_teams: z.array(z.object({
-        team_name: z.string().trim().min(1, "Team Name is required."),
-        designation: z.string().trim().min(1, "Designation is required."),
-        person_name: z.string().trim().min(1, "Person Name is required."),
-        number: z.string().trim().min(1, "Contact Number is required.").regex(/^\d+$/, "Invalid number format"),
-    })).optional(),
-
-    company_spot_verification: z.array(z.object({
-        verified: z.boolean().optional(),
-        verified_by_name: z.string().trim().min(1, "Verifier name is required."),
-        photo_upload: z.any().optional().nullable(),
-        remark: z.string().trim().optional().or(z.literal("")).nullable(),
-    })).optional(),
-    company_references: z.array(z.object({
-        person_name: z.string().trim().min(1, "Person name is required."),
-        company_id: z.object({ label: z.string(), value: z.string().min(1, "Company is required.")}, {required_error: "Company selection is required"}),
-        number: z.string().trim().min(1, "Contact number is required.").regex(/^\d+$/, "Invalid number format"),
-        remark: z.string().trim().optional().or(z.literal("")).nullable(),
-    })).optional(),
-  }).passthrough();
-
-
-  const formMethods = useForm<CompanyFormSchema>({
-    defaultValues: defaultValues || {},
-    resolver: zodResolver(companySchema),
-    mode: "onTouched",
-  });
-  const {
-    handleSubmit,
-    reset,
-    formState: { errors },
-    control,
-    getValues,
-  } = formMethods;
-
-  useEffect(() => {
-    if (defaultValues) {
-      reset(defaultValues);
-    }
-  }, [defaultValues, reset]);
-
-  const internalFormSubmit = (values: CompanyFormSchema) => {
-    onFormSubmit?.(values, formMethods);
-  };
-
-  const navigationKeys = companyNavigationList.map((item) => item.link);
-  const handleNext = () => {
-    const currentIndex = navigationKeys.indexOf(activeSection);
-    if (currentIndex < navigationKeys.length - 1)
-      setActiveSection(navigationKeys[currentIndex + 1]);
-  };
-  const handlePrevious = () => {
-    const currentIndex = navigationKeys.indexOf(activeSection);
-    if (currentIndex > 0) setActiveSection(navigationKeys[currentIndex - 1]);
-  };
-
-  const renderActiveSection = () => {
-    const sectionProps = { errors, control, formMethods, getValues };
-    switch (activeSection) {
-      case "companyDetails": return <CompanyDetailsSection {...sectionProps} />;
-      case "kycDocuments": return <KYCDetailSection {...sectionProps} />;
-      case "bankDetails": return <BankDetailsSection {...sectionProps} />;
-      case "spotVerification": return <SpotVerificationSection {...sectionProps} />;
-      case "reference": return <ReferenceSection {...sectionProps} />;
-      case "accessibility": return <AccessibilitySection {...sectionProps} />;
-      case "memberManagement": return <MemberManagementSection {...sectionProps} />;
-      case "teamManagement": return <TeamManagementSection {...sectionProps} />;
-      default: return <CompanyDetailsSection {...sectionProps} />;
-    }
-  };
-
-  return (
-    <>
-      <div className="flex gap-1 items-end mb-3">
-        <NavLink to="/business-entities/company">
-          <h6 className="font-semibold hover:text-primary-600">Company</h6>
-        </NavLink>
-        <BiChevronRight size={22} />
-        <h6 className="font-semibold text-primary-600 dark:text-primary-300">
-          {isEditMode ? "Edit Company" : "Add New Company"}
-        </h6>
-      </div>
-      <Card className="mb-6" bodyClass="px-4 py-2 md:px-6">
-        <NavigatorComponent activeSection={activeSection} onNavigate={setActiveSection} />
-      </Card>
-      <form onSubmit={handleSubmit(internalFormSubmit, (err) => console.log("Zod Validation Errors:", err))} className="flex flex-col gap-4 pb-20">
-        {renderActiveSection()}
-      </form>
-      <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex justify-between items-center p-4">
-          <div>
-            {onDiscard && (
-              <Button type="button" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"} icon={<TbTrash />} onClick={onDiscard} disabled={isSubmitting} >
-                Discard
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0} > Previous </Button>
-            <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1} > Next </Button>
-            <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit)} disabled={isSubmitting} > {isEditMode ? "Update" : "Create"} </Button>
-          </div>
+        primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
+        primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
+        primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
+        primary_bank_verification_photo: z.any().optional().nullable(),
+        secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
+        secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
+        secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
+        secondary_bank_verification_photo: z.any().optional().nullable(),
+        company_bank_details: z.array(z.object({
+            bank_account_number: z.string().trim().min(1,"Account number required if bank entry added"),
+            bank_name: z.string().min(1,"Bank name required"),
+            ifsc_code: z.string().trim().min(1,"IFSC code required"),
+            verification_photo: z.any().optional().nullable(),
+            type: z.object({ label: z.string(), value: z.string().min(1, "Bank type required") }, {required_error: "Bank type is required"}),
+        })).optional(),
+    
+        USER_ACCESS: z.boolean({required_error: "User Access selection is required"}),
+        BILLING_FIELD: z.boolean({required_error: "Billing Field selection is required"}),
+        billing_documents: z.array(z.object({
+            document_name: z.string().trim().min(1, "Document name is required."),
+            document: z.any().optional().nullable(),
+        })).optional(),
+        
+        company_members: z.array(z.object({
+            member_id: z.object({ label: z.string(), value: z.string() }, {required_error: "Member selection is required."}),
+            designation: z.string().trim().min(1, "Designation is required."),
+            person_name: z.string().trim().optional().nullable(),
+            number: z.string().trim().optional().nullable(),
+        })).optional(),
+    
+        company_teams: z.array(z.object({
+            team_name: z.string().trim().min(1, "Team Name is required."),
+            designation: z.string().trim().min(1, "Designation is required."),
+            person_name: z.string().trim().min(1, "Person Name is required."),
+            number: z.string().trim().min(1, "Contact Number is required.").regex(/^\d+$/, "Invalid number format"),
+        })).optional(),
+    
+        company_spot_verification: z.array(z.object({
+            verified: z.boolean().optional(),
+            verified_by_name: z.string().trim().min(1, "Verifier name is required."),
+            photo_upload: z.any().optional().nullable(),
+            remark: z.string().trim().optional().or(z.literal("")).nullable(),
+        })).optional(),
+        company_references: z.array(z.object({
+            person_name: z.string().trim().min(1, "Person name is required."),
+            company_id: z.object({ label: z.string(), value: z.string().min(1, "Company is required.")}, {required_error: "Company selection is required"}),
+            number: z.string().trim().min(1, "Contact number is required.").regex(/^\d+$/, "Invalid number format"),
+            remark: z.string().trim().optional().or(z.literal("")).nullable(),
+        })).optional(),
+    }).passthrough();
+  
+    const formMethods = useForm<CompanyFormSchema>({
+      defaultValues: defaultValues || {},
+      resolver: zodResolver(companySchema),
+      mode: "onTouched",
+    });
+    const {
+      handleSubmit,
+      reset,
+      formState: { errors },
+      control,
+      getValues,
+    } = formMethods;
+  
+    useEffect(() => {
+      if (defaultValues) {
+        reset(defaultValues);
+      }
+    }, [defaultValues, reset]);
+  
+    const internalFormSubmit = (values: CompanyFormSchema) => {
+      onFormSubmit?.(values, formMethods);
+    };
+  
+    const navigationKeys = companyNavigationList.map((item) => item.link);
+    const handleNext = () => {
+      const currentIndex = navigationKeys.indexOf(activeSection);
+      if (currentIndex < navigationKeys.length - 1)
+        setActiveSection(navigationKeys[currentIndex + 1]);
+    };
+    const handlePrevious = () => {
+      const currentIndex = navigationKeys.indexOf(activeSection);
+      if (currentIndex > 0) setActiveSection(navigationKeys[currentIndex - 1]);
+    };
+  
+    const renderActiveSection = () => {
+      const sectionProps = { errors, control, formMethods, getValues };
+      switch (activeSection) {
+        case "companyDetails": return <CompanyDetailsSection {...sectionProps} />;
+        case "kycDocuments": return <KYCDetailSection {...sectionProps} />;
+        case "bankDetails": return <BankDetailsSection {...sectionProps} />;
+        case "spotVerification": return <SpotVerificationSection {...sectionProps} />;
+        case "reference": return <ReferenceSection {...sectionProps} />;
+        case "accessibility": return <AccessibilitySection {...sectionProps} />;
+        case "memberManagement": return <MemberManagementSection {...sectionProps} />;
+        case "teamManagement": return <TeamManagementSection {...sectionProps} />;
+        default: return <CompanyDetailsSection {...sectionProps} />;
+      }
+    };
+  
+    return (
+      <>
+        <div className="flex gap-1 items-end mb-3">
+          <NavLink to="/business-entities/company">
+            <h6 className="font-semibold hover:text-primary-600">Company</h6>
+          </NavLink>
+          <BiChevronRight size={22} />
+          <h6 className="font-semibold text-primary-600 dark:text-primary-300">
+            {isEditMode ? "Edit Company" : "Add New Company"}
+          </h6>
         </div>
-      </Card>
-    </>
-  );
+        <Card className="mb-6" bodyClass="px-4 py-2 md:px-6">
+          <NavigatorComponent activeSection={activeSection} onNavigate={setActiveSection} />
+        </Card>
+        <form onSubmit={handleSubmit(internalFormSubmit, (err) => console.log("Zod Validation Errors:", err))} className="flex flex-col gap-4 pb-20">
+          {renderActiveSection()}
+        </form>
+        <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center p-4">
+            <div>
+              {onDiscard && (
+                <Button type="button" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"} icon={<TbTrash />} onClick={onDiscard} disabled={isSubmitting} >
+                  Discard
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0} > Previous </Button>
+              <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1} > Next </Button>
+              <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit)} disabled={isSubmitting} > {isEditMode ? "Update" : "Create"} </Button>
+            </div>
+          </div>
+        </Card>
+      </>
+    );
 };
 
 // --- CompanyFormPage (Combined Add/Edit Page) ---
@@ -1533,7 +1548,7 @@ const CompanyCreate = () => {
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { CountriesData = [], ContinentsData = [], memberData, CompanyData: AllCompaniesData } = useSelector(masterSelector);
+  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData } = useSelector(masterSelector);
 
 
   const getEmptyFormValues = (): CompanyFormSchema => ({
@@ -1576,14 +1591,16 @@ const CompanyCreate = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    const emptyForm = getEmptyFormValues();
-    if (isEditMode && id) {
+    // Guard clause to prevent running until all lookup data is available.
+    const lookupsReady = CountriesData?.length > 0 && ContinentsData?.length > 0 && MemberData && AllCompaniesData;
+
+    if (isEditMode && id && lookupsReady) {
       const fetchCompanyData = async () => {
         setPageLoading(true);
         try {
           const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
           if (actionResult) {
-            const allMembersForSelect = (memberData || memberData?.data || []).map((m: any) => ({ value: String(m.id), label: `${m.name} (ID:${m.id})` }));
+            const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `${m.name} (ID:${m.id})` }));
             const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: c.company_name }));
             const transformed = transformApiToFormSchema(
               actionResult, 
@@ -1592,7 +1609,7 @@ const CompanyCreate = () => {
               allMembersForSelect,
               allCompaniesForRefSelect
             );
-            setInitialData({ ...emptyForm, ...transformed });
+            setInitialData({ ...getEmptyFormValues(), ...transformed });
           } else {
             toast.push(<Notification type="danger" title="Fetch Error"> Company data not found. </Notification>);
             navigate("/business-entities/company");
@@ -1605,11 +1622,11 @@ const CompanyCreate = () => {
         }
       };
       fetchCompanyData();
-    } else {
-      setInitialData(emptyForm);
+    } else if (!isEditMode) {
+      setInitialData(getEmptyFormValues());
       setPageLoading(false);
     }
-  }, [id, isEditMode, navigate, dispatch, CountriesData, ContinentsData, memberData, AllCompaniesData]);
+  }, [id, isEditMode, navigate, dispatch, CountriesData, ContinentsData, MemberData, AllCompaniesData]);
 
 
   const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
