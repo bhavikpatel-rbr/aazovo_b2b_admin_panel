@@ -1221,11 +1221,11 @@ const transformApiTaskToTicket = (apiTask: any): Ticket => {
     }));
 
     const comments: Comment[] = (apiTask.activity_notes || []).map((note: any) => ({
-        id: note.id.toString(),
-        name: note.user.name,
-        src: note.user.profile_pic_path || '',
-        message: note.activity_comment,
-        date: new Date(note.created_at).toISOString(), // Store as ISO string
+        id: note?.id?.toString(),
+        name: note?.user?.name,
+        src: note?.user?.profile_pic_path || '',
+        message: note?.activity_comment,
+        date: new Date(note?.created_at).toISOString(), // Store as ISO string
     }));
 
     const attachments: Attachment[] = (apiTask.attachments || []).map((att: any) => ({
