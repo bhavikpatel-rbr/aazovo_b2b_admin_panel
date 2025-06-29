@@ -94,7 +94,9 @@ import {
   editRequestFeedbackAction,
   deleteRequestFeedbackAction,
   deleteAllRequestFeedbacksAction,
-  submitExportReasonAction, // Added for export reason
+  submitExportReasonAction,
+  addNotificationAction,
+  getAllUsersAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
@@ -136,9 +138,6 @@ export type RequestFeedbackItem = {
   subject?: string | null;
   rating?: number | string | null;
   deleted_at?: string | null;
-  // icon_full_path?: File | string; // This field seems redundant if `attachment` holds the path.
-  // If it serves a different purpose, it can be kept.
-  // For now, focusing on `attachment` for file handling.
   health_score?: number; // Added for modal consistency
   updated_by_user?: { name: string; roles: [{ display_name: string }] }; // Added for consistency
 };
@@ -170,6 +169,7 @@ export interface RequestFeedbackModalState {
 interface RequestFeedbackModalsProps {
   modalState: RequestFeedbackModalState;
   onClose: () => void;
+  getAllUserDataOptions: SelectOption[]
 }
 
 const dummyUsers = [
@@ -228,6 +228,7 @@ const dummyTimeline = [
 const RequestFeedbackModals: React.FC<RequestFeedbackModalsProps> = ({
   modalState,
   onClose,
+  getAllUserDataOptions,
 }) => {
   const { type, data: item, isOpen } = modalState;
   if (!isOpen || !item) return null;
@@ -239,7 +240,7 @@ const RequestFeedbackModals: React.FC<RequestFeedbackModalsProps> = ({
       case "whatsapp":
         return <SendWhatsAppDialog item={item} onClose={onClose} />;
       case "notification":
-        return <AddNotificationDialog item={item} onClose={onClose} />;
+        return <AddNotificationDialog item={item} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
       case "task":
         return <AssignTaskDialog item={item} onClose={onClose} />;
       case "calendar":
@@ -371,68 +372,84 @@ const SendWhatsAppDialog: React.FC<{
 const AddNotificationDialog: React.FC<{
   item: RequestFeedbackItem;
   onClose: () => void;
-}> = ({ item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit: RHFHandleSubmit } = useForm({
-    defaultValues: {
-      title: `Update on your ${item.type}`,
-      users: [] as SelectOption[],
-      message: "",
-    },
-  });
-  const onSend = (data: any) => {
-    setIsLoading(true);
-    console.log("Sending in-app notification for", item.id, "with data:", data);
-    setTimeout(() => {
-      toast.push(<Notification type="success" title="Notification Sent" />);
-      setIsLoading(false);
-      onClose();
-    }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Notification for {item.name}</h5>
-      <form onSubmit={RHFHandleSubmit(onSend)}>
-        <FormItem label="Notification Title">
-          <Controller
-            name="title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </FormItem>
-        <FormItem label="Send to Users">
-          <Controller
-            name="users"
-            control={control}
-            render={({ field }) => (
-              <Select
-                isMulti
-                placeholder="Select Users"
-                options={dummyUsers}
-                {...field}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem label="Message">
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={3} />}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose} type="button">
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
-            Send Notification
-          </Button>
-        </div>
-      </form>
-    </Dialog>
-  );
+  getAllUserDataOptions: SelectOption[];
+}> = ({ item, onClose, getAllUserDataOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const notificationSchema = z.object({
+        notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+        send_users: z.array(z.number()).min(1, "Please select at least one user."),
+        message: z.string().min(10, "Message must be at least 10 characters long."),
+    });
+
+    type NotificationFormData = z.infer<typeof notificationSchema>;
+
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: {
+            notification_title: `Update on your ${item.type}: ${item.subject || item.id}`,
+            send_users: [],
+            message: `This is a notification regarding your recent ${item.type.toLowerCase()}: "${item.subject || 'General Inquiry'}".`,
+        },
+        mode: 'onChange'
+    });
+
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = {
+            send_users: formData.send_users,
+            notification_title: formData.notification_title,
+            message: formData.message,
+            module_id: String(item.id),
+            module_name: 'RequestFeedback',
+        };
+
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Notify about: {item.subject || `Item #${item.id}`}</h5>
+            <Form onSubmit={handleSubmit(onSend)}>
+                <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+                    <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
+                </FormItem>
+                <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+                    <Controller
+                        name="send_users"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                isMulti
+                                placeholder="Select User(s)"
+                                options={getAllUserDataOptions}
+                                value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
+                                onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])}
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
 };
+
 
 const AssignTaskDialog: React.FC<{
   item: RequestFeedbackItem;
@@ -1281,6 +1298,7 @@ const RequestAndFeedbackListing = () => {
   const {
     requestFeedbacksData = { data: [], counts: {} },
     status: masterLoadingStatus = "idle",
+    getAllUserData = []
   } = useSelector(masterSelector, shallowEqual);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -1320,6 +1338,8 @@ const RequestAndFeedbackListing = () => {
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+
   const handleOpenModal = (
     type: RequestFeedbackModalType,
     itemData: RequestFeedbackItem
@@ -1329,6 +1349,7 @@ const RequestAndFeedbackListing = () => {
 
   useEffect(() => {
     dispatch(getRequestFeedbacksAction());
+    dispatch(getAllUsersAction())
   }, [dispatch]);
 
   const formMethods = useForm<RequestFeedbackFormData>({
@@ -2082,8 +2103,6 @@ const RequestAndFeedbackListing = () => {
                 className="text-red-500 hover:text-red-700 whitespace-nowrap"
                 onClick={() => {
                   setRemoveExistingAttachment(true);
-                  // formMethods.setValue("attachment", undefined); // RHF state for file input is cleared by selecting new or by form reset
-                  // No need to clear selectedFile here as it's for new uploads
                 }}
               >
                 Remove
@@ -2530,7 +2549,7 @@ const RequestAndFeedbackListing = () => {
                   placeholder="Any Type"
                   options={TYPE_OPTIONS}
                   value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
+                  onChange={(val: any) => field.onChange(val || [])}
                 />
               )}
             />
@@ -2545,7 +2564,7 @@ const RequestAndFeedbackListing = () => {
                   placeholder="Any Status"
                   options={STATUS_OPTIONS_FORM}
                   value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
+                  onChange={(val: any) => field.onChange(val || [])}
                 />
               )}
             />
@@ -2560,7 +2579,7 @@ const RequestAndFeedbackListing = () => {
                   placeholder="Any Rating"
                   options={RATING_OPTIONS}
                   value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
+                  onChange={(val: any) => field.onChange(val || [])}
                 />
               )}
             />
@@ -2647,6 +2666,7 @@ const RequestAndFeedbackListing = () => {
       <RequestFeedbackModals
         modalState={modalState}
         onClose={handleCloseModal}
+        getAllUserDataOptions={getAllUserDataOptions}
       />
     </>
   );
