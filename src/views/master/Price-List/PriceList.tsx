@@ -103,7 +103,7 @@ function exportToPdf(filename: string, title: string, data: (PriceListItem & { q
     doc.text(title, 14, 16);
     autoTable(doc, {
         head: [['Product Name', 'Sales Price', 'Qty']],
-        body: data.map(item => [item.product?.name || 'N/A', `Rs. ${item.sales_price}`, item.qty]),
+        body: data.map(item => [item.product?.name || 'N/A', `${item.sales_price}`, item.qty]),
         startY: 20,
     });
     doc.save(filename);
@@ -210,7 +210,7 @@ const AddNotificationDialog = ({ PriceList, onClose, getAllUserDataOptions }) =>
     const [isLoading, setIsLoading] = useState(false);
     const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
     type NotificationFormData = z.infer<typeof notificationSchema>;
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Price Update: ${PriceList.product.name}`, send_users: [], message: `The price for product "${PriceList.product.name}" has been updated. The new sales price is ₹${PriceList.sales_price}.` }, mode: 'onChange' });
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Price Update: ${PriceList.product.name}`, send_users: [], message: `The price for product "${PriceList.product.name}" has been updated. The new sales price is ${PriceList.sales_price}.` }, mode: 'onChange' });
     const onSend = async (formData: NotificationFormData) => {
         setIsLoading(true);
         const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(PriceList.id), module_name: 'PriceList', };
@@ -342,7 +342,7 @@ const PriceList = () => {
         { header: 'Price Breakup', accessorKey: 'price', enableSorting: true, size: 160, cell: ({ row }) => { const { price, base_price, gst_price, usd } = row.original; return (<div className="flex flex-col text-xs"><span>Price: {price}</span><span>Base: {base_price}</span><span>GST: {gst_price}</span><span>USD: {usd}</span></div>); }, },
         { header: 'Cost Split', accessorKey: 'nlc', enableSorting: true, size: 160, cell: ({ row }) => { const { expance, margin, interest, nlc } = row.original; return (<div className="flex flex-col text-xs"><span>Expense: {expance}</span><span>Margin: {margin}</span><span>Interest: {interest}</span><span>NLC: {nlc}</span></div>); }, },
         { header: 'Sales Price', accessorKey: 'sales_price', enableSorting: true, size: 140, },
-        { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+        
         { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100': props.row.original.status === 'Active', 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100': props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Actions', id: 'action', size: 120, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} />) },
     ], [handleOpenModal, openEditDrawer, openImageViewer]);
@@ -411,7 +411,7 @@ const PriceList = () => {
 
         const detailsText = selectedItemsData.map(item => (
             `Product: ${item.product?.name || 'N/A'}\n` +
-            `Sales Price: ₹${item.sales_price}\n` +
+            `Sales Price: ${item.sales_price}\n` +
             `Qty: ${rowQuantities[item.id] || 'N/A'}`
         )).join('\n-----------------------------------\n');
 
@@ -465,7 +465,7 @@ const PriceList = () => {
     const todayPriceListData = useMemo(() => { const today = new Date(); today.setHours(0, 0, 0, 0); if (!Array.isArray(priceListData?.data)) return []; return priceListData.data.filter(item => { if (!item.updated_at) return false; const itemDate = new Date(item.updated_at); itemDate.setHours(0, 0, 0, 0); return itemDate.getTime() === today.getTime(); }); }, [priceListData?.data]);
     
     // MODIFICATION: Removed 'Status' from the shareable text
-    const generateShareableText = () => { let message = `*Today's Price List (${new Date().toLocaleDateString()})*\n\n-----------------------------------\n`; todayPriceListData.forEach((item) => { message += `*Product:* ${item.product?.name}\n*Price:* ₹${item.sales_price}\n-----------------------------------\n` }); return message; };
+    const generateShareableText = () => { let message = `*Today's Price List (${new Date().toLocaleDateString()})*\n\n-----------------------------------\n`; todayPriceListData.forEach((item) => { message += `*Product:* ${item.product?.name}\n*Price:* ${item.sales_price}\n-----------------------------------\n` }); return message; };
     
     const handleShareViaEmail = () => { const subject = `Today's Price List - ${new Date().toLocaleDateString()}`; const body = generateShareableText().replace(/\*/g, '').replace(/\n/g, '%0A'); window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; };
     const handleShareViaWhatsapp = () => { const message = generateShareableText(); const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; window.open(whatsappUrl, '_blank'); };
@@ -555,7 +555,7 @@ const PriceList = () => {
                 <div className="h-full">
                     {todayPriceListData.length > 0 ? (
                         <Table><Table.THead><Table.Tr><Table.Th>Product Name</Table.Th><Table.Th>Sales Price</Table.Th><Table.Th>Status</Table.Th></Table.Tr></Table.THead>
-                            <Table.TBody>{todayPriceListData.map((item) => (<Table.Tr key={item.id}><Table.Td>{item.product?.name}</Table.Td><Table.Td>₹{item.sales_price}</Table.Td><Table.Td><Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600': item.status === 'Active', 'bg-red-100 text-red-600': item.status === 'Inactive' })}>{item.status}</Tag></Table.Td></Table.Tr>))}</Table.TBody>
+                            <Table.TBody>{todayPriceListData.map((item) => (<Table.Tr key={item.id}><Table.Td>{item.product?.name}</Table.Td><Table.Td>{item.sales_price}</Table.Td><Table.Td><Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600': item.status === 'Active', 'bg-red-100 text-red-600': item.status === 'Inactive' })}>{item.status}</Tag></Table.Td></Table.Tr>))}</Table.TBody>
                         </Table>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-center"><div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-full mb-4"><TbFileDownload className="text-4xl text-gray-500" /></div><h6 className="font-semibold">No Prices Updated Today</h6><p className="text-gray-500">Check back later or view the full price list.</p></div>
