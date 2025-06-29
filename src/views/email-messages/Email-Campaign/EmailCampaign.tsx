@@ -574,28 +574,31 @@ const RecipientFilterModal = ({
   } = useSelector(masterSelector, shallowEqual);
 
   // --- Transform fetched data into options for Select components ---
-  const companyOptions = useMemo(() =>
-      (CompanyData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
+  const companyOptions = useMemo(
+    () =>
+      (Array.isArray(CompanyData) ? CompanyData : CompanyData?.data || []).map(
+        (c: any) => ({ value: String(c?.id), label: c?.name })
+      ),
     [CompanyData]
   );
   const brandOptions = useMemo(() =>
-      (BrandData || []).map((b: any) => ({ value: String(b.id), label: b.name })),
+    BrandData?.map((b: any) => ({ value: String(b.id), label: b.name })),
     [BrandData]
   );
   const categoryOptions = useMemo(() =>
-      (CategoriesData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
+    (CategoriesData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
     [CategoriesData]
   );
   const productOptions = useMemo(() =>
-      (ProductsData?.data || []).map((p: any) => ({ value: String(p.id), label: p.name })),
+    (ProductsData?.data || []).map((p: any) => ({ value: String(p.id), label: p.name })),
     [ProductsData?.data]
   );
   const continentOptions = useMemo(() =>
-      (ContinentsData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
+    (ContinentsData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
     [ContinentsData]
   );
   const countryOptions = useMemo(() =>
-      (CountriesData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
+    (CountriesData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
     [CountriesData]
   );
   // Assuming sub-categories are within CategoriesData for this example
@@ -798,7 +801,7 @@ const RecipientFilterModal = ({
                   <Select
                     {...field}
                     value={null} // Placeholder
-                    onChange={() => {}} // Placeholder
+                    onChange={() => { }} // Placeholder
                     options={[]} // Placeholder: Requires a separate state API call, likely dependent on country
                     isClearable
                     placeholder="Select State"
@@ -814,7 +817,7 @@ const RecipientFilterModal = ({
                   <Select
                     {...field}
                     value={null} // Placeholder
-                    onChange={() => {}} // Placeholder
+                    onChange={() => { }} // Placeholder
                     options={[]} // Placeholder: Requires a separate city API call
                     isClearable
                     placeholder="Select City"
@@ -952,9 +955,9 @@ const EmailCampaignListing = () => {
     () =>
       Array.isArray(mailTemplatesData)
         ? mailTemplatesData.map((t: ApiMailTemplate) => ({
-            value: String(t.id),
-            label: t.name,
-          }))
+          value: String(t.id),
+          label: t.name,
+        }))
         : [],
     [mailTemplatesData]
   );
@@ -962,10 +965,10 @@ const EmailCampaignListing = () => {
     (): ProductOption[] =>
       Array.isArray(ProductsData?.data)
         ? ProductsData.data.map((p: ApiProduct) => ({
-            value: String(p.id),
-            label: p.name,
-            imageUrl: p.image_url,
-          }))
+          value: String(p.id),
+          label: p.name,
+          imageUrl: p.image_url,
+        }))
         : [],
     [ProductsData?.data]
   );
@@ -1104,8 +1107,8 @@ const EmailCampaignListing = () => {
           : mailTemplateOptions[0]?.value || "",
         campaign_name: itemToEdit
           ? itemToEdit.campaign_name ||
-            itemToEdit.mail_template?.name ||
-            `Campaign ${itemToEdit.id}`
+          itemToEdit.mail_template?.name ||
+          `Campaign ${itemToEdit.id}`
           : "",
         text_block_1: itemToEdit?.header_text || "",
         img_1:
@@ -1294,11 +1297,10 @@ const EmailCampaignListing = () => {
         deleteEmailCampaignAction({ id: itemToDelete.id })
       ).unwrap();
       toast.push(
-        <Notification title="Campaign Deleted" type="success">{`Campaign "${
-          itemToDelete.campaign_name ||
+        <Notification title="Campaign Deleted" type="success">{`Campaign "${itemToDelete.campaign_name ||
           itemToDelete.mail_template?.name ||
           itemToDelete.id
-        }" deleted.`}</Notification>
+          }" deleted.`}</Notification>
       );
       dispatch(getEmailCampaignsAction({ params: tableData }));
     } catch (e: any) {
@@ -1361,13 +1363,13 @@ const EmailCampaignListing = () => {
       emailCampaignsData.data
     )
       ? emailCampaignsData.data.map((item) => ({
-          ...item,
-          campaignNameDisplay:
-            item.campaign_name ||
-            item.mail_template?.name ||
-            `Campaign ${item.id}`,
-          dateTimeDisplay: new Date(item.created_at),
-        }))
+        ...item,
+        campaignNameDisplay:
+          item.campaign_name ||
+          item.mail_template?.name ||
+          `Campaign ${item.id}`,
+        dateTimeDisplay: new Date(item.created_at),
+      }))
       : [];
     let processedData = cloneDeep(sourceData);
     if (tableData.query) {
@@ -1571,7 +1573,7 @@ const EmailCampaignListing = () => {
               className={classNames(
                 "capitalize whitespace-nowrap",
                 campaignDisplayStatusColor[String(s)] ||
-                  campaignDisplayStatusColor.default
+                campaignDisplayStatusColor.default
               )}
             >
               {statusLabel}
@@ -1710,7 +1712,7 @@ const EmailCampaignListing = () => {
                         label={`Product for Image ${productNumber}`}
                         invalid={
                           !!(errors as FieldErrors<CampaignCreationFormData>)[
-                            fieldName
+                          fieldName
                           ]
                         }
                         errorMessage={
@@ -1935,8 +1937,8 @@ const EmailCampaignListing = () => {
                 {mailTemplateOptions.find(
                   (t) => t.value === formData.template_id
                 )?.label || (
-                  <span className="italic text-gray-500">Not Set</span>
-                )}
+                    <span className="italic text-gray-500">Not Set</span>
+                  )}
               </p>
               <p>
                 <strong>Recipients:</strong>{" "}
@@ -2137,9 +2139,8 @@ const EmailCampaignListing = () => {
         </AdaptiveCard>
       </Container>
       <Drawer
-        title={`${
-          editingItem ? "Edit" : "Create"
-        } Email Campaign - Step ${currentWizardStep} of 4`}
+        title={`${editingItem ? "Edit" : "Create"
+          } Email Campaign - Step ${currentWizardStep} of 4`}
         isOpen={isCreateDrawerOpen}
         onClose={closeCreateDrawer}
         onRequestClose={closeCreateDrawer}
@@ -2277,8 +2278,8 @@ const EmailCampaignListing = () => {
             invalid={!!filterFormMethods.formState.errors.date_range}
             errorMessage={
               filterFormMethods.formState.errors.date_range?.message as
-                | string
-                | undefined
+              | string
+              | undefined
             }
           >
             <Controller

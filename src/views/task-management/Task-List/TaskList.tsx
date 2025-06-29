@@ -63,11 +63,13 @@ import type { TableQueries } from '@/@types/common'
 
 // Redux
 import { useAppDispatch } from '@/reduxtool/store'
-import { useSelector } from 'react-redux'
+import { shallowEqual, useSelector } from 'react-redux'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
     getAllTaskAction,
     submitExportReasonAction,
+    addNotificationAction,
+    getAllUsersAction
 } from '@/reduxtool/master/middleware'
 
 // --- Consolidated Type Definitions ---
@@ -104,6 +106,15 @@ type FilterSelectOption = {
     value: string
     label: string
 }
+// For Modals
+export type ModalType = 'notification';
+export interface ModalState {
+    isOpen: boolean;
+    type: ModalType | null;
+    data: TaskItem | null;
+}
+export type SelectOption = { value: any; label: string };
+
 
 const filterValidationSchema = z.object({
     status: z.array(z.string()).optional().default([]),
@@ -286,15 +297,7 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                     Task Details: {task.note}
                 </span>
             }
-            // Removed width={600} from Drawer. Dialog might have default sizing or accept className for panel.
-            // For example, contentClassName="w-full max-w-2xl" if Dialog supports it.
-            // Assuming Dialog provides a reasonably sized modal by default.
         >
-            {/* 
-              The content that was previously the direct child of Drawer.
-              Now, this div itself handles padding, spacing, and scrolling behavior for the modal content.
-              Added overflow-y-auto and max-h-[75vh] for scrollability within the modal.
-            */}
             <div className="p-1 sm:p-4 space-y-3 overflow-y-auto max-h-[75vh]">
                 <div className="border-b pb-3">
                     <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1">
@@ -466,7 +469,6 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
     )
 }
 
-
 // --- Reusable Components ---
 
 export const ActionColumn = ({
@@ -474,13 +476,13 @@ export const ActionColumn = ({
     onView,
     onChangeStatus,
     onDelete,
-    // onClone, // Not used in current example but kept for flexibility
+    onOpenModal,
 }: {
     onEdit: () => void
     onView: () => void
     onChangeStatus?: () => void
     onDelete?: () => void
-    onClone?: () => void
+    onOpenModal: (type: ModalType) => void;
 }) => {
     const iconButtonClass =
         'text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
@@ -513,47 +515,47 @@ export const ActionColumn = ({
                     <TbEye />
                 </div>
             </Tooltip>
-<Dropdown
-  renderTitle={
-    <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
-  }
->
-  {/* 1. Send Email */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbMail size={18} />
-    <span className="text-xs">Send Email</span>
-  </Dropdown.Item>
+            <Dropdown
+            renderTitle={
+                <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+            }
+            >
+            {/* 1. Send Email */}
+            <Dropdown.Item className="flex items-center gap-2">
+                <TbMail size={18} />
+                <span className="text-xs">Send Email</span>
+            </Dropdown.Item>
 
-  {/* 2. Send WhatsApp */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbBrandWhatsapp size={18} />
-    <span className="text-xs">Send Whatsapp</span>
-  </Dropdown.Item>
+            {/* 2. Send WhatsApp */}
+            <Dropdown.Item className="flex items-center gap-2">
+                <TbBrandWhatsapp size={18} />
+                <span className="text-xs">Send Whatsapp</span>
+            </Dropdown.Item>
 
-  {/* 3. Add Notification */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbBell size={18} />
-    <span className="text-xs">Add Notification</span>
-  </Dropdown.Item>
+            {/* 3. Add Notification */}
+            <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification')}>
+                <TbBell size={18} />
+                <span className="text-xs">Add Notification</span>
+            </Dropdown.Item>
 
-  {/* 4. Add Schedule */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbCalendarEvent size={18} />
-    <span className="text-xs">Add Schedule</span>
-  </Dropdown.Item>
+            {/* 4. Add Schedule */}
+            <Dropdown.Item className="flex items-center gap-2">
+                <TbCalendarEvent size={18} />
+                <span className="text-xs">Add Schedule</span>
+            </Dropdown.Item>
 
-  {/* 5. Add Active */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbTagStarred size={18} />
-    <span className="text-xs">Add Active</span>
-  </Dropdown.Item>
+            {/* 5. Add Active */}
+            <Dropdown.Item className="flex items-center gap-2">
+                <TbTagStarred size={18} />
+                <span className="text-xs">Add Active</span>
+            </Dropdown.Item>
 
-  {/* 6. Add/View Activity */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbActivity size={18} />
-    <span className="text-xs">Add / View Activity</span>
-  </Dropdown.Item>
-</Dropdown>
+            {/* 6. Add/View Activity */}
+            <Dropdown.Item className="flex items-center gap-2">
+                <TbActivity size={18} />
+                <span className="text-xs">Add / View Activity</span>
+            </Dropdown.Item>
+            </Dropdown>
 
         </div>
     )
@@ -726,11 +728,11 @@ export const TaskFilter = ({
                                     value={statusOptions.filter((opt) =>
                                         field.value?.includes(opt.value),
                                     )}
-                                    onChange={(selectedVal) =>
+                                    onChange={(selectedVal: any) =>
                                         field.onChange(
                                             selectedVal
                                                 ? selectedVal.map(
-                                                      (opt) => opt.value,
+                                                      (opt: any) => opt.value,
                                                   )
                                                 : [],
                                         )
@@ -752,11 +754,11 @@ export const TaskFilter = ({
                                     value={assigneeOptions.filter((opt) =>
                                         field.value?.includes(opt.value),
                                     )}
-                                    onChange={(selectedVal) =>
+                                    onChange={(selectedVal: any) =>
                                         field.onChange(
                                             selectedVal
                                                 ? selectedVal.map(
-                                                      (opt) => opt.value,
+                                                      (opt: any) => opt.value,
                                                   )
                                                 : [],
                                         )
@@ -976,6 +978,96 @@ const TaskListActionTools = ({ pageTitle }: { pageTitle: string }) => {
     )
 }
 
+// --- Notification Dialog ---
+const AddNotificationDialog = ({ task, onClose, getAllUserDataOptions }: { task: TaskItem, onClose: () => void, getAllUserDataOptions: SelectOption[] }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const notificationSchema = z.object({
+        notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+        send_users: z.array(z.number()).min(1, "Please select at least one user."),
+        message: z.string().min(10, "Message must be at least 10 characters long."),
+    });
+
+    type NotificationFormData = z.infer<typeof notificationSchema>;
+
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: {
+            notification_title: `Regarding Task: ${task.note}`,
+            send_users: [],
+            message: `This is a notification for the task: "${task.note}".`
+        },
+        mode: 'onChange'
+    });
+
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = {
+            send_users: formData.send_users,
+            notification_title: formData.notification_title,
+            message: formData.message,
+            module_id: String(task.id),
+            module_name: 'Task',
+        };
+
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Notify about: {task.note}</h5>
+            <UiFormComponents onSubmit={handleSubmit(onSend)}>
+                <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+                    <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
+                </UiFormItem>
+                <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+                    <Controller
+                        name="send_users"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                isMulti
+                                placeholder="Select User(s)"
+                                options={getAllUserDataOptions}
+                                value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
+                                onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])}
+                            />
+                        )}
+                    />
+                </UiFormItem>
+                <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                </UiFormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
+                </div>
+            </UiFormComponents>
+        </Dialog>
+    );
+};
+
+const TaskModals = ({ modalState, onClose, getAllUserDataOptions }: { modalState: ModalState, onClose: () => void, getAllUserDataOptions: SelectOption[] }) => {
+    const { type, data: task, isOpen } = modalState;
+    if (!isOpen || !task) return null;
+
+    switch (type) {
+        case 'notification':
+            return <AddNotificationDialog task={task} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+        default:
+            return null;
+    }
+};
+
 // --- Data Transformation Helper ---
 const transformApiTaskToTaskItem = (apiTask: any): TaskItem => {
     let assignToArray: string[] = []
@@ -1046,7 +1138,8 @@ export const useTaskListingLogic = () => {
     const {
         AllTaskData = [],
         status: masterLoadingStatus = 'idle',
-    } = useSelector(masterSelector)
+        getAllUserData = [],
+    } = useSelector(masterSelector, shallowEqual)
 
     const [isLoading, setIsLoading] = useState(false)
     const [tasks, setTasks] = useState<TaskItem[]>([])
@@ -1071,9 +1164,15 @@ export const useTaskListingLogic = () => {
 
     const [isViewModalOpen, setIsViewModalOpen] = useState(false)
     const [viewingTask, setViewingTask] = useState<TaskItem | null>(null)
+    const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
+
+
+    const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+
 
     useEffect(() => {
         dispatch(getAllTaskAction())
+        dispatch(getAllUsersAction())
     }, [dispatch])
 
     useEffect(() => {
@@ -1360,6 +1459,14 @@ export const useTaskListingLogic = () => {
         setIsViewModalOpen(false)
         setViewingTask(null)
     }, [])
+    
+    const handleOpenModal = useCallback((type: ModalType, itemData: TaskItem) => {
+        setModalState({ isOpen: true, type, data: itemData });
+    }, []);
+
+    const handleCloseModal = useCallback(() => {
+        setModalState({ isOpen: false, type: null, data: null });
+    }, []);
 
 
     const columns: ColumnDef<TaskItem>[] = useMemo(
@@ -1387,7 +1494,7 @@ export const useTaskListingLogic = () => {
                                     {createdBy}
                                 </span>
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {props.row.original._originalData?.created_by_user?.roles?.[0]?.display_name || ''}
+                                  {(props.row.original._originalData as any)?.created_by_user?.roles?.[0]?.display_name || ''}
                                 </span>
                             </div>
                         </div>
@@ -1514,11 +1621,12 @@ export const useTaskListingLogic = () => {
                         onView={() => handleOpenViewModal(props.row.original)}
                         onDelete={() => handleDelete(props.row.original)}
                         onChangeStatus={() => handleChangeStatus(props.row.original, 'completed')}
+                        onOpenModal={(type) => handleOpenModal(type, props.row.original)}
                     />
                 ),
             },
         ],
-        [handleEdit, handleDelete, handleChangeStatus, handleOpenViewModal],
+        [handleEdit, handleDelete, handleChangeStatus, handleOpenViewModal, handleOpenModal],
     )
 
     return {
@@ -1555,6 +1663,9 @@ export const useTaskListingLogic = () => {
         viewingTask,
         handleOpenViewModal,
         handleCloseViewModal,
+        modalState,
+        handleCloseModal,
+        getAllUserDataOptions
     }
 }
 
@@ -1591,6 +1702,9 @@ const TaskList = () => {
         isViewModalOpen,
         viewingTask,
         handleCloseViewModal,
+        modalState,
+        handleCloseModal,
+        getAllUserDataOptions
     } = useTaskListingLogic()
 
     return (
@@ -1706,6 +1820,12 @@ const TaskList = () => {
                 task={viewingTask}
                 isOpen={isViewModalOpen}
                 onClose={handleCloseViewModal}
+            />
+            
+            <TaskModals
+                modalState={modalState}
+                onClose={handleCloseModal}
+                getAllUserDataOptions={getAllUserDataOptions}
             />
         </>
     )
