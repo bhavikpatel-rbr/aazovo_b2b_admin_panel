@@ -4792,6 +4792,7 @@ export const addNotificationAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addNotificationAsync(data)
       if (response) {
+        dispatch(getAllNotificationAction());
         return response
       }
 

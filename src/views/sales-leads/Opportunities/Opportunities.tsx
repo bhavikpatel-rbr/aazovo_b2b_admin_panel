@@ -1,5 +1,3 @@
-// src/views/your-path/Opportunities.tsx
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import cloneDeep from "lodash/cloneDeep";
@@ -110,11 +108,15 @@ import type { ChangeEvent, ReactNode } from "react";
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addNotificationAction,
+  getAllUsersAction,
   getOpportunitiesAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { useSelector } from "react-redux";
+import { shallowEqual, useSelector } from "react-redux";
+import dayjs from "dayjs";
+
 
 // --- Define API Item Type (Matches API Response Structure) ---
 export type ApiOpportunityItem = {
@@ -200,6 +202,7 @@ const exportReasonSchema = z.object({
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+export type SelectOption = { value: any; label: string };
 
 // ============================================================================
 // --- MODALS SECTION ---
@@ -223,6 +226,7 @@ export interface OpportunityModalState {
 interface OpportunityModalsProps {
   modalState: OpportunityModalState;
   onClose: () => void;
+  getAllUserDataOptions: SelectOption[];
 }
 
 // --- Helper Data for Modal Demos ---
@@ -243,6 +247,7 @@ const eventTypeOptions = [
 const OpportunityModals: React.FC<OpportunityModalsProps> = ({
   modalState,
   onClose,
+  getAllUserDataOptions
 }) => {
   const { type, data: opportunity, isOpen } = modalState;
   if (!isOpen || !opportunity) return null;
@@ -257,7 +262,7 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
         );
       case "notification":
         return (
-          <AddNotificationDialog opportunity={opportunity} onClose={onClose} />
+          <AddNotificationDialog opportunity={opportunity} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />
         );
       case "task":
         return <AssignTaskDialog opportunity={opportunity} onClose={onClose} />;
@@ -391,51 +396,77 @@ const SendWhatsAppDialog: React.FC<{
 const AddNotificationDialog: React.FC<{
   opportunity: OpportunityItem;
   onClose: () => void;
-}> = ({ opportunity, onClose }) => {
+  getAllUserDataOptions: SelectOption[];
+}> = ({ opportunity, onClose, getAllUserDataOptions }) => {
+  const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({
-    defaultValues: { title: "", users: [], message: "" },
+
+  const notificationSchema = z.object({
+    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+    send_users: z.array(z.number()).min(1, "Please select at least one user."),
+    message: z.string().min(10, "Message must be at least 10 characters long."),
   });
-  const onSend = (data: any) => {
+
+  type NotificationFormData = z.infer<typeof notificationSchema>;
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+        notification_title: `Update on Opportunity: ${opportunity.opportunity_id}`,
+        send_users: [],
+        message: `This is a notification regarding opportunity ID ${opportunity.opportunity_id} for the product "${opportunity.product_name}".`
+    },
+    mode: 'onChange'
+  });
+
+  const onSend = async (formData: NotificationFormData) => {
     setIsLoading(true);
-    console.log(
-      "Sending in-app notification for",
-      opportunity.opportunity_id,
-      "with data:",
-      data
-    );
-    setTimeout(() => {
-      toast.push(<Notification type="success" title="Notification Sent" />);
-      setIsLoading(false);
-      onClose();
-    }, 1000);
+    const payload = {
+        send_users: formData.send_users,
+        notification_title: formData.notification_title,
+        message: formData.message,
+        module_id: String(opportunity.id),
+        module_name: 'Opportunity',
+    };
+
+    try {
+        await dispatch(addNotificationAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+        onClose();
+    } catch (error: any) {
+        toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+        setIsLoading(false);
+    }
   };
+  
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Notification for {opportunity.opportunity_id}</h5>
-      <form onSubmit={handleSubmit(onSend)}>
-        <FormItem label="Notification Title">
+      <Form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
           <Controller
-            name="title"
+            name="notification_title"
             control={control}
             render={({ field }) => <Input {...field} />}
           />
         </FormItem>
-        <FormItem label="Send to Users">
+        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
           <Controller
-            name="users"
+            name="send_users"
             control={control}
             render={({ field }) => (
               <Select
                 isMulti
                 placeholder="Select Users"
-                options={dummyUsers}
-                {...field}
+                options={getAllUserDataOptions}
+                value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
+                onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])}
               />
             )}
           />
         </FormItem>
-        <FormItem label="Message">
+        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
           <Controller
             name="message"
             control={control}
@@ -446,11 +477,11 @@ const AddNotificationDialog: React.FC<{
           <Button className="mr-2" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
             Send Notification
           </Button>
         </div>
-      </form>
+      </Form>
     </Dialog>
   );
 };
@@ -716,7 +747,6 @@ const GenericActionDialog: React.FC<{
 // --- END MODALS SECTION ---
 // ============================================================================
 
-// --- Constants & Color Mappings ---
 const recordStatusTagColor: Record<OpportunityItem["status"], string> = {
   pending:
     "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-200",
@@ -747,7 +777,6 @@ const TABS = {
   AUTO_MATCH: "auto_match",
 };
 
-// --- CSV Export Helpers ---
 type OpportunityExportItem = Omit<OpportunityItem, "created_date" | "updated_at"> & {
   created_date_formatted: string;
   updated_at_formatted: string;
@@ -832,7 +861,6 @@ function exportToCsvOpportunities(filename: string, rows: OpportunityItem[]) {
   return false;
 }
 
-// --- DataTable1 (Your Custom DataTable Component) ---
 export type OnSortParamTanstack = {
   order: "asc" | "desc" | "";
   key: string | number;
@@ -1208,7 +1236,6 @@ const DataTableComponent = React.forwardRef(<T extends object>(
 });
 DataTableComponent.displayName = "DataTableComponent";
 
-// --- Helper Components ---
 const FormattedDate: React.FC<{ dateString?: string; label?: string }> = ({
   dateString,
   label,
@@ -1298,7 +1325,6 @@ InfoLine.defaultProps = {
   boldText: false,
 };
 
-// --- Sub-Components for Opportunities Page ---
 const OpportunitySearch = React.forwardRef<
   HTMLInputElement,
   { onInputChange: (value: string) => void }
@@ -1317,8 +1343,6 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
   const openDrawer = () => setIsDrawerOpen(true);
   const closeDrawer = () => setIsDrawerOpen(false);
   const { control, handleSubmit } = useForm();
-  const allOpportunitiesForFilter =
-    useSelector(masterSelector).Opportunities || [];
 
   const onSubmitFilter = (data: any) => {
     console.log("Filter data:", data);
@@ -1357,7 +1381,6 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
         }
       >
         <Form id="filterOpportunityForm" onSubmit={handleSubmit(onSubmitFilter)}>
-           {/* You can add your filter fields here as in the second provided file */}
            <p className="p-4 text-center text-gray-500">Filter controls go here.</p>
         </Form>
       </Drawer>
@@ -1513,9 +1536,6 @@ const MainRowActionColumn = ({
         <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
           <TbBulb size={18} /> <span className="text-xs">View Opportunity</span>
         </Dropdown.Item>
-        {/* <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
-          <TbUser size={18} /> <span className="text-xs">View Buyer/Seller</span>
-        </Dropdown.Item> */}
         <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
           <TbDiscount size={18} /> <span className="text-xs">Create Offer/Demand</span>
         </Dropdown.Item>
@@ -1571,19 +1591,17 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
             <Tag className={`${opportunityStatusTagColor[item.opportunity_status] || opportunityStatusTagColor.default} capitalize`}>{item.opportunity_status}</Tag>
           </div>
           <FormattedDate label="Created" dateString={item.created_date} />
-          {/* Actions for expanded view can be added here if needed */}
         </div>
       </div>
     </Card>
   );
 };
 
-// --- Main Opportunities Component ---
 const Opportunities = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { Opportunities: rawOpportunities = [], status: masterLoadingStatus = "idle" } =
-    useSelector(masterSelector);
+  const { Opportunities: rawOpportunities = [], getAllUserData = [], status: masterLoadingStatus = "idle" } =
+    useSelector(masterSelector, shallowEqual);
 
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
   const [tableQueries, setTableQueries] = useState<
@@ -1599,7 +1617,6 @@ const Opportunities = () => {
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
-  // --- MODAL STATE AND HANDLERS ---
   const [modalState, setModalState] = useState<OpportunityModalState>({
     isOpen: false,
     type: null,
@@ -1611,7 +1628,6 @@ const Opportunities = () => {
   ) => setModalState({ isOpen: true, type, data: opportunityData });
   const handleCloseModal = () =>
     setModalState({ isOpen: false, type: null, data: null });
-  // --- END MODAL STATE ---
 
   const exportReasonFormMethods = useForm<ExportReasonFormData>({
     resolver: zodResolver(exportReasonSchema),
@@ -1619,8 +1635,11 @@ const Opportunities = () => {
     mode: "onChange",
   });
 
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((user: any) => ({ value: user.id, label: user.name })) : [], [getAllUserData]);
+
   useEffect(() => {
     dispatch(getOpportunitiesAction());
+    dispatch(getAllUsersAction());
   }, [dispatch]);
 
   useEffect(() => {
@@ -2191,7 +2210,7 @@ const Opportunities = () => {
           onDeleteSelected={handleDeleteSelected}
         />
       </Container>
-      <OpportunityModals modalState={modalState} onClose={handleCloseModal} />
+      <OpportunityModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"

@@ -1,4 +1,3 @@
-// src/views/your-path/Products.tsx
 
 import React, {
   useState,
@@ -103,6 +102,8 @@ import {
   // Actions to be added for import/export, following the reference module's pattern
   // importProductsAction, // Assuming this will be created
   submitExportReasonAction, // Assuming this will be created
+  addNotificationAction, // Added for notification functionality
+  getAllUsersAction, // Added for notification functionality
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
@@ -236,6 +237,7 @@ export interface ProductsModalState {
 interface ProductsModalsProps {
   modalState: ProductsModalState;
   onClose: () => void;
+  getAllUserDataOptions: { value: any; label: string }[];
 }
 
 // --- Helper Data for Modal Demos (from reference) ---
@@ -362,55 +364,116 @@ const SendWhatsAppDialog: React.FC<{
 };
 
 const AddNotificationDialog: React.FC<{
-  item: ProductItem;
-  onClose: () => void;
-}> = ({ item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({
-    defaultValues: { message: "", users: [] },
-  });
-  const onSubmit = (data: any) => {
-    setIsLoading(true);
-    console.log("Adding notification for", item.name, "with data:", data);
-    setTimeout(() => {
-      toast.push(
-        <Notification type="success" title="Notification Added" />
-      );
-      setIsLoading(false);
-      onClose();
-    }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Notification for {item.name}</h5>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FormItem label="Notify Users">
-          <Controller
-            name="users"
-            control={control}
-            render={({ field }) => (
-              <UiSelect isMulti options={dummyUsers} {...field} />
-            )}
-          />
-        </FormItem>
-        <FormItem label="Message">
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={3} />}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
-            Add
-          </Button>
-        </div>
-      </form>
-    </Dialog>
-  );
+    item: ProductItem;
+    onClose: () => void;
+    getAllUserDataOptions: { value: any; label: string }[];
+}> = ({ item, onClose, getAllUserDataOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const notificationSchema = z.object({
+        notification_title: z.string().min(3, 'Title must be at least 3 characters long.'),
+        send_users: z.array(z.number()).min(1, 'Please select at least one user.'),
+        message: z.string().min(10, 'Message must be at least 10 characters long.'),
+    });
+    type NotificationFormData = z.infer<typeof notificationSchema>;
+
+    const {
+        control,
+        handleSubmit,
+        formState: { errors, isValid },
+    } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: {
+            notification_title: `Product Update: ${item.name}`,
+            send_users: [],
+            message: `This is a notification regarding the product "${item.name}". Please review the details.`,
+        },
+        mode: 'onChange',
+    });
+
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = {
+            send_users: formData.send_users,
+            notification_title: formData.notification_title,
+            message: formData.message,
+            module_id: String(item.id),
+            module_name: 'Product',
+        };
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    type="danger"
+                    title="Failed to Send Notification"
+                    children={error?.message || 'An unknown error occurred.'}
+                />
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Notify User about: {item.name}</h5>
+            <Form onSubmit={handleSubmit(onSend)}>
+                <FormItem
+                    label="Title"
+                    invalid={!!errors.notification_title}
+                    errorMessage={errors.notification_title?.message}
+                >
+                    <Controller
+                        name="notification_title"
+                        control={control}
+                        render={({ field }) => <Input {...field} />}
+                    />
+                </FormItem>
+                <FormItem
+                    label="Send To"
+                    invalid={!!errors.send_users}
+                    errorMessage={errors.send_users?.message}
+                >
+                    <Controller
+                        name="send_users"
+                        control={control}
+                        render={({ field }) => (
+                            <UiSelect
+                                isMulti
+                                placeholder="Select User(s)"
+                                options={getAllUserDataOptions}
+                                value={getAllUserDataOptions.filter((o) =>
+                                    field.value?.includes(o.value)
+                                )}
+                                onChange={(options) =>
+                                    field.onChange(options?.map((o) => o.value) || [])
+                                }
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+                    <Controller
+                        name="message"
+                        control={control}
+                        render={({ field }) => <Input textArea {...field} rows={4} />}
+                    />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
+                        Cancel
+                    </Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
+                        Send Notification
+                    </Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
 };
 
 const AssignTaskDialog: React.FC<{
@@ -594,6 +657,7 @@ const GenericActionDialog: React.FC<{
 const ProductsModals: React.FC<ProductsModalsProps> = ({
   modalState,
   onClose,
+  getAllUserDataOptions,
 }) => {
   const { type, data: item, isOpen } = modalState;
   if (!isOpen || !item) return null;
@@ -605,7 +669,7 @@ const ProductsModals: React.FC<ProductsModalsProps> = ({
       case "whatsapp":
         return <SendWhatsAppDialog item={item} onClose={onClose} />;
       case "notification":
-        return <AddNotificationDialog item={item} onClose={onClose} />;
+        return <AddNotificationDialog item={item} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
       case "task":
         return <AssignTaskDialog item={item} onClose={onClose} />;
       case "calendar":
@@ -1058,6 +1122,7 @@ const Products = () => {
     BrandData = [],
     unitData = [],
     CountriesData = [],
+    getAllUserData = [],
     status: masterLoadingStatus,
   } = useSelector(masterSelector);
   useEffect(() => {
@@ -1067,6 +1132,7 @@ const Products = () => {
     dispatch(getBrandAction());
     dispatch(getUnitAction());
     dispatch(getCountriesAction());
+    dispatch(getAllUsersAction());
   }, [dispatch]);
 
   const [currentListTab, setCurrentListTab] = useState<string>(TABS.ALL);
@@ -1148,6 +1214,13 @@ const Products = () => {
         ? CountriesData.map((c: any) => ({ value: c.id, label: c.name }))
         : [],
     [CountriesData]
+  );
+  const getAllUserDataOptions = useMemo(
+    () =>
+      Array.isArray(getAllUserData)
+        ? getAllUserData?.map((u: any) => ({ value: u.id, label: u.name })) || []
+        : [],
+    [getAllUserData]
   );
   const [subcategoryOptions, setSubcategoryOptions] = useState<
     { value: number; label: string }[]
@@ -3606,7 +3679,7 @@ const Products = () => {
           )}
         </div>
       </Dialog>
-      <ProductsModals modalState={modalState} onClose={handleCloseModal} />
+      <ProductsModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions}/>
     </>
   );
 };

@@ -1,3 +1,5 @@
+// src/views/your-path/Inquiries.tsx
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import cloneDeep from "lodash/cloneDeep";
 import React, {
@@ -80,6 +82,8 @@ import {
   getDepartmentsAction,
   getInquiriesAction,
   submitExportReasonAction,
+  addNotificationAction, // Added
+  getAllUsersAction, // Added
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
@@ -93,6 +97,153 @@ const exportReasonSchema = z.object({
         .max(255, 'Reason cannot exceed 255 characters.'),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+
+// ============================================================================
+// --- MODALS SECTION ---
+// All modal components for Inquiries are defined here.
+// ============================================================================
+
+// --- Type Definitions for Modals ---
+export type InquiryModalType = 'notification';
+export interface InquiryModalState {
+    isOpen: boolean;
+    type: InquiryModalType | null;
+    data: InquiryItem | null;
+}
+export type SelectOption = { value: any; label: string };
+
+// --- Notification Dialog ---
+const AddInquiryNotificationDialog: React.FC<{
+    inquiry: InquiryItem;
+    onClose: () => void;
+    getAllUserDataOptions: SelectOption[];
+}> = ({ inquiry, onClose, getAllUserDataOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const notificationSchema = z.object({
+        notification_title: z.string().min(3, 'Title must be at least 3 characters long.'),
+        send_users: z.array(z.number()).min(1, 'Please select at least one user.'),
+        message: z.string().min(10, 'Message must be at least 10 characters long.'),
+    });
+    type NotificationFormData = z.infer<typeof notificationSchema>;
+
+    const {
+        control,
+        handleSubmit,
+        formState: { errors, isValid },
+    } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: {
+            notification_title: `Regarding Inquiry: ${inquiry.inquiry_id}`,
+            send_users: [],
+            message: `This is a notification for inquiry "${inquiry.inquiry_id}" from ${inquiry.company_name}. Please review the details.`,
+        },
+        mode: 'onChange',
+    });
+
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = {
+            send_users: formData.send_users,
+            notification_title: formData.notification_title,
+            message: formData.message,
+            module_id: String(inquiry.id),
+            module_name: 'Inquiry',
+        };
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(
+                <Notification
+                    type="danger"
+                    title="Failed to Send Notification"
+                    children={error?.message || 'An unknown error occurred.'}
+                />
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Notify User about: {inquiry.inquiry_id}</h5>
+            <UiForm onSubmit={handleSubmit(onSend)}>
+                <FormItem
+                    label="Title"
+                    invalid={!!errors.notification_title}
+                    errorMessage={errors.notification_title?.message}
+                >
+                    <Controller
+                        name="notification_title"
+                        control={control}
+                        render={({ field }) => <Input {...field} />}
+                    />
+                </FormItem>
+                <FormItem
+                    label="Send To"
+                    invalid={!!errors.send_users}
+                    errorMessage={errors.send_users?.message}
+                >
+                    <Controller
+                        name="send_users"
+                        control={control}
+                        render={({ field }) => (
+                            <UiSelect
+                                isMulti
+                                placeholder="Select User(s)"
+                                options={getAllUserDataOptions}
+                                value={getAllUserDataOptions.filter((o) =>
+                                    field.value?.includes(o.value)
+                                )}
+                                onChange={(options) =>
+                                    field.onChange(options?.map((o) => o.value) || [])
+                                }
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+                    <Controller
+                        name="message"
+                        control={control}
+                        render={({ field }) => <Input textArea {...field} rows={4} />}
+                    />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
+                        Cancel
+                    </Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
+                        Send Notification
+                    </Button>
+                </div>
+            </UiForm>
+        </Dialog>
+    );
+};
+
+// --- Modals Wrapper Component ---
+const InquiriesModals: React.FC<{
+    modalState: InquiryModalState;
+    onClose: () => void;
+    getAllUserDataOptions: SelectOption[];
+}> = ({ modalState, onClose, getAllUserDataOptions }) => {
+    const { type, data: inquiry, isOpen } = modalState;
+    if (!isOpen || !inquiry) return null;
+
+    switch (type) {
+        case 'notification':
+            return <AddInquiryNotificationDialog inquiry={inquiry} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+        default:
+            return null;
+    }
+};
+
 
 // --- API Inquiry Item Type ---
 export type ApiInquiryItem = {
@@ -248,6 +399,7 @@ interface InquiryListStore {
   setSelectedInquiries: React.Dispatch<React.SetStateAction<InquiryItem[]>>;
   departments: Department[];
   isLoading: boolean;
+  getAllUserDataOptions: SelectOption[]; // Added
 }
 const InquiryListContext = React.createContext<InquiryListStore | undefined>(undefined);
 const useInquiryList = (): InquiryListStore => {
@@ -257,15 +409,18 @@ const useInquiryList = (): InquiryListStore => {
 };
 const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dispatch = useAppDispatch();
-  const { inquiryList1, departmentsData, status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
+  const { inquiryList1, departmentsData, getAllUserData, status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
   const [inquiryList, setInquiryList] = useState<InquiryItem[]>([]);
   const [selectedInquiries, setSelectedInquiries] = useState<InquiryItem[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(u => ({ value: u.id, label: u.name })) : [], [getAllUserData]);
+
   useEffect(() => {
     dispatch(getDepartmentsAction());
     dispatch(getInquiriesAction());
+    dispatch(getAllUsersAction()); // Added
   }, [dispatch]);
 
   useEffect(() => {
@@ -287,7 +442,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   return (
-    <InquiryListContext.Provider value={{ inquiryList, selectedInquiries, setSelectedInquiries, departments, isLoading }}>
+    <InquiryListContext.Provider value={{ inquiryList, selectedInquiries, setSelectedInquiries, departments, isLoading, getAllUserDataOptions }}>
       {children}
     </InquiryListContext.Provider>
   );
@@ -310,9 +465,7 @@ const InquiryListActionTools = () => {
 };
 
 // --- InquiryActionColumn Component (DataTable Actions) ---
-const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit }: { rowData: InquiryItem; onViewDetail: (id: string) => void; onDeleteItem: (item: InquiryItem) => void; onEdit?: (id: string) => void; onShare?: (id: string) => void; onChangeItemStatus?: (id: string, currentStatus: InquiryItem["status"]) => void; }) => {
-  console.log("rowData",rowData);
-  
+const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOpenModal }: { rowData: InquiryItem; onViewDetail: (id: string) => void; onDeleteItem: (item: InquiryItem) => void; onEdit?: (id: string) => void; onShare?: (id: string) => void; onChangeItemStatus?: (id: string, currentStatus: InquiryItem["status"]) => void; onOpenModal: (type: InquiryModalType, data: InquiryItem) => void; }) => {
   const handleEdit = () => onEdit && onEdit(rowData.id);
   return (
     <div className="flex items-center justify-center gap-1">
@@ -331,7 +484,7 @@ const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit }: { 
   </Dropdown.Item>
 
   {/* 3. Add Notification */}
-  <Dropdown.Item className="flex items-center gap-2">
+  <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification', rowData)}>
     <TbBell size={18} /> <span className="text-xs">Add Notification</span>
   </Dropdown.Item>
 
@@ -558,7 +711,7 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({ isOpen, onClose, in
 // --- InquiryListTable Component ---
 const InquiryListTable = () => {
   const dispatch = useAppDispatch();
-  const { inquiryList, departments, isLoading, selectedInquiries, setSelectedInquiries } = useInquiryList();
+  const { inquiryList, departments, isLoading, selectedInquiries, setSelectedInquiries, getAllUserDataOptions } = useInquiryList();
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<InquiryFilterFormData>({});
@@ -574,6 +727,10 @@ const InquiryListTable = () => {
   const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = useState(false);
   const [inquiryToView, setInquiryToView] = useState<InquiryItem | null>(null);
 
+  // --- State for Action Modals (e.g., Notification) ---
+  const [modalState, setModalState] = useState<InquiryModalState>({ isOpen: false, type: null, data: null });
+  const handleOpenModal = useCallback((type: InquiryModalType, itemData: InquiryItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
+  const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
   const filterFormMethods = useForm<InquiryFilterFormData>({ resolver: zodResolver(inquiryFilterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: '' }, mode: 'onChange' });
@@ -657,8 +814,8 @@ const InquiryListTable = () => {
     { header: "Contact Person", accessorKey: "contact_person_name", enableSorting: true, size: 240, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-gray-800 dark:text-gray-100">{d.contact_person_name}</span><a href={`mailto:${d.contact_person_email}`} className="text-blue-600 hover:underline dark:text-blue-400">{d.contact_person_email}</a><span className="text-gray-600 dark:text-gray-300">{d.contact_person_phone}</span></div>); } },
     { header: "Inquiry Details", accessorKey: "inquiry_priority", enableSorting: true, size: 280, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-1 text-xs"><div className="flex items-center gap-2"><Tag className={`${priorityColors[d.inquiry_priority] || priorityColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_priority} </Tag><Tag className={`${inquiryCurrentStatusColors[d.inquiry_status] || inquiryCurrentStatusColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_status}</Tag></div><span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Assigned:</span> {d.assigned_to}</span>{d.department && (<span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Dept:</span> {d.department}</span>)}<Tooltip title={d.inquiry_description}><p className="text-gray-600 dark:text-gray-400 line-clamp-2">{d.inquiry_description}</p></Tooltip></div>); } },
     { header: "Timeline", accessorKey: "inquiry_date", enableSorting: true, size: 180, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><FormattedDateDisplay dateString={d.inquiry_date} label="Inquired" /><FormattedDateDisplay dateString={d.response_date} label="Responded" /></div>); } },
-    { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props) => (<InquiryActionColumn rowData={props.row.original} onViewDetail={handleViewDetails} onDeleteItem={handleDeleteItemClick} onEdit={handleEditInquiry} />) },
-  ], [navigate, allFilteredAndSortedData]); // Added navigate and allFilteredAndSortedData dependency
+    { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props) => (<InquiryActionColumn rowData={props.row.original} onViewDetail={handleViewDetails} onDeleteItem={handleDeleteItemClick} onEdit={handleEditInquiry} onOpenModal={handleOpenModal} />) },
+  ], [navigate, allFilteredAndSortedData, handleOpenModal]); // Added navigate, allFilteredAndSortedData, handleOpenModal dependency
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
@@ -819,6 +976,12 @@ const InquiryListTable = () => {
                 setInquiryToView(null);
             }}
             inquiry={inquiryToView}
+        />
+        {/* Action Modals */}
+        <InquiriesModals
+            modalState={modalState}
+            onClose={handleCloseModal}
+            getAllUserDataOptions={getAllUserDataOptions}
         />
     </>
   );
