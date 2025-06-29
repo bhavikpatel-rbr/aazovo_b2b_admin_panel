@@ -4661,6 +4661,24 @@ export const editTaskAction = createAsyncThunk<any, any>(
   }
 )
 
+export const deleteAllExportMappingsAction = createAsyncThunk<any, any>(
+  "auth/deleteAllExportMappings", // Note: "Roles" is singular here, "Roless" might be more consistent with the function name
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await deleteAllExportMappingsAsync()
+      if (response?.data?.status === true) {
+        dispatch(getRolesAction())
+
+        return response?.data?.data
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
 export const getEmployeesListingAction = createAsyncThunk(
   "auth/getEmployeesListingAction",
   async (_, { rejectWithValue, dispatch }) => {
