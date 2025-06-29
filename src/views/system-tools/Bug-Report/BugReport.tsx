@@ -472,7 +472,7 @@ const BugReportNotificationDialog = ({
   } = useForm<NotificationFormData>({
     resolver: zodResolver(notificationSchema),
     defaultValues: {
-      notification_title: `Regarding Bug Report by ${bugReport.name}`,
+      notification_title: `Warning: Regarding Bug Report by ${bugReport.name}`,
       send_users: [],
       message: `A bug report has been submitted by "${bugReport.name}" with the following details:\n\nReport: ${bugReport.report}\nSeverity: ${bugReport.severity}\nStatus: ${bugReport.status}\n\nPlease review.`,
     },
