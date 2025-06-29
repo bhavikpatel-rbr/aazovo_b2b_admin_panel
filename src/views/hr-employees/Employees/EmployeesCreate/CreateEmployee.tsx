@@ -64,7 +64,6 @@ const employeeFormValidationSchema = z.object({
         dateOfBirth: z.date({ required_error: "Date of birth is required." }),
         age: z.union([z.string().min(1), z.number().min(1)]),
         gender: z.object({ label: z.string(), value: z.string() }, { required_error: "Gender is required." }),
-        nationalityId: z.object({ label: z.string(), value: z.string() }, { required_error: "Nationality is required." }),
         bloodGroup: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
         permanentAddress: z.string().min(1, 'Permanent address is required'),
         localAddress: z.string().optional(),
@@ -548,9 +547,11 @@ const EmployeeFormPage = () => {
             if (isEditMode && employeeId) {
                 setIsLoading(true);
                 const actionResult = await dispatch(apiGetEmployeeById(employeeId)).unwrap();
+                console.log(actionResult, 'actionResult');
+                
                 try {
                     if (actionResult) {
-                        setEmployeeData(apiToForm(actionResult.data))
+                        setEmployeeData(apiToForm(actionResult?.data?.data))
                         setIsLoading(false)
                     } else if (!isEditMode) {
                         setEmployeeData({});
