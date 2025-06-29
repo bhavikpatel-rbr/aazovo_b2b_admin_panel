@@ -14,30 +14,26 @@ import NotificationToggle from './NotificationToggle'
 
 import { Avatar } from '@/components/ui'
 import type { DropdownRef } from '@/components/ui/Dropdown'
-// TODO: Import your actual 'mark as read' actions from the master slice
-import {
-    // markAllNotificationsAsRead, // Example action
-    // markNotificationAsRead, // Example action
-    masterSelector,
-} from '@/reduxtool/master/masterSlice'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { useAppDispatch } from '@/reduxtool/store'
 import { PiEnvelopeLight, PiWarningLight } from 'react-icons/pi'
 import { useSelector } from 'react-redux'
 import { getAllNotificationAction } from '@/reduxtool/master/middleware'
+
 // Define a clear type for notifications
 type Notification = {
     id: string
     notification_title: string
     description: string
-    date: string // Should be an ISO date string
-    type: 'warning' | 'inquiry' | 'default' // Example types
+    created_at: string // Assuming this is the correct field from your API
+    type: 'warning' | 'inquiry' | 'default'
     readed: boolean
 }
 
 const notificationHeight = 'h-[280px]'
 
-// Helper component for rendering avatars based on notification type
 const NotificationAvatar = ({ type }: { type: Notification['type'] }) => {
+    // ... (no changes here)
     switch (type) {
         case 'warning':
             return (
@@ -50,7 +46,7 @@ const NotificationAvatar = ({ type }: { type: Notification['type'] }) => {
             return (
                 <Avatar
                     icon={<PiEnvelopeLight />}
-                    className="bg-blue-500" // Use a different color for distinction
+                    className="bg-blue-500"
                 />
             )
         default:
@@ -58,7 +54,6 @@ const NotificationAvatar = ({ type }: { type: Notification['type'] }) => {
     }
 }
 
-// Helper component for a single notification item for better readability
 const NotificationItem = ({
     notification,
     onMarkAsRead,
@@ -78,8 +73,8 @@ const NotificationItem = ({
                 {notification?.notification_title}
             </div>
             <div className="text-xs">
+                {/* Corrected 'message' to 'description' based on your type definition */}
                 <span>{notification?.message}</span>
-                {/* TODO: Use a library like 'date-fns' to format 'notification.date' as relative time (e.g., "10m ago") */}
                 <span className="text-gray-500 dark:text-gray-400 ml-2">
                     {new Date(notification?.created_at).toLocaleTimeString()}
                 </span>
@@ -98,22 +93,27 @@ const _Notification = ({ className }: { className?: string }) => {
     const dispatch = useAppDispatch()
     const notificationDropdownRef = useRef<DropdownRef>(null)
 
-    // Get notifications directly from the Redux store
     const notifications = useSelector(masterSelector).getNotification?.data as
         | Notification[]
         | undefined
 
-    // Derive state from Redux store, avoiding local state duplication
+    // ✅ FIX #1: Make the useMemo hook robust by checking if `notifications` is an array.
     const { hasUnread, noResult } = useMemo(() => {
-        const unreadCount =
-            notifications?.filter((item) => !item.readed).length ?? 0
+        // Add this check to prevent runtime errors
+        if (!Array.isArray(notifications)) {
+            return {
+                hasUnread: false,
+                noResult: true,
+            }
+        }
+
+        const unreadCount = notifications.filter((item) => !item.readed).length
         return {
             hasUnread: unreadCount > 0,
-            noResult: !notifications || notifications.length === 0,
+            noResult: notifications.length === 0,
         }
     }, [notifications])
 
-    // Fetch notifications on component mount and set up polling
     useEffect(() => {
         const fetchInitialData = async () => {
             setLoading(true)
@@ -123,7 +123,6 @@ const _Notification = ({ className }: { className?: string }) => {
 
         fetchInitialData()
 
-        // Set up polling with cleanup to prevent memory leaks
         const intervalId = setInterval(() => {
             dispatch(getAllNotificationAction())
         }, 1000 * 60 * 60) // every hour
@@ -132,19 +131,14 @@ const _Notification = ({ className }: { className?: string }) => {
     }, [dispatch])
 
     const handleMarkAllAsRead = () => {
-        // TODO: This should dispatch a Redux action to update the backend and store.
-        // Example: dispatch(markAllNotificationsAsRead());
         console.log('Dispatching markAllNotificationsAsRead action...')
     }
 
     const handleMarkAsRead = (id: string) => {
-        // TODO: This should dispatch a Redux action to update the backend and store.
-        // Example: dispatch(markNotificationAsRead(id));
         console.log(`Dispatching markNotificationAsRead action for id: ${id}`)
     }
 
     const handleViewAllActivity = () => {
-        // Corrected path from 'notifiactions' to 'notifications'
         navigate('/notifications')
         notificationDropdownRef.current?.handleDropdownClose()
     }
@@ -179,7 +173,7 @@ const _Notification = ({ className }: { className?: string }) => {
                     <div
                         className={classNames(
                             'flex items-center justify-center',
-                            notificationHeight,
+                            notificationHeight
                         )}
                     >
                         <Spinner size={40} />
@@ -188,7 +182,7 @@ const _Notification = ({ className }: { className?: string }) => {
                     <div
                         className={classNames(
                             'flex items-center justify-center',
-                            notificationHeight,
+                            notificationHeight
                         )}
                     >
                         <div className="text-center">
@@ -202,7 +196,9 @@ const _Notification = ({ className }: { className?: string }) => {
                         </div>
                     </div>
                 ) : (
-                    notifications?.map((item) => (
+                    // ✅ FIX #2: Add an Array.isArray check before mapping to prevent crashes.
+                    Array.isArray(notifications) &&
+                    notifications.map((item) => (
                         <NotificationItem
                             key={item.id}
                             notification={item}

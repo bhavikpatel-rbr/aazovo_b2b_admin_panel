@@ -2917,7 +2917,7 @@ export const addEmployeeListAsync = async (payload) => {
 export const editEmployeeListAsync = async (payload) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
-    const response = await axiosInstance.post(`${config.apiURL}/employee/${payload?.id}`, payload);
+    const response = await axiosInstance.get(`${config.apiURL}/employee/${payload}`, payload);
     return response;
   } catch (err) {
     return isAxiosError(err);
@@ -2992,6 +2992,26 @@ export const getAllUsersAsync = async () => {
 export const logOutAsync = async () => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/logout`, {})
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const getAllScheduleAsync = async () => {
+  try {
+    const getUserIDFromLocalStorage = JSON.parse(localStorage.getItem("@secure:UserData"))?.id;
+    const response = await axiosInstance.get(`${config.apiURL}/event`, { "user_id": getUserIDFromLocalStorage })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addScheduleAsync = async (payload) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/event`, { ...payload })
     return response
   } catch (err) {
     return isAxiosError(err)

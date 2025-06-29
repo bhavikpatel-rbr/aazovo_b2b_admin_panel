@@ -933,8 +933,8 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
           const isImageUrl = (url: unknown): url is string => typeof url === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
           
           return (
-            <div key={doc.name} className="border dark:border-gray-600 p-3 rounded-md">
-              <label className="flex items-center gap-2 mb-2 font-semibold">
+           <div key={doc.name}>
+              <label className="flex items-center gap-2 mb-1">
                 <Controller name={doc.enabledName} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
                 {doc.label} (Verified)
               </label>
