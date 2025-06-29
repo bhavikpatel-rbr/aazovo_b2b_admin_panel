@@ -1,12 +1,11 @@
 // src/views/your-path/EmployeesListing.tsx
 
-import React, { Ref, useCallback, useEffect, useMemo, useState } from "react"; // Added useEffect
-// import { Link, useNavigate } from 'react-router-dom'; // useNavigate will be replaced by drawer logic for add/edit
-import { zodResolver } from "@hookform/resolvers/zod"; // Added
+import { zodResolver } from "@hookform/resolvers/zod";
 import cloneDeep from "lodash/cloneDeep";
-import { Controller, useForm } from "react-hook-form"; // Added
+import React, { Ref, useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from 'react-router-dom';
-import { z } from "zod"; // Added
+import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -25,7 +24,7 @@ import {
   FormItem,
   Input,
   Select as UiSelect,
-} from "@/components/ui"; // Added Drawer, Form, FormItem, UiSelect, Textarea
+} from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
@@ -74,11 +73,19 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { getDepartmentsAction, getDesignationsAction, getEmployeesListingAction, getRolesAction } from "@/reduxtool/master/middleware";
+import { 
+    addNotificationAction, 
+    getDepartmentsAction, 
+    getDesignationsAction, 
+    getEmployeesListingAction, 
+    getRolesAction, 
+    getAllUsersAction 
+} from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { useSelector } from "react-redux";
+import { shallowEqual, useSelector } from "react-redux";
+
 
 // --- Define Item Type ---
 export type EmployeeStatus = "active" | "inactive" | "on_leave" | "terminated";
@@ -225,7 +232,7 @@ export interface ModalState {
   type: ModalType | null;
   data: EmployeeItem | null;
 }
-
+export type SelectOption = { value: any; label: string };
 // --- Reusable ActionColumn Component ---
 const ActionColumn = ({
   rowData,
@@ -559,18 +566,81 @@ const SendWhatsAppDialog: React.FC<{ employee: EmployeeItem; onClose: () => void
   );
 };
 
-const AddNotificationDialog: React.FC<{ employee: EmployeeItem; onClose: () => void }> = ({ employee, onClose }) => {
-  // A simplified version
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Notification for {employee.name}</h5>
-      <Input textArea placeholder="Enter notification message..." rows={3} />
-      <div className="text-right mt-6">
-        <Button className="mr-2" onClick={onClose}>Cancel</Button>
-        <Button variant="solid" onClick={onClose}>Submit</Button>
-      </div>
-    </Dialog>
-  );
+const AddNotificationDialog: React.FC<{ employee: EmployeeItem; onClose: () => void; getAllUserDataOptions: SelectOption[] }> = ({ employee, onClose, getAllUserDataOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const notificationSchema = z.object({
+        notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+        send_users: z.array(z.number()).min(1, "Please select at least one user."),
+        message: z.string().min(10, "Message must be at least 10 characters long."),
+    });
+
+    type NotificationFormData = z.infer<typeof notificationSchema>;
+
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: {
+            notification_title: `Notification regarding: ${employee.name}`,
+            send_users: [],
+            message: `This is a notification concerning employee ${employee.name}.`
+        },
+        mode: 'onChange'
+    });
+
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = {
+            send_users: formData.send_users,
+            notification_title: formData.notification_title,
+            message: formData.message,
+            module_id: String(employee.id),
+            module_name: 'Employee',
+        };
+
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Notify about: {employee.name}</h5>
+            <Form onSubmit={handleSubmit(onSend)}>
+                <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+                    <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
+                </FormItem>
+                <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+                    <Controller
+                        name="send_users"
+                        control={control}
+                        render={({ field }) => (
+                            <UiSelect
+                                isMulti
+                                placeholder="Select User(s)"
+                                options={getAllUserDataOptions}
+                                value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
+                                onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])}
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
 };
 
 const AssignTaskDialog: React.FC<{ employee: EmployeeItem; onClose: () => void }> = ({ employee, onClose }) => {
@@ -694,14 +764,14 @@ const GenericActionDialog: React.FC<{ type: ModalType | null; employee: Employee
 };
 
 // --- Main Modal Router Component ---
-const EmployeeModals: React.FC<{ modalState: ModalState; onClose: () => void; }> = ({ modalState, onClose }) => {
+const EmployeeModals: React.FC<{ modalState: ModalState; onClose: () => void; getAllUserDataOptions: SelectOption[] }> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const { type, data: employee, isOpen } = modalState;
   if (!isOpen || !employee) return null;
 
   switch (type) {
     case 'email': return <SendEmailDialog employee={employee} onClose={onClose} />;
     case 'whatsapp': return <SendWhatsAppDialog employee={employee} onClose={onClose} />;
-    case 'notification': return <AddNotificationDialog employee={employee} onClose={onClose} />;
+    case 'notification': return <AddNotificationDialog employee={employee} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
     case 'schedule': return <AddScheduleDialog employee={employee} onClose={onClose} />;
     case 'task': return <AssignTaskDialog employee={employee} onClose={onClose} />;
     case 'documents': return <DownloadDocumentDialog employee={employee} onClose={onClose} />;
@@ -1023,8 +1093,11 @@ const EmployeesListing = () => {
 
   const { EmployeesList: Employees, Roles = [],
     departmentsData = [],
-    designationsData = [], } = useSelector(masterSelector);
-  console.log(Employees, "EmployeesList");
+    designationsData = [], 
+    getAllUserData = [] 
+  } = useSelector(masterSelector, shallowEqual);
+
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
 
   useEffect(() => {
     if (Employees && Employees?.data?.data?.length > 0) {
@@ -1037,6 +1110,7 @@ const EmployeesListing = () => {
     dispatch(getRolesAction());
     dispatch(getDepartmentsAction());
     dispatch(getDesignationsAction());
+    dispatch(getAllUsersAction());
   }, [dispatch])
 
   // --- Modal Handlers ---
@@ -1134,7 +1208,7 @@ const EmployeesListing = () => {
       const v = filterCriteria.filterDepartments.map((o) =>
         o.value.toLowerCase()
       );
-      processedData = processedData.filter((e) =>
+      processedData = processedData.filter((e: any) =>
         v.includes(e.department?.name?.toLowerCase())
       );
     }
@@ -1142,7 +1216,7 @@ const EmployeesListing = () => {
       const v = filterCriteria.filterDesignations.map((o) =>
         o.value.toLowerCase()
       );
-      processedData = processedData.filter((e) =>
+      processedData = processedData.filter((e: any) =>
         v.includes(e.designation?.toLowerCase())
       );
     }
@@ -1152,8 +1226,8 @@ const EmployeesListing = () => {
     }
     if (filterCriteria.filterRoles?.length) {
       const v = filterCriteria.filterRoles.map((o) => o.value?.toLowerCase());
-      processedData = processedData.filter((e) =>
-        e.roles.some((role) => v.includes(role?.name?.toLowerCase()))
+      processedData = processedData.filter((e: any) =>
+        e.roles.some((role: any) => v.includes(role?.name?.toLowerCase()))
       );
     }
 
@@ -1161,14 +1235,14 @@ const EmployeesListing = () => {
     if (tableData.query) {
       const query = tableData.query.toLowerCase();
       processedData = processedData.filter(
-        (e) =>
+        (e: any) =>
           e.id.toLowerCase().includes(query) ||
           e.name.toLowerCase().includes(query) ||
           e.email.toLowerCase().includes(query) ||
           (e.mobile?.toLowerCase().includes(query) ?? false) ||
           e.department.toLowerCase().includes(query) ||
           e.designation.toLowerCase().includes(query) ||
-          e.roles.some((role) => role.toLowerCase().includes(query)) ||
+          e.roles.some((role: any) => role.toLowerCase().includes(query)) ||
           e.status.toLowerCase().includes(query)
       );
     }
@@ -1176,7 +1250,7 @@ const EmployeesListing = () => {
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       /* ... your existing sort logic ... */
-      processedData.sort((a, b) => {
+      processedData.sort((a: any, b: any) => {
         let aVal = a[key as keyof EmployeeItem] as any;
         let bVal = b[key as keyof EmployeeItem] as any;
         if (key === "createdAt" || key === "joiningDate") {
@@ -1306,7 +1380,7 @@ const EmployeesListing = () => {
 
           return (
             <Tag
-              className={`${employeeStatusColor[displayStatus]} text-white capitalize`}
+              className={`${employeeStatusColor[displayStatus as keyof typeof employeeStatusColor]} text-white capitalize`}
             >
               {displayStatus}
             </Tag>
@@ -1339,7 +1413,7 @@ const EmployeesListing = () => {
       },
       {
         header: "Designation", accessorKey: "designation", size: 200,
-         /* ... (keep original cell) ... */ cell: (props) => {
+         /* ... (keep original cell) ... */ cell: (props: any) => {
           const data = props.row.original || {};
 
           return (
@@ -1355,7 +1429,7 @@ const EmployeesListing = () => {
         header: "Department",
         accessorKey: "department",
         size: 200,
-         /* ... (keep original cell) ... */ cell: (props) => {
+         /* ... (keep original cell) ... */ cell: (props: any) => {
           const { department } = props.row.original || {};
 
           return (
@@ -1370,13 +1444,13 @@ const EmployeesListing = () => {
       {
         header: "Roles",
         accessorKey: "roles",
-        cell: (props) => {
+        cell: (props: any) => {
 
           const { roles } = props.row.original || {};
 
           return (
             <div className="flex flex-wrap gap-1 text-xs">
-              {props?.row?.original?.roles?.map((role) => (
+              {props?.row?.original?.roles?.map((role: any) => (
                 <Tag
                   key={role}
                   className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]"
@@ -1392,7 +1466,7 @@ const EmployeesListing = () => {
         header: "Joined At",
         accessorKey: "joiningDate",
         size: 200,
-        cell: (props) =>
+        cell: (props: any) =>
           props?.row?.original?.date_of_joining ? <span className="text-xs"> {dayjs(props?.row?.original?.date_of_joining).format("D MMM YYYY, h:mm A")}</span> : '-'
       }, // Added Joining Date
       {
@@ -1535,7 +1609,7 @@ const EmployeesListing = () => {
         onClose={handleCloseChangePwd}
         employee={currentItemForDialog}
       />
-      <EmployeeModals modalState={modalState} onClose={handleCloseModal} />
+      <EmployeeModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions}/>
 
       {/* Filter Drawer */}
       <Drawer
