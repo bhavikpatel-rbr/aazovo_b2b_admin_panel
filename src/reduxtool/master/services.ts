@@ -232,10 +232,12 @@ export const addCurrencyAsync = async (unitData: any) => {
 }
 
 export const editCurrencyAsync = async (unitData: any) => {
+  console.log("unitData", unitData);
+
   console.log(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol, currency_code: unitData?.currency_code, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol, currency_code: unitData?.currency_code, status: unitData?.status, country_id: unitData?.country_id })
     return response
   } catch (err) {
     return isAxiosError(err)
