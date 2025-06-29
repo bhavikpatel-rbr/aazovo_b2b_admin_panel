@@ -1,15 +1,20 @@
 // src/views/sales-leads/LeadsListing.tsx
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
-import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import classNames from "classnames";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState
+} from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
@@ -17,96 +22,92 @@ dayjs.extend(isSameOrAfter);
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
-import Container from "@/components/shared/Container";
-import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
-import Tag from "@/components/ui/Tag";
-import Button from "@/components/ui/Button";
-import Dialog from "@/components/ui/Dialog";
-import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
+import Container from "@/components/shared/Container";
 import DebouceInput from "@/components/shared/DebouceInput";
 import RichTextEditor from "@/components/shared/RichTextEditor";
+import StickyFooter from "@/components/shared/StickyFooter";
 import {
-  Drawer,
-  Form,
-  Input,
-  Select as UiSelect,
-  DatePicker,
-  FormItem,
-  Table,
+  Button,
   Card,
+  DatePicker,
+  Dialog,
+  Drawer,
+  Dropdown,
+  Form,
+  FormItem,
+  Input,
+  Select,
+  Table
 } from "@/components/ui";
-import Dropdown from "@/components/ui/Dropdown";
-import classNames from "classnames";
+import Notification from "@/components/ui/Notification";
+import Tag from "@/components/ui/Tag";
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
+import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbPencil,
-  TbTrash,
   TbAlertTriangle,
-  TbSubtask,
-  TbSearch,
-  TbCloudUpload,
-  TbFilter,
-  TbPlus,
-  TbEye,
-  TbUserPlus,
-  TbArrowsExchange,
-  TbRocket,
-  TbInfoCircle,
-  TbReload,
-  TbMail,
-  TbBrandWhatsapp,
   TbBell,
-  TbTagStarred,
-  TbCalendarEvent,
-  TbAlarm,
-  TbDownload,
-  TbMessageReport,
-  TbClipboardText,
-  TbFileZip,
-  TbFileText,
-  TbTrophy,
-  TbCalendar,
-  TbCircleCheck,
-  TbFlag,
-  TbFlagX,
   TbBox,
-  TbListDetails,
-  TbPennant,
+  TbBrandWhatsapp,
+  TbCalendar,
+  TbCalendarEvent,
+  TbCircleCheck,
+  TbClipboardText,
+  TbCloudUpload,
+  TbDownload,
+  TbEye,
   TbFileDescription,
   TbFileInvoice,
+  TbFileText,
+  TbFileZip,
+  TbFilter,
+  TbFlag,
+  TbFlagX,
+  TbInfoCircle,
+  TbListDetails,
+  TbMail,
+  TbPencil,
+  TbPennant,
+  TbPlus,
+  TbReload,
+  TbRocket,
+  TbSearch,
+  TbSubtask,
+  TbTagStarred,
+  TbTrash,
+  TbTrophy
 } from "react-icons/tb";
-import { BsThreeDotsVertical } from "react-icons/bs";
 
 // Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-  CellContext,
-} from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import type { LeadStatus, EnquiryType, LeadIntent } from "./types";
 import {
-  leadStatusOptions as leadStatusOptionsConst,
+  CellContext,
+  ColumnDef,
+  Row
+} from "@tanstack/react-table";
+import type { EnquiryType, LeadIntent, LeadStatus } from "./types";
+import {
   enquiryTypeOptions as enquiryTypeOptionsConst,
   leadIntentOptions as leadIntentOptionsConst,
+  leadStatusOptions as leadStatusOptionsConst,
 } from "./types";
 
 // Redux
-import { useSelector } from "react-redux";
+import { DataTable } from "@/components/shared";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { shallowEqual, useSelector } from "react-redux";
 import { useAppDispatch } from "@/reduxtool/store";
 import {
   getLeadAction,
   deleteLeadAction,
   deleteAllLeadsAction,
+  addNotificationAction,
+  getAllUsersAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // --- Internal Flattened Type for component use ---
 type LeadListItem = {
@@ -127,11 +128,14 @@ type LeadListItem = {
   updatedAt?: Date;
   source_supplier_id?: string | number | null;
   sourceSupplierName?: string;
-  // Keep the raw object for the detailed view dialog
   rawApiData: any;
   buyer: any;
   supplier: any;
+  member_email?: string;
+  member_phone?: string;
 };
+
+export type SelectOption = { value: any; label: string };
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
@@ -327,147 +331,10 @@ export interface LeadModalState {
 interface LeadModalsProps {
   modalState: LeadModalState;
   onClose: () => void;
+  getAllUserDataOptions: SelectOption[];
 }
 
-// --- NEW MODAL DIALOGS ---
-const ConvertLeadToDealDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit } = useForm({
-        defaultValues: { dealValue: lead.target_price || 0, dealName: `${lead.productName} for ${lead.customerName}` }
-    });
-
-    const onConvert = (data: any) => {
-        setIsLoading(true);
-        console.log(`Converting lead ${lead.lead_number} to deal with data:`, data);
-        setTimeout(() => {
-            toast.push(<Notification type="success" title="Lead Converted">Successfully converted to a new deal.</Notification>);
-            setIsLoading(false);
-            onClose();
-        }, 1000);
-    };
-
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Convert Lead to Deal</h5>
-            <p className="mb-4">Convert lead <span className="font-semibold">{lead.lead_number}</span> into a new deal. Please confirm the details below.</p>
-            <form onSubmit={handleSubmit(onConvert)}>
-                <FormItem label="Deal Name">
-                    <Controller name="dealName" control={control} render={({ field }) => <Input {...field} />} />
-                </FormItem>
-                <FormItem label="Estimated Deal Value ($)">
-                    <Controller name="dealValue" control={control} render={({ field }) => <Input type="number" {...field} />} />
-                </FormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading}>Confirm & Convert</Button>
-                </div>
-            </form>
-        </Dialog>
-    );
-};
-
-const ViewOpportunitiesDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => {
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={700}>
-            <h5 className="mb-4">Opportunities for {lead.lead_number}</h5>
-            <div className="max-h-[400px] overflow-y-auto">
-                <Table>
-                    <Table.THead>
-                        <Table.Tr>
-                            <Table.Th>ID</Table.Th>
-                            <Table.Th>Name</Table.Th>
-                            <Table.Th>Stage</Table.Th>
-                            <Table.Th>Value</Table.Th>
-                            <Table.Th>Close Date</Table.Th>
-                        </Table.Tr>
-                    </Table.THead>
-                    <Table.TBody>
-                        {dummyOpportunities.map(op => (
-                            <Table.Tr key={op.id}>
-                                <Table.Td>{op.id}</Table.Td>
-                                <Table.Td>{op.name}</Table.Td>
-                                <Table.Td><Tag className="bg-purple-100 text-purple-700">{op.stage}</Tag></Table.Td>
-                                <Table.Td>${op.value.toLocaleString()}</Table.Td>
-                                <Table.Td>{dayjs(op.closeDate).format('DD MMM, YYYY')}</Table.Td>
-                            </Table.Tr>
-                        ))}
-                    </Table.TBody>
-                </Table>
-            </div>
-            <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-        </Dialog>
-    );
-};
-
-const ViewLeadFormDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-        <h5 className="mb-4">Lead Form Details: {lead.lead_number}</h5>
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-            <FormItem label="Product"><Input value={lead.productName} readOnly /></FormItem>
-            <FormItem label="Customer"><Input value={`${lead.customerName} (ID: ${lead.customerId})`} readOnly /></FormItem>
-            <div className="grid grid-cols-2 gap-4">
-                <FormItem label="Quantity"><Input value={lead.qty ?? 'N/A'} readOnly /></FormItem>
-                <FormItem label="Target Price"><Input value={lead.target_price ?? 'N/A'} readOnly /></FormItem>
-            </div>
-            <FormItem label="Assigned Sales Person"><Input value={lead.salesPersonName || 'Unassigned'} readOnly /></FormItem>
-            <FormItem label="Enquiry Type"><Input value={lead.enquiry_type} readOnly /></FormItem>
-            <FormItem label="Lead Intent"><Input value={lead.lead_intent} readOnly /></FormItem>
-        </div>
-        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
-);
-
-const ViewDealDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-        <h5 className="mb-4">Associated Deal for {lead.lead_number}</h5>
-        <p>This lead has been converted to the following deal:</p>
-        <Card bordered className="mt-4">
-            <p><strong>Deal ID:</strong> {dummyDeal.id}</p>
-            <p><strong>Value:</strong> ${dummyDeal.value.toLocaleString()}</p>
-            <p><strong>Pipeline:</strong> {dummyDeal.pipeline}</p>
-            <p><strong>Stage:</strong> <Tag className="bg-emerald-100 text-emerald-700">{dummyDeal.stage}</Tag></p>
-            <p><strong>Close Date:</strong> {dayjs(dummyDeal.closeDate).format('DD MMM, YYYY')}</p>
-        </Card>
-        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
-);
-
-const AddAccountDocumentsDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit } = useForm({ defaultValues: { document: null, description: '' } });
-
-    const onUpload = (data: any) => {
-        setIsLoading(true);
-        console.log(`Uploading document for lead ${lead.lead_number} with data:`, data);
-        setTimeout(() => {
-            toast.push(<Notification type="success" title="Document Uploaded"></Notification>);
-            setIsLoading(false);
-            onClose();
-        }, 1200);
-    };
-
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Add Account Document</h5>
-            <p className="mb-4">Upload a document for the account associated with <span className="font-semibold">{lead.customerName}</span>.</p>
-            <form onSubmit={handleSubmit(onUpload)}>
-                <FormItem label="Document File">
-                    <Controller name="document" control={control} render={({ field }) => <Input type="file" onChange={(e) => field.onChange(e.target.files?.[0])} />} />
-                </FormItem>
-                <FormItem label="Description">
-                    <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} />
-                </FormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading}>Upload</Button>
-                </div>
-            </form>
-        </Dialog>
-    );
-};
-
-// --- EXISTING MODAL DIALOGS ---
-const LeadModals: React.FC<LeadModalsProps> = ({ modalState, onClose }) => {
+const LeadModals: React.FC<LeadModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const { type, data: lead, isOpen } = modalState;
   if (!isOpen || !lead) return null;
 
@@ -478,7 +345,7 @@ const LeadModals: React.FC<LeadModalsProps> = ({ modalState, onClose }) => {
       case "whatsapp":
         return <SendWhatsAppDialog lead={lead} onClose={onClose} />;
       case "notification":
-        return <AddNotificationDialog lead={lead} onClose={onClose} />;
+        return <AddNotificationDialog lead={lead} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
       case "task":
         return <AssignTaskDialog lead={lead} onClose={onClose} />;
       case "calendar":
@@ -504,6 +371,141 @@ const LeadModals: React.FC<LeadModalsProps> = ({ modalState, onClose }) => {
     }
   };
   return <>{renderModalContent()}</>;
+};
+
+const ConvertLeadToDealDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({
+    defaultValues: { dealValue: lead.target_price || 0, dealName: `${lead.productName} for ${lead.customerName}` }
+  });
+  const onConvert = (data: any) => {
+    setIsLoading(true);
+    console.log(`Converting lead ${lead.lead_number} to deal with data:`, data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Lead Converted">Successfully converted to a new deal.</Notification>);
+      setIsLoading(false);
+      onClose();
+    }, 1000);
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Convert Lead to Deal</h5>
+      <p className="mb-4">Convert lead <span className="font-semibold">{lead.lead_number}</span> into a new deal. Please confirm the details below.</p>
+      <form onSubmit={handleSubmit(onConvert)}>
+        <FormItem label="Deal Name">
+          <Controller name="dealName" control={control} render={({ field }) => <Input {...field} />} />
+        </FormItem>
+        <FormItem label="Estimated Deal Value ($)">
+          <Controller name="dealValue" control={control} render={({ field }) => <Input type="number" {...field} />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading}>Confirm & Convert</Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+};
+
+const ViewOpportunitiesDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => {
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={700}>
+      <h5 className="mb-4">Opportunities for {lead.lead_number}</h5>
+      <div className="max-h-[400px] overflow-y-auto">
+        <Table>
+          <Table.THead>
+            <Table.Tr>
+              <Table.Th>ID</Table.Th>
+              <Table.Th>Name</Table.Th>
+              <Table.Th>Stage</Table.Th>
+              <Table.Th>Value</Table.Th>
+              <Table.Th>Close Date</Table.Th>
+            </Table.Tr>
+          </Table.THead>
+          <Table.TBody>
+            {dummyOpportunities.map(op => (
+              <Table.Tr key={op.id}>
+                <Table.Td>{op.id}</Table.Td>
+                <Table.Td>{op.name}</Table.Td>
+                <Table.Td><Tag className="bg-purple-100 text-purple-700">{op.stage}</Tag></Table.Td>
+                <Table.Td>${op.value.toLocaleString()}</Table.Td>
+                <Table.Td>{dayjs(op.closeDate).format('DD MMM, YYYY')}</Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.TBody>
+        </Table>
+      </div>
+      <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+    </Dialog>
+  );
+};
+
+const ViewLeadFormDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => (
+  <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
+    <h5 className="mb-4">Lead Form Details: {lead.lead_number}</h5>
+    <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+      <FormItem label="Product"><Input value={lead.productName} readOnly /></FormItem>
+      <FormItem label="Customer"><Input value={`${lead.customerName} (ID: ${lead.customerId})`} readOnly /></FormItem>
+      <div className="grid grid-cols-2 gap-4">
+        <FormItem label="Quantity"><Input value={lead.qty ?? 'N/A'} readOnly /></FormItem>
+        <FormItem label="Target Price"><Input value={lead.target_price ?? 'N/A'} readOnly /></FormItem>
+      </div>
+      <FormItem label="Assigned Sales Person"><Input value={lead.salesPersonName || 'Unassigned'} readOnly /></FormItem>
+      <FormItem label="Enquiry Type"><Input value={lead.enquiry_type} readOnly /></FormItem>
+      <FormItem label="Lead Intent"><Input value={lead.lead_intent} readOnly /></FormItem>
+    </div>
+    <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+  </Dialog>
+);
+
+const ViewDealDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => (
+  <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-4">Associated Deal for {lead.lead_number}</h5>
+    <p>This lead has been converted to the following deal:</p>
+    <Card bordered className="mt-4">
+      <p><strong>Deal ID:</strong> {dummyDeal.id}</p>
+      <p><strong>Value:</strong> ${dummyDeal.value.toLocaleString()}</p>
+      <p><strong>Pipeline:</strong> {dummyDeal.pipeline}</p>
+      <p><strong>Stage:</strong> <Tag className="bg-emerald-100 text-emerald-700">{dummyDeal.stage}</Tag></p>
+      <p><strong>Close Date:</strong> {dayjs(dummyDeal.closeDate).format('DD MMM, YYYY')}</p>
+    </Card>
+    <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+  </Dialog>
+);
+
+const AddAccountDocumentsDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit } = useForm({ defaultValues: { document: null, description: '' } });
+
+  const onUpload = (data: any) => {
+    setIsLoading(true);
+    console.log(`Uploading document for lead ${lead.lead_number} with data:`, data);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Document Uploaded"></Notification>);
+      setIsLoading(false);
+      onClose();
+    }, 1200);
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Account Document</h5>
+      <p className="mb-4">Upload a document for the account associated with <span className="font-semibold">{lead.customerName}</span>.</p>
+      <form onSubmit={handleSubmit(onUpload)}>
+        <FormItem label="Document File">
+          <Controller name="document" control={control} render={({ field }) => <Input type="file" onChange={(e: any) => field.onChange(e.target.files?.[0])} />} />
+        </FormItem>
+        <FormItem label="Description">
+          <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading}>Upload</Button>
+        </div>
+      </form>
+    </Dialog>
+  );
 };
 
 const SendEmailDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({
@@ -572,7 +574,7 @@ const SendWhatsAppDialog: React.FC<{
     },
   });
   const onSendMessage = (data: { message: string }) => {
-    const phone = "1234567890"; // Dummy phone number
+    const phone = lead.member_phone?.replace(/\D/g, "") || "1234567890"; // Dummy phone number
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(
       data.message
     )}`;
@@ -606,66 +608,69 @@ const SendWhatsAppDialog: React.FC<{
 const AddNotificationDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
-}> = ({ lead, onClose }) => {
+  getAllUserDataOptions: SelectOption[];
+}> = ({ lead, onClose, getAllUserDataOptions }) => {
+  const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({
-    defaultValues: { title: "", users: [], message: "" },
+  const notificationSchema = z.object({
+    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+    send_users: z.array(z.number()).min(1, "Please select at least one user."),
+    message: z.string().min(10, "Message must be at least 10 characters long."),
   });
-  const onSend = (data: any) => {
+
+  type NotificationFormData = z.infer<typeof notificationSchema>;
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+      notification_title: `Update on Lead: ${lead.lead_number}`,
+      send_users: [],
+      message: `This is a notification regarding lead ID ${lead.lead_number} for the product "${lead.productName}".`
+    },
+    mode: 'onChange'
+  });
+
+  const onSend = async (formData: NotificationFormData) => {
     setIsLoading(true);
-    console.log(
-      "Sending in-app notification for",
-      lead.lead_number,
-      "with data:",
-      data
-    );
-    setTimeout(() => {
-      toast.push(<Notification type="success" title="Notification Sent" />);
-      setIsLoading(false);
+    const payload = {
+      send_users: formData.send_users,
+      notification_title: formData.notification_title,
+      message: formData.message,
+      module_id: String(lead.id),
+      module_name: 'Lead',
+    };
+
+    try {
+      await dispatch(addNotificationAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
       onClose();
-    }, 1000);
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Notification for {lead.lead_number}</h5>
-      <form onSubmit={handleSubmit(onSend)}>
-        <FormItem label="Notification Title">
-          <Controller
-            name="title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
+      <Form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+          <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
         </FormItem>
-        <FormItem label="Send to Users">
-          <Controller
-            name="users"
-            control={control}
-            render={({ field }) => (
-              <UiSelect
-                isMulti
-                placeholder="Select Users"
-                options={dummyUsers}
-                {...field}
-              />
-            )}
-          />
+        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+          <Controller name="send_users" control={control} render={({ field }) => (
+            <Select isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />
+          )} />
         </FormItem>
-        <FormItem label="Message">
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={3} />}
-          />
+        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+          <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} />
         </FormItem>
         <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
-            Send Notification
-          </Button>
+          <Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button>
         </div>
-      </form>
+      </Form>
     </Dialog>
   );
 };
@@ -860,11 +865,9 @@ const ViewAlertDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = (
           dummyAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`p-3 rounded-lg border-l-4 border-${
-                alertColors[alert.severity]
-              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
-                alertColors[alert.severity]
-              }-500/10`}
+              className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]
+                }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]
+                }-500/10`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
@@ -1009,6 +1012,7 @@ const GenericActionDialog: React.FC<{
     </Dialog>
   );
 };
+
 // ============================================================================
 // --- END MODALS SECTION ---
 // ============================================================================
@@ -1074,65 +1078,54 @@ const LeadActionColumn = ({
         </div>
       </Tooltip>
       <Dropdown
-  renderTitle={
-    <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
-  }
->
-  {/* 1. Send Email */}
-  <Dropdown.Item onClick={() => onOpenModal("email")} className="flex items-center gap-2 text-xs">
-    <TbMail size={18} /> Send Email
-  </Dropdown.Item>
+        renderTitle={
+          <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+        }
+      >
+        <Dropdown.Item onClick={() => onOpenModal("email")} className="flex items-center gap-2 text-xs">
+          <TbMail size={18} /> Send Email
+        </Dropdown.Item>
 
-  {/* 2. Send WhatsApp */}
-  <Dropdown.Item onClick={() => onOpenModal("whatsapp")} className="flex items-center gap-2 text-xs">
-    <TbBrandWhatsapp size={18} /> Send Whatsapp
-  </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("whatsapp")} className="flex items-center gap-2 text-xs">
+          <TbBrandWhatsapp size={18} /> Send Whatsapp
+        </Dropdown.Item>
 
-  {/* 3. Add Notification */}
-  <Dropdown.Item onClick={() => onOpenModal("notification")} className="flex items-center gap-2 text-xs">
-    <TbBell size={18} /> Add Notification
-  </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("notification")} className="flex items-center gap-2 text-xs">
+          <TbBell size={18} /> Add Notification
+        </Dropdown.Item>
 
-  {/* 4. Assign Task */}
-  <Dropdown.Item onClick={() => onOpenModal("task")} className="flex items-center gap-2 text-xs">
-    <TbSubtask size={18} /> Assign Task
-  </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("task")} className="flex items-center gap-2 text-xs">
+          <TbSubtask size={18} /> Assign Task
+        </Dropdown.Item>
 
-  {/* 5. Add Schedule */}
-  <Dropdown.Item onClick={() => onOpenModal("calendar")} className="flex items-center gap-2 text-xs">
-    <TbCalendarEvent size={18} /> Add Schedule
-  </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("calendar")} className="flex items-center gap-2 text-xs">
+          <TbCalendarEvent size={18} /> Add Schedule
+        </Dropdown.Item>
 
-  {/* 6. Add Active */}
-  <Dropdown.Item onClick={() => onOpenModal("active")} className="flex items-center gap-2 text-xs">
-    <TbTagStarred size={18} /> Add Active
-  </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("active")} className="flex items-center gap-2 text-xs">
+          <TbTagStarred size={18} /> Add Active
+        </Dropdown.Item>
 
-  {/* 7. Convert to Leads */}
-  <Dropdown.Item onClick={() => onOpenModal("convertToDeal")} className="flex items-center gap-2 text-xs">
-    <TbRocket size={18} /> Convert to Deal
-  </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("convertToDeal")} className="flex items-center gap-2 text-xs">
+          <TbRocket size={18} /> Convert to Deal
+        </Dropdown.Item>
 
-  {/* 8. View Opportunities */}
-  <Dropdown.Item onClick={() => onOpenModal("viewOpportunities")} className="flex items-center gap-2 text-xs">
-    <TbTrophy size={18} /> View Opportunities
-  </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("viewOpportunities")} className="flex items-center gap-2 text-xs">
+          <TbTrophy size={18} /> View Opportunities
+        </Dropdown.Item>
 
-  {/* 9. View Lead Form */}
-  <Dropdown.Item onClick={() => onOpenModal("viewLeadForm")} className="flex items-center gap-2 text-xs">
-    <TbFileDescription size={18} /> View Lead Form
-  </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("viewLeadForm")} className="flex items-center gap-2 text-xs">
+          <TbFileDescription size={18} /> View Lead Form
+        </Dropdown.Item>
 
-  {/* 10. View Deal */}
-  <Dropdown.Item onClick={() => onOpenModal("viewDeal")} className="flex items-center gap-2 text-xs">
-    <TbPennant size={18} /> View Deal
-  </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("viewDeal")} className="flex items-center gap-2 text-xs">
+          <TbPennant size={18} /> View Deal
+        </Dropdown.Item>
 
-  {/* 11. Add Account Documents */}
-  <Dropdown.Item onClick={() => onOpenModal("addAccountDocuments")} className="flex items-center gap-2 text-xs">
-    <TbFileInvoice size={18} /> Add Account Documents
-  </Dropdown.Item>
-</Dropdown>
+        <Dropdown.Item onClick={() => onOpenModal("addAccountDocuments")} className="flex items-center gap-2 text-xs">
+          <TbFileInvoice size={18} /> Add Account Documents
+        </Dropdown.Item>
+      </Dropdown>
 
     </div>
   );
@@ -1198,15 +1191,15 @@ const LeadSelectedFooter = ({ selectedItems, onDeleteSelected }: any) => {
     </>
   );
 };
+const TABS_LEADS = { ALL: "all", NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified", PROPOSAL_SENT: "Proposal Sent", NEGOTIATION: "Negotiation", FOLLOW_UP: "Follow Up", WON: "Won", LOST: "Lost", };
 
 // --- Main LeadsListing Component ---
 const LeadsListing = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { LeadsData = [], status: masterLoadingStatus = "idle" } =
-    useSelector(masterSelector);
+  const { LeadsData = [], getAllUserData = [], status: masterLoadingStatus = "idle" } =
+    useSelector(masterSelector, shallowEqual);
 
-  // States for Drawers & Dialogs
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isAssignDrawerOpen, setIsAssignDrawerOpen] = useState(false);
   const [isChangeStatusDrawerOpen, setIsChangeStatusDrawerOpen] =
@@ -1219,7 +1212,6 @@ const LeadsListing = () => {
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
-  // --- MODAL STATE AND HANDLERS ---
   const [modalState, setModalState] = useState<LeadModalState>({
     isOpen: false,
     type: null,
@@ -1230,7 +1222,6 @@ const LeadsListing = () => {
   const handleCloseModal = () =>
     setModalState({ isOpen: false, type: null, data: null });
 
-  // States for table and delete operations
   const [isProcessingDelete, setIsProcessingDelete] = useState(false);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<LeadListItem | null>(null);
@@ -1245,7 +1236,6 @@ const LeadsListing = () => {
   });
   const [selectedItems, setSelectedItems] = useState<LeadListItem[]>([]);
 
-  // Form methods
   const filterFormMethods = useForm<FilterFormData>({
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
@@ -1261,8 +1251,11 @@ const LeadsListing = () => {
     defaultValues: { reason: "" },
   });
 
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((user: any) => ({ value: user.id, label: user.name })) : [], [getAllUserData]);
+
   useEffect(() => {
     dispatch(getLeadAction());
+    dispatch(getAllUsersAction());
   }, [dispatch]);
 
   const mappedLeads: LeadListItem[] = useMemo(() => {
@@ -1293,6 +1286,8 @@ const LeadsListing = () => {
         rawApiData: apiLead,
         buyer: apiLead.buyer,
         supplier: apiLead.supplier,
+        member_email: apiLead.customer?.email,
+        member_phone: apiLead.customer?.mobile_no
       })
     );
   }, [LeadsData?.data?.data]);
@@ -1302,9 +1297,8 @@ const LeadsListing = () => {
     total: number;
     allFilteredAndSortedData: LeadListItem[];
   } => {
-    let processedData: LeadListItem[] = cloneDeep(mappedLeads);
+    let processedData: LeadListItem[] = mappedLeads;
 
-    // --- FILTERS ---
     if (filterCriteria.dateRange?.[0] || filterCriteria.dateRange?.[1]) {
       const [start, end] = filterCriteria.dateRange.map((d) =>
         d ? dayjs(d) : null
@@ -1356,7 +1350,6 @@ const LeadsListing = () => {
       );
     }
 
-    // --- Search Logic ---
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter(
@@ -1372,7 +1365,6 @@ const LeadsListing = () => {
       );
     }
 
-    // --- SORTING ---
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
       processedData.sort((a, b) => {
@@ -1676,10 +1668,9 @@ const LeadsListing = () => {
             <span>{props.getValue() as string}</span>
             <div>
               <Tag
-                className={`${
-                  enquiryTypeColor[props.row.original.enquiry_type] ||
+                className={`${enquiryTypeColor[props.row.original.enquiry_type] ||
                   enquiryTypeColor.default
-                } capitalize px-2 py-1 text-xs`}
+                  } capitalize px-2 py-1 text-xs`}
               >
                 {props.row.original.enquiry_type}
               </Tag>
@@ -1700,10 +1691,9 @@ const LeadsListing = () => {
         size: 120,
         cell: (props: CellContext<LeadListItem, any>) => (
           <Tag
-            className={`${
-              leadStatusColor[props.row.original.lead_status] ||
+            className={`${leadStatusColor[props.row.original.lead_status] ||
               leadStatusColor.default
-            } capitalize px-2 py-1 text-xs`}
+              } capitalize px-2 py-1 text-xs`}
           >
             {props.row.original.lead_status}
           </Tag>
@@ -1748,18 +1738,18 @@ const LeadsListing = () => {
         cell: (props: CellContext<LeadListItem, any>) => {
           const formattedDate = props.row.original.createdAt
             ? `${new Date(props.row.original.createdAt).getDate()} ${new Date(
-                props.row.original.createdAt
-              ).toLocaleString("en-US", {
-                month: "short",
-              })} ${new Date(
-                props.row.original.createdAt
-              ).getFullYear()}, ${new Date(
-                props.row.original.createdAt
-              ).toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
+              props.row.original.createdAt
+            ).toLocaleString("en-US", {
+              month: "short",
+            })} ${new Date(
+              props.row.original.createdAt
+            ).getFullYear()}, ${new Date(
+              props.row.original.createdAt
+            ).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })}`
             : "N/A";
 
           return (
@@ -1974,19 +1964,16 @@ const LeadsListing = () => {
         </h5>
         {leadToView ? (
           <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-            {/* --- MODIFICATION START --- */}
             {(Object.keys(leadToView.rawApiData) as Array<keyof any>).map(
               (key) => {
                 const label = String(key)
                   .replace(/_/g, " ")
-                  .replace(/([A-Z])/g, " $1") // Converts camelCase to spaced words
+                  .replace(/([A-Z])/g, " $1")
                   .trim()
-                  .replace(/\b\w/g, (l) => l.toUpperCase()); // Title cases each word
+                  .replace(/\b\w/g, (l) => l.toUpperCase());
 
                 const value: any = leadToView.rawApiData[key];
                 let displayValue: React.ReactNode;
-
-                // Keys for objects where we want to display the 'name' property
                 const nameDisplayKeys = [
                   "buyer",
                   "supplier",
@@ -1999,8 +1986,6 @@ const LeadsListing = () => {
                 if ((key === "created_at" || key === "updated_at") && value) {
                   displayValue = dayjs(value).format("DD MMM, YYYY h:mm A");
                 } else if (nameDisplayKeys.includes(String(key))) {
-                  // Handle specific objects: if it's an object with a name, show the name.
-                  // If it's null, undefined, or an object without a 'name' property, show hyphen.
                   if (
                     value &&
                     typeof value === "object" &&
@@ -2017,11 +2002,8 @@ const LeadsListing = () => {
                   value !== null &&
                   !(value instanceof Date)
                 ) {
-                  // For any other object (that is not a Date and not in nameDisplayKeys),
-                  // we skip rendering the row.
                   return null;
                 } else {
-                  // For primitive values (string, number, boolean) or null/undefined/empty string
                   displayValue =
                     value === null || value === undefined || value === "" ? (
                       <span className="text-gray-400">-</span>
@@ -2045,7 +2027,6 @@ const LeadsListing = () => {
                 );
               }
             )}
-            {/* --- MODIFICATION END --- */}
           </div>
         ) : (
           <div className="p-10 text-center">
@@ -2060,7 +2041,6 @@ const LeadsListing = () => {
         </div>
       </Dialog>
 
-      {/* Assign Lead Drawer */}
       <Drawer
         title="Assign Lead"
         isOpen={isAssignDrawerOpen}
@@ -2112,7 +2092,7 @@ const LeadsListing = () => {
                   value={dummySalesPersons.find(
                     (sp) => sp.id === field.value
                   )}
-                  onChange={(opt) => field.onChange(opt?.value)}
+                  onChange={(opt: any) => field.onChange(opt?.value)}
                   placeholder="Select Sales Person"
                 />
               )}
@@ -2121,7 +2101,6 @@ const LeadsListing = () => {
         </Form>
       </Drawer>
 
-      {/* Change Status Drawer */}
       <Drawer
         title="Change Lead Status"
         isOpen={isChangeStatusDrawerOpen}
@@ -2170,7 +2149,7 @@ const LeadsListing = () => {
                   value={leadStatusOptionsConst.find(
                     (opt) => opt.value === field.value
                   )}
-                  onChange={(opt) => field.onChange(opt?.value as LeadStatus)}
+                  onChange={(opt: any) => field.onChange(opt?.value as LeadStatus)}
                   placeholder="Select New Status"
                 />
               )}
@@ -2179,7 +2158,6 @@ const LeadsListing = () => {
         </Form>
       </Drawer>
 
-      {/* Filter Drawer */}
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
@@ -2221,8 +2199,8 @@ const LeadsListing = () => {
                   value={leadStatusOptionsConst.filter((o) =>
                     field.value?.includes(o.value)
                   )}
-                  onChange={(opts) =>
-                    field.onChange(opts?.map((o) => o.value) || [])
+                  onChange={(opts: any) =>
+                    field.onChange(opts?.map((o: any) => o.value) || [])
                   }
                 />
               )}
@@ -2239,8 +2217,8 @@ const LeadsListing = () => {
                   value={enquiryTypeOptionsConst.filter((o) =>
                     field.value?.includes(o.value)
                   )}
-                  onChange={(opts) =>
-                    field.onChange(opts?.map((o) => o.value) || [])
+                  onChange={(opts: any) =>
+                    field.onChange(opts?.map((o: any) => o.value) || [])
                   }
                 />
               )}
@@ -2257,8 +2235,8 @@ const LeadsListing = () => {
                   value={leadIntentOptionsConst.filter((o) =>
                     field.value?.includes(o.value)
                   )}
-                  onChange={(opts) =>
-                    field.onChange(opts?.map((o) => o.value) || [])
+                  onChange={(opts: any) =>
+                    field.onChange(opts?.map((o: any) => o.value) || [])
                   }
                 />
               )}
@@ -2278,8 +2256,8 @@ const LeadsListing = () => {
                   value={dummyProducts
                     .filter((o) => field.value?.includes(o.value))
                     .map((p) => ({ value: p.id, label: p.name }))}
-                  onChange={(opts) =>
-                    field.onChange(opts?.map((o) => o.value) || [])
+                  onChange={(opts: any) =>
+                    field.onChange(opts?.map((o: any) => o.value) || [])
                   }
                 />
               )}
@@ -2299,8 +2277,8 @@ const LeadsListing = () => {
                   value={dummySalesPersons
                     .filter((o) => field.value?.includes(String(o.value)))
                     .map((p) => ({ value: p.id, label: p.name }))}
-                  onChange={(opts) =>
-                    field.onChange(opts?.map((o) => o.value) || [])
+                  onChange={(opts: any) =>
+                    field.onChange(opts?.map((o: any) => o.value) || [])
                   }
                 />
               )}
@@ -2337,7 +2315,7 @@ const LeadsListing = () => {
         </p>
       </ConfirmDialog>
 
-      <LeadModals modalState={modalState} onClose={handleCloseModal} />
+      <LeadModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
 
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
