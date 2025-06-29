@@ -9,7 +9,6 @@ import {
   addEmployeesAction,
   addInquiriesAction,
   addMemberAction,
-  addNotificationAction,
   addpartnerAction,
   addPaymentTermAction,
   addUnitAction,
@@ -185,7 +184,7 @@ const INITIAL_STATE: any = {
   editEmployees: {},
   getEmployeesdata: {},
   reportingTo: [],
-  getwallItemsData:  {},
+  getwallItemsData: {},
   getNotification: {},
   addNotification: {},
 };
@@ -488,7 +487,7 @@ const masterSlice = createSlice({
       ...state,
       AllTaskData: payload,
     }));
- builder.addCase(getAllTaskByStatuesAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(getAllTaskByStatuesAction.fulfilled, (state, { payload }) => ({
       ...state,
       AllTaskDataByStatues: payload,
     }));
@@ -676,10 +675,7 @@ const masterSlice = createSlice({
       ...state,
       getNotification: payload,
     }));
-    builder.addCase(addNotificationAction.fulfilled, (state, { payload }) => ({
-      ...state,
-      addNotification: payload,
-    }));
+
   },
 });
 
