@@ -186,7 +186,7 @@ const INITIAL_STATE: any = {
   editEmployees: {},
   getEmployeesdata: {},
   reportingTo: [],
-  getwallItemsData:  {},
+  getwallItemsData: {},
   getNotification: {},
   addNotification: {},
   getAllUserData: [],
@@ -490,7 +490,7 @@ const masterSlice = createSlice({
       ...state,
       AllTaskData: payload,
     }));
- builder.addCase(getAllTaskByStatuesAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(getAllTaskByStatuesAction.fulfilled, (state, { payload }) => ({
       ...state,
       AllTaskDataByStatues: payload,
     }));

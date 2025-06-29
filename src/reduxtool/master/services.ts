@@ -271,7 +271,11 @@ export const getcontinentAsync = async () => {
 
 export const addcontinentAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/continent`, unitData)
+    const response = await axiosInstance.post(`${config.apiURL}/master/continent`, unitData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
     return response
   } catch (err) {
     return isAxiosError(err)
