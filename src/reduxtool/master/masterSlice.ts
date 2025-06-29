@@ -39,6 +39,7 @@ import {
   editUnitAction,
   getActivityLogAction,
   getAllCompany,
+  getAllNotificationAction,
   getAllProductAction,
   getAllProductsAction,
   getAllTaskAction,
@@ -183,7 +184,8 @@ const INITIAL_STATE: any = {
   editEmployees: {},
   getEmployeesdata: {},
   reportingTo: [],
-  getwallItemsData:  {}
+  getwallItemsData:  {},
+  getNotification: {},
 };
 
 const masterSlice = createSlice({
@@ -667,6 +669,10 @@ const masterSlice = createSlice({
     builder.addCase(getReportingTo.fulfilled, (state, { payload }) => ({
       ...state,
       reportingTo: payload,
+    }));
+    builder.addCase(getAllNotificationAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      getNotification: payload,
     }));
   },
 });
