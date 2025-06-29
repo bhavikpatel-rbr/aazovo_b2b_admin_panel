@@ -40,7 +40,6 @@ import {
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
-// import Tag from "@/components/ui/Tag"; // Not used directly, but DataTable might use it
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Spinner from "@/components/ui/Spinner";
 import toast from "@/components/ui/toast";
@@ -49,14 +48,12 @@ import Tooltip from "@/components/ui/Tooltip";
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  // TbAffiliate, // Not used
   TbAlarm,
   TbAlertTriangle,
   TbArrowDownLeft,
   TbArrowUpRight,
   TbBell,
   TbBrandWhatsapp,
-  // TbBuilding, // Not used
   TbCalendar,
   TbCalendarDown,
   TbCalendarEvent,
@@ -64,52 +61,45 @@ import {
   TbCancel,
   TbChecks,
   TbCircleCheck,
-  // TbCircleLetterX, // Not used
-  // TbCircleX, // Not used
   TbClipboardText,
   TbClockHour4,
-  // TbCloudDownload, // Not used directly
   TbCloudUpload,
-  // TbDotsVertical, // Not used
   TbDownload,
   TbEye,
-  // TbEyeDollar, // Not used
-  // TbFileSearch, // Not used
   TbFileText,
   TbFileZip,
   TbFilter,
   TbListDetails,
-  // TbLink, // Not used
   TbMail,
-  // TbMessageCircle, // Not used
-  // TbMessageReport, // Not used
   TbPencil,
   TbPlus,
-  // TbReceipt, // Not used
   TbRefresh,
   TbSearch,
-  // TbShare, // Not used
   TbTagStarred,
   TbTrash,
-  // TbUpload, // Not used
   TbUser,
   TbUserCircle,
-  TbUserSearch
+  TbUserSearch,
+  TbBulb,
+  TbNotebook,
+  TbDiscount,
 } from "react-icons/tb";
 
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addNotificationAction,
   deleteAllDemandsAction,
   deleteAllOffersAction,
   deleteDemandAction,
   deleteOfferAction,
   getDemandsAction,
   getOffersAction,
+  getAllUsersAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { useSelector } from "react-redux";
+import { shallowEqual, useSelector } from "react-redux";
 
 // Types
 import type { TableQueries as CommonTableQueries } from "@/@types/common";
@@ -120,10 +110,7 @@ import type {
   Row,
 } from "@/components/shared/DataTable";
 
-// Define specific table queries if needed, or ensure CommonTableQueries matches
-interface TableQueries extends CommonTableQueries {
-  // Add any specific fields if @/@types/common is too generic
-}
+interface TableQueries extends CommonTableQueries { }
 
 
 // --- Form Schemas ---
@@ -168,7 +155,6 @@ export type ActualApiOfferShape = {
   numberOfSellers?: number;
   updated_by_name?: string;
   updated_by_role?: string;
-  // Additions from new response format
   seller_section_data?: Array<{ id: number; name: string }>;
   buyer_section_data?: Array<{ id: number; name: string }>;
   created_by_user?: ApiUserShape;
@@ -222,6 +208,8 @@ export type OfferDemandItem = {
   health_score?: number;
 };
 
+export type SelectOption = { value: any; label: string };
+
 const TABS = { ALL: "all", OFFER: "offer", DEMAND: "demand" };
 
 // ============================================================================
@@ -233,9 +221,9 @@ export type OfferDemandModalType =
   | "viewDetails"; // Added new modal type for viewing details
 
 export interface OfferDemandModalState { isOpen: boolean; type: OfferDemandModalType | null; data: OfferDemandItem | null; }
-interface OfferDemandModalsProps { modalState: OfferDemandModalState; onClose: () => void; }
+interface OfferDemandModalsProps { modalState: OfferDemandModalState; onClose: () => void; getAllUserDataOptions: SelectOption[] }
 
-const dummyUsersForModals = [ // Renamed to avoid confusion with dynamic user list for filters
+const dummyUsersForModals = [
   { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },
 ];
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
@@ -244,7 +232,7 @@ const dummyAlerts = [{ id: 1, severity: "danger", message: "Offer #OD123 has low
 const dummyTimeline = [{ id: 1, icon: <TbMail />, title: "Initial Offer Created", desc: "Offer was created and sent.", time: "2023-11-01", }, { id: 2, icon: <TbCalendar />, title: "Follow-up Call Scheduled", desc: "Scheduled a call.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Item Assigned", desc: "Assigned to team.", time: "2023-10-27", },];
 const dummyDocs = [{ id: "doc1", name: "Offer_Details.pdf", type: "pdf", size: "1.2 MB", }, { id: "doc2", name: "Images.zip", type: "zip", size: "8.5 MB", },];
 
-const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClose, }) => {
+const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const { type, data: item, isOpen } = modalState;
   if (!isOpen || !item) return null;
   const renderModalContent = () => {
@@ -252,11 +240,11 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClo
       case "viewDetails": return <ViewDetailsDialog item={item} onClose={onClose} />;
       case "email": return <SendEmailDialog item={item} onClose={onClose} />;
       case "whatsapp": return <SendWhatsAppDialog item={item} onClose={onClose} />;
-      case "notification": return <AddNotificationDialog item={item} onClose={onClose} />;
+      case "notification": return <AddNotificationDialog item={item} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
       case "task": return <AssignTaskDialog item={item} onClose={onClose} />;
       case "calendar": return <AddScheduleDialog item={item} onClose={onClose} />;
       case "alert": return <ViewAlertDialog item={item} onClose={onClose} />;
-      case "trackRecord": return <TrackRecordDialog item={item} onClose={onClose} />; // Generic, can be Accept/Reject
+      case "trackRecord": return <TrackRecordDialog item={item} onClose={onClose} />;
       case "engagement": return <ViewEngagementDialog item={item} onClose={onClose} />;
       case "document": return <DownloadDocumentDialog item={item} onClose={onClose} />;
       default: return (<GenericActionDialog type={type} item={item} onClose={onClose} />);
@@ -280,10 +268,6 @@ const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
         </span>
       </div>
       <div className="mt-4 space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-2">
-        {/* <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-            <span className="font-semibold text-gray-700 dark:text-gray-200">ID</span>
-            <span className="font-mono text-gray-600 dark:text-gray-400">{item.id}</span>
-        </div> */}
         <div className="flex justify-between border-b pb-2 dark:border-gray-600">
           <span className="font-semibold text-gray-700 dark:text-gray-200">Created By</span>
           <span className="text-gray-600 dark:text-gray-400">{item.createdByInfo.userName}</span>
@@ -330,9 +314,7 @@ const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
           </div>
         )}
       </div>
-      <div className="text-right mt-6">
-        <Button variant="solid" onClick={onClose}>Close</Button>
-      </div>
+      <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
     </Dialog>
   );
 };
@@ -375,24 +357,70 @@ const SendWhatsAppDialog: React.FC<{ item: OfferDemandItem; onClose: () => void;
   );
 };
 
-const AddNotificationDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { title: "", users: [], message: "" }, });
-  const onSend = (data: any) => {
-    setIsLoading(true); console.log("Notification for", item.name, ":", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Notification for {item.name}</h5>
-      <form onSubmit={handleSubmit(onSend)}>
-        <FormItem label="Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-        <FormItem label="Send to Users"><Controller name="users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={dummyUsersForModals} {...field} />)} /></FormItem>
-        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
-        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send</Button></div>
-      </form>
-    </Dialog>
-  );
+const AddNotificationDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; getAllUserDataOptions: SelectOption[] }> = ({ item, onClose, getAllUserDataOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const notificationSchema = z.object({
+      notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+      send_users: z.array(z.number()).min(1, "Please select at least one user."),
+      message: z.string().min(10, "Message must be at least 10 characters long."),
+    });
+  
+    type NotificationFormData = z.infer<typeof notificationSchema>;
+  
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+      resolver: zodResolver(notificationSchema),
+      defaultValues: {
+        notification_title: `Regarding ${item.type}: ${item.name}`,
+        send_users: [],
+        message: `This is a notification for the ${item.type.toLowerCase()}: "${item.name}".`
+      },
+      mode: 'onChange'
+    });
+  
+    const onSend = async (formData: NotificationFormData) => {
+      setIsLoading(true);
+      const payload = {
+        send_users: formData.send_users,
+        notification_title: formData.notification_title,
+        message: formData.message,
+        module_id: String(item.id),
+        module_name: 'OfferDemand',
+      };
+  
+      try {
+        await dispatch(addNotificationAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+        onClose();
+      } catch (error: any) {
+        toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    return (
+      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Add Notification for {item.name}</h5>
+        <Form onSubmit={handleSubmit(onSend)}>
+          <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+            <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
+          </FormItem>
+          <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+            <Controller name="send_users" control={control} render={({ field }) => (
+              <Select isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />
+            )} />
+          </FormItem>
+          <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+            <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} />
+          </FormItem>
+          <div className="text-right mt-6">
+            <Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button>
+          </div>
+        </Form>
+      </Dialog>
+    );
 };
 
 const AssignTaskDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
@@ -530,7 +558,6 @@ const GenericActionDialog: React.FC<{ type: OfferDemandModalType | null; item: O
 // --- END MODALS SECTION ---
 // ============================================================================
 
-// --- CSV Export Helpers ---
 type OfferDemandExportItem = Omit<OfferDemandItem, | "createdDate" | "updated_at" | "createdByInfo" | "assignedToInfo" | "originalApiItem" | "groups"> &
 { created_by_name: string; assigned_to_name: string; created_date_formatted: string; updated_date_formatted: string; };
 
@@ -566,22 +593,16 @@ function exportToCsvOffersDemands(filename: string, rows: OfferDemandItem[]) {
 
 const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
   const offerGroups: ApiGroupItem[] = [];
-
-  // Use the new _data fields that contain user names for sections
   if (apiOffer.seller_section_data && Array.isArray(apiOffer.seller_section_data)) {
     const sellerItems = apiOffer.seller_section_data.map(user => user.name).filter(Boolean);
     if (sellerItems.length > 0) offerGroups.push({ groupName: "Seller Section", items: sellerItems });
   }
-
   if (apiOffer.buyer_section_data && Array.isArray(apiOffer.buyer_section_data)) {
     const buyerItems = apiOffer.buyer_section_data.map(user => user.name).filter(Boolean);
     if (buyerItems.length > 0) offerGroups.push({ groupName: "Buyer Section", items: buyerItems });
   }
-
   if (apiOffer.groupA) offerGroups.push({ groupName: "Group A", items: [apiOffer.groupA] });
   if (apiOffer.groupB) offerGroups.push({ groupName: "Group B", items: [apiOffer.groupB] });
-
-  // Use the more complete user objects if they are provided.
   const creator = apiOffer.created_by_user || apiOffer.created_by;
   const assignee = apiOffer.assign_user_data || apiOffer.assign_user;
 
@@ -656,8 +677,6 @@ ItemTable.displayName = "ItemTable";
 const ItemSearch = React.memo(React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void, initialValue?: string }>(({ onInputChange, initialValue }, ref) => (
   <DebouceInput ref={ref} placeholder="Quick Search (ID, Name, Creator)..." suffix={<TbSearch className="text-lg" />}
     onChange={(e) => onInputChange(e.target.value)}
-  // DebounceInput value is internally managed; initialValue prop isn't standard for DebounceInput here
-  // To set initial value, the parent would need to manage the input field itself or DebounceInput needs enhancement
   />
 )));
 ItemSearch.displayName = "ItemSearch";
@@ -707,13 +726,16 @@ const OffersDemands = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const offerDemandCounts = useSelector(masterSelector).Offers.counts;
-  const offersStoreData = useSelector(masterSelector).Offers?.data;
-  const demandsStoreData = useSelector(masterSelector).Demands;
-  const offersStatus = useSelector(masterSelector).offersStatus;
-  const demandsStatus = useSelector(masterSelector).demandsStatus;
-  const offersError = useSelector(masterSelector).offersError;
-  const demandsError = useSelector(masterSelector).demandsError;
+  const {
+    Offers: { counts: offerDemandCounts, data: offersStoreData },
+    Demands: demandsStoreData,
+    offersStatus,
+    demandsStatus,
+    offersError,
+    demandsError,
+    getAllUserData,
+  } = useSelector(masterSelector, shallowEqual);
+
 
   const [currentTab, setCurrentTab] = useState<string>(TABS.ALL);
   const initialTableQueries: TableQueries = { pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" };
@@ -739,6 +761,8 @@ const OffersDemands = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
+
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((user: any) => ({ value: user.id, label: user.name })) : [], [getAllUserData]);
 
   const currentTableConfig = useMemo(() => {
     if (currentTab === TABS.ALL) return allTableConfig;
@@ -802,7 +826,8 @@ const OffersDemands = () => {
 
   const fetchData = useCallback(() => {
     const params = prepareApiParams(currentTableConfig, filterCriteria);
-
+    dispatch(getAllUsersAction()) // Fetch users for modals
+    
     const shouldFetchOffers = currentTab === TABS.OFFER || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Offer"));
     const shouldFetchDemands = currentTab === TABS.DEMAND || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Demand"));
 
@@ -826,7 +851,7 @@ const OffersDemands = () => {
     let itemsToDisplay: OfferDemandItem[] = [];
     let currentTotal = 0;
 
-    const safeOffersItems = Array.isArray(offersStoreData) ? offersStoreData : [];
+    const safeOffersItems = Array.isArray(offersStoreData?.data) ? offersStoreData.data : [];
     const safeDemandsItems = Array.isArray(demandsStoreData?.data) ? demandsStoreData.data : [];
     const safeOffersTotal = typeof offersStoreData?.total === 'number' ? offersStoreData.total : 0;
     const safeDemandsTotal = typeof demandsStoreData?.total === 'number' ? demandsStoreData.total : 0;
@@ -990,8 +1015,6 @@ const OffersDemands = () => {
                   </div>
                 );
               }
-
-              // Fallback for other groups or if special groups are empty
               return (<div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><div className="pl-2 flex flex-col gap-0.5 text-gray-600 dark:text-gray-400">{group.items.slice(0, 3).map((item, itemIdx) => (<span key={itemIdx}>{item}</span>))}{group.items.length > 3 && (<span className="italic">...and {group.items.length - 3} more</span>)}</div></div>);
             })}
           </div>
@@ -1037,24 +1060,18 @@ const OffersDemands = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-4"><h5 className="mb-4 lg:mb-0">Offers & Demands</h5><ItemActionTools onRefresh={() => fetchData()} onOpenFilter={openFilterDrawer} /></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-            {/* Card 1: Total */}
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={24} /></div>
               <div><h6 className="text-blue-500">{offerDemandCounts?.total ?? 0}</h6><span className="font-semibold text-xs">Total</span></div>
             </Card>
-
-            {/* Card 2: Offer */}
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbArrowUpRight size={24} /></div>
               <div><h6 className="text-green-500">{offerDemandCounts?.offers ?? 0}</h6><span className="font-semibold text-xs">Offers</span></div>
             </Card>
-
-            {/* Card 3: Demand */}
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
               <div><h6 className="text-violet-500">{offerDemandCounts?.demands ?? 0}</h6><span className="font-semibold text-xs">Demands</span></div>
             </Card>
-            {/* Card 4: Today Total */}
             <Card
               bodyClass="flex gap-2 p-2"
               className="rounded-md border border-amber-300"
@@ -1069,13 +1086,10 @@ const OffersDemands = () => {
                 <span className="font-semibold text-xs">Today</span>
               </div>
             </Card>
-            {/* Card 5: Today Offers */}
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-teal-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
               <div><h6 className="text-teal-500">{offerDemandCounts?.today_offers ?? 0}</h6><span className="font-semibold text-xs">Today Offers</span></div>
             </Card>
-
-            {/* Card 6: Today Demands */}
             <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-rose-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div>
               <div><h6 className="text-rose-500">{offerDemandCounts?.today_demands ?? 0}</h6><span className="font-semibold text-xs">Today Demands</span></div>
@@ -1113,15 +1127,13 @@ const OffersDemands = () => {
       <Drawer title="Filter Options" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="flex justify-end gap-2 w-full"><Button size="sm" onClick={onClearFilters}>Clear All</Button><Button size="sm" variant="solid" form="filterForm" type="submit">Apply</Button></div>}>
         <Form id="filterForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-y-6 p-4 h-full overflow-y-auto">
           {currentTab === TABS.ALL && (
-            <FormItem label="Type"><Controller name="itemType" control={filterFormMethods.control} render={({ field }) => (<Select placeholder="Filter by Offer/Demand" options={itemTypeOptions} value={itemTypeOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option?.value || null)} isClearable />)} /></FormItem>
+            <FormItem label="Type"><Controller name="itemType" control={filterFormMethods.control} render={({ field }) => (<Select placeholder="Filter by Offer/Demand" options={itemTypeOptions} value={itemTypeOptions.find(opt => opt.value === field.value)} onChange={(option: any) => field.onChange(option?.value || null)} isClearable />)} /></FormItem>
           )}
           <FormItem label="Created Date"><Controller name="createdDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange} placeholder="Start - End" inputFormat="DD MMM YYYY" />)} /></FormItem>
           <FormItem label="Updated Date"><Controller name="updatedDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange} placeholder="Start - End" inputFormat="DD MMM YYYY" />)} /></FormItem>
-          {/* <FormItem label="Creator"><Controller name="creatorIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Creator(s)" options={allApiUsersForFilterDropdown} value={allApiUsersForFilterDropdown.filter(opt => field.value?.includes(opt.value))} onChange={(options) => field.onChange(options?.map(opt => opt.value) || [])} />)} /></FormItem>
-          <FormItem label="Assignee"><Controller name="assigneeIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Assignee(s)" options={allApiUsersForFilterDropdown} value={allApiUsersForFilterDropdown.filter(opt => field.value?.includes(opt.value))} onChange={(options) => field.onChange(options?.map(opt => opt.value) || [])} />)} /></FormItem> */}
         </Form>
       </Drawer>
-      <OfferDemandModals modalState={modalState} onClose={handleCloseModal} />
+      <OfferDemandModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
     </>
   );
 };
