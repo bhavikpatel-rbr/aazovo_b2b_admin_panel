@@ -49,14 +49,14 @@ const documentFormSchema = z.object({ name: z.string().min(1, "Document name is 
 type DocumentFormData = z.infer<typeof documentFormSchema>;
 const exportReasonSchema = z.object({ reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."), });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
-const statusOptions: SelectOption[] = [ { value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }, ];
+const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
 
 // --- HELPERS ---
 function exportToCsvDocument(filename: string, rows: DocumentItem[]) {
     if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; }
     const CSV_HEADERS = ["ID", "Document Name", "Document Type", "Status", "Updated By", "Updated Role", "Updated At"];
     const preparedRows = rows.map(row => ({ id: row.id, name: row.name, documentTypeNameForCsv: row.document_type_name || "N/A", status: row.status, updated_by_name: row.updated_by_user?.name || "N/A", updated_by_role: row.updated_by_user?.roles[0]?.display_name || "N/A", updated_at: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A", }));
-    const csvContent = [ CSV_HEADERS.join(','), ...preparedRows.map(row => [ row.id, `"${String(row.name).replace(/"/g, '""')}"`, `"${String(row.documentTypeNameForCsv).replace(/"/g, '""')}"`, row.status, `"${String(row.updated_by_name).replace(/"/g, '""')}"`, `"${String(row.updated_by_role).replace(/"/g, '""')}"`, `"${String(row.updated_at).replace(/"/g, '""')}"` ].join(',')) ].join('\n');
+    const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => [row.id, `"${String(row.name).replace(/"/g, '""')}"`, `"${String(row.documentTypeNameForCsv).replace(/"/g, '""')}"`, row.status, `"${String(row.updated_by_name).replace(/"/g, '""')}"`, `"${String(row.updated_by_role).replace(/"/g, '""')}"`, `"${String(row.updated_at).replace(/"/g, '""')}"`].join(','))].join('\n');
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -96,7 +96,8 @@ const DocumentTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, o
     const isColumnVisible = (header: string) => filteredColumns.some((c) => c.header === header);
     return (
         <div className="md:flex items-center justify-between w-full gap-2">
-            <div className="flex-grow mb-2 md:mb-0"><DebounceInput value={searchInputValue} placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onSearchChange(e.target.value)} /></div>
+            <div className="flex-grow mb-2 md:mb-0"><DebounceInput value={searchInputValue} placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onSearchChange(e.target.value)
+            } /></div>
             <div className="flex gap-2">
                 <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
                     <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
@@ -153,22 +154,22 @@ const Documents = () => {
     const columns: ColumnDef<DocumentItem>[] = useMemo(() => [
         { header: "Document Name", accessorKey: "name", enableSorting: true, size: 200 },
         { header: "Document Type", accessorKey: "document_type_name", enableSorting: true, size: 200 },
-        { 
-            header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, 
-            cell: (props) => { 
-                const { updated_by_user } = props.row.original; 
+        {
+            header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200,
+            cell: (props) => {
+                const { updated_by_user } = props.row.original;
                 return (
                     <div className="flex items-center gap-2">
                         <Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} />
                         <div><span>{updated_by_user?.name || "N/A"}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ""}</div></div>
                     </div>
-                ); 
-            } 
+                );
+            }
         },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
-        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center"  },  cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
+        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
     ], []);
-    
+
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DocumentItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns); }, [columns]);
 
@@ -178,20 +179,20 @@ const Documents = () => {
         if (activeFilters.names?.length) { const names = new Set(activeFilters.names.map(n => n.toLowerCase())); processedData = processedData.filter(item => names.has(item.name.toLowerCase())); }
         if (activeFilters.documentTypeIds?.length) { const typeIds = new Set(activeFilters.documentTypeIds); processedData = processedData.filter(item => typeIds.has(String(item.document_type))); }
         if (activeFilters.status?.length) { const statuses = new Set(activeFilters.status); processedData = processedData.filter(item => statuses.has(item.status)); }
-        
-        if (tableData.query) { 
-            const query = tableData.query.toLowerCase().trim(); 
-            processedData = processedData.filter(item => 
-                item.name?.toLowerCase().includes(query) || 
-                item.document_type_name?.toLowerCase().includes(query) || 
+
+        if (tableData.query) {
+            const query = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter(item =>
+                item.name?.toLowerCase().includes(query) ||
+                item.document_type_name?.toLowerCase().includes(query) ||
                 item.status?.toLowerCase().includes(query) ||
                 item.updated_by_user?.name?.toLowerCase().includes(query)
-            ); 
+            );
         }
 
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key && processedData.length > 0) { processedData.sort((a, b) => { const aValue = a[key as keyof DocumentItem] ?? ""; const bValue = b[key as keyof DocumentItem] ?? ""; if (key === 'updated_at') { const dateA = aValue ? new Date(aValue as string).getTime() : 0; const dateB = bValue ? new Date(bValue as string).getTime() : 0; return order === 'asc' ? dateA - dateB : dateB - dateA; } return order === "asc" ? String(aValue).localeCompare(String(bValue)) : String(bValue).localeCompare(String(aValue)); }); }
-        
+
         const currentTotal = processedData.length;
         const pageIndex = tableData.pageIndex as number;
         const pageSize = tableData.pageSize as number;
@@ -207,7 +208,7 @@ const Documents = () => {
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
     const handleSelectPageSizeChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
     const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
-    
+
     // --- CORRECTED: handleSearchChange with functional update ---
     const handleSearchChange = useCallback((query: string) => {
         setTableData((prev) => ({
@@ -224,13 +225,13 @@ const Documents = () => {
     }, [handleSetTableData]);
     const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getDocumentListAction()); };
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
-    
+
     const handleCardClick = (status: 'Active' | 'Inactive' | 'All') => {
         handleSetTableData({ query: '', pageIndex: 1 });
-        if (status === 'All') { setActiveFilters({}); } 
+        if (status === 'All') { setActiveFilters({}); }
         else { setActiveFilters({ status: [status] }); }
     };
-    
+
     const openAddDrawer = () => { formMethods.reset({ name: "", document_type: documentTypeOptionsForSelect[0]?.value || '', status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
     const onAddDocumentSubmit = async (data: DocumentFormData) => { setIsSubmitting(true); try { await dispatch(addDocumentListAction({ name: data.name, document_type: data.document_type, status: data.status })).unwrap(); toast.push(<Notification title="Document Added" type="success">{`Document "${data.name}" was successfully added.`}</Notification>); closeAddDrawer(); dispatch(getDocumentListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add Document" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
@@ -239,7 +240,7 @@ const Documents = () => {
     const onEditDocumentSubmit = async (data: DocumentFormData) => { if (!editingDocument?.id) return; setIsSubmitting(true); try { await dispatch(editDocumentListAction({ id: editingDocument.id, name: data.name, document_type: data.document_type, status: data.status })).unwrap(); toast.push(<Notification title="Document Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); closeEditDrawer(); dispatch(getDocumentListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update Document" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
     const handleDeleteClick = (doc: DocumentItem) => { setDocumentToDelete(doc); setSingleDeleteConfirmOpen(true); };
     const onConfirmSingleDelete = async () => { if (!documentToDelete?.id) return; setIsDeleting(true); try { await dispatch(deleteDocumentListAction({ id: documentToDelete.id })).unwrap(); toast.push(<Notification title="Document Deleted" type="success">{`"${documentToDelete.name}" was successfully deleted.`}</Notification>); dispatch(getDocumentListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Delete Document" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setDocumentToDelete(null); } };
-    
+
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
         setIsSubmittingExportReason(true);
@@ -249,7 +250,8 @@ const Documents = () => {
             toast.push(<Notification title="Export Reason Submitted" type="success" />);
             exportToCsvDocument(fileName, allFilteredAndSortedData);
             setIsExportReasonModalOpen(false);
-        } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
         } finally { setIsSubmittingExportReason(false); }
     };
 
@@ -263,16 +265,16 @@ const Documents = () => {
                     <div className="lg:flex items-center justify-between mb-4">
                         <h3 className="mb-4 lg:mb-0">Documents</h3>
                         <div className="flex flex-col sm:flex-row items-center gap-2">
-                            
+
                             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Document</Button>
                         </div>
-                      
+
                     </div>
-                      <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
-                                <Tooltip title="Click to show all documents"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{DocumentListData.length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
-                                <Tooltip title="Click to show active documents"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{DocumentListData.filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
-                                <Tooltip title="Click to show inactive documents"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{DocumentListData.filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
-                            </div>
+                    <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
+                        <Tooltip title="Click to show all documents"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{DocumentListData.length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active documents"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{DocumentListData.filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show inactive documents"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{DocumentListData.filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+                    </div>
                     <div className="mb-4">
                         <DocumentTableTools
                             onSearchChange={handleSearchChange}
@@ -285,8 +287,9 @@ const Documents = () => {
                             documentTypeOptions={documentTypeOptionsForSelect}
                             columns={columns}
                             filteredColumns={filteredColumns}
+                            searchInputValue={tableData?.query}
                             setFilteredColumns={setFilteredColumns}
-                            // searchInputValue={tableData.query}
+                        // searchInputValue={tableData.query}
                         />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} docTypeOptions={documentTypeOptionsForSelect} />
@@ -322,12 +325,12 @@ const Documents = () => {
                 {editingDocument && (<div className="absolute bottom-4 right-4 left-4">
                     <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                         <div><b className="font-semibold text-gray-900 dark:text-gray-100">Latest Update:</b><br />
-                <p className="font-semibold">{editingDocument.updated_by_user?.name  || "N/A"}</p>
-                <p>{editingDocument.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
-                </div>
-                <div className="text-right">
-                    <b className="font-semibold text-gray-900 dark:text-gray-100"></b><br />
-                    <span className="font-semibold">Created:</span> <span>{editingDocument.created_at ? new Date(editingDocument.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated:</span> <span>{editingDocument.updated_at ? new Date(editingDocument.updated_at).toLocaleString() : "N/A"}</span></div></div></div>)}
+                            <p className="font-semibold">{editingDocument.updated_by_user?.name || "N/A"}</p>
+                            <p>{editingDocument.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
+                        </div>
+                        <div className="text-right">
+                            <b className="font-semibold text-gray-900 dark:text-gray-100"></b><br />
+                            <span className="font-semibold">Created:</span> <span>{editingDocument.created_at ? new Date(editingDocument.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated:</span> <span>{editingDocument.updated_at ? new Date(editingDocument.updated_at).toLocaleString() : "N/A"}</span></div></div></div>)}
             </Drawer>
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
                 <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
@@ -339,7 +342,7 @@ const Documents = () => {
             </ConfirmDialog>
             <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
                 <div className="flex justify-center items-center p-4">
-                {imageToView ? (<img src={imageToView} alt="User Profile" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
+                    {imageToView ? (<img src={imageToView} alt="User Profile" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
                 </div>
             </Dialog>
         </>
