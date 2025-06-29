@@ -88,6 +88,7 @@ export type ExportMappingItem = {
     fileName: string | null
     reason: string | null
     exportDate: Date
+    profile_pic_path:  string | null
 }
 
 // --- Zod Schema for Export Reason Form (New) ---
@@ -116,6 +117,7 @@ const transformApiDataToExportMappingItem = (
             fileName: apiData.file_name,
             reason: apiData.reason,
             exportDate: new Date(apiData.created_at),
+            profile_pic_path: apiData.user.profile_pic_path,
         }
     } catch (error) {
         console.error('Error transforming API data for ID:', apiData.id, error)
@@ -173,7 +175,7 @@ const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
                     <h6 className="text-base font-semibold">Exported By</h6>
                     <figure className="flex gap-2 items-center mt-2">
                         <img
-                            src={userIconPlaceholder}
+                           src={data.profile_pic_path || userIconPlaceholder}
                             alt={data.userName}
                             className="h-9 w-9 rounded-full"
                         />
@@ -596,8 +598,8 @@ const ActiveFiltersDisplay = ({
     }
 
     return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 pt-2 border-t border-gray-200 dark:border-gray-700 mt-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">
+        <div className="flex flex-wrap items-center gap-2 mb-4  border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2 ">
                 Active Filters:
             </span>
             {activeRoles.map((role) => (
@@ -1038,11 +1040,11 @@ const ExportMapping = () => {
                 enableSorting: true,
                 size: 200,
                 cell: (props) => {
-                    const { userName, userRole } = props.row.original
+                    const { userName, userRole ,profile_pic_path } = props.row.original
                     return (
                         <div className="flex items-center gap-2">
                             <img
-                                src={userIconPlaceholder}
+                                src={profile_pic_path || userIconPlaceholder}
                                 alt={userName}
                                 className="w-8 h-8 rounded-full object-cover"
                             />
