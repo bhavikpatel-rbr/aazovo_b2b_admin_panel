@@ -46,11 +46,8 @@ import {
     getCategoriesAction,
     getPriceListAction,
     getSubcategoriesByCategoryIdAction,
-<<<<<<< HEAD
     // addNotificationAction,
-=======
     submitExportReasonAction,
->>>>>>> c0094f6c0b0a70aee75304a0410ffee32d19e65a
 } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
 import { shallowEqual, useSelector } from 'react-redux'
@@ -223,10 +220,8 @@ const AddNotificationDialog = ({ PriceList, onClose, getAllUserDataOptions }) =>
     // --- Event Handlers ---
     const onSend = async (formData: NotificationFormData) => {
         setIsLoading(true);
-<<<<<<< HEAD
         setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000);
         // await dispatch(addNotificationAction(data)).unwrap();
-=======
         const payload = {
             // From form
             send_users: formData.send_users, // Key is `user_id`, value is an array of IDs
@@ -252,7 +247,6 @@ const AddNotificationDialog = ({ PriceList, onClose, getAllUserDataOptions }) =>
         } finally {
             setIsLoading(false);
         }
->>>>>>> c0094f6c0b0a70aee75304a0410ffee32d19e65a
     };
 
     return (
