@@ -1370,7 +1370,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     
         company_certificate: z.array(z.object({
-            certificate_id: z.any().refine(val => val && (typeof val === 'string' ? val.trim() !== '' : val.value && String(val.value).trim() !== ''), { message: "Certificate ID is required if row is added." }),
+            certificate_id: z.number().min(1, "Certificate ID is required."),
             certificate_name: z.string().trim().min(1, "Certificate Name is required."),
             upload_certificate: z.any().optional().nullable(),
         })).optional(),
@@ -1385,7 +1385,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
             gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
             contact_person: z.string().trim().nullable(),
             office_email: z.string().trim().email("Invalid email format.").nullable(),
-            office_phone: z.string().trim().max(10, "Invalid phone number.").regex(/^\d{7,15}$/, "Invalid phone number format.").nullable(),
+            office_phone: z.number().max(10, "Invalid phone number.").nullable().or(z.string().max(10, "Invalid phone number.").nullable()).nullable(),
         })).optional(),
         
         declaration_206ab: z.any().optional().nullable(), declaration_206ab_remark: z.string().optional().or(z.literal("")).nullable(), declaration_206ab_remark_enabled: z.boolean().optional(),
