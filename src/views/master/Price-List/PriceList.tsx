@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import classNames from 'classnames'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import cloneDeep from 'lodash/cloneDeep'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
@@ -34,7 +34,6 @@ import type { TableQueries } from '@/@types/common'
 import type { CellContext, ColumnDef, OnSortParam } from '@/components/shared/DataTable'
 
 // Redux Imports
-import { authSelector } from '@/reduxtool/auth/authSlice'; // Assuming this path for the logged-in user
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
     addNotificationAction,
@@ -46,7 +45,6 @@ import {
     getCategoriesAction,
     getPriceListAction,
     getSubcategoriesByCategoryIdAction,
-    // addNotificationAction,
     submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
@@ -97,16 +95,16 @@ function exportToExcel(filename: string, data: PriceListItem[]) {
     toast.push(<Notification title="Export Successful" type="success" children={`Data exported to ${filename}.`} />);
 }
 
-function exportToPdf(data: PriceListItem[]) {
+function exportToPdf(filename: string, title: string, data: PriceListItem[]) {
     if (!data || !data.length) { toast.push(<Notification title="No Data" type="info" children="Nothing to export." />); return; }
     const doc = new jsPDF();
-    doc.text("Today's Price List", 14, 16);
-    (doc as any).autoTable({
+    doc.text(title, 14, 16);
+    autoTable(doc, {
         head: [['Product Name', 'Sales Price', 'Status']],
         body: data.map(item => [item.product?.name || 'N/A', `Rs. ${item.sales_price}`, item.status]),
         startY: 20,
     });
-    doc.save('todays-prices.pdf');
+    doc.save(filename);
     toast.push(<Notification title="Export Successful" type="success" children="PDF downloaded." />);
 }
 
@@ -155,7 +153,7 @@ const PriceListTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, 
             <div className="flex-grow mb-2 md:mb-0"><DebounceInput value={searchInputValue} placeholder="Search Product, ID, Status, User..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onSearchChange(e.target.value)} /></div>
             <div className="flex gap-2">
                 <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.map(col => col.header && (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}</div>
+                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.filter(c => c.id !== 'select').map(col => col.header && (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}</div>
                 </Dropdown>
                 <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
                 <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
@@ -175,6 +173,22 @@ const PriceListTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, 
 });
 PriceListTableTools.displayName = 'PriceListTableTools';
 
+const SelectionActions = ({ count, onClearSelection, onExport, onPdf, onCopy }: { count: number, onClearSelection: () => void, onExport: () => void, onPdf: () => void, onCopy: () => void }) => (
+    <div className="flex items-center justify-between w-full gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+        <div className="flex items-center gap-2">
+            <Tooltip title="Clear Selection">
+                <Button size="sm" shape="circle" variant="plain" icon={<TbX />} onClick={onClearSelection} />
+            </Tooltip>
+            <span className="font-semibold text-indigo-700 dark:text-indigo-200">{count} selected</span>
+        </div>
+        <div className="flex gap-2">
+            <Button size="sm" icon={<TbClipboardText />} onClick={onCopy}>Copy Selected</Button>
+            <Button size="sm" icon={<BsFileExcelFill />} onClick={onExport}>Export Selected</Button>
+            <Button size="sm" icon={<FaRegFilePdf />} onClick={onPdf}>PDF for Selected</Button>
+        </div>
+    </div>
+);
+
 const ActionColumn = ({ rowData, onEdit, onOpenModal }: { rowData: PriceListItem; onEdit: () => void; onOpenModal: (type: PriceListModalType, data: PriceListItem) => void; }) => {
     const handleCopyDetails = (item: PriceListItem) => {
         const details = [`Product: ${item.product?.name}`, `Price: ${item.price}`, `Base Price: ${item.base_price}`, `Sales Price: ${item.sales_price}`, `Status: ${item.status}`].join('\n');
@@ -192,91 +206,22 @@ const ActionColumn = ({ rowData, onEdit, onOpenModal }: { rowData: PriceListItem
 const AddNotificationDialog = ({ PriceList, onClose, getAllUserDataOptions }) => {
     const dispatch = useAppDispatch();
     const [isLoading, setIsLoading] = useState(false);
-
-    // --- Data Hooks ---
-    // Get the current user's ID for the 'created_by' field
-    const { user } = useSelector(authSelector);
-    const createdById = user?.id;
-
-    // --- Form Hooks & Schema ---
-    const notificationSchema = z.object({
-        notification_title: z.string().min(3, "Title must be at least 3 characters long."),
-        send_users: z.array(z.number()).min(1, "Please select at least one user."),
-        message: z.string().min(10, "Message must be at least 10 characters long."),
-    });
-
+    const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
     type NotificationFormData = z.infer<typeof notificationSchema>;
-
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
-        resolver: zodResolver(notificationSchema),
-        defaultValues: {
-            notification_title: `Price Update: ${PriceList.product.name}`,
-            send_users: [],
-            message: `The price for product "${PriceList.product.name}" has been updated. The new sales price is ₹${PriceList.sales_price}.`
-        },
-        mode: 'onChange'
-    });
-
-    // --- Event Handlers ---
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Price Update: ${PriceList.product.name}`, send_users: [], message: `The price for product "${PriceList.product.name}" has been updated. The new sales price is ₹${PriceList.sales_price}.` }, mode: 'onChange' });
     const onSend = async (formData: NotificationFormData) => {
         setIsLoading(true);
-        // await dispatch(addNotificationAction(data)).unwrap();
-        const payload = {
-            // From form
-            send_users: formData.send_users, // Key is `user_id`, value is an array of IDs
-            notification_title: formData.notification_title,
-            message: formData.message,
-
-            // From context/props
-            category_id: PriceList.product.category?.id || null,
-            module_id: String(PriceList.id),
-            module_name: 'PriceList',
-
-            // Static/System values
-            created_by: createdById,
-            seen: 0,
-        };
-
-        try {
-            await dispatch(addNotificationAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
-            onClose();
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
-        } finally {
-            setIsLoading(false);
-        }
+        const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(PriceList.id), module_name: 'PriceList', };
+        try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
     };
-
     return (
         <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
             <h5 className="mb-4">Notify User about: {PriceList.product.name}</h5>
             <Form onSubmit={handleSubmit(onSend)}>
-                <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
-                    <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
-                </FormItem>
-                <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
-                    <Controller
-                        name="send_users"
-                        control={control}
-                        render={({ field }) => (
-                            <Select
-                                isMulti
-                                placeholder="Select User(s)"
-                                options={getAllUserDataOptions}
-                                value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
-                                onChange={(options) => field.onChange(options?.map(o => o.value) || [])}
-                            />
-                        )}
-                    />
-                </FormItem>
-                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
-                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
-                </FormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
-                </div>
+                <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+                <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<Select isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map(o => o.value) || [])} />)} /></FormItem>
+                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
+                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div>
             </Form>
         </Dialog>
     );
@@ -302,6 +247,7 @@ const PriceList = () => {
     const [editingPriceListItem, setEditingPriceListItem] = useState<PriceListItem | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+    const [isExportSelectedReasonModalOpen, setIsExportSelectedReasonModalOpen] = useState(false);
     const [isTodayExportReasonModalOpen, setIsTodayExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [isTodaySubmittingExportReason, setIsTodaySubmittingExportReason] = useState(false);
@@ -310,9 +256,9 @@ const PriceList = () => {
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [imageToView, setImageToView] = useState<string | null>(null);
     const [modalState, setModalState] = useState<PriceListModalState>({ isOpen: false, type: null, data: null });
+    const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
     const { priceListData = { data: [], counts: {} }, productsMasterData = [], status: masterLoadingStatus = "idle", CategoriesData: GlobalCategoriesData = [], subCategoriesForSelectedCategoryData = [], BrandData = [], getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
-
 
     const productOptions = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map(p => ({ value: String(p.id), label: p.name })) : [], [productsMasterData]);
     const categoryOptions = useMemo(() => Array.isArray(GlobalCategoriesData) ? GlobalCategoriesData.map(c => ({ value: c.id, label: c.name })) : [], [GlobalCategoriesData]);
@@ -326,56 +272,18 @@ const PriceList = () => {
     const editFormMethods = useForm<PriceListFormData>({ resolver: zodResolver(priceListFormSchema), mode: 'onChange' });
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
-    const openImageViewer = useCallback((imageUrl: string | null | undefined) => {
-        if (imageUrl) {
-            setImageToView(imageUrl);
-            setIsImageViewerOpen(true);
-        }
-    }, []);
-
-    const closeImageViewer = useCallback(() => {
-        setIsImageViewerOpen(false);
-        setImageToView(null);
-    }, []);
-
-    const handleOpenModal = useCallback((type: PriceListModalType, itemData: PriceListItem) => {
-        setModalState({ isOpen: true, type, data: itemData })
-    }, []);
-
-    const handleCloseModal = useCallback(() => {
-        setModalState({ isOpen: false, type: null, data: null })
-    }, []);
+    const openImageViewer = useCallback((imageUrl: string | null | undefined) => { if (imageUrl) { setImageToView(imageUrl); setIsImageViewerOpen(true); } }, []);
+    const closeImageViewer = useCallback(() => { setIsImageViewerOpen(false); setImageToView(null); }, []);
+    const handleOpenModal = useCallback((type: PriceListModalType, itemData: PriceListItem) => { setModalState({ isOpen: true, type, data: itemData }) }, []);
+    const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }) }, []);
 
     const onAddPriceListSubmit = async (data: PriceListFormData) => { setIsSubmitting(true); try { await dispatch(addPriceListAction(data)).unwrap(); toast.push(<Notification title="Price Item Added" type="success" />); closeAddDrawer(); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add" type="danger">{error.message}</Notification>); } finally { setIsSubmitting(false); } };
-    
     const openAddDrawer = useCallback(() => { addFormMethods.reset(); setIsAddDrawerOpen(true); }, [addFormMethods]);
     const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
     const onEditPriceListSubmit = async (data: PriceListFormData) => { if (!editingPriceListItem) return; setIsSubmitting(true); try { await dispatch(editPriceListAction({ id: editingPriceListItem.id, ...data })).unwrap(); toast.push(<Notification title="Price Item Updated" type="success" />); closeEditDrawer(); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message}</Notification>); } finally { setIsSubmitting(false); } };
-
-    const openEditDrawer = useCallback((item: PriceListItem) => {
-        setEditingPriceListItem(item);
-        editFormMethods.reset({ product_id: String(item.product_id), price: item.price, usd_rate: item.usd_rate, expance: item.expance, margin: item.margin, status: item.status });
-        setIsEditDrawerOpen(true);
-    }, [editFormMethods]);
-
-    const closeEditDrawer = useCallback(() => {
-        setIsEditDrawerOpen(false);
-        setEditingPriceListItem(null);
-    }, []);
-
-    const columns: ColumnDef<PriceListItem>[] = useMemo(() => [
-        { header: 'Product', accessorKey: 'product.name', enableSorting: true, size: 280, cell: (props: CellContext<PriceListItem, any>) => { const row = props.row.original; return (<div className="flex items-center gap-3"><Avatar size={40} shape="circle" src={row.product?.thumb_image_full_path} icon={<TbBox />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.product?.thumb_image_full_path)} /><div className="truncate"><span className="font-semibold">{row.product?.name || 'N/A'}</span></div></div>) } },
-        { header: 'Price Breakup', accessorKey: 'price', enableSorting: true, size: 160, cell: ({ row }) => { const { price, base_price, gst_price, usd } = row.original; return (<div className="flex flex-col text-xs"><span>Price: {price}</span><span>Base: {base_price}</span><span>GST: {gst_price}</span><span>USD: {usd}</span></div>); }, },
-        { header: 'Cost Split', accessorKey: 'nlc', enableSorting: true, size: 160, cell: ({ row }) => { const { expance, margin, interest, nlc } = row.original; return (<div className="flex flex-col text-xs"><span>Expense: {expance}</span><span>Margin: {margin}</span><span>Interest: {interest}</span><span>NLC: {nlc}</span></div>); }, },
-        { header: 'Sales Price', accessorKey: 'sales_price', enableSorting: true, size: 140, },
-        { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
-        { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100': props.row.original.status === 'Active', 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100': props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
-        { header: 'Actions', id: 'action', size: 120, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} />) },
-    ], [handleOpenModal, openEditDrawer, openImageViewer]);
-
-    const [filteredColumns, setFilteredColumns] = useState<ColumnDef<PriceListItem>[]>(columns);
-    useEffect(() => { setFilteredColumns(columns) }, [columns]);
+    const openEditDrawer = useCallback((item: PriceListItem) => { setEditingPriceListItem(item); editFormMethods.reset({ product_id: String(item.product_id), price: item.price, usd_rate: item.usd_rate, expance: item.expance, margin: item.margin, status: item.status }); setIsEditDrawerOpen(true); }, [editFormMethods]);
+    const closeEditDrawer = useCallback(() => { setIsEditDrawerOpen(false); setEditingPriceListItem(null); }, []);
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         const sourceData = Array.isArray(priceListData?.data) ? priceListData.data.map(item => ({ ...item, product: item.product || {} })) : [];
@@ -396,26 +304,82 @@ const PriceList = () => {
         return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
     }, [priceListData?.data, tableData, activeFilters]);
 
-    const activeFilterCount = useMemo(() => Object.values(activeFilters).filter(v => Array.isArray(v) ? v.length > 0 : v).length, [activeFilters]);
+    const handleSelectAll = useCallback((checked: boolean) => {
+        if (checked) { setSelectedRows(allFilteredAndSortedData.map(row => row.id)); } else { setSelectedRows([]); }
+    }, [allFilteredAndSortedData]);
+    const handleSelectRow = useCallback((checked: boolean, rowId: number) => { setSelectedRows(prev => checked ? [...prev, rowId] : prev.filter(id => id !== rowId)); }, []);
+    const selectedItemsData = useMemo(() => { if (selectedRows.length === 0) return []; const selectedSet = new Set(selectedRows); return (priceListData.data || []).filter(item => selectedSet.has(item.id)); }, [selectedRows, priceListData.data]);
 
+    const baseColumns: ColumnDef<PriceListItem>[] = useMemo(() => [
+        { header: 'Product', accessorKey: 'product.name', enableSorting: true, size: 280, cell: (props: CellContext<PriceListItem, any>) => { const row = props.row.original; return (<div className="flex items-center gap-3"><Avatar size={40} shape="circle" src={row.product?.thumb_image_full_path} icon={<TbBox />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.product?.thumb_image_full_path)} /><div className="truncate"><span className="font-semibold">{row.product?.name || 'N/A'}</span></div></div>) } },
+        { header: 'Price Breakup', accessorKey: 'price', enableSorting: true, size: 160, cell: ({ row }) => { const { price, base_price, gst_price, usd } = row.original; return (<div className="flex flex-col text-xs"><span>Price: {price}</span><span>Base: {base_price}</span><span>GST: {gst_price}</span><span>USD: {usd}</span></div>); }, },
+        { header: 'Cost Split', accessorKey: 'nlc', enableSorting: true, size: 160, cell: ({ row }) => { const { expance, margin, interest, nlc } = row.original; return (<div className="flex flex-col text-xs"><span>Expense: {expance}</span><span>Margin: {margin}</span><span>Interest: {interest}</span><span>NLC: {nlc}</span></div>); }, },
+        { header: 'Sales Price', accessorKey: 'sales_price', enableSorting: true, size: 140, },
+        { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+        { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100': props.row.original.status === 'Active', 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100': props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
+        { header: 'Actions', id: 'action', size: 120, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} />) },
+    ], [handleOpenModal, openEditDrawer, openImageViewer]);
+
+    const columns: ColumnDef<PriceListItem>[] = useMemo(() => {
+        const isAllFilteredSelected = allFilteredAndSortedData.length > 0 && selectedRows.length === allFilteredAndSortedData.length;
+        const isSomeFilteredSelected = selectedRows.length > 0 && !isAllFilteredSelected;
+        return [
+            { id: 'select', header: () => (<div className="text-center"><Checkbox checked={isAllFilteredSelected} indeterminate={isSomeFilteredSelected} onChange={handleSelectAll} /></div>), cell: ({ row }) => (<div className="text-center"><Checkbox checked={selectedRows.includes(row.original.id)} onChange={(checked) => handleSelectRow(checked, row.original.id)} /></div>), size: 50, },
+            ...baseColumns
+        ]
+    }, [baseColumns, allFilteredAndSortedData, selectedRows, handleSelectAll, handleSelectRow]);
+
+    const [filteredColumns, setFilteredColumns] = useState<ColumnDef<PriceListItem>[]>(columns);
+    useEffect(() => { setFilteredColumns(columns) }, [columns]);
+
+    const activeFilterCount = useMemo(() => Object.values(activeFilters).filter(v => Array.isArray(v) ? v.length > 0 : v).length, [activeFilters]);
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
-    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), []);
-    const handleSelectPageSizeChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), []);
-    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectPageSizeChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
     const handleSearchChange = useCallback((query: string) => { setTableData(prev => ({ ...prev, query, pageIndex: 1 })); }, []);
-    const handleApplyFilters = useCallback((filters: Partial<PriceListFilterSchema>) => { setActiveFilters(filters); handleSetTableData({ pageIndex: 1 }); }, []);
+    const handleApplyFilters = useCallback((filters: Partial<PriceListFilterSchema>) => { setActiveFilters(filters); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
     const handleRemoveFilter = useCallback((key: keyof PriceListFilterSchema, value: string | number) => {
         setActiveFilters(prev => { const newFilters = { ...prev }; if (key === 'date') { delete newFilters.date; return newFilters; } const currentValues = prev[key] as any[]; if (!currentValues) return prev; const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } return newFilters; });
         handleSetTableData({ pageIndex: 1 });
-    }, []);
-    const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getPriceListAction()); };
+    }, [handleSetTableData]);
+    const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); setSelectedRows([]); dispatch(getPriceListAction()); };
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [dispatch, tableData]);
 
     const handleCardClick = (filterType: 'status' | 'date' | 'all', value?: any) => {
-        setTableData(prev => ({ ...prev, query: '', pageIndex: 1 }));
+        setTableData(prev => ({ ...prev, query: '', pageIndex: 1 })); setSelectedRows([]);
         if (filterType === 'all') { setActiveFilters({}); }
         else if (filterType === 'status') { setActiveFilters({ status: [value] }); }
         else if (filterType === 'date') { setActiveFilters({ date: [new Date(), new Date()] }); }
+    };
+
+    const handleCopySelected = useCallback(() => {
+        if (selectedItemsData.length === 0) {
+            toast.push(<Notification title="No selection" type="info">Please select rows to copy.</Notification>);
+            return;
+        }
+
+        const detailsText = selectedItemsData.map(item => (
+            `Product: ${item.product?.name || 'N/A'}\n` +
+            `Sales Price: ₹${item.sales_price}\n` +
+            `Status: ${item.status}`
+        )).join('\n-----------------------------------\n');
+
+        navigator.clipboard.writeText(detailsText).then(() => {
+            toast.push(<Notification title="Copied to clipboard" type="success" duration={2000}>
+                {selectedItemsData.length} item(s) copied.
+            </Notification>);
+            setSelectedRows([]);
+        }, () => {
+            toast.push(<Notification title="Failed to copy" type="danger" duration={2000} />);
+        });
+    }, [selectedItemsData]);
+    
+    const handlePdfSelected = () => { if (selectedItemsData.length === 0) { toast.push(<Notification title="No selection" type="info">Please select rows for PDF.</Notification>); return; } exportToPdf('selected-prices.pdf', 'Price List Selection', selectedItemsData); setSelectedRows([]); };
+    const handleOpenSelectedExportReasonModal = () => { if (!selectedItemsData.length) return; exportReasonFormMethods.reset(); setIsExportSelectedReasonModalOpen(true); };
+    const handleConfirmSelectedExportWithReason = async (data: ExportReasonFormData) => {
+        setIsSubmittingExportReason(true); const fileName = `price_list_selection_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+        try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "PriceList Selection", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToExcel(fileName, selectedItemsData); setIsExportSelectedReasonModalOpen(false); setSelectedRows([]); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsSubmittingExportReason(false); }
     };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) return; exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
@@ -423,16 +387,11 @@ const PriceList = () => {
     const handleOpenTodayExportReasonModal = () => { if (!todayPriceListData.length) return; exportReasonFormMethods.reset(); setIsTodayExportReasonModalOpen(true); };
     const handleTodayConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsTodaySubmittingExportReason(true); const fileName = `todays_price_list_export_${new Date().toISOString().split('T')[0]}.xlsx`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Today's Price List", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToExcel(fileName, todayPriceListData); setIsTodayExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsTodaySubmittingExportReason(false); } };
 
-    const todayPriceListData = useMemo(() => {
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        if (!Array.isArray(priceListData?.data)) return [];
-        return priceListData.data.filter(item => { if (!item.updated_at) return false; const itemDate = new Date(item.updated_at); itemDate.setHours(0, 0, 0, 0); return itemDate.getTime() === today.getTime(); });
-    }, [priceListData?.data]);
-
+    const todayPriceListData = useMemo(() => { const today = new Date(); today.setHours(0, 0, 0, 0); if (!Array.isArray(priceListData?.data)) return []; return priceListData.data.filter(item => { if (!item.updated_at) return false; const itemDate = new Date(item.updated_at); itemDate.setHours(0, 0, 0, 0); return itemDate.getTime() === today.getTime(); }); }, [priceListData?.data]);
     const generateShareableText = () => { let message = `*Today's Price List (${new Date().toLocaleDateString()})*\n\n-----------------------------------\n`; todayPriceListData.forEach((item) => { message += `*Product:* ${item.product?.name}\n*Price:* ₹${item.sales_price}\n*Status:* ${item.status}\n-----------------------------------\n` }); return message; };
     const handleShareViaEmail = () => { const subject = `Today's Price List - ${new Date().toLocaleDateString()}`; const body = generateShareableText().replace(/\*/g, '').replace(/\n/g, '%0A'); window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; };
     const handleShareViaWhatsapp = () => { const message = generateShareableText(); const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; window.open(whatsappUrl, '_blank'); };
-    const handlePdfDownload = () => exportToPdf(todayPriceListData);
+    const handlePdfDownload = () => exportToPdf('todays-prices.pdf', "Today's Price List", todayPriceListData);
     const handleExcelDownload = () => handleOpenTodayExportReasonModal();
 
     const formFieldsConfig = useMemo(() => [{ name: 'product_id', label: 'Product Name', type: 'select', options: productOptions, isRequired: true }, { name: 'price', label: 'Price', type: 'text', isRequired: true }, { name: 'usd_rate', label: 'USD Rate', type: 'text', isRequired: true }, { name: 'expance', label: 'Expenses', type: 'text', isRequired: true }, { name: 'margin', label: 'Margin', type: 'text', isRequired: true }, { name: 'status', label: 'Status', type: 'select', options: statusOptions, isRequired: true }], [productOptions]);
@@ -459,14 +418,24 @@ const PriceList = () => {
                         <div className="cursor-pointer" onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbDiscountOff size={24} /></div><div><h6 className="text-red-500">{priceListData?.counts?.inactive}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div>
                     </div>
                     <div className="mb-4">
-                        <PriceListTableTools
-                            onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal}
-                            activeFilters={activeFilters} activeFilterCount={activeFilterCount}
-                            productOptions={productOptions} categoryOptions={categoryOptions} subCategoryOptions={subCategoryOptions} brandOptions={brandOptions}
-                            columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns}
-                            searchInputValue={tableData.query} dispatch={dispatch}
-                            isFilterDrawerOpen={isFilterDrawerOpen} setIsFilterDrawerOpen={setIsFilterDrawerOpen}
-                        />
+                        {selectedRows.length > 0 ? (
+                            <SelectionActions
+                                count={selectedRows.length}
+                                onClearSelection={() => setSelectedRows([])}
+                                onExport={handleOpenSelectedExportReasonModal}
+                                onPdf={handlePdfSelected}
+                                onCopy={handleCopySelected}
+                            />
+                        ) : (
+                            <PriceListTableTools
+                                onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal}
+                                activeFilters={activeFilters} activeFilterCount={activeFilterCount}
+                                productOptions={productOptions} categoryOptions={categoryOptions} subCategoryOptions={subCategoryOptions} brandOptions={brandOptions}
+                                columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns}
+                                searchInputValue={tableData.query} dispatch={dispatch}
+                                isFilterDrawerOpen={isFilterDrawerOpen} setIsFilterDrawerOpen={setIsFilterDrawerOpen}
+                            />
+                        )}
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} productOptions={productOptions} categoryOptions={categoryOptions} subCategoryOptions={subCategoryOptions} brandOptions={brandOptions} />
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching item(s).</div>}
@@ -509,6 +478,9 @@ const PriceList = () => {
                 </div>
             </Drawer>
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }} >
+                <Form onSubmit={(e) => e.preventDefault()}><FormItem label="Reason"><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => <Input textArea {...field} />} /></FormItem></Form>
+            </ConfirmDialog>
+            <ConfirmDialog isOpen={isExportSelectedReasonModalOpen} type="info" title="Reason for Exporting Selection" onClose={() => setIsExportSelectedReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmSelectedExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }} >
                 <Form onSubmit={(e) => e.preventDefault()}><FormItem label="Reason"><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => <Input textArea {...field} />} /></FormItem></Form>
             </ConfirmDialog>
             <ConfirmDialog isOpen={isTodayExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsTodayExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleTodayConfirmExportWithReason)} loading={isTodaySubmittingExportReason} confirmText={isTodaySubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isTodaySubmittingExportReason }} >

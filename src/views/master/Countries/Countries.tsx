@@ -161,12 +161,12 @@ const Countries = () => {
     const { CountriesData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
     
     const totalCount = useMemo(() => CountriesData.length, [CountriesData]);
-    const activeCount = useMemo(() => CountriesData.filter((c: CountryItem) => c.status === 'Active').length, [CountriesData]);
-    const inactiveCount = useMemo(() => CountriesData.filter((c: CountryItem) => c.status === 'Inactive').length, [CountriesData]);
+    const activeCount = useMemo(() => CountriesData.length > 0 && CountriesData?.filter((c: CountryItem) => c.status === 'Active').length, [CountriesData]);
+    const inactiveCount = useMemo(() => CountriesData.length > 0 && CountriesData?.filter((c: CountryItem) => c.status === 'Inactive').length, [CountriesData]);
     
-    const countryNameOptionsForFilter = useMemo(() => Array.isArray(CountriesData) ? [...new Set(CountriesData.map(c => c.name))].sort().map(name => ({ value: name, label: name })) : [], [CountriesData]);
-    const countryIsoOptionsForFilter = useMemo(() => Array.isArray(CountriesData) ? [...new Set(CountriesData.map(c => c.iso_code))].sort().map(iso => ({ value: iso, label: iso })) : [], [CountriesData]);
-    const regionOptions = useMemo(() => Array.isArray(CountriesData) ? [...new Set(CountriesData.map(c => c.region).filter(Boolean))].sort().map(region => ({ value: region as string, label: region as string })) : [], [CountriesData]);
+    const countryNameOptionsForFilter = useMemo(() => Array.isArray(CountriesData) ? [...new Set(CountriesData?.map(c => c.name))].sort().map(name => ({ value: name, label: name })) : [], [CountriesData]);
+    const countryIsoOptionsForFilter = useMemo(() => Array.isArray(CountriesData) ? [...new Set(CountriesData?.map(c => c.iso_code))].sort().map(iso => ({ value: iso, label: iso })) : [], [CountriesData]);
+    const regionOptions = useMemo(() => Array.isArray(CountriesData) ? [...new Set(CountriesData?.map(c => c.region).filter(Boolean))].sort().map(region => ({ value: region as string, label: region as string })) : [], [CountriesData]);
 
     useEffect(() => { dispatch(getCountriesAction()); }, [dispatch]);
 

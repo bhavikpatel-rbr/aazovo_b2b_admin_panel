@@ -84,6 +84,8 @@ export const addUnitAsync = async (unitData: any) => {
 }
 
 export const editUnitAsync = async (unitData: any) => {
+  console.log("unitData", unitData);
+
   console.log(`${config.apiURL}/master/unit/${unitData?.id}`, { _method: "PUT", name: unitData?.name });
 
   try {
@@ -134,7 +136,7 @@ export const addDocumentTypeAsync = async (unitData: any) => {
 
 export const editDocumentTypeAsync = async (unitData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/document_type/${unitData?.id}`, { _method: "PUT", name: unitData?.name, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/document_type/${unitData?.id}`, { _method: "PUT", name: unitData?.name, status: unitData?.status, department_id: unitData?.department_id })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -230,10 +232,12 @@ export const addCurrencyAsync = async (unitData: any) => {
 }
 
 export const editCurrencyAsync = async (unitData: any) => {
+  console.log("unitData", unitData);
+
   console.log(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.name });
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol, currency_code: unitData?.currency_code, status: unitData?.status })
+    const response = await axiosInstance.post(`${config.apiURL}/master/currency/${unitData?.id}`, { _method: "PUT", currency_symbol: unitData?.currency_symbol, currency_code: unitData?.currency_code, status: unitData?.status, country_id: unitData?.country_id })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -321,46 +325,46 @@ export const getcountryAsync = async () => {
   }
 }
 export const addcountryAsync = async (formData: FormData) => {
-    try {
-        const response = await axiosInstance.post(
-            `${config.apiURL}/master/country`,
-            formData, // Pass FormData directly
-            {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            }
-        );
-        return response;
-    } catch (err) {
-        // Re-throw the error to be caught by the Redux thunk's catch block
-        throw err;
-    }
+  try {
+    const response = await axiosInstance.post(
+      `${config.apiURL}/master/country`,
+      formData, // Pass FormData directly
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response;
+  } catch (err) {
+    // Re-throw the error to be caught by the Redux thunk's catch block
+    throw err;
+  }
 };
 
 export const editcountryAsync = async ({
-    id,
-    data,
+  id,
+  data,
 }: {
-    id: string | number;
-    data: FormData; // Expecting FormData now
+  id: string | number;
+  data: FormData; // Expecting FormData now
 }) => {
-    try {
-        const response = await axiosInstance.post(
-            `${config.apiURL}/master/country/${id}`,
-            data, // Pass the FormData object directly as the request body
-            {
-                headers: {
-                    // Axios usually sets this automatically for FormData, but it's good to be explicit
-                    'Content-Type': 'multipart/form-data',
-                },
-            }
-        );
-        return response;
-    } catch (err) {
-        // Re-throw the error to be caught by the Redux thunk's catch block
-        throw err;
-    }
+  try {
+    const response = await axiosInstance.post(
+      `${config.apiURL}/master/country/${id}`,
+      data, // Pass the FormData object directly as the request body
+      {
+        headers: {
+          // Axios usually sets this automatically for FormData, but it's good to be explicit
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response;
+  } catch (err) {
+    // Re-throw the error to be caught by the Redux thunk's catch block
+    throw err;
+  }
 };
 
 export const deletcountryAsync = async (unitData: any) => {
@@ -2976,7 +2980,7 @@ export const addNotificationAsync = async (payload) => {
 
 export const getAllUsersAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/get-all-users`,{})
+    const response = await axiosInstance.get(`${config.apiURL}/get-all-users`, {})
     return response?.data?.data
   } catch (err) {
     return isAxiosError(err)
