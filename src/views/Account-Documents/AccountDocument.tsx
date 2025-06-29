@@ -34,6 +34,7 @@ import {
   FormItem,
   Select,
   Card,
+  Dialog,
 } from "@/components/ui";
 import Dropdown from "@/components/ui/Dropdown";
 
@@ -92,12 +93,25 @@ import {
 } from "./types";
 
 // Redux
-import { useSelector } from "react-redux";
+import { shallowEqual, useSelector } from "react-redux";
 import { useAppDispatch } from "@/reduxtool/store";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { addNotificationAction, getAllUsersAction } from "@/reduxtool/master/middleware";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+
+
+// --- Define Types ---
+export type SelectOption = { value: any; label: string };
+export type ModalType = 'notification';
+export interface ModalState {
+    isOpen: boolean;
+    type: ModalType | null;
+    data: AccountDocumentListItem | null;
+}
 
 const dummyAccountDocumentData: AccountDocumentListItem[] = [
   {
+    id: "ACC-001",
     status: "approved",
     leadNumber: "LD-202405-001",
     enquiryType: "purchase",
@@ -118,6 +132,7 @@ const dummyAccountDocumentData: AccountDocumentListItem[] = [
     createdAt: "2025-05-20T14:30:00Z",
   },
   {
+    id: "ACC-002",
     status: "pending",
     leadNumber: "LD-202405-002",
     enquiryType: "sales",
@@ -138,6 +153,7 @@ const dummyAccountDocumentData: AccountDocumentListItem[] = [
     createdAt: "2025-05-22T10:15:00Z",
   },
   {
+    id: "ACC-003",
     status: "rejected",
     leadNumber: "LD-202405-003",
     enquiryType: "service",
@@ -198,7 +214,7 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
 
 // --- Helper Components (AccountDocumentActionColumn, AccountDocumentSearch, etc. - Keep your existing complex ones) ---
 
-const AccountDocumentActionColumn = ({ onDelete }: any) => {
+const AccountDocumentActionColumn = ({ onDelete, onOpenModal, rowData }: any) => {
   const navigate = useNavigate();
 
   return (
@@ -245,7 +261,7 @@ const AccountDocumentActionColumn = ({ onDelete }: any) => {
           <TbCalendarClock size={18} />
           <span className="text-xs">Add Schedule </span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification', rowData)}>
           <TbBell size={18} />
           <span className="text-xs">Add Notification </span>
         </Dropdown.Item>
@@ -262,12 +278,102 @@ const AccountDocumentActionColumn = ({ onDelete }: any) => {
   );
 };
 
+const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: { document: AccountDocumentListItem, onClose: () => void, getAllUserDataOptions: SelectOption[] }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const notificationSchema = z.object({
+        notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+        send_users: z.array(z.number()).min(1, "Please select at least one user."),
+        message: z.string().min(10, "Message must be at least 10 characters long."),
+    });
+
+    type NotificationFormData = z.infer<typeof notificationSchema>;
+
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: {
+            notification_title: `Regarding Document: ${document.documentNumber}`,
+            send_users: [],
+            message: `This is a notification for document number "${document.documentNumber}" for company "${document.companyName}".`
+        },
+        mode: 'onChange'
+    });
+
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = {
+            send_users: formData.send_users,
+            notification_title: formData.notification_title,
+            message: formData.message,
+            module_id: String(document.id),
+            module_name: 'AccountDocument',
+        };
+
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Notify about: {document.documentNumber}</h5>
+            <Form onSubmit={handleSubmit(onSend)}>
+                <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+                    <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
+                </FormItem>
+                <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+                    <Controller
+                        name="send_users"
+                        control={control}
+                        render={({ field }) => (
+                            <UiSelect
+                                isMulti
+                                placeholder="Select User(s)"
+                                options={getAllUserDataOptions}
+                                value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
+                                onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])}
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
+};
+
+const AccountDocumentModals = ({ modalState, onClose, getAllUserDataOptions }: { modalState: ModalState, onClose: () => void, getAllUserDataOptions: SelectOption[] }) => {
+    const { type, data: document, isOpen } = modalState;
+    if (!isOpen || !document) return null;
+
+    switch (type) {
+        case 'notification':
+            return <AddNotificationDialog document={document} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+        default:
+            return null;
+    }
+};
+
+
 const AccountDocumentSearch = React.forwardRef<HTMLInputElement, any>(
   (props, ref) => <DebouceInput {...props} ref={ref} />
 );
 AccountDocumentSearch.displayName = "AccountDocumentSearch";
 const AccountDocumentTableTools = (
-  { onSearchChange, onFilter }: any /* ... (Keep your original) ... */
+  { onSearchChange, onFilter }: any
 ) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
     <div className="flex-grow">
@@ -369,6 +475,9 @@ const AccountDocument = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
+  // Redux state
+  const { getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
+
   // States for Drawers & Dialogs that remain in this component
   const [isSubmittingDrawer, setIsSubmittingDrawer] = useState(false); // For Assign/Change Status
 
@@ -392,6 +501,23 @@ const AccountDocument = () => {
     []
   );
 
+  const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
+
+  // Fetch data on mount
+  useEffect(() => {
+    dispatch(getAllUsersAction());
+  }, [dispatch]);
+
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+
+  const handleOpenModal = useCallback((type: ModalType, itemData: AccountDocumentListItem) => {
+    setModalState({ isOpen: true, type, data: itemData });
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+      setModalState({ isOpen: false, type: null, data: null });
+  }, []);
+  
   const mappedAccountDocument: AccountDocumentListItem[] = [];
 
   const { pageData, total, allFilteredAndSortedData } = useMemo((): {
@@ -399,9 +525,8 @@ const AccountDocument = () => {
     total: number;
     allFilteredAndSortedData: AccountDocumentListItem[];
   } => {
-    // ... (Keep your existing data processing logic) ...
     let processedData: AccountDocumentListItem[] = cloneDeep(
-      mappedAccountDocument
+      dummyAccountDocumentData
     );
     if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
@@ -435,7 +560,7 @@ const AccountDocument = () => {
       total: currentTotal,
       allFilteredAndSortedData: processedData,
     };
-  }, [mappedAccountDocument, tableData]);
+  }, [tableData]);
 
   const handleSetTableData = useCallback(
     (data: Partial<TableQueries>) =>
@@ -483,7 +608,7 @@ const AccountDocument = () => {
   );
   const handleAllRowSelect = useCallback(
     (checked: boolean, currentRows: Row<AccountDocumentListItem>[]) => {
-      /* ... (Keep) ... */ const originals = currentRows.map((r) => r.original);
+      const originals = currentRows.map((r) => r.original);
       if (checked)
         setSelectedItems((prev) => {
           const oldIds = new Set(prev.map((i) => i.id));
@@ -516,7 +641,7 @@ const AccountDocument = () => {
         cell: (props: CellContext<AccountDocumentListItem, any>) => (
           <Tag
             className={`${
-              accountDocumentStatusColor[props.row.original.status] ||
+              accountDocumentStatusColor[props.row.original.status as keyof typeof accountDocumentStatusColor] ||
               accountDocumentStatusColor.default
             } capitalize px-2 py-1 text-xs`}
           >
@@ -531,11 +656,11 @@ const AccountDocument = () => {
         cell: (props) => {
           return (
             <div className="flex flex-col gap-0.5 text-xs">
-              <span>{props.getValue()}</span>
+              <span>{props.getValue<string>()}</span>
               <div>
                 <Tag
                   className={`${
-                    enquiryTypeColor[props.row.original.enquiryType] ||
+                    enquiryTypeColor[props.row.original.enquiryType as keyof typeof enquiryTypeColor] ||
                     enquiryTypeColor.default
                   } capitalize px-2 py-1 text-xs`}
                 >
@@ -604,11 +729,13 @@ const AccountDocument = () => {
         cell: (props: CellContext<AccountDocumentListItem, any>) => (
           <AccountDocumentActionColumn
             onDelete={() => handleDeleteClick(props.row.original)}
+            onOpenModal={handleOpenModal}
+            rowData={props.row.original}
           />
         ),
       },
     ],
-    [handleDeleteClick]
+    [handleDeleteClick, handleOpenModal]
   );
 
   return (
@@ -624,8 +751,7 @@ const AccountDocument = () => {
               onClick={() => openAddNewDocumentDrawer()}
             >
               Set New Document
-            </Button>{" "}
-            {/* Updated */}
+            </Button>
           </div>
 
           <div className="grid grid-cols-6 mb-4 gap-2">
@@ -712,7 +838,7 @@ const AccountDocument = () => {
             <AccountDocumentTable
               selectable
               columns={columns}
-              data={dummyAccountDocumentData}
+              data={pageData}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
@@ -1023,6 +1149,8 @@ const AccountDocument = () => {
           </span>
         </Form>
       </Drawer>
+
+      <AccountDocumentModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions}/>
     </>
   );
 };
