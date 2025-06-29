@@ -1640,10 +1640,10 @@ const ReferenceSection = ({ control }: FormSectionBaseProps) => {
         {fields.map((item, index) => (
           <Card key={item.id} className="mb-4 border-black relative rounded-md">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 p-4">
-              <FormItem label="Person Name (from Partner)">
+              <FormItem label="Person Name">
                   <Controller name={`partner_references.${index}.referenced_partner_id`} control={control} render={({ field }) => <Select placeholder="Select Partner" options={partnerOptions} {...field} />} />
               </FormItem>
-              <FormItem label="Company Name (from Company)">
+              <FormItem label="Company Name">
                   <Controller name={`partner_references.${index}.company_id`} control={control} render={({ field }) => <Select placeholder="Select Company" options={companyOptions} {...field} />} />
               </FormItem>
               <FormItem label="Email"><Controller name={`partner_references.${index}.email`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>

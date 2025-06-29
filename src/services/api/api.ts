@@ -7,7 +7,9 @@ import { config } from "../../utils/config"
 import { ErrorResponse } from "./SuccessResponse"
 
 const instance: AxiosInstance = axios.create({
-  baseURL: "https://aazovo.codefriend.in/api",
+  // baseURL: "https://aazovo.codefriend.in/api",
+  // baseURL: "https://test.aazovo.co.in/api",
+  baseURL: "https://aazovo.omcommunication.co/api",
   timeout: 1000 * 50,
   headers: {
     "Content-Type": "application/json",
