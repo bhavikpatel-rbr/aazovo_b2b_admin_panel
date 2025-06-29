@@ -2972,3 +2972,13 @@ export const addNotificationAsync = async (payload) => {
     return isAxiosError(err)
   }
 }
+
+
+export const getAllUsersAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/get-all-users`,{})
+    return response?.data?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}

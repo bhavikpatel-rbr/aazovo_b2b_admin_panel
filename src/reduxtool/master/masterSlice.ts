@@ -45,6 +45,7 @@ import {
   getAllProductsAction,
   getAllTaskAction,
   getAllTaskByStatuesAction,
+  getAllUsersAction,
   getAutoEmailsAction,
   getAutoEmailTemplatesAction,
   getAutoMatchDataAction,
@@ -185,9 +186,10 @@ const INITIAL_STATE: any = {
   editEmployees: {},
   getEmployeesdata: {},
   reportingTo: [],
-  getwallItemsData:  {},
+  getwallItemsData: {},
   getNotification: {},
   addNotification: {},
+  getAllUserData: [],
 };
 
 const masterSlice = createSlice({
@@ -488,7 +490,7 @@ const masterSlice = createSlice({
       ...state,
       AllTaskData: payload,
     }));
- builder.addCase(getAllTaskByStatuesAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(getAllTaskByStatuesAction.fulfilled, (state, { payload }) => ({
       ...state,
       AllTaskDataByStatues: payload,
     }));
@@ -676,10 +678,21 @@ const masterSlice = createSlice({
       ...state,
       getNotification: payload,
     }));
+<<<<<<< HEAD
     // builder.addCase(addNotificationAction.fulfilled, (state, { payload }) => ({
     //   ...state,
     //   addNotification: payload,
     // }));
+=======
+    builder.addCase(addNotificationAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      addNotification: payload,
+    }));
+    builder.addCase(getAllUsersAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      getAllUserData: payload,
+    }));
+>>>>>>> c0094f6c0b0a70aee75304a0410ffee32d19e65a
   },
 });
 
