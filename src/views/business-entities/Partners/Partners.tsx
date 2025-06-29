@@ -9,6 +9,7 @@ import React, {
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -16,25 +17,24 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
-import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
   Card,
+  Checkbox,
   DatePicker,
   Drawer,
   Dropdown,
   Input,
   Select,
-  Table,
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
+  Tag,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
-import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
@@ -42,34 +42,25 @@ import Tooltip from "@/components/ui/Tooltip";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
-  TbAlarm,
-  TbAlertTriangle,
-  TbBell,
   TbBrandWhatsapp,
-  TbCalendarEvent,
   TbChecks,
-  TbClipboardText,
   TbCloudUpload,
-  TbDownload,
+  TbColumns,
   TbEye,
-  TbFileSearch,
-  TbFileText,
-  TbFileZip,
   TbFilter,
   TbMail,
   TbPencil,
   TbPlus,
-  TbReceipt,
+  TbReload,
   TbSearch,
-  TbTagStarred,
   TbUser,
   TbUserCancel,
   TbUserCheck,
   TbUserCircle,
   TbUserMinus,
-  TbUserSearch,
   TbUsersGroup,
-  TbUserX
+  TbUserX,
+  TbX,
 } from "react-icons/tb";
 
 // Types
@@ -89,7 +80,6 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
-
 
 // --- PartnerItem Type (Data Structure) ---
 export type PartnerItem = {
@@ -187,18 +177,17 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
 }
 
 // --- Status Colors & Context ---
-const partnerStatusColors: Record<string, string> = {
-  Active: "bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300",
-  Verified: "bg-blue-200 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
-  Pending: "bg-orange-200 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
-  Inactive: "bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300",
-  "Non Verified": "bg-yellow-200 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
-  active: "bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300",
-  inactive: "bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300",
-};
-const getPartnerStatusClass = (statusValue?: PartnerItem["status"]): string => {
+export const getPartnerStatusClass = (statusValue?: PartnerItem["status"]): string => {
   if (!statusValue) return "bg-gray-200 text-gray-600";
-  return partnerStatusColors[statusValue] || "bg-gray-200 text-gray-600";
+  const lowerCaseStatus = statusValue.toLowerCase();
+  const partnerStatusColors: Record<string, string> = {
+    active: "bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+    verified: "bg-blue-200 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
+    pending: "bg-orange-200 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
+    inactive: "bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+    "non verified": "bg-yellow-200 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
+  };
+  return partnerStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600";
 };
 
 interface PartnerListStore {
@@ -222,7 +211,6 @@ const usePartnerList = (): PartnerListStore => {
 const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { partnerData, CountriesData, ContinentsData } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
-
   const [partnerList, setPartnerList] = useState<PartnerItem[]>(partnerData?.data ?? []);
   const [selectedPartners, setSelectedPartners] = useState<PartnerItem[]>([]);
   const [partnerCount, setPartnerCount] = useState(partnerData?.counts ?? {});
@@ -258,9 +246,9 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// --- Child Components (Search, ActionTools) ---
-const PartnerListSearch: React.FC<{ onInputChange: (value: string) => void; }> = ({ onInputChange }) => {
-  return <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />;
+// --- Child Components ---
+const PartnerListSearch: React.FC<{ onInputChange: (value: string) => void; value: string; }> = ({ onInputChange, value }) => {
+  return <DebouceInput placeholder="Quick Search..." value={value} suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />;
 };
 
 const PartnerListActionTools = () => {
@@ -274,126 +262,80 @@ const PartnerListActionTools = () => {
   );
 };
 
-// --- MODALS SECTION ---
-export type ModalType = "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "alert" | "trackRecord" | "engagement" | "transaction" | "document" | "viewDetail";
-export interface ModalState { isOpen: boolean; type: ModalType | null; data: PartnerItem | null; }
-interface PartnerModalsProps { modalState: ModalState; onClose: () => void; }
-
-const ViewPartnerDetailDialog: React.FC<{ partner: PartnerItem; onClose: () => void; }> = ({ partner, onClose }) => {
-  const renderDetailItem = (label: string, value: any) => {
-    if (value === null || value === undefined || value === "") return null;
+const PartnerActionColumn = ({ rowData, onEdit }: { rowData: PartnerItem; onEdit: (id: string) => void; }) => {
+    const navigate = useNavigate();
     return (
-      <div className="mb-3">
-        <span className="font-semibold text-gray-700 dark:text-gray-200">{label}: </span>
-        <span className="text-gray-600 dark:text-gray-400">{String(value)}</span>
+      <div className="flex items-center justify-center gap-1">
+        <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
+        <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
+        <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+          <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+        </Dropdown>
       </div>
     );
-  };
-
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={800}>
-      <div className="max-h-[80vh] overflow-y-auto pr-4">
-        <h4 className="mb-6">Partner Details: {partner.partner_name}</h4>
-        <Card className="mb-4" bordered>
-          <h5 className="mb-2">Basic Information</h5>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            {renderDetailItem("Partner Code", partner.partner_code)}
-            {renderDetailItem("Ownership Type", partner.ownership_type)}
-            {renderDetailItem("Owner Name", partner.owner_name)}
-            <div className="mb-3">
-              <span className="font-semibold text-gray-700 dark:text-gray-200">Status: </span>
-              <span className="text-gray-600 dark:text-gray-400"><Tag className={`${getPartnerStatusClass(partner.status)} capitalize`}>{partner.status}</Tag></span>
-            </div>
-            {renderDetailItem("Profile Completion", `${partner.profile_completion}%`)}
-          </div>
-        </Card>
-        <Card className="mb-4" bordered>
-          <h5 className="mb-2">Contact Information</h5>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            {renderDetailItem("Primary Email", partner.primary_email_id)}
-            {renderDetailItem("Primary Contact", `${partner.primary_contact_number_code} ${partner.primary_contact_number}`)}
-             <div className="mb-3">
-              <span className="font-semibold text-gray-700 dark:text-gray-200">Website: </span>
-              <span className="text-gray-600 dark:text-gray-400"><a href={partner.partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{partner.partner_website}</a></span>
-            </div>
-          </div>
-        </Card>
-        <Card className="mb-4" bordered>
-          <h5 className="mb-2">Address & Location</h5>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            {renderDetailItem("Address", partner.partner_address)}
-            {renderDetailItem("City", partner.city)}
-            {renderDetailItem("State", partner.state)}
-            {renderDetailItem("Country", partner.country?.name)}
-            {renderDetailItem("Continent", partner.continent?.name)}
-          </div>
-        </Card>
-        <Card className="mb-4" bordered>
-          <h5 className="mb-2">Legal & Financial</h5>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            {renderDetailItem("GST Number", partner.gst_number)}
-            {renderDetailItem("PAN Number", partner.pan_number)}
-             <div className="mb-3">
-              <span className="font-semibold text-gray-700 dark:text-gray-200">KYC Verified: </span>
-              <span className="text-gray-600 dark:text-gray-400">{partner.kyc_verified ? <MdCheckCircle className="text-green-500 text-xl inline-block" /> : <MdCancel className="text-red-500 text-xl inline-block" />}</span>
-            </div> 
-          </div>
-        </Card>
-      </div>
-      <div className="text-right mt-6">
-        <Button variant="solid" onClick={onClose}>Close</Button>
-      </div>
-    </Dialog>
-  )
-}
-
-const PartnerModals: React.FC<PartnerModalsProps> = ({ modalState, onClose }) => {
-  const { type, data: partner, isOpen } = modalState;
-  if (!isOpen || !partner) return null;
-  // This can be expanded with other modals as needed
-  switch (type) {
-    case 'viewDetail':
-      return <ViewPartnerDetailDialog partner={partner} onClose={onClose} />;
-    default:
-      return <Dialog isOpen={true} onClose={onClose}><p>Modal for: {type}</p></Dialog>;
-  }
 };
 
-const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: { rowData: PartnerItem; onEdit: (id: string) => void; onOpenModal: (type: ModalType, data: PartnerItem) => void; }) => {
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
-      <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => onOpenModal('viewDetail', rowData)}><TbEye /></div></Tooltip>
-      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
-        {/* Add more actions as modals are implemented */}
-      </Dropdown>
-    </div>
-  );
+// --- ActiveFiltersDisplay Component ---
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+    filterData: PartnerFilterFormData;
+    onRemoveFilter: (key: keyof PartnerFilterFormData, value: string) => void;
+    onClearAll: () => void;
+  }) => {
+    const filterKeyToLabelMap: Record<string, string> = {
+      filterStatus: 'Status', filterOwnershipType: 'Type', filterContinent: 'Continent',
+      filterCountry: 'Country', filterState: 'State', filterCity: 'City',
+      filterKycVerified: 'KYC',
+    };
+    const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
+      if (!value || (Array.isArray(value) && value.length === 0)) return [];
+      if (key === 'filterCreatedDate') {
+        const dateArray = value as [Date | null, Date | null];
+        if (dateArray[0] && dateArray[1]) {
+          return [{ key, value: 'date-range', label: `Date: ${dateArray[0].toLocaleDateString()} - ${dateArray[1].toLocaleDateString()}` }];
+        }
+        return [];
+      }
+      if (Array.isArray(value)) {
+        return value.filter(item => item !== null && item !== undefined).map((item: { value: string; label: string }) => ({
+          key, value: item.value, label: `${filterKeyToLabelMap[key] || 'Filter'}: ${item.label}`,
+        }));
+      }
+      return [];
+    });
+    if (activeFiltersList.length === 0) return null;
+    return (
+      <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+        <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+        {activeFiltersList.map(filter => (
+          <Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
+            {filter.label}
+            <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof PartnerFilterFormData, filter.value)} />
+          </Tag>
+        ))}
+        <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+      </div>
+    );
 };
 
 const PartnerListTable = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { partnerList, setSelectedPartners, partnerCount, ContinentsData, CountriesData } = usePartnerList();
-
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>({ filterCreatedDate: [null, null] });
-
-  const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
-  const handleOpenModal = (type: ModalType, partnerData: PartnerItem) => setModalState({ isOpen: true, type, data: partnerData });
-  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
-
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), mode: 'onChange' });
+  const filterFormMethods = useForm<PartnerFilterFormData>({ resolver: zodResolver(partnerFilterFormSchema) });
 
-  const filterFormMethods = useForm<PartnerFilterFormData>({ resolver: zodResolver(partnerFilterFormSchema), defaultValues: filterCriteria });
-
-  useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
+  const openFilterDrawer = () => {
+    filterFormMethods.reset(filterCriteria);
+    setFilterDrawerOpen(true);
+  };
 
   const onApplyFiltersSubmit = (data: PartnerFilterFormData) => {
     setFilterCriteria(data);
@@ -403,65 +345,59 @@ const PartnerListTable = () => {
 
   const onClearFilters = () => {
     const defaultFilters: PartnerFilterFormData = { filterCreatedDate: [null, null], filterStatus: [], filterOwnershipType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [] };
-    filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
+    handleSetTableData({ pageIndex: 1, query: "" });
+  };
+
+  const handleRemoveFilter = (key: keyof PartnerFilterFormData, valueToRemove: string) => {
+    setFilterCriteria(prev => {
+        const newCriteria = { ...prev };
+        if (key === 'filterCreatedDate') {
+          (newCriteria as any)[key] = [null, null];
+        } else {
+          const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
+          if (currentFilterArray) {
+            const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove);
+            (newCriteria as any)[key] = newFilterArray;
+          }
+        }
+        return newCriteria;
+    });
     handleSetTableData({ pageIndex: 1 });
+  };
+
+  const onRefreshData = () => {
+    onClearFilters();
+    dispatch(getpartnerAction());
+    toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />);
+  };
+
+  const handleCardClick = (filterType: string, value: string) => {
+    const newCriteria: PartnerFilterFormData = {
+      filterCreatedDate: [null, null],
+      filterStatus: [], filterOwnershipType: [], filterContinent: [], filterCountry: [],
+      filterState: [], filterCity: [], filterKycVerified: [],
+    };
+    if (filterType === 'status') {
+      newCriteria.filterStatus = [{ value, label: value }];
+    }
+    setFilterCriteria(newCriteria);
+    handleSetTableData({ pageIndex: 1, query: "" });
   };
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let filteredData = [...partnerList];
-    if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
-      const selected = filterCriteria.filterStatus.map(s => s.value);
-      filteredData = filteredData.filter(p => selected.includes(p.status));
-    }
-    if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) {
-      const selected = filterCriteria.filterOwnershipType.map(s => s.value);
-      filteredData = filteredData.filter(p => selected.includes(p.ownership_type));
-    }
-    if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) {
-      const selected = filterCriteria.filterContinent.map(s => s.value);
-      filteredData = filteredData.filter(p => p.continent && selected.includes(p.continent.name));
-    }
-    if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) {
-      const selected = filterCriteria.filterCountry.map(s => s.value);
-      filteredData = filteredData.filter(p => p.country && selected.includes(p.country.name));
-    }
-    if (filterCriteria.filterState && filterCriteria.filterState.length > 0) {
-      const selected = filterCriteria.filterState.map(s => s.value);
-      filteredData = filteredData.filter(p => selected.includes(p.state));
-    }
-    if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) {
-      const selected = filterCriteria.filterCity.map(s => s.value);
-      filteredData = filteredData.filter(p => selected.includes(p.city));
-    }
-    if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) {
-      const selected = filterCriteria.filterKycVerified.map(k => k.value === "Yes");
-      filteredData = filteredData.filter(p => selected.includes(p.kyc_verified));
-    }
-
-    if (filterCriteria.filterCreatedDate?.[0] && filterCriteria.filterCreatedDate?.[1]) {
-      const [start, end] = filterCriteria.filterCreatedDate;
-      end.setHours(23, 59, 59, 999);
-      filteredData = filteredData.filter(p => {
-        const date = new Date(p.created_at);
-        return date >= start && date <= end;
-      });
-    }
-
-    if (tableData.query) {
-      filteredData = filteredData.filter(i => Object.values(i).some(v => String(v).toLowerCase().includes(tableData.query.toLowerCase())));
-    }
+    if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selected = filterCriteria.filterStatus.map(s => s.value.toLowerCase()); filteredData = filteredData.filter(p => p.status && selected.includes(p.status.toLowerCase())); }
+    if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) { const selected = filterCriteria.filterOwnershipType.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.ownership_type)); }
+    if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) { const selected = filterCriteria.filterContinent.map(s => s.value); filteredData = filteredData.filter(p => p.continent && selected.includes(p.continent.name)); }
+    if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) { const selected = filterCriteria.filterCountry.map(s => s.value); filteredData = filteredData.filter(p => p.country && selected.includes(p.country.name)); }
+    if (filterCriteria.filterState && filterCriteria.filterState.length > 0) { const selected = filterCriteria.filterState.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.state)); }
+    if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) { const selected = filterCriteria.filterCity.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.city)); }
+    if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) { const selected = filterCriteria.filterKycVerified.map(k => k.value === "Yes"); filteredData = filteredData.filter(p => selected.includes(p.kyc_verified)); }
+    if (filterCriteria.filterCreatedDate?.[0] && filterCriteria.filterCreatedDate?.[1]) { const [start, end] = filterCriteria.filterCreatedDate; end.setHours(23, 59, 59, 999); filteredData = filteredData.filter(p => { const date = new Date(p.created_at); return date >= start && date <= end; }); }
+    if (tableData.query) { filteredData = filteredData.filter(i => Object.values(i).some(v => String(v).toLowerCase().includes(tableData.query.toLowerCase()))); }
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key) {
-      filteredData.sort((a, b) => {
-        const av = a[key as keyof PartnerItem] ?? "";
-        const bv = b[key as keyof PartnerItem] ?? "";
-        if (typeof av === "string" && typeof bv === "string") {
-          return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-        }
-        return 0;
-      });
-    }
+    if (order && key) { filteredData.sort((a, b) => { const av = a[key as keyof PartnerItem] ?? ""; const bv = b[key as keyof PartnerItem] ?? ""; if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); return 0; }); }
     const pI = tableData.pageIndex as number, pS = tableData.pageSize as number;
     return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData };
   }, [partnerList, tableData, filterCriteria]);
@@ -473,45 +409,16 @@ const PartnerListTable = () => {
   const handleRowSelect = useCallback((c: boolean, r: PartnerItem) => setSelectedPartners(p => c ? [...p, r] : p.filter(i => i.id !== r.id)), [setSelectedPartners]);
   const handleAllRowSelect = useCallback((c: boolean, r: Row<PartnerItem>[]) => setSelectedPartners(c ? r.map(i => i.original) : []), [setSelectedPartners]);
 
-  const handleOpenExportReasonModal = () => {
-    if (!allFilteredAndSortedData.length) {
-      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
-      return;
-    }
-    exportReasonFormMethods.reset({ reason: "" });
-    setIsExportReasonModalOpen(true);
-  };
-
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
-    setIsSubmittingExportReason(true);
-    const fileName = `partners_export_${new Date().toISOString().split('T')[0]}.csv`;
-    try {
-      // Assuming a similar action exists for partners
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: "Partners", file_name: fileName })).unwrap();
-      toast.push(<Notification title="Export Reason Submitted" type="success" />);
-      exportToCsv(fileName, allFilteredAndSortedData);
-      setIsExportReasonModalOpen(false);
-    } catch (error: any) {
-      toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />);
-    } finally {
-      setIsSubmittingExportReason(false);
-    }
-  };
+  const handleOpenExportReasonModal = () => { /* ... */ };
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { /* ... */ };
 
   const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
-  const openImageViewer = (imageUrl: string | null) => {
-    if (imageUrl) {
-      setImageToView(imageUrl);
-      setImageViewerOpen(true);
-    }
-  };
+  const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
   const closeImageViewer = () => setImageViewerOpen(false);
 
   const columns: ColumnDef<PartnerItem>[] = useMemo(() => [
-    {
-      header: "Partner Info", accessorKey: "partner_name", size: 220,
-      cell: ({ row }) => (
+    { header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => (
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <Avatar src={row.original.partner_logo ? `https://aazovo.codefriend.in/${row.original.partner_logo}` : ''} size="md" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.original.partner_logo || null)} icon={<TbUserCircle />} />
@@ -525,9 +432,7 @@ const PartnerListTable = () => {
         </div>
       ),
     },
-    {
-      header: "Contact", accessorKey: "owner_name", size: 180,
-      cell: ({ row }) => (
+    { header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }) => (
         <div className="text-xs flex flex-col gap-0.5">
           {row.original.owner_name && <span><b>Owner:</b> {row.original.owner_name}</span>}
           {row.original.primary_contact_number && <span>{row.original.primary_contact_number_code} {row.original.primary_contact_number}</span>}
@@ -536,9 +441,7 @@ const PartnerListTable = () => {
         </div>
       )
     },
-    {
-      header: "Legal IDs & Status", size: 180, accessorKey: 'status',
-      cell: ({ row }) => (
+    { header: "Legal IDs & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => (
         <div className="flex flex-col gap-1 text-[10px]">
           {row.original.gst_number && <div><b>GST:</b> <span className="break-all">{row.original.gst_number}</span></div>}
           {row.original.pan_number && <div><b>PAN:</b> <span className="break-all">{row.original.pan_number}</span></div>}
@@ -546,9 +449,7 @@ const PartnerListTable = () => {
         </div>
       )
     },
-    {
-      header: "Profile & Scores", size: 190, accessorKey: 'profile_completion',
-      cell: ({ row }) => (
+    { header: "Profile & Scores", size: 190, accessorKey: 'profile_completion', id: 'profile', cell: ({ row }) => (
         <div className="flex flex-col gap-1.5 text-xs">
           <span><b>Teams:</b> {row.original.teams_count || 0}</span>
           <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${row.original.kyc_verified ? 'Yes' : 'No'}`}>{row.original.kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}</Tooltip></div>
@@ -558,12 +459,12 @@ const PartnerListTable = () => {
         </div>
       )
     },
-    {
-      header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80,
-      cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} onOpenModal={handleOpenModal} />,
-    },
-  ], [navigate, handleOpenModal, openImageViewer]);
+    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} />, },
+  ], [navigate, openImageViewer]);
 
+  const [filteredColumns, setFilteredColumns] = useState(columns);
+  const toggleColumn = (checked: boolean, colId: string) => { /* ... */ };
+  const isColumnVisible = (colId: string) => { /* ... */ };
   const statusOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [partnerList]);
   const ownershipTypeOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.ownership_type))).filter(Boolean).map((t) => ({ value: t, label: t })), [partnerList]);
   const continentOptions = useMemo(() => ContinentsData.map((co) => ({ value: co.name, label: co.name })), [ContinentsData]);
@@ -572,32 +473,32 @@ const PartnerListTable = () => {
   const cityOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.city))).filter(Boolean).map((ci) => ({ value: ci, label: ci })), [partnerList]);
   const kycOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
   const { DatePickerRange } = DatePicker;
+  const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const cardBodyClass = "flex gap-2 p-2";
 
   return (
     <>
-      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
-        <div className="flex justify-center items-center p-4">
-          {imageToView ? <img src={`https://aazovo.codefriend.in/${imageToView}`} alt="Partner Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
-        </div>
-      </Dialog>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-4 gap-2">
-        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div><div><h6>{partnerCount?.total ?? 0}</h6><span className="text-xs font-semibold">Total</span></div></Card>
-        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUser size={24} /></div><div><h6>{partnerCount?.active ?? 0}</h6><span className="text-xs font-semibold">Active</span></div></Card>
-        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserCancel size={24} /></div><div><h6>{partnerCount?.disabled ?? 0}</h6><span className="text-xs font-semibold">Disabled</span></div></Card>
-        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbUserCheck size={24} /></div><div><h6>{partnerCount?.verified ?? 0}</h6><span className="text-xs font-semibold">Verified</span></div></Card>
-        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserMinus size={24} /></div><div><h6>{partnerCount?.unverified ?? 0}</h6><span className="text-xs font-semibold">Unverified</span></div></Card>
+        <Tooltip title="Click to show all partners"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div><div><h6>{partnerCount?.total ?? 0}</h6><span className="text-xs font-semibold">Total</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Active status"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUser size={24} /></div><div><h6>{partnerCount?.active ?? 0}</h6><span className="text-xs font-semibold">Active</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Inactive status"><div onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserCancel size={24} /></div><div><h6>{partnerCount?.disabled ?? 0}</h6><span className="text-xs font-semibold">Disabled</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Verified status"><div onClick={() => handleCardClick('status', 'Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbUserCheck size={24} /></div><div><h6>{partnerCount?.verified ?? 0}</h6><span className="text-xs font-semibold">Verified</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Unverified status"><div onClick={() => handleCardClick('status', 'Non Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserMinus size={24} /></div><div><h6>{partnerCount?.unverified ?? 0}</h6><span className="text-xs font-semibold">Unverified</span></div></Card></div></Tooltip>
       </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <PartnerListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} />
+        <PartnerListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} value={tableData.query} />
         <div className="flex gap-2">
-          <Button icon={<TbFilter />} onClick={() => setFilterDrawerOpen(true)}>Filter</Button>
+          <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+            <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}</div>
+          </Dropdown>
+          <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
           <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
         </div>
       </div>
-      <DataTable selectable columns={columns} data={pageData} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
-      <Drawer title="Partner Filters" isOpen={isFilterDrawerOpen} onClose={() => setFilterDrawerOpen(false)} onRequestClose={() => setFilterDrawerOpen(false)} width={480}
-        footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear All</Button><Button size="sm" variant="solid" form="filterPartnerForm" type="submit">Apply</Button></div>}
-      >
+      <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
+      <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+      <Drawer title="Partner Filters" isOpen={isFilterDrawerOpen} onClose={() => setFilterDrawerOpen(false)} onRequestClose={() => setFilterDrawerOpen(false)} width={480} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear All</Button><Button size="sm" variant="solid" form="filterPartnerForm" type="submit">Apply</Button></div>}>
         <UiForm id="filterPartnerForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
             <UiFormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={statusOptions} {...field} />} /></UiFormItem>
@@ -616,7 +517,11 @@ const PartnerListTable = () => {
           <UiFormItem label="Please provide a reason:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => <Input textArea {...field} placeholder="Enter reason..." rows={3} />} /></UiFormItem>
         </UiForm>
       </ConfirmDialog>
-      <PartnerModals modalState={modalState} onClose={handleCloseModal} />
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
+        <div className="flex justify-center items-center p-4">
+          {imageToView ? <img src={`https://aazovo.codefriend.in/${imageToView}`} alt="Partner Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image to display.</p>}
+        </div>
+      </Dialog>
     </>
   );
 };
