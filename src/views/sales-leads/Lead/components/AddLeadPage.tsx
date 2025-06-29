@@ -3,12 +3,10 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, NavLink } from "react-router-dom";
 import dayjs from "dayjs";
-import classNames from "classnames"; // FIX: Correct classnames import
 
 // UI Components
 import Input from "@/components/ui/Input";
 import { FormItem, FormContainer } from "@/components/ui/Form";
-// FIX: Import Table and Tooltip from the correct internal UI library
 import {
   Select as UiSelect,
   DatePicker,
@@ -26,7 +24,6 @@ import Spinner from "@/components/ui/Spinner";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
-import { TbPencil, TbTrash } from "react-icons/tb"; // FIX: Cleaned up icon imports
 
 // Types and Schema
 import type { LeadFormData } from "../types"; // Ensure this path is correct
@@ -54,11 +51,6 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-type SelectOption = {
-  value: string | number;
-  label: string;
-  id?: number | string;
-};
 type ApiLookupItem = {
   id: string | number;
   name: string;
@@ -91,23 +83,6 @@ const AddLeadPage = () => {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [initialDataFetched, setInitialDataFetched] = useState(false);
 
-  const [matchedOpportunities] = useState([
-    {
-      id: 1,
-      company: "TechSource Inc.",
-      member: "John Doe",
-      details: "Have 500 units, A-Grade, ready to ship.",
-      timestamp: "2023-10-27 10:00 AM",
-    },
-    {
-      id: 2,
-      company: "Global Gadgets LLC",
-      member: "Jane Smith",
-      details: "Looking to buy 1000 units, flexible on price.",
-      timestamp: "2023-10-27 09:45 AM",
-    },
-  ]);
-
   const {
     productsMasterData = [],
     ProductSpecificationsData = [],
@@ -117,8 +92,7 @@ const AddLeadPage = () => {
     suppliers = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
-  console.log("memberData",memberData);
-  
+
   const {
     control,
     handleSubmit,
@@ -242,22 +216,45 @@ const AddLeadPage = () => {
     }));
   }, [salesPerson]);
 
-  const suppliersOption = useMemo(() => {
-    if (!Array.isArray(suppliers)) return [];
-    return suppliers.map((product: ApiLookupItem) => ({
-      value: product.id,
-      label: product.name,
-    }));
-  }, [suppliers]);
-
   const onSubmit = async (data: LeadFormData) => {
     setIsSubmitting(true);
-    const payload = {
-      ...data,
-      source_eta: data.source_eta ? dayjs(data.source_eta).toISOString() : null,
+
+    // Find the label for the cartoon type ID
+    const cartoonTypeLabel =
+      cartoonTypeOptions.find(
+        (option) => option.value === data.source_cartoon_type_id
+      )?.label || null;
+
+    // --- START: PAYLOAD TRANSFORMATION ---
+    // Transform the form data to match the required API payload structure
+    const apiPayload = {
+      lead_intent: data.lead_intent,
+      lead_member: data.member_id,
+      enquiry_type: data.enquiry_type,
+      product_id: data.product_id,
+      qty: data.qty,
+      target_price: data.target_price,
+      lead_status: data.lead_status,
+      assigned_saled_id: data.assigned_sales_person_id,
+      product_spec_id: data.product_spec_id,
+      source_member_id: data.source_supplier_id,
+      source_qty: data.source_qty,
+      sourced_price: data.source_price,
+      product_status: data.source_product_status,
+      device_condition: data.source_device_condition,
+      device_type: data.source_device_type,
+      color: data.source_color,
+      cartoon_type: cartoonTypeLabel,
+      dispatch_status: data.source_dispatch_status,
+      payment_term_id: data.source_payment_term_id,
+      eta: data.source_eta ? dayjs(data.source_eta).format("YYYY-MM-DD") : null,
+      location: data.source_location,
+      internal_remark: data.source_internal_remarks,
     };
+    // --- END: PAYLOAD TRANSFORMATION ---
+
     try {
-      await dispatch(addLeadAction(payload)).unwrap();
+      await dispatch(addLeadAction(apiPayload)).unwrap();
       toast.push(
         <Notification title="Success" type="success">
           Lead created successfully.
@@ -765,8 +762,6 @@ const AddLeadPage = () => {
               </FormItem>
             </div>
           </AdaptableCard>
-
-     
 
           <div className="mt-6 flex justify-end gap-2">
             <Button

@@ -85,9 +85,10 @@ function exportToCsv(filename: string, rows: PriceListItem[]) {
     toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
 }
 
-function exportToExcel(filename: string, data: PriceListItem[]) {
+// MODIFICATION: Removed 'Status' from the Excel export
+function exportToExcel(filename: string, data: (PriceListItem & { qty: string })[]) {
     if (!data || !data.length) { toast.push(<Notification title="No Data" type="info" children="Nothing to export." />); return; }
-    const worksheetData = data.map(item => ({ 'Product Name': item.product?.name, 'Sales Price': item.sales_price, 'Base Price': item.base_price, Status: item.status, 'Last Updated': new Date(item.updated_at || '').toLocaleString(), }));
+    const worksheetData = data.map(item => ({ 'Product Name': item.product?.name, 'Sales Price': item.sales_price, 'Base Price': item.base_price, Qty: item.qty, 'Last Updated': new Date(item.updated_at || '').toLocaleString(), }));
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Price List");
@@ -95,13 +96,14 @@ function exportToExcel(filename: string, data: PriceListItem[]) {
     toast.push(<Notification title="Export Successful" type="success" children={`Data exported to ${filename}.`} />);
 }
 
-function exportToPdf(filename: string, title: string, data: PriceListItem[]) {
+// MODIFICATION: Removed 'Status' from the PDF export
+function exportToPdf(filename: string, title: string, data: (PriceListItem & { qty: string })[]) {
     if (!data || !data.length) { toast.push(<Notification title="No Data" type="info" children="Nothing to export." />); return; }
     const doc = new jsPDF();
     doc.text(title, 14, 16);
     autoTable(doc, {
-        head: [['Product Name', 'Sales Price', 'Status']],
-        body: data.map(item => [item.product?.name || 'N/A', `Rs. ${item.sales_price}`, item.status]),
+        head: [['Product Name', 'Sales Price', 'Qty']],
+        body: data.map(item => [item.product?.name || 'N/A', `${item.sales_price}`, item.qty]),
         startY: 20,
     });
     doc.save(filename);
@@ -208,7 +210,7 @@ const AddNotificationDialog = ({ PriceList, onClose, getAllUserDataOptions }) =>
     const [isLoading, setIsLoading] = useState(false);
     const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
     type NotificationFormData = z.infer<typeof notificationSchema>;
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Price Update: ${PriceList.product.name}`, send_users: [], message: `The price for product "${PriceList.product.name}" has been updated. The new sales price is ₹${PriceList.sales_price}.` }, mode: 'onChange' });
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Price Update: ${PriceList.product.name}`, send_users: [], message: `The price for product "${PriceList.product.name}" has been updated. The new sales price is ${PriceList.sales_price}.` }, mode: 'onChange' });
     const onSend = async (formData: NotificationFormData) => {
         setIsLoading(true);
         const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(PriceList.id), module_name: 'PriceList', };
@@ -257,6 +259,7 @@ const PriceList = () => {
     const [imageToView, setImageToView] = useState<string | null>(null);
     const [modalState, setModalState] = useState<PriceListModalState>({ isOpen: false, type: null, data: null });
     const [selectedRows, setSelectedRows] = useState<number[]>([]);
+    const [rowQuantities, setRowQuantities] = useState<{ [key: number]: string }>({});
 
     const { priceListData = { data: [], counts: {} }, productsMasterData = [], status: masterLoadingStatus = "idle", CategoriesData: GlobalCategoriesData = [], subCategoriesForSelectedCategoryData = [], BrandData = [], getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
 
@@ -310,28 +313,74 @@ const PriceList = () => {
     const handleSelectRow = useCallback((checked: boolean, rowId: number) => { setSelectedRows(prev => checked ? [...prev, rowId] : prev.filter(id => id !== rowId)); }, []);
     const selectedItemsData = useMemo(() => { if (selectedRows.length === 0) return []; const selectedSet = new Set(selectedRows); return (priceListData.data || []).filter(item => selectedSet.has(item.id)); }, [selectedRows, priceListData.data]);
 
+    const handleQuantityChange = useCallback((rowId: number, value: string) => {
+        setRowQuantities(prev => ({
+            ...prev,
+            [rowId]: value
+        }));
+    }, []);
+
     const baseColumns: ColumnDef<PriceListItem>[] = useMemo(() => [
-        { header: 'Product', accessorKey: 'product.name', enableSorting: true, size: 280, cell: (props: CellContext<PriceListItem, any>) => { const row = props.row.original; return (<div className="flex items-center gap-3"><Avatar size={40} shape="circle" src={row.product?.thumb_image_full_path} icon={<TbBox />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.product?.thumb_image_full_path)} /><div className="truncate"><span className="font-semibold">{row.product?.name || 'N/A'}</span></div></div>) } },
+        { header: 'Product', accessorKey: 'product.name', enableSorting: true, size: 100, cell: (props: CellContext<PriceListItem, any>) => { const row = props.row.original; return (<div className="flex items-center gap-3"><Avatar size={40} shape="circle" src={row.product?.thumb_image_full_path} icon={<TbBox />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.product?.thumb_image_full_path)} /><div className="truncate"><span className="font-semibold">{row.product?.name || 'N/A'}</span></div></div>) } },
+        { 
+            header: 'Qty',
+            id: 'qty',
+            size: 150,
+            cell: ({ row, column }) => {
+                const rowId = row.original.id;
+                const { quantities, handleQtyChange } = (column.columnDef.meta as any);
+                return (
+                    <Input
+                        size="sm"
+                        placeholder="Qty"
+                        value={quantities[rowId] || ''}
+                        onChange={(e) => handleQtyChange(rowId, e.target.value)}
+                    />
+                )
+            }
+        },
         { header: 'Price Breakup', accessorKey: 'price', enableSorting: true, size: 160, cell: ({ row }) => { const { price, base_price, gst_price, usd } = row.original; return (<div className="flex flex-col text-xs"><span>Price: {price}</span><span>Base: {base_price}</span><span>GST: {gst_price}</span><span>USD: {usd}</span></div>); }, },
         { header: 'Cost Split', accessorKey: 'nlc', enableSorting: true, size: 160, cell: ({ row }) => { const { expance, margin, interest, nlc } = row.original; return (<div className="flex flex-col text-xs"><span>Expense: {expance}</span><span>Margin: {margin}</span><span>Interest: {interest}</span><span>NLC: {nlc}</span></div>); }, },
         { header: 'Sales Price', accessorKey: 'sales_price', enableSorting: true, size: 140, },
-        { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+        
         { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100': props.row.original.status === 'Active', 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100': props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Actions', id: 'action', size: 120, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} />) },
     ], [handleOpenModal, openEditDrawer, openImageViewer]);
 
-    const columns: ColumnDef<PriceListItem>[] = useMemo(() => {
+    const finalColumns = useMemo(() => {
         const isAllFilteredSelected = allFilteredAndSortedData.length > 0 && selectedRows.length === allFilteredAndSortedData.length;
         const isSomeFilteredSelected = selectedRows.length > 0 && !isAllFilteredSelected;
-        return [
-            { id: 'select', header: () => (<div className="text-center"><Checkbox checked={isAllFilteredSelected} indeterminate={isSomeFilteredSelected} onChange={handleSelectAll} /></div>), cell: ({ row }) => (<div className="text-center"><Checkbox checked={selectedRows.includes(row.original.id)} onChange={(checked) => handleSelectRow(checked, row.original.id)} /></div>), size: 50, },
-            ...baseColumns
-        ]
-    }, [baseColumns, allFilteredAndSortedData, selectedRows, handleSelectAll, handleSelectRow]);
 
-    const [filteredColumns, setFilteredColumns] = useState<ColumnDef<PriceListItem>[]>(columns);
-    useEffect(() => { setFilteredColumns(columns) }, [columns]);
+        const selectColumn: ColumnDef<PriceListItem> = {
+            id: 'select',
+            header: () => (<div className="text-center"><Checkbox checked={isAllFilteredSelected} indeterminate={isSomeFilteredSelected} onChange={handleSelectAll} /></div>),
+            cell: ({ row }) => (<div className="text-center"><Checkbox checked={selectedRows.includes(row.original.id)} onChange={(checked) => handleSelectRow(checked, row.original.id)} /></div>),
+            size: 50,
+        };
 
+        const columnsWithInjectedData = baseColumns.map(col => {
+            if (col.id === 'qty') {
+                return {
+                    ...col,
+                    meta: {
+                        quantities: rowQuantities,
+                        handleQtyChange: handleQuantityChange,
+                    },
+                };
+            }
+            return col;
+        });
+
+        return [selectColumn, ...columnsWithInjectedData];
+
+    }, [baseColumns, selectedRows, allFilteredAndSortedData, handleSelectAll, handleSelectRow, rowQuantities, handleQuantityChange]);
+    
+    const [filteredColumns, setFilteredColumns] = useState(finalColumns);
+    
+    useEffect(() => {
+        setFilteredColumns(finalColumns);
+    }, [finalColumns]);
+    
     const activeFilterCount = useMemo(() => Object.values(activeFilters).filter(v => Array.isArray(v) ? v.length > 0 : v).length, [activeFilters]);
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
@@ -353,6 +402,7 @@ const PriceList = () => {
         else if (filterType === 'date') { setActiveFilters({ date: [new Date(), new Date()] }); }
     };
 
+    // MODIFICATION: Removed 'Status' from the copied text
     const handleCopySelected = useCallback(() => {
         if (selectedItemsData.length === 0) {
             toast.push(<Notification title="No selection" type="info">Please select rows to copy.</Notification>);
@@ -361,8 +411,8 @@ const PriceList = () => {
 
         const detailsText = selectedItemsData.map(item => (
             `Product: ${item.product?.name || 'N/A'}\n` +
-            `Sales Price: ₹${item.sales_price}\n` +
-            `Status: ${item.status}`
+            `Sales Price: ${item.sales_price}\n` +
+            `Qty: ${rowQuantities[item.id] || 'N/A'}`
         )).join('\n-----------------------------------\n');
 
         navigator.clipboard.writeText(detailsText).then(() => {
@@ -373,25 +423,53 @@ const PriceList = () => {
         }, () => {
             toast.push(<Notification title="Failed to copy" type="danger" duration={2000} />);
         });
-    }, [selectedItemsData]);
+    }, [selectedItemsData, rowQuantities]);
     
-    const handlePdfSelected = () => { if (selectedItemsData.length === 0) { toast.push(<Notification title="No selection" type="info">Please select rows for PDF.</Notification>); return; } exportToPdf('selected-prices.pdf', 'Price List Selection', selectedItemsData); setSelectedRows([]); };
+    const handlePdfSelected = () => { 
+        if (selectedItemsData.length === 0) { toast.push(<Notification title="No selection" type="info">Please select rows for PDF.</Notification>); return; } 
+        const dataWithQty = selectedItemsData.map(item => ({
+            ...item,
+            qty: rowQuantities[item.id] || 'N/A'
+        }));
+        exportToPdf('selected-prices.pdf', 'Price List Selection', dataWithQty); 
+        setSelectedRows([]); 
+    };
+
     const handleOpenSelectedExportReasonModal = () => { if (!selectedItemsData.length) return; exportReasonFormMethods.reset(); setIsExportSelectedReasonModalOpen(true); };
+    
     const handleConfirmSelectedExportWithReason = async (data: ExportReasonFormData) => {
-        setIsSubmittingExportReason(true); const fileName = `price_list_selection_export_${new Date().toISOString().split('T')[0]}.xlsx`;
-        try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "PriceList Selection", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToExcel(fileName, selectedItemsData); setIsExportSelectedReasonModalOpen(false); setSelectedRows([]); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsSubmittingExportReason(false); }
+        setIsSubmittingExportReason(true); 
+        const fileName = `price_list_selection_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const dataWithQty = selectedItemsData.map(item => ({
+            ...item,
+            qty: rowQuantities[item.id] || 'N/A'
+        }));
+        try { 
+            await dispatch(submitExportReasonAction({ reason: data.reason, module: "PriceList Selection", file_name: fileName })).unwrap(); 
+            toast.push(<Notification title="Export Reason Submitted" type="success" />); 
+            exportToExcel(fileName, dataWithQty); 
+            setIsExportSelectedReasonModalOpen(false); 
+            setSelectedRows([]); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); 
+        } finally { 
+            setIsSubmittingExportReason(false); 
+        }
     };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) return; exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `price_list_export_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "PriceList", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsSubmittingExportReason(false); } };
     const handleOpenTodayExportReasonModal = () => { if (!todayPriceListData.length) return; exportReasonFormMethods.reset(); setIsTodayExportReasonModalOpen(true); };
-    const handleTodayConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsTodaySubmittingExportReason(true); const fileName = `todays_price_list_export_${new Date().toISOString().split('T')[0]}.xlsx`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Today's Price List", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToExcel(fileName, todayPriceListData); setIsTodayExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsTodaySubmittingExportReason(false); } };
+    const handleTodayConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsTodaySubmittingExportReason(true); const fileName = `todays_price_list_export_${new Date().toISOString().split('T')[0]}.xlsx`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Today's Price List", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToExcel(fileName, todayPriceListData.map(item => ({...item, qty: ''}))); setIsTodayExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsTodaySubmittingExportReason(false); } };
 
     const todayPriceListData = useMemo(() => { const today = new Date(); today.setHours(0, 0, 0, 0); if (!Array.isArray(priceListData?.data)) return []; return priceListData.data.filter(item => { if (!item.updated_at) return false; const itemDate = new Date(item.updated_at); itemDate.setHours(0, 0, 0, 0); return itemDate.getTime() === today.getTime(); }); }, [priceListData?.data]);
-    const generateShareableText = () => { let message = `*Today's Price List (${new Date().toLocaleDateString()})*\n\n-----------------------------------\n`; todayPriceListData.forEach((item) => { message += `*Product:* ${item.product?.name}\n*Price:* ₹${item.sales_price}\n*Status:* ${item.status}\n-----------------------------------\n` }); return message; };
+    
+    // MODIFICATION: Removed 'Status' from the shareable text
+    const generateShareableText = () => { let message = `*Today's Price List (${new Date().toLocaleDateString()})*\n\n-----------------------------------\n`; todayPriceListData.forEach((item) => { message += `*Product:* ${item.product?.name}\n*Price:* ${item.sales_price}\n-----------------------------------\n` }); return message; };
+    
     const handleShareViaEmail = () => { const subject = `Today's Price List - ${new Date().toLocaleDateString()}`; const body = generateShareableText().replace(/\*/g, '').replace(/\n/g, '%0A'); window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; };
     const handleShareViaWhatsapp = () => { const message = generateShareableText(); const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; window.open(whatsappUrl, '_blank'); };
-    const handlePdfDownload = () => exportToPdf('todays-prices.pdf', "Today's Price List", todayPriceListData);
+    const handlePdfDownload = () => exportToPdf('todays-prices.pdf', "Today's Price List", todayPriceListData.map(item => ({...item, qty: ''})));
     const handleExcelDownload = () => handleOpenTodayExportReasonModal();
 
     const formFieldsConfig = useMemo(() => [{ name: 'product_id', label: 'Product Name', type: 'select', options: productOptions, isRequired: true }, { name: 'price', label: 'Price', type: 'text', isRequired: true }, { name: 'usd_rate', label: 'USD Rate', type: 'text', isRequired: true }, { name: 'expance', label: 'Expenses', type: 'text', isRequired: true }, { name: 'margin', label: 'Margin', type: 'text', isRequired: true }, { name: 'status', label: 'Status', type: 'select', options: statusOptions, isRequired: true }], [productOptions]);
@@ -431,8 +509,11 @@ const PriceList = () => {
                                 onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal}
                                 activeFilters={activeFilters} activeFilterCount={activeFilterCount}
                                 productOptions={productOptions} categoryOptions={categoryOptions} subCategoryOptions={subCategoryOptions} brandOptions={brandOptions}
-                                columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns}
-                                searchInputValue={tableData.query} dispatch={dispatch}
+                                columns={baseColumns} 
+                                filteredColumns={filteredColumns} 
+                                setFilteredColumns={setFilteredColumns}
+                                searchInputValue={tableData.query} 
+                                dispatch={dispatch}
                                 isFilterDrawerOpen={isFilterDrawerOpen} setIsFilterDrawerOpen={setIsFilterDrawerOpen}
                             />
                         )}
@@ -441,10 +522,14 @@ const PriceList = () => {
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching item(s).</div>}
                     <div className="flex-grow overflow-auto">
                         <DataTable
-                            columns={filteredColumns} data={pageData} noData={pageData.length <= 0}
+                            columns={filteredColumns}
+                            data={pageData}
+                            noData={pageData.length <= 0}
                             loading={masterLoadingStatus === "loading" || isSubmitting}
                             pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
-                            onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort}
+                            onPaginationChange={handlePaginationChange}
+                            onSelectChange={handleSelectPageSizeChange}
+                            onSort={handleSort}
                         />
                     </div>
                 </AdaptiveCard>
@@ -470,7 +555,7 @@ const PriceList = () => {
                 <div className="h-full">
                     {todayPriceListData.length > 0 ? (
                         <Table><Table.THead><Table.Tr><Table.Th>Product Name</Table.Th><Table.Th>Sales Price</Table.Th><Table.Th>Status</Table.Th></Table.Tr></Table.THead>
-                            <Table.TBody>{todayPriceListData.map((item) => (<Table.Tr key={item.id}><Table.Td>{item.product?.name}</Table.Td><Table.Td>₹{item.sales_price}</Table.Td><Table.Td><Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600': item.status === 'Active', 'bg-red-100 text-red-600': item.status === 'Inactive' })}>{item.status}</Tag></Table.Td></Table.Tr>))}</Table.TBody>
+                            <Table.TBody>{todayPriceListData.map((item) => (<Table.Tr key={item.id}><Table.Td>{item.product?.name}</Table.Td><Table.Td>{item.sales_price}</Table.Td><Table.Td><Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600': item.status === 'Active', 'bg-red-100 text-red-600': item.status === 'Inactive' })}>{item.status}</Tag></Table.Td></Table.Tr>))}</Table.TBody>
                         </Table>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-center"><div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-full mb-4"><TbFileDownload className="text-4xl text-gray-500" /></div><h6 className="font-semibold">No Prices Updated Today</h6><p className="text-gray-500">Check back later or view the full price list.</p></div>

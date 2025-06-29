@@ -2997,3 +2997,23 @@ export const logOutAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+
+export const getAllScheduleAsync = async () => {
+  try {
+    const getUserIDFromLocalStorage = JSON.parse(localStorage.getItem("@secure:UserData"))?.id;
+    const response = await axiosInstance.get(`${config.apiURL}/event`, { "user_id": getUserIDFromLocalStorage })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addScheduleAsync = async (payload) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/event`, { ...payload })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
