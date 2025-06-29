@@ -24,7 +24,7 @@ import Select from '@/components/ui/Select'
 import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog, Table } from '@/components/ui'
 
 // Icons
-import { TbPencil, TbTrash, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbEyeDollar, TbFileDownload, TbShare, TbUserCircle, TbReceipt, TbDeviceWatchDollar, TbClockDollar, TbPencilDollar, TbDiscount, TbDiscountOff, TbBell, TbClipboardText, TbDotsVertical, TbBox, TbUser } from 'react-icons/tb'
+import { TbPencil, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbEyeDollar, TbFileDownload, TbShare, TbUserCircle, TbReceipt, TbDeviceWatchDollar, TbClockDollar, TbPencilDollar, TbDiscount, TbDiscountOff, TbBell, TbClipboardText, TbDotsVertical, TbBox, TbUser } from 'react-icons/tb'
 import { FaRegFilePdf, FaWhatsapp } from 'react-icons/fa'
 import { BsFileExcelFill } from 'react-icons/bs'
 import { HiOutlineMail } from 'react-icons/hi'
@@ -41,7 +41,6 @@ import {
     getPriceListAction,
     addPriceListAction,
     editPriceListAction,
-    deletePriceListAction,
     getAllProductAction,
     submitExportReasonAction,
     getCategoriesAction,
@@ -172,7 +171,7 @@ const PriceListTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, 
 });
 PriceListTableTools.displayName = 'PriceListTableTools';
 
-const ActionColumn = ({ rowData, onEdit, onDelete, onOpenModal }: { rowData: PriceListItem; onEdit: () => void; onDelete: () => void; onOpenModal: (type: PriceListModalType, data: PriceListItem) => void; }) => {
+const ActionColumn = ({ rowData, onEdit, onOpenModal }: { rowData: PriceListItem; onEdit: () => void; onOpenModal: (type: PriceListModalType, data: PriceListItem) => void; }) => {
     const handleCopyDetails = (item: PriceListItem) => {
         const details = [`Product: ${item.product?.name}`, `Price: ${item.price}`, `Base Price: ${item.base_price}`, `Sales Price: ${item.sales_price}`, `Status: ${item.status}`].join('\n');
         navigator.clipboard.writeText(details).then(() => { toast.push(<Notification title="Copied to clipboard" type="success" duration={2000} />); }, () => { toast.push(<Notification title="Failed to copy" type="danger" duration={2000} />); });
@@ -180,11 +179,8 @@ const ActionColumn = ({ rowData, onEdit, onDelete, onOpenModal }: { rowData: Pri
     return (
         <div className="flex items-center justify-center gap-1">
             <Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={onEdit}><TbPencil /></div></Tooltip>
-            <Tooltip title="Delete"><div className="text-lg p-1.5 cursor-pointer hover:text-red-500" onClick={onDelete}><TbTrash /></div></Tooltip>
-            <Dropdown placement="bottom-end" renderTitle={<Tooltip title="More"><div className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><TbDotsVertical /></div></Tooltip>}>
-                <Dropdown.Item onClick={() => onOpenModal('notification', rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Notify</span></Dropdown.Item>
-                <Dropdown.Item onClick={() => handleCopyDetails(rowData)} className="flex items-center gap-2"><TbClipboardText size={18} /> <span className="text-xs">Copy Details</span></Dropdown.Item>
-            </Dropdown>
+            <Tooltip title="Notify"><div className="text-lg p-1.5 cursor-pointer hover:text-amber-500" onClick={() => onOpenModal('notification', rowData)}><TbBell /></div></Tooltip>
+            <Tooltip title="Copy Details"><div className="text-lg p-1.5 cursor-pointer hover:text-gray-600" onClick={() => handleCopyDetails(rowData)}><TbClipboardText /></div></Tooltip>
         </div>
     );
 };
@@ -224,9 +220,6 @@ const PriceList = () => {
     const [isTodayPriceDrawerOpen, setIsTodayPriceDrawerOpen] = useState(false);
     const [editingPriceListItem, setEditingPriceListItem] = useState<PriceListItem | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-    const [priceListItemToDelete, setPriceListItemToDelete] = useState<PriceListItem | null>(null);
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
     const [isTodayExportReasonModalOpen, setIsTodayExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
@@ -262,8 +255,8 @@ const PriceList = () => {
         { header: 'Sales Price', accessorKey: 'sales_price', enableSorting: true, size: 140, },
         { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
         { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100': props.row.original.status === 'Active', 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100': props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
-        { header: 'Actions', id: 'action', size: 120, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />) },
-    ], []);
+        { header: 'Actions', id: 'action', size: 120, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} />) },
+    ], [handleOpenModal]);
     
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<PriceListItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -315,8 +308,6 @@ const PriceList = () => {
     const openEditDrawer = (item: PriceListItem) => { setEditingPriceListItem(item); editFormMethods.reset({ product_id: String(item.product_id), price: item.price, usd_rate: item.usd_rate, expance: item.expance, margin: item.margin, status: item.status }); setIsEditDrawerOpen(true); };
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingPriceListItem(null); };
     const onEditPriceListSubmit = async (data: PriceListFormData) => { if (!editingPriceListItem) return; setIsSubmitting(true); try { await dispatch(editPriceListAction({ id: editingPriceListItem.id, ...data })).unwrap(); toast.push(<Notification title="Price Item Updated" type="success" />); closeEditDrawer(); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message}</Notification>); } finally { setIsSubmitting(false); } };
-    const handleDeleteClick = (item: PriceListItem) => { setPriceListItemToDelete(item); setSingleDeleteConfirmOpen(true); };
-    const onConfirmSingleDelete = async () => { if (!priceListItemToDelete) return; setIsDeleting(true); try { await dispatch(deletePriceListAction({ id: priceListItemToDelete.id })).unwrap(); toast.push(<Notification title="Price Item Deleted" type="success" />); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Deletion Failed" type="danger">{error.message}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setPriceListItemToDelete(null); } };
     
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) return; exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `price_list_export_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "PriceList", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsSubmittingExportReason(false); } };
@@ -373,7 +364,7 @@ const PriceList = () => {
                     <div className="flex-grow overflow-auto">
                         <DataTable
                             columns={filteredColumns} data={pageData} noData={pageData.length <= 0}
-                            loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting}
+                            loading={masterLoadingStatus === "loading" || isSubmitting}
                             pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort}
                         />
@@ -413,9 +404,6 @@ const PriceList = () => {
             </ConfirmDialog>
             <ConfirmDialog isOpen={isTodayExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsTodayExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleTodayConfirmExportWithReason)} loading={isTodaySubmittingExportReason} confirmText={isTodaySubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isTodaySubmittingExportReason }} >
                 <Form onSubmit={(e) => e.preventDefault()}><FormItem label="Reason"><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => <Input textArea {...field} />} /></FormItem></Form>
-            </ConfirmDialog>
-            <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Price Item" onClose={() => setSingleDeleteConfirmOpen(false)} onConfirm={onConfirmSingleDelete} loading={isDeleting}>
-                <p>Are you sure you want to delete this price list item?</p>
             </ConfirmDialog>
             <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer}><div className="flex justify-center items-center p-4"><img src={imageToView || ''} alt="View" style={{ maxWidth: "100%", maxHeight: "80vh" }} /></div></Dialog>
             <PriceListModals modalState={modalState} onClose={handleCloseModal} />
