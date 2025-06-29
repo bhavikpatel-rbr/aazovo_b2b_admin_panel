@@ -34,7 +34,6 @@ import type { TableQueries } from '@/@types/common'
 import type { CellContext, ColumnDef, OnSortParam } from '@/components/shared/DataTable'
 
 // Redux Imports
-import { authSelector } from '@/reduxtool/auth/authSlice'; // Assuming this path for the logged-in user
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
     addNotificationAction,
@@ -195,8 +194,6 @@ const AddNotificationDialog = ({ PriceList, onClose, getAllUserDataOptions }) =>
 
     // --- Data Hooks ---
     // Get the current user's ID for the 'created_by' field
-    const { user } = useSelector(authSelector);
-    const createdById = user?.id;
 
     // --- Form Hooks & Schema ---
     const notificationSchema = z.object({
@@ -220,21 +217,12 @@ const AddNotificationDialog = ({ PriceList, onClose, getAllUserDataOptions }) =>
     // --- Event Handlers ---
     const onSend = async (formData: NotificationFormData) => {
         setIsLoading(true);
-        // await dispatch(addNotificationAction(data)).unwrap();
         const payload = {
-            // From form
             send_users: formData.send_users, // Key is `user_id`, value is an array of IDs
             notification_title: formData.notification_title,
             message: formData.message,
-
-            // From context/props
-            category_id: PriceList.product.category?.id || null,
             module_id: String(PriceList.id),
             module_name: 'PriceList',
-
-            // Static/System values
-            created_by: createdById,
-            seen: 0,
         };
 
         try {
