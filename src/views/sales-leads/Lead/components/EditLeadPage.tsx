@@ -3,7 +3,6 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, NavLink, useParams } from "react-router-dom";
 import dayjs from "dayjs";
-import classNames from "classnames";
 
 // UI Components
 import Input from "@/components/ui/Input";
@@ -12,8 +11,6 @@ import {
   Select as UiSelect,
   DatePicker,
   Button,
-  Table,
-  Tooltip,
 } from "@/components/ui";
 import InputNumber from "@/components/ui/Input/InputNumber";
 import Notification from "@/components/ui/Notification";
@@ -25,7 +22,7 @@ import Spinner from "@/components/ui/Spinner";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
-import { TbInfoCircle, TbPencil, TbTrash } from "react-icons/tb";
+import { TbInfoCircle } from "react-icons/tb";
 
 // Types and Schema
 import type { LeadFormData } from "../types";
@@ -54,11 +51,6 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-type SelectOption = {
-  value: string | number;
-  label: string;
-  id?: number | string;
-};
 type ApiLookupItem = {
   id: string | number;
   name: string;
@@ -93,24 +85,6 @@ const EditLeadPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
-  // Dummy data for the new Matched Opportunity table
-  const [matchedOpportunities] = useState([
-    {
-      id: 1,
-      company: "TechSource Inc.",
-      member: "John Doe",
-      details: "Have 500 units, A-Grade, ready to ship.",
-      timestamp: "2023-10-27 10:00 AM",
-    },
-    {
-      id: 2,
-      company: "Global Gadgets LLC",
-      member: "Jane Smith",
-      details: "Looking to buy 1000 units, flexible on price.",
-      timestamp: "2023-10-27 09:45 AM",
-    },
-  ]);
-
   const {
     productsMasterData = [],
     ProductSpecificationsData = [],
@@ -127,24 +101,22 @@ const EditLeadPage = () => {
     control,
     handleSubmit,
     reset,
-    watch, // Watch for dynamic field changes
+    watch,
     formState: { errors, isDirty },
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadFormSchema),
     mode: "onChange",
-    defaultValues: { // Set default values to prevent uncontrolled component warnings
-        member_id: null,
-        enquiry_type: '',
-        lead_intent: null,
-        product_id: null,
-        qty: null,
+    defaultValues: {
+      member_id: null,
+      enquiry_type: '',
+      lead_intent: null,
+      product_id: null,
+      qty: null,
     }
   });
 
-  // Watch lead_intent to dynamically update labels
   const leadIntentValue = watch("lead_intent");
 
-  // --- Dynamic labels based on lead_intent ---
   const leadMemberLabel = useMemo(() => {
     if (leadIntentValue === "Buy") return <div>Lead Member (Buyer)<span className="text-red-500"> * </span></div>;
     if (leadIntentValue === "Sell") return <div>Lead Member (Supplier)<span className="text-red-500"> * </span></div>;
@@ -157,43 +129,37 @@ const EditLeadPage = () => {
     return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
   }, [leadIntentValue]);
 
-  // Fetch all dropdown and specific lead data
   useEffect(() => {
     if (!id) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Lead ID missing.
-        </Notification>
-      );
+      toast.push(<Notification title="Error" type="danger">Lead ID missing.</Notification>);
       navigate("/sales/leads");
       return;
     }
-
-    // Fetch master data for dropdowns
     dispatch(getAllProductAction());
     dispatch(getProductSpecificationsAction());
     dispatch(getPaymentTermAction());
     dispatch(getLeadMemberAction());
     dispatch(getSalesPersonAction());
     dispatch(getSuppliersAction());
-
-    // Fetch the specific lead data by its ID
     dispatch(getLeadById(id));
-
   }, [dispatch, id, navigate]);
 
-  // ======== 🚀 POPULATE FORM WHEN DATA IS READY (UPDATED) 🚀 ========
   useEffect(() => {
     if (currentLeadStatus === "idle" && currentLead) {
-        // Helper to convert string to number, returning null if invalid
-        const toNumber = (val: any) => {
-            const num = parseFloat(val);
-            return isNaN(num) ? null : num;
-        };
+      const toNumber = (val: any) => {
+        const num = parseFloat(val);
+        return isNaN(num) ? null : num;
+      };
+
+      // Reverse lookup for cartoon type: API gives label ("Box"), form needs value (4)
+      const cartoonTypeId =
+        cartoonTypeOptions.find(
+          (option) => option.label === currentLead.cartoon_type
+        )?.value ?? null;
       
       reset({
-        // Lead Information
-        member_id: toNumber(currentLead.member_id),
+        // Lead Info
+        member_id: toNumber(currentLead.lead_member), // Map from API name
         enquiry_type: currentLead.enquiry_type ?? "",
         lead_intent: currentLead.lead_intent ?? null,
         product_id: toNumber(currentLead.product_id),
@@ -201,93 +167,78 @@ const EditLeadPage = () => {
         qty: toNumber(currentLead.qty),
         target_price: toNumber(currentLead.target_price),
         lead_status: currentLead.lead_status ?? "New",
-        assigned_sales_person_id: toNumber(currentLead.assigned_sales_person_id),
+        assigned_sales_person_id: toNumber(currentLead.assigned_saled_id), // Map from API name
 
         // Sourcing Details
-        source_supplier_id: toNumber(currentLead.source_supplier_id),
+        source_supplier_id: toNumber(currentLead.source_member_id), // Map from API name
         source_qty: toNumber(currentLead.source_qty),
-        source_price: toNumber(currentLead.source_price),
-        source_product_status: currentLead.source_product_status ?? null,
-        source_device_condition: currentLead.source_device_condition ?? null,
-        source_device_type: currentLead.source_device_type ?? null,
-        source_color: currentLead.source_color ?? null,
-        source_cartoon_type_id: toNumber(currentLead.source_cartoon_type_id),
-        source_dispatch_status: currentLead.source_dispatch_status ?? null,
-        source_payment_term_id: toNumber(currentLead.source_payment_term_id),
-        source_location: currentLead.source_location ?? null,
-        source_internal_remarks: currentLead.source_internal_remarks ?? null,
+        source_price: toNumber(currentLead.sourced_price), // Map from API name
+        source_product_status: currentLead.product_status ?? null, // Map from API name
+        source_device_condition: currentLead.device_condition ?? null, // Map from API name
+        source_device_type: currentLead.device_type ?? null, // Map from API name
+        source_color: currentLead.color ?? null, // Map from API name
+        source_cartoon_type_id: cartoonTypeId, // Use the reverse-looked-up ID
+        source_dispatch_status: currentLead.dispatch_status ?? null, // Map from API name
+        source_payment_term_id: toNumber(currentLead.payment_term_id),
+        source_location: currentLead.location ?? null, // Map from API name
+        source_internal_remarks: currentLead.internal_remark ?? null, // Map from API name
         
-        // Handle date conversion carefully
         source_eta:
-          currentLead.source_eta && dayjs(currentLead.source_eta).isValid()
-            ? dayjs(currentLead.source_eta).toDate()
+          currentLead.eta && dayjs(currentLead.eta).isValid()
+            ? dayjs(currentLead.eta).toDate()
             : null,
       });
     }
   }, [currentLead, currentLeadStatus, reset]);
 
   // Memoized options from Redux store
-  const productOptions = useMemo(
-    () =>
-      productsMasterData.map((p: ApiLookupItem) => ({
-        value: p.id,
-        label: p.name,
-      })),
-    [productsMasterData]
-  );
-  const productSpecOptions = useMemo(
-    () =>
-      ProductSpecificationsData.map((s: ApiLookupItem) => ({
-        value: s.id,
-        label: s.name,
-      })),
-    [ProductSpecificationsData]
-  );
-  const paymentTermOptions = useMemo(
-    () =>
-      PaymentTermsData.map((pt: ApiLookupItem) => ({
-        value: pt.id,
-        label: pt.term_name || pt.name,
-      })),
-    [PaymentTermsData]
-  );
-  const leadMemberOptions = useMemo(
-    () =>
-      memberData.map((m: ApiLookupItem) => ({ value: m.id, label: m.name })),
-    [memberData]
-  );
-  const salesPersonOptions = useMemo(
-    () =>
-      salesPerson.map((sp: ApiLookupItem) => ({
-        value: sp.id,
-        label: sp.name,
-      })),
-    [salesPerson]
-  );
-  const suppliersOptions = useMemo(
-    () => suppliers.map((s: ApiLookupItem) => ({ value: s.id, label: s.name })),
-    [suppliers]
-  );
+  const productOptions = useMemo(() => productsMasterData.map((p: ApiLookupItem) => ({ value: p.id, label: p.name })), [productsMasterData]);
+  const productSpecOptions = useMemo(() => ProductSpecificationsData.map((s: ApiLookupItem) => ({ value: s.id, label: s.name })), [ProductSpecificationsData]);
+  const paymentTermOptions = useMemo(() => PaymentTermsData.map((pt: ApiLookupItem) => ({ value: pt.id, label: pt.term_name || pt.name })), [PaymentTermsData]);
+  const leadMemberOptions = useMemo(() => memberData.map((m: ApiLookupItem) => ({ value: m.id, label: m.name })), [memberData]);
+  const salesPersonOptions = useMemo(() => salesPerson.map((sp: ApiLookupItem) => ({ value: sp.id, label: sp.name })), [salesPerson]);
 
   const onSubmit = async (data: LeadFormData) => {
-    if (!id || !currentLead) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          Cannot submit: Lead data not loaded.
-        </Notification>
-      );
-      return;
-    }
+    if (!id) return;
     setIsSubmitting(true);
-    // Add the lead ID to the payload for the update action
-    const payload = {
-      ...data,
-      id: currentLead.id, 
-      source_eta: data.source_eta ? dayjs(data.source_eta).toISOString() : null,
-    };
 
+    // Find the label for the cartoon type ID
+    const cartoonTypeLabel =
+      cartoonTypeOptions.find(
+        (option) => option.value === data.source_cartoon_type_id
+      )?.label || null;
+
+    // --- START: PAYLOAD TRANSFORMATION ---
+    // Transform the form data to match the required API payload structure for editing
+    const apiPayload = {
+      id: parseInt(id, 10), // Ensure ID is a number
+      lead_intent: data.lead_intent,
+      lead_member: data.member_id,
+      enquiry_type: data.enquiry_type,
+      product_id: data.product_id,
+      qty: data.qty,
+      target_price: data.target_price,
+      lead_status: data.lead_status,
+      assigned_saled_id: data.assigned_sales_person_id,
+      product_spec_id: data.product_spec_id,
+      source_member_id: data.source_supplier_id,
+      source_qty: data.source_qty,
+      sourced_price: data.source_price,
+      product_status: data.source_product_status,
+      device_condition: data.source_device_condition,
+      device_type: data.source_device_type,
+      color: data.source_color,
+      cartoon_type: cartoonTypeLabel,
+      dispatch_status: data.source_dispatch_status,
+      payment_term_id: data.source_payment_term_id,
+      eta: data.source_eta ? dayjs(data.source_eta).format("YYYY-MM-DD") : null,
+      location: data.source_location,
+      internal_remark: data.source_internal_remarks,
+    };
+    // --- END: PAYLOAD TRANSFORMATION ---
+    
     try {
-      await dispatch(editLeadAction(payload)).unwrap();
+      await dispatch(editLeadAction(apiPayload)).unwrap();
       toast.push(
         <Notification title="Success" type="success">
           Lead updated successfully.
@@ -349,7 +300,7 @@ const EditLeadPage = () => {
           <AdaptableCard className="mb-4">
             <h5 className="mb-6 font-semibold">Lead Information</h5>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
-                            <FormItem
+            <FormItem
                 label="Lead Intent"
                 invalid={!!errors.lead_intent}
                 errorMessage={errors.lead_intent?.message}
@@ -540,7 +491,7 @@ const EditLeadPage = () => {
           <AdaptableCard className="mt-4 mb-4">
             <h5 className="mb-6 font-semibold">Sourcing Details</h5>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
-              <FormItem
+            <FormItem
                 label={sourceMemberLabel}
                 invalid={!!errors.source_supplier_id}
                 errorMessage={errors.source_supplier_id?.message}
