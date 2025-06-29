@@ -1,6 +1,6 @@
 // src/views/your-path/Continents.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import cloneDeep from 'lodash/cloneDeep'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -16,789 +16,250 @@ import Button from '@/components/ui/Button'
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import DebouceInput from '@/components/shared/DebouceInput'
+import DebounceInput from '@/components/shared/DebouceInput' // Corrected typo
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input, Tag } from '@/components/ui' // Added Tag
+import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog } from '@/components/ui'
 
 // Icons
-import {
-    TbPencil,
-    // TbTrash, // Commented out
-    // TbChecks, // Commented out
-    TbSearch,
-    TbFilter,
-    TbPlus,
-    TbCloudUpload,
-    TbReload,
-} from 'react-icons/tb'
+import { TbPencil, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbFile, TbFileCheck, TbFileX, TbUserCircle } from 'react-icons/tb'
 
 // Types
-import type {
-    OnSortParam,
-    ColumnDef,
-    // Row, // Commented out
-} from '@/components/shared/DataTable'
+import type { OnSortParam, ColumnDef } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+
+// Redux Imports
 import { useAppDispatch } from '@/reduxtool/store'
+import { shallowEqual, useSelector } from 'react-redux'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
     getContinentsAction,
     addContinentAction,
     editContinentAction,
-    // deleteContinentAction, // Kept for potential future use, but UI trigger removed
-    // deleteAllContinentsAction, // Commented out
-    submitExportReasonAction, // Placeholder for future action
+    submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
-import { useSelector } from 'react-redux'
-import { masterSelector } from '@/reduxtool/master/masterSlice'
 
-// Type for Select options
-type SelectOption = {
-    value: string | number
-    label: string
-}
+// --- FEATURE-SPECIFIC TYPES & SCHEMAS ---
+export type ContinentItem = { id: string | number; name: string; status: 'Active' | 'Inactive'; created_at?: string; updated_at?: string; updated_by_user?: { name: string, profile_pic_path?: string, roles: { display_name: string }[] }; };
+export type SelectOption = { value: string; label: string };
+type ContinentFilterSchema = { names: string[]; status: ('Active' | 'Inactive')[]; };
+const continentFormSchema = z.object({ name: z.string().min(1, "Continent name is required.").max(100, "Name cannot exceed 100 characters."), status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }), });
+type ContinentFormData = z.infer<typeof continentFormSchema>;
+const exportReasonSchema = z.object({ reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."), });
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
 
-// --- Define ContinentItem Type ---
-export type ContinentItem = {
-    id: string | number
-    name: string
-    status: 'Active' | 'Inactive' // Added status field
-    created_at?: string
-    updated_at?: string
-    updated_by_name?: string
-    updated_by_role?: string
-}
-
-// --- Status Options ---
-const statusOptions: SelectOption[] = [
-    { value: 'Active', label: 'Active' },
-    { value: 'Inactive', label: 'Inactive' },
-]
-
-// --- Zod Schema for Add/Edit Continent Form ---
-const continentFormSchema = z.object({
-    name: z
-        .string()
-        .min(1, 'Continent name is required.')
-        .max(100, 'Name cannot exceed 100 characters.'),
-    status: z.enum(['Active', 'Inactive'], {
-        required_error: 'Status is required.',
-    }), // Added status
-})
-type ContinentFormData = z.infer<typeof continentFormSchema>
-
-// --- Zod Schema for Filter Form ---
-const filterFormSchema = z.object({
-    filterNames: z
-        .array(z.object({ value: z.string(), label: z.string() }))
-        .optional(),
-    filterStatus: z // Added status filter
-        .array(z.object({ value: z.string(), label: z.string() }))
-        .optional(),
-})
-type FilterFormData = z.infer<typeof filterFormSchema>
-
-// --- Zod Schema for Export Reason Form ---
-const exportReasonSchema = z.object({
-    reason: z
-        .string()
-        .min(1, 'Reason for export is required.')
-        .max(255, 'Reason cannot exceed 255 characters.'),
-})
-type ExportReasonFormData = z.infer<typeof exportReasonSchema>
-
-// --- CSV Exporter Utility ---
-const CSV_HEADERS_CONTINENT = [
-    'ID',
-    'Continent Name',
-    'Status',
-    'Updated By',
-    'Updated Role',
-    'Updated At',
-]
-type ContinentExportItem = Omit<ContinentItem, 'created_at' | 'updated_at'> & {
-    status: 'Active' | 'Inactive' // Ensure status is part of export
-    updated_at_formatted?: string
-}
-const CSV_KEYS_CONTINENT_EXPORT: (keyof ContinentExportItem)[] = [
-    'id',
-    'name',
-    'status', // Added status
-    'updated_by_name',
-    'updated_by_role',
-    'updated_at_formatted',
-]
-
+// --- HELPERS ---
 function exportToCsvContinent(filename: string, rows: ContinentItem[]) {
-    if (!rows || !rows.length) {
-        toast.push(
-            <Notification title="No Data" type="info">
-                Nothing to export.
-            </Notification>,
-        )
-        return false
-    }
-    const transformedRows: ContinentExportItem[] = rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        status: row.status, // Added status
-        updated_by_name: row.updated_by_name || 'N/A',
-        updated_by_role: row.updated_by_role || 'N/A',
-        updated_at_formatted: row.updated_at
-            ? new Date(row.updated_at).toLocaleString()
-            : 'N/A',
-    }))
-
-    const separator = ','
-    const csvContent =
-        CSV_HEADERS_CONTINENT.join(separator) +
-        '\n' +
-        transformedRows
-            .map((row) => {
-                return CSV_KEYS_CONTINENT_EXPORT.map((k) => {
-                    let cell = row[k as keyof ContinentExportItem]
-                    if (cell === null || cell === undefined) {
-                        cell = ''
-                    } else {
-                        cell = String(cell).replace(/"/g, '""')
-                    }
-                    if (String(cell).search(/("|,|\n)/g) >= 0) {
-                        cell = `"${cell}"`
-                    }
-                    return cell
-                }).join(separator)
-            })
-            .join('\n')
-
-    const blob = new Blob(['\ufeff' + csvContent], {
-        type: 'text/csv;charset=utf-8;',
-    })
-    const link = document.createElement('a')
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob)
-        link.setAttribute('href', url)
-        link.setAttribute('download', filename)
-        link.style.visibility = 'hidden'
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-        toast.push(
-            <Notification title="Export Successful" type="success">
-                Data exported to {filename}.
-            </Notification>,
-        )
-        return true
-    }
-    toast.push(
-        <Notification title="Export Failed" type="danger">
-            Browser does not support this feature.
-        </Notification>,
-    )
-    return false
+    if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; }
+    const CSV_HEADERS = ["ID", "Continent Name", "Status", "Updated By", "Updated Role", "Updated At"];
+    const preparedRows = rows.map(row => ({ id: row.id, name: row.name, status: row.status, updated_by_name: row.updated_by_user?.name || "N/A", updated_by_role: row.updated_by_user?.roles[0]?.display_name || "N/A", updated_at: row.updated_at ? new Date(row.updated_at).toLocaleString() : "N/A", }));
+    const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => [row.id, `"${String(row.name).replace(/"/g, '""')}"`, row.status, `"${String(row.updated_by_name).replace(/"/g, '""')}"`, `"${String(row.updated_by_role).replace(/"/g, '""')}"`, `"${String(row.updated_at).replace(/"/g, '""')}"`].join(','))].join('\n');
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
 }
 
-// --- ActionColumn Component ---
-const ActionColumn = ({ onEdit }: { onEdit: () => void }) => {
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
+// --- REUSABLE DISPLAY & TOOL COMPONENTS ---
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }) => {
+    const activeNames = filterData.names || []; const activeStatuses = filterData.status || []; const hasActiveFilters = activeNames.length > 0 || activeStatuses.length > 0;
+    if (!hasActiveFilters) return null;
     return (
-        <div className="flex items-center justify-center">
-            <Tooltip title="Edit">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    onClick={onEdit}
-                >
-                    <TbPencil />
-                </div>
-            </Tooltip>
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {activeNames.map(name => (<Tag key={`name-${name}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">Name: {name}<TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('names', name)} /></Tag>))}
+            {activeStatuses.map(status => (<Tag key={`status-${status}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">Status: {status}<TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('status', status)} /></Tag>))}
+            {hasActiveFilters && <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>}
         </div>
-    )
-}
+    );
+};
 
-// --- ContinentSearch Component ---
-type ContinentSearchProps = {
-    onInputChange: (value: string) => void
-    ref?: Ref<HTMLInputElement>
-}
-const ContinentSearch = React.forwardRef<
-    HTMLInputElement,
-    ContinentSearchProps
->(({ onInputChange }, ref) => {
+const ContinentTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, continentNameOptions, columns, filteredColumns, setFilteredColumns, searchInputValue }, ref) => {
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+    const { control, handleSubmit, setValue } = useForm<ContinentFilterSchema>({ defaultValues: { names: [], status: [] }, });
+    useEffect(() => { setValue('names', activeFilters.names || []); setValue('status', activeFilters.status || []); }, [activeFilters, setValue]);
+    const onSubmit = (data: ContinentFilterSchema) => { onApplyFilters(data); setIsFilterDrawerOpen(false); };
+    const onDrawerClear = () => { onApplyFilters({}); setIsFilterDrawerOpen(false); };
+    const toggleColumn = (checked: boolean, colHeader: string) => { if (checked) { setFilteredColumns((currentCols) => { const newVisibleHeaders = [...currentCols.map((c) => c.header as string), colHeader]; return columns.filter((c) => newVisibleHeaders.includes(c.header as string)); }); } else { setFilteredColumns((currentCols) => currentCols.filter((c) => c.header !== colHeader)); } };
+    const isColumnVisible = (header: string) => filteredColumns.some((c) => c.header === header);
     return (
-        <DebouceInput
-            ref={ref}
-            className="w-full"
-            placeholder="Quick Search..."
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e) => onInputChange(e.target.value)}
-        />
-    )
-})
-ContinentSearch.displayName = 'ContinentSearch'
-
-// --- ContinentTableTools Component ---
-const ContinentTableTools = ({
-    onSearchChange,
-    onFilter,
-    onExport,
-    onClearFilters,
-}: {
-    onSearchChange: (query: string) => void
-    onFilter: () => void
-    onExport: () => void
-    onClearFilters: () => void
-}) => {
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <ContinentSearch onInputChange={onSearchChange} />
+        <div className="md:flex items-center justify-between w-full gap-2">
+            <div className="flex-grow mb-2 md:mb-0"><DebounceInput value={searchInputValue} placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onSearchChange(e.target.value)} /></div>
+            <div className="flex gap-2">
+                <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => col.header && (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}
+                    </div>
+                </Dropdown>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
+                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
             </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Button
-                    title="Clear Filters"
-                    icon={<TbReload />}
-                    onClick={() => onClearFilters()}
-                ></Button>
-                <Button
-                    icon={<TbFilter />}
-                    onClick={onFilter}
-                    className="w-full sm:w-auto"
-                >
-                    Filter
-                </Button>
-                <Button
-                    icon={<TbCloudUpload />}
-                    onClick={onExport} // This will now open the reason modal
-                    className="w-full sm:w-auto"
-                >
-                    Export
-                </Button>
-            </div>
+            <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterContinentForm">Apply</Button></div>}>
+                <Form id="filterContinentForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+                    <FormItem label="Continent Name"><Controller name="names" control={control} render={({ field }) => (<Select isMulti placeholder="Select names..." options={continentNameOptions} value={continentNameOptions.filter(o => field.value?.includes(o.value))} onChange={(val) => field.onChange(val.map(v => v.value))} />)} /></FormItem>
+                    <FormItem label="Status"><Controller name="status" control={control} render={({ field }) => (<Select isMulti placeholder="Select status..." options={statusOptions} value={statusOptions.filter(o => field.value?.includes(o.value))} onChange={(val) => field.onChange(val.map(v => v.value))} />)} /></FormItem>
+                </Form>
+            </Drawer>
         </div>
-    )
-}
+    );
+});
+ContinentTableTools.displayName = 'ContinentTableTools';
 
-// --- ContinentTable Component ---
-type ContinentTableProps = {
-    columns: ColumnDef<ContinentItem>[]
-    data: ContinentItem[]
-    loading: boolean
-    pagingData: { total: number; pageIndex: number; pageSize: number }
-    onPaginationChange: (page: number) => void
-    onSelectChange: (value: number) => void
-    onSort: (sort: OnSortParam) => void
-}
-const ContinentTable = ({
-    columns,
-    data,
-    loading,
-    pagingData,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-}: ContinentTableProps) => {
-    return (
-        <DataTable
-            columns={columns}
-            data={data}
-            noData={!loading && data.length === 0}
-            loading={loading}
-            pagingData={pagingData}
-            onPaginationChange={onPaginationChange}
-            onSelectChange={onSelectChange}
-            onSort={onSort}
-        />
-    )
-}
-
-// --- Main Continents Component ---
+// --- MAIN CONTINENTS COMPONENT ---
 const Continents = () => {
-    const dispatch = useAppDispatch()
+    const dispatch = useAppDispatch();
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+    const [editingContinent, setEditingContinent] = useState<ContinentItem | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+    const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+    const [activeFilters, setActiveFilters] = useState<Partial<ContinentFilterSchema>>({});
+    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
+    const [isImageViewerOpen, setImageViewerOpen] = useState(false);
+    const [imageToView, setImageToView] = useState<string | null>(null);
 
-    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
-    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
-    const [editingContinent, setEditingContinent] =
-        useState<ContinentItem | null>(null)
-    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
-    const [isSubmitting, setIsSubmitting] = useState(false)
+    const { ContinentsData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+    const continentNameOptionsForFilter = useMemo(() => Array.isArray(ContinentsData) ? [...new Set(ContinentsData.map(doc => doc.name))].sort().map(name => ({ value: name, label: name })) : [], [ContinentsData]);
 
-    // State for export reason modal
-    const [isExportReasonModalOpen, setIsExportReasonModalOpen] =
-        useState(false)
-    const [isSubmittingExportReason, setIsSubmittingExportReason] =
-        useState(false)
+    useEffect(() => { dispatch(getContinentsAction()); }, [dispatch]);
 
-    const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
-        filterNames: [],
-        filterStatus: [], // Added
-    })
+    const formMethods = useForm<ContinentFormData>({ resolver: zodResolver(continentFormSchema), defaultValues: { name: "", status: 'Active' }, mode: "onChange" });
+    const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
-    const { ContinentsData = [], status: masterLoadingStatus = 'idle' } =
-        useSelector(masterSelector)
+    const openImageViewer = (imageUrl: string | null | undefined) => {
+        if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); }
+    };
+    const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
 
-    const defaultFormValues: ContinentFormData = useMemo(
-        () => ({
-            name: '',
-            status: 'Active', // Default status
-        }),
-        [],
-    )
+    const columns: ColumnDef<ContinentItem>[] = useMemo(() => [
+        { header: "Continent Name", accessorKey: "name", enableSorting: true, size: 200 },
+        { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+        { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
+        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
+    ], []);
 
-    useEffect(() => {
-        dispatch(getContinentsAction())
-    }, [dispatch])
-
-    const addFormMethods = useForm<ContinentFormData>({
-        resolver: zodResolver(continentFormSchema),
-        defaultValues: defaultFormValues,
-        mode: 'onChange',
-    })
-    const editFormMethods = useForm<ContinentFormData>({
-        resolver: zodResolver(continentFormSchema),
-        defaultValues: defaultFormValues,
-        mode: 'onChange',
-    })
-    const filterFormMethods = useForm<FilterFormData>({
-        resolver: zodResolver(filterFormSchema),
-        defaultValues: filterCriteria,
-    })
-    const exportReasonFormMethods = useForm<ExportReasonFormData>({
-        resolver: zodResolver(exportReasonSchema),
-        defaultValues: { reason: '' },
-        mode: 'onChange',
-    })
-
-    const openAddDrawer = () => {
-        addFormMethods.reset(defaultFormValues)
-        setIsAddDrawerOpen(true)
-    }
-    const closeAddDrawer = () => {
-        addFormMethods.reset(defaultFormValues)
-        setIsAddDrawerOpen(false)
-    }
-    const onAddContinentSubmit = async (data: ContinentFormData) => {
-        setIsSubmitting(true)
-        try {
-            // API expected to handle audit fields, only send name and status
-            await dispatch(
-                addContinentAction({ name: data.name, status: data.status }),
-            ).unwrap()
-            toast.push(
-                <Notification
-                    title="Continent Added"
-                    type="success"
-                    duration={2000}
-                >
-                    Continent "{data.name}" added.
-                </Notification>,
-            )
-            closeAddDrawer()
-            dispatch(getContinentsAction())
-        } catch (error: any) {
-            toast.push(
-                <Notification
-                    title="Failed to Add"
-                    type="danger"
-                    duration={3000}
-                >
-                    {error.message || 'Could not add continent.'}
-                </Notification>,
-            )
-        } finally {
-            setIsSubmitting(false)
-        }
-    }
-
-    const openEditDrawer = useCallback(
-        (continent: ContinentItem) => {
-            setEditingContinent(continent)
-            editFormMethods.reset({
-                name: continent.name,
-                status: continent.status || 'Active', // Set status, default to Active
-            })
-            setIsEditDrawerOpen(true)
-        },
-        [editFormMethods],
-    )
-
-    const closeEditDrawer = () => {
-        setEditingContinent(null)
-        editFormMethods.reset(defaultFormValues)
-        setIsEditDrawerOpen(false)
-    }
-    const onEditContinentSubmit = async (data: ContinentFormData) => {
-        if (!editingContinent?.id) return
-        setIsSubmitting(true)
-        try {
-            // API expected to handle audit fields, only send id, name and status
-            await dispatch(
-                editContinentAction({
-                    id: editingContinent.id,
-                    name: data.name,
-                    status: data.status,
-                }),
-            ).unwrap()
-            toast.push(
-                <Notification
-                    title="Continent Updated"
-                    type="success"
-                    duration={2000}
-                >
-                    Continent "{data.name}" updated.
-                </Notification>,
-            )
-            closeEditDrawer()
-            dispatch(getContinentsAction())
-        } catch (error: any) {
-            toast.push(
-                <Notification
-                    title="Failed to Update"
-                    type="danger"
-                    duration={3000}
-                >
-                    {error.message || 'Could not update continent.'}
-                </Notification>,
-            )
-        } finally {
-            setIsSubmitting(false)
-        }
-    }
-
-    const openFilterDrawer = () => {
-        filterFormMethods.reset(filterCriteria)
-        setIsFilterDrawerOpen(true)
-    }
-    const closeFilterDrawerCb = useCallback(
-        () => setIsFilterDrawerOpen(false),
-        [],
-    )
-    const onApplyFiltersSubmit = (data: FilterFormData) => {
-        setFilterCriteria({
-            filterNames: data.filterNames || [],
-            filterStatus: data.filterStatus || [], // Added
-        })
-        handleSetTableData({ pageIndex: 1 })
-        closeFilterDrawerCb()
-    }
-    const onClearFilters = () => {
-        const defaultFilters = {
-            filterNames: [],
-            filterStatus: [], // Added
-        }
-        filterFormMethods.reset(defaultFilters)
-        setFilterCriteria(defaultFilters)
-        handleSetTableData({ pageIndex: 1 })
-        dispatch(getContinentsAction())
-    }
-
-    const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: '', key: '' },
-        query: '',
-    })
-
-    const continentNameOptions = useMemo(() => {
-        if (!Array.isArray(ContinentsData)) return []
-        const uniqueNames = new Set(
-            ContinentsData.map((continent) => continent.name),
-        )
-        return Array.from(uniqueNames).map((name) => ({
-            value: name,
-            label: name,
-        }))
-    }, [ContinentsData])
+    const [filteredColumns, setFilteredColumns] = useState<ColumnDef<ContinentItem>[]>(columns);
+    useEffect(() => { setFilteredColumns(columns); }, [columns]);
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        const sourceData: ContinentItem[] = Array.isArray(ContinentsData)
-            ? ContinentsData.map((item) => ({
-                  ...item,
-                  status: item.status || 'Inactive', // Ensure status has a default
-              }))
-            : []
-        let processedData: ContinentItem[] = cloneDeep(sourceData)
-
-        if (filterCriteria.filterNames?.length) {
-            const selectedFilterNames = filterCriteria.filterNames.map((opt) =>
-                opt.value.toLowerCase(),
-            )
-            processedData = processedData.filter((item) =>
-                selectedFilterNames.includes(
-                    item.name?.trim().toLowerCase() ?? '',
-                ),
-            )
-        }
-        if (filterCriteria.filterStatus?.length) {
-            // Added status filter
-            const statuses = filterCriteria.filterStatus.map((opt) => opt.value)
-            processedData = processedData.filter((item) =>
-                statuses.includes(item.status),
-            )
-        }
+        let processedData: ContinentItem[] = cloneDeep(ContinentsData || []);
+        if (activeFilters.names?.length) { const names = new Set(activeFilters.names.map(n => n.toLowerCase())); processedData = processedData.filter(item => names.has(item.name.toLowerCase())); }
+        if (activeFilters.status?.length) { const statuses = new Set(activeFilters.status); processedData = processedData.filter(item => statuses.has(item.status)); }
 
         if (tableData.query) {
-            const query = tableData.query.toLowerCase().trim()
-            processedData = processedData.filter(
-                (item) =>
-                    (item.name?.trim().toLowerCase() ?? '').includes(query) ||
-                    (item.status?.trim().toLowerCase() ?? '').includes(query) || // Search by status
-                    (item.updated_by_name?.trim().toLowerCase() ?? '').includes(
-                        query,
-                    ) ||
-                    String(item.id ?? '')
-                        .trim()
-                        .toLowerCase()
-                        .includes(query),
-            )
-        }
-        const { order, key } = tableData.sort as OnSortParam
-        if (
-            order &&
-            key &&
-            ['id', 'name', 'status', 'updated_at', 'updated_by_name'].includes(
-                key,
-            ) && // Added status to sortable keys
-            processedData.length > 0
-        ) {
-            processedData.sort((a, b) => {
-                let aValue: any, bValue: any
-                if (key === 'updated_at') {
-                    const dateA = a.updated_at
-                        ? new Date(a.updated_at).getTime()
-                        : 0
-                    const dateB = b.updated_at
-                        ? new Date(b.updated_at).getTime()
-                        : 0
-                    return order === 'asc' ? dateA - dateB : dateB - dateA
-                } else if (key === 'status') {
-                    // Added status sorting
-                    aValue = a.status ?? ''
-                    bValue = b.status ?? ''
-                } else {
-                    aValue = a[key as keyof ContinentItem] ?? ''
-                    bValue = b[key as keyof ContinentItem] ?? ''
-                }
-
-                return order === 'asc'
-                    ? String(aValue).localeCompare(String(bValue))
-                    : String(bValue).localeCompare(String(aValue))
-            })
+            const query = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter(item =>
+                item.name?.toLowerCase().includes(query) ||
+                item.status?.toLowerCase().includes(query) ||
+                item.updated_by_user?.name?.toLowerCase().includes(query)
+            );
         }
 
-        const currentTotal = processedData.length
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const startIndex = (pageIndex - 1) * pageSize
-        return {
-            pageData: processedData.slice(startIndex, startIndex + pageSize),
-            total: currentTotal,
-            allFilteredAndSortedData: processedData,
-        }
-    }, [ContinentsData, tableData, filterCriteria])
+        const { order, key } = tableData.sort as OnSortParam;
+        if (order && key && processedData.length > 0) { processedData.sort((a, b) => { const aValue = a[key as keyof ContinentItem] ?? ""; const bValue = b[key as keyof ContinentItem] ?? ""; if (key === 'updated_at') { const dateA = aValue ? new Date(aValue as string).getTime() : 0; const dateB = bValue ? new Date(bValue as string).getTime() : 0; return order === 'asc' ? dateA - dateB : dateB - dateA; } return order === "asc" ? String(aValue).localeCompare(String(bValue)) : String(bValue).localeCompare(String(aValue)); }); }
 
-    const handleOpenExportReasonModal = () => {
-        if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
-            toast.push(
-                <Notification title="No Data" type="info">
-                    Nothing to export.
-                </Notification>,
-            )
-            return
-        }
-        exportReasonFormMethods.reset({ reason: '' })
-        setIsExportReasonModalOpen(true)
-    }
+        const currentTotal = processedData.length;
+        const pageIndex = tableData.pageIndex as number;
+        const pageSize = tableData.pageSize as number;
+        const startIndex = (pageIndex - 1) * pageSize;
+        return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
+    }, [ContinentsData, tableData, activeFilters]);
 
-    const handleConfirmExportWithReason = async (
-        data: ExportReasonFormData,
-    ) => {
-        setIsSubmittingExportReason(true)
-        const moduleName = 'Continents'
-        const timestamp = new Date().toISOString().split('T')[0] // Format: YYYY-MM-DD
-        const fileName = `continents_export_${timestamp}.csv`
+    const activeFilterCount = useMemo(() => {
+        let count = 0; if (activeFilters.names?.length) count++; if (activeFilters.status?.length) count++; return count;
+    }, [activeFilters]);
+
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
+    const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+    const handleSelectPageSizeChange = useCallback((value: number) => handleSetTableData({ pageSize: Number(value), pageIndex: 1 }), [handleSetTableData]);
+    const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
+    const handleSearchChange = useCallback((query: string) => { setTableData((prev) => ({ ...prev, query: query, pageIndex: 1 })); }, []);
+    const handleApplyFilters = useCallback((filters: Partial<ContinentFilterSchema>) => { setActiveFilters(filters); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
+    const handleRemoveFilter = useCallback((key: keyof ContinentFilterSchema, value: string) => {
+        setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as string[] | undefined; if (!currentValues) return prev; const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } return newFilters; });
+        handleSetTableData({ pageIndex: 1 });
+    }, [handleSetTableData]);
+    const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getContinentsAction()); };
+    const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
+
+    const handleCardClick = (status: 'Active' | 'Inactive' | 'All') => {
+        handleSetTableData({ query: '', pageIndex: 1 });
+        if (status === 'All') { setActiveFilters({}); }
+        else { setActiveFilters({ status: [status] }); }
+    };
+
+    const openAddDrawer = () => { formMethods.reset({ name: "", status: 'Active' }); setIsAddDrawerOpen(true); };
+    const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
+    const onAddContinentSubmit = async (data: ContinentFormData) => { setIsSubmitting(true); try { await dispatch(addContinentAction({ name: data.name, status: data.status })).unwrap(); toast.push(<Notification title="Continent Added" type="success">{`Continent "${data.name}" was successfully added.`}</Notification>); closeAddDrawer(); dispatch(getContinentsAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
+    const openEditDrawer = (doc: ContinentItem) => { setEditingContinent(doc); formMethods.reset({ name: doc.name, status: doc.status || 'Active' }); setIsEditDrawerOpen(true); };
+    const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingContinent(null); };
+    const onEditContinentSubmit = async (data: ContinentFormData) => { if (!editingContinent?.id) return; setIsSubmitting(true); try { await dispatch(editContinentAction({ id: editingContinent.id, name: data.name, status: data.status })).unwrap(); toast.push(<Notification title="Continent Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); closeEditDrawer(); dispatch(getContinentsAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
+
+    const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
+    const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+        setIsSubmittingExportReason(true);
+        const fileName = `continents_export_${new Date().toISOString().split('T')[0]}.csv`;
         try {
-            await dispatch(
-                submitExportReasonAction({
-                    reason: data.reason,
-                    module: moduleName,
-                    file_name: fileName,
-                }),
-            ).unwrap()
-            toast.push(
-                <Notification title="Export Reason Submitted" type="success" />,
-            )
-            // After successful reason submit, download CSV
-            exportToCsvContinent(fileName, allFilteredAndSortedData)
-            setIsExportReasonModalOpen(false)
+            await dispatch(submitExportReasonAction({ reason: data.reason, module: "Continents", file_name: fileName })).unwrap();
+            toast.push(<Notification title="Export Reason Submitted" type="success" />);
+            exportToCsvContinent(fileName, allFilteredAndSortedData);
+            setIsExportReasonModalOpen(false);
         } catch (error: any) {
-            toast.push(
-                <Notification
-                    title="Failed to Submit Reason"
-                    type="danger"
-                    message={error.message}
-                />,
-            )
-        } finally {
-            setIsSubmittingExportReason(false)
-        }
-    }
+            toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
+        } finally { setIsSubmittingExportReason(false); }
+    };
 
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-        setTableData((prev) => ({ ...prev, ...data }))
-    }, [])
-    const handlePaginationChange = useCallback(
-        (page: number) => handleSetTableData({ pageIndex: page }),
-        [handleSetTableData],
-    )
-    const handleSelectPageSizeChange = useCallback(
-        (value: number) => {
-            handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
-        },
-        [handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => {
-            handleSetTableData({ sort: sort, pageIndex: 1 })
-        },
-        [handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
-        [handleSetTableData],
-    )
-
-    const columns: ColumnDef<ContinentItem>[] = useMemo(
-        () => [
-            // { header: "ID", accessorKey: "id", enableSorting: true, size: 100 },
-            {
-                header: 'Continent Name',
-                accessorKey: 'name',
-                enableSorting: true,
-                size: 320,
-            },
-            {
-                header: 'Updated Info',
-                accessorKey: 'updated_at', // For sorting by date
-                enableSorting: true,
-
-                size: 120,
-                cell: (props) => {
-                    const { updated_at, updated_by_user, updated_by_role } =
-                        props.row.original
-                    const formattedDate = updated_at
-                        ? `${new Date(updated_at).getDate()} ${new Date(
-                              updated_at,
-                          ).toLocaleString('en-US', {
-                              month: 'short',
-                          })} ${new Date(updated_at).getFullYear()}, ${new Date(
-                              updated_at,
-                          ).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true,
-                          })}`
-                        : 'N/A'
-                    return (
-                        <div className="text-xs">
-                            <span>
-                                {updated_by_user?.name || 'N/A'}
-                                {updated_by_user?.roles[0]?.display_name && (
-                                    <>
-                                        <br />
-                                        <b>
-                                            {
-                                                updated_by_user?.roles[0]
-                                                    ?.display_name
-                                            }
-                                        </b>
-                                    </>
-                                )}
-                            </span>
-                            <br />
-                            <span>{formattedDate}</span>
-                        </div>
-                    )
-                },
-            },
-            {
-                // Added Status Column
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                size: 80,
-                cell: (props) => {
-                    const status = props.row.original.status
-                    return (
-                        <Tag
-                            className={classNames(
-                                'capitalize font-semibold whitespace-nowrap',
-                                {
-                                    'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500':
-                                        status === 'Active',
-                                    'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500':
-                                        status === 'Inactive',
-                                },
-                            )}
-                        >
-                            {status}
-                        </Tag>
-                    )
-                },
-            },
-            // {
-            //     header: 'Actions',
-            //     id: 'action',
-            //     meta: { HeaderClass: 'text-center', cellClass: 'text-center' },
-            //     size: 60,
-            //     cell: (props) => (
-            //         <ActionColumn
-            //             onEdit={() => openEditDrawer(props.row.original)}
-            //         />
-            //     ),
-            // },
-        ],
-        [openEditDrawer],
-    )
+    const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+    const cardBodyClass = "flex items-center gap-2 p-2";
 
     return (
         <>
             <Container className="h-auto">
-                <AdaptiveCard className="h-full" bodyClass="h-full">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                        <h5 className="mb-2 sm:mb-0">Continents</h5>
-                        <Button
-                            variant="solid"
-                            icon={<TbPlus />}
-                            onClick={openAddDrawer}
-                        >
-                            Add New
-                        </Button>
+                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+                    <div className="lg:flex items-center justify-between mb-4">
+                        <h3 className="mb-4 lg:mb-0">Continents</h3>
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Continent</Button>
+                        </div>
                     </div>
-                    <ContinentTableTools
-                        onSearchChange={handleSearchChange}
-                        onFilter={openFilterDrawer}
-                        onExport={handleOpenExportReasonModal} // Changed to open reason modal
-                        onClearFilters={onClearFilters}
-                    />
-                    <div className="mt-4">
-                        <ContinentTable
+                    <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
+                        <Tooltip title="Click to show all continents"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{ContinentsData.length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active continents"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{ContinentsData.filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show inactive continents"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{ContinentsData.filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+                    </div>
+                    <div className="mb-4">
+                        <ContinentTableTools
+                            onSearchChange={handleSearchChange}
+                            onApplyFilters={handleApplyFilters}
+                            onClearFilters={onClearFiltersAndReload}
+                            onExport={handleOpenExportReasonModal}
+                            activeFilters={activeFilters}
+                            activeFilterCount={activeFilterCount}
+                            continentNameOptions={continentNameOptionsForFilter}
                             columns={columns}
+                            filteredColumns={filteredColumns}
+                            setFilteredColumns={setFilteredColumns}
+                            searchInputValue={tableData?.query}
+                        />
+                    </div>
+                    <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
+                    {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching continent(s).</div>}
+                    <div className="flex-grow overflow-auto">
+                        <DataTable
+                            columns={filteredColumns}
                             data={pageData}
-                            loading={
-                                masterLoadingStatus === 'loading' ||
-                                isSubmitting
-                            }
-                            pagingData={{
-                                total: total,
-                                pageIndex: tableData.pageIndex as number,
-                                pageSize: tableData.pageSize as number,
-                            }}
+                            noData={pageData.length <= 0}
+                            loading={masterLoadingStatus === "loading" || isSubmitting}
+                            pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             onPaginationChange={handlePaginationChange}
                             onSelectChange={handleSelectPageSizeChange}
                             onSort={handleSort}
@@ -807,357 +268,39 @@ const Continents = () => {
                 </AdaptiveCard>
             </Container>
 
-            {[
-                {
-                    formMethods: addFormMethods,
-                    onSubmit: onAddContinentSubmit,
-                    isOpen: isAddDrawerOpen,
-                    closeFn: closeAddDrawer,
-                    title: 'Add Continent',
-                    formId: 'addContinentForm',
-                    submitText: 'Adding...',
-                    saveText: 'Save',
-                    isEdit: false,
-                },
-                {
-                    formMethods: editFormMethods,
-                    onSubmit: onEditContinentSubmit,
-                    isOpen: isEditDrawerOpen,
-                    closeFn: closeEditDrawer,
-                    title: 'Edit Continent',
-                    formId: 'editContinentForm',
-                    submitText: 'Saving...',
-                    saveText: 'Save',
-                    isEdit: true,
-                },
-            ].map((drawerProps) => (
-                <Drawer
-                    key={drawerProps.formId}
-                    title={drawerProps.title}
-                    isOpen={drawerProps.isOpen}
-                    onClose={drawerProps.closeFn}
-                    onRequestClose={drawerProps.closeFn}
-                    width={480}
-                    bodyClass='relative'
-                    footer={
-                        <div className="text-right w-full">
-                            <Button
-                                size="sm"
-                                className="mr-2"
-                                onClick={drawerProps.closeFn}
-                                disabled={isSubmitting}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="solid"
-                                form={drawerProps.formId}
-                                type="submit"
-                                loading={isSubmitting}
-                                disabled={
-                                    !drawerProps.formMethods.formState
-                                        .isValid || isSubmitting
-                                }
-                            >
-                                {isSubmitting
-                                    ? drawerProps.submitText
-                                    : drawerProps.saveText}
-                            </Button>
-                        </div>
-                    }
-                >
-                    <Form
-                        id={drawerProps.formId}
-                        onSubmit={drawerProps.formMethods.handleSubmit(
-                            drawerProps.onSubmit as any,
-                        )}
-                        className="flex flex-col gap-4 relative pb-28"
-                    >
-                        <FormItem
-                            label={
-                                <div>
-                                    Continent Name
-                                    <span className="text-red-500"> * </span>
-                                </div>
-                            }
-                            invalid={
-                                !!drawerProps.formMethods.formState.errors.name
-                            }
-                            errorMessage={
-                                drawerProps.formMethods.formState.errors.name
-                                    ?.message as string | undefined
-                            }
-                        >
-                            <Controller
-                                name="name"
-                                control={drawerProps.formMethods.control}
-                                render={({ field }) => (
-                                    <Input
-                                        {...field}
-                                        placeholder="Enter Continent Name"
-                                    />
-                                )}
-                            />
-                        </FormItem>
-                        <FormItem // Added Status Field
-                            label={
-                                <div>
-                                    Status
-                                    <span className="text-red-500"> * </span>
-                                </div>
-                            }
-                            invalid={
-                                !!drawerProps.formMethods.formState.errors
-                                    .status
-                            }
-                            errorMessage={
-                                drawerProps.formMethods.formState.errors.status
-                                    ?.message as string | undefined
-                            }
-                        >
-                            <Controller
-                                name="status"
-                                control={drawerProps.formMethods.control}
-                                render={({ field }) => (
-                                    <Select
-                                        placeholder="Select Status"
-                                        options={statusOptions}
-                                        value={
-                                            statusOptions.find(
-                                                (option) =>
-                                                    option.value ===
-                                                    field.value,
-                                            ) || null
-                                        }
-                                        onChange={(option) =>
-                                            field.onChange(
-                                                option ? option.value : '',
-                                            )
-                                        }
-                                    />
-                                )}
-                            />
-                        </FormItem>
-                    </Form>
-                    {drawerProps.isEdit && editingContinent && (
-                        <div className="absolute bottom-[3%] w-[90%]">
-                            <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                                {/* First div (will be narrower) - Removed inline style={{flex:0.4}} */}
-                                <div>
-                                    <b className="mt-3 mb-3 font-semibold text-primary">
-                                        Latest Update:
-                                    </b>
-                                    <br />
-                                    <p className="text-sm font-semibold">
-                                        {editingContinent.updated_by_user
-                                            ?.name || 'N/A'}
-                                    </p>
-                                    <p>
-                                        {editingContinent.updated_by_user
-                                            ?.roles[0]?.display_name || 'N/A'}
-                                    </p>
-                                </div>
-                                {/* Second div (will be wider) - Removed inline style={{flex:0.6}} */}
-                                <div className='text-right'>
-                                    <br />{' '}
-                                    {/* This <br /> is for spacing, consider if padding/margin is more appropriate */}
-                                    <span className="font-semibold">
-                                        Created At:
-                                    </span>{' '}
-                                    <span>
-                                        {editingContinent.created_at
-                                            ? `${new Date(editingContinent.created_at).getDate()} ${new Date(
-                                                  editingContinent.created_at,
-                                              ).toLocaleString('en-US', {
-                                                  month: 'short',
-                                              })} ${new Date(editingContinent.created_at).getFullYear()}, ${new Date(
-                                                  editingContinent.created_at,
-                                              ).toLocaleTimeString('en-US', {
-                                                  hour: 'numeric',
-                                                  minute: '2-digit',
-                                                  hour12: true,
-                                              })}`
-                                            : 'N/A'}
-                                    </span>
-                                    <br />
-                                    <span className="font-semibold">
-                                        Updated At:
-                                    </span>{' '}
-                                    <span>
-                                        {editingContinent.updated_at
-                                            ? `${new Date(editingContinent.updated_at).getDate()} ${new Date(
-                                                  editingContinent.updated_at,
-                                              ).toLocaleString('en-US', {
-                                                  month: 'short',
-                                              })} ${new Date(editingContinent.updated_at).getFullYear()}, ${new Date(
-                                                  editingContinent.updated_at,
-                                              ).toLocaleTimeString('en-US', {
-                                                  hour: 'numeric',
-                                                  minute: '2-digit',
-                                                  hour12: true,
-                                              })}`
-                                            : 'N/A'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </Drawer>
-            ))}
-
-            <Drawer
-                title="Filters"
-                isOpen={isFilterDrawerOpen}
-                onClose={closeFilterDrawerCb}
-                onRequestClose={closeFilterDrawerCb}
-                width={400}
-                footer={
-                    <div className="text-right w-full">
-                        <Button
-                            size="sm"
-                            className="mr-2"
-                            onClick={onClearFilters}
-                        >
-                            Clear
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            form="filterContinentForm"
-                            type="submit"
-                        >
-                            Apply
-                        </Button>
-                    </div>
-                }
-            >
-                <Form
-                    id="filterContinentForm"
-                    onSubmit={filterFormMethods.handleSubmit(
-                        onApplyFiltersSubmit,
-                    )}
-                    className="flex flex-col gap-4"
-                >
-                    <FormItem label="Continent Name">
-                        <Controller
-                            name="filterNames"
-                            control={filterFormMethods.control}
-                            render={({ field }) => (
-                                <Select
-                                    isMulti
-                                    placeholder="Select continent names..."
-                                    options={continentNameOptions}
-                                    value={field.value || []}
-                                    onChange={(selectedVal) =>
-                                        field.onChange(selectedVal || [])
-                                    }
-                                />
-                            )}
-                        />
-                    </FormItem>
-                    <FormItem label="Status">
-                        {' '}
-                        {/* Added Status Filter */}
-                        <Controller
-                            name="filterStatus"
-                            control={filterFormMethods.control}
-                            render={({ field }) => (
-                                <Select
-                                    isMulti
-                                    placeholder="Select status..."
-                                    options={statusOptions}
-                                    value={field.value || []}
-                                    onChange={(selectedVal) =>
-                                        field.onChange(selectedVal || [])
-                                    }
-                                />
-                            )}
-                        />
-                    </FormItem>
+            <Drawer title="Add Continent" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} width={460} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="addContinentForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Adding..." : "Save"}</Button></div>}>
+                <Form id="addContinentForm" onSubmit={formMethods.handleSubmit(onAddContinentSubmit)} className="flex flex-col gap-4">
+                    <FormItem label={<div>Continent Name <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Continent Name" />)} /></FormItem>
+                    <FormItem label={<div>Status <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : "")} />)} /></FormItem>
                 </Form>
             </Drawer>
-
-            <ConfirmDialog
-                isOpen={isExportReasonModalOpen}
-                type="info" // Using info type for a form dialog
-                title="Reason for Export"
-                onClose={() => setIsExportReasonModalOpen(false)}
-                onRequestClose={() => setIsExportReasonModalOpen(false)}
-                onCancel={() => setIsExportReasonModalOpen(false)}
-                onConfirm={exportReasonFormMethods.handleSubmit(
-                    handleConfirmExportWithReason,
-                )}
-                loading={isSubmittingExportReason}
-                confirmText={
-                    isSubmittingExportReason
-                        ? 'Submitting...'
-                        : 'Submit & Export'
-                }
-                cancelText="Cancel"
-                confirmButtonProps={{
-                    disabled:
-                        !exportReasonFormMethods.formState.isValid ||
-                        isSubmittingExportReason,
-                }}
-            >
-                {/* Form directly inside ConfirmDialog's children for layout */}
-                <Form
-                    id="exportReasonForm" // ID can be useful for external submit triggers if needed
-                    onSubmit={(e) => {
-                        e.preventDefault() // Prevent native form submission
-                        exportReasonFormMethods.handleSubmit(
-                            handleConfirmExportWithReason,
-                        )() // Trigger RHF submit
-                    }}
-                    className="flex flex-col gap-4 mt-2" // Added mt-2 for spacing
-                >
-                    <FormItem
-                        label="Please provide a reason for exporting this data:"
-                        invalid={
-                            !!exportReasonFormMethods.formState.errors.reason
-                        }
-                        errorMessage={
-                            exportReasonFormMethods.formState.errors.reason
-                                ?.message
-                        }
-                    >
-                        <Controller
-                            name="reason"
-                            control={exportReasonFormMethods.control}
-                            render={({ field }) => (
-                                <Input
-                                    textArea
-                                    {...field}
-                                    placeholder="Enter reason..."
-                                    rows={3}
-                                />
-                            )}
-                        />
-                    </FormItem>
+            <Drawer title="Edit Continent" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} onRequestClose={closeEditDrawer} width={480} bodyClass="relative" footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editContinentForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button></div>}>
+                <Form id="editContinentForm" onSubmit={formMethods.handleSubmit(onEditContinentSubmit)} className="flex flex-col gap-4">
+                    <FormItem label={<div>Continent Name <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Continent Name" />)} /></FormItem>
+                    <FormItem label={<div>Status <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : "")} />)} /></FormItem>
+                </Form>
+                {editingContinent && (<div className="absolute bottom-4 right-4 left-4">
+                    <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                        <div><b className="font-semibold text-gray-900 dark:text-gray-100">Latest Update:</b><br />
+                            <p className="font-semibold">{editingContinent.updated_by_user?.name || "N/A"}</p>
+                            <p>{editingContinent.updated_by_user?.roles[0]?.display_name || "N/A"}</p>
+                        </div>
+                        <div className="text-right">
+                            <b className="font-semibold text-gray-900 dark:text-gray-100"></b><br />
+                            <span className="font-semibold">Created:</span> <span>{editingContinent.created_at ? new Date(editingContinent.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated:</span> <span>{editingContinent.updated_at ? new Date(editingContinent.updated_at).toLocaleString() : "N/A"}</span></div></div></div>)}
+            </Drawer>
+            <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
+                <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
+                    <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem>
                 </Form>
             </ConfirmDialog>
-
-            {/* Individual delete ConfirmDialog remains commented out as per template */}
-            {/* 
-      <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Continent"
-        onClose={() => { setSingleDeleteConfirmOpen(false); setContinentToDelete(null); }}
-        onRequestClose={() => { setSingleDeleteConfirmOpen(false); setContinentToDelete(null); }}
-        onCancel={() => { setSingleDeleteConfirmOpen(false); setContinentToDelete(null); }}
-        onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
-      >
-        <p>
-          Are you sure you want to delete the continent "
-          <strong>{continentToDelete?.name}</strong>"?
-        </p>
-      </ConfirmDialog>
-      */}
+            <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
+                <div className="flex justify-center items-center p-4">
+                    {imageToView ? (<img src={imageToView} alt="User Profile" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
+                </div>
+            </Dialog>
         </>
-    )
-}
+    );
+};
 
-export default Continents
+export default Continents;
