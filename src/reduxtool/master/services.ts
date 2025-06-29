@@ -2986,3 +2986,14 @@ export const getAllUsersAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+
+
+export const logOutAsync = async () => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/logout`, {})
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
