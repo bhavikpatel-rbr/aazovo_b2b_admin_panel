@@ -7,10 +7,10 @@ import React, {
   useState,
 } from "react";
 // REMOVED: import { CSVLink } from "react-csv";
+import classNames from "classnames";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -28,16 +28,13 @@ import {
   Drawer,
   Dropdown,
   Input,
-  Select,
-  Table,
+  Tag,
   Form as UiForm,
   FormItem as UiFormItem,
-  Select as UiSelect,
-  Tag,
+  Select as UiSelect
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
-import FormItem from "@/components/ui/Form/FormItem";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
@@ -46,42 +43,28 @@ import Tooltip from "@/components/ui/Tooltip";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
-  TbAlarm,
-  TbAlertTriangle,
   TbBell,
   TbBrandWhatsapp,
   TbBuilding,
   TbBuildingBank,
   TbBuildingCommunity,
-  TbCalendar,
-  TbCalendarEvent,
   TbCancel,
   TbChecks,
   TbCircleCheck,
   TbCircleX,
-  TbClipboardText,
   TbCloudUpload,
   TbColumns,
-  TbDownload,
   TbEye,
-  TbFileSearch,
-  TbFileText,
-  TbFileZip,
   TbFilter,
   TbMail,
   TbPencil,
   TbPlus,
-  TbReceipt,
   TbReload,
   TbSearch,
   TbShieldCheck,
   TbShieldX,
-  TbTagStarred,
-  TbUser,
   TbUserCircle,
-  TbUserSearch,
-  TbUsersGroup,
-  TbX,
+  TbX
 } from "react-icons/tb";
 
 // Types
@@ -93,11 +76,12 @@ import type {
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addNotificationAction,
   deleteAllcompanyAction,
+  getAllUsersAction,
   getCompanyAction,
   getContinentsAction,
-  getCountriesAction,
-  submitExportReasonAction,
+  getCountriesAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
@@ -339,15 +323,17 @@ export const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): stri
 const CompanyListContext = React.createContext<any>(undefined);
 const useCompanyList = () => useContext(CompanyListContext);
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { CompanyData, CountriesData, ContinentsData } = useSelector(masterSelector);
+  const { CompanyData, CountriesData, ContinentsData , getAllUserData= []} = useSelector(masterSelector);
+
   const dispatch = useAppDispatch();
   const [companyList, setCompanyList] = useState<CompanyItem[]>(CompanyData?.data ?? []);
   const [companyCount, setCompanyCount] = useState(CompanyData?.counts ?? {});
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
   const [companyListTotal, setCompanyListTotal] = useState<number>(CompanyData?.length ?? 0);
-  useEffect(() => { dispatch(getCountriesAction()); dispatch(getContinentsAction()); }, [dispatch]);
+  const getAllUserDataOptionsData = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+  useEffect(() => { dispatch(getCountriesAction()); dispatch(getContinentsAction()); dispatch(getAllUsersAction()) }, [dispatch]);
   useEffect(() => {
-    setCompanyCount(CompanyData?.counts ?? {}); 
+    setCompanyCount(CompanyData?.counts ?? {});
     setCompanyList(CompanyData?.data ?? []);
     setCompanyListTotal(CompanyData?.data?.length ?? 0);
   }, [CompanyData]);
@@ -357,6 +343,7 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children
       companyCount, companyList, setCompanyList, selectedCompanies, setSelectedCompanies,
       companyListTotal, setCompanyListTotal, ContinentsData: Array.isArray(ContinentsData) ? ContinentsData : [],
       CountriesData: Array.isArray(CountriesData) ? CountriesData : [],
+      getAllUserData: Array.isArray(getAllUserDataOptionsData) ? getAllUserDataOptionsData : [],
     }}>{children}</CompanyListContext.Provider>
   );
 };
@@ -390,13 +377,13 @@ const CompanyListActionTools = () => {
 // ============================================================================
 // --- MODALS SECTION ---
 // ============================================================================
-
+export type SelectOption = { value: any; label: string };
 export type ModalType = | "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "members" | "alert" | "trackRecord" | "engagement" | "transaction" | "document" | "viewDetail";
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: CompanyItem | null; }
-interface CompanyModalsProps { modalState: ModalState; onClose: () => void; }
+interface CompanyModalsProps { modalState: ModalState; onClose: () => void; getAllUserDataOptions: SelectOption[]; }
 
 const ViewCompanyDetailDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
-    const renderDetailItem = (label: string, value: any, isHtml = false) => {
+  const renderDetailItem = (label: string, value: any, isHtml = false) => {
     if (value === null || value === undefined || value === "") return null;
     return (
       <div className="mb-3">
@@ -684,19 +671,132 @@ const ViewCompanyDetailDialog: React.FC<{ company: CompanyItem; onClose: () => v
   );
 };
 
-const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, }) => {
+const AddCompanyNotificationDialog: React.FC<{
+  company: CompanyItem;
+  onClose: () => void;
+  getAllUserDataOptions: SelectOption[];
+}> = ({ company, onClose, getAllUserDataOptions }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const notificationSchema = z.object({
+    notification_title: z.string().min(3, 'Title must be at least 3 characters long.'),
+    send_users: z.array(z.number()).min(1, 'Please select at least one user.'),
+    message: z.string().min(10, 'Message must be at least 10 characters long.'),
+  });
+  type NotificationFormData = z.infer<typeof notificationSchema>;
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<NotificationFormData>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+      notification_title: `Regarding Company: ${company.company_name}`,
+      send_users: [],
+      message: `This is a notification for company "${company.company_name}" (${company.company_code}). Please review the details.`,
+    },
+    mode: 'onChange',
+  });
+
+  const onSend = async (formData: NotificationFormData) => {
+    setIsLoading(true);
+    const payload = {
+      send_users: formData.send_users,
+      notification_title: formData.notification_title,
+      message: formData.message,
+      module_id: String(company.id),
+      module_name: 'Company',
+    };
+    try {
+      await dispatch(addNotificationAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title="Failed to Send Notification"
+          children={error?.message || 'An unknown error occurred.'}
+        />
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Notify User about: {company.company_name}</h5>
+      <UiForm onSubmit={handleSubmit(onSend)}>
+        <UiFormItem
+          label="Title"
+          invalid={!!errors.notification_title}
+          errorMessage={errors.notification_title?.message}
+        >
+          <Controller
+            name="notification_title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </UiFormItem>
+        <UiFormItem
+          label="Send To"
+          invalid={!!errors.send_users}
+          errorMessage={errors.send_users?.message}
+        >
+          <Controller
+            name="send_users"
+            control={control}
+            render={({ field }) => (
+              <UiSelect
+                isMulti
+                placeholder="Select User(s)"
+                options={getAllUserDataOptions}
+                value={getAllUserDataOptions.filter((o) =>
+                  field.value?.includes(o.value)
+                )}
+                onChange={(options) =>
+                  field.onChange(options?.map((o) => o.value) || [])
+                }
+              />
+            )}
+          />
+        </UiFormItem>
+        <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
+            Send Notification
+          </Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
+};
+
+const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const { type, data: company, isOpen } = modalState;
   if (!isOpen || !company) return null;
 
   switch (type) {
     case "viewDetail": return <ViewCompanyDetailDialog company={company} onClose={onClose} />;
-    // Other cases for other modals
+    case 'notification': return <AddCompanyNotificationDialog company={company} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
     default: return <Dialog isOpen={true}><p>Unhandled modal type: {type}</p></Dialog>;
   }
 };
+// --- END MODALS SECTION ---
 
 const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, }: { rowData: CompanyItem; onEdit: (id: number) => void; onOpenModal: (type: ModalType, data: CompanyItem) => void; }) => {
-   const navigate = useNavigate();
+  const navigate = useNavigate();
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit">
@@ -709,14 +809,14 @@ const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, }: { rowData: Compa
           <TbEye />
         </div>
       </Tooltip>
-      <Dropdown renderTitle={ <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" /> }>
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
         <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"> <TbMail size={18} /> <span className="text-xs">Send Email</span> </Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"> <TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span> </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"> <TbBell size={18} /> <span className="text-xs">Add Notification</span> </Dropdown.Item>
       </Dropdown>
     </div>
   );
 };
-// --- END MODALS SECTION ---
 
 // --- ActiveFiltersDisplay Component ---
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
@@ -763,7 +863,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
 const CompanyListTable = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { companyList, setSelectedCompanies, companyCount, ContinentsData, CountriesData, } = useCompanyList();
+  const { companyList, setSelectedCompanies, companyCount, ContinentsData, CountriesData, getAllUserData: getAllUserDataOptions } = useCompanyList();
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "",
@@ -955,8 +1055,8 @@ const CompanyListTable = () => {
       },
     },
     { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <CompanyActionColumn rowData={props.row.original} onEdit={handleEditCompany} onOpenModal={handleOpenModal} /> },
-  ], [handleOpenModal, openImageViewer]);
-  
+  ], [handleOpenModal, openImageViewer, navigate]);
+
   const [filteredColumns, setFilteredColumns] = useState(columns);
 
   const toggleColumn = (checked: boolean, colId: string) => { /* ... */ };
@@ -995,7 +1095,7 @@ const CompanyListTable = () => {
           <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
             <div className="flex flex-col p-2">
               <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-              {columns.map((col) => { const id = col.id || col.accessorKey as string; if (!col.header) return null; return ( <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"> <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox> </div> ) })}
+              {columns.map((col) => { const id = col.id || col.accessorKey as string; if (!col.header) return null; return (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"> <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox> </div>) })}
             </div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
@@ -1020,7 +1120,7 @@ const CompanyListTable = () => {
           </div>
         </UiForm>
       </Drawer>
-      <CompanyModals modalState={modalState} onClose={handleCloseModal} />
+      <CompanyModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
         <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
           <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
