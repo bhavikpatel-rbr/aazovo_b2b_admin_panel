@@ -35,6 +35,8 @@ import {
     Input,
     Dropdown,
     Checkbox,
+    Avatar,
+    Dialog,
 } from '@/components/ui'
 
 // Redux Actions
@@ -57,6 +59,7 @@ import {
     TbReload,
     TbColumns,
     TbX,
+    TbUserCircle,
 } from 'react-icons/tb'
 import userIconPlaceholder from '/img/avatars/thumb-1.jpg'
 
@@ -1032,6 +1035,20 @@ const ExportMapping = () => {
         [],
     )
 
+     const [isImageViewerOpen, setImageViewerOpen] = useState(false);
+      const [imageToView, setImageToView] = useState<string | null>(null);
+      const closeImageViewer = () => {
+        setImageViewerOpen(false);
+        setImageToView(null);
+      };
+
+     const openImageViewer = (imageUrl: string | null) => {
+    if (imageUrl) {
+      setImageToView(imageUrl);
+      setImageViewerOpen(true);
+    }
+  };
+
     const columns: ColumnDef<ExportMappingItem>[] = useMemo(
         () => [
             {
@@ -1043,11 +1060,33 @@ const ExportMapping = () => {
                     const { userName, userRole ,profile_pic_path } = props.row.original
                     return (
                         <div className="flex items-center gap-2">
-                            <img
-                                src={profile_pic_path || userIconPlaceholder}
-                                alt={userName}
-                                className="w-8 h-8 rounded-full object-cover"
-                            />
+                            {profile_pic_path ? 
+                        // <img
+                        //         src={profile_pic_path || userIconPlaceholder}
+                        //         // alt={userName}
+                        //         className="w-8 h-8 rounded-full object-cover"
+                        //     /> 
+                            <Avatar
+                                              src={profile_pic_path} // UPDATED src logic
+                                              size="sm"
+                                              shape="circle"
+                                              className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                                              onClick={() => profile_pic_path && openImageViewer(profile_pic_path)}
+                                              icon={<TbUserCircle />}
+                                            />
+                            
+                            : 
+                             <Avatar
+                                              src={userIconPlaceholder} // UPDATED src logic
+                                              size="sm"
+                                              shape="circle"
+                                              className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                                              onClick={() => userIconPlaceholder && openImageViewer(userIconPlaceholder)}
+                                              icon={<TbUserCircle />}
+                                            />
+                           
+                        }
+                           
                             <div>
                                 <span className="font-semibold block truncate max-w-[150px]">
                                     {userName}
@@ -1133,6 +1172,8 @@ const ExportMapping = () => {
         ],
         [],
     )
+
+    
     const [filteredColumns, setFilteredColumns] = useState(columns)
     
     // Reset filtered columns when the base columns definition changes
@@ -1241,6 +1282,7 @@ const ExportMapping = () => {
                         <DataTable
                             columns={filteredColumns}
                             data={pageData}
+                            noData={pageData.length <= 0}
                             loading={tableLoading}
                             pagingData={{
                                 total: total,
@@ -1263,7 +1305,30 @@ const ExportMapping = () => {
                     uFEFF={true}
                 />
             </Container>
-
+<Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        width={600}
+      >
+        <div className="flex justify-center items-center p-4">
+          {imageToView ? (
+            <img
+              src={imageToView}
+            //   alt="Company Logo Full View"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "80vh",
+                objectFit: "contain",
+              }}
+            />
+          ) : (
+            <p>No image to display.</p>
+          )}
+        </div>
+      </Dialog>
             <ConfirmDialog
                 isOpen={isExportReasonModalOpen}
                 type="info"
