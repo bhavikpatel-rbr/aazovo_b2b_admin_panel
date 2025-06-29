@@ -220,7 +220,6 @@ const AddNotificationDialog = ({ PriceList, onClose, getAllUserDataOptions }) =>
     // --- Event Handlers ---
     const onSend = async (formData: NotificationFormData) => {
         setIsLoading(true);
-        setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000);
         // await dispatch(addNotificationAction(data)).unwrap();
         const payload = {
             // From form
