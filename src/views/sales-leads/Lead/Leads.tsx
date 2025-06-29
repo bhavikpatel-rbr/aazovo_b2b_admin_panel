@@ -1,4 +1,5 @@
 // src/views/sales-leads/LeadsListing.tsx
+// This is the complete and updated file with all features, including scheduling.
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
@@ -37,7 +38,7 @@ import {
   Form,
   FormItem,
   Input,
-  Select,
+  Select as UiSelect,
   Table
 } from "@/components/ui";
 import Notification from "@/components/ui/Notification";
@@ -82,7 +83,7 @@ import {
 } from "react-icons/tb";
 
 // Types
-import type { TableQueries } from "@/@types/common";
+import type { OnSortParam, TableQueries } from "@/@types/common";
 import {
   CellContext,
   ColumnDef,
@@ -107,6 +108,7 @@ import {
   addNotificationAction,
   getAllUsersAction,
   submitExportReasonAction,
+  addScheduleAction
 } from "@/reduxtool/master/middleware";
 
 // --- Internal Flattened Type for component use ---
@@ -160,6 +162,16 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
+// --- Zod Schema for Schedule Form ---
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
 // --- UI Constants ---
 const leadStatusColor: Record<LeadStatus | "default", string> = {
   New: "bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200",
@@ -195,7 +207,7 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
   default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
 };
 
-// --- Dummy Data ---
+// --- Dummy/Static Data ---
 const dummyProducts = [
   { id: 1, name: "iPhone 15 Pro" },
   { id: 2, name: "Galaxy S24 Ultra" },
@@ -215,9 +227,10 @@ const priorityOptions = [
   { value: "high", label: "High" },
 ];
 const eventTypeOptions = [
-  { value: "meeting", label: "Meeting" },
-  { value: "call", label: "Follow-up Call" },
-  { value: "deadline", label: "Project Deadline" },
+  { value: "Meeting", label: "Meeting" },
+  { value: "Call", label: "Follow-up Call" },
+  { value: "Deadline", label: "Project Deadline" },
+  { value: "Reminder", label: "Reminder" },
 ];
 const dummyAlerts = [
   {
@@ -772,52 +785,103 @@ const AddScheduleDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> =
   lead,
   onClose,
 }) => {
+  const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
     defaultValues: {
-      title: `Call with member for ${lead.lead_number}`,
-      eventType: null,
-      startDate: null,
-      notes: "",
+      event_title: `Follow up on lead ${lead.lead_number}`,
+      event_type: undefined,
+      date_time: null as any, // react-hook-form needs null for empty date
+      remind_from: null,
+      notes: `Regarding lead for "${lead.productName}" from customer "${lead.customerName}".`,
     },
+    mode: "onChange",
   });
-  const onAddEvent = (data: any) => {
+
+  const onAddEvent = async (data: ScheduleFormData) => {
     setIsLoading(true);
-    console.log("Adding event for", lead.lead_number, "with data:", data);
-    setTimeout(() => {
-      toast.push(<Notification type="success" title="Event Scheduled" />);
-      setIsLoading(false);
+    const payload = {
+      module_id: Number(lead.id),
+      module_name: "Member", // As per prompt requirement
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format("YYYY-MM-DDTHH:mm:ss"),
+      ...(data.remind_from && {
+        remind_from: dayjs(data.remind_from).format("YYYY-MM-DDTHH:mm:ss"),
+      }),
+      notes: data.notes || "",
+    };
+
+    try {
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(
+        <Notification
+          type="success"
+          title="Event Scheduled"
+          children={`Successfully scheduled event for lead ${lead.lead_number}.`}
+        />
+      );
       onClose();
-    }, 1000);
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title="Scheduling Failed"
+          children={error?.message || "An unknown error occurred."}
+        />
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
+
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {lead.lead_number}</h5>
-      <form onSubmit={handleSubmit(onAddEvent)}>
-        <FormItem label="Event Title">
+      <Form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem
+          label="Event Title"
+          invalid={!!errors.event_title}
+          errorMessage={errors.event_title?.message}
+        >
           <Controller
-            name="title"
+            name="event_title"
             control={control}
             render={({ field }) => <Input {...field} />}
           />
         </FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Event Type">
+          <FormItem
+            label="Event Type"
+            invalid={!!errors.event_type}
+            errorMessage={errors.event_type?.message}
+          >
             <Controller
-              name="eventType"
+              name="event_type"
               control={control}
               render={({ field }) => (
                 <UiSelect
                   placeholder="Select Type"
                   options={eventTypeOptions}
-                  {...field}
+                  value={eventTypeOptions.find((o) => o.value === field.value)}
+                  onChange={(opt: any) => field.onChange(opt?.value)}
                 />
               )}
             />
           </FormItem>
-          <FormItem label="Date & Time">
+          <FormItem
+            label="Event Date & Time"
+            invalid={!!errors.date_time}
+            errorMessage={errors.date_time?.message}
+          >
             <Controller
-              name="startDate"
+              name="date_time"
               control={control}
               render={({ field }) => (
                 <DatePicker.DateTimepicker
@@ -829,7 +893,28 @@ const AddScheduleDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> =
             />
           </FormItem>
         </div>
-        <FormItem label="Notes">
+        <FormItem
+          label="Reminder Date & Time (Optional)"
+          invalid={!!errors.remind_from}
+          errorMessage={errors.remind_from?.message}
+        >
+          <Controller
+            name="remind_from"
+            control={control}
+            render={({ field }) => (
+              <DatePicker.DateTimepicker
+                placeholder="Select date and time"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Notes"
+          invalid={!!errors.notes}
+          errorMessage={errors.notes?.message}
+        >
           <Controller
             name="notes"
             control={control}
@@ -837,14 +922,24 @@ const AddScheduleDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> =
           />
         </FormItem>
         <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>
+          <Button
+            type="button"
+            className="mr-2"
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
+          <Button
+            variant="solid"
+            type="submit"
+            loading={isLoading}
+            disabled={!isValid || isLoading}
+          >
             Save Event
           </Button>
         </div>
-      </form>
+      </Form>
     </Dialog>
   );
 };
@@ -1191,7 +1286,6 @@ const LeadSelectedFooter = ({ selectedItems, onDeleteSelected }: any) => {
     </>
   );
 };
-const TABS_LEADS = { ALL: "all", NEW: "New", CONTACTED: "Contacted", QUALIFIED: "Qualified", PROPOSAL_SENT: "Proposal Sent", NEGOTIATION: "Negotiation", FOLLOW_UP: "Follow Up", WON: "Won", LOST: "Lost", };
 
 // --- Main LeadsListing Component ---
 const LeadsListing = () => {

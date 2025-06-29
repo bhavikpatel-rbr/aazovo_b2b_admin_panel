@@ -44,9 +44,9 @@ import {
   getAllNotificationAction,
   getAllProductAction,
   getAllProductsAction,
+  getAllScheduleAction,
   getAllTaskAction,
   getAllTaskByStatuesAction,
-  getAllUsersAction,
   getAutoEmailsAction,
   getAutoEmailTemplatesAction,
   getAutoMatchDataAction,
@@ -113,7 +113,7 @@ import {
   getUsersAction,
   getWallItemById,
   getWallItemsAction,
-  getWallListingAction,
+  getWallListingAction
 } from "./middleware";
 
 const INITIAL_STATE: any = {
@@ -191,6 +191,7 @@ const INITIAL_STATE: any = {
   getNotification: {},
   addNotification: {},
   getAllUserData: [],
+  getSchedule: {},
 };
 
 const masterSlice = createSlice({
@@ -687,9 +688,9 @@ const masterSlice = createSlice({
       ...state,
       addNotification: payload,
     }));
-    builder.addCase(getAllUsersAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(getAllScheduleAction.fulfilled, (state, { payload }) => ({
       ...state,
-      getAllUserData: payload,
+      getSchedule: payload,
     }));
   },
 });
