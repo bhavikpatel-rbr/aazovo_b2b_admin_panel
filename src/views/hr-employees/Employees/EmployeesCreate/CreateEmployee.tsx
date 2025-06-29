@@ -563,7 +563,7 @@ const EmployeeFormPage = () => {
         };
         fetchCompanyData();
 
-    }, [employeeId, isEditMode, dispatch, lookups]);
+    }, [employeeId]);
 
     const handleFormSubmit = (formData: FormData, id?: string) => {
         setIsSubmitting(true);
