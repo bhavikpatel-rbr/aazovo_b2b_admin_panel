@@ -31,6 +31,15 @@ const businessEntityRoute: Routes = [
             pageContainerType: 'contained',
         },
     },
+     {
+        key: 'businessEntities.company',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/company-view/:id`,
+        component: lazy(() => import('@/views/business-entities/Company/components/CompanyView')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
     {
         key: 'businessEntities.member',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/member`,
