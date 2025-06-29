@@ -59,6 +59,15 @@ const hrEmployeesRoute: Routes = [
         },
     },
     {
+        key: 'hrEmployees.employees',
+        path: `${HR_EMPLOYEES_PREFIX_PATH}/employees/edit/:id`,
+        component: lazy(() => import('@/views/hr-employees/Employees/EmployeesCreate/CreateEmployee')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'hrEmployees.jobApplicationsAdd', // Unique key
         path: `${HR_EMPLOYEES_PREFIX_PATH}/job-applications/add`,
         component: lazy(() => import('@/views/hr-employees/Job-Application/components/AddJobApplicationPage')), // Adjust path
