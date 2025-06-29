@@ -9,6 +9,7 @@ import {
   addEmployeesAction,
   addInquiriesAction,
   addMemberAction,
+  addNotificationAction,
   addpartnerAction,
   addPaymentTermAction,
   addUnitAction,
@@ -186,6 +187,7 @@ const INITIAL_STATE: any = {
   reportingTo: [],
   getwallItemsData:  {},
   getNotification: {},
+  addNotification: {},
 };
 
 const masterSlice = createSlice({
@@ -673,6 +675,10 @@ const masterSlice = createSlice({
     builder.addCase(getAllNotificationAction.fulfilled, (state, { payload }) => ({
       ...state,
       getNotification: payload,
+    }));
+    builder.addCase(addNotificationAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      addNotification: payload,
     }));
   },
 });

@@ -2932,3 +2932,14 @@ export const getAllNotificationAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+
+
+export const addNotificationAsync = async (payload) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/setting/notification_message`, { ...payload })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}

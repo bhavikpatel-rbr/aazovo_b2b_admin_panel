@@ -46,6 +46,7 @@ import {
     getCategoriesAction,
     getBrandAction,
     getSubcategoriesByCategoryIdAction,
+    addNotificationAction,
 } from '@/reduxtool/master/middleware'
 import { Link } from 'react-router-dom'
 
@@ -57,12 +58,12 @@ export type ProductMasterItem = { id: string | number; name: string; }
 export type SelectOption = { value: any; label: string };
 export type PriceListModalType = 'notification';
 export interface PriceListModalState { isOpen: boolean; type: PriceListModalType | null; data: PriceListItem | null; }
-type PriceListFilterSchema = { productIds: string[]; categoryIds: number[]; subCategoryIds: number[]; brandIds: number[]; status: ('Active' | 'Inactive')[]; date: [Date | null, Date | null] | null;};
+type PriceListFilterSchema = { productIds: string[]; categoryIds: number[]; subCategoryIds: number[]; brandIds: number[]; status: ('Active' | 'Inactive')[]; date: [Date | null, Date | null] | null; };
 const priceListFormSchema = z.object({ product_id: z.string().min(1, 'Product is required.'), price: z.string().min(1, 'Price is required.').regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid number'), usd_rate: z.string().min(1, 'USD Rate is required.').regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid number'), expance: z.string().min(1, 'Expenses are required.').regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid number'), margin: z.string().min(1, 'Margin is required.').regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid number'), status: z.enum(['Active', 'Inactive'], { required_error: 'Status is required.' }), });
 type PriceListFormData = z.infer<typeof priceListFormSchema>;
 const exportReasonSchema = z.object({ reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."), });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
-const statusOptions: SelectOption[] = [ { value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }, ];
+const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
 
 // --- HELPER FUNCTIONS ---
 function exportToCsv(filename: string, rows: PriceListItem[]) {
@@ -143,9 +144,9 @@ const PriceListTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, 
     useEffect(() => { if (isFilterDrawerOpen && watchedCategoryIds && watchedCategoryIds.length > 0) { dispatch(getSubcategoriesByCategoryIdAction(watchedCategoryIds[0])); } }, [watchedCategoryIds, isFilterDrawerOpen, dispatch]);
     const onSubmit = (data: PriceListFilterSchema) => { onApplyFilters(data); setIsFilterDrawerOpen(false); };
     const onDrawerClear = () => { onApplyFilters({}); setIsFilterDrawerOpen(false); };
-    const toggleColumn = (checked: boolean, colHeader: string) => { const newCols = checked ? [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a,b) => columns.indexOf(a as any) - columns.indexOf(b as any)) : filteredColumns.filter(c => c.header !== colHeader); setFilteredColumns(newCols); };
+    const toggleColumn = (checked: boolean, colHeader: string) => { const newCols = checked ? [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a, b) => columns.indexOf(a as any) - columns.indexOf(b as any)) : filteredColumns.filter(c => c.header !== colHeader); setFilteredColumns(newCols); };
     const isColumnVisible = (header: string) => filteredColumns.some(c => c.header === header);
-    
+
     return (
         <div className="md:flex items-center justify-between w-full gap-2">
             <div className="flex-grow mb-2 md:mb-0"><DebounceInput value={searchInputValue} placeholder="Search Product, ID, Status, User..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onSearchChange(e.target.value)} /></div>
@@ -186,9 +187,14 @@ const ActionColumn = ({ rowData, onEdit, onOpenModal }: { rowData: PriceListItem
 };
 
 const AddNotificationDialog: React.FC<{ PriceList: PriceListItem; onClose: () => void; }> = ({ PriceList, onClose }) => {
+    const dispatch = useAppDispatch();
     const [isLoading, setIsLoading] = useState(false);
     const { control, handleSubmit } = useForm({ defaultValues: { title: '', users: [], message: '' } });
-    const onSend = (data: any) => { setIsLoading(true); setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000); };
+    const onSend = async (data: any) => {
+        setIsLoading(true);
+        setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000);
+        await dispatch(addNotificationAction(data)).unwrap();
+    };
     return (
         <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
             <h5 className="mb-4">Add Notification for {PriceList.product.name}</h5>
@@ -230,7 +236,7 @@ const PriceList = () => {
     const [imageToView, setImageToView] = useState<string | null>(null);
     const [modalState, setModalState] = useState<PriceListModalState>({ isOpen: false, type: null, data: null });
 
-    const { priceListData = {data: [], counts: {}}, productsMasterData = [], status: masterLoadingStatus = "idle", CategoriesData: GlobalCategoriesData = [], subCategoriesForSelectedCategoryData = [], BrandData = [] } = useSelector(masterSelector, shallowEqual);
+    const { priceListData = { data: [], counts: {} }, productsMasterData = [], status: masterLoadingStatus = "idle", CategoriesData: GlobalCategoriesData = [], subCategoriesForSelectedCategoryData = [], BrandData = [] } = useSelector(masterSelector, shallowEqual);
 
     const productOptions = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map(p => ({ value: String(p.id), label: p.name })) : [], [productsMasterData]);
     const categoryOptions = useMemo(() => Array.isArray(GlobalCategoriesData) ? GlobalCategoriesData.map(c => ({ value: c.id, label: c.name })) : [], [GlobalCategoriesData]);
@@ -257,12 +263,12 @@ const PriceList = () => {
         { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames('capitalize', { 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100': props.row.original.status === 'Active', 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100': props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Actions', id: 'action', size: 120, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} />) },
     ], [handleOpenModal]);
-    
+
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<PriceListItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        const sourceData = Array.isArray(priceListData?.data) ? priceListData.data.map(item => ({...item, product: item.product || {}})) : [];
+        const sourceData = Array.isArray(priceListData?.data) ? priceListData.data.map(item => ({ ...item, product: item.product || {} })) : [];
         let processedData: PriceListItem[] = cloneDeep(sourceData);
         if (activeFilters.productIds?.length) { const ids = new Set(activeFilters.productIds); processedData = processedData.filter(item => ids.has(String(item.product_id))); }
         if (activeFilters.categoryIds?.length) { const ids = new Set(activeFilters.categoryIds); processedData = processedData.filter(item => item.product?.category?.id && ids.has(item.product.category.id)); }
@@ -294,21 +300,21 @@ const PriceList = () => {
     }, []);
     const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getPriceListAction()); };
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
-    
+
     const handleCardClick = (filterType: 'status' | 'date' | 'all', value?: any) => {
         setTableData(prev => ({ ...prev, query: '', pageIndex: 1 }));
-        if (filterType === 'all') { setActiveFilters({}); } 
+        if (filterType === 'all') { setActiveFilters({}); }
         else if (filterType === 'status') { setActiveFilters({ status: [value] }); }
         else if (filterType === 'date') { setActiveFilters({ date: [new Date(), new Date()] }); }
     };
-    
+
     const openAddDrawer = () => { addFormMethods.reset(); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => setIsAddDrawerOpen(false);
     const onAddPriceListSubmit = async (data: PriceListFormData) => { setIsSubmitting(true); try { await dispatch(addPriceListAction(data)).unwrap(); toast.push(<Notification title="Price Item Added" type="success" />); closeAddDrawer(); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add" type="danger">{error.message}</Notification>); } finally { setIsSubmitting(false); } };
     const openEditDrawer = (item: PriceListItem) => { setEditingPriceListItem(item); editFormMethods.reset({ product_id: String(item.product_id), price: item.price, usd_rate: item.usd_rate, expance: item.expance, margin: item.margin, status: item.status }); setIsEditDrawerOpen(true); };
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingPriceListItem(null); };
     const onEditPriceListSubmit = async (data: PriceListFormData) => { if (!editingPriceListItem) return; setIsSubmitting(true); try { await dispatch(editPriceListAction({ id: editingPriceListItem.id, ...data })).unwrap(); toast.push(<Notification title="Price Item Updated" type="success" />); closeEditDrawer(); dispatch(getPriceListAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message}</Notification>); } finally { setIsSubmitting(false); } };
-    
+
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) return; exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `price_list_export_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "PriceList", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsSubmittingExportReason(false); } };
     const handleOpenTodayExportReasonModal = () => { if (!todayPriceListData.length) return; exportReasonFormMethods.reset(); setIsTodayExportReasonModalOpen(true); };
@@ -325,8 +331,8 @@ const PriceList = () => {
     const handleShareViaWhatsapp = () => { const message = generateShareableText(); const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; window.open(whatsappUrl, '_blank'); };
     const handlePdfDownload = () => exportToPdf(todayPriceListData);
     const handleExcelDownload = () => handleOpenTodayExportReasonModal();
-    
-    const formFieldsConfig = useMemo(() => [{name: 'product_id', label: 'Product Name', type: 'select', options: productOptions, isRequired: true}, { name: 'price', label: 'Price', type: 'text', isRequired: true }, { name: 'usd_rate', label: 'USD Rate', type: 'text', isRequired: true }, { name: 'expance', label: 'Expenses', type: 'text', isRequired: true }, { name: 'margin', label: 'Margin', type: 'text', isRequired: true }, { name: 'status', label: 'Status', type: 'select', options: statusOptions, isRequired: true }], [productOptions]);
+
+    const formFieldsConfig = useMemo(() => [{ name: 'product_id', label: 'Product Name', type: 'select', options: productOptions, isRequired: true }, { name: 'price', label: 'Price', type: 'text', isRequired: true }, { name: 'usd_rate', label: 'USD Rate', type: 'text', isRequired: true }, { name: 'expance', label: 'Expenses', type: 'text', isRequired: true }, { name: 'margin', label: 'Margin', type: 'text', isRequired: true }, { name: 'status', label: 'Status', type: 'select', options: statusOptions, isRequired: true }], [productOptions]);
     const renderFormField = (fieldConfig: any, formControl: any) => { const commonProps = { name: fieldConfig.name, control: formControl }; const placeholderText = `Enter ${fieldConfig.label}`; if (fieldConfig.type === 'select') { return (<Controller {...commonProps} render={({ field }) => (<Select placeholder={`Select ${fieldConfig.label}`} options={fieldConfig.options || []} value={fieldConfig.options?.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : '')} />)} />); } return (<Controller {...commonProps} render={({ field }) => (<Input {...field} type={fieldConfig.type || 'text'} placeholder={placeholderText} />)} />); };
 
     return (
@@ -376,17 +382,17 @@ const PriceList = () => {
             <Drawer title="Add Price" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} width={480} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="addPriceForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Adding..." : "Save"}</Button></div>}>
                 <Form id="addPriceForm" onSubmit={addFormMethods.handleSubmit(onAddPriceListSubmit)} className="flex flex-col gap-4">
                     <div className="grid grid-cols-2 gap-4">
-                        {formFieldsConfig.map(fConfig => ( <FormItem key={fConfig.name} label={<div>{fConfig.label}{fConfig.isRequired && <span className="text-red-500">*</span>}</div>} invalid={!!addFormMethods.formState.errors[fConfig.name]} errorMessage={addFormMethods.formState.errors[fConfig.name]?.message as string} className={['product_id', 'status'].includes(fConfig.name) ? 'col-span-2' : 'col-span-1'}> {renderFormField(fConfig, addFormMethods.control)} </FormItem> ))}
+                        {formFieldsConfig.map(fConfig => (<FormItem key={fConfig.name} label={<div>{fConfig.label}{fConfig.isRequired && <span className="text-red-500">*</span>}</div>} invalid={!!addFormMethods.formState.errors[fConfig.name]} errorMessage={addFormMethods.formState.errors[fConfig.name]?.message as string} className={['product_id', 'status'].includes(fConfig.name) ? 'col-span-2' : 'col-span-1'}> {renderFormField(fConfig, addFormMethods.control)} </FormItem>))}
                     </div>
                 </Form>
             </Drawer>
             <Drawer title="Edit Price" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={480} bodyClass="relative" footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editPriceForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button></div>}>
                 <Form id="editPriceForm" onSubmit={editFormMethods.handleSubmit(onEditPriceListSubmit)} className="flex flex-col gap-4">
                     <div className="grid grid-cols-2 gap-4">
-                        {formFieldsConfig.map(fConfig => ( <FormItem key={fConfig.name} label={<div>{fConfig.label}{fConfig.isRequired && <span className="text-red-500">*</span>}</div>} invalid={!!editFormMethods.formState.errors[fConfig.name]} errorMessage={editFormMethods.formState.errors[fConfig.name]?.message as string} className={['product_id', 'status'].includes(fConfig.name) ? 'col-span-2' : 'col-span-1'}> {renderFormField(fConfig, editFormMethods.control)} </FormItem> ))}
+                        {formFieldsConfig.map(fConfig => (<FormItem key={fConfig.name} label={<div>{fConfig.label}{fConfig.isRequired && <span className="text-red-500">*</span>}</div>} invalid={!!editFormMethods.formState.errors[fConfig.name]} errorMessage={editFormMethods.formState.errors[fConfig.name]?.message as string} className={['product_id', 'status'].includes(fConfig.name) ? 'col-span-2' : 'col-span-1'}> {renderFormField(fConfig, editFormMethods.control)} </FormItem>))}
                     </div>
                 </Form>
-                {editingPriceListItem && (<div className="absolute bottom-4 right-4 left-4"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-gray-900 dark:text-gray-100">Latest Update:</b><br /><p className="font-semibold">{editingPriceListItem.updated_by_user?.name  || "N/A"}</p><p>{editingPriceListItem.updated_by_user?.roles[0]?.display_name || "N/A"}</p></div><div className="text-right"><span className="font-semibold">Created:</span> <span>{editingPriceListItem.created_at ? new Date(editingPriceListItem.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated:</span> <span>{editingPriceListItem.updated_at ? new Date(editingPriceListItem.updated_at).toLocaleString() : "N/A"}</span></div></div></div>)}
+                {editingPriceListItem && (<div className="absolute bottom-4 right-4 left-4"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-gray-900 dark:text-gray-100">Latest Update:</b><br /><p className="font-semibold">{editingPriceListItem.updated_by_user?.name || "N/A"}</p><p>{editingPriceListItem.updated_by_user?.roles[0]?.display_name || "N/A"}</p></div><div className="text-right"><span className="font-semibold">Created:</span> <span>{editingPriceListItem.created_at ? new Date(editingPriceListItem.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated:</span> <span>{editingPriceListItem.updated_at ? new Date(editingPriceListItem.updated_at).toLocaleString() : "N/A"}</span></div></div></div>)}
             </Drawer>
             <Drawer title="Today's Price List" isOpen={isTodayPriceDrawerOpen} onClose={() => setIsTodayPriceDrawerOpen(false)} width={700} footer={<div className="flex items-center justify-between w-full"><span className="text-xs text-gray-500">{todayPriceListData.length} item(s) updated today.</span><div className="flex gap-2"><Button size="sm" icon={<FaRegFilePdf />} onClick={handlePdfDownload} disabled={todayPriceListData.length === 0}>PDF</Button><Button size="sm" icon={<BsFileExcelFill />} onClick={handleExcelDownload} disabled={todayPriceListData.length === 0}>Excel</Button><Dropdown placement="top-end" renderTitle={<Button size="sm" variant="solid" icon={<TbShare />} disabled={todayPriceListData.length === 0}>Share</Button>}><Dropdown.Item icon={<HiOutlineMail />} onClick={handleShareViaEmail}>Share via Email</Dropdown.Item><Dropdown.Item icon={<FaWhatsapp />} onClick={handleShareViaWhatsapp}>Share on WhatsApp</Dropdown.Item></Dropdown></div></div>}>
                 <div className="h-full">
