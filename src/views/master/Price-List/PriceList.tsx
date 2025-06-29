@@ -1,53 +1,55 @@
 // src/views/your-path/PriceList.tsx
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import classNames from 'classnames'
-import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
+import cloneDeep from 'lodash/cloneDeep'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import * as XLSX from 'xlsx'
+import { z } from 'zod'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import Container from '@/components/shared/Container'
 import DataTable from '@/components/shared/DataTable'
-import Tooltip from '@/components/ui/Tooltip'
+import DebounceInput from '@/components/shared/DebouceInput'
+import { Avatar, Card, Checkbox, Dialog, Drawer, Dropdown, Form, FormItem, Input, Table, Tag } from '@/components/ui'
 import Button from '@/components/ui/Button'
 import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import DebounceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog, Table } from '@/components/ui'
+import toast from '@/components/ui/toast'
+import Tooltip from '@/components/ui/Tooltip'
 
 // Icons
-import { TbPencil, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbEyeDollar, TbFileDownload, TbShare, TbUserCircle, TbReceipt, TbDeviceWatchDollar, TbClockDollar, TbPencilDollar, TbDiscount, TbDiscountOff, TbBell, TbClipboardText, TbDotsVertical, TbBox, TbUser } from 'react-icons/tb'
-import { FaRegFilePdf, FaWhatsapp } from 'react-icons/fa'
 import { BsFileExcelFill } from 'react-icons/bs'
+import { FaRegFilePdf, FaWhatsapp } from 'react-icons/fa'
 import { HiOutlineMail } from 'react-icons/hi'
+import { TbBell, TbBox, TbClipboardText, TbClockDollar, TbCloudUpload, TbColumns, TbDeviceWatchDollar, TbDiscount, TbDiscountOff, TbEyeDollar, TbFileDownload, TbFilter, TbPencil, TbPencilDollar, TbPlus, TbReceipt, TbReload, TbSearch, TbShare, TbUser, TbUserCircle, TbX } from 'react-icons/tb'
 
 // Types
-import type { OnSortParam, ColumnDef, CellContext } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
+import type { CellContext, ColumnDef, OnSortParam } from '@/components/shared/DataTable'
 
 // Redux Imports
-import { useAppDispatch } from '@/reduxtool/store'
-import { shallowEqual, useSelector } from 'react-redux'
+import { authSelector } from '@/reduxtool/auth/authSlice'; // Assuming this path for the logged-in user
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
-    getPriceListAction,
+    addNotificationAction,
     addPriceListAction,
     editPriceListAction,
     getAllProductAction,
-    submitExportReasonAction,
-    getCategoriesAction,
+    getAllUsersAction,
     getBrandAction,
+    getCategoriesAction,
+    getPriceListAction,
     getSubcategoriesByCategoryIdAction,
-    addNotificationAction,
+    submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
+import { shallowEqual, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 
@@ -186,33 +188,104 @@ const ActionColumn = ({ rowData, onEdit, onOpenModal }: { rowData: PriceListItem
     );
 };
 
-const AddNotificationDialog: React.FC<{ PriceList: PriceListItem; onClose: () => void; }> = ({ PriceList, onClose }) => {
+const AddNotificationDialog = ({ PriceList, onClose, getAllUserDataOptions }) => {
     const dispatch = useAppDispatch();
     const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit } = useForm({ defaultValues: { title: '', users: [], message: '' } });
-    const onSend = async (data: any) => {
+
+    // --- Data Hooks ---
+    // Get the current user's ID for the 'created_by' field
+    const { user } = useSelector(authSelector);
+    const createdById = user?.id;
+
+    // --- Form Hooks & Schema ---
+    const notificationSchema = z.object({
+        notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+        send_users: z.array(z.number()).min(1, "Please select at least one user."),
+        message: z.string().min(10, "Message must be at least 10 characters long."),
+    });
+
+    type NotificationFormData = z.infer<typeof notificationSchema>;
+
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: {
+            notification_title: `Price Update: ${PriceList.product.name}`,
+            send_users: [],
+            message: `The price for product "${PriceList.product.name}" has been updated. The new sales price is ₹${PriceList.sales_price}.`
+        },
+        mode: 'onChange'
+    });
+
+    // --- Event Handlers ---
+    const onSend = async (formData: NotificationFormData) => {
         setIsLoading(true);
-        setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000);
-        await dispatch(addNotificationAction(data)).unwrap();
+        const payload = {
+            // From form
+            send_users: formData.send_users, // Key is `user_id`, value is an array of IDs
+            notification_title: formData.notification_title,
+            message: formData.message,
+
+            // From context/props
+            category_id: PriceList.product.category?.id || null,
+            module_id: String(PriceList.id),
+            module_name: 'PriceList',
+
+            // Static/System values
+            created_by: createdById,
+            seen: 0,
+        };
+
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
     };
+
     return (
         <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Add Notification for {PriceList.product.name}</h5>
-            <form onSubmit={handleSubmit(onSend)}>
-                <FormItem label="Notification Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-                <FormItem label="Send to Users"><Controller name="users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={[]} {...field} />)} /></FormItem>
-                <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<Input textArea {...field} rows={3} />)} /></FormItem>
-                <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send Notification</Button></div>
-            </form>
+            <h5 className="mb-4">Notify User about: {PriceList.product.name}</h5>
+            <Form onSubmit={handleSubmit(onSend)}>
+                <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+                    <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
+                </FormItem>
+                <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+                    <Controller
+                        name="send_users"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                isMulti
+                                placeholder="Select User(s)"
+                                options={getAllUserDataOptions}
+                                value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
+                                onChange={(options) => field.onChange(options?.map(o => o.value) || [])}
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
+                </div>
+            </Form>
         </Dialog>
     );
 };
 
-const PriceListModals: React.FC<{ modalState: PriceListModalState; onClose: () => void; }> = ({ modalState, onClose }) => {
+
+const PriceListModals: React.FC<{ modalState: PriceListModalState; onClose: () => void; }> = ({ modalState, onClose, getAllUserDataOptions }) => {
     const { type, data: PriceList, isOpen } = modalState;
     if (!isOpen || !PriceList) return null;
     switch (type) {
-        case 'notification': return <AddNotificationDialog PriceList={PriceList} onClose={onClose} />;
+        case 'notification': return <AddNotificationDialog PriceList={PriceList} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
         default: return null;
     }
 }
@@ -236,14 +309,16 @@ const PriceList = () => {
     const [imageToView, setImageToView] = useState<string | null>(null);
     const [modalState, setModalState] = useState<PriceListModalState>({ isOpen: false, type: null, data: null });
 
-    const { priceListData = { data: [], counts: {} }, productsMasterData = [], status: masterLoadingStatus = "idle", CategoriesData: GlobalCategoriesData = [], subCategoriesForSelectedCategoryData = [], BrandData = [] } = useSelector(masterSelector, shallowEqual);
+    const { priceListData = { data: [], counts: {} }, productsMasterData = [], status: masterLoadingStatus = "idle", CategoriesData: GlobalCategoriesData = [], subCategoriesForSelectedCategoryData = [], BrandData = [], getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
+
 
     const productOptions = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map(p => ({ value: String(p.id), label: p.name })) : [], [productsMasterData]);
     const categoryOptions = useMemo(() => Array.isArray(GlobalCategoriesData) ? GlobalCategoriesData.map(c => ({ value: c.id, label: c.name })) : [], [GlobalCategoriesData]);
     const subCategoryOptions = useMemo(() => Array.isArray(subCategoriesForSelectedCategoryData) ? subCategoriesForSelectedCategoryData.map(sc => ({ value: sc.id, label: sc.name })) : [], [subCategoriesForSelectedCategoryData]);
     const brandOptions = useMemo(() => Array.isArray(BrandData) ? BrandData.map(b => ({ value: b.id, label: b.name })) : [], [BrandData]);
+    const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
 
-    useEffect(() => { dispatch(getPriceListAction()); dispatch(getAllProductAction()); dispatch(getCategoriesAction()); dispatch(getBrandAction()); }, [dispatch]);
+    useEffect(() => { dispatch(getPriceListAction()); dispatch(getAllProductAction()); dispatch(getCategoriesAction()); dispatch(getBrandAction()); dispatch(getAllUsersAction()) }, [dispatch]);
 
     const addFormMethods = useForm<PriceListFormData>({ resolver: zodResolver(priceListFormSchema), defaultValues: { product_id: '', price: '', usd_rate: '', expance: '', margin: '', status: 'Active' }, mode: "onChange" });
     const editFormMethods = useForm<PriceListFormData>({ resolver: zodResolver(priceListFormSchema), mode: 'onChange' });
@@ -412,7 +487,7 @@ const PriceList = () => {
                 <Form onSubmit={(e) => e.preventDefault()}><FormItem label="Reason"><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => <Input textArea {...field} />} /></FormItem></Form>
             </ConfirmDialog>
             <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer}><div className="flex justify-center items-center p-4"><img src={imageToView || ''} alt="View" style={{ maxWidth: "100%", maxHeight: "80vh" }} /></div></Dialog>
-            <PriceListModals modalState={modalState} onClose={handleCloseModal} />
+            <PriceListModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
         </>
     );
 };

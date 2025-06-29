@@ -45,6 +45,7 @@ import {
   getAllProductsAction,
   getAllTaskAction,
   getAllTaskByStatuesAction,
+  getAllUsersAction,
   getAutoEmailsAction,
   getAutoEmailTemplatesAction,
   getAutoMatchDataAction,
@@ -188,6 +189,7 @@ const INITIAL_STATE: any = {
   getwallItemsData:  {},
   getNotification: {},
   addNotification: {},
+  getAllUserData: [],
 };
 
 const masterSlice = createSlice({
@@ -679,6 +681,10 @@ const masterSlice = createSlice({
     builder.addCase(addNotificationAction.fulfilled, (state, { payload }) => ({
       ...state,
       addNotification: payload,
+    }));
+    builder.addCase(getAllUsersAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      getAllUserData: payload,
     }));
   },
 });
