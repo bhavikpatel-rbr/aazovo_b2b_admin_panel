@@ -218,7 +218,7 @@ const ActionColumn = ({ data }: { data: ExportMappingItem }) => {
 }
 ActionColumn.displayName = 'ActionColumn'
 
-// --- ExportMappingTableTools Component (with forwardRef) ---
+// --- ExportMappingTableTools Component (with state sync) ---
 const ExportMappingTableTools = React.forwardRef(({
     columns,
     filteredColumns,
@@ -230,15 +230,25 @@ const ExportMappingTableTools = React.forwardRef(({
     onExport,
     isDataReady,
     activeFilterCount,
+    activeFilters, // <-- New prop
 }, ref) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false)
     const closeFilterDrawer = () => setIsFilterDrawerOpen(false)
     const openFilterDrawer = () => setIsFilterDrawerOpen(true)
 
-    const { control, handleSubmit, reset } = useForm<ExportMappingFilterSchema>({
+    const { control, handleSubmit, reset, setValue } = useForm<ExportMappingFilterSchema>({
         defaultValues: { userRole: [], exportFrom: [], fileExtensions: [], exportDate: null },
-    })
+    });
     
+    // Syncs the form state when parent's filter state changes
+    useEffect(() => {
+        setValue('userRole', activeFilters.userRole || []);
+        setValue('exportFrom', activeFilters.exportFrom || []);
+        setValue('fileExtensions', activeFilters.fileExtensions || []);
+        setValue('exportDate', activeFilters.exportDate || null);
+    }, [activeFilters, setValue]);
+
+    // Exposes a reset function to the parent for 'Clear All' functionality
     React.useImperativeHandle(ref, () => ({
         resetForm() {
             reset({ userRole: [], exportFrom: [], fileExtensions: [], exportDate: null });
@@ -250,10 +260,10 @@ const ExportMappingTableTools = React.forwardRef(({
         closeFilterDrawer()
     }
 
+    // This button just tells the parent to clear everything
     const handleClearFormInDrawer = () => {
-        reset({ userRole: [], exportFrom: [], fileExtensions: [], exportDate: null })
-        onApplyFilters({})
-        closeFilterDrawer()
+        onApplyFilters({}); 
+        closeFilterDrawer();
     }
 
     const userRoles = useMemo(() => {
@@ -269,12 +279,9 @@ const ExportMappingTableTools = React.forwardRef(({
     }, [allExportMappings, isDataReady])
 
     const fileExtensionsOptions = useMemo(() => [
-        { value: '.csv', label: 'CSV (.csv)' },
-        { value: '.xlsx', label: 'Excel (.xlsx)' },
-        { value: '.json', label: 'JSON (.json)' },
-        { value: '.pdf', label: 'PDF (.pdf)' },
-        { value: '.log', label: 'Log (.log)' },
-        { value: '.bak', label: 'Backup (.bak)' },
+        { value: '.csv', label: 'CSV (.csv)' }, { value: '.xlsx', label: 'Excel (.xlsx)' },
+        { value: '.json', label: 'JSON (.json)' }, { value: '.pdf', label: 'PDF (.pdf)' },
+        { value: '.log', label: 'Log (.log)' }, { value: '.bak', label: 'Backup (.bak)' },
     ], [])
 
     const toggleColumn = (checked: boolean, colHeader: string) => {
@@ -324,7 +331,7 @@ const ExportMappingTableTools = React.forwardRef(({
                         </span>
                     )}
                 </Button>
-                <Button icon={<TbCloudDownload />} onClick={onExport} disabled={!isDataReady || allExportMappings.length === 0}>
+                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady || allExportMappings.length === 0}>
                     Export
                 </Button>
             </div>
@@ -582,13 +589,12 @@ const ExportMapping = () => {
     const handleClearAllFilters = useCallback(() => {
         setActiveFilters({})
         handleSetTableData({ pageIndex: 1 })
-        toolsRef.current?.resetForm();
+        // The ref is not needed here anymore, as the useEffect in the child will handle the reset
     }, [handleSetTableData])
 
     const onClearFiltersAndReload = () => {
         setActiveFilters({})
         setTableData((prev) => ({ ...prev, pageIndex: 1, query: '' }))
-        toolsRef.current?.resetForm();
         dispatch(getExportMappingsAction())
     }
 
@@ -678,7 +684,7 @@ const ExportMapping = () => {
             },
         },
         {
-            header: 'Action', id: 'action', size:60, meta: { HeaderClass: "text-center", cellClass: "text-center" },
+            header: 'Action', id: 'action', size: 80, meta: { cellClass: 'text-center' },
             cell: (props) => <ActionColumn data={props.row.original} />,
         },
     ], [])
@@ -694,22 +700,10 @@ const ExportMapping = () => {
                         <h5 className="mb-4 lg:mb-0">Export Mapping Log</h5>
                     </div>
                     <div className="grid grid-cols-4 mb-4 gap-2">
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-                            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbCloudUpload size={24} /></div>
-                            <div><h6 className="text-blue-500">{apiExportMappings?.counts?.total}</h6><span className="font-semibold text-xs">Total Exports</span></div>
-                        </Card>
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300">
-                            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendarUp size={24} /></div>
-                            <div><h6 className="text-violet-500">{apiExportMappings?.counts?.today}</h6><span className="font-semibold text-xs">Exports Today</span></div>
-                        </Card>
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
-                            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbUserUp size={24} /></div>
-                            <div><h6 className="text-pink-500">{apiExportMappings?.counts?.top_user}</h6><span className="font-semibold text-xs">Top User</span></div>
-                        </Card>
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
-                            <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBookUpload size={24} /></div>
-                            <div><h6 className="text-green-500">{apiExportMappings?.counts?.top_module}</h6><span className="font-semibold text-xs">Top Module</span></div>
-                        </Card>
+                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbCloudUpload size={24} /></div><div><h6 className="text-blue-500">{apiExportMappings?.counts?.total}</h6><span className="font-semibold text-xs">Total Exports</span></div></Card>
+                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendarUp size={24} /></div><div><h6 className="text-violet-500">{apiExportMappings?.counts?.today}</h6><span className="font-semibold text-xs">Exports Today</span></div></Card>
+                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbUserUp size={24} /></div><div><h6 className="text-pink-500">{apiExportMappings?.counts?.top_user}</h6><span className="font-semibold text-xs">Top User</span></div></Card>
+                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBookUpload size={24} /></div><div><h6 className="text-green-500">{apiExportMappings?.counts?.top_module}</h6><span className="font-semibold text-xs">Top Module</span></div></Card>
                     </div>
                     <div className="mb-4">
                         <ExportMappingTableTools
@@ -724,6 +718,7 @@ const ExportMapping = () => {
                             onExport={handleOpenExportReasonModal}
                             isDataReady={isDataReady}
                             activeFilterCount={activeFilterCount}
+                            activeFilters={activeFilters}
                         />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
