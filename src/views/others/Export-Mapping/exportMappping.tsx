@@ -678,7 +678,7 @@ const ExportMapping = () => {
             },
         },
         {
-            header: 'Action', id: 'action', size: 80, meta: { cellClass: 'text-center' },
+            header: 'Action', id: 'action', size:60, meta: { HeaderClass: "text-center", cellClass: "text-center" },
             cell: (props) => <ActionColumn data={props.row.original} />,
         },
     ], [])
