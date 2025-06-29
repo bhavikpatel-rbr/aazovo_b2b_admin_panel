@@ -20,22 +20,22 @@ const webSettingsNavigationConfig: NavigationTree[] = [
         },
         subMenu: [
 
-            {
-                key: 'webSettings.homeCategoryImage',
-                path: `${WEB_SETTINGS_ROUTE}/home-category-image`,
-                title: 'Home Category Image',
-                translateKey: 'nav.webSettings.homeCategoryImage',
-                icon: 'homeCategoryImage',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN],
-                meta: {
-                    description: {
-                        translateKey: 'nav.webSettings.homeCategoryImageDesc',
-                        label: 'Manage home category images',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'webSettings.homeCategoryImage',
+            //     path: `${WEB_SETTINGS_ROUTE}/home-category-image`,
+            //     title: 'Home Category Image',
+            //     translateKey: 'nav.webSettings.homeCategoryImage',
+            //     icon: 'homeCategoryImage',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.webSettings.homeCategoryImageDesc',
+            //             label: 'Manage home category images',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
             {
                 key: 'webSettings.trendingImage',
                 path: `${WEB_SETTINGS_ROUTE}/trending-image`,
