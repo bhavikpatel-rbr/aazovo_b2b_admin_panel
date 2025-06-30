@@ -139,7 +139,7 @@ const _Notification = ({ className }: { className?: string }) => {
     }
 
     const handleViewAllActivity = () => {
-        navigate('/notifications')
+        navigate('/notifiactions')
         notificationDropdownRef.current?.handleDropdownClose()
     }
 
