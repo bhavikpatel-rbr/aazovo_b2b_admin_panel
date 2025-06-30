@@ -1,6 +1,3 @@
-// src/views/sales-leads/LeadsListing.tsx
-// This is the complete and updated file with all features, including scheduling.
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import dayjs from "dayjs";
@@ -673,7 +670,7 @@ const AddNotificationDialog: React.FC<{
         </FormItem>
         <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
           <Controller name="send_users" control={control} render={({ field }) => (
-            <Select isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />
+            <UiSelect isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />
           )} />
         </FormItem>
         <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
