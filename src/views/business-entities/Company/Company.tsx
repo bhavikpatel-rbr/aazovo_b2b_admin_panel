@@ -9,7 +9,7 @@ import React, {
 // REMOVED: import { CSVLink } from "react-csv";
 import classNames from "classnames";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
 import { z } from "zod";
 
 // UI Components
@@ -48,6 +48,7 @@ import {
   TbBuilding,
   TbBuildingBank,
   TbBuildingCommunity,
+  TbCalendarEvent,
   TbCancel,
   TbChecks,
   TbCircleCheck,
@@ -77,6 +78,7 @@ import type {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addNotificationAction,
+  addScheduleAction,
   deleteAllcompanyAction,
   getAllUsersAction,
   getCompanyAction,
@@ -84,6 +86,7 @@ import {
   getCountriesAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
+import dayjs from "dayjs";
 import { useSelector } from "react-redux";
 
 // --- START: Detailed CompanyItem and Sub-types ---
@@ -303,6 +306,16 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
+// --- Zod Schema for Schedule Form ---
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
 // --- CSV Exporter Utility for Companies ---
 const exportToCsv = (filename: string, rows: CompanyItem[]) => { /* ... existing code ... */ };
 
@@ -380,7 +393,7 @@ const CompanyListActionTools = () => {
 // --- MODALS SECTION ---
 // ============================================================================
 export type SelectOption = { value: any; label: string };
-export type ModalType = | "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "members" | "alert" | "trackRecord" | "engagement" | "transaction" | "document" | "viewDetail";
+export type ModalType = | "email" | "whatsapp" | "notification" | "task" | "active" | "schedule" | "calendar" | "members" | "alert" | "trackRecord" | "engagement" | "transaction" | "document" | "viewDetail";
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: CompanyItem | null; }
 interface CompanyModalsProps { modalState: ModalState; onClose: () => void; getAllUserDataOptions: SelectOption[]; }
 
@@ -785,6 +798,70 @@ const AddCompanyNotificationDialog: React.FC<{
   );
 };
 
+const AddCompanyScheduleDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
+
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+      resolver: zodResolver(scheduleSchema),
+      defaultValues: { event_title: `Meeting with ${company.company_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding company ${company.company_name} (${company.company_code}).`},
+      mode: 'onChange',
+    });
+  
+    const onAddEvent = async (data: ScheduleFormData) => {
+      setIsLoading(true);
+      const payload = {
+        module_id: Number(company.id),
+        module_name: 'Company',
+        event_title: data.event_title,
+        event_type: data.event_type,
+        date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+        ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+        notes: data.notes || '',
+      };
+  
+      try {
+        await dispatch(addScheduleAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${company.company_name}.`} />);
+        onClose();
+      } catch (error: any) {
+        toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    return (
+      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Add Schedule for {company.company_name}</h5>
+        <UiForm onSubmit={handleSubmit(onAddEvent)}>
+          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+            <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+          </UiFormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+              <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} />
+            </UiFormItem>
+            <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+              <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+            </UiFormItem>
+          </div>
+          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+            <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+          </UiFormItem>
+          <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+            <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+          </UiFormItem>
+          <div className="text-right mt-6">
+            <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+          </div>
+        </UiForm>
+      </Dialog>
+    );
+};
+
 const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const { type, data: company, isOpen } = modalState;
   if (!isOpen || !company) return null;
@@ -792,6 +869,7 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getA
   switch (type) {
     case "viewDetail": return <ViewCompanyDetailDialog company={company} onClose={onClose} />;
     case 'notification': return <AddCompanyNotificationDialog company={company} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+    case 'schedule': return <AddCompanyScheduleDialog company={company} onClose={onClose} />;
     default: return <Dialog isOpen={true}><p>Unhandled modal type: {type}</p></Dialog>;
   }
 };
@@ -815,6 +893,7 @@ const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, }: { rowData: Compa
         <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"> <TbMail size={18} /> <span className="text-xs">Send Email</span> </Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"> <TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span> </Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"> <TbBell size={18} /> <span className="text-xs">Add Notification</span> </Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /><span className="text-xs">Add Schedule</span></Dropdown.Item>
       </Dropdown>
     </div>
   );

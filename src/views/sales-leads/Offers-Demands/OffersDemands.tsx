@@ -89,6 +89,7 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addNotificationAction,
+  addScheduleAction, // <-- IMPORT THE ACTION
   deleteAllDemandsAction,
   deleteAllOffersAction,
   deleteDemandAction,
@@ -130,6 +131,16 @@ const filterFormSchema = z.object({
   assigneeIds: z.array(z.string()).optional().default([]), // Will be sent as assign_user=id1,id2
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
+
+// Zod Schema for Schedule Form
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 
 // --- API Item Types (Adjusted based on sample and requirements for transformation) ---
@@ -227,31 +238,15 @@ const dummyUsersForModals = [
   { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },
 ];
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
-const eventTypeOptions = [{ value: "meeting", label: "Meeting" }, { value: "call", label: "Follow-up Call" }, { value: "deadline", label: "Project Deadline" },];
+const eventTypeOptions = [
+  { value: "Meeting", label: "Meeting" },
+  { value: "Call", label: "Follow-up Call" },
+  { value: "Deadline", label: "Project Deadline" },
+  { value: "Reminder", label: "Reminder" },
+];
 const dummyAlerts = [{ id: 1, severity: "danger", message: "Offer #OD123 has low engagement.", time: "2 days ago", }, { id: 2, severity: "warning", message: "Demand #DD456 is approaching its expiration date.", time: "5 days ago", },];
 const dummyTimeline = [{ id: 1, icon: <TbMail />, title: "Initial Offer Created", desc: "Offer was created and sent.", time: "2023-11-01", }, { id: 2, icon: <TbCalendar />, title: "Follow-up Call Scheduled", desc: "Scheduled a call.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Item Assigned", desc: "Assigned to team.", time: "2023-10-27", },];
 const dummyDocs = [{ id: "doc1", name: "Offer_Details.pdf", type: "pdf", size: "1.2 MB", }, { id: "doc2", name: "Images.zip", type: "zip", size: "8.5 MB", },];
-
-const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
-  const { type, data: item, isOpen } = modalState;
-  if (!isOpen || !item) return null;
-  const renderModalContent = () => {
-    switch (type) {
-      case "viewDetails": return <ViewDetailsDialog item={item} onClose={onClose} />;
-      case "email": return <SendEmailDialog item={item} onClose={onClose} />;
-      case "whatsapp": return <SendWhatsAppDialog item={item} onClose={onClose} />;
-      case "notification": return <AddNotificationDialog item={item} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-      case "task": return <AssignTaskDialog item={item} onClose={onClose} />;
-      case "calendar": return <AddScheduleDialog item={item} onClose={onClose} />;
-      case "alert": return <ViewAlertDialog item={item} onClose={onClose} />;
-      case "trackRecord": return <TrackRecordDialog item={item} onClose={onClose} />;
-      case "engagement": return <ViewEngagementDialog item={item} onClose={onClose} />;
-      case "document": return <DownloadDocumentDialog item={item} onClose={onClose} />;
-      default: return (<GenericActionDialog type={type} item={item} onClose={onClose} />);
-    }
-  };
-  return <>{renderModalContent()}</>;
-};
 
 const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   return (
@@ -448,24 +443,72 @@ const AssignTaskDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }
 };
 
 const AddScheduleDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
+  const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { title: "", eventType: null, startDate: null, notes: "" }, });
-  const onAddEvent = (data: any) => {
-    setIsLoading(true); console.log("Add event for", item.name, ":", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Event Scheduled" />); setIsLoading(false); onClose(); }, 1000);
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: {
+      event_title: `Regarding ${item.type}: ${item.name}`,
+      event_type: undefined,
+      date_time: null as any,
+      remind_from: null,
+      notes: `Details for ${item.type.toLowerCase()} "${item.name}" (ID: ${item.id}).`,
+    },
+    mode: 'onChange',
+  });
+
+  const onAddEvent = async (data: ScheduleFormData) => {
+    setIsLoading(true);
+    const payload = {
+      module_id: Number((item.originalApiItem as any).id), // Use the numeric ID
+      module_name: 'OfferDemand',
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+      notes: data.notes || '',
+    };
+
+    try {
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${item.name}.`} />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {item.name}</h5>
-      <form onSubmit={handleSubmit(onAddEvent)}>
-        <FormItem label="Event Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder={`e.g., Review ${item.type}`} />)} /></FormItem>
+      <Form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+        </FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Event Type"><Controller name="eventType" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} {...field} />)} /></FormItem>
-          <FormItem label="Date & Time"><Controller name="startDate" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <Controller name="event_type" control={control} render={({ field }) => (
+              <Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </FormItem>
+          <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} />
+          </FormItem>
         </div>
-        <FormItem label="Notes"><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Save Event</Button></div>
-      </form>
+        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+        </FormItem>
+        <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+        </div>
+      </Form>
     </Dialog>
   );
 };
@@ -553,6 +596,27 @@ const GenericActionDialog: React.FC<{ type: OfferDemandModalType | null; item: O
       <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button></div>
     </Dialog>
   );
+};
+
+const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
+  const { type, data: item, isOpen } = modalState;
+  if (!isOpen || !item) return null;
+  const renderModalContent = () => {
+    switch (type) {
+      case "viewDetails": return <ViewDetailsDialog item={item} onClose={onClose} />;
+      case "email": return <SendEmailDialog item={item} onClose={onClose} />;
+      case "whatsapp": return <SendWhatsAppDialog item={item} onClose={onClose} />;
+      case "notification": return <AddNotificationDialog item={item} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+      case "task": return <AssignTaskDialog item={item} onClose={onClose} />;
+      case "calendar": return <AddScheduleDialog item={item} onClose={onClose} />;
+      case "alert": return <ViewAlertDialog item={item} onClose={onClose} />;
+      case "trackRecord": return <TrackRecordDialog item={item} onClose={onClose} />;
+      case "engagement": return <ViewEngagementDialog item={item} onClose={onClose} />;
+      case "document": return <DownloadDocumentDialog item={item} onClose={onClose} />;
+      default: return (<GenericActionDialog type={type} item={item} onClose={onClose} />);
+    }
+  };
+  return <>{renderModalContent()}</>;
 };
 // ============================================================================
 // --- END MODALS SECTION ---

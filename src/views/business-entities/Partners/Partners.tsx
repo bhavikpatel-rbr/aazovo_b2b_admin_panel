@@ -43,6 +43,7 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
   TbBrandWhatsapp,
+  TbCalendarEvent, // Added Icon
   TbChecks,
   TbCloudUpload,
   TbColumns,
@@ -72,6 +73,7 @@ import type {
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addScheduleAction, // Added Action
   deleteAllpartnerAction,
   getContinentsAction,
   getCountriesAction,
@@ -79,6 +81,7 @@ import {
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
+import dayjs from "dayjs"; // Added dayjs
 import { useSelector } from "react-redux";
 
 // --- PartnerItem Type (Data Structure) ---
@@ -126,6 +129,16 @@ const exportReasonSchema = z.object({
   reason: z.string().min(10, "Reason must be at least 10 characters.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+// --- Zod Schema for Schedule Form (ADDED) ---
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- CSV Exporter Utility ---
 const PARTNER_CSV_HEADERS = ["ID", "Name", "Partner Code", "Ownership Type", "Status", "Country", "State", "City", "KYC Verified", "Created Date", "Owner", "Contact Number", "Email", "Website", "GST", "PAN"];
@@ -246,6 +259,92 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// --- MODALS SECTION ---
+export type ModalType = 'email' | 'whatsapp' | 'schedule';
+export interface ModalState { isOpen: boolean; type: ModalType | null; data: PartnerItem | null; }
+
+const AddPartnerScheduleDialog: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
+
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+      resolver: zodResolver(scheduleSchema),
+      defaultValues: { event_title: `Meeting with ${partner.partner_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding partner ${partner.partner_name} (${partner.partner_code}).`},
+      mode: 'onChange',
+    });
+  
+    const onAddEvent = async (data: ScheduleFormData) => {
+      setIsLoading(true);
+      const payload = {
+        module_id: Number(partner.id),
+        module_name: 'Partner',
+        event_title: data.event_title,
+        event_type: data.event_type,
+        date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+        ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+        notes: data.notes || '',
+      };
+  
+      try {
+        await dispatch(addScheduleAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${partner.partner_name}.`} />);
+        onClose();
+      } catch (error: any) {
+        toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    return (
+      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Add Schedule for {partner.partner_name}</h5>
+        <UiForm onSubmit={handleSubmit(onAddEvent)}>
+          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+            <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+          </UiFormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+              <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} />
+            </UiFormItem>
+            <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+              <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+            </UiFormItem>
+          </div>
+          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+            <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+          </UiFormItem>
+          <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+            <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+          </UiFormItem>
+          <div className="text-right mt-6">
+            <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+          </div>
+        </UiForm>
+      </Dialog>
+    );
+};
+
+const PartnerModals: React.FC<{ modalState: ModalState; onClose: () => void; }> = ({ modalState, onClose }) => {
+  const { type, data: partner, isOpen } = modalState;
+  if (!isOpen || !partner) return null;
+
+  switch (type) {
+    case 'schedule':
+      return <AddPartnerScheduleDialog partner={partner} onClose={onClose} />;
+    // Other cases for 'email', 'whatsapp' can be added here
+    default:
+      return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+          <p>Modal for action: {type}</p>
+        </Dialog>
+      );
+  }
+};
+
+
 // --- Child Components ---
 const PartnerListSearch: React.FC<{ onInputChange: (value: string) => void; value: string; }> = ({ onInputChange, value }) => {
   return <DebouceInput placeholder="Quick Search..." value={value} suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />;
@@ -262,7 +361,11 @@ const PartnerListActionTools = () => {
   );
 };
 
-const PartnerActionColumn = ({ rowData, onEdit }: { rowData: PartnerItem; onEdit: (id: string) => void; }) => {
+const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: { 
+    rowData: PartnerItem; 
+    onEdit: (id: string) => void;
+    onOpenModal: (type: ModalType, data: PartnerItem) => void;
+}) => {
     const navigate = useNavigate();
     return (
       <div className="flex items-center justify-center gap-1">
@@ -271,6 +374,10 @@ const PartnerActionColumn = ({ rowData, onEdit }: { rowData: PartnerItem; onEdit
         <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
           <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
           <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+          <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2">
+            <TbCalendarEvent size={18} />
+            <span className="text-xs">Add Schedule</span>
+          </Dropdown.Item>
         </Dropdown>
       </div>
     );
@@ -328,9 +435,13 @@ const PartnerListTable = () => {
   const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>({ filterCreatedDate: [null, null] });
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
   
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), mode: 'onChange' });
   const filterFormMethods = useForm<PartnerFilterFormData>({ resolver: zodResolver(partnerFilterFormSchema) });
+
+  const handleOpenModal = (type: ModalType, partnerData: PartnerItem) => setModalState({ isOpen: true, type, data: partnerData });
+  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
   const openFilterDrawer = () => {
     filterFormMethods.reset(filterCriteria);
@@ -459,8 +570,8 @@ const PartnerListTable = () => {
         </div>
       )
     },
-    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} />, },
-  ], [navigate, openImageViewer]);
+    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <PartnerActionColumn rowData={props.row.original} onEdit={(id) => navigate(`/business-entities/partner-edit/${id}`)} onOpenModal={handleOpenModal} />, },
+  ], [navigate, openImageViewer, handleOpenModal]);
 
   const [filteredColumns, setFilteredColumns] = useState(columns);
   const toggleColumn = (checked: boolean, colId: string) => { /* ... */ };
@@ -512,6 +623,7 @@ const PartnerListTable = () => {
           </div>
         </UiForm>
       </Drawer>
+      <PartnerModals modalState={modalState} onClose={handleCloseModal} />
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
         <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}>
           <UiFormItem label="Please provide a reason:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => <Input textArea {...field} placeholder="Enter reason..." rows={3} />} /></UiFormItem>
