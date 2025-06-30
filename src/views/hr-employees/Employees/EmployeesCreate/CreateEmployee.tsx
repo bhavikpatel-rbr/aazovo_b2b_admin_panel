@@ -338,7 +338,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('blood_group', objToValue(values.personalInformation?.bloodGroup));
         formData.append('permanent_address', values.personalInformation?.permanentAddress || '');
         formData.append('local_address', values.personalInformation?.localAddress || '');
-        formData.append('marital_status', objToValue(values.personalInformation?.maritalStatus));
+        formData.append('maritual_status', objToValue(values.personalInformation?.maritalStatus));
         
         formData.append('role_id', objToValue(values.roleResponsibility?.roleId));
         formData.append('department_id', arrayToCommaString(values.roleResponsibility?.departmentId));
@@ -505,7 +505,7 @@ const EmployeeFormPage = () => {
                     bloodGroup: { value: apiData.blood_group || '', label: apiData.blood_group || '' },
                     permanentAddress: apiData.permanent_address || '',
                     localAddress: apiData.local_address || '',
-                    maritalStatus: { value: apiData.marital_status || '', label: apiData.marital_status || '' },
+                    maritalStatus: { value: apiData.maritual_status || '', label: apiData.maritual_status || '' },
                 },
                 roleResponsibility: {
                     roleId: findOption(roleOptions, apiData.role_id),
