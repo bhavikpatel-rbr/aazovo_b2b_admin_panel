@@ -84,6 +84,7 @@ import type {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addNotificationAction,
+  addScheduleAction, // <-- IMPORT THE ACTION
   deleteAllWallAction,
   getAllCompany,
   getAllUsersAction,
@@ -192,6 +193,17 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
+// Zod Schema for Schedule Form
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
+
 // --- Status Colors and Options ---
 const recordStatusColor: Record<WallRecordStatus, string> = {
   Pending:
@@ -274,9 +286,10 @@ const priorityOptions = [
   { value: "high", label: "High" },
 ];
 const eventTypeOptions = [
-  { value: "meeting", label: "Meeting" },
-  { value: "call", label: "Follow-up Call" },
-  { value: "deadline", label: "Project Deadline" },
+  { value: "Meeting", label: "Meeting" },
+  { value: "Call", label: "Follow-up Call" },
+  { value: "Deadline", label: "Project Deadline" },
+  { value: "Reminder", label: "Reminder" },
 ];
 const dummyAlerts = [
   {
@@ -293,37 +306,6 @@ const dummyAlerts = [
   },
 ];
 
-const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
-  const { type, data: wallItem, isOpen } = modalState;
-  if (!isOpen || !wallItem) return null;
-  const renderModalContent = () => {
-    switch (type) {
-      case "email":
-        return <SendEmailDialog wallItem={wallItem} onClose={onClose} />;
-      case "whatsapp":
-        return <SendWhatsAppDialog wallItem={wallItem} onClose={onClose} />;
-      case "notification":
-        return <AddNotificationDialog wallItem={wallItem} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-      case "task":
-        return <AssignTaskDialog wallItem={wallItem} onClose={onClose} />;
-      case "calendar":
-        return <AddScheduleDialog wallItem={wallItem} onClose={onClose} />;
-      case "alert":
-        return <ViewAlertDialog wallItem={wallItem} onClose={onClose} />;
-      case "share":
-        return <ShareWallLinkDialog wallItem={wallItem} onClose={onClose} />;
-      default:
-        return (
-          <GenericActionDialog
-            type={type}
-            wallItem={wallItem}
-            onClose={onClose}
-          />
-        );
-    }
-  };
-  return <>{renderModalContent()}</>;
-};
 const SendEmailDialog: React.FC<{
   wallItem: WallItem;
   onClose: () => void;
@@ -621,76 +603,74 @@ const AddScheduleDialog: React.FC<{
   wallItem: WallItem;
   onClose: () => void;
 }> = ({ wallItem, onClose }) => {
+  console.log(wallItem, "wallItem");
+  
+  const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({
-    defaultValues: { title: "", eventType: null, startDate: null, notes: "" },
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: {
+      event_title: `Regarding Wall Item: ${wallItem.product_name}`,
+      event_type: undefined,
+      date_time: null as any,
+      remind_from: null,
+      notes: `Details for wall item "${wallItem.product_name}" (ID: ${wallItem.id}).`,
+    },
+    mode: 'onChange',
   });
-  const onAddEvent = (data: any) => {
+
+  const onAddEvent = async (data: ScheduleFormData) => {
     setIsLoading(true);
-    console.log("Adding event for", wallItem.product_name, "with data:", data);
-    setTimeout(() => {
-      toast.push(<Notification type="success" title="Event Scheduled" />);
-      setIsLoading(false);
+    const payload = {
+      module_id: Number(wallItem.id),
+      module_name: 'WallListing',
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+      notes: data.notes || '',
+    };
+
+    try {
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for "${wallItem.product_name}".`} />);
       onClose();
-    }, 1000);
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for "{wallItem.product_name}"</h5>
-      <form onSubmit={handleSubmit(onAddEvent)}>
-        <FormItem label="Event Title">
-          <Controller
-            name="title"
-            control={control}
-            render={({ field }) => (
-              <Input {...field} placeholder="e.g., Call about listing" />
-            )}
-          />
+      <Form onSubmit={handleSubmit(onAddEvent)}>
+        <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
         </FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Event Type">
-            <Controller
-              name="eventType"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Type"
-                  options={eventTypeOptions}
-                  {...field}
-                />
-              )}
-            />
+          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <Controller name="event_type" control={control} render={({ field }) => (
+              <UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
           </FormItem>
-          <FormItem label="Date & Time">
-            <Controller
-              name="startDate"
-              control={control}
-              render={({ field }) => (
-                <DatePicker.DateTimepicker
-                  placeholder="Select date and time"
-                  value={field.value as Date}
-                  onChange={field.onChange}
-                />
-              )}
-            />
+          <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
           </FormItem>
         </div>
-        <FormItem label="Notes">
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => <Input textArea {...field} />}
-          />
+        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+        </FormItem>
+        <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
         </FormItem>
         <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
-            Save Event
-          </Button>
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
         </div>
-      </form>
+      </Form>
     </Dialog>
   );
 };
@@ -818,6 +798,37 @@ const GenericActionDialog: React.FC<{
       </div>
     </Dialog>
   );
+};
+const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
+  const { type, data: wallItem, isOpen } = modalState;
+  if (!isOpen || !wallItem) return null;
+  const renderModalContent = () => {
+    switch (type) {
+      case "email":
+        return <SendEmailDialog wallItem={wallItem} onClose={onClose} />;
+      case "whatsapp":
+        return <SendWhatsAppDialog wallItem={wallItem} onClose={onClose} />;
+      case "notification":
+        return <AddNotificationDialog wallItem={wallItem} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+      case "task":
+        return <AssignTaskDialog wallItem={wallItem} onClose={onClose} />;
+      case "calendar":
+        return <AddScheduleDialog wallItem={wallItem} onClose={onClose} />;
+      case "alert":
+        return <ViewAlertDialog wallItem={wallItem} onClose={onClose} />;
+      case "share":
+        return <ShareWallLinkDialog wallItem={wallItem} onClose={onClose} />;
+      default:
+        return (
+          <GenericActionDialog
+            type={type}
+            wallItem={wallItem}
+            onClose={onClose}
+          />
+        );
+    }
+  };
+  return <>{renderModalContent()}</>;
 };
 
 // --- CSV Export ---
