@@ -15,11 +15,11 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import { Card, Button, Input, DatePicker, Select, Radio, Checkbox, FormItem, Spinner, Notification, toast } from '@/components/ui';
 import { BiChevronRight } from 'react-icons/bi';
 import { HiOutlineTrash } from 'react-icons/hi';
-import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById, getCompanyAction } from '@/reduxtool/master/middleware';
+import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById, getCategoriesAction } from '@/reduxtool/master/middleware';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
-import {
-    getRolesAction, getDepartmentsAction, getDesignationsAction,
-    getCountriesAction, getParentCategoriesAction,
+import { 
+    getRolesAction, getDepartmentsAction, getDesignationsAction, 
+    getCountriesAction, getParentCategoriesAction, 
     getBrandAction, getAllProductsAction, getMemberAction, getReportingTo
 } from '@/reduxtool/master/middleware';
 
@@ -57,18 +57,30 @@ const employeeFormValidationSchema = z.object({
         mobileNumberCode: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
         email: z.string().min(1, 'Email is required').email('Invalid email format'),
         experience: z.string().min(1, 'Experience is required'),
-        password: z.string().min(6, 'min 6 Character password is required'),
+        password: z.string().optional(),
     }),
     personalInformation: z.object({
         status: z.object({ label: z.string(), value: z.string() }, { required_error: "Status is required." }),
         dateOfBirth: z.date({ required_error: "Date of birth is required." }).nullable(),
         age: z.union([z.string(), z.number()]).nullable(),
-        gender: z.object({ label: z.string(), value: z.string() }, { required_error: "Gender is required." }).nullable(),
+        gender: z.object({ label: z.string(), value: z.string() }).nullable(),
+        nationalityId: z.object({ label: z.string(), value: z.string() }, { required_error: "Nationality is required." }).nullable(),
         bloodGroup: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
+        permanentAddress: z.string().nullable(),
         localAddress: z.string().optional().nullable(),
-        maritalStatus: z.object({ label: z.string(), value: z.string() }, { required_error: "Marital status is required." }).nullable(),
+        maritalStatus: z.object({ label: z.string(), value: z.string() }).nullable(),
     }),
-}).passthrough();
+   
+}).passthrough().refine(data => {
+    // Conditionally require password only if it's NOT in edit mode (i.e., no ID)
+    if (!data.id && (!data.registration.password || data.registration.password.length < 6)) {
+      return false;
+    }
+    return true;
+  }, {
+    message: "Password is required and must be at least 6 characters for new employees",
+    path: ["registration", "password"],
+});
 
 
 // --- 3. FORM SECTION & NAVIGATOR COMPONENTS ---
@@ -97,30 +109,28 @@ const Navigator = ({ activeSection, onNavigate }: { activeSection: FormSectionKe
 };
 
 const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
-    const dispatch = useAppDispatch();
     const isEditMode = !!control._formValues.id;
+    const dispatch = useAppDispatch();
     const { CountriesData = [] } = useSelector(masterSelector);
     useEffect(() => { if (!Array.isArray(CountriesData) || CountriesData.length === 0) dispatch(getCountriesAction()); }, [dispatch, CountriesData]);
 
     const countryCodeOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData
         .filter((c: any) => c.phone_code)
         .map((c: any) => ({
-            value: `${c.phone_code}`,
-            label: `${c.phone_code} (${c.name} - ${c.iso_code})`,
+            value: `+${c.phone_code}`,
+            label: `+${c.phone_code} (${c.name})`,
         }))
         .sort((a, b) => a.label.localeCompare(b.label)) : [], [CountriesData]);
 
-
-
     return (
         <Card id="registration"><h4 className="mb-6">Registration</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FormItem label={<>Full Name <span className="text-red-500">*</span></>} invalid={!!errors.registration?.fullName} errorMessage={errors.registration?.fullName?.message}><Controller name="registration.fullName" control={control} rules={{ required: 'Full Name is required' }} render={({ field }) => <Input placeholder="Enter full name" {...field} />} /></FormItem>
-            <FormItem label={<>Date of Joining <span className="text-red-500">*</span></>} invalid={!!errors.registration?.dateOfJoining} errorMessage={errors.registration?.dateOfJoining?.message}><Controller name="registration.dateOfJoining" control={control} rules={{ required: 'Date of Joining is required' }} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label={<>Full Name <span className="text-red-500">*</span></>} invalid={!!errors.registration?.fullName} errorMessage={errors.registration?.fullName?.message}><Controller name="registration.fullName" control={control} render={({ field }) => <Input placeholder="Enter full name" {...field} />} /></FormItem>
+            <FormItem label={<>Date of Joining <span className="text-red-500">*</span></>} invalid={!!errors.registration?.dateOfJoining} errorMessage={errors.registration?.dateOfJoining?.message}><Controller name="registration.dateOfJoining" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label={<>Mobile Number <span className="text-red-500">*</span></>} invalid={!!errors.registration?.mobileNumber || !!(errors.registration as any)?.mobileNumberCode} errorMessage={errors.registration?.mobileNumber?.message || (errors.registration as any)?.mobileNumberCode?.message}>
-                <div className='flex gap-2'><div className='w-1/3'><Controller name="registration.mobileNumberCode" control={control} rules={{ required: 'Code is required' }} render={({ field }) => <Select options={countryCodeOptions} placeholder="Code" {...field} />} /></div><div className='w-2/3'><Controller name="registration.mobileNumber" control={control} rules={{ required: 'Mobile Number is required' }} render={({ field }) => <Input type="tel" placeholder="9876543210" {...field} />} /></div></div></FormItem>
-            <FormItem label={<>Email <span className="text-red-500">*</span></>} invalid={!!errors.registration?.email} errorMessage={errors.registration?.email?.message}><Controller name="registration.email" control={control} rules={{ required: 'Email is required', pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' } }} render={({ field }) => <Input type="email" placeholder="employee@company.com" {...field} />} /></FormItem>
-            <FormItem label={<>Experience <span className="text-red-500">*</span></>} invalid={!!errors.registration?.experience} errorMessage={errors.registration?.experience?.message}><Controller name="registration.experience" control={control} rules={{ required: 'Experience is required' }} render={({ field }) => <Input placeholder="e.g., 3 years" {...field} />} /></FormItem>
-            <FormItem label={<>Password <span className="text-red-500">*</span></>} invalid={!!errors.registration?.password} errorMessage={errors.registration?.password?.message}><Controller name="registration.password" control={control} rules={{ required: 'Password is required for new employees' }} render={({ field }) => <Input type="password" placeholder="Enter password" {...field} />} /></FormItem>
+                <div className='flex gap-2'><div className='w-1/3'><Controller name="registration.mobileNumberCode" control={control} render={({ field }) => <Select options={countryCodeOptions} placeholder="Code" {...field} />} /></div><div className='w-2/3'><Controller name="registration.mobileNumber" control={control} render={({ field }) => <Input type="tel" placeholder="9876543210" {...field} />} /></div></div></FormItem>
+            <FormItem label={<>Email <span className="text-red-500">*</span></>} invalid={!!errors.registration?.email} errorMessage={errors.registration?.email?.message}><Controller name="registration.email" control={control} render={({ field }) => <Input type="email" placeholder="employee@company.com" {...field} />} /></FormItem>
+            <FormItem label={<>Experience <span className="text-red-500">*</span></>} invalid={!!errors.registration?.experience} errorMessage={errors.registration?.experience?.message}><Controller name="registration.experience" control={control} render={({ field }) => <Input placeholder="e.g., 3 years" {...field} />} /></FormItem>
+            {!isEditMode && (<FormItem label={<>Password <span className="text-red-500">*</span></>} invalid={!!errors.registration?.password} errorMessage={errors.registration?.password?.message}><Controller name="registration.password" control={control} render={({ field }) => <Input type="password" placeholder="Enter password" {...field} />} /></FormItem>)}
         </div></Card>
     );
 };
@@ -129,7 +139,7 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
     const dispatch = useAppDispatch();
     const { CountriesData = [] } = useSelector(masterSelector);
     useEffect(() => { if (!Array.isArray(CountriesData) || CountriesData.length === 0) dispatch(getCountriesAction()); }, [dispatch, CountriesData]);
-    const nationalityOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: c.id, label: c.name })) : [], [CountriesData]);
+    const nationalityOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: String(c.id), label: c.name })) : [], [CountriesData]);
     const statusOptions = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }];
     const genderOptions = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }];
     const bloodGroupOptions = [{ value: 'A+', label: 'A+' }, { value: 'B+', label: 'B+' }, { value: 'O+', label: 'O+' }, { value: 'A-', label: 'A-' }, { value: 'B-', label: 'B-' }, { value: 'O-', label: 'O-' }, { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' }, { value: 'Other', label: 'Other' }];
@@ -150,30 +160,39 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
 };
 
 const DocumentSubmissionSection = ({ control, errors }: FormSectionBaseProps) => {
-    const { getValues } = useForm<EmployeeFormSchema>();
     const documentFields = [
-        { name: 'profile_pic', label: "Profile Picture", accept: "image/*" }, { name: 'identity_proof', label: "Identity Proof", accept: ".pdf,.jpg,.jpeg,.png" },
-        { name: 'address_proof', label: "Address Proof", accept: ".pdf,.jpg,.jpeg,.png" }, { name: 'educational_certificates', label: "Educational Certificates", accept: ".pdf,.zip" },
-        { name: 'experience_certificates', label: "Experience Certificates", accept: ".pdf,.zip" }, { name: 'relieving_letter', label: "Relieving Letter", accept: ".pdf" },
+        { name: 'profile_pic', label: "Profile Picture", accept: "image/*" },
+        { name: 'identity_proof', label: "Identity Proof (e.g., Aadhaar, Passport)", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
+        { name: 'address_proof', label: "Address Proof (e.g., Utility Bill)", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
+        { name: 'educational_certificates', label: "Educational Certificates", accept: ".pdf,.zip" },
+        { name: 'experience_certificates', label: "Experience Certificates", accept: ".pdf,.zip" },
+        { name: 'offer_letter', label: "Offer Letter", accept: ".pdf" },
+        { name: 'past_offer_letter', label: "Past Offer Letter(s)", accept: ".pdf,.zip" },
+        { name: 'relieving_letter', label: "Relieving Letter", accept: ".pdf" },
+        { name: 'designation_letter', label: "Designation Letter", accept: ".pdf" },
+        { name: 'salary_slips', label: "Salary Slips (Last 3 Months)", accept: ".pdf,.zip" },
+        { name: 'bank_account_proof', label: "Bank Account Proof", accept: ".pdf,.jpg,.jpeg,.png" },
+        { name: 'pan_card', label: "PAN Card", accept: ".pdf,.jpg,.jpeg,.png" },
+        { name: 'passport_size_photograph', label: "Passport Size Photograph", accept: ".jpg,.jpeg,.png" },
     ];
-
+    
     return (
         <Card id="documentSubmission"><h4 className="mb-6">Document Submission</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 items-start">
-            {documentFields.map(doc => (
-                <FormItem key={doc.name} label={doc.label} invalid={!!(errors.documentSubmission as any)?.[doc.name]} errorMessage={(errors.documentSubmission as any)?.[doc.name]?.message}>
-                    <Controller name={`documentSubmission.${doc.name}` as any} control={control} render={({ field: { onChange, value, ...rest } }) => {
-                        const isImage = typeof value === 'string' && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(value);
-                        const isFileObject = value instanceof File;
-                        return (
-                            <div className="flex items-center gap-4">
-                                <Input type="file" {...rest} accept={doc.accept} onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} />
-                                {(isFileObject && value.type.startsWith('image/')) && <img src={URL.createObjectURL(value)} alt="Preview" className="w-16 h-16 rounded-md object-cover" />}
-                                {isImage && <img src={`https://aazovo.codefriend.in/${value}`} alt="Preview" className="w-16 h-16 rounded-md object-cover" />}
-                                {(typeof value === 'string' && !isImage) && <a href={`https://aazovo.codefriend.in/${value}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">View Doc</a>}
-                            </div>
-                        )
-                    }} />
-                </FormItem>
+            {documentFields.map(doc => ( 
+            <FormItem key={doc.name} label={<>{doc.label}{doc.required && <span className="text-red-500"> *</span>}</>} invalid={!!(errors.documentSubmission as any)?.[doc.name]} errorMessage={(errors.documentSubmission as any)?.[doc.name]?.message}>
+                <Controller name={`documentSubmission.${doc.name}` as any} control={control} render={({ field: { onChange, value, ...rest } }) => {
+                    const isImage = typeof value === 'string' && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(value);
+                    const isFileObject = value instanceof File;
+                    return (
+                        <div className="flex items-center gap-4">
+                            <Input type="file" {...rest} accept={doc.accept} onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} />
+                            { (isFileObject && value.type.startsWith('image/')) && <img src={URL.createObjectURL(value)} alt="Preview" className="w-16 h-16 rounded-md object-cover" /> }
+                            { isImage && <img src={value} alt="Preview" className="w-16 h-16 rounded-md object-cover" /> }
+                            { (typeof value === 'string' && !isImage) && <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">View Document</a>}
+                        </div>
+                    )
+                }} />
+            </FormItem>
             ))}
         </div></Card>
     );
@@ -181,26 +200,30 @@ const DocumentSubmissionSection = ({ control, errors }: FormSectionBaseProps) =>
 
 const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) => {
     const dispatch = useAppDispatch();
-    const { Roles, departmentsData, designationsData, BrandData, ParentCategories, AllProducts, memberData, reportingTo } = useSelector(masterSelector);
+    const { Roles, departmentsData, designationsData, BrandData, CategoriesData, AllProducts, memberData, reportingTo, CountriesData } = useSelector(masterSelector);
     useEffect(() => {
         dispatch(getRolesAction()); dispatch(getDepartmentsAction()); dispatch(getDesignationsAction()); dispatch(getBrandAction());
-        dispatch(getParentCategoriesAction()); dispatch(getAllProductsAction()); dispatch(getMemberAction()); dispatch(getReportingTo());
+        dispatch(getCategoriesAction()); dispatch(getAllProductsAction()); dispatch(getMemberAction()); dispatch(getReportingTo());
+        dispatch(getCountriesAction());
     }, [dispatch]);
+
+    
     const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => toOptions(departmentsData?.data), [departmentsData]);
     const designationOptions = useMemo(() => toOptions(designationsData?.data), [designationsData]);
-    const categoryOptions = useMemo(() => toOptions(ParentCategories?.data), [ParentCategories]);
+    const countryOptions = useMemo(() => toOptions(CountriesData), [CountriesData]);
+    const categoryOptions = useMemo(() => toOptions(CategoriesData), [CategoriesData]);
     const brandOptions = useMemo(() => toOptions(BrandData), [BrandData]);
     const productOptions = useMemo(() => toOptions(AllProducts), [AllProducts]);
     const reportingHrOptions = useMemo(() => toOptions(reportingTo?.data), [reportingTo]);
-    const reportingHeadOptions = useMemo(() => toOptions(memberData?.data?.data || memberData?.data), [memberData]);
-    const findMultiSelectValues = (options: any[], values: any) => Array.isArray(values) ? options.filter(option => values.some(v => v.value === option.value)) : [];
+    const reportingHeadOptions = useMemo(() => toOptions(memberData), [memberData]);
     return (
         <Card id="roleResponsibility"><h4 className="mb-6">Role & Responsibility</h4><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
             <FormItem label="Role" invalid={!!errors.roleResponsibility?.roleId}><Controller name="roleResponsibility.roleId" control={control} render={({ field }) => <Select placeholder="Select Role" options={roleOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Department" invalid={!!errors.roleResponsibility?.departmentId}><Controller name="roleResponsibility.departmentId" control={control} render={({ field }) => <Select isMulti placeholder="Select Departments" options={departmentOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Designation" invalid={!!errors.roleResponsibility?.designationId}><Controller name="roleResponsibility.designationId" control={control} render={({ field }) => <Select placeholder="Select Designation" options={designationOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label="Country (Responsibility)" invalid={!!errors.roleResponsibility?.countryId}><Controller name="roleResponsibility.countryId" control={control} render={({ field }) => <Select isMulti placeholder="Select Countries" options={countryOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Category (Focus Area)" invalid={!!errors.roleResponsibility?.categoryId}><Controller name="roleResponsibility.categoryId" control={control} render={({ field }) => <Select isMulti placeholder="Select Categories" options={categoryOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Brand (Responsibility)" invalid={!!errors.roleResponsibility?.brandId}><Controller name="roleResponsibility.brandId" control={control} render={({ field }) => <Select isMulti placeholder="Select Brands" options={brandOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Product/Service (Focus)" invalid={!!errors.roleResponsibility?.productServiceId}><Controller name="roleResponsibility.productServiceId" control={control} render={({ field }) => <Select isMulti placeholder="Select Products" options={productOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
@@ -229,9 +252,9 @@ const EquipmentsAssetsSection = ({ control, errors }: FormSectionBaseProps) => {
                                 return (
                                     <div className='flex items-center gap-4'>
                                         <Input type="file" {...rest} onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} />
-                                        {(isFileObject && value.type.startsWith('image/')) && <img src={URL.createObjectURL(value)} alt="Preview" className="w-16 h-16 rounded-md object-cover" />}
-                                        {isImage && <img src={`https://aazovo.codefriend.in/${value}`} alt="Preview" className="w-16 h-16 rounded-md object-cover" />}
-                                        {(typeof value === 'string' && !isImage) && <a href={`https://aazovo.codefriend.in/${value}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">View Doc</a>}
+                                        {(isFileObject && value.type.startsWith('image/')) && <img src={URL.createObjectURL(value)} alt="Preview" className="w-16 h-16 rounded-md object-cover" /> }
+                                        {isImage && <img src={value} alt="Preview" className="w-16 h-16 rounded-md object-cover" /> }
+                                        {(typeof value === 'string' && !isImage) && <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">View Doc</a>}
                                     </div>
                                 )
                             }} /></FormItem>
@@ -288,8 +311,6 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         resolver: zodResolver(employeeFormValidationSchema)
     });
 
-    useEffect(() => { if (!isEmpty(defaultValues)) reset(defaultValues) }, [defaultValues, reset]);
-
     const internalFormSubmit = (values: EmployeeFormSchema) => {
         const formData = new FormData();
         const formatDate = (date: Date | null) => date ? dayjs(date).format('YYYY-MM-DD') : '';
@@ -299,10 +320,8 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         if (isEdit && defaultValues?.id) {
             formData.append('_method', "PUT");
             formData.append('employee_id', defaultValues.id);
-
         }
 
-        // Registration
         formData.append('name', values.registration?.fullName || '');
         formData.append('date_of_joining', formatDate(values.registration?.dateOfJoining));
         formData.append('mobile_number', values.registration?.mobileNumber || '');
@@ -310,8 +329,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('email', values.registration?.email || '');
         formData.append('experience', values.registration?.experience || '');
         if (!isEdit && values.registration.password) formData.append('password', values.registration.password);
-
-        // Personal Info
+        
         formData.append('status', objToValue(values.personalInformation?.status));
         formData.append('date_of_birth', formatDate(values.personalInformation?.dateOfBirth));
         formData.append('age', String(values.personalInformation?.age || ''));
@@ -321,8 +339,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('permanent_address', values.personalInformation?.permanentAddress || '');
         formData.append('local_address', values.personalInformation?.localAddress || '');
         formData.append('marital_status', objToValue(values.personalInformation?.maritalStatus));
-
-        // Role & Responsibility
+        
         formData.append('role_id', objToValue(values.roleResponsibility?.roleId));
         formData.append('department_id', arrayToCommaString(values.roleResponsibility?.departmentId));
         formData.append('designation_id', objToValue(values.roleResponsibility?.designationId));
@@ -333,15 +350,13 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('product_service_id', arrayToCommaString(values.roleResponsibility?.productServiceId));
         formData.append('reporting_hr_id', arrayToCommaString(values.roleResponsibility?.reportingHrId));
         formData.append('reporting_head_id', objToValue(values.roleResponsibility?.reportingHeadId));
-
-        // Documents
+        
         Object.entries(values.documentSubmission || {}).forEach(([key, file]) => {
             if (file instanceof File) {
                 formData.append(key, file);
             }
         });
 
-        // Other sections
         formData.append('training_date_of_completion', formatDate(values.training?.inductionDateCompletion));
         formData.append('training_remark', values.training?.inductionRemarks || '');
         formData.append('specific_training_date_of_completion', formatDate(values.training?.departmentTrainingDateCompletion));
@@ -366,7 +381,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
                 }
             });
         }
-
+        
         onFormSubmit(formData, defaultValues?.id);
     };
 
@@ -383,12 +398,12 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
             default: return <RegistrationSection {...sectionProps} />;
         }
     };
-
+    
     const handleNext = () => activeSectionIndex < sectionKeys.length - 1 && setActiveSection(sectionKeys[activeSectionIndex + 1]);
     const handlePrevious = () => activeSectionIndex > 0 && setActiveSection(sectionKeys[activeSectionIndex - 1]);
 
     return (
-        <form onSubmit={handleSubmit(internalFormSubmit, (err) => console.log(err))} className="h-full">
+        <form onSubmit={handleSubmit(internalFormSubmit, (err) => console.log("Form Validation Errors:", err))} className="h-full">
             <div className="h-full flex flex-col justify-between">
                 <div className="flex-grow pb-6">
                     <div className="flex gap-1 items-end mb-3">
@@ -404,7 +419,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
                     </div>
                 </div>
                 <div className="bg-white sticky bottom-0 -mx-8 px-8 py-4 border-t dark:border-gray-700 dark:bg-gray-800">
-                    <div className="flex justify-between items-center">
+                     <div className="flex justify-between items-center">
                         <div>
                             <Button type="button" icon={<HiOutlineTrash />} onClick={onDiscard} disabled={isSubmitting}>Discard</Button>
                         </div>
@@ -425,11 +440,8 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
 const EmployeeFormPage = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { id: employeeId } = useParams<{ id?: string }>();
-    
+    const { id:employeeId } = useParams<{ id: string }>();
     const isEditMode = !!employeeId;
-    console.log(employeeId, 'employeeId');
-    
 
     const [employeeData, setEmployeeData] = useState<Partial<EmployeeFormSchema> | null>(null);
     const [isLoading, setIsLoading] = useState(isEditMode);
@@ -437,10 +449,11 @@ const EmployeeFormPage = () => {
     const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
 
     const lookups = useSelector(masterSelector);
-
+    
     useEffect(() => {
         dispatch(getRolesAction());
- 
+        dispatch(getDepartmentsAction());
+        dispatch(getDesignationsAction());
         dispatch(getCountriesAction());
         dispatch(getParentCategoriesAction());
         dispatch(getBrandAction());
@@ -450,11 +463,10 @@ const EmployeeFormPage = () => {
     }, [dispatch]);
 
     useEffect(() => {
-        const lookupsReady = !isEmpty(lookups.Roles) && !isEmpty(lookups.departmentsData?.data) && !isEmpty(lookups.designationsData?.data) && !isEmpty(lookups.CountriesData) && !isEmpty(lookups.reportingTo?.data) && !isEmpty(lookups.memberData?.data);
-
+     
         const apiToForm = (apiData: any): Partial<EmployeeFormSchema> => {
-            const findOption = (options: any[], value: any) => options.find(o => String(o.value) === String(value));
-            const findMultiOptions = (options: any[], values: any[]) => Array.isArray(values) ? options.filter(o => values.includes(String(o.value))) : [];
+            const findOption = (options: {value:string, label:string}[], value: any) => options.find(o => String(o.value) === String(value));
+            const findMultiOptions = (options: {value:string, label:string}[], values: any[]) => Array.isArray(values) ? options.filter(o => values.includes(String(o.value))) : [];
             const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
             const mapApiBoolToYesNo = (value: any): 'yes' | 'no' | '' => {
                 if (value === true || value === 1 || value === '1') return 'yes';
@@ -471,7 +483,7 @@ const EmployeeFormPage = () => {
             const productOptions = toOptions(lookups.AllProducts);
             const reportingHrOptions = toOptions(lookups.reportingTo?.data);
             const reportingHeadOptions = toOptions(lookups.memberData?.data?.data || lookups.memberData?.data);
-
+            
             const commaStringToArray = (str: string | null | undefined): string[] => (str ? String(str).split(',') : []);
 
             return {
@@ -508,12 +520,19 @@ const EmployeeFormPage = () => {
                     reportingHeadId: findOption(reportingHeadOptions, apiData.reporting_head_id),
                 },
                 documentSubmission: {
-                    profile_pic: apiData.profile_pic,
-                    identity_proof: apiData.identity_proof,
-                    address_proof: apiData.address_proof,
-                    educational_certificates: apiData.educational_certificates,
-                    experience_certificates: apiData.experience_certificates,
-                    relieving_letter: apiData.relieving_letter,
+                    profile_pic: apiData.profile_pic_path,
+                    identity_proof: apiData.identity_proof_path,
+                    address_proof: apiData.address_proof_path,
+                    educational_certificates: apiData.educational_certificates_path?.[0],
+                    experience_certificates: apiData.experience_certificates_path?.[0],
+                    offer_letter: apiData.offer_letter_path,
+                    past_offer_letter: apiData.past_offer_letter_path,
+                    relieving_letter: apiData.relieving_letter_path,
+                    designation_letter: apiData.designation_letter_path,
+                    salary_slips: apiData.salary_slips_path?.[0],
+                    bank_account_proof: apiData.bank_account_proof_path,
+                    pan_card: apiData.pan_card_path,
+                    passport_size_photograph: apiData.passport_size_photograph_path,
                 },
                 training: {
                     inductionDateCompletion: apiData.training_date_of_completion ? new Date(apiData.training_date_of_completion) : null,
@@ -529,11 +548,12 @@ const EmployeeFormPage = () => {
                     notice_period_status: apiData.notice_period_status || '', notice_period_remarks: apiData.notice_period_remarks || '',
                 },
                 equipmentsAssetsProvided: {
-                    items: (typeof apiData.equipments_assets_issued === 'string' ? JSON.parse(apiData.equipments_assets_issued) : (apiData.equipments_assets_issued || [])).map((item: any) => ({ ...item, attachment: item.attachment_url || null })),
+                    items: (apiData.assets || []).map((item: any) => ({ ...item, attachment: item.attachment_url || null })),
                 },
             };
+            return transformed;
         };
-
+        
         const fetchCompanyData = async () => {
             if (isEditMode && employeeId) {
                 setIsLoading(true);
@@ -554,7 +574,6 @@ const EmployeeFormPage = () => {
             }
         };
         fetchCompanyData();
-
     }, [employeeId]);
 
     const handleFormSubmit = (formData: FormData, id?: string) => {
@@ -587,13 +606,15 @@ const EmployeeFormPage = () => {
 
     return (
         <Container className="h-full">
-            <EmployeeFormComponent
-                isEdit={isEditMode}
-                defaultValues={employeeData || {}}
-                onFormSubmit={handleFormSubmit}
-                isSubmitting={isSubmitting}
-                onDiscard={onDiscardOpen}
-            />
+            {employeeData && (
+                <EmployeeFormComponent 
+                    isEdit={isEditMode} 
+                    defaultValues={employeeData} 
+                    onFormSubmit={handleFormSubmit}
+                    isSubmitting={isSubmitting}
+                    onDiscard={onDiscardOpen}
+                />
+            )}
             <ConfirmDialog
                 isOpen={discardConfirmationOpen}
                 type="danger"
