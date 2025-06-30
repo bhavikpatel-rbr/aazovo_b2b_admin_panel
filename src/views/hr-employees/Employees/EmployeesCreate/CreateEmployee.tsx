@@ -61,25 +61,12 @@ const employeeFormValidationSchema = z.object({
     }),
     personalInformation: z.object({
         status: z.object({ label: z.string(), value: z.string() }, { required_error: "Status is required." }),
-        dateOfBirth: z.date({ required_error: "Date of birth is required." }),
-        age: z.union([z.string().min(1), z.number().min(1)]),
-        gender: z.object({ label: z.string(), value: z.string() }, { required_error: "Gender is required." }),
+        dateOfBirth: z.date({ required_error: "Date of birth is required." }).nullable(),
+        age: z.union([z.string(), z.number()]).nullable(),
+        gender: z.object({ label: z.string(), value: z.string() }, { required_error: "Gender is required." }).nullable(),
         bloodGroup: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-        permanentAddress: z.string().min(1, 'Permanent address is required'),
-        localAddress: z.string().optional(),
-        maritalStatus: z.object({ label: z.string(), value: z.string() }, { required_error: "Marital status is required." }),
-    }),
-    roleResponsibility: z.object({
-        roleId: z.object({ label: z.string(), value: z.string() }, { required_error: "Role is required." }),
-        departmentId: z.array(z.object({ label: z.string(), value: z.string() })).min(1, 'At least one department is required'),
-        designationId: z.object({ label: z.string(), value: z.string() }, { required_error: "Designation is required." }),
-        countryId: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
-        categoryId: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
-        subcategoryId: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
-        brandId: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
-        productServiceId: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
-        reportingHrId: z.array(z.object({ label: z.string(), value: z.string() })).min(1, "Reporting HR is required"),
-        reportingHeadId: z.object({ label: z.string(), value: z.string() }, { required_error: "Reporting Head is required." }),
+        localAddress: z.string().optional().nullable(),
+        maritalStatus: z.object({ label: z.string(), value: z.string() }, { required_error: "Marital status is required." }).nullable(),
     }),
 }).passthrough();
 
@@ -133,7 +120,7 @@ const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
                 <div className='flex gap-2'><div className='w-1/3'><Controller name="registration.mobileNumberCode" control={control} rules={{ required: 'Code is required' }} render={({ field }) => <Select options={countryCodeOptions} placeholder="Code" {...field} />} /></div><div className='w-2/3'><Controller name="registration.mobileNumber" control={control} rules={{ required: 'Mobile Number is required' }} render={({ field }) => <Input type="tel" placeholder="9876543210" {...field} />} /></div></div></FormItem>
             <FormItem label={<>Email <span className="text-red-500">*</span></>} invalid={!!errors.registration?.email} errorMessage={errors.registration?.email?.message}><Controller name="registration.email" control={control} rules={{ required: 'Email is required', pattern: { value: /^\S+@\S+$/i, message: 'Invalid email format' } }} render={({ field }) => <Input type="email" placeholder="employee@company.com" {...field} />} /></FormItem>
             <FormItem label={<>Experience <span className="text-red-500">*</span></>} invalid={!!errors.registration?.experience} errorMessage={errors.registration?.experience?.message}><Controller name="registration.experience" control={control} rules={{ required: 'Experience is required' }} render={({ field }) => <Input placeholder="e.g., 3 years" {...field} />} /></FormItem>
-            {!isEditMode && (<FormItem label={<>Password <span className="text-red-500">*</span></>} invalid={!!errors.registration?.password} errorMessage={errors.registration?.password?.message}><Controller name="registration.password" control={control} rules={{ required: 'Password is required for new employees' }} render={({ field }) => <Input type="password" placeholder="Enter password" {...field} />} /></FormItem>)}
+            <FormItem label={<>Password <span className="text-red-500">*</span></>} invalid={!!errors.registration?.password} errorMessage={errors.registration?.password?.message}><Controller name="registration.password" control={control} rules={{ required: 'Password is required for new employees' }} render={({ field }) => <Input type="password" placeholder="Enter password" {...field} />} /></FormItem>
         </div></Card>
     );
 };
@@ -310,7 +297,9 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         const objToValue = (obj: any) => obj?.value || '';
 
         if (isEdit && defaultValues?.id) {
+            formData.append('_method', "PUT");
             formData.append('employee_id', defaultValues.id);
+
         }
 
         // Registration
@@ -439,6 +428,8 @@ const EmployeeFormPage = () => {
     const { id: employeeId } = useParams<{ id?: string }>();
     
     const isEditMode = !!employeeId;
+    console.log(employeeId, 'employeeId');
+    
 
     const [employeeData, setEmployeeData] = useState<Partial<EmployeeFormSchema> | null>(null);
     const [isLoading, setIsLoading] = useState(isEditMode);
