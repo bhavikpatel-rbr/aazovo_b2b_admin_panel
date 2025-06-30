@@ -6,6 +6,7 @@ import classNames from 'classnames'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import dayjs from 'dayjs' // <-- ADDED
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -69,6 +70,7 @@ import {
     getAllTaskAction,
     submitExportReasonAction,
     addNotificationAction,
+    addScheduleAction, // <-- IMPORT THE ACTION
     getAllUsersAction
 } from '@/reduxtool/master/middleware'
 
@@ -107,7 +109,7 @@ type FilterSelectOption = {
     label: string
 }
 // For Modals
-export type ModalType = 'notification';
+export type ModalType = 'notification' | 'schedule'; // <-- MODIFIED
 export interface ModalState {
     isOpen: boolean;
     type: ModalType | null;
@@ -134,6 +136,16 @@ const exportReasonSchema = z.object({
 })
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>
 
+// --- Zod Schema for Schedule Form ---
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
 // --- Constants ---
 export const taskStatusColor: Record<TaskStatus, string> = {
     pending: 'bg-amber-500',
@@ -144,6 +156,14 @@ export const taskStatusColor: Record<TaskStatus, string> = {
     cancelled: 'bg-red-500',
     not_started: 'bg-yellow-500',
 }
+
+const eventTypeOptions = [
+  { value: "Meeting", label: "Meeting" },
+  { value: "Call", label: "Follow-up Call" },
+  { value: "Deadline", label: "Project Deadline" },
+  { value: "Reminder", label: "Reminder" },
+];
+
 
 // --- CSV Exporter Utility ---
 const TASK_CSV_HEADERS = [
@@ -539,7 +559,7 @@ export const ActionColumn = ({
             </Dropdown.Item>
 
             {/* 4. Add Schedule */}
-            <Dropdown.Item className="flex items-center gap-2">
+            <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule')}>
                 <TbCalendarEvent size={18} />
                 <span className="text-xs">Add Schedule</span>
             </Dropdown.Item>
@@ -1056,6 +1076,79 @@ const AddNotificationDialog = ({ task, onClose, getAllUserDataOptions }: { task:
     );
 };
 
+// --- AddScheduleDialog Component ---
+const AddScheduleDialog: React.FC<{ task: TaskItem; onClose: () => void }> = ({ task, onClose }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: {
+      event_title: `Regarding Task: ${task.note}`,
+      event_type: undefined,
+      date_time: null as any,
+      remind_from: null,
+      notes: `Details for task "${task.note}".`,
+    },
+    mode: 'onChange',
+  });
+
+  const onAddEvent = async (data: ScheduleFormData) => {
+    setIsLoading(true);
+    const payload = {
+      module_id: Number(task.id),
+      module_name: 'Task',
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+      notes: data.notes || '',
+    };
+
+    try {
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for task "${task.note}".`} />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for Task: {task.note}</h5>
+      <UiFormComponents onSubmit={handleSubmit(onAddEvent)}>
+        <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+        </UiFormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <Controller name="event_type" control={control} render={({ field }) => (
+              <Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </UiFormItem>
+          <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+          </UiFormItem>
+        </div>
+        <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+        </UiFormItem>
+        <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+        </div>
+      </UiFormComponents>
+    </Dialog>
+  );
+};
+
+
 const TaskModals = ({ modalState, onClose, getAllUserDataOptions }: { modalState: ModalState, onClose: () => void, getAllUserDataOptions: SelectOption[] }) => {
     const { type, data: task, isOpen } = modalState;
     if (!isOpen || !task) return null;
@@ -1063,6 +1156,8 @@ const TaskModals = ({ modalState, onClose, getAllUserDataOptions }: { modalState
     switch (type) {
         case 'notification':
             return <AddNotificationDialog task={task} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+        case 'schedule':
+            return <AddScheduleDialog task={task} onClose={onClose} />;
         default:
             return null;
     }
