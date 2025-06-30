@@ -82,10 +82,12 @@ import {
   getDepartmentsAction,
   getInquiriesAction,
   submitExportReasonAction,
-  addNotificationAction, // Added
-  getAllUsersAction, // Added
+  addNotificationAction, 
+  getAllUsersAction,
+  addScheduleAction, // Added
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
+import dayjs from "dayjs"; // Added
 import { useSelector } from "react-redux";
 import { BsThreeDotsVertical } from "react-icons/bs";
 
@@ -98,6 +100,16 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
+// --- Zod Schema for Schedule Form (ADDED) ---
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
 
 // ============================================================================
 // --- MODALS SECTION ---
@@ -105,7 +117,7 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 // ============================================================================
 
 // --- Type Definitions for Modals ---
-export type InquiryModalType = 'notification';
+export type InquiryModalType = 'notification' | 'schedule';
 export interface InquiryModalState {
     isOpen: boolean;
     type: InquiryModalType | null;
@@ -227,6 +239,72 @@ const AddInquiryNotificationDialog: React.FC<{
     );
 };
 
+// --- Schedule Dialog (ADDED) ---
+const AddInquiryScheduleDialog: React.FC<{ inquiry: InquiryItem; onClose: () => void }> = ({ inquiry, onClose }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
+
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+      resolver: zodResolver(scheduleSchema),
+      defaultValues: { event_title: `Follow-up on Inquiry ${inquiry.inquiry_id}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding inquiry from ${inquiry.company_name} about "${inquiry.inquiry_subject}".`},
+      mode: 'onChange',
+    });
+  
+    const onAddEvent = async (data: ScheduleFormData) => {
+      setIsLoading(true);
+      const payload = {
+        module_id: Number(inquiry.id),
+        module_name: 'Inquiry',
+        event_title: data.event_title,
+        event_type: data.event_type,
+        date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+        ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+        notes: data.notes || '',
+      };
+  
+      try {
+        await dispatch(addScheduleAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for inquiry ${inquiry.inquiry_id}.`} />);
+        onClose();
+      } catch (error: any) {
+        toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    return (
+      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Add Schedule for Inquiry: {inquiry.inquiry_id}</h5>
+        <UiForm onSubmit={handleSubmit(onAddEvent)}>
+          <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+            <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+          </FormItem>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+              <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} />
+            </FormItem>
+            <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+              <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+            </FormItem>
+          </div>
+          <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+            <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+          </FormItem>
+          <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+            <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+          </FormItem>
+          <div className="text-right mt-6">
+            <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+          </div>
+        </UiForm>
+      </Dialog>
+    );
+};
+
+
 // --- Modals Wrapper Component ---
 const InquiriesModals: React.FC<{
     modalState: InquiryModalState;
@@ -239,6 +317,8 @@ const InquiriesModals: React.FC<{
     switch (type) {
         case 'notification':
             return <AddInquiryNotificationDialog inquiry={inquiry} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+        case 'schedule':
+            return <AddInquiryScheduleDialog inquiry={inquiry} onClose={onClose} />;
         default:
             return null;
     }
@@ -494,8 +574,8 @@ const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOp
   </Dropdown.Item>
 
   {/* 5. Add Schedule */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbCalendarEvent size={18} /> <span className="text-xs">Add Calendar</span>
+  <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule', rowData)}>
+    <TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span>
   </Dropdown.Item>
 
   {/* 6. Add Active */}
