@@ -87,12 +87,14 @@ import Td from "@/components/ui/Table/Td";
 import Tr from "@/components/ui/Table/Tr";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addScheduleAction, // ADDED
   deleteAllMemberAction,
   getMemberAction,
-  submitExportReasonAction, // ADDED: Assume this action exists
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware"; // Adjust path and action names as needed
 import { useAppDispatch } from "@/reduxtool/store";
 import cloneDeep from "lodash/cloneDeep";
+import dayjs from "dayjs"; // ADDED
 import { MdCheckCircle } from "react-icons/md";
 import { useSelector } from "react-redux";
 
@@ -181,6 +183,17 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 // --- End Export Reason Schema ---
+
+// --- Zod Schema for Schedule Form --- ADDED
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
+// --- End Schedule Schema ---
 
 // --- CSV Exporter Utility ---
 const CSV_HEADERS = [
@@ -367,9 +380,10 @@ const priorityOptions = [
   { value: "high", label: "High" },
 ];
 const eventTypeOptions = [
-  { value: "meeting", label: "Meeting" },
-  { value: "call", label: "Follow-up Call" },
-  { value: "deadline", label: "Project Deadline" },
+  { value: "Meeting", label: "Meeting" },
+  { value: "Call", label: "Follow-up Call" },
+  { value: "Deadline", label: "Project Deadline" },
+  { value: "Reminder", label: "Reminder" },
 ];
 const dummyAlerts = [
   {
@@ -450,7 +464,7 @@ const MemberModals: React.FC<MemberModalsProps> = ({
         return <ViewEngagementDialog member={member} onClose={onClose} />;
       case "document":
         return <DownloadDocumentDialog member={member} onClose={onClose} />;
-      case "viewDetail": // ADDED
+      case "viewDetail":
         return <ViewMemberDetailDialog member={member} onClose={onClose} />;
       // Add other cases as needed
       default:
@@ -729,86 +743,96 @@ const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
   );
 };
 
-const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void }> =
-  ({ member, onClose }) => {
+// --- UPDATED AddScheduleDialog ---
+const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({ member, onClose }) => {
+    const dispatch = useAppDispatch();
     const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit } = useForm({
-      defaultValues: {
-        title: "",
-        eventType: null,
-        startDate: null,
-        notes: "",
+
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+      resolver: zodResolver(scheduleSchema),
+      defaultValues: { 
+          event_title: `Meeting with ${member.member_name}`, 
+          event_type: undefined, 
+          date_time: null as any, 
+          remind_from: null, 
+          notes: `Regarding member ${member.member_name} (ID: ${member.id}).`
       },
+      mode: 'onChange',
     });
-    const onAddEvent = (data: any) => {
+  
+    const onAddEvent = async (data: ScheduleFormData) => {
       setIsLoading(true);
-      console.log("Adding event for", member.member_name, "with data:", data);
-      setTimeout(() => {
-        toast.push(<Notification type="success" title="Event Scheduled" />);
-        setIsLoading(false);
+      const payload = {
+        module_id: Number(member.id),
+        module_name: 'Member',
+        event_title: data.event_title,
+        event_type: data.event_type,
+        date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+        ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+        notes: data.notes || '',
+      };
+  
+      try {
+        await dispatch(addScheduleAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${member.member_name}.`} />);
         onClose();
-      }, 1000);
+      } catch (error: any) {
+        toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+      } finally {
+        setIsLoading(false);
+      }
     };
+    
     return (
       <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
         <h5 className="mb-4">Add Schedule for {member.member_name}</h5>
-        <form onSubmit={handleSubmit(onAddEvent)}>
-          <FormItem label="Event Title">
-            <Controller
-              name="title"
-              control={control}
-              render={({ field }) => (
-                <Input {...field} placeholder="e.g., Onboarding Call" />
-              )}
-            />
-          </FormItem>
+        <UiForm onSubmit={handleSubmit(onAddEvent)}>
+          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+            <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+          </UiFormItem>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormItem label="Event Type">
-              <Controller
-                name="eventType"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    placeholder="Select Type"
-                    options={eventTypeOptions}
-                    {...field}
+            <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+              <Controller name="event_type" control={control} render={({ field }) => (
+                  <UiSelect 
+                      placeholder="Select Type" 
+                      options={eventTypeOptions} 
+                      value={eventTypeOptions.find(o => o.value === field.value)} 
+                      onChange={(opt: any) => field.onChange(opt?.value)} 
                   />
-                )}
-              />
-            </FormItem>
-            <FormItem label="Date & Time">
-              <Controller
-                name="startDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker.DateTimepicker
-                    placeholder="Select date and time"
-                    value={field.value as any}
-                    onChange={field.onChange}
+              )} />
+            </UiFormItem>
+            <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+              <Controller name="date_time" control={control} render={({ field }) => (
+                  <DatePicker.DateTimepicker 
+                      placeholder="Select date and time" 
+                      value={field.value} 
+                      onChange={field.onChange} 
                   />
-                )}
-              />
-            </FormItem>
+              )} />
+            </UiFormItem>
           </div>
-          <FormItem label="Notes">
-            <Controller
-              name="notes"
-              control={control}
-              render={({ field }) => <Input textArea {...field} />}
-            />
-          </FormItem>
+          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+            <Controller name="remind_from" control={control} render={({ field }) => (
+                <DatePicker.DateTimepicker 
+                    placeholder="Select date and time" 
+                    value={field.value} 
+                    onChange={field.onChange} 
+                />
+            )} />
+          </UiFormItem>
+          <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+            <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+          </UiFormItem>
           <div className="text-right mt-6">
-            <Button className="mr-2" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button variant="solid" type="submit" loading={isLoading}>
-              Save Event
-            </Button>
+            <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
           </div>
-        </form>
+        </UiForm>
       </Dialog>
     );
-  };
+};
+// --- END UPDATED AddScheduleDialog ---
+
 
 const ViewAlertDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
   member,
