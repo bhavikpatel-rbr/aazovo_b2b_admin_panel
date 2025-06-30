@@ -47,6 +47,7 @@ import {
   getAllScheduleAction,
   getAllTaskAction,
   getAllTaskByStatuesAction,
+  getAllUsersAction,
   getAutoEmailsAction,
   getAutoEmailTemplatesAction,
   getAutoMatchDataAction,
@@ -691,6 +692,10 @@ const masterSlice = createSlice({
     builder.addCase(getAllScheduleAction.fulfilled, (state, { payload }) => ({
       ...state,
       getSchedule: payload,
+    }));
+    builder.addCase(getAllUsersAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      getAllUserData: payload,
     }));
   },
 });

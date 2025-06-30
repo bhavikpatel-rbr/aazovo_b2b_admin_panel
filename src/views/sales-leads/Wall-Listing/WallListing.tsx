@@ -1967,7 +1967,7 @@ const WallListing = () => {
         onConfirmDelete={onConfirmDeleteSelectedItems}
         isDeleting={masterLoadingStatus === "loading"}
       />
-      <WallModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={useMemo(() => getAllUserData.map((user: any) => ({value: user.id, label: user.name})), [getAllUserData])} />
+      <WallModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={useMemo(() => getAllUserData?.map((user: any) => ({value: user?.id, label: user?.name})), [getAllUserData])} />
 
       <Drawer
         title="View Wall Item Details"
