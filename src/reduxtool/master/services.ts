@@ -3017,3 +3017,12 @@ export const addScheduleAsync = async (payload) => {
     return isAxiosError(err)
   }
 }
+
+export const getAutoSpbAsync = async () => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity/autospb`, {})
+    return response?.data?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}

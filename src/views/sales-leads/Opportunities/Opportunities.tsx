@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
-import cloneDeep from "lodash/cloneDeep";
 import React, {
   Fragment,
   Ref,
@@ -29,7 +28,7 @@ import {
   Card,
   Checkbox,
   DatePicker,
-  Dialog, // Correctly imported Dialog
+  Dialog,
   Drawer,
   Dropdown,
   Form,
@@ -87,7 +86,6 @@ import {
 // Types
 import type { TableQueries } from "@/@types/common";
 import {
-  CellContext,
   ColumnDef,
   ColumnSort,
   ExpandedState,
@@ -112,11 +110,11 @@ import {
   getAllUsersAction,
   getOpportunitiesAction,
   submitExportReasonAction,
+  // Assume getAutoSpbAction is available for dispatch
+  // getAutoSpbAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
-import dayjs from "dayjs";
-
 
 // --- Define API Item Type (Matches API Response Structure) ---
 export type ApiOpportunityItem = {
@@ -156,6 +154,44 @@ export type ApiOpportunityItem = {
   updated_by_role?: string;
 };
 
+// --- Define Auto SPB API Types ---
+export type AutoSpbApiItem = {
+  id: number;
+  customer_code: string | null;
+  phonecode: string | null;
+  mobile_no: string | null;
+  brand_name: string | null;
+  product_name: string | null;
+  qty: string;
+  created_at: string;
+  product_status: string;
+  product_specs: string | null;
+  device_type: string | null;
+  price: string;
+  color: string;
+  master_cartoon: string | null;
+  dispatch_status: string;
+  payment_term: string | null;
+  device_condition: string;
+  eta_details: string;
+  location: string;
+  summary: any;
+  unit: any;
+};
+
+export type AutoSpbApiResponse = {
+  status: boolean;
+  message: string;
+  data: Record<
+    string,
+    {
+      Buy?: AutoSpbApiItem[];
+      Sell?: AutoSpbApiItem[];
+    }
+  >;
+  autospbNumber: number;
+};
+
 // --- Define UI Item Type (Table Row Data) ---
 export type OpportunityItem = {
   id: string;
@@ -189,9 +225,12 @@ export type OpportunityItem = {
   updated_at?: string;
   assigned_to?: string;
   notes?: string;
-  listing_url?: string;
+  listing_url: string | null;
   updated_by_name?: string;
   updated_by_role?: string;
+  // Custom fields for Auto SPB data
+  _rawSpbBuyItems?: AutoSpbApiItem[];
+  _rawSpbSellItems?: AutoSpbApiItem[];
 };
 
 // --- Form Schemas ---
@@ -206,7 +245,6 @@ export type SelectOption = { value: any; label: string };
 
 // ============================================================================
 // --- MODALS SECTION ---
-// All modal components for Opportunities are defined here.
 // ============================================================================
 
 export type OpportunityModalType =
@@ -247,7 +285,7 @@ const eventTypeOptions = [
 const OpportunityModals: React.FC<OpportunityModalsProps> = ({
   modalState,
   onClose,
-  getAllUserDataOptions
+  getAllUserDataOptions,
 }) => {
   const { type, data: opportunity, isOpen } = modalState;
   if (!isOpen || !opportunity) return null;
@@ -262,7 +300,11 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
         );
       case "notification":
         return (
-          <AddNotificationDialog opportunity={opportunity} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />
+          <AddNotificationDialog
+            opportunity={opportunity}
+            onClose={onClose}
+            getAllUserDataOptions={getAllUserDataOptions}
+          />
         );
       case "task":
         return <AssignTaskDialog opportunity={opportunity} onClose={onClose} />;
@@ -402,56 +444,80 @@ const AddNotificationDialog: React.FC<{
   const [isLoading, setIsLoading] = useState(false);
 
   const notificationSchema = z.object({
-    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+    notification_title: z
+      .string()
+      .min(3, "Title must be at least 3 characters long."),
     send_users: z.array(z.number()).min(1, "Please select at least one user."),
     message: z.string().min(10, "Message must be at least 10 characters long."),
   });
 
   type NotificationFormData = z.infer<typeof notificationSchema>;
 
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<NotificationFormData>({
     resolver: zodResolver(notificationSchema),
     defaultValues: {
-        notification_title: `Update on Opportunity: ${opportunity.opportunity_id}`,
-        send_users: [],
-        message: `This is a notification regarding opportunity ID ${opportunity.opportunity_id} for the product "${opportunity.product_name}".`
+      notification_title: `Update on Opportunity: ${opportunity.opportunity_id}`,
+      send_users: [],
+      message: `This is a notification regarding opportunity ID ${opportunity.opportunity_id} for the product "${opportunity.product_name}".`,
     },
-    mode: 'onChange'
+    mode: "onChange",
   });
 
   const onSend = async (formData: NotificationFormData) => {
     setIsLoading(true);
     const payload = {
-        send_users: formData.send_users,
-        notification_title: formData.notification_title,
-        message: formData.message,
-        module_id: String(opportunity.id),
-        module_name: 'Opportunity',
+      send_users: formData.send_users,
+      notification_title: formData.notification_title,
+      message: formData.message,
+      module_id: String(opportunity.id),
+      module_name: "Opportunity",
     };
 
     try {
-        await dispatch(addNotificationAction(payload)).unwrap();
-        toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
-        onClose();
+      await dispatch(addNotificationAction(payload)).unwrap();
+      toast.push(
+        <Notification type="success" title="Notification Sent Successfully!" />
+      );
+      onClose();
     } catch (error: any) {
-        toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+      toast.push(
+        <Notification
+          type="danger"
+          title="Failed to Send Notification"
+          children={error?.message || "An unknown error occurred."}
+        />
+      );
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
-  
+
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Notification for {opportunity.opportunity_id}</h5>
+      <h5 className="mb-4">
+        Add Notification for {opportunity.opportunity_id}
+      </h5>
       <Form onSubmit={handleSubmit(onSend)}>
-        <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
+        <FormItem
+          label="Notification Title"
+          invalid={!!errors.notification_title}
+          errorMessage={errors.notification_title?.message}
+        >
           <Controller
             name="notification_title"
             control={control}
             render={({ field }) => <Input {...field} />}
           />
         </FormItem>
-        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
+        <FormItem
+          label="Send to Users"
+          invalid={!!errors.send_users}
+          errorMessage={errors.send_users?.message}
+        >
           <Controller
             name="send_users"
             control={control}
@@ -460,13 +526,21 @@ const AddNotificationDialog: React.FC<{
                 isMulti
                 placeholder="Select Users"
                 options={getAllUserDataOptions}
-                value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
-                onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])}
+                value={getAllUserDataOptions.filter((o) =>
+                  field.value?.includes(o.value)
+                )}
+                onChange={(options: any) =>
+                  field.onChange(options?.map((o: any) => o.value) || [])
+                }
               />
             )}
           />
         </FormItem>
-        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+        <FormItem
+          label="Message"
+          invalid={!!errors.message}
+          errorMessage={errors.message?.message}
+        >
           <Controller
             name="message"
             control={control}
@@ -477,7 +551,12 @@ const AddNotificationDialog: React.FC<{
           <Button className="mr-2" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
+          <Button
+            variant="solid"
+            type="submit"
+            loading={isLoading}
+            disabled={!isValid || isLoading}
+          >
             Send Notification
           </Button>
         </div>
@@ -689,9 +768,7 @@ const ViewAlertDialog: React.FC<{
         >
           <div className="flex items-start gap-2">
             <TbAlertTriangle className="text-amber-500 mt-1" size={20} />
-            <p className="text-sm">
-              Opportunity has been pending for 7 days.
-            </p>
+            <p className="text-sm">Opportunity has been pending for 7 days.</p>
           </div>
         </div>
       </div>
@@ -777,25 +854,66 @@ const TABS = {
   AUTO_MATCH: "auto_match",
 };
 
-type OpportunityExportItem = Omit<OpportunityItem, "created_date" | "updated_at"> & {
+type OpportunityExportItem = Omit<
+  OpportunityItem,
+  "created_date" | "updated_at"
+> & {
   created_date_formatted: string;
   updated_at_formatted: string;
 };
 
 const CSV_HEADERS_OPPORTUNITIES = [
-  "ID", "Opportunity ID", "Product Name", "Status", "Opportunity Status",
-  "Match Score", "SPB Role", "Want To", "Company Name", "Company ID",
-  "Member Name", "Member ID", "Member Email", "Member Phone", "Member Type",
-  "Quantity", "Product Category", "Product Subcategory", "Brand", "Product Specs",
-  "Updated By", "Updated Role", "Last Updated", "Created At"
+  "ID",
+  "Opportunity ID",
+  "Product Name",
+  "Status",
+  "Opportunity Status",
+  "Match Score",
+  "SPB Role",
+  "Want To",
+  "Company Name",
+  "Company ID",
+  "Member Name",
+  "Member ID",
+  "Member Email",
+  "Member Phone",
+  "Member Type",
+  "Quantity",
+  "Product Category",
+  "Product Subcategory",
+  "Brand",
+  "Product Specs",
+  "Updated By",
+  "Updated Role",
+  "Last Updated",
+  "Created At",
 ];
 
 const CSV_KEYS_OPPORTUNITIES_EXPORT: (keyof OpportunityExportItem)[] = [
-  "id", "opportunity_id", "product_name", "status", "opportunity_status",
-  "match_score", "spb_role", "want_to", "company_name", "company_id",
-  "member_name", "member_id", "member_email", "member_phone", "member_type",
-  "quantity", "product_category", "product_subcategory", "brand", "product_specs",
-  "updated_by_name", "updated_by_role", "updated_at_formatted", "created_date_formatted"
+  "id",
+  "opportunity_id",
+  "product_name",
+  "status",
+  "opportunity_status",
+  "match_score",
+  "spb_role",
+  "want_to",
+  "company_name",
+  "company_id",
+  "member_name",
+  "member_id",
+  "member_email",
+  "member_phone",
+  "member_type",
+  "quantity",
+  "product_category",
+  "product_subcategory",
+  "brand",
+  "product_specs",
+  "updated_by_name",
+  "updated_by_role",
+  "updated_at_formatted",
+  "created_date_formatted",
 ];
 
 function exportToCsvOpportunities(filename: string, rows: OpportunityItem[]) {
@@ -944,296 +1062,304 @@ export type DataTableResetHandle = {
   resetSelected: () => void;
 };
 
-const DataTableComponent = React.forwardRef(<T extends object>(
-  props: DataTable1Props<T>,
-  ref: Ref<DataTableResetHandle | HTMLTableElement>
-) => {
-  const {
-    skeletonAvatarColumns,
-    columns: columnsProp = [],
-    data = [],
-    customNoDataIcon,
-    loading,
-    noData,
-    onCheckBoxChange,
-    onIndeterminateCheckBoxChange,
-    onPaginationChange,
-    onSelectChange,
-    onSort,
-    pageSizes = [10, 25, 50, 100],
-    selectable = false,
-    skeletonAvatarProps,
-    pagingData = {
-      total: 0,
-      pageIndex: 1,
-      pageSize: 10,
-    },
-    checkboxChecked,
-    getRowCanExpand,
-    renderRowSubComponent,
-    state: controlledState,
-    onExpandedChange: onControlledExpandedChange,
-    instanceId = "data-table",
-    ...rest
-  } = props;
-
-  const { pageSize, pageIndex, total } = pagingData;
-
-  const [sorting, setSorting] = useState<ColumnSort[] | []>([]);
-  const isManuallyExpanded =
-    controlledState?.expanded !== undefined &&
-    onControlledExpandedChange !== undefined;
-  const [internalExpanded, setInternalExpanded] = useState<ExpandedState>({});
-
-  const expanded = isManuallyExpanded
-    ? controlledState.expanded!
-    : internalExpanded;
-  const onExpandedChange = isManuallyExpanded
-    ? onControlledExpandedChange!
-    : setInternalExpanded;
-
-  const pageSizeOption = useMemo(
-    () =>
-      pageSizes.map((number) => ({
-        value: number,
-        label: `${number} / page`,
-      })),
-    [pageSizes]
-  );
-
-  useEffect(() => {
-    if (Array.isArray(sorting)) {
-      const sortOrder =
-        sorting.length > 0 ? (sorting[0].desc ? "desc" : "asc") : "";
-      const id = sorting.length > 0 ? sorting[0].id : "";
-      onSort?.({ order: sortOrder, key: id });
-    }
-  }, [sorting, onSort]);
-
-  const handleIndeterminateCheckBoxChange = (
-    checked: boolean,
-    rows: Row<T>[]
+const DataTableComponent = React.forwardRef(
+  <T extends object>(
+    props: DataTable1Props<T>,
+    ref: Ref<DataTableResetHandle | HTMLTableElement>
   ) => {
-    if (!loading) {
-      onIndeterminateCheckBoxChange?.(checked, rows);
-    }
-  };
+    const {
+      skeletonAvatarColumns,
+      columns: columnsProp = [],
+      data = [],
+      customNoDataIcon,
+      loading,
+      noData,
+      onCheckBoxChange,
+      onIndeterminateCheckBoxChange,
+      onPaginationChange,
+      onSelectChange,
+      onSort,
+      pageSizes = [10, 25, 50, 100],
+      selectable = false,
+      skeletonAvatarProps,
+      pagingData = {
+        total: 0,
+        pageIndex: 1,
+        pageSize: 10,
+      },
+      checkboxChecked,
+      getRowCanExpand,
+      renderRowSubComponent,
+      state: controlledState,
+      onExpandedChange: onControlledExpandedChange,
+      instanceId = "data-table",
+      ...rest
+    } = props;
 
-  const handleCheckBoxChange = (checked: boolean, row: T) => {
-    if (!loading) {
-      onCheckBoxChange?.(checked, row);
-    }
-  };
+    const { pageSize, pageIndex, total } = pagingData;
 
-  const finalColumns: ColumnDef<T>[] = useMemo(() => {
-    const currentColumns = [...columnsProp];
+    const [sorting, setSorting] = useState<ColumnSort[] | []>([]);
+    const isManuallyExpanded =
+      controlledState?.expanded !== undefined &&
+      onControlledExpandedChange !== undefined;
+    const [internalExpanded, setInternalExpanded] = useState<ExpandedState>({});
 
-    if (selectable) {
-      return [
-        {
-          id: "select",
-          header: ({ table }) => (
-            <IndeterminateCheckbox
-              checked={table.getIsAllRowsSelected()}
-              indeterminate={table.getIsSomeRowsSelected()}
-              onChange={(e) => {
-                table.getToggleAllRowsSelectedHandler()(e as any);
-                handleIndeterminateCheckBoxChange(
-                  e.target.checked,
-                  table.getRowModel().rows
-                );
-              }}
-            />
-          ),
-          cell: ({ row }) => (
-            <IndeterminateCheckbox
-              checked={
-                checkboxChecked
-                  ? checkboxChecked(row.original)
-                  : row.getIsSelected()
-              }
-              indeterminate={row.getIsSomeSelected()}
-              onChange={(e) => {
-                row.getToggleSelectedHandler()(e as any);
-                handleCheckBoxChange(e.target.checked, row.original);
-              }}
-            />
-          ),
-          size: 48,
-        },
-        ...currentColumns,
-      ];
-    }
-    return currentColumns;
-  }, [
-    columnsProp,
-    selectable,
-    loading,
-    checkboxChecked,
-    handleCheckBoxChange,
-    handleIndeterminateCheckBoxChange,
-  ]);
+    const expanded = isManuallyExpanded
+      ? controlledState.expanded!
+      : internalExpanded;
+    const onExpandedChange = isManuallyExpanded
+      ? onControlledExpandedChange!
+      : setInternalExpanded;
 
-  const table = useReactTable({
-    data: data as T[],
-    columns: finalColumns,
-    state: {
-      sorting: sorting as ColumnSort[],
-      expanded,
-    },
-    onSortingChange: setSorting,
-    onExpandedChange: onExpandedChange,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
-    getRowCanExpand,
-    manualPagination: true,
-    manualSorting: true,
-  });
+    const pageSizeOption = useMemo(
+      () =>
+        pageSizes.map((number) => ({
+          value: number,
+          label: `${number} / page`,
+        })),
+      [pageSizes]
+    );
 
-  const handlePaginationChangeInternal = (page: number) => {
-    if (!loading) {
-      table.resetRowSelection();
-      onPaginationChange?.(page);
-    }
-  };
+    useEffect(() => {
+      if (Array.isArray(sorting)) {
+        const sortOrder =
+          sorting.length > 0 ? (sorting[0].desc ? "desc" : "asc") : "";
+        const id = sorting.length > 0 ? sorting[0].id : "";
+        onSort?.({ order: sortOrder, key: id });
+      }
+    }, [sorting, onSort]);
 
-  const handleSelectChangeInternal = (value?: number) => {
-    if (!loading && value) {
-      table.setPageSize(Number(value));
-      onSelectChange?.(Number(value));
-      onPaginationChange?.(1);
-      table.resetRowSelection();
-    }
-  };
+    const handleIndeterminateCheckBoxChange = (
+      checked: boolean,
+      rows: Row<T>[]
+    ) => {
+      if (!loading) {
+        onIndeterminateCheckBoxChange?.(checked, rows);
+      }
+    };
 
-  return (
-    <Loading loading={Boolean(loading && data.length !== 0)} type="cover">
-      <Table {...rest}>
-        <THead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <Tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                return (
-                  <Th
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    style={{
-                      width: header.getSize() !== 150 ? header.getSize() : undefined,
-                    }}
-                  >
-                    {header.isPlaceholder ? null : (
-                      <div
-                        className={classNames(
-                          header.column.getCanSort() &&
-                            "cursor-pointer select-none point",
-                          loading && "pointer-events-none",
-                          (header.column.columnDef.meta as any)?.HeaderClass
-                        )}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                        {header.column.getCanSort() && (
-                          <Sorter sort={header.column.getIsSorted()} />
-                        )}
-                      </div>
-                    )}
-                  </Th>
-                );
-              })}
-            </Tr>
-          ))}
-        </THead>
-        {loading && data.length === 0 ? (
-          <TableRowSkeleton
-            columns={finalColumns.length}
-            rows={pagingData.pageSize}
-            avatarInColumns={skeletonAvatarColumns}
-            avatarProps={skeletonAvatarProps}
-          />
-        ) : (
-          <TBody>
-            {noData || table.getRowModel().rows.length === 0 ? (
-              <Tr>
-                <Td
-                  className="hover:bg-transparent text-center"
-                  colSpan={finalColumns.length}
-                >
-                  <div className="flex flex-col items-center justify-center gap-4 my-10">
-                    {customNoDataIcon ? (
-                      customNoDataIcon
-                    ) : (
-                      <FileNotFound className="grayscale" />
-                    )}
-                    <span className="font-semibold"> No data found! </span>
-                  </div>
-                </Td>
+    const handleCheckBoxChange = (checked: boolean, row: T) => {
+      if (!loading) {
+        onCheckBoxChange?.(checked, row);
+      }
+    };
+
+    const finalColumns: ColumnDef<T>[] = useMemo(() => {
+      const currentColumns = [...columnsProp];
+
+      if (selectable) {
+        return [
+          {
+            id: "select",
+            header: ({ table }) => (
+              <IndeterminateCheckbox
+                checked={table.getIsAllRowsSelected()}
+                indeterminate={table.getIsSomeRowsSelected()}
+                onChange={(e) => {
+                  table.getToggleAllRowsSelectedHandler()(e as any);
+                  handleIndeterminateCheckBoxChange(
+                    e.target.checked,
+                    table.getRowModel().rows
+                  );
+                }}
+              />
+            ),
+            cell: ({ row }) => (
+              <IndeterminateCheckbox
+                checked={
+                  checkboxChecked
+                    ? checkboxChecked(row.original)
+                    : row.getIsSelected()
+                }
+                indeterminate={row.getIsSomeSelected()}
+                onChange={(e) => {
+                  row.getToggleSelectedHandler()(e as any);
+                  handleCheckBoxChange(e.target.checked, row.original);
+                }}
+              />
+            ),
+            size: 48,
+          },
+          ...currentColumns,
+        ];
+      }
+      return currentColumns;
+    }, [
+      columnsProp,
+      selectable,
+      loading,
+      checkboxChecked,
+      handleCheckBoxChange,
+      handleIndeterminateCheckBoxChange,
+    ]);
+
+    const table = useReactTable({
+      data: data as T[],
+      columns: finalColumns,
+      state: {
+        sorting: sorting as ColumnSort[],
+        expanded,
+      },
+      onSortingChange: setSorting,
+      onExpandedChange: onExpandedChange,
+      getCoreRowModel: getCoreRowModel(),
+      getFilteredRowModel: getFilteredRowModel(),
+      getPaginationRowModel: getPaginationRowModel(),
+      getSortedRowModel: getSortedRowModel(),
+      getExpandedRowModel: getExpandedRowModel(),
+      getRowCanExpand,
+      manualPagination: true,
+      manualSorting: true,
+    });
+
+    const handlePaginationChangeInternal = (page: number) => {
+      if (!loading) {
+        table.resetRowSelection();
+        onPaginationChange?.(page);
+      }
+    };
+
+    const handleSelectChangeInternal = (value?: number) => {
+      if (!loading && value) {
+        table.setPageSize(Number(value));
+        onSelectChange?.(Number(value));
+        onPaginationChange?.(1);
+        table.resetRowSelection();
+      }
+    };
+
+    return (
+      <Loading loading={Boolean(loading && data.length !== 0)} type="cover">
+        <Table {...rest}>
+          <THead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <Tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <Th
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      style={{
+                        width:
+                          header.getSize() !== 150
+                            ? header.getSize()
+                            : undefined,
+                      }}
+                    >
+                      {header.isPlaceholder ? null : (
+                        <div
+                          className={classNames(
+                            header.column.getCanSort() &&
+                              "cursor-pointer select-none point",
+                            loading && "pointer-events-none",
+                            (header.column.columnDef.meta as any)?.HeaderClass
+                          )}
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                          {header.column.getCanSort() && (
+                            <Sorter sort={header.column.getIsSorted()} />
+                          )}
+                        </div>
+                      )}
+                    </Th>
+                  );
+                })}
               </Tr>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <Fragment key={row.id}>
-                  <Tr>
-                    {row.getVisibleCells().map((cell) => (
-                      <Td
-                        key={cell.id}
-                        style={{
-                          width:
-                            cell.column.getSize() !== 150
-                              ? cell.column.getSize()
-                              : undefined,
-                        }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </Td>
-                    ))}
-                  </Tr>
-                  {row.getIsExpanded() && renderRowSubComponent && (
-                     <Tr>
-                        <Td colSpan={row.getVisibleCells().length} className="p-0 border-b-0 hover:bg-transparent">
-                           {renderRowSubComponent({ row })}
-                        </Td>
-                    </Tr>
-                  )}
-                </Fragment>
-              ))
-            )}
-          </TBody>
-        )}
-      </Table>
-      {total > 0 && (
-        <div className="flex items-center justify-between mt-4">
-          <Pagination
-            pageSize={pageSize}
-            currentPage={pageIndex}
-            total={total}
-            onChange={handlePaginationChangeInternal}
-          />
-          <div style={{ minWidth: 130 }}>
-            <Select
-              instanceId={`${instanceId}-page-size-select`}
-              size="sm"
-              menuPlacement="top"
-              isSearchable={false}
-              value={pageSizeOption.find(
-                (option) => option.value === pageSize
-              )}
-              options={pageSizeOption}
-              onChange={(option) => handleSelectChangeInternal(option?.value)}
+            ))}
+          </THead>
+          {loading && data.length === 0 ? (
+            <TableRowSkeleton
+              columns={finalColumns.length}
+              rows={pagingData.pageSize}
+              avatarInColumns={skeletonAvatarColumns}
+              avatarProps={skeletonAvatarProps}
             />
+          ) : (
+            <TBody>
+              {noData || table.getRowModel().rows.length === 0 ? (
+                <Tr>
+                  <Td
+                    className="hover:bg-transparent text-center"
+                    colSpan={finalColumns.length}
+                  >
+                    <div className="flex flex-col items-center justify-center gap-4 my-10">
+                      {customNoDataIcon ? (
+                        customNoDataIcon
+                      ) : (
+                        <FileNotFound className="grayscale" />
+                      )}
+                      <span className="font-semibold"> No data found! </span>
+                    </div>
+                  </Td>
+                </Tr>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <Fragment key={row.id}>
+                    <Tr>
+                      {row.getVisibleCells().map((cell) => (
+                        <Td
+                          key={cell.id}
+                          style={{
+                            width:
+                              cell.column.getSize() !== 150
+                                ? cell.column.getSize()
+                                : undefined,
+                          }}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </Td>
+                      ))}
+                    </Tr>
+                    {row.getIsExpanded() && renderRowSubComponent && (
+                      <Tr>
+                        <Td
+                          colSpan={row.getVisibleCells().length}
+                          className="p-0 border-b-0 hover:bg-transparent"
+                        >
+                          {renderRowSubComponent({ row })}
+                        </Td>
+                      </Tr>
+                    )}
+                  </Fragment>
+                ))
+              )}
+            </TBody>
+          )}
+        </Table>
+        {total > 0 && (
+          <div className="flex items-center justify-between mt-4">
+            <Pagination
+              pageSize={pageSize}
+              currentPage={pageIndex}
+              total={total}
+              onChange={handlePaginationChangeInternal}
+            />
+            <div style={{ minWidth: 130 }}>
+              <Select
+                instanceId={`${instanceId}-page-size-select`}
+                size="sm"
+                menuPlacement="top"
+                isSearchable={false}
+                value={pageSizeOption.find(
+                  (option) => option.value === pageSize
+                )}
+                options={pageSizeOption}
+                onChange={(option) => handleSelectChangeInternal(option?.value)}
+              />
+            </div>
           </div>
-        </div>
-      )}
-    </Loading>
-  );
-});
+        )}
+      </Loading>
+    );
+  }
+);
 DataTableComponent.displayName = "DataTableComponent";
 
 const FormattedDate: React.FC<{ dateString?: string; label?: string }> = ({
@@ -1300,10 +1426,9 @@ const InfoLine: React.FC<{
         </span>
       )}
       <span
-        className={classNames(
-          "text-gray-700 dark:text-gray-200 truncate",
-          { "font-semibold": boldText }
-        )}
+        className={classNames("text-gray-700 dark:text-gray-200 truncate", {
+          "font-semibold": boldText,
+        })}
         title={
           title ||
           (typeof text === "string" || typeof text === "number"
@@ -1362,11 +1487,7 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
         width={480}
         footer={
           <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={() => closeDrawer()}
-            >
+            <Button size="sm" className="mr-2" onClick={() => closeDrawer()}>
               Clear
             </Button>
             <Button
@@ -1380,8 +1501,13 @@ const OpportunityFilterDrawer: React.FC<any> = () => {
           </div>
         }
       >
-        <Form id="filterOpportunityForm" onSubmit={handleSubmit(onSubmitFilter)}>
-           <p className="p-4 text-center text-gray-500">Filter controls go here.</p>
+        <Form
+          id="filterOpportunityForm"
+          onSubmit={handleSubmit(onSubmitFilter)}
+        >
+          <p className="p-4 text-center text-gray-500">
+            Filter controls go here.
+          </p>
         </Form>
       </Drawer>
     </>
@@ -1472,13 +1598,26 @@ const MainRowActionColumn = ({
   const navigate = useNavigate();
 
   const handleViewDetails = () => {
+    if (item.id.startsWith("spb-match-")) {
+      toast.push(
+        <Notification title="Info" type="info" duration={4000}>
+          Expand the row to see match details. A dedicated view page for match
+          groups is not available.
+        </Notification>
+      );
+      return;
+    }
     let path = `/sales-leads/opportunities/`;
-    if (item.spb_role === "Seller" || (currentTab === TABS.SELLER && !item.spb_role)) {
+    if (
+      item.spb_role === "Seller" ||
+      (currentTab === TABS.SELLER && !item.spb_role)
+    ) {
       path += `seller/detail/${item.id}`;
-    } else if (item.spb_role === "Buyer" || (currentTab === TABS.BUYER && !item.spb_role)) {
+    } else if (
+      item.spb_role === "Buyer" ||
+      (currentTab === TABS.BUYER && !item.spb_role)
+    ) {
       path += `buyer/detail/${item.id}`;
-    } else if (currentTab === TABS.AUTO_MATCH) {
-      path += `match/detail/${item.id}`;
     } else {
       path += `detail/${item.id}`;
     }
@@ -1518,79 +1657,386 @@ const MainRowActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        <Dropdown.Item onClick={() => onOpenModal("notification", item)} className="flex items-center gap-2">
-          <TbBell size={18} /> <span className="text-xs">Add as Notification</span>
+        <Dropdown.Item
+          onClick={() => onOpenModal("notification", item)}
+          className="flex items-center gap-2"
+        >
+          <TbBell size={18} />{" "}
+          <span className="text-xs">Add as Notification</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("active", item)} className="flex items-center gap-2">
-          <TbTagStarred size={18} /> <span className="text-xs">Mark as Active</span>
+        <Dropdown.Item
+          onClick={() => onOpenModal("active", item)}
+          className="flex items-center gap-2"
+        >
+          <TbTagStarred size={18} />{" "}
+          <span className="text-xs">Mark as Active</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("calendar", item)} className="flex items-center gap-2">
-          <TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span>
+        <Dropdown.Item
+          onClick={() => onOpenModal("calendar", item)}
+          className="flex items-center gap-2"
+        >
+          <TbCalendarEvent size={18} />{" "}
+          <span className="text-xs">Add to Calendar</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("task", item)} className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", item)}
+          className="flex items-center gap-2"
+        >
           <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("alert", item)}
+          className="flex items-center gap-2"
+        >
           <TbAlarm size={18} /> <span className="text-xs">View Alert</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("alert", item)}
+          className="flex items-center gap-2"
+        >
           <TbBulb size={18} /> <span className="text-xs">View Opportunity</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
-          <TbDiscount size={18} /> <span className="text-xs">Create Offer/Demand</span>
+        <Dropdown.Item
+          onClick={() => onOpenModal("alert", item)}
+          className="flex items-center gap-2"
+        >
+          <TbDiscount size={18} />{" "}
+          <span className="text-xs">Create Offer/Demand</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("alert", item)} className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("alert", item)}
+          className="flex items-center gap-2"
+        >
           <TbNotebook size={18} /> <span className="text-xs">Add Notes</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("email", item)} className="flex items-center gap-2">
+        <Dropdown.Item
+          onClick={() => onOpenModal("email", item)}
+          className="flex items-center gap-2"
+        >
           <TbMail size={18} /> <span className="text-xs">Send Email</span>
         </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("whatsapp", item)} className="flex items-center gap-2">
-          <TbBrandWhatsapp size={18} /> <span className="text-xs">Send on Whatsapp</span>
+        <Dropdown.Item
+          onClick={() => onOpenModal("whatsapp", item)}
+          className="flex items-center gap-2"
+        >
+          <TbBrandWhatsapp size={18} />{" "}
+          <span className="text-xs">Send on Whatsapp</span>
         </Dropdown.Item>
       </Dropdown>
     </div>
   );
 };
 
-const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentTab: string; }> = ({ row: { original: item } }) => {
-  const opportunityType = item.spb_role ? `${item.spb_role} in SPB` : (item.want_to || "General");
+const ExpandedOpportunityDetails: React.FC<{
+  row: Row<OpportunityItem>;
+  currentTab: string;
+}> = ({ row: { original: item } }) => {
+  const opportunityType = item.spb_role
+    ? `${item.spb_role} in SPB`
+    : item.want_to || "General";
   return (
     <Card bordered className="m-1 my-2 rounded-lg">
       <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
         <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
-          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Opportunity Snapshot</h6>
-          <InfoLine icon={<TbIdBadge2 size={14} />} label="Opp. ID" text={item.opportunity_id} className="font-medium text-sm" />
-          <InfoLine icon={<TbBox size={14} />} label="Product" text={item.product_name} className="font-medium text-sm" title={item.product_name}/>
-          <InfoLine icon={<TbTag size={14} />} label="Category" text={`${item.product_category || 'N/A'}${item.product_subcategory ? ` > ${item.product_subcategory}` : ''}`} />
-          <InfoLine icon={<TbTag size={14} />} label="Brand" text={item.brand || 'N/A'} />
-          {item.product_specs && <InfoLine icon={<TbInfoCircle size={14} />} label="Specs" text={item.product_specs} />}
-          <InfoLine icon={<TbChecklist size={14} />} label="Quantity" text={item.quantity?.toString() || 'N/A'} />
-          <InfoLine icon={<TbProgressCheck size={14} />} label="Product Status" text={item.product_status_listing || 'N/A'} />
-          <InfoLine icon={<TbExchange size={14} />} label="Intent/Role" text={opportunityType} />
+          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+            Opportunity Snapshot
+          </h6>
+          <InfoLine
+            icon={<TbIdBadge2 size={14} />}
+            label="Opp. ID"
+            text={item.opportunity_id}
+            className="font-medium text-sm"
+          />
+          <InfoLine
+            icon={<TbBox size={14} />}
+            label="Product"
+            text={item.product_name}
+            className="font-medium text-sm"
+            title={item.product_name}
+          />
+          <InfoLine
+            icon={<TbTag size={14} />}
+            label="Category"
+            text={`${item.product_category || "N/A"}${
+              item.product_subcategory ? ` > ${item.product_subcategory}` : ""
+            }`}
+          />
+          <InfoLine
+            icon={<TbTag size={14} />}
+            label="Brand"
+            text={item.brand || "N/A"}
+          />
+          {item.product_specs && (
+            <InfoLine
+              icon={<TbInfoCircle size={14} />}
+              label="Specs"
+              text={item.product_specs}
+            />
+          )}
+          <InfoLine
+            icon={<TbChecklist size={14} />}
+            label="Quantity"
+            text={item.quantity?.toString() || "N/A"}
+          />
+          <InfoLine
+            icon={<TbProgressCheck size={14} />}
+            label="Product Status"
+            text={item.product_status_listing || "N/A"}
+          />
+          <InfoLine
+            icon={<TbExchange size={14} />}
+            label="Intent/Role"
+            text={opportunityType}
+          />
         </div>
         <div className="space-y-1.5 pr-3 md:border-r md:dark:border-gray-600">
-          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Company & Member</h6>
+          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+            Company & Member
+          </h6>
           <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm mb-2">
-            <InfoLine icon={<TbBuilding size={14} />} text={item.company_name} className="font-semibold" />
+            <InfoLine
+              icon={<TbBuilding size={14} />}
+              text={item.company_name}
+              className="font-semibold"
+            />
           </div>
           <div className="p-2 border rounded dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm">
-            <InfoLine icon={<TbUser size={14} />} text={item.member_name} className="font-semibold" />
-            <InfoLine text={item.member_type} className="ml-5 text-indigo-600 dark:text-indigo-400 font-medium" />
-            {item.member_email && <InfoLine icon={<TbMail size={14} />} text={<a href={`mailto:${item.member_email}`} className="text-blue-500 hover:underline">{item.member_email}</a>} />}
-            {item.member_phone && <InfoLine icon={<TbPhone size={14} />} text={item.member_phone} />}
+            <InfoLine
+              icon={<TbUser size={14} />}
+              text={item.member_name}
+              className="font-semibold"
+            />
+            <InfoLine
+              text={item.member_type}
+              className="ml-5 text-indigo-600 dark:text-indigo-400 font-medium"
+            />
+            {item.member_email && (
+              <InfoLine
+                icon={<TbMail size={14} />}
+                text={
+                  <a
+                    href={`mailto:${item.member_email}`}
+                    className="text-blue-500 hover:underline"
+                  >
+                    {item.member_email}
+                  </a>
+                }
+              />
+            )}
+            {item.member_phone && (
+              <InfoLine icon={<TbPhone size={14} />} text={item.member_phone} />
+            )}
           </div>
-          {item.listing_url && <InfoLine icon={<TbLinkIcon size={14} />} label="Listing" text={<a href={item.listing_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate block max-w-[180px]" title={item.listing_url}>{item.listing_url}</a>} />}
+          {item.listing_url && (
+            <InfoLine
+              icon={<TbLinkIcon size={14} />}
+              label="Listing"
+              text={
+                <a
+                  href={item.listing_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline truncate block max-w-[180px]"
+                  title={item.listing_url}
+                >
+                  {item.listing_url}
+                </a>
+              }
+            />
+          )}
         </div>
         <div className="space-y-1.5">
-          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Match & Lifecycle</h6>
-          <InfoLine icon={<TbRadar2 size={14} />} label="Matches" text={item.matches_found_count || 'N/A'} />
-          <InfoLine icon={<TbTargetArrow size={14} />} label="Match Score" text={`${item.match_score}%`} />
+          <h6 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">
+            Match & Lifecycle
+          </h6>
+          <InfoLine
+            icon={<TbRadar2 size={14} />}
+            label="Matches"
+            text={item.matches_found_count || "N/A"}
+          />
+          <InfoLine
+            icon={<TbTargetArrow size={14} />}
+            label="Match Score"
+            text={`${item.match_score}%`}
+          />
           <div className="flex items-center gap-2">
-            <InfoLine icon={<TbProgressCheck size={14} />} label="Opp. Status" />
-            <Tag className={`${opportunityStatusTagColor[item.opportunity_status] || opportunityStatusTagColor.default} capitalize`}>{item.opportunity_status}</Tag>
+            <InfoLine
+              icon={<TbProgressCheck size={14} />}
+              label="Opp. Status"
+            />
+            <Tag
+              className={`${
+                opportunityStatusTagColor[item.opportunity_status] ||
+                opportunityStatusTagColor.default
+              } capitalize`}
+            >
+              {item.opportunity_status}
+            </Tag>
           </div>
           <FormattedDate label="Created" dateString={item.created_date} />
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+// --- NEW COMPONENT: Modal to view SPB Item Summary ---
+const SpbSummaryViewModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  item: AutoSpbApiItem | null;
+}> = ({ isOpen, onClose, item }) => {
+  if (!item) return null;
+
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={600}
+    >
+      <h5 className="mb-4">Listing Summary</h5>
+      <div className="mt-4">
+        <p className="text-gray-800 dark:text-gray-100">
+          <strong>Product:</strong> {item.product_name}
+        </p>
+        <p className="text-gray-800 dark:text-gray-100 mt-2">
+          <strong>Brand:</strong> {item.brand_name}
+        </p>
+        <Card bordered className="mt-4 p-4 bg-gray-50 dark:bg-gray-800">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            {item.summary || "No summary available."}
+          </p>
+        </Card>
+      </div>
+      {/* <div className="text-right mt-6">
+        <Button variant="solid" onClick={onClose}>
+          Close
+        </Button>
+      </div> */}
+    </Dialog>
+  );
+};
+
+// --- NEW COMPONENT: Renders a minimal summary row for SPB items ---
+// Props interface for SpbSummaryRow
+interface SpbSummaryRowProps {
+  item: AutoSpbApiItem;
+  onViewSummary: (item: AutoSpbApiItem) => void;
+}
+
+const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
+  item,
+  onViewSummary,
+}) => {
+  const memberName = `Member (ID: ${item.id})`; // Placeholder
+
+  return (
+    <div className="flex justify-between items-center w-full py-3 text-xs border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+      {/* Left side: Member & Product Info */}
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
+          {memberName}
+        </p>
+      </div>
+      {/* <div className="flex-1 min-w-0 pr-4">
+
+        <p
+          className="text-gray-500 dark:text-gray-400 truncate"
+          title={item.product_name || "N/A"}
+        >
+          {item.product_name || "N/A"}
+        </p>
+        </div> */}
+      {/* Right side: Quantity & Actions */}
+      <div className="flex-shrink-0 flex items-center gap-4">
+        <div>
+          <span className="text-gray-500 dark:text-gray-400">Qty: </span>
+          <span className="font-bold text-gray-800 dark:text-gray-100">
+            {item.qty}
+          </span>
+        </div>
+        <div>
+          <span className="text-gray-500 dark:text-gray-400">Unit: </span>
+          <span className="font-bold text-gray-800 dark:text-gray-100">
+            {item.unit}
+          </span>
+        </div>
+        <Tooltip title="View Summary">
+          <Button
+            shape="circle"
+            size="sm"
+            variant="plain"
+            icon={<TbEye />}
+            onClick={() => onViewSummary(item)}
+            className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+          />
+        </Tooltip>
+      </div>
+    </div>
+  );
+};
+
+// Props interface for ExpandedAutoSpbDetails
+interface ExpandedAutoSpbDetailsProps {
+  row: Row<OpportunityItem>;
+  onViewSummary: (item: AutoSpbApiItem) => void;
+}
+
+const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
+  row,
+  onViewSummary,
+}) => {
+  const buyItems = row.original._rawSpbBuyItems || [];
+  const sellItems = row.original._rawSpbSellItems || [];
+
+  return (
+    <Card
+      bordered
+      className="m-1 my-2 rounded-lg bg-gray-50 dark:bg-gray-900/50"
+    >
+      <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Buy Demand Section */}
+        <div>
+          <h6 className="text-sm font-semibold text-purple-600 dark:text-purple-400 mb-2 flex items-center gap-2">
+            <TbChecks /> Buyer ({buyItems.length})
+          </h6>
+          <div className="bg-white dark:bg-gray-800 rounded-md px-3">
+            {buyItems.length > 0 ? (
+              buyItems.map((item) => (
+                <SpbSummaryRow
+                  key={`buy-${item.id}`}
+                  item={item}
+                  onViewSummary={onViewSummary}
+                />
+              ))
+            ) : (
+              <p className="text-xs text-gray-500 py-4 text-center">
+                No buy demand in this match.
+              </p>
+            )}
+          </div>
+        </div>
+        {/* Sell Offers Section */}
+        <div>
+          <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-2">
+            <TbBox /> Seller ({sellItems.length})
+          </h6>
+          <div className="bg-white dark:bg-gray-800 rounded-md px-3">
+            {sellItems.length > 0 ? (
+              sellItems.map((item) => (
+                <SpbSummaryRow
+                  key={`sell-${item.id}`}
+                  item={item}
+                  onViewSummary={onViewSummary}
+                />
+              ))
+            ) : (
+              <p className="text-xs text-gray-500 py-4 text-center">
+                No sell offers in this match.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </Card>
@@ -1600,8 +2046,11 @@ const ExpandedOpportunityDetails: React.FC<{ row: Row<OpportunityItem>; currentT
 const Opportunities = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { Opportunities: rawOpportunities = [], getAllUserData = [], status: masterLoadingStatus = "idle" } =
-    useSelector(masterSelector, shallowEqual);
+  const {
+    Opportunities: rawOpportunities = [],
+    getAllUserData = [],
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector, shallowEqual);
 
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
   const [tableQueries, setTableQueries] = useState<
@@ -1617,6 +2066,14 @@ const Opportunities = () => {
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
 
+  // --- State for Auto SPB Data ---
+  const [autoSpbData, setAutoSpbData] = useState<AutoSpbApiResponse | null>(
+    null
+  );
+  const [autoSpbStatus, setAutoSpbStatus] = useState<
+    "idle" | "loading" | "succeeded" | "failed"
+  >("idle");
+
   const [modalState, setModalState] = useState<OpportunityModalState>({
     isOpen: false,
     type: null,
@@ -1629,26 +2086,226 @@ const Opportunities = () => {
   const handleCloseModal = () =>
     setModalState({ isOpen: false, type: null, data: null });
 
+  // --- State for SPB Summary Modal ---
+  const [summaryModalState, setSummaryModalState] = useState<{
+    isOpen: boolean;
+    item: AutoSpbApiItem | null;
+  }>({ isOpen: false, item: null });
+
+  const handleOpenSummaryModal = (item: AutoSpbApiItem) => {
+    setSummaryModalState({ isOpen: true, item });
+  };
+
+  const handleCloseSummaryModal = () => {
+    setSummaryModalState({ isOpen: false, item: null });
+  };
+
   const exportReasonFormMethods = useForm<ExportReasonFormData>({
     resolver: zodResolver(exportReasonSchema),
     defaultValues: { reason: "" },
     mode: "onChange",
   });
 
-  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((user: any) => ({ value: user.id, label: user.name })) : [], [getAllUserData]);
+  const getAllUserDataOptions = useMemo(
+    () =>
+      Array.isArray(getAllUserData)
+        ? getAllUserData.map((user: any) => ({
+            value: user.id,
+            label: user.name,
+          }))
+        : [],
+    [getAllUserData]
+  );
 
   useEffect(() => {
-    dispatch(getOpportunitiesAction());
-    dispatch(getAllUsersAction());
-  }, [dispatch]);
+    if (currentTab === TABS.AUTO_MATCH) {
+      if (autoSpbStatus === "idle") {
+        // In a real app, this would be:
+        // dispatch(getAutoSpbAction()).unwrap().then(setAutoSpbData).catch(...)
+
+        // Simulating the action with the ORIGINAL data provided
+        setAutoSpbStatus("loading");
+        setTimeout(() => {
+          const originalApiResponse: AutoSpbApiResponse = {
+            status: true,
+            message: "Data retrieved successfully",
+            data: {
+              "1": {
+                Buy: [
+                  {
+                    id: 3,
+                    customer_code: "CUST12345",
+                    phonecode: "+91",
+                    mobile_no: "9876543210",
+                    brand_name: "Apple",
+                    product_name: "iPhone 15 Pro Max",
+                    qty: "1",
+                    unit: "pieces",
+                    created_at: "2025-06-27",
+                    product_status: "Active",
+                    product_specs: '256GB, A17 Bionic, 6.7" OLED',
+                    device_type: "Smartphone",
+                    price: "1399",
+                    color: "Natural Titanium",
+                    master_cartoon: "MC001",
+                    dispatch_status: "Shipped",
+                    payment_term: "Prepaid",
+                    device_condition: "New",
+                    eta_details: "2025-06-30",
+                    location: "Mumbai",
+                    summary:
+                      "1x New iPhone 15 Pro Max (Natural Titanium) to Mumbai – Shipped",
+                  },
+                  {
+                    id: 4,
+                    customer_code: "CUST78901",
+                    phonecode: "+1",
+                    mobile_no: "2025550187",
+                    brand_name: "Apple",
+                    product_name: "iPhone 14",
+                    qty: "2",
+                    unit: "pieces",
+                    created_at: "2025-06-25",
+                    product_status: "Active",
+                    product_specs: '128GB, A15 Bionic, 6.1" OLED',
+                    device_type: "Smartphone",
+                    price: "899",
+                    color: "Midnight Black",
+                    master_cartoon: "MC002",
+                    dispatch_status: "Dispatched",
+                    payment_term: "COD",
+                    device_condition: "New",
+                    eta_details: "2025-06-29",
+                    location: "New York",
+                    summary:
+                      "2x New iPhone 14 (Midnight Black) to New York – Dispatched",
+                  },
+                  {
+                    id: 5,
+                    customer_code: "CUST45678",
+                    phonecode: "+44",
+                    mobile_no: "7400123456",
+                    brand_name: "Apple",
+                    product_name: "iPhone SE (3rd Gen)",
+                    qty: "5",
+                    unit: "pieces",
+                    created_at: "2025-06-24",
+                    product_status: "Active",
+                    product_specs: '64GB, A15 Bionic, 4.7" LCD',
+                    device_type: "Smartphone",
+                    price: "499",
+                    color: "Starlight",
+                    master_cartoon: "MC003",
+                    dispatch_status: "Processing",
+                    payment_term: "Prepaid",
+                    device_condition: "New",
+                    eta_details: "2025-07-01",
+                    location: "London",
+                    summary:
+                      "5x New iPhone SE (Starlight) to London – Processing",
+                  },
+                  {
+                    id: 6,
+                    customer_code: "CUST11223",
+                    phonecode: "+61",
+                    mobile_no: "412345678",
+                    brand_name: "Apple",
+                    product_name: "iPhone 13 Mini",
+                    qty: "3",
+                    unit: "pieces",
+                    created_at: "2025-06-26",
+                    product_status: "Active",
+                    product_specs: '128GB, A15 Bionic, 5.4" OLED',
+                    device_type: "Smartphone",
+                    price: "799",
+                    color: "Blue",
+                    master_cartoon: "MC004",
+                    dispatch_status: "Shipped",
+                    payment_term: "COD",
+                    device_condition: "New",
+                    eta_details: "2025-06-30",
+                    location: "Sydney",
+                    summary: "3x New iPhone 13 Mini (Blue) to Sydney – Shipped",
+                  },
+                ],
+              },
+              "2": {
+                Buy: [
+                  {
+                    id: 1,
+                    customer_code: "CUST99887",
+                    phonecode: "+49",
+                    mobile_no: "1523456789",
+                    brand_name: "Samsung",
+                    product_name: "Galaxy S24 Ultra",
+                    qty: "1",
+                    unit: "pieces",
+                    created_at: "2025-06-21",
+                    product_status: "Inactive",
+                    product_specs: '512GB, Snapdragon 8 Gen 3, 6.8" AMOLED',
+                    device_type: "Smartphone",
+                    price: "1399",
+                    color: "Phantom Black",
+                    master_cartoon: "MC010",
+                    dispatch_status: "Shipped",
+                    payment_term: "Prepaid",
+                    device_condition: "Refurbished",
+                    eta_details: "2025-06-28",
+                    location: "Berlin",
+                    summary:
+                      "1x Refurbished Galaxy S24 Ultra (Phantom Black) to Berlin – Shipped",
+                  },
+                ],
+                Sell: [
+                  {
+                    id: 2,
+                    customer_code: "CUST55443",
+                    phonecode: "+91",
+                    mobile_no: "9123456789",
+                    brand_name: "Samsung",
+                    product_name: "Galaxy S24 Ultra",
+                    qty: "2",
+                    unit: "pieces",
+                    created_at: "2025-06-22",
+                    product_status: "Active",
+                    product_specs: '256GB, Snapdragon 8 Gen 3, 6.8" AMOLED',
+                    device_type: "Smartphone",
+                    price: "1249",
+                    color: "Titanium Gray",
+                    master_cartoon: "MC011",
+                    dispatch_status: "Delivered",
+                    payment_term: "Prepaid",
+                    device_condition: "Like New",
+                    eta_details: "2025-06-26",
+                    location: "Delhi",
+                    summary:
+                      "2x Like New Galaxy S24 Ultra (Titanium Gray) to Delhi – Delivered",
+                  },
+                ],
+              },
+            },
+            autospbNumber: 1001,
+          };
+          setAutoSpbData(originalApiResponse);
+          setAutoSpbStatus("succeeded");
+        }, 1500);
+      }
+    } else {
+      if (!rawOpportunities.length) {
+        dispatch(getOpportunitiesAction());
+      }
+      if (!getAllUserData.length) {
+        dispatch(getAllUsersAction());
+      }
+    }
+  }, [dispatch, currentTab, autoSpbStatus, rawOpportunities, getAllUserData]);
 
   useEffect(() => {
     if (Array.isArray(rawOpportunities)) {
       const mappedOpportunities = rawOpportunities.map(
         (apiItem: ApiOpportunityItem): OpportunityItem => {
           let uiStatus: OpportunityItem["status"] = "pending";
-          if (apiItem.status?.toLowerCase() === "pending")
-            uiStatus = "pending";
+          if (apiItem.status?.toLowerCase() === "pending") uiStatus = "pending";
           else if (apiItem.status?.toLowerCase() === "active")
             uiStatus = "active";
           else if (
@@ -1691,8 +2348,7 @@ const Opportunities = () => {
               (typeof apiItem.quantity === "string"
                 ? parseInt(apiItem.quantity, 10)
                 : apiItem.quantity) ?? undefined,
-            product_status_listing:
-              apiItem.product_status_listing || undefined,
+            product_status_listing: apiItem.product_status_listing || undefined,
             want_to: apiItem.want_to || undefined,
             company_name: apiItem.company_name || "N/A",
             company_id: apiItem.company_id || undefined,
@@ -1702,8 +2358,7 @@ const Opportunities = () => {
             member_phone: apiItem.member_phone || undefined,
             member_type: apiItem.member_type || "Standard",
             price_match_type: apiItem.price_match_type || undefined,
-            quantity_match_listing:
-              apiItem.quantity_match_listing || undefined,
+            quantity_match_listing: apiItem.quantity_match_listing || undefined,
             location_match: apiItem.location_match || undefined,
             matches_found_count: apiItem.matches_found_count ?? undefined,
             updated_at: apiItem.updated_at || undefined,
@@ -1759,7 +2414,78 @@ const Opportunities = () => {
   };
   const currentSelectedItems = selectedItems[currentTab] || [];
 
+  const autoSpbTableData = useMemo<OpportunityItem[]>(() => {
+    if (!autoSpbData || !autoSpbData.data) return [];
+
+    const transformedData: OpportunityItem[] = [];
+    const { data: matchGroups, autospbNumber } = autoSpbData;
+
+    for (const groupId in matchGroups) {
+      const group = matchGroups[groupId];
+      const buyItems = group.Buy || [];
+      const sellItems = group.Sell || [];
+      const allItems = [...buyItems, ...sellItems];
+      if (allItems.length === 0) continue;
+
+      const representativeItem = allItems[0];
+      const totalQuantity = allItems.reduce(
+        (sum, item) => sum + (parseInt(item.qty, 10) || 0),
+        0
+      );
+      const productNames = [
+        ...new Set(
+          allItems.map((i) => i.product_name || i.brand_name).filter(Boolean)
+        ),
+      ];
+
+      const matchRow: OpportunityItem = {
+        id: `spb-match-${groupId}`,
+        opportunity_id: `ASPB-${autospbNumber}-${groupId}`,
+        product_name: productNames.join(", ") || `Match Group ${groupId}`,
+        status: "active",
+        opportunity_status: "Shortlisted",
+        match_score: 88, // Placeholder value
+        created_date: representativeItem.created_at,
+        spb_role: "Match",
+        want_to: "Exchange",
+        company_name: `Buyers: ${buyItems.length}`,
+        member_name: `Sellers: ${sellItems.length}`,
+        member_type: "SPB Match",
+        quantity: totalQuantity,
+        brand: representativeItem.brand_name || undefined,
+        _rawSpbBuyItems: buyItems,
+        _rawSpbSellItems: sellItems,
+      };
+      transformedData.push(matchRow);
+    }
+    return transformedData;
+  }, [autoSpbData]);
+
   const filteredOpportunities = useMemo(() => {
+    if (currentTab === TABS.AUTO_MATCH) {
+      let data = [...autoSpbTableData];
+      if (currentTableData.query) {
+        const query = currentTableData.query.toLowerCase();
+        data = data.filter(
+          (item) =>
+            Object.values(item).some((value) =>
+              String(value).toLowerCase().includes(query)
+            ) ||
+            item._rawSpbBuyItems?.some((subItem) =>
+              Object.values(subItem).some((val) =>
+                String(val).toLowerCase().includes(query)
+              )
+            ) ||
+            item._rawSpbSellItems?.some((subItem) =>
+              Object.values(subItem).some((val) =>
+                String(val).toLowerCase().includes(query)
+              )
+            )
+        );
+      }
+      return data;
+    }
+
     let data = [...opportunities];
     if (currentTab === TABS.SELLER) {
       data = data.filter(
@@ -1775,8 +2501,6 @@ const Opportunities = () => {
           op.want_to === "Buy" ||
           (op.buy_listing_id && !op.sell_listing_id)
       );
-    } else if (currentTab === TABS.AUTO_MATCH) {
-      data = data.filter((op) => op.buy_listing_id && op.sell_listing_id);
     }
 
     if (currentTableData.query) {
@@ -1789,7 +2513,7 @@ const Opportunities = () => {
       );
     }
     return data;
-  }, [currentTab, opportunities, currentTableData.query]);
+  }, [currentTab, opportunities, autoSpbTableData, currentTableData.query]);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData = [...filteredOpportunities];
@@ -1802,8 +2526,10 @@ const Opportunities = () => {
         const bVal = b[key as keyof OpportunityItem];
         if (key === "created_date" || key === "updated_at") {
           return order === "asc"
-            ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime()
-            : new Date(bVal as string).getTime() - new Date(aVal as string).getTime();
+            ? new Date(aVal as string).getTime() -
+                new Date(bVal as string).getTime()
+            : new Date(bVal as string).getTime() -
+                new Date(aVal as string).getTime();
         }
         if (typeof aVal === "number" && typeof bVal === "number") {
           return order === "asc" ? aVal - bVal : bVal - aVal;
@@ -1840,9 +2566,7 @@ const Opportunities = () => {
     setIsExportReasonModalOpen(true);
   };
 
-  const handleConfirmExportWithReason = async (
-    data: ExportReasonFormData
-  ) => {
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = "Opportunities";
     try {
@@ -1866,51 +2590,116 @@ const Opportunities = () => {
     setIsExportReasonModalOpen(false);
   };
 
-  const handleSetCurrentTableData = useCallback((data: Partial<TableQueries>) => {
-    setTableQueries(prev => ({ ...prev, [currentTab]: { ...prev[currentTab], ...data } }));
-  }, [currentTab]);
-  const handlePaginationChange = useCallback((page: number) => handleSetCurrentTableData({ pageIndex: page }), [handleSetCurrentTableData]);
-  const handleSelectChange = useCallback((value: number) => {
-    handleSetCurrentTableData({ pageSize: Number(value), pageIndex: 1 });
-    setSelectedItems(prev => ({ ...prev, [currentTab]: [] }));
-  }, [handleSetCurrentTableData, currentTab]);
-  const handleSort = useCallback((sort: OnSortParamTanstack) =>
-    handleSetCurrentTableData({ sort: sort as any, pageIndex: 1 }), [handleSetCurrentTableData]);
-  const handleSearchChange = useCallback((query: string) =>
-    handleSetCurrentTableData({ query: query, pageIndex: 1 }), [handleSetCurrentTableData]);
-  const handleRowSelect = useCallback((checked: boolean, row: OpportunityItem) => {
-    setSelectedItems(prev => ({ ...prev, [currentTab]: checked ? [...(prev[currentTab] || []), row] : (prev[currentTab] || []).filter((i) => i.id !== row.id) }));
-  }, [currentTab]);
-  const handleAllRowSelect = useCallback((checked: boolean, rows: Row<OpportunityItem>[]) => {
-    setSelectedItems(prev => ({ ...prev, [currentTab]: checked ? rows.map((r) => r.original) : [] }));
-  }, [currentTab]);
+  const handleSetCurrentTableData = useCallback(
+    (data: Partial<TableQueries>) => {
+      setTableQueries((prev) => ({
+        ...prev,
+        [currentTab]: { ...prev[currentTab], ...data },
+      }));
+    },
+    [currentTab]
+  );
+  const handlePaginationChange = useCallback(
+    (page: number) => handleSetCurrentTableData({ pageIndex: page }),
+    [handleSetCurrentTableData]
+  );
+  const handleSelectChange = useCallback(
+    (value: number) => {
+      handleSetCurrentTableData({ pageSize: Number(value), pageIndex: 1 });
+      setSelectedItems((prev) => ({ ...prev, [currentTab]: [] }));
+    },
+    [handleSetCurrentTableData, currentTab]
+  );
+  const handleSort = useCallback(
+    (sort: OnSortParamTanstack) =>
+      handleSetCurrentTableData({ sort: sort as any, pageIndex: 1 }),
+    [handleSetCurrentTableData]
+  );
+  const handleSearchChange = useCallback(
+    (query: string) =>
+      handleSetCurrentTableData({ query: query, pageIndex: 1 }),
+    [handleSetCurrentTableData]
+  );
+  const handleRowSelect = useCallback(
+    (checked: boolean, row: OpportunityItem) => {
+      setSelectedItems((prev) => ({
+        ...prev,
+        [currentTab]: checked
+          ? [...(prev[currentTab] || []), row]
+          : (prev[currentTab] || []).filter((i) => i.id !== row.id),
+      }));
+    },
+    [currentTab]
+  );
+  const handleAllRowSelect = useCallback(
+    (checked: boolean, rows: Row<OpportunityItem>[]) => {
+      setSelectedItems((prev) => ({
+        ...prev,
+        [currentTab]: checked ? rows.map((r) => r.original) : [],
+      }));
+    },
+    [currentTab]
+  );
 
-  const handleEdit = useCallback((item: OpportunityItem) => {
-    let path = '/sales-leads/opportunities/';
-    if (item.spb_role === "Seller" || (currentTab === TABS.SELLER && !item.spb_role)) {
+  const handleEdit = useCallback(
+    (item: OpportunityItem) => {
+      if (item.id.startsWith("spb-match-")) {
+        toast.push(
+          <Notification
+            title="Action Not Available"
+            type="info"
+            duration={4000}
+          >
+            Editing is not available for an auto-matched group. You can edit the
+            individual listings that form the match.
+          </Notification>
+        );
+        return;
+      }
+
+      let path = "/sales-leads/opportunities/";
+      if (
+        item.spb_role === "Seller" ||
+        (currentTab === TABS.SELLER && !item.spb_role)
+      ) {
         path += `seller/edit/${item.id}`;
-    } else if (item.spb_role === "Buyer" || (currentTab === TABS.BUYER && !item.spb_role)) {
+      } else if (
+        item.spb_role === "Buyer" ||
+        (currentTab === TABS.BUYER && !item.spb_role)
+      ) {
         path += `buyer/edit/${item.id}`;
-    } else if (currentTab === TABS.AUTO_MATCH) {
-        path += `seller/edit/${item.id}`;
-        toast.push(<Notification title="Info" type="info">Editing Seller aspect of this match.</Notification>);
-    } else {
-        if (item.spb_role === "Seller" || item.want_to === "Sell") path += `seller/edit/${item.id}`;
-        else if (item.spb_role === "Buyer" || item.want_to === "Buy") path += `buyer/edit/${item.id}`;
+      } else {
+        if (item.spb_role === "Seller" || item.want_to === "Sell")
+          path += `seller/edit/${item.id}`;
+        else if (item.spb_role === "Buyer" || item.want_to === "Buy")
+          path += `buyer/edit/${item.id}`;
         else path += `detail/${item.id}`;
-    }
-    if (path.includes("/edit/") || path.includes("/detail/")) navigate(path);
-  }, [navigate, currentTab]);
+      }
+      if (path.includes("/edit/") || path.includes("/detail/")) navigate(path);
+    },
+    [navigate, currentTab]
+  );
 
   const handleDeleteSelected = useCallback(() => {
     const selectedIds = new Set(currentSelectedItems.map((i) => i.id));
-    setOpportunities((prevAll) => prevAll.filter((i) => !selectedIds.has(i.id)));
+    // For now, we only allow deleting from the main opportunities list
+    if (currentTab !== TABS.AUTO_MATCH) {
+      setOpportunities((prevAll) =>
+        prevAll.filter((i) => !selectedIds.has(i.id))
+      );
+      toast.push(
+        <Notification title="Records Deleted" type="success">
+          {`${selectedIds.size} record(s) deleted.`}
+        </Notification>
+      );
+    } else {
+      toast.push(
+        <Notification title="Action Not Available" type="info">
+          Deleting auto-matched groups is not supported from this view.
+        </Notification>
+      );
+    }
     setSelectedItems((prev) => ({ ...prev, [currentTab]: [] }));
-    toast.push(
-      <Notification title="Records Deleted" type="success">
-        {`${selectedIds.size} record(s) deleted.`}
-      </Notification>
-    );
   }, [currentSelectedItems, currentTab]);
 
   const handleTabChange = (tabKey: string) => {
@@ -1918,203 +2707,323 @@ const Opportunities = () => {
     setCurrentTab(tabKey);
   };
 
-  const getColumnsForStandardView = useCallback((): ColumnDef<OpportunityItem>[] => [
-    {
-      header: "Products",
-      accessorKey: "opportunity_id",
-      size: 280,
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <div className="flex items-start gap-3">
-            <Avatar size={38} shape="circle" className="mt-1 bg-primary-500 text-white text-base flex-shrink-0">
-              {item.product_name?.substring(0, 2).toUpperCase()}
-            </Avatar>
-            <div className="flex flex-col">
-              <Link to={`/sales-leads/opportunities/detail/${item.id}`} className="font-semibold text-sm text-primary-600 hover:underline dark:text-primary-400 mb-0.5">
-                {item.opportunity_id}
-              </Link>
-              <Tooltip title={item.product_name}>
-                <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[220px]">
-                  {item.product_name}
-                </span>
-              </Tooltip>
-              <Tag className={`${recordStatusTagColor[item.status] || recordStatusTagColor.default} capitalize text-[10px] px-1.5 py-0.5 mt-1 self-start`}>{item.status}</Tag>
-            </div>
-          </div>
-        )
-      }
-    },
-    {
-      header: "Company & Member",
-      accessorKey: "company_name",
-      size: 240,
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <div className="text-xs">
-            <div className="mb-1.5 flex items-center">
-              <TbBuilding size={14} className="mr-2 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-              <span className="font-semibold text-gray-800 dark:text-gray-100 truncate" title={item.company_name}>{item.company_name}</span>
-            </div>
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-1.5 flex items-center">
-              <TbUser size={14} className="mr-2 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-              <div className="flex flex-col">
-                <span className="font-medium text-gray-700 dark:text-gray-200 truncate" title={item.member_name}>{item.member_name}</span>
-                <Tag className="bg-indigo-100 text-indigo-700 dark:bg-indigo-500/30 dark:text-indigo-300 text-[9px] px-1 py-0.5 align-middle whitespace-nowrap self-start mt-1">
-                  {item.member_type}
-                </Tag>
-              </div>
-            </div>
-          </div>
-        )
-      }
-    },
-    {
-      header: "Key Details",
-      accessorKey: "match_score",
-      size: 240,
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <div className="text-xs space-y-1">
-            <InfoLine icon={<TbPhone size={13} />} text={item.member_phone || 'N/A'} />
-            <InfoLine icon={<TbMail size={13} />} text={item.member_email ? <a href={`mailto:${item.member_email}`} className="text-blue-500 hover:underline">{item.member_email}</a> : 'N/A'} />
-            <div className="pt-1 mt-1 border-t dark:border-gray-600">
-              <InfoLine icon={<TbChecklist size={13} />} label="Qty" text={item.quantity ?? 'N/A'} />
-              <InfoLine icon={<TbExchange size={13} />} label="Want To" text={item.want_to ?? 'N/A'} />
-            </div>
-            <div className="pt-1 mt-1 border-t dark:border-gray-600">
-              <InfoLine icon={<TbRadar2 size={13} />} label="Matches" text={item.matches_found_count ?? 'N/A'} />
-              <InfoLine icon={<TbTargetArrow size={13} />} label="Score" text={`${item.match_score}%`} />
-            </div>
-          </div>
-        )
-      }
-    },
-    {
-      header: "Timestamps",
-      accessorKey: "created_date",
-      size: 150,
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <div className="text-xs space-y-1.5">
-            <FormattedDate label="Created" dateString={item.created_date} />
-            <div className="flex items-center gap-1">
-              <InfoLine icon={<TbProgressCheck size={14} />} label="Opp." />
-              <Tag className={`${opportunityStatusTagColor[item.opportunity_status] || opportunityStatusTagColor.default} capitalize text-[10px] px-1.5 py-0.5 whitespace-nowrap`}>{item.opportunity_status}</Tag>
-            </div>
-          </div>
-        )
-      }
-    },
-    {
-      header: "Actions",
-      id: "action_std",
-      size: 120,
-      cell: (props) => <MainRowActionColumn
-        onEdit={() => handleEdit(props.row.original)}
-        item={props.row.original}
-        currentTab={currentTab}
-        onOpenModal={handleOpenModal}
-      />
-    },
-  ], [handleEdit, currentTab, handleOpenModal]);
-
-  const getColumnsForExpandableView = useCallback((): ColumnDef<OpportunityItem>[] => [
-    {
-      id: 'expander',
-      header: () => null,
-      size: 40,
-      cell: ({ row }) => (
-        <Tooltip title={row.getIsExpanded() ? "Collapse" : "Expand Details"}>
-          <Button
-            shape="circle"
-            size="xs"
-            variant="plain"
-            icon={row.getIsExpanded() ? <TbMinus /> : <TbPlus />}
-            onClick={row.getToggleExpandedHandler()}
-          />
-        </Tooltip>
-      )
-    },
-    {
-      header: "Products",
-      accessorKey: "product_name",
-      size: 280,
-      cell: ({ row }) => {
+  const getColumnsForStandardView = useCallback(
+    (): ColumnDef<OpportunityItem>[] => [
+      {
+        header: "Products",
+        accessorKey: "opportunity_id",
+        size: 280,
+        cell: ({ row }) => {
           const item = row.original;
           return (
             <div className="flex items-start gap-3">
-              <Avatar size={38} shape="circle" className="mt-1 bg-primary-500 text-white text-base flex-shrink-0">
+              <Avatar
+                size={38}
+                shape="circle"
+                className="mt-1 bg-primary-500 text-white text-base flex-shrink-0"
+              >
                 {item.product_name?.substring(0, 2).toUpperCase()}
               </Avatar>
               <div className="flex flex-col">
-                <Link to={`/sales-leads/opportunities/match/detail/${item.id}`} className="font-semibold text-sm text-primary-600 hover:underline dark:text-primary-400 mb-0.5">
+                <Link
+                  to={`/sales-leads/opportunities/detail/${item.id}`}
+                  className="font-semibold text-sm text-primary-600 hover:underline dark:text-primary-400 mb-0.5"
+                >
                   {item.opportunity_id}
                 </Link>
-                <Tooltip title={item.product_name}><span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[220px]">{item.product_name}</span></Tooltip>
+                <Tooltip title={item.product_name}>
+                  <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[220px]">
+                    {item.product_name}
+                  </span>
+                </Tooltip>
+                <Tag
+                  className={`${
+                    recordStatusTagColor[item.status] ||
+                    recordStatusTagColor.default
+                  } capitalize text-[10px] px-1.5 py-0.5 mt-1 self-start`}
+                >
+                  {item.status}
+                </Tag>
               </div>
             </div>
-          )
-      }
-    },
-    {
-      header: "Parties",
-      accessorKey: "company_name",
-      size: 280,
-       cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <div className="text-xs">
-            <InfoLine icon={<TbBuilding size={14}/>} text={item.company_name} boldText />
-            <InfoLine icon={<TbUser size={14}/>} text={item.member_name} className="mt-1" />
-            {item.spb_role && (
-              <Tag className={classNames("mt-1.5 capitalize", item.spb_role === "Seller" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700")}>
-                {item.spb_role}
-              </Tag>
-            )}
-          </div>
-        )
-      }
-    },
-    {
-      header: "Match Info",
-      accessorKey: "match_score",
-      size: 200,
-      cell: ({ row }) => {
+          );
+        },
+      },
+      {
+        header: "Company & Member",
+        accessorKey: "company_name",
+        size: 240,
+        cell: ({ row }) => {
           const item = row.original;
           return (
-              <div className="text-xs space-y-1">
-                  <InfoLine icon={<TbRadar2 size={13} />} label="Matches" text={item.matches_found_count ?? 'N/A'} />
-                  <InfoLine icon={<TbTargetArrow size={13} />} label="Score" text={`${item.match_score}%`} />
-                  <div className="flex items-center gap-1">
-                      <InfoLine icon={<TbProgressCheck size={14} />} label="Status" />
-                      <Tag className={`${opportunityStatusTagColor[item.opportunity_status] || opportunityStatusTagColor.default} capitalize`}>{item.opportunity_status}</Tag>
-                  </div>
+            <div className="text-xs">
+              <div className="mb-1.5 flex items-center">
+                <TbBuilding
+                  size={14}
+                  className="mr-2 text-gray-400 dark:text-gray-500 flex-shrink-0"
+                />
+                <span
+                  className="font-semibold text-gray-800 dark:text-gray-100 truncate"
+                  title={item.company_name}
+                >
+                  {item.company_name}
+                </span>
               </div>
-          )
-      }
-    },
-    {
-      header: "Timestamps",
-      accessorKey: "created_date",
-      size: 150,
-      cell: ({ row }) => (<FormattedDate dateString={row.original.created_date} />)
-    },
-    {
-      header: "Actions",
-      id: "action_exp",
-      size: 120,
-      cell: (props) => <MainRowActionColumn
-        onEdit={() => handleEdit(props.row.original)}
-        item={props.row.original}
-        currentTab={currentTab}
-        onOpenModal={handleOpenModal}
-      />
-    },
-  ], [expanded, handleEdit, currentTab, handleOpenModal]);
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-1.5 flex items-center">
+                <TbUser
+                  size={14}
+                  className="mr-2 text-gray-400 dark:text-gray-500 flex-shrink-0"
+                />
+                <div className="flex flex-col">
+                  <span
+                    className="font-medium text-gray-700 dark:text-gray-200 truncate"
+                    title={item.member_name}
+                  >
+                    {item.member_name}
+                  </span>
+                  <Tag className="bg-indigo-100 text-indigo-700 dark:bg-indigo-500/30 dark:text-indigo-300 text-[9px] px-1 py-0.5 align-middle whitespace-nowrap self-start mt-1">
+                    {item.member_type}
+                  </Tag>
+                </div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Key Details",
+        accessorKey: "match_score",
+        size: 240,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="text-xs space-y-1">
+              <InfoLine
+                icon={<TbPhone size={13} />}
+                text={item.member_phone || "N/A"}
+              />
+              <InfoLine
+                icon={<TbMail size={13} />}
+                text={
+                  item.member_email ? (
+                    <a
+                      href={`mailto:${item.member_email}`}
+                      className="text-blue-500 hover:underline"
+                    >
+                      {item.member_email}
+                    </a>
+                  ) : (
+                    "N/A"
+                  )
+                }
+              />
+              <div className="pt-1 mt-1 border-t dark:border-gray-600">
+                <InfoLine
+                  icon={<TbChecklist size={13} />}
+                  label="Qty"
+                  text={item.quantity ?? "N/A"}
+                />
+                <InfoLine
+                  icon={<TbExchange size={13} />}
+                  label="Want To"
+                  text={item.want_to ?? "N/A"}
+                />
+              </div>
+              <div className="pt-1 mt-1 border-t dark:border-gray-600">
+                <InfoLine
+                  icon={<TbRadar2 size={13} />}
+                  label="Matches"
+                  text={item.matches_found_count ?? "N/A"}
+                />
+                <InfoLine
+                  icon={<TbTargetArrow size={13} />}
+                  label="Score"
+                  text={`${item.match_score}%`}
+                />
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Timestamps",
+        accessorKey: "created_date",
+        size: 150,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="text-xs space-y-1.5">
+              <FormattedDate label="Created" dateString={item.created_date} />
+              <div className="flex items-center gap-1">
+                <InfoLine icon={<TbProgressCheck size={14} />} label="Opp." />
+                <Tag
+                  className={`${
+                    opportunityStatusTagColor[item.opportunity_status] ||
+                    opportunityStatusTagColor.default
+                  } capitalize text-[10px] px-1.5 py-0.5 whitespace-nowrap`}
+                >
+                  {item.opportunity_status}
+                </Tag>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Actions",
+        id: "action_std",
+        size: 120,
+        cell: (props) => (
+          <MainRowActionColumn
+            onEdit={() => handleEdit(props.row.original)}
+            item={props.row.original}
+            currentTab={currentTab}
+            onOpenModal={handleOpenModal}
+          />
+        ),
+      },
+    ],
+    [handleEdit, currentTab, handleOpenModal]
+  );
+
+  const getColumnsForExpandableView = useCallback(
+    (): ColumnDef<OpportunityItem>[] => [
+      {
+        id: "expander",
+        header: () => null,
+        size: 40,
+        cell: ({ row }) => (
+          <Tooltip title={row.getIsExpanded() ? "Collapse" : "Expand Details"}>
+            <Button
+              shape="circle"
+              size="xs"
+              variant="plain"
+              icon={row.getIsExpanded() ? <TbMinus /> : <TbPlus />}
+              onClick={row.getToggleExpandedHandler()}
+            />
+          </Tooltip>
+        ),
+      },
+      {
+        header: "Match/Product",
+        accessorKey: "product_name",
+        size: 280,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="flex items-start gap-3">
+              <Avatar
+                size={38}
+                shape="circle"
+                className="mt-1 bg-primary-500 text-white text-base flex-shrink-0"
+              >
+                {item.product_name?.substring(0, 2).toUpperCase()}
+              </Avatar>
+              <div className="flex flex-col">
+                <span className="font-semibold text-sm text-primary-600 dark:text-primary-400 mb-0.5 cursor-default">
+                  {item.opportunity_id}
+                </span>
+                <Tooltip title={item.product_name}>
+                  <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[220px]">
+                    {item.product_name}
+                  </span>
+                </Tooltip>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Parties",
+        accessorKey: "company_name",
+        size: 280,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="text-xs">
+              <InfoLine
+                icon={<TbBuilding size={14} />}
+                text={item.company_name}
+                boldText
+              />
+              <InfoLine
+                icon={<TbUser size={14} />}
+                text={item.member_name}
+                className="mt-1"
+              />
+              {item.spb_role && (
+                <Tag
+                  className={classNames(
+                    "mt-1.5 capitalize",
+                    item.spb_role === "Seller"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-purple-100 text-purple-700"
+                  )}
+                >
+                  {item.spb_role}
+                </Tag>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        header: "Match Info",
+        accessorKey: "match_score",
+        size: 200,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="text-xs space-y-1">
+              <InfoLine
+                icon={<TbRadar2 size={13} />}
+                label="Total Qty"
+                text={item.quantity ?? "N/A"}
+              />
+              <InfoLine
+                icon={<TbTargetArrow size={13} />}
+                label="Score"
+                text={`${item.match_score}%`}
+              />
+              <div className="flex items-center gap-1">
+                <InfoLine icon={<TbProgressCheck size={14} />} label="Status" />
+                <Tag
+                  className={`${
+                    opportunityStatusTagColor[item.opportunity_status] ||
+                    opportunityStatusTagColor.default
+                  } capitalize`}
+                >
+                  {item.opportunity_status}
+                </Tag>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: "Timestamps",
+        accessorKey: "created_date",
+        size: 150,
+        cell: ({ row }) => (
+          <FormattedDate dateString={row.original.created_date} />
+        ),
+      },
+      {
+        header: "Actions",
+        id: "action_exp",
+        size: 120,
+        cell: (props) => (
+          <MainRowActionColumn
+            onEdit={() => handleEdit(props.row.original)}
+            item={props.row.original}
+            currentTab={currentTab}
+            onOpenModal={handleOpenModal}
+          />
+        ),
+      },
+    ],
+    [handleEdit, currentTab, handleOpenModal]
+  );
 
   const columns = useMemo(() => {
     if (currentTab === TABS.AUTO_MATCH) {
@@ -2122,6 +3031,11 @@ const Opportunities = () => {
     }
     return getColumnsForStandardView();
   }, [currentTab, getColumnsForStandardView, getColumnsForExpandableView]);
+
+  const isLoading =
+    currentTab === TABS.AUTO_MATCH
+      ? autoSpbStatus === "loading"
+      : masterLoadingStatus === "loading";
 
   return (
     <>
@@ -2132,7 +3046,10 @@ const Opportunities = () => {
           </div>
 
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
-            <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto" aria-label="Tabs">
+            <nav
+              className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto"
+              aria-label="Tabs"
+            >
               {[TABS.ALL, TABS.SELLER, TABS.BUYER, TABS.AUTO_MATCH].map(
                 (tab) => (
                   <button
@@ -2164,7 +3081,7 @@ const Opportunities = () => {
               selectable
               columns={columns}
               data={pageData}
-              loading={masterLoadingStatus === "loading"}
+              loading={isLoading}
               pagingData={{
                 total,
                 pageIndex: currentTableData.pageIndex as number,
@@ -2180,28 +3097,23 @@ const Opportunities = () => {
                   (selected: OpportunityItem) => selected.id === row.id
                 )
               }
-              state={
-                currentTab === TABS.AUTO_MATCH ? { expanded } : undefined
+              state={{ expanded }}
+              onExpandedChange={setExpanded}
+              getRowCanExpand={() => true}
+              renderRowSubComponent={({ row }: { row: Row<OpportunityItem> }) =>
+                currentTab === TABS.AUTO_MATCH ? (
+                  <ExpandedAutoSpbDetails
+                    row={row}
+                    onViewSummary={handleOpenSummaryModal}
+                  />
+                ) : (
+                  <ExpandedOpportunityDetails
+                    row={row}
+                    currentTab={currentTab}
+                  />
+                )
               }
-              onExpandedChange={
-                currentTab === TABS.AUTO_MATCH ? setExpanded : undefined
-              }
-              getRowCanExpand={
-                currentTab === TABS.AUTO_MATCH ? () => true : undefined
-              }
-              renderRowSubComponent={
-                currentTab === TABS.AUTO_MATCH
-                  ? ({ row }: { row: Row<OpportunityItem> }) => (
-                      <ExpandedOpportunityDetails
-                        row={row}
-                        currentTab={currentTab}
-                      />
-                    )
-                  : undefined
-              }
-              noData={
-                masterLoadingStatus !== "loading" && pageData.length === 0
-              }
+              noData={!isLoading && pageData.length === 0}
             />
           </div>
         </AdaptiveCard>
@@ -2210,7 +3122,16 @@ const Opportunities = () => {
           onDeleteSelected={handleDeleteSelected}
         />
       </Container>
-      <OpportunityModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
+      <OpportunityModals
+        modalState={modalState}
+        onClose={handleCloseModal}
+        getAllUserDataOptions={getAllUserDataOptions}
+      />
+      <SpbSummaryViewModal
+        isOpen={summaryModalState.isOpen}
+        onClose={handleCloseSummaryModal}
+        item={summaryModalState.item}
+      />
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"
