@@ -25,7 +25,8 @@ import {
     TbUser,
     TbUsersGroup,
     TbLicense,
-    TbLinkOff
+    TbLinkOff,
+    TbArrowLeft
 } from 'react-icons/tb';
 
 // Types and Data
@@ -98,6 +99,7 @@ const PartnerProfileHeader = ({ partner }: PartnerProfileHeaderProps) => {
                 <Button variant="solid" icon={<TbPencil />} onClick={handleEdit}>
                     Edit Partner
                 </Button>
+                 <Button icon={<TbArrowLeft />} onClick={() => navigate('/business-entities/partner')}>Back to List</Button>
             </div>
         </div>
     );
