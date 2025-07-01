@@ -57,6 +57,7 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { count } from "console";
 
 // --- Type Definitions ---
 type ApiSliderItem = {
@@ -122,6 +123,8 @@ const filterFormSchema = z.object({
   filterStatuses: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterDisplayPages: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterSources: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  // ADD THIS LINE
+  date: z.tuple([z.date(), z.date()]).optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -207,10 +210,18 @@ const Sliders = () => {
 
   const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
     let processedData: SliderItem[] = cloneDeep(mappedSliders);
-    
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
     // Calculate counts from the total mapped data before filtering
     const initialCounts = {
         total: mappedSliders.length,
+        today: mappedSliders.filter(s => {
+            const createdAtDate = new Date(s.created_at);
+            return createdAtDate >= todayStart && createdAtDate <= todayEnd;
+        }).length,
         active: mappedSliders.filter(s => s.status === 'Active').length,
         inactive: mappedSliders.filter(s => s.status === 'Inactive').length,
         // Add more counts here if needed, e.g., for today
@@ -220,6 +231,15 @@ const Sliders = () => {
     if (filters.filterStatuses?.length) processedData = processedData.filter((i) => filters.filterStatuses!.some((f) => f.value === i.status));
     if (filters.filterDisplayPages?.length) processedData = processedData.filter((i) => filters.filterDisplayPages!.some((f) => f.value === i.displayPage));
     if (filters.filterSources?.length) processedData = processedData.filter((i) => filters.filterSources!.some((f) => f.value === i.source));
+    if (filters.date) {
+        const [startDate, endDate] = filters.date;
+        processedData = processedData.filter(item => {
+            if (!item.created_at) return false;
+            const itemDate = new Date(item.created_at);
+            return itemDate >= startDate && itemDate <= endDate;
+        });
+    }
+    
     if (tableData.query) { const q = tableData.query.toLowerCase(); processedData = processedData.filter((i) => i.title?.toLowerCase().includes(q) || String(i.id).toLowerCase().includes(q) || i.displayPage?.toLowerCase().includes(q) || i.source?.toLowerCase().includes(q) || (i.updated_by_user?.name?.toLowerCase() ?? "").includes(q) || String(i.indexPosition ?? "").includes(q)); }
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { processedData.sort((a, b) => { let aVal: any, bVal: any; if (key === 'created_at' || key === 'updated_at') { aVal = a[key] ? new Date(a[key]).getTime() : 0; bVal = b[key] ? new Date(b[key]).getTime() : 0; } else if (key === "indexPosition") { aVal = a.indexPosition === null ? Infinity : a.indexPosition; bVal = b.indexPosition === null ? Infinity : b.indexPosition; } else { aVal = (a as any)[key] ?? ""; bVal = (b as any)[key] ?? ""; } if (typeof aVal === 'number' && typeof bVal === 'number') return order === 'asc' ? aVal - bVal : bVal - aVal; return order === 'asc' ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal)); }); }
@@ -236,7 +256,25 @@ const Sliders = () => {
   // --- Handlers ---
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); setSelectedItems([]); }, []);
   const onClearFiltersAndReload = () => { setActiveFilters({}); handleSetTableData({ pageIndex: 1, query: "" }); dispatch(getSlidersAction()); };
-  const handleCardClick = (filterType: 'status' | 'all', value?: string) => { handleSetTableData({ pageIndex: 1, query: '' }); if (filterType === 'all') { setActiveFilters({}); } else if (filterType === 'status') { const statusOption = apiStatusOptions.find(opt => opt.value === value); setActiveFilters(statusOption ? { filterStatuses: [statusOption] } : {}); } };
+  const handleCardClick = (filterType: 'status' | 'date' | 'all', value?: string) => {
+    handleSetTableData({ pageIndex: 1, query: '' });
+
+    if (filterType === 'all') {
+        setActiveFilters({});
+    } else if (filterType === 'status') {
+        const statusOption = apiStatusOptions.find(opt => opt.value === value);
+        setActiveFilters(statusOption ? { filterStatuses: [statusOption] } : {});
+    } else if (filterType === 'date' && value === 'today') {
+        // SET THE DATE FILTER
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+        
+        setActiveFilters({ date: [todayStart, todayEnd] });
+    }
+};
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, valueToRemove: string) => { setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = (prev[key] || []) as {value: string}[]; const newValues = currentValues.filter(item => item.value !== valueToRemove); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete (newFilters as any)[key]; } return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
   const handleRowSelect = useCallback((checked: boolean, row: SliderItem) => setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id)), []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<SliderItem>[]) => { const originals = currentRows.map((r) => r.original); if (checked) { setSelectedItems((prev) => { const prevIds = new Set(prev.map((i) => i.id)); return [...prev, ...originals.filter((r) => !prevIds.has(r.id))]; }); } else { const currentIds = new Set(originals.map((r) => r.id)); setSelectedItems((prev) => prev.filter((item) => !currentIds.has(item.id))); } }, []);
@@ -308,7 +346,7 @@ const Sliders = () => {
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         {/* CORRECTED: Cards now calculate counts from the memoized data */}
         <Tooltip title="Click to show all sliders"><div className="cursor-pointer" onClick={() => handleCardClick('all')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMessageStar size={24} /></div><div><h6 className="text-blue-500">{counts.total}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to show sliders created today"><div className="cursor-pointer" onClick={() => handleCardClick('all')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbMessageShare size={24} /></div><div><h6 className="text-violet-500">0</h6><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show sliders created today"><div className="cursor-pointer" onClick={() => handleCardClick('date', 'today')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbMessageShare size={24} /></div><div><h6 className="text-violet-500">{counts.today}</h6><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
         <Tooltip title="Click to show Active sliders"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Active')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMessageCheck size={24} /></div><div><h6 className="text-green-500">{counts.active}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
         <Tooltip title="Click to show Inactive sliders"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMessage2X size={24} /></div><div><h6 className="text-red-500">{counts.inactive}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
     </div>

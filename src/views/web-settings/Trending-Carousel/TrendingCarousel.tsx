@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import cloneDeep from 'lodash/cloneDeep'
-import { useForm, Controller, FieldError } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
@@ -24,7 +24,10 @@ import {
     Input,
     Select,
     Tag,
-} from '@/components/ui' // Added Tag
+    Card,
+    Dropdown,
+    Checkbox,
+} from '@/components/ui'
 
 // Icons
 import {
@@ -32,12 +35,19 @@ import {
     TbTrash,
     TbChecks,
     TbSearch,
+    TbFilter,
     TbPlus,
     TbCloudUpload,
     TbPhoto,
     TbReload,
     TbUser,
     TbFileText,
+    TbMessageStar,
+    TbMessageCheck,
+    TbMessage2X,
+    TbColumns,
+    TbX,
+    TbUserCircle
 } from 'react-icons/tb'
 
 // Redux
@@ -48,157 +58,91 @@ import {
     editTrendingCarouselAction,
     deleteTrendingCarouselAction,
     deleteMultipleTrendingCarouselAction,
-    submitExportReasonAction, // Placeholder for actual action
+    submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
 
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
-// Types for DataTable
+// Types
 import type { OnSortParam, ColumnDef, Row } from '@/components/shared/DataTable'
 import type { TableQueries } from '@/@types/common'
 import { useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 
-// --- Trending Carousel Item Data Type ---
+// --- Type Definitions ---
 export type TrendingCarouselItemData = {
     id: number
     images: string
     links: string | null
-    deleted_at?: string | null
     created_at: string
     updated_at?: string
-    status: 'Active' | 'Inactive' // Changed to match API
+    status: 'Active' | 'Inactive'
     images_full_path: string
-    updated_by_name?: string // Added
-    updated_by_role?: string // Added
+    updated_by_name?: string
+    updated_by_role?: string
+    updated_by_user?: {
+        name: string
+        roles: { display_name: string }[]
+    }
     [key: string]: any
 }
-
-// --- Zod Schema for Add/Edit Form ---
-const trendingCarouselFormSchema = z.object({
-    imageFile: z
-        .instanceof(File, { message: 'Image is required.' })
-        .optional()
-        .nullable()
-        .refine(
-            (file) => !file || file.size <= 5 * 1024 * 1024,
-            `Max file size is 5MB.`,
-        )
-        .refine(
-            (file) =>
-                !file ||
-                ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(
-                    file.type,
-                ),
-            'Only .jpg, .jpeg, .png, .webp, .gif files are accepted.',
-        ),
-    links: z
-        .string()
-        .url({
-            message: 'Please enter a valid URL (e.g., https://example.com).',
-        })
-        .optional()
-        .nullable()
-        .or(z.literal('')),
-    status: z.enum(['Active', 'Inactive'], {
-        required_error: 'Status is required.',
-    }), // Added status
-})
 type SelectOption = {
     value: string | number
     label: string
 }
-type TrendingCarouselFormData = z.infer<typeof trendingCarouselFormSchema>
 const statusOptions: SelectOption[] = [
     { value: 'Active', label: 'Active' },
     { value: 'Inactive', label: 'Inactive' },
 ]
-// --- Zod Schema for Export Reason Form ---
+
+// --- Zod Schemas ---
+const trendingCarouselFormSchema = z.object({
+    imageFile: z.instanceof(File, { message: 'Image is required.' }).optional().nullable()
+        .refine((file) => !file || file.size <= 5 * 1024 * 1024, `Max file size is 5MB.`)
+        .refine((file) => !file || ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type), 'Only .jpg, .jpeg, .png, .webp, .gif files are accepted.'),
+    links: z.string().url({ message: 'Please enter a valid URL (e.g., https://example.com).' }).optional().nullable().or(z.literal('')),
+    status: z.enum(['Active', 'Inactive'], { required_error: 'Status is required.' }),
+})
+type TrendingCarouselFormData = z.infer<typeof trendingCarouselFormSchema>
+
+const filterFormSchema = z.object({
+  filterStatuses: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+});
+type FilterFormData = z.infer<typeof filterFormSchema>;
+
 const exportReasonSchema = z.object({
-    reason: z
-        .string()
-        .min(1, 'Reason for export is required.')
-        .max(255, 'Reason cannot exceed 255 characters.'),
+    reason: z.string().min(10, 'Reason for export is required.').max(255, 'Reason cannot exceed 255 characters.'),
 })
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>
 
-const statusColor: Record<TrendingCarouselItemData['status'], string> = {
-    // Use SliderItem["status"]
-    Active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    Inactive: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
-}
-// --- CSV Exporter Utility ---
-const CSV_CAROUSEL_HEADERS = [
-    'ID',
-    'Image Path (Server)',
-    'Link',
-    'Image Full URL',
-    'Created At',
-    'Updated By',
-    'Updated Role',
-    'Updated At',
-]
-
-type TrendingCarouselExportItem = Omit<
-    TrendingCarouselItemData,
-    'created_at' | 'updated_at'
-> & {
-    created_at_formatted?: string
-    updated_at_formatted?: string
-}
-
-const CSV_CAROUSEL_KEYS_EXPORT: (keyof TrendingCarouselExportItem)[] = [
-    'id',
-    'images',
-    'links',
-    'images_full_path',
-    'created_at_formatted',
-    'updated_by_name',
-    'updated_by_role',
-    'updated_at_formatted',
-]
-
-function exportCarouselItemsToCsv(
-    filename: string,
-    rows: TrendingCarouselItemData[],
-) {
-    if (!rows || !rows.length) {
-        // Toast handled by caller or handleOpenExportReasonModal
-        return false
-    }
+// --- Utility Functions ---
+function exportCarouselItemsToCsv(filename: string, rows: TrendingCarouselItemData[]) {
+    if (!rows || !rows.length) return false
+    const CSV_HEADERS = [ 'ID', 'Image Path (Server)', 'Link', 'Image Full URL', 'Status', 'Created At', 'Updated By', 'Updated Role', 'Updated At', ]
+    type TrendingCarouselExportItem = Omit<TrendingCarouselItemData, 'created_at' | 'updated_at'> & { created_at_formatted?: string; updated_at_formatted?: string }
+    const CSV_KEYS: (keyof TrendingCarouselExportItem)[] = [ 'id', 'images', 'links', 'images_full_path', 'status', 'created_at_formatted', 'updated_by_name', 'updated_by_role', 'updated_at_formatted', ]
+    
     const preparedRows: TrendingCarouselExportItem[] = rows.map((row) => ({
         ...row,
         links: row.links || 'N/A',
-        created_at_formatted: row.created_at
-            ? new Date(row.created_at).toLocaleString()
-            : 'N/A',
+        created_at_formatted: new Date(row.created_at).toLocaleString(),
         updated_by_name: row.updated_by_name || 'N/A',
         updated_by_role: row.updated_by_role || 'N/A',
-        updated_at_formatted: row.updated_at
-            ? new Date(row.updated_at).toLocaleString()
-            : 'N/A',
+        updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : 'N/A',
     }))
 
-    const separator = ','
-    const csvContent =
-        CSV_CAROUSEL_HEADERS.join(separator) +
-        '\n' +
-        preparedRows
-            .map((row) =>
-                CSV_CAROUSEL_KEYS_EXPORT.map((k) => {
-                    let cell = row[k as keyof TrendingCarouselExportItem]
-                    if (cell === null || cell === undefined) cell = ''
-                    else cell = String(cell).replace(/"/g, '""')
-                    if (String(cell).search(/("|,|\n)/g) >= 0)
-                        cell = `"${cell}"`
-                    return cell
-                }).join(separator),
-            )
-            .join('\n')
+    const csvContent = [
+        CSV_HEADERS.join(','),
+        ...preparedRows.map(row => CSV_KEYS.map(k => {
+            let cell = (row as any)[k]
+            if (cell === null || cell === undefined) cell = ''
+            else cell = String(cell).replace(/"/g, '""')
+            if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`
+            return cell
+        }).join(','))
+    ].join('\n')
 
-    const blob = new Blob(['\ufeff' + csvContent], {
-        type: 'text/csv;charset=utf-8;',
-    })
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     if (link.download !== undefined) {
         const url = URL.createObjectURL(blob)
@@ -211,1424 +155,230 @@ function exportCarouselItemsToCsv(
         URL.revokeObjectURL(url)
         return true
     }
-    toast.push(
-        <Notification title="Export Failed" type="danger">
-            Browser does not support this feature.
-        </Notification>,
-    )
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>)
     return false
 }
+function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(' ') }
 
-// --- Helper: classNames ---
-function classNames(...classes: (string | boolean | undefined)[]) {
-    return classes.filter(Boolean).join(' ')
-}
+// --- Child Components ---
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => (
+    <div className="flex items-center justify-center">
+        <Tooltip title="Edit"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400" role="button" tabIndex={0} onClick={onEdit}><TbPencil /></div></Tooltip>
+        <Tooltip title="Delete"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400" role="button" tabIndex={0} onClick={onDelete}><TbTrash /></div></Tooltip>
+    </div>
+)
 
-// --- ActionColumn Component ---
-const ActionColumn = ({
-    onEdit,
-    onDelete,
-}: {
-    onEdit: () => void
-    onDelete: () => void
-}) => {
-    const iconButtonClass =
-        'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
-    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: Partial<FilterFormData>; onRemoveFilter: (key: keyof FilterFormData, value: string) => void; onClearAll: () => void; }) => {
+    const filters = Object.entries(filterData).flatMap(([key, values]) => (Array.isArray(values) ? values.map(v => ({ key: key as keyof FilterFormData, ...v })) : []));
+    if (filters.length === 0) return null;
+    return ( <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4"> <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span> {filters.map((filter) => (<Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500"> Status: {filter.label} <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter(filter.key, filter.value)} /> </Tag>))} <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button> </div> );
+};
+
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearAll, columns, filteredColumns, setFilteredColumns, activeFilterCount }: { onSearchChange: (q: string) => void; onFilter: () => void; onExport: () => void; onClearAll: () => void; columns: ColumnDef<TrendingCarouselItemData>[]; filteredColumns: ColumnDef<TrendingCarouselItemData>[]; setFilteredColumns: (cols: ColumnDef<TrendingCarouselItemData>[]) => void; activeFilterCount: number; }) => {
+    const toggleColumn = (checked: boolean, colHeader: string) => setFilteredColumns(checked ? [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a,b) => columns.indexOf(a) - columns.indexOf(b)) : filteredColumns.filter(c => c.header !== colHeader));
+    const isColumnVisible = (header: string) => filteredColumns.some(c => c.header === header);
     return (
-        <div className="flex items-center justify-center">
-            <Tooltip title="Edit">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400',
-                    )}
-                    role="button"
-                    tabIndex={0}
-                    onClick={onEdit}
-                    onKeyDown={(e) => e.key === 'Enter' && onEdit()}
-                >
-                    {' '}
-                    <TbPencil />{' '}
-                </div>
-            </Tooltip>
-            <Tooltip title="Delete">
-                <div
-                    className={classNames(
-                        iconButtonClass,
-                        hoverBgClass,
-                        'text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400',
-                    )}
-                    role="button"
-                    tabIndex={0}
-                    onClick={onDelete}
-                    onKeyDown={(e) => e.key === 'Enter' && onDelete()}
-                >
-                    {' '}
-                    <TbTrash />{' '}
-                </div>
-            </Tooltip>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow">
+                <DebouceInput className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onSearchChange(e.target.value)} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Dropdown renderTitle={<Button title="Toggle Columns" icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2">
+                        <div className="font-semibold mb-1 border-b pb-1">Toggle Columns</div>
+                        {columns.filter(c => c.id !== 'select' && c.header).map(col => (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(c) => toggleColumn(c, col.header as string)} />{col.header}</div>))}
+                    </div>
+                </Dropdown>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearAll} />
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+            </div>
         </div>
     )
 }
-ActionColumn.displayName = 'ActionColumn'
 
-// --- Search Component ---
-type ItemSearchProps = {
-    onInputChange: (value: string) => void
-    placeholder: string
-}
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
-    ({ onInputChange, placeholder }, ref) => (
-        <DebouceInput
-            ref={ref}
-            className="w-full"
-            placeholder={placeholder}
-            suffix={<TbSearch className="text-lg" />}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                onInputChange(e.target.value)
-            }
-        />
-    ),
-)
-ItemSearch.displayName = 'ItemSearch'
-
-// --- TableTools Component ---
-type ItemTableToolsProps = {
-    onSearchChange: (query: string) => void
-    onExport: () => void
-    searchPlaceholder: string
-    onClearSearch: () => void // Renamed from onClearFilters for clarity as only search is cleared
-}
-const ItemTableTools = ({
-    onSearchChange,
-    onExport,
-    searchPlaceholder,
-    onClearSearch,
-}: ItemTableToolsProps) => (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-        <div className="flex-grow">
-            <ItemSearch
-                onInputChange={onSearchChange}
-                placeholder={searchPlaceholder}
-            />
-        </div>
-        <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-            <Button
-                title="Clear Search"
-                icon={<TbReload />}
-                onClick={onClearSearch}
-            ></Button>{' '}
-            {/* Clear Search */}
-            <Button
-                icon={<TbCloudUpload />}
-                onClick={onExport}
-                className="w-full sm:w-auto"
-            >
-                {' '}
-                Export{' '}
-            </Button>
-        </div>
-    </div>
-)
-ItemTableTools.displayName = 'ItemTableTools'
-
-// --- SelectedFooter Component ---
-type TrendingCarouselSelectedFooterProps = {
-    selectedItems: TrendingCarouselItemData[]
-    onDeleteSelected: () => void
-    isDeleting?: boolean // Changed from disabled for clarity
-}
-const TrendingCarouselSelectedFooter = ({
-    selectedItems,
-    onDeleteSelected,
-    isDeleting,
-}: TrendingCarouselSelectedFooterProps) => {
-    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
-    const handleDeleteClick = () => setDeleteConfirmationOpen(true)
-    const handleCancelDelete = () => setDeleteConfirmationOpen(false)
-    const handleConfirmDelete = () => {
-        onDeleteSelected()
-        setDeleteConfirmationOpen(false)
-    }
+const SelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: { selectedItems: TrendingCarouselItemData[], onDeleteSelected: () => void; isDeleting?: boolean }) => {
+    const [deleteOpen, setDeleteOpen] = useState(false)
     if (selectedItems.length === 0) return null
     return (
         <>
-            <StickyFooter
-                className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-                stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-            >
+            <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
                 <div className="flex items-center justify-between w-full px-4 sm:px-8">
                     <span className="flex items-center gap-2">
-                        <span className="text-lg text-primary-600 dark:text-primary-400">
-                            {' '}
-                            <TbChecks />{' '}
-                        </span>
-                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-                            <span className="heading-text">
-                                {selectedItems.length}
-                            </span>
-                            <span>
-                                {' '}
-                                Item{selectedItems.length > 1 ? 's' : ''}{' '}
-                                selected{' '}
-                            </span>
-                        </span>
+                        <span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span>
+                        <span className="font-semibold flex items-center gap-1 text-sm sm:text-base"><span className="heading-text">{selectedItems.length}</span><span>Item{selectedItems.length > 1 ? 's' : ''} selected</span></span>
                     </span>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            size="sm"
-                            variant="plain"
-                            className="text-red-600 hover:text-red-500"
-                            onClick={handleDeleteClick}
-                            loading={isDeleting}
-                        >
-                            {' '}
-                            Delete Selected{' '}
-                        </Button>
-                    </div>
+                    <Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteOpen(true)} loading={isDeleting}>Delete Selected</Button>
                 </div>
             </StickyFooter>
-            <ConfirmDialog
-                isOpen={deleteConfirmationOpen}
-                type="danger"
-                title={`Delete ${selectedItems.length} Carousel Item${selectedItems.length > 1 ? 's' : ''}`}
-                onClose={handleCancelDelete}
-                onRequestClose={handleCancelDelete}
-                onCancel={handleCancelDelete}
-                onConfirm={handleConfirmDelete}
-                confirmButtonColor="red-600"
-                loading={isDeleting}
-            >
-                <p>
-                    {' '}
-                    Are you sure you want to delete the selected carousel item
-                    {selectedItems.length > 1 ? 's' : ''}? This action cannot be
-                    undone.{' '}
-                </p>
+            <ConfirmDialog isOpen={deleteOpen} type="danger" title={`Delete ${selectedItems.length} Carousel Item${selectedItems.length > 1 ? 's' : ''}`} onClose={() => setDeleteOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteOpen(false); }} loading={isDeleting}>
+                <p>Are you sure you want to delete the selected carousel items? This action cannot be undone.</p>
             </ConfirmDialog>
         </>
     )
 }
-TrendingCarouselSelectedFooter.displayName = 'TrendingCarouselSelectedFooter'
 
 // --- Main Component: Trending Carousel ---
 const TrendingCarousel = () => {
     const dispatch = useAppDispatch()
-
-    const {
-        trendingCarouselData = [],
-        status: masterLoadingStatus = 'idle',
-        error: masterError = null,
-    } = useSelector(masterSelector)
+    const { trendingCarouselData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector)
 
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
-    const [editingItem, setEditingItem] =
-        useState<TrendingCarouselItemData | null>(null)
-    const [itemToDelete, setItemToDelete] =
-        useState<TrendingCarouselItemData | null>(null)
-
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+    const [editingItem, setEditingItem] = useState<TrendingCarouselItemData | null>(null)
+    const [itemToDelete, setItemToDelete] = useState<TrendingCarouselItemData | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
-
-    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] =
-        useState(false)
-    const [tableData, setTableData] = useState<TableQueries>({
-        pageIndex: 1,
-        pageSize: 10,
-        sort: { order: 'desc', key: 'created_at' }, // Default sort
-        query: '',
-    })
-    const [selectedItems, setSelectedItems] = useState<
-        TrendingCarouselItemData[]
-    >([])
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false)
+    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '' })
+    const [selectedItems, setSelectedItems] = useState<TrendingCarouselItemData[]>([])
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false)
     const [imageToView, setImageToView] = useState<string | null>(null)
-    const closeImageViewer = () => {
-        setIsImageViewerOpen(false)
-        setImageToView(null)
-    }
-    // --- Export Reason Modal State ---
-    const [isExportReasonModalOpen, setIsExportReasonModalOpen] =
-        useState(false)
-    const [isSubmittingExportReason, setIsSubmittingExportReason] =
-        useState(false)
+    const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false)
+    const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false)
+    const [activeFilters, setActiveFilters] = useState<Partial<FilterFormData>>({});
 
-    const formMethods = useForm<TrendingCarouselFormData>({
-        resolver: zodResolver(trendingCarouselFormSchema),
-        defaultValues: { links: '', imageFile: null, status: 'Active' },
-        mode: 'onChange',
-    })
+    const addFormMethods = useForm<TrendingCarouselFormData>({ resolver: zodResolver(trendingCarouselFormSchema), defaultValues: { links: '', imageFile: null, status: 'Active' }, mode: 'onChange' })
+    const editFormMethods = useForm<TrendingCarouselFormData>({ resolver: zodResolver(trendingCarouselFormSchema), defaultValues: { links: '', imageFile: null, status: 'Active' }, mode: 'onChange' })
+    const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: activeFilters })
+    const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: '' }, mode: 'onChange' })
 
-    const exportReasonFormMethods = useForm<ExportReasonFormData>({
-        resolver: zodResolver(exportReasonSchema),
-        defaultValues: { reason: '' },
-        mode: 'onChange',
-    })
+    useEffect(() => { dispatch(getTrendingCarouselAction()) }, [dispatch])
+    useEffect(() => { return () => { if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl) } }, [imagePreviewUrl])
 
-    useEffect(() => {
-        dispatch(getTrendingCarouselAction())
-    }, [dispatch])
-
-    useEffect(() => {
-        if (masterLoadingStatus === 'failed' && masterError) {
-            const errorMessage =
-                typeof masterError === 'string'
-                    ? masterError
-                    : 'An unexpected error occurred.'
-            toast.push(
-                <Notification
-                    title="Operation Failed"
-                    type="danger"
-                    duration={4000}
-                >
-                    {errorMessage}
-                </Notification>,
-            )
-        }
-    }, [masterLoadingStatus, masterError])
-
-    useEffect(() => {
-        return () => {
-            if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl)
-        }
-    }, [imagePreviewUrl])
-
-    const openAddDrawer = useCallback(() => {
-        formMethods.reset({ links: '', imageFile: null })
-        setImagePreviewUrl(null)
-        setIsAddDrawerOpen(true)
-    }, [formMethods])
-
-    const closeAddDrawer = useCallback(() => {
-        setIsAddDrawerOpen(false)
-        if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl)
-        setImagePreviewUrl(null)
-        formMethods.reset({ links: '', imageFile: null })
-    }, [formMethods, imagePreviewUrl])
-
-    const openEditDrawer = useCallback(
-        (item: TrendingCarouselItemData) => {
-            setEditingItem(item)
-            formMethods.reset({
-                links: item.links || '',
-                imageFile: null,
-                status: item.status,
-            })
-            setImagePreviewUrl(null)
-            setIsEditDrawerOpen(true)
-        },
-        [formMethods],
-    )
-
-    const closeEditDrawer = useCallback(() => {
-        setIsEditDrawerOpen(false)
-        setEditingItem(null)
-        if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl)
-        setImagePreviewUrl(null)
-        formMethods.reset({ links: '', imageFile: null })
-    }, [formMethods, imagePreviewUrl])
-
-    const onAddItemSubmit = async (data: TrendingCarouselFormData) => {
-        console.log('data', data)
-
-        if (!data.imageFile) {
-            formMethods.setError('imageFile', {
-                type: 'manual',
-                message: 'Image is required for new items.',
-            })
-            return
-        }
-        setIsSubmitting(true)
-        const formData = new FormData()
-        formData.append('links', data.links || '')
-        formData.append('status', data.status || '')
-        if (data.imageFile) formData.append('images', data.imageFile)
-
-        try {
-            await dispatch(addTrendingCarouselAction(formData)).unwrap()
-            toast.push(
-                <Notification
-                    title="Carousel Item Added"
-                    type="success"
-                    duration={2000}
-                >
-                    Item added successfully.
-                </Notification>,
-            )
-            closeAddDrawer()
-            dispatch(getTrendingCarouselAction())
-        } catch (error: any) {
-            const message =
-                error?.message || error?.data?.message || 'Could not add item.'
-            toast.push(
-                <Notification
-                    title="Failed to Add"
-                    type="danger"
-                    duration={3000}
-                >
-                    {message}
-                </Notification>,
-            )
-        } finally {
-            setIsSubmitting(false)
-        }
-    }
-
-    const onEditItemSubmit = async (data: TrendingCarouselFormData) => {
-        if (!editingItem) return
-        setIsSubmitting(true)
-        const formData = new FormData()
-        formData.append('_method', 'PUT')
-        formData.append('links', data.links || '')
-        formData.append('status', data.status || '')
-        if (data.imageFile) formData.append('images', data.imageFile)
-
-        try {
-            await dispatch(
-                editTrendingCarouselAction({ id: editingItem.id, formData }),
-            ).unwrap()
-            toast.push(
-                <Notification
-                    title="Carousel Item Updated"
-                    type="success"
-                    duration={2000}
-                >
-                    Item updated successfully.
-                </Notification>,
-            )
-            closeEditDrawer()
-            dispatch(getTrendingCarouselAction())
-        } catch (error: any) {
-            const message =
-                error?.message ||
-                error?.data?.message ||
-                'Could not update item.'
-            toast.push(
-                <Notification
-                    title="Failed to Update"
-                    type="danger"
-                    duration={3000}
-                >
-                    {message}
-                </Notification>,
-            )
-        } finally {
-            setIsSubmitting(false)
-        }
-    }
-
-    const handleDeleteClick = useCallback((item: TrendingCarouselItemData) => {
-        if (item.id === undefined || item.id === null) return
-        setItemToDelete(item)
-        setSingleDeleteConfirmOpen(true)
-    }, [])
-
-    const onConfirmSingleDelete = async () => {
-        if (
-            !itemToDelete ||
-            itemToDelete.id === undefined ||
-            itemToDelete.id === null
-        )
-            return
-        setIsDeleting(true)
-        setSingleDeleteConfirmOpen(false)
-        try {
-            await dispatch(
-                deleteTrendingCarouselAction({ id: itemToDelete.id }),
-            ).unwrap()
-            toast.push(
-                <Notification
-                    title="Item Deleted"
-                    type="success"
-                    duration={2000}
-                >{`Carousel item (ID: ${itemToDelete.id}) deleted.`}</Notification>,
-            )
-            setSelectedItems((prev) =>
-                prev.filter((item) => item.id !== itemToDelete!.id),
-            )
-            dispatch(getTrendingCarouselAction())
-        } catch (error: any) {
-            const message =
-                error?.message ||
-                error?.data?.message ||
-                'Could not delete item.'
-            toast.push(
-                <Notification
-                    title="Failed to Delete"
-                    type="danger"
-                    duration={3000}
-                >
-                    {message}
-                </Notification>,
-            )
-        } finally {
-            setIsDeleting(false)
-            setItemToDelete(null)
-        }
-    }
-
-    const handleDeleteSelected = async () => {
-        if (selectedItems.length === 0) return
-        setIsDeleting(true)
-        const idsToDelete = selectedItems.map((item) => String(item.id))
-        try {
-            await dispatch(
-                deleteMultipleTrendingCarouselAction({
-                    ids: idsToDelete.join(','),
-                }),
-            ).unwrap()
-            toast.push(
-                <Notification
-                    title="Deletion Successful"
-                    type="success"
-                    duration={2000}
-                >
-                    {selectedItems.length} item(s) deleted.
-                </Notification>,
-            )
-            setSelectedItems([])
-            dispatch(getTrendingCarouselAction())
-        } catch (error: any) {
-            const message =
-                error?.message ||
-                error?.data?.message ||
-                'Failed to delete selected items.'
-            toast.push(
-                <Notification
-                    title="Deletion Failed"
-                    type="danger"
-                    duration={3000}
-                >
-                    {message}
-                </Notification>,
-            )
-        } finally {
-            setIsDeleting(false)
-        }
-    }
-
-    const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        const sourceData: TrendingCarouselItemData[] = Array.isArray(
-            trendingCarouselData,
-        )
-            ? trendingCarouselData
-            : []
+    const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
+        const sourceData: TrendingCarouselItemData[] = Array.isArray(trendingCarouselData) ? trendingCarouselData : []
         let processedData: TrendingCarouselItemData[] = cloneDeep(sourceData)
+        
+        const initialCounts = {
+            total: sourceData.length,
+            active: sourceData.filter(i => i.status === 'Active').length,
+            inactive: sourceData.filter(i => i.status === 'Inactive').length,
+        };
 
-        if (tableData.query && tableData.query.trim() !== '') {
+        if (activeFilters.filterStatuses?.length) {
+            const selected = new Set(activeFilters.filterStatuses.map(s => s.value));
+            processedData = processedData.filter(item => selected.has(item.status));
+        }
+
+        if (tableData.query) {
             const query = tableData.query.toLowerCase().trim()
-            processedData = processedData.filter(
-                (item) =>
-                    String(item.links || '')
-                        .toLowerCase()
-                        .includes(query) ||
-                    String(item.id).toLowerCase().includes(query) ||
-                    (item.updated_by_name?.toLowerCase() ?? '').includes(
-                        query,
-                    ) || // Search by updated_by_name
-                    (item.created_at &&
-                        new Date(item.created_at)
-                            .toLocaleDateString()
-                            .toLowerCase()
-                            .includes(query)),
-            )
+            processedData = processedData.filter(item => String(item.links || '').toLowerCase().includes(query) || String(item.id).toLowerCase().includes(query))
         }
 
-        const { order, key } = tableData.sort as OnSortParam
-        if (
-            order &&
-            key &&
-            [
-                'id',
-                'links',
-                'created_at',
-                'updated_at',
-                'updated_by_name',
-            ].includes(key)
-        ) {
-            // Added new sort keys
+        const { order, key } = tableData.sort
+        if (order && key) {
             processedData.sort((a, b) => {
-                let aValue: any, bValue: any
+                let aValue: any = (a as any)[key], bValue: any = (b as any)[key]
                 if (key === 'created_at' || key === 'updated_at') {
-                    const dateA = a[key as 'created_at' | 'updated_at']
-                        ? new Date(
-                              a[key as 'created_at' | 'updated_at']!,
-                          ).getTime()
-                        : 0
-                    const dateB = b[key as 'created_at' | 'updated_at']
-                        ? new Date(
-                              b[key as 'created_at' | 'updated_at']!,
-                          ).getTime()
-                        : 0
-                    return order === 'asc' ? dateA - dateB : dateB - dateA
-                } else {
-                    aValue = a[key as keyof TrendingCarouselItemData] ?? ''
-                    bValue = b[key as keyof TrendingCarouselItemData] ?? ''
+                    aValue = a[key] ? new Date(a[key]).getTime() : 0
+                    bValue = b[key] ? new Date(b[key]).getTime() : 0
                 }
-                if (typeof aValue === 'number' && typeof bValue === 'number') {
-                    return order === 'asc' ? aValue - bValue : bValue - aValue
-                }
-                return order === 'asc'
-                    ? String(aValue).localeCompare(String(bValue))
-                    : String(bValue).localeCompare(String(aValue))
+                if (aValue < bValue) return order === 'asc' ? -1 : 1
+                if (aValue > bValue) return order === 'asc' ? 1 : -1
+                return 0
             })
         }
-        const currentTotal = processedData.length
-        const pageIndex = tableData.pageIndex as number
-        const pageSize = tableData.pageSize as number
-        const startIndex = (pageIndex - 1) * pageSize
+
         return {
-            pageData: processedData.slice(startIndex, startIndex + pageSize),
-            total: currentTotal,
+            pageData: processedData.slice((tableData.pageIndex - 1) * tableData.pageSize, tableData.pageIndex * tableData.pageSize),
+            total: processedData.length,
             allFilteredAndSortedData: processedData,
+            counts: initialCounts,
         }
-    }, [trendingCarouselData, tableData])
+    }, [trendingCarouselData, tableData, activeFilters])
 
-    const handleOpenExportReasonModal = () => {
-        if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
-            toast.push(
-                <Notification title="No Data" type="info">
-                    Nothing to export.
-                </Notification>,
-            )
-            return
-        }
-        exportReasonFormMethods.reset({ reason: '' })
-        setIsExportReasonModalOpen(true)
-    }
+    const activeFilterCount = useMemo(() => Object.values(activeFilters).filter(v => Array.isArray(v) ? v.length > 0 : !!v).length, [activeFilters]);
+    const tableLoading = masterLoadingStatus === 'loading' || isSubmitting || isDeleting;
 
-    const handleConfirmExportWithReason = async (
-        data: ExportReasonFormData,
-    ) => {
-        setIsSubmittingExportReason(true)
-        const moduleName = 'Trending Carousel Images'
-        const timestamp = new Date().toISOString().split('T')[0] // YYYY-MM-DD
-        const fileName = `trending_carousel_items_${timestamp}.csv`
-        try {
-            await dispatch(
-                submitExportReasonAction({
-                    reason: data.reason,
-                    module: moduleName,
-                    file_name: fileName,
-                }),
-            ).unwrap()
-            toast.push(
-                <Notification title="Export Reason Submitted" type="success" />,
-            )
-
-            exportCarouselItemsToCsv(fileName, allFilteredAndSortedData)
-            toast.push(
-                <Notification title="Data Exported" type="success">
-                    Carousel data has been exported.
-                </Notification>,
-            )
-            setIsExportReasonModalOpen(false)
-        } catch (error: any) {
-            toast.push(
-                <Notification
-                    title="Operation Failed"
-                    type="danger"
-                    message={
-                        error.message ||
-                        'Could not complete the export process.'
-                    }
-                />,
-            )
-        } finally {
-            setIsSubmittingExportReason(false)
-        }
-    }
-
-    const handleSetTableData = useCallback(
-        (data: Partial<TableQueries>) =>
-            setTableData((prev) => ({ ...prev, ...data })),
-        [],
-    )
-    const handlePaginationChange = useCallback(
-        (page: number) => handleSetTableData({ pageIndex: page }),
-        [handleSetTableData],
-    )
-    const handleSelectChange = useCallback(
-        (value: number) => {
-            handleSetTableData({ pageSize: Number(value), pageIndex: 1 })
-            setSelectedItems([])
-        },
-        [handleSetTableData],
-    )
-    const handleSort = useCallback(
-        (sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }),
-        [handleSetTableData],
-    )
-    const handleSearchChange = useCallback(
-        (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
-        [handleSetTableData],
-    )
-
-    const handleClearSearch = () => {
-        handleSetTableData({ pageIndex: 1 })
-        dispatch(getTrendingCarouselAction())
-    }
-    const handleRowSelect = useCallback(
-        (checked: boolean, row: TrendingCarouselItemData) => {
-            setSelectedItems((prev) => {
-                if (checked)
-                    return prev.some((item) => item.id === row.id)
-                        ? prev
-                        : [...prev, row]
-                return prev.filter((item) => item.id !== row.id)
-            })
-        },
-        [],
-    )
-
-    const openImageViewer = (src: string | null) => {
-        if (src) {
-            setImageToView(src)
-            setIsImageViewerOpen(true)
-        }
-    }
-
-    const handleAllRowSelect = useCallback(
-        (checked: boolean, currentRows: Row<TrendingCarouselItemData>[]) => {
-            const originals = currentRows.map((r) => r.original)
-            if (checked) {
-                setSelectedItems((prev) => {
-                    const prevIds = new Set(prev.map((item) => item.id))
-                    const newToAdd = originals.filter(
-                        (r) => r.id !== undefined && !prevIds.has(r.id),
-                    )
-                    return [...prev, ...newToAdd]
-                })
-            } else {
-                const currentIds = new Set(
-                    originals.map((r) => r.id).filter((id) => id !== undefined),
-                )
-                setSelectedItems((prev) =>
-                    prev.filter(
-                        (item) =>
-                            item.id !== undefined && !currentIds.has(item.id),
-                    ),
-                )
-            }
-        },
-        [],
-    )
-
-    const columns: ColumnDef<TrendingCarouselItemData>[] = useMemo(
-        () => [
-            // { header: "ID", accessorKey: "id", enableSorting: true, size: 80, meta: { tdClass: "text-center", thClass: "text-center" }  },
-            // {
-            //   header: "Image",
-            //   accessorKey: "images_full_path",
-            //   enableSorting: false,
-            //   size: 80,
-            //   meta: { cellClass: "p-1" },
-            //   cell: (props) => (<Avatar size={60} className="rounded-sm"  src={props.row.original.images_full_path || undefined} icon={<TbPhoto />} />),
-            // },
-            {
-                header: 'Image',
-                accessorKey: 'images_full_path',
-                enableSorting: false,
-                size: 60,
-                meta: { headerClass: 'text-center', cellClass: 'text-center' },
-                cell: (props) => {
-                    const iconPath = props.row.original.images_full_path
-                    const titleInitial = props.row.original.title
-                        ?.charAt(0)
-                        .toUpperCase()
-                    return (
-                        <Avatar
-                            size={40}
-                            shape="circle"
-                            src={iconPath || undefined}
-                            icon={!iconPath ? <TbFileText /> : undefined}
-                            onClick={() => openImageViewer(iconPath)}
-                            className={
-                                iconPath
-                                    ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500'
-                                    : ''
-                            }
-                        >
-                            {!iconPath ? titleInitial : null}
-                        </Avatar>
-                    )
-                },
-            },
-            {
-                header: 'Link',
-                accessorKey: 'links',
-                enableSorting: true,
-                size: 280, // Adjusted size
-                cell: (props) =>
-                    props.row.original.links ? (
-                        <a
-                            href={props.row.original.links}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 hover:underline truncate block max-w-[230px]"
-                            title={props.row.original.links}
-                        >
-                            {' '}
-                            {props.row.original.links}{' '}
-                        </a>
-                    ) : (
-                        <span className="text-gray-500">No Link</span>
-                    ),
-            },
-            {
-                header: 'Status',
-                accessorKey: 'status',
-                enableSorting: true,
-                size: 80,
-                cell: (props) => (
-                    <Tag
-                        className={
-                            props.row.original.status == 'Active'
-                                ? `bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 capitalize font-semibold border-0`
-                                : `bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100  `
-                        }
-                    >
-                        {props.row.original.status}
-                    </Tag>
-                ),
-            },
-            {
-                header: 'Updated Info',
-                accessorKey: 'updated_at', // Sort by updated_at
-                enableSorting: true,
-
-                size: 160,
-                cell: (props) => {
-                    const { updated_at, updated_by_user, updated_by_role } =
-                        props.row.original
-                    const formattedDate = updated_at
-                        ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
-                        : 'N/A'
-                    return (
-                        <div className="text-xs">
-                            <span>
-                                {updated_by_user?.name || 'N/A'}
-                                {updated_by_user?.roles[0]?.display_name && (
-                                    <>
-                                        <br />
-                                        <b>
-                                            {
-                                                updated_by_user?.roles[0]
-                                                    ?.display_name
-                                            }
-                                        </b>
-                                    </>
-                                )}
-                            </span>
-                            <br />
-                            <span>{formattedDate}</span>
-                        </div>
-                    )
-                },
-            },
-            {
-                header: 'Actions',
-                id: 'action',
-                meta: { HeaderClass: 'text-center', cellClass: 'text-center' },
-                size: 80,
-                cell: (props) => (
-                    <ActionColumn
-                        onEdit={() => openEditDrawer(props.row.original)}
-                        onDelete={() => handleDeleteClick(props.row.original)}
-                    />
-                ),
-            },
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-        ],
-        [openEditDrawer, handleDeleteClick],
-    )
+    // --- Handlers ---
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); setSelectedItems([]); }, [])
+    const onClearAllFilters = () => { setActiveFilters({}); handleSetTableData({ query: '', pageIndex: 1 }); dispatch(getTrendingCarouselAction()); }
+    const handleCardClick = (filterType: 'status' | 'all', value?: string) => { handleSetTableData({ pageIndex: 1, query: '' }); if (filterType === 'all') setActiveFilters({}); else if (filterType === 'status') { const option = statusOptions.find(o => o.value === value); setActiveFilters(option ? { filterStatuses: [option] } : {}); } }
+    const handleRemoveFilter = useCallback((key: keyof FilterFormData, valueToRemove: string) => { setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = (prev[key] || []) as {value: string}[]; const newValues = currentValues.filter(item => item.value !== valueToRemove); if (newValues.length > 0) (newFilters as any)[key] = newValues; else delete (newFilters as any)[key]; return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
+    const openAddDrawer = () => { addFormMethods.reset({ links: '', imageFile: null, status: 'Active' }); setImagePreviewUrl(null); setIsAddDrawerOpen(true) }
+    const closeAddDrawer = () => { setIsAddDrawerOpen(false); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(null); }
+    const onAddItemSubmit = async (data: TrendingCarouselFormData) => { if (!data.imageFile) { addFormMethods.setError('imageFile', { type: 'manual', message: 'Image is required.' }); return; } setIsSubmitting(true); const formData = new FormData(); formData.append('links', data.links || ''); formData.append('status', data.status); formData.append('images', data.imageFile); try { await dispatch(addTrendingCarouselAction(formData)).unwrap(); toast.push(<Notification title="Item Added" type="success" />); closeAddDrawer(); dispatch(getTrendingCarouselAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add" type="danger">{error?.message || 'Could not add item.'}</Notification>); } finally { setIsSubmitting(false); } }
+    const openEditDrawer = (item: TrendingCarouselItemData) => { setEditingItem(item); editFormMethods.reset({ links: item.links || '', imageFile: null, status: item.status }); setImagePreviewUrl(null); setIsEditDrawerOpen(true); }
+    const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingItem(null); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(null); }
+    const onEditItemSubmit = async (data: TrendingCarouselFormData) => { if (!editingItem) return; setIsSubmitting(true); const formData = new FormData(); formData.append('_method', 'PUT'); formData.append('links', data.links || ''); formData.append('status', data.status); if (data.imageFile) formData.append('images', data.imageFile); try { await dispatch(editTrendingCarouselAction({ id: editingItem.id, formData })).unwrap(); toast.push(<Notification title="Item Updated" type="success" />); closeEditDrawer(); dispatch(getTrendingCarouselAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error?.message || 'Could not update item.'}</Notification>); } finally { setIsSubmitting(false); } }
+    const handleDeleteClick = (item: TrendingCarouselItemData) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }
+    const onConfirmSingleDelete = async () => { if (!itemToDelete) return; setIsDeleting(true); try { await dispatch(deleteTrendingCarouselAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Item Deleted" type="success" />); setSelectedItems(p => p.filter(i => i.id !== itemToDelete.id)); dispatch(getTrendingCarouselAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Could not delete item.'}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setItemToDelete(null); } }
+    const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); try { await dispatch(deleteMultipleTrendingCarouselAction({ ids: selectedItems.map(i => i.id).join(',') })).unwrap(); toast.push(<Notification title="Items Deleted" type="success" />); setSelectedItems([]); dispatch(getTrendingCarouselAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Failed to delete.'}</Notification>); } finally { setIsDeleting(false); } }
+    const handleOpenExportModal = () => { if (!allFilteredAndSortedData?.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: '' }); setIsExportReasonModalOpen(true); }
+    const handleConfirmExport = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `trending_carousel_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Trending Carousel', file_name: fileName })).unwrap(); toast.push(<Notification title="Reason Submitted" type="success" />); exportCarouselItemsToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (e: any) { toast.push(<Notification title="Export Failed" type="danger">{e?.message || 'Could not complete export.'}</Notification>); } finally { setIsSubmittingExportReason(false); } }
+    const openImageViewer = (src: string | null) => { if (src) { setImageToView(src); setIsImageViewerOpen(true); } }
+    
+    const baseColumns: ColumnDef<TrendingCarouselItemData>[] = useMemo(() => [
+        { header: 'Image', accessorKey: 'images_full_path', enableSorting: false, size: 60, cell: (props) => (<Avatar size={40} shape="circle" src={props.row.original.images_full_path || undefined} icon={!props.row.original.images_full_path ? <TbFileText /> : undefined} onClick={() => openImageViewer(props.row.original.images_full_path)} className={props.row.original.images_full_path ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500' : ''} />)},
+        { header: 'Link', accessorKey: 'links', enableSorting: true, size: 280, cell: (props) => props.row.original.links ? (<a href={props.row.original.links} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate block max-w-[230px]" title={props.row.original.links}>{props.row.original.links}</a>) : (<span className="text-gray-500">No Link</span>)},
+        { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames('capitalize font-semibold', props.row.original.status === 'Active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100')}>{props.row.original.status}</Tag>)},
+        { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+        { header: 'Actions', id: 'action', meta: { cellClass: 'text-center' }, size: 80, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />)},
+    ], []);
+    const [filteredColumns, setFilteredColumns] = useState(baseColumns);
+    useEffect(() => { setFilteredColumns(baseColumns); }, []);
 
     return (
         <>
             <Container className="h-auto">
-                <AdaptiveCard className="h-full" bodyClass="h-full">
+                <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                         <h5 className="mb-2 sm:mb-0">Trending Carousel</h5>
                         <div>
-                            <Link to="/task/task-list/create">
-                                <Button
-                                    className="mr-2"
-                                    icon={<TbUser />}
-                                    clickFeedback={false}
-                                    customColorClass={({
-                                        active,
-                                        unclickable,
-                                    }) =>
-                                        classNames(
-                                            'hover:text-gray-800 dark:hover:bg-gray-600 border-0 hover:ring-0',
-                                            active
-                                                ? 'bg-gray-200'
-                                                : 'bg-gray-100',
-                                            unclickable &&
-                                                'opacity-50 cursor-not-allowed',
-                                            !active &&
-                                                !unclickable &&
-                                                'hover:bg-gray-200',
-                                        )
-                                    }
-                                >
-                                    Assign to Task
-                                </Button>
-                            </Link>
-                            <Button
-                                variant="solid"
-                                icon={<TbPlus />}
-                                onClick={openAddDrawer}
-                                disabled={
-                                    masterLoadingStatus === 'loading' ||
-                                    isSubmitting ||
-                                    isDeleting
-                                }
-                            >
-                                {' '}
-                                Add New{' '}
-                            </Button>
+                            <Link to="/task/task-list/create"><Button className="mr-2" icon={<TbUser />} clickFeedback={false}>Assign to Task</Button></Link>
+                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
                         </div>
                     </div>
-                    <ItemTableTools
-                        onSearchChange={handleSearchChange}
-                        onExport={handleOpenExportReasonModal}
-                        searchPlaceholder="Quick Search..."
-                        onClearSearch={handleClearSearch}
-                    />
-                    <div className="mt-4">
-                        <DataTable
-                            columns={columns}
-                            noData={pageData.length === 0}
-                            data={pageData}
-                            loading={
-                                masterLoadingStatus === 'loading' ||
-                                isSubmitting ||
-                                isDeleting
-                            }
-                            pagingData={{
-                                total: total,
-                                pageIndex: tableData.pageIndex as number,
-                                pageSize: tableData.pageSize as number,
-                            }}
-                            selectable
-                            checkboxChecked={(row: TrendingCarouselItemData) =>
-                                selectedItems.some(
-                                    (selected) => selected.id === row.id,
-                                )
-                            }
-                            onPaginationChange={handlePaginationChange}
-                            onSelectChange={handleSelectChange}
-                            onSort={handleSort}
-                            onCheckBoxChange={handleRowSelect}
-                            onIndeterminateCheckBoxChange={handleAllRowSelect}
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                        <Tooltip title="Click to show all items"><div className="cursor-pointer" onClick={() => handleCardClick('all')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMessageStar size={24} /></div><div><h6 className="text-blue-500">{counts.total}</h6><span className="font-semibold text-xs">Total Items</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show Active items"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Active')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMessageCheck size={24} /></div><div><h6 className="text-green-500">{counts.active}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show Inactive items"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMessage2X size={24} /></div><div><h6 className="text-red-500">{counts.inactive}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
+                    </div>
+                    <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+                    <div className="mt-4"><ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFilters} /></div>
+                    <div className="mt-4 flex-grow overflow-y-auto">
+                        <DataTable selectable columns={filteredColumns} data={pageData} noData={!tableLoading && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} checkboxChecked={(row) => selectedItems.some(s => s.id === row.id)} onPaginationChange={(p) => handleSetTableData({ pageIndex: p })} onSelectChange={(s) => handleSetTableData({ pageSize: s, pageIndex: 1 })} onSort={(s) => handleSetTableData({ sort: s })} onCheckBoxChange={(c, r) => setSelectedItems(p => c ? [...p, r] : p.filter(i => i.id !== r.id))} onIndeterminateCheckBoxChange={(c, rs) => { const rIds = new Set(rs.map(r => r.original.id)); setSelectedItems(p => c ? [...p, ...rs.map(r => r.original).filter(r => !p.some(i => i.id === r.id))] : p.filter(i => !rIds.has(i.id))); }}/>
                     </div>
                 </AdaptiveCard>
             </Container>
 
-            <TrendingCarouselSelectedFooter
-                selectedItems={selectedItems}
-                onDeleteSelected={handleDeleteSelected}
-                isDeleting={isDeleting || masterLoadingStatus === 'loading'}
-            />
+            <SelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
-            <Drawer
-                title="Add Trending Carousel"
-                isOpen={isAddDrawerOpen}
-                onClose={closeAddDrawer}
-                onRequestClose={closeAddDrawer}
-                width={520}
-                footer={
-                    <div className="text-right w-full">
-                        <Button
-                            size="sm"
-                            className="mr-2"
-                            onClick={closeAddDrawer}
-                            disabled={isSubmitting}
-                            type="button"
-                        >
-                            {' '}
-                            Cancel{' '}
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            form="addCarouselItemForm"
-                            type="submit"
-                            loading={isSubmitting}
-                            disabled={
-                                !formMethods.formState.isValid || isSubmitting
-                            }
-                        >
-                            {' '}
-                            {isSubmitting ? 'Adding...' : 'Save'}{' '}
-                        </Button>
-                    </div>
-                }
-            >
-                <Form
-                    id="addCarouselItemForm"
-                    onSubmit={formMethods.handleSubmit(onAddItemSubmit)}
-                    className="flex flex-col gap-y-6"
-                >
-                    <FormItem
-                        label={
-                            <div>
-                                Image<span className="text-red-500"> * </span>
-                            </div>
-                        }
-                        invalid={!!formMethods.formState.errors.imageFile}
-                        errorMessage={
-                            formMethods.formState.errors.imageFile?.message
-                        }
-                    >
-                        <Controller
-                            name="imageFile"
-                            control={formMethods.control}
-                            render={({
-                                field: { onChange, onBlur, name, ref },
-                            }) => (
-                                <Input
-                                    type="file"
-                                    name={name}
-                                    ref={ref}
-                                    onBlur={onBlur}
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0] || null
-                                        onChange(file)
-                                        if (imagePreviewUrl)
-                                            URL.revokeObjectURL(imagePreviewUrl)
-                                        setImagePreviewUrl(
-                                            file
-                                                ? URL.createObjectURL(file)
-                                                : null,
-                                        )
-                                        if (file)
-                                            formMethods.clearErrors('imageFile')
-                                    }}
-                                    accept="image/png, image/jpeg, image/webp, image/gif"
-                                />
-                            )}
-                        />
-                        {imagePreviewUrl && (
-                            <Avatar
-                                src={imagePreviewUrl}
-                                className="w-[430px] h-[auto] border p-1 rounded-md mt-2"
-                                shape="square"
-                            />
-                        )}
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {' '}
-                            Max file size 5MB. Accepted: .jpg, .png, .webp, .gif{' '}
-                        </p>
-                    </FormItem>
-                    <FormItem
-                        label={
-                            <div>
-                                Link<span className="text-red-500"> * </span>
-                            </div>
-                        }
-                        invalid={!!formMethods.formState.errors.links}
-                        errorMessage={
-                            formMethods.formState.errors.links?.message
-                        }
-                    >
-                        <Controller
-                            name="links"
-                            control={formMethods.control}
-                            render={({ field }) => (
-                                <Input
-                                    {...field}
-                                    value={field.value ?? ''}
-                                    type="url"
-                                    placeholder="https://example.com/product-page"
-                                />
-                            )}
-                        />
-                    </FormItem>
-                    <FormItem // Added Status Field
-                        label={
-                            <div>
-                                Status<span className="text-red-500"> * </span>
-                            </div>
-                        }
-                        invalid={!!formMethods.formState.errors.status}
-                        errorMessage={
-                            formMethods.formState.errors.status?.message as
-                                | string
-                                | undefined
-                        }
-                    >
-                        <Controller
-                            name="status"
-                            control={formMethods.control}
-                            render={({ field }) => (
-                                <Select
-                                    placeholder="Select Status"
-                                    options={statusOptions}
-                                    value={
-                                        statusOptions.find(
-                                            (option) =>
-                                                option.value === field.value,
-                                        ) || null
-                                    }
-                                    onChange={(option) =>
-                                        field.onChange(
-                                            option ? option.value : '',
-                                        )
-                                    }
-                                />
-                            )}
-                        />
-                    </FormItem>
+            {/* Add Drawer */}
+            <Drawer title="Add Trending Carousel" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="addCarouselItemForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Adding...' : 'Save'}</Button></div>}>
+                <Form id="addCarouselItemForm" onSubmit={addFormMethods.handleSubmit(onAddItemSubmit)} className="flex flex-col gap-y-6">
+                    <FormItem label={<div>Image<span className="text-red-500"> *</span></div>} invalid={!!addFormMethods.formState.errors.imageFile} errorMessage={addFormMethods.formState.errors.imageFile?.message}><Controller name="imageFile" control={addFormMethods.control} render={({ field: { onChange } }) => (<Input type="file" onChange={(e) => { const file = e.target.files?.[0] || null; onChange(file); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />)} /></FormItem>
+                    {imagePreviewUrl && <Avatar src={imagePreviewUrl} className="w-full h-auto border p-1 rounded-md" shape="square" />}
+                    <FormItem label="Link" invalid={!!addFormMethods.formState.errors.links} errorMessage={addFormMethods.formState.errors.links?.message}><Controller name="links" control={addFormMethods.control} render={({ field }) => (<Input {...field} value={field.value ?? ''} type="url" placeholder="https://example.com" />)} /></FormItem>
+                    <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!addFormMethods.formState.errors.status} errorMessage={addFormMethods.formState.errors.status?.message}><Controller name="status" control={addFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value)} onChange={o => field.onChange(o?.value)} />)} /></FormItem>
                 </Form>
             </Drawer>
 
-            <Drawer
-                title="Edit Trending Carousel"
-                isOpen={isEditDrawerOpen}
-                onClose={closeEditDrawer}
-                onRequestClose={closeEditDrawer}
-                width={520}
-                footer={
-                    <div className="text-right w-full">
-                        <Button
-                            size="sm"
-                            className="mr-2"
-                            onClick={closeEditDrawer}
-                            disabled={isSubmitting}
-                            type="button"
-                        >
-                            {' '}
-                            Cancel{' '}
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="solid"
-                            form="editCarouselItemForm"
-                            type="submit"
-                            loading={isSubmitting}
-                            disabled={
-                                isSubmitting ||
-                                (!formMethods.formState.isDirty &&
-                                    !imagePreviewUrl &&
-                                    !formMethods.formState.errors.imageFile) ||
-                                !formMethods.formState.isValid
-                            }
-                        >
-                            {isSubmitting ? 'Saving...' : 'Save'}
-                        </Button>
-                    </div>
-                }
-            >
-                <Form
-                    id="editCarouselItemForm"
-                    onSubmit={formMethods.handleSubmit(onEditItemSubmit)}
-                    className="flex flex-col gap-y-6 relative pb-28"
-                >
-                    {' '}
-                    {/* Added relative pb-28 */}
-                    <FormItem label="Current Image">
-                        {editingItem?.images_full_path ? (
-                            <Avatar
-                                src={editingItem.images_full_path}
-                                className="w-[460px] h-[auto] border p-1 rounded-md mt-2"
-                                shape="square"
-                            />
-                        ) : (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {' '}
-                                No current image.{' '}
-                            </p>
-                        )}
-                    </FormItem>
-                    <FormItem
-                        label="New Image (Optional to replace)"
-                        invalid={!!formMethods.formState.errors.imageFile}
-                        errorMessage={
-                            formMethods.formState.errors.imageFile?.message
-                        }
-                    >
-                        <Controller
-                            name="imageFile"
-                            control={formMethods.control}
-                            render={({
-                                field: { onChange, onBlur, name, ref },
-                            }) => (
-                                <Input
-                                    type="file"
-                                    name={name}
-                                    ref={ref}
-                                    onBlur={onBlur}
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0] || null
-                                        onChange(file)
-                                        if (imagePreviewUrl)
-                                            URL.revokeObjectURL(imagePreviewUrl)
-                                        setImagePreviewUrl(
-                                            file
-                                                ? URL.createObjectURL(file)
-                                                : null,
-                                        )
-                                    }}
-                                    accept="image/png, image/jpeg, image/webp, image/gif"
-                                />
-                            )}
-                        />
-                        {imagePreviewUrl && (
-                            <Avatar
-                                src={imagePreviewUrl}
-                                size={100}
-                                shape="square"
-                                className="mt-2 border border-gray-200 dark:border-gray-600"
-                            />
-                        )}
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {' '}
-                            Upload a new image to replace the current one. Max
-                            5MB.{' '}
-                        </p>
-                    </FormItem>
-                    <FormItem
-                        label={
-                            <div>
-                                Link<span className="text-red-500"> * </span>
-                            </div>
-                        }
-                        invalid={!!formMethods.formState.errors.links}
-                        errorMessage={
-                            formMethods.formState.errors.links?.message
-                        }
-                    >
-                        <Controller
-                            name="links"
-                            control={formMethods.control}
-                            render={({ field }) => (
-                                <Input
-                                    {...field}
-                                    value={field.value ?? ''}
-                                    type="url"
-                                    placeholder="https://example.com/updated-product-page"
-                                />
-                            )}
-                        />
-                    </FormItem>
-                    <FormItem // Added Status Field
-                        label={
-                            <div>
-                                Status<span className="text-red-500"> * </span>
-                            </div>
-                        }
-                        invalid={!!formMethods.formState.errors.status}
-                        errorMessage={
-                            formMethods.formState.errors.status?.message as
-                                | string
-                                | undefined
-                        }
-                    >
-                        <Controller
-                            name="status"
-                            control={formMethods.control}
-                            render={({ field }) => (
-                                <Select
-                                    placeholder="Select Status"
-                                    options={statusOptions}
-                                    value={
-                                        statusOptions.find(
-                                            (option) =>
-                                                option.value === field.value,
-                                        ) || null
-                                    }
-                                    onChange={(option) =>
-                                        field.onChange(
-                                            option ? option.value : '',
-                                        )
-                                    }
-                                />
-                            )}
-                        />
-                    </FormItem>
-                    {editingItem && (
-                        <div className="absolute bottom-0 w-full">
-                            {' '}
-                            {/* Positioned audit info */}
-                            <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                                <div>
-                                    <b className="mt-3 mb-3 font-semibold text-primary">
-                                        Latest Update:
-                                    </b>
-                                    <br />
-                                    <p className="text-sm font-semibold">
-                                        {editingItem.updated_by_user?.name ||
-                                            'N/A'}
-                                    </p>
-                                    <p>
-                                        {editingItem.updated_by_user?.roles[0]
-                                            ?.display_name || 'N/A'}
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <br />
-                                    <span className="font-semibold">
-                                        Created At:
-                                    </span>{' '}
-                                    <span>
-                                        {editingItem.created_at
-                                            ? `${new Date(editingItem.created_at).getDate()} ${new Date(
-                                                  editingItem.created_at,
-                                              ).toLocaleString('en-US', {
-                                                  month: 'short',
-                                              })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
-                                                  editingItem.created_at,
-                                              ).toLocaleTimeString('en-US', {
-                                                  hour: 'numeric',
-                                                  minute: '2-digit',
-                                                  hour12: true,
-                                              })}`
-                                            : 'N/A'}
-                                    </span>
-                                    <br />
-                                    <span className="font-semibold">
-                                        Updated At:
-                                    </span>{' '}
-                                    <span>
-                                        {editingItem.updated_at
-                                            ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
-                                                  editingItem.updated_at,
-                                              ).toLocaleString('en-US', {
-                                                  month: 'short',
-                                              })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
-                                                  editingItem.updated_at,
-                                              ).toLocaleTimeString('en-US', {
-                                                  hour: 'numeric',
-                                                  minute: '2-digit',
-                                                  hour12: true,
-                                              })}`
-                                            : 'N/A'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+            {/* Edit Drawer */}
+            <Drawer title="Edit Trending Carousel" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editCarouselItemForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</Button></div>}>
+                <Form id="editCarouselItemForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-y-6">
+                    <FormItem label="Current Image">{editingItem?.images_full_path ? <Avatar src={editingItem.images_full_path} className="w-full h-auto border p-1 rounded-md" shape="square" /> : <p>No image.</p>}</FormItem>
+                    <FormItem label="New Image (Optional)" invalid={!!editFormMethods.formState.errors.imageFile} errorMessage={editFormMethods.formState.errors.imageFile?.message}><Controller name="imageFile" control={editFormMethods.control} render={({ field: { onChange } }) => (<Input type="file" onChange={(e) => { const file = e.target.files?.[0] || null; onChange(file); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />)} /></FormItem>
+                    {imagePreviewUrl && <Avatar src={imagePreviewUrl} className="w-full h-auto border p-1 rounded-md" shape="square" />}
+                    <FormItem label="Link" invalid={!!editFormMethods.formState.errors.links} errorMessage={editFormMethods.formState.errors.links?.message}><Controller name="links" control={editFormMethods.control} render={({ field }) => (<Input {...field} value={field.value ?? ''} type="url" placeholder="https://example.com" />)} /></FormItem>
+                    <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!editFormMethods.formState.errors.status} errorMessage={editFormMethods.formState.errors.status?.message}><Controller name="status" control={editFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value)} onChange={o => field.onChange(o?.value)} />)} /></FormItem>
                 </Form>
             </Drawer>
+            
+            {/* Filter Drawer */}
+            <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} width={400} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearAllFilters}>Clear</Button><Button size="sm" variant="solid" form="filterForm" type="submit">Apply</Button></div>}>
+              <Form id="filterForm" onSubmit={filterFormMethods.handleSubmit((data) => { setActiveFilters(data); handleSetTableData({ pageIndex: 1 }); setIsFilterDrawerOpen(false); })} className="flex flex-col gap-4">
+                  <FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select status..." options={statusOptions} value={field.value || []} onChange={(v) => field.onChange(v || [])} />)} /></FormItem>
+              </Form>
+            </Drawer>
 
-            <Dialog
-                isOpen={isImageViewerOpen}
-                onClose={closeImageViewer}
-                onRequestClose={closeImageViewer}
-                shouldCloseOnOverlayClick={true}
-                shouldCloseOnEsc={true}
-                width={600}
-            >
-                <div className="flex justify-center items-center p-4">
-                    {imageToView ? (
-                        <img
-                            src={imageToView}
-                            alt="Slider Image Full View"
-                            style={{
-                                maxWidth: '100%',
-                                maxHeight: '80vh',
-                                objectFit: 'contain',
-                            }}
-                        />
-                    ) : (
-                        <p>No image to display.</p>
-                    )}
-                </div>
-            </Dialog>
-
-            <ConfirmDialog
-                isOpen={singleDeleteConfirmOpen}
-                type="danger"
-                title="Delete Carousel Item"
-                onClose={() => {
-                    setSingleDeleteConfirmOpen(false)
-                    setItemToDelete(null)
-                }}
-                onRequestClose={() => {
-                    setSingleDeleteConfirmOpen(false)
-                    setItemToDelete(null)
-                }}
-                onCancel={() => {
-                    setSingleDeleteConfirmOpen(false)
-                    setItemToDelete(null)
-                }}
-                confirmButtonColor="red-600"
-                onConfirm={onConfirmSingleDelete}
-                loading={isDeleting}
-            >
-                <p>
-                    {' '}
-                    Are you sure you want to delete this carousel item?{' '}
-                    {itemToDelete && ` (ID: ${itemToDelete.id})`} This action
-                    cannot be undone.{' '}
-                </p>
-            </ConfirmDialog>
-
-            {/* --- Export Reason Modal --- */}
-            <ConfirmDialog
-                isOpen={isExportReasonModalOpen}
-                type="info"
-                title="Reason for Export"
-                onClose={() => setIsExportReasonModalOpen(false)}
-                onRequestClose={() => setIsExportReasonModalOpen(false)}
-                onCancel={() => setIsExportReasonModalOpen(false)}
-                onConfirm={exportReasonFormMethods.handleSubmit(
-                    handleConfirmExportWithReason,
-                )}
-                loading={isSubmittingExportReason}
-                confirmText={
-                    isSubmittingExportReason
-                        ? 'Submitting...'
-                        : 'Submit & Export'
-                }
-                cancelText="Cancel"
-                confirmButtonProps={{
-                    disabled:
-                        !exportReasonFormMethods.formState.isValid ||
-                        isSubmittingExportReason,
-                }}
-            >
-                <Form
-                    id="exportTrendingCarouselReasonForm" // Unique ID
-                    onSubmit={(e) => {
-                        e.preventDefault()
-                        exportReasonFormMethods.handleSubmit(
-                            handleConfirmExportWithReason,
-                        )()
-                    }}
-                    className="flex flex-col gap-4 mt-2"
-                >
-                    <FormItem
-                        label="Please provide a reason for exporting this data:"
-                        invalid={
-                            !!exportReasonFormMethods.formState.errors.reason
-                        }
-                        errorMessage={
-                            exportReasonFormMethods.formState.errors.reason
-                                ?.message
-                        }
-                    >
-                        <Controller
-                            name="reason"
-                            control={exportReasonFormMethods.control}
-                            render={({ field }) => (
-                                <Input
-                                    textArea
-                                    {...field}
-                                    placeholder="Enter reason..."
-                                    rows={3}
-                                />
-                            )}
-                        />
-                    </FormItem>
-                </Form>
+            <Dialog isOpen={isImageViewerOpen} onClose={() => setIsImageViewerOpen(false)} width={600}><div className="flex justify-center items-center p-4">{imageToView ? <img src={imageToView} alt="Full View" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} /> : <p>No image.</p>}</div></Dialog>
+            <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Carousel Item" onClose={() => setSingleDeleteConfirmOpen(false)} onConfirm={onConfirmSingleDelete} loading={isDeleting}><p>Are you sure you want to delete this item?</p></ConfirmDialog>
+            <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExport)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? 'Submitting...' : 'Submit & Export'} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
+                <Form id="exportReasonForm" onSubmit={(e) => e.preventDefault()} className="mt-2"><FormItem label="Reason:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form>
             </ConfirmDialog>
         </>
     )
