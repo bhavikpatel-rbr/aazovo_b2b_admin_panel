@@ -6,7 +6,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-// REMOVED: import { CSVLink } from "react-csv";
 import classNames from "classnames";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from 'react-router-dom';
@@ -83,7 +82,8 @@ import {
   getAllUsersAction,
   getCompanyAction,
   getContinentsAction,
-  getCountriesAction
+  getCountriesAction,
+  submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
@@ -302,7 +302,7 @@ type CompanyFilterFormData = z.infer<typeof companyFilterFormSchema>;
 
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
-  reason: z.string().min(10, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
+  reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
@@ -317,7 +317,49 @@ const scheduleSchema = z.object({
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- CSV Exporter Utility for Companies ---
-const exportToCsv = (filename: string, rows: CompanyItem[]) => { /* ... existing code ... */ };
+function exportToCsv(filename: string, rows: CompanyItem[]) {
+    if (!rows || !rows.length) {
+        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+        return false;
+    }
+    const CSV_HEADERS = ["ID", "Company Name", "Owner Name", "Ownership Type", "Status", "Contact", "Email", "Country", "State", "City", "KYC Verified", "Created Date"];
+    const preparedRows = rows.map(row => ({
+        id: row.id,
+        company_name: row.company_name,
+        owner_name: row.owner_name,
+        ownership_type: row.ownership_type,
+        status: row.status,
+        primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`,
+        primary_email_id: row.primary_email_id,
+        country: row.country?.name || 'N/A',
+        state: row.state,
+        city: row.city,
+        kyc_verified: row.kyc_verified ? 'Yes' : 'No',
+        created_at: row.created_at ? new Date(row.created_at).toLocaleDateString() : 'N/A'
+    }));
+    const csvContent = [
+        CSV_HEADERS.join(','),
+        ...preparedRows.map(row => CSV_HEADERS.map(header =>
+            JSON.stringify(row[header.toLowerCase().replace(/ /g, '_') as keyof typeof row] ?? '', (key, value) => value === null ? '' : value)
+        ).join(','))
+    ].join('\n');
+    const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
+        return true;
+    }
+    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+    return false;
+}
 
 // --- Status Colors & Context ---
 export const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
@@ -346,8 +388,6 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getAllUserDataOptionsData = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
   useEffect(() => { dispatch(getCountriesAction()); dispatch(getContinentsAction()); dispatch(getAllUsersAction()) }, [dispatch]);
   useEffect(() => {
-    console.log(CompanyData?.counts, 'vvvvvvvvvvv');
-    
     setCompanyCount(CompanyData?.counts ?? {});
     setCompanyList(CompanyData?.data ?? []);
     setCompanyListTotal(CompanyData?.data?.length ?? 0);
@@ -739,7 +779,7 @@ const AddCompanyNotificationDialog: React.FC<{
       setIsLoading(false);
     }
   };
-
+  
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Notify User about: {company.company_name}</h5>
@@ -1010,12 +1050,21 @@ const CompanyListTable = () => {
   const handleCardClick = (filterType: string, value: string) => {
     const newCriteria: CompanyFilterFormData = {
       filterCreatedDate: [null, null],
-      filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [],
-      filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [],
+      filterStatus: [],
+      filterCompanyType: [],
+      filterContinent: [],
+      filterCountry: [],
+      filterState: [],
+      filterCity: [],
+      filterKycVerified: [],
+      filterEnableBilling: [],
     };
 
     if (filterType === 'status') {
-        newCriteria.filterStatus = [{ value, label: value }];
+      const statusOption = statusOptions.find(opt => opt.value === value);
+      if(statusOption) {
+        newCriteria.filterStatus = [statusOption];
+      }
     }
     
     setFilterCriteria(newCriteria);
@@ -1060,8 +1109,33 @@ const CompanyListTable = () => {
   }, [companyList, tableData, filterCriteria]);
 
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
-  const handleOpenExportReasonModal = () => { /* ... */ };
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { /* ... */ };
+
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData.length) {
+        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+        return;
+    }
+    exportReasonFormMethods.reset();
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+      setIsSubmittingExportReason(true);
+      const fileName = `companies_export_${new Date().toISOString().split('T')[0]}.csv`;
+      try {
+          await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Company', file_name: fileName })).unwrap();
+          toast.push(<Notification title="Export Reason Submitted" type="success" />);
+          const exportSuccess = exportToCsv(fileName, allFilteredAndSortedData);
+          if(exportSuccess) {
+            setIsExportReasonModalOpen(false);
+          }
+      } catch (error: any) {
+          toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
+      } finally {
+          setIsSubmittingExportReason(false);
+      }
+  };
+
   const handleEditCompany = (id: number) => navigate(`/business-entities/company-edit/${id}`);
   const handleSetTableData = useCallback((d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d })), []);
   const handlePaginationChange = useCallback((p: number) => handleSetTableData({ pageIndex: p }), [handleSetTableData]);
@@ -1140,8 +1214,29 @@ const CompanyListTable = () => {
 
   const [filteredColumns, setFilteredColumns] = useState(columns);
 
-  const toggleColumn = (checked: boolean, colId: string) => { /* ... */ };
-  const isColumnVisible = (colId: string) => { /* ... */ };
+  const isColumnVisible = (colId: string) => {
+    return filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  };
+  
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+        const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+        if (originalColumn) {
+            setFilteredColumns(prev => {
+                const newCols = [...prev, originalColumn];
+                newCols.sort((a, b) => {
+                    const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                    const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                    return indexA - indexB;
+                });
+                return newCols;
+            });
+        }
+    } else {
+        setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+  
   const statusOptions = useMemo(() => Array.from(new Set(companyList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [companyList]);
   const companyTypeOptions = useMemo(() => Array.from(new Set(companyList.map((c) => c.ownership_type))).filter(Boolean).map((ct) => ({ value: ct, label: ct })), [companyList]);
   const continentOptions = useMemo(() => ContinentsData.map((co) => ({ value: co.name, label: co.name })), [ContinentsData]);
@@ -1176,7 +1271,20 @@ const CompanyListTable = () => {
           <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
             <div className="flex flex-col p-2">
               <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-              {columns.map((col) => { const id = col.id || col.accessorKey as string; if (!col.header) return null; return (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"> <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox> </div>) })}
+              {columns.map((col) => {
+                  const id = col.id || col.accessorKey as string;
+                  if (!col.header) return null;
+                  return (
+                      <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                          <Checkbox
+                              checked={isColumnVisible(id)}
+                              onChange={(checked) => toggleColumn(checked, id)}
+                          >
+                              {col.header as string}
+                          </Checkbox>
+                      </div>
+                  )
+              })}
             </div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
