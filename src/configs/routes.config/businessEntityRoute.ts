@@ -68,6 +68,15 @@ const businessEntityRoute: Routes = [
         },
     },
     {
+        key: 'businessEntities.member',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/member-view/:id`,
+        component: lazy(() => import('@/views/business-entities/Member/MemberView')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'businessEntities.partner',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/partner`,
         component: lazy(() => import('@/views/business-entities/Partners')),
