@@ -1374,8 +1374,8 @@ const Products = () => {
   }, [thumbImagePreviewUrl, galleryImages]);
 
   const mappedProducts: ProductItem[] = useMemo(() => {
-    if (!Array.isArray(ProductsData?.data)) return [];
-    return ProductsData?.data.map((apiItem: ApiProductItem): ProductItem => {
+    if (!Array.isArray(ProductsData)) return [];
+    return ProductsData.map((apiItem: ApiProductItem): ProductItem => {
       let iconFullPath: string | null = null;
       if (apiItem.icon_full_path) iconFullPath = apiItem.icon_full_path;
       else if (apiItem.icon)
@@ -1521,7 +1521,7 @@ const Products = () => {
       };
     });
   }, [
-    ProductsData?.data,
+    ProductsData,
     domainOptions,
     categoryOptions,
     brandOptions,
@@ -2244,7 +2244,7 @@ const Products = () => {
     masterLoadingStatus === "pending" || masterLoadingStatus === "loading";
   const tableIsProcessing = isSubmittingForm || isImporting;
 
-  if (isLoadingData && !ProductsData?.data.length) {
+  if (isLoadingData && !ProductsData?.length) {
     return (
       <Container className="h-full">
         <div className="h-full flex flex-col items-center justify-center">
@@ -2374,7 +2374,7 @@ const Products = () => {
             <DataTable
               columns={columns}
               data={pageData}
-              loading={isLoadingData && ProductsData?.data.length > 0}
+              loading={isLoadingData && ProductsData?.length > 0}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
