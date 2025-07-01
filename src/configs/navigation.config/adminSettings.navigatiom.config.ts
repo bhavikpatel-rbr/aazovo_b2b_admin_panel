@@ -51,22 +51,22 @@ const adminSettingsNavigationConfig: NavigationTree[] = [
             //     },
             //     subMenu: [],
             // },
-            {
-                key: 'adminSettings.domainManagement',
-                path: `${ADMIN_SETTINGS_ROUTE}/domain-management`,
-                title: 'Domain Management',
-                translateKey: 'nav.adminSettings.domainManagement',
-                icon: 'domainManagement',
-                type: NAV_ITEM_TYPE_ITEM,
-                authority: [ADMIN],
-                meta: {
-                    description: {
-                        translateKey: 'nav.adminSettings.domainManagementDesc',
-                        label: 'Manage domains',
-                    },
-                },
-                subMenu: [],
-            },
+            // {
+            //     key: 'adminSettings.domainManagement',
+            //     path: `${ADMIN_SETTINGS_ROUTE}/domain-management`,
+            //     title: 'Domain Management',
+            //     translateKey: 'nav.adminSettings.domainManagement',
+            //     icon: 'domainManagement',
+            //     type: NAV_ITEM_TYPE_ITEM,
+            //     authority: [ADMIN],
+            //     meta: {
+            //         description: {
+            //             translateKey: 'nav.adminSettings.domainManagementDesc',
+            //             label: 'Manage domains',
+            //         },
+            //     },
+            //     subMenu: [],
+            // },
             {
                 key: 'adminSettings.numberSystem',
                 path: `${ADMIN_SETTINGS_ROUTE}/number-system`,
