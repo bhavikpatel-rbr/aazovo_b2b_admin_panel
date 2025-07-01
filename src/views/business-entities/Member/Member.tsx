@@ -300,7 +300,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   };
 
-  const handleOpenModal = (type: MemberModalType, memberData: FormItem) => setModalState({ isOpen: true, type, data: memberData });
+  const handleOpenModal = (type: MemberModalType, memberData: FormItem) => navigate(`/business-entities/member-view/${memberData.id}`, { state: memberData });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
@@ -330,7 +330,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "Members"; const timestamp = new Date().toISOString().split("T")[0]; const fileName = `members_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message}/>); } finally { setIsSubmittingExportReason(false); } };
   
   const handleEdit = (form: FormItem) => navigate(`/business-entities/member-edit/${form.id}`, { state: form });
-  const handleViewDetails = (form: FormItem) => navigate("/business-entities/member-create", { state: form });
+  const handleViewDetails = (form: FormItem) => navigate(`/business-entities/member-view/${form.id}`, { state: form });
 
   const columns: ColumnDef<FormItem>[] = useMemo(() => [
       { header: "Member", accessorKey: "member_name", id: 'member', size: 180, cell: (props) => (<div className="flex flex-col gap-1"><div className="flex items-center gap-1.5"><div className="text-xs"><b className="text-xs text-blue-500"><em>70892{props.row.original.id || ""}</em></b> <br /><b className="texr-xs">{props.row.original.name || ""}</b></div></div><div className="text-xs"><div className="text-xs text-gray-500">{props.row.original.email || ""}</div><div className="text-xs text-gray-500">{props.row.original.number || ""}</div><div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div></div></div>), },
