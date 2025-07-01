@@ -71,6 +71,7 @@ import {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
 
+// --- Type Definitions ---
 type ApiBrandItem = {
   id: number;
   name: string;
@@ -104,6 +105,7 @@ export type BrandItem = {
   mobileNo: string | null;
 };
 
+// --- Zod Schemas ---
 const brandFormSchema = z.object({
   name: z.string().min(1, "Brand name is required.").max(255, "Name cannot exceed 255 chars."),
   slug: z.string().min(1, "Slug is required.").max(255, "Slug cannot exceed 255 chars."),
@@ -128,7 +130,7 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-
+// --- Constants & Helper Functions ---
 const CSV_HEADERS_BRAND = [ "ID", "Name", "Slug", "Icon URL", "Show Header (1=Yes, 0=No)", "Status", "Meta Title", "Meta Description", "Meta Keywords", "Mobile No.", "Created At", "Updated At", ];
 type BrandCsvItem = { id: number; name: string; slug: string; icon_full_path: string | null; showHeader: number; status: BrandStatus; metaTitle: string | null; metaDescription: string | null; metaKeyword: string | null; mobileNo: string | null; createdAt: string; updatedAt: string; };
 
@@ -167,6 +169,7 @@ const uiStatusOptions: { value: BrandStatus; label: string }[] = [ { value: "act
 const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" }, ];
 const showHeaderOptions: { value: "1" | "0"; label: string }[] = [ { value: "1", label: "Yes" }, { value: "0", label: "No" }, ];
 
+// --- Helper Components ---
 const ActionColumn = ({ onEdit, onViewDetail, onDelete, }: { onEdit: () => void; onViewDetail: () => void; onDelete: () => void; }) => {
   return (
     <div className="flex items-center justify-center gap-2">
@@ -181,7 +184,7 @@ const BrandSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: 
 ));
 BrandSearch.displayName = "BrandSearch";
 
-const BrandTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns }: {
+const BrandTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
@@ -189,6 +192,7 @@ const BrandTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, c
   columns: ColumnDef<BrandItem>[];
   filteredColumns: ColumnDef<BrandItem>[];
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<BrandItem>[]>>;
+  activeFilterCount: number;
 }) => {
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
@@ -221,25 +225,31 @@ const BrandTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, c
                     </div>
                 </Dropdown>
                 <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
                 <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
             </div>
         </div>
     )
 };
 
-type BrandTableProps = {
-  columns: ColumnDef<BrandItem>[];
-  data: BrandItem[];
-  loading: boolean;
-  pagingData: { total: number; pageIndex: number; pageSize: number };
-  selectedItems: BrandItem[];
-  onPaginationChange: (page: number) => void;
-  onSelectChange: (value: number) => void;
-  onSort: (sort: OnSortParam) => void;
-  onRowSelect: (checked: boolean, row: BrandItem) => void;
-  onAllRowSelect: (checked: boolean, rows: Row<BrandItem>[]) => void;
-};
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: FilterFormData,
+  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onClearAll: () => void;
+}) => {
+    const { filterNames, filterStatuses } = filterData;
+    if (!filterNames?.length && !filterStatuses?.length) return null;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
+            {filterStatuses?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', item.value)} /></Tag>)}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+}
+
 const BrandTable = (props: BrandTableProps) => ( <DataTable selectable {...props} /> );
 
 const BrandSelectedFooter = ({ selectedItems, onDeleteSelected }: BrandSelectedFooterProps) => {
@@ -259,16 +269,10 @@ const BrandSelectedFooter = ({ selectedItems, onDeleteSelected }: BrandSelectedF
 };
 
 interface DialogDetailRowProps {
-  label: string;
-  value: string | React.ReactNode;
-  isLink?: boolean;
-  preWrap?: boolean;
-  breakAll?: boolean;
-  labelClassName?: string;
-  valueClassName?: string;
-  className?: string;
+  label: string; value: string | React.ReactNode; isLink?: boolean;
+  preWrap?: boolean; breakAll?: boolean; labelClassName?: string;
+  valueClassName?: string; className?: string;
 }
-
 const DialogDetailRow: React.FC<DialogDetailRowProps> = ({ label, value, isLink, preWrap, breakAll, labelClassName = "text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider", valueClassName = "text-sm text-slate-700 dark:text-slate-100 mt-0.5", className = "", }) => (
   <div className={`py-1.5 ${className}`}>
     <p className={`${labelClassName}`}>{label}</p>
@@ -276,6 +280,8 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = ({ label, value, isLink,
   </div>
 );
 
+
+// --- Main Component ---
 const Brands = () => {
   const dispatch = useAppDispatch();
   const [isAddDrawerOpen, setAddDrawerOpen] = useState(false);
@@ -429,6 +435,32 @@ const Brands = () => {
     return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
   }, [mappedBrands, tableData, filterCriteria]);
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterCriteria.filterNames?.length) count++;
+    if (filterCriteria.filterStatuses?.length) count++;
+    return count;
+  }, [filterCriteria]);
+  
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
+
+  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: string) => {
+    setFilterCriteria(prev => {
+        const newFilters = { ...prev };
+        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+        if (currentValues) {
+            const newValues = currentValues.filter(item => item.value !== value);
+            if (newValues.length > 0) {
+                (newFilters as any)[key] = newValues;
+            } else {
+                delete newFilters[key];
+            }
+        }
+        return newFilters;
+    });
+    handleSetTableData({ pageIndex: 1 });
+  }, [handleSetTableData]);
+
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || allFilteredAndSortedData.length === 0) {
       toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return;
@@ -449,7 +481,6 @@ const Brands = () => {
     } finally { setIsSubmittingExportReason(false); }
   };
 
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
   const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
   const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
@@ -503,9 +534,10 @@ const Brands = () => {
                 columns={columns}
                 filteredColumns={filteredColumns}
                 setFilteredColumns={setFilteredColumns}
+                activeFilterCount={activeFilterCount}
             />
           </div>
-          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={() => {}} onClearAll={onClearFilters} />
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="flex-grow overflow-auto">
             <BrandTable
               columns={filteredColumns} data={pageData} loading={tableLoading}
@@ -586,23 +618,4 @@ const Brands = () => {
     </>
   );
 };
-
-const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
-  filterData: FilterFormData,
-  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
-  onClearAll: () => void;
-}) => {
-    const { filterNames, filterStatuses } = filterData;
-    if (!filterNames?.length && !filterStatuses?.length) return null;
-
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterNames?.map(item => <Tag key={item.value} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
-            {filterStatuses?.map(item => <Tag key={item.value} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', item.value)} /></Tag>)}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
-}
-
 export default Brands;

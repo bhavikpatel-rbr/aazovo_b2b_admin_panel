@@ -161,7 +161,7 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
 
 const DocumentSubmissionSection = ({ control, errors }: FormSectionBaseProps) => {
     const documentFields = [
-        { name: 'profile_pic', label: "Profile Picture", accept: "image/*" },
+        { name: 'profile_pic', label: "Profile Picture", accept: ".pdf,.jpg,.jpeg,.png"  },
         { name: 'identity_proof', label: "Identity Proof (e.g., Aadhaar, Passport)", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'address_proof', label: "Address Proof (e.g., Utility Bill)", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'educational_certificates', label: "Educational Certificates", accept: ".pdf,.zip" },
@@ -502,7 +502,7 @@ const EmployeeFormPage = () => {
                     age: apiData.age || '',
                     gender: { value: apiData.gender || '', label: apiData.gender || '' },
                     nationalityId: findOption(countryOptions, apiData.nationality_id),
-                    bloodGroup: { value: apiData.blood_group || '', label: apiData.blood_group || '' },
+                    bloodGroup: { value: apiData.blood_group || '', label: apiData.blood_tgroup || '' },
                     permanentAddress: apiData.permanent_address || '',
                     localAddress: apiData.local_address || '',
                     maritalStatus: { value: apiData.maritual_status || '', label: apiData.maritual_status || '' },

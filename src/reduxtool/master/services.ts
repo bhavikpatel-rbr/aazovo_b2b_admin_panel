@@ -3026,3 +3026,12 @@ export const getAutoSpbAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+export const blockUserAsync = async (payload: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/blocked-ips`, { ...payload })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
