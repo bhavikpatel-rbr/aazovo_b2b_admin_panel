@@ -758,8 +758,9 @@ const InquiryListTable = () => {
   const handleViewDetails = (id: string) => {
     const inquiry = allFilteredAndSortedData.find(item => item.id === id);
     if (inquiry) {
-      setInquiryToView(inquiry);
-      setIsViewDetailsModalOpen(true);
+      // setInquiryToView(inquiry);
+       navigate(`/business-entities/inquiry-view/${id}`);
+      // setIsViewDetailsModalOpen(true);
     } else {
       toast.push(<Notification type="danger" title="Error">Inquiry details not found.</Notification>);
     }
@@ -966,7 +967,9 @@ const InquiryListSelected = () => {
 };
 
 // --- Main Inquiries Page Component ---
-const Inquiries = () => (
+const Inquiries = () =>{
+  const navigate = useNavigate();
+  return (
   <InquiryListProvider>
     <>
       <Container>
@@ -976,7 +979,7 @@ const Inquiries = () => (
               <h5>Inquiries</h5>
               <div className="flex flex-col md:flex-row gap-3">
                 <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => {
-                    const navigate = useNavigate();
+                   
                     navigate("/business-entities/create-inquiry");
                 }}>Add New</Button>
               </div>
@@ -989,5 +992,6 @@ const Inquiries = () => (
     </>
   </InquiryListProvider>
 );
+}
 
 export default Inquiries;

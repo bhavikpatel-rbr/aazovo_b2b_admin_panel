@@ -130,6 +130,15 @@ const businessEntityRoute: Routes = [
             pageContainerType: 'contained',
         },
     },
+    {
+        key: 'businessEntities.inquiries',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/inquiry-view/:id`,
+        component: lazy(() => import('@/views/business-entities/Inquiries/InquiryView')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
     // {
     //     key: 'businessEntities.subscriber',
     //     path: `${BUSINESS_ENTITIES_PREFIX_PATH}/subscriber`,
