@@ -84,7 +84,8 @@ import {
   getDesignationsAction,
   getEmployeesListingAction,
   getRolesAction,
-  getAllUsersAction
+  getAllUsersAction,
+  submitExportReasonAction // Ensure this is imported if you use it
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
@@ -146,7 +147,7 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- Zod Schema for Export Reason ---
 const exportReasonSchema = z.object({
-  reason: z.string().min(10, "Reason must be at least 10 characters.").max(255, "Reason cannot exceed 255 characters."),
+  reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
@@ -393,14 +394,12 @@ const EmployeesListing = () => {
   };
 
   const handleCardClick = (filterType: string, value: string) => {
-    const defaultFilters = { filterDepartments: [], filterDesignations: [], filterStatuses: [], filterRoles: [] };
+    onClearFilters();
     if (filterType === 'status') {
       const statusOption = EMPLOYEE_STATUS_OPTIONS.find(s => s.value === value);
       if (statusOption) {
-        setFilterCriteria({ ...defaultFilters, filterStatuses: [statusOption] });
+        setFilterCriteria({ ...filterCriteria, filterStatuses: [statusOption] });
       }
-    } else {
-      onClearFilters();
     }
   };
 
@@ -436,14 +435,18 @@ const EmployeesListing = () => {
 
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
-    const exportSuccessful = exportEmployeesToCsv("employees.csv", allFilteredAndSortedData);
-    if(exportSuccessful) {
-        // Here you could dispatch an action to log the reason on the backend
-        // await dispatch(submitExportReasonAction({ reason: data.reason, module_name: 'Employee'}));
-        console.log("Export reason:", data.reason);
+    const fileName = `employees_export_${dayjs().format('YYYY-MM-DD')}.csv`;
+    try {
+        await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Employee', file_name: fileName })).unwrap();
+        const exportSuccessful = exportEmployeesToCsv(fileName, allFilteredAndSortedData);
+        if (exportSuccessful) {
+            setIsExportReasonModalOpen(false);
+        }
+    } catch (error: any) {
+        toast.push(<Notification title="Operation Failed" type="danger" message={error.message || 'Could not submit reason or export data.'} />);
+    } finally {
+        setIsSubmittingExportReason(false);
     }
-    setIsSubmittingExportReason(false);
-    setIsExportReasonModalOpen(false);
   };
   
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
@@ -466,8 +469,14 @@ const EmployeesListing = () => {
   ], [navigate, handleOpenModal]);
 
   const [filteredColumns, setFilteredColumns] = useState(columns);
-  const toggleColumn = (checked: boolean, colId: string) => { /* ... */ };
-  const isColumnVisible = (colId: string) => { /* ... */ };
+  const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+        setFilteredColumns(prev => [...prev, columns.find(c => (c.id || c.accessorKey) === colId)!].sort((a,b) => columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey)) - columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey))));
+    } else {
+        setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
   const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: any) => ({ value: d.name, label: d.name })) : [], [departmentsData?.data]);
   const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: any) => ({ value: d.name, label: d.name })) : [], [designationsData?.data]);
@@ -518,8 +527,11 @@ const EmployeesListing = () => {
         title="Reason for Export"
         onClose={() => setIsExportReasonModalOpen(false)}
         onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
         onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
         loading={isSubmittingExportReason}
+        confirmText={isSubmittingExportReason ? 'Submitting...' : 'Submit & Export'}
+        cancelText="Cancel"
         confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
       >
         <Form
