@@ -77,7 +77,8 @@ import {
   editCategoryAction,
   deleteCategoryAction,
   deleteAllCategoriesAction,
-  submitExportReasonAction, // Added for export with reason
+  submitExportReasonAction,
+  getParentCategoriesAction, // Added for export with reason
   // importCategoriesAction, // Added for new import modal
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -479,8 +480,8 @@ const Categories = () => {
   const [isViewDetailModalOpen, setIsViewDetailModalOpen] = useState(false);
   const [categoryToView, setCategoryToView] = useState<CategoryItem | null>(null);
 
-  const { CategoriesData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
-  useEffect(() => { dispatch(getCategoriesAction()); }, [dispatch]);
+  const { CategoriesData = [], status: masterLoadingStatus = "idle", ParentCategories= [] } = useSelector(masterSelector);
+  useEffect(() => { dispatch(getCategoriesAction()); dispatch(getParentCategoriesAction());  }, [dispatch]);
 
   useEffect(() => {
     return () => {
@@ -508,11 +509,11 @@ const Categories = () => {
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
   const parentCategoryOptions = useMemo(() => {
-    if (!Array.isArray(CategoriesData)) return [{ value: null, label: "No Parent Category" }];
-    const options = CategoriesData.filter(cat => !editingCategory || cat.id !== editingCategory.id)
+    if (!Array.isArray(ParentCategories)) return [{ value: null, label: "No Parent Category" }];
+    const options = ParentCategories.filter(cat => !editingCategory || cat.id !== editingCategory.id)
       .map((cat: ApiCategoryItem) => ({ value: cat.id, label: cat.name, }));
     return [{ value: null, label: "No Parent Category" }, ...options];
-  }, [CategoriesData, editingCategory]);
+  }, [ParentCategories, editingCategory]);
 
   const getFullPath = (apiPath?: string | null, filename?: string | null, typeFolder: string = 'category_icons/') => {
     if (apiPath) return apiPath;
