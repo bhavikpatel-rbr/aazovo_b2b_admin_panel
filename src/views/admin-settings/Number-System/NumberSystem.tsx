@@ -16,10 +16,10 @@ import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DebouceInput from "@/components/shared/DebouceInput";
-import { Drawer, Form, FormItem, Input, Select, Tag, Card, Dropdown, Checkbox } from "@/components/ui";
+import { Drawer, Form, FormItem, Input, Select, Tag, Card, Dropdown, Checkbox, Avatar, Dialog } from "@/components/ui";
 
 // Icons
-import { TbPencil, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbMessageStar, TbMessageCheck, TbMessage2X, TbColumns, TbX } from "react-icons/tb";
+import { TbPencil, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbMessageStar, TbMessageCheck, TbMessage2X, TbColumns, TbX, TbUserCircle } from "react-icons/tb";
 
 // Types
 import type { OnSortParam, ColumnDef } from "@/components/shared/DataTable";
@@ -178,24 +178,28 @@ const NumberSystems = () => {
 
   const activeFilterCount = useMemo(() => Object.values(activeFilters).flat().length, [activeFilters]);
   const tableLoading = masterLoadingStatus === "loading" || isSubmitting;
-
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [imageToView, setImageToView] = useState<string | null>(null);
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
   const onClearAllFilters = () => { setActiveFilters({}); filterFormMethods.reset(); handleSetTableData({ query: '', pageIndex: 1 }); dispatch(getNumberSystemsAction()); };
   const handleCardClick = (status?: 'Active' | 'Inactive') => { handleSetTableData({ pageIndex: 1, query: '' }); if (!status) { setActiveFilters({}); } else { const option = apiStatusOptions.find(o => o.value === status); setActiveFilters(option ? { filterStatus: [option] } : {}); } };
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, valueToRemove: string) => { setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = (prev[key] || []) as {value: string}[]; const newValues = currentValues.filter(item => item.value !== valueToRemove); if (newValues.length > 0) (newFilters as any)[key] = newValues; else delete (newFilters as any)[key]; return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
   const openAddDrawer = () => { formMethods.reset(defaultFormValues); setIsAddDrawerOpen(true); };
   const closeAddDrawer = () => setIsAddDrawerOpen(false);
+  
   const openEditDrawer = (item: NumberSystemItem) => { setEditingItem(item); const countryIds = item.country_ids?.split(',').map(id => id.trim()).filter(Boolean) || []; formMethods.reset({ name: item.name, status: item.status, prefix: item.prefix || "", country_ids: countryIds, customer_code_starting: Number(item.customer_code_starting || 0), current_customer_code: Number(item.current_customer_code || 0), non_kyc_customer_code_starting: Number(item.non_kyc_customer_code_starting || 0), non_kyc_current_customer_code: Number(item.non_kyc_current_customer_code || 0), company_code_starting: Number(item.company_code_starting || 0), current_company_code: Number(item.current_company_code || 0), non_kyc_company_code_starting: Number(item.non_kyc_company_code_starting || 0), non_kyc_current_company_code: Number(item.non_kyc_current_company_code || 0) }); setIsEditDrawerOpen(true); };
   const closeEditDrawer = () => { setEditingItem(null); setIsEditDrawerOpen(false); };
   const onSubmitHandler = async (data: NumberSystemFormData) => { setIsSubmitting(true); const apiPayload = { name: data.name, status: data.status, prefix: data.prefix || null, country_ids: data.country_ids.join(','), customer_code_starting: String(data.customer_code_starting), current_customer_code: String(data.current_customer_code), non_kyc_customer_code_starting: String(data.non_kyc_customer_code_starting), non_kyc_current_customer_code: String(data.non_kyc_current_customer_code), company_code_starting: String(data.company_code_starting), current_company_code: String(data.current_company_code), non_kyc_company_code_starting: String(data.non_kyc_company_code_starting), non_kyc_current_company_code: String(data.non_kyc_current_company_code) }; try { if (editingItem) { await dispatch(editNumberSystemAction({ id: editingItem.id, ...apiPayload })).unwrap(); toast.push(<Notification title="System Updated" type="success" />); closeEditDrawer(); } else { await dispatch(addNumberSystemAction(apiPayload)).unwrap(); toast.push(<Notification title="System Added" type="success" />); closeAddDrawer(); } dispatch(getNumberSystemsAction()); } catch (error: any) { toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger">{error?.message || 'Error'}</Notification>); } finally { setIsSubmitting(false); } };
   const onApplyFiltersSubmit = (data: FilterFormData) => { setActiveFilters({ filterCountryIds: data.filterCountryIds || [], filterStatus: data.filterStatus || [] }); handleSetTableData({ pageIndex: 1 }); setIsFilterDrawerOpen(false); };
   const handleOpenExportModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
   const handleConfirmExport = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `numbering-systems_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Numbering Systems', file_name: fileName })).unwrap(); toast.push(<Notification title="Reason Submitted" type="success" />); exportNumberSystemsToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (e: any) { toast.push(<Notification title="Export Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsSubmittingExportReason(false); } };
-
+const openImageViewer = (src: string | null) => { if (src) { setImageToView(src); setIsImageViewerOpen(true); } };
+  const closeImageViewer = () => { setIsImageViewerOpen(false); setImageToView(null); };
+  
   const baseColumns: ColumnDef<NumberSystemItem>[] = useMemo(() => [
       { header: "Name", accessorKey: "name", enableSorting: true, size: 160, cell: (props) => <span className="font-semibold">{props.row.original.name}</span> },
       { header: "Countries", accessorKey: "country_ids", id: "countriesCount", enableSorting: true, size: 360, cell: (props) => { const ids = props.row.original.country_ids?.split(',').map(id => id.trim()).filter(Boolean) || []; if (ids.length === 0) return <Tag>N/A</Tag>; const names = ids.map(id => countryOptions.find(c => c.value === id)?.label || `ID:${id}`); return (<div className="flex flex-wrap gap-1">{names.slice(0, 2).map((n, i) => <Tag key={i} className="bg-gray-100 dark:bg-gray-600">{n}</Tag>)}{names.length > 2 && <Tooltip title={names.join(', ')}><Tag className="bg-gray-200 dark:bg-gray-500">+{names.length - 2} more</Tag></Tooltip>}</div>); }},
-      { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_name, updated_by_role } = props.row.original; const date = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A"; return (<div><span>{updated_by_name || "N/A"}</span><br /><b>{updated_by_role || ""}</b><div className="text-xs text-gray-500">{date}</div></div>); }},
+      { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
       { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => <Tag className={`${statusColor[props.row.original.status]} capitalize font-semibold border-0`}>{props.row.original.status}</Tag> },
       { header: "Actions", id: "action", size: 60, meta: { cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} /> },
   ], [countryOptions, openEditDrawer]);
@@ -264,7 +268,7 @@ const NumberSystems = () => {
           <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Filter by status..." options={apiStatusOptions} value={field.value || []} onChange={(v) => field.onChange(v || [])} />)} /></FormItem>
         </Form>
       </Drawer>
-
+<Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}><div className="flex justify-center items-center p-4">{imageToView ? (<img src={imageToView} alt="Blog Icon Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }}/>) : (<p>No image to display.</p>)}</div></Dialog>
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExport)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? 'Submitting...' : 'Submit & Export'} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
           <Form id="exportNumberSystemsReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2"><FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form>
       </ConfirmDialog>
