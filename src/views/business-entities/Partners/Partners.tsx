@@ -501,7 +501,7 @@ const PartnerListTable = () => {
     handleSetTableData({ pageIndex: 1, query: "" });
   };
 
-  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+  const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
     let filteredData = [...partnerList];
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selected = filterCriteria.filterStatus.map(s => s.value.toLowerCase()); filteredData = filteredData.filter(p => p.status && selected.includes(p.status.toLowerCase())); }
     if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) { const selected = filterCriteria.filterOwnershipType.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.ownership_type)); }
@@ -512,10 +512,23 @@ const PartnerListTable = () => {
     if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) { const selected = filterCriteria.filterKycVerified.map(k => k.value === "Yes"); filteredData = filteredData.filter(p => selected.includes(p.kyc_verified)); }
     if (filterCriteria.filterCreatedDate?.[0] && filterCriteria.filterCreatedDate?.[1]) { const [start, end] = filterCriteria.filterCreatedDate; end.setHours(23, 59, 59, 999); filteredData = filteredData.filter(p => { const date = new Date(p.created_at); return date >= start && date <= end; }); }
     if (tableData.query) { filteredData = filteredData.filter(i => Object.values(i).some(v => String(v).toLowerCase().includes(tableData.query.toLowerCase()))); }
+  
+  
+   let count = 0;
+
+     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) count++;
+    if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) count++;
+    if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) count++;
+    if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) count++;
+    if (filterCriteria.filterState && filterCriteria.filterState.length > 0) count++;
+    if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) count++;
+    if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) count++;
+   
+
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { filteredData.sort((a, b) => { const av = a[key as keyof PartnerItem] ?? ""; const bv = b[key as keyof PartnerItem] ?? ""; if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); return 0; }); }
     const pI = tableData.pageIndex as number, pS = tableData.pageSize as number;
-    return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData };
+    return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
   }, [partnerList, tableData, filterCriteria]);
 
   const handleSetTableData = useCallback((d: Partial<TableQueries>) => setTableData(p => ({ ...p, ...d })), []);
@@ -659,7 +672,7 @@ const PartnerListTable = () => {
             <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}</div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
-          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
           <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
         </div>
       </div>

@@ -181,7 +181,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
 }
 
 // --- MODALS SECTION ---
-export type MemberModalType = "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "alert" | "trackRecord" | "engagement" | "document" | "feedback" | "wallLink" |"viewDetail" |"resetPassword";
+export type MemberModalType = "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "alert" | "trackRecord" | "engagement" | "document" | "feedback" | "wallLink" | "viewDetail" | "resetPassword";
 export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
 interface MemberModalsProps { modalState: MemberModalState; onClose: () => void; }
 
@@ -197,7 +197,7 @@ const SendEmailDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({ 
 const SendWhatsAppDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => { const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi ${member.member_name}, regarding your membership...`, }, }); const onSendMessage = (data: { message: string }) => { const phone = member.member_contact_number?.replace(/\D/g, ""); if (!phone) { toast.push(<Notification type="danger" title="Invalid Phone Number" />); return; } const url = `https://wa.me/${phone}?text=${encodeURIComponent(data.message)}`; window.open(url, "_blank"); toast.push(<Notification type="success" title="Redirecting to WhatsApp" />); onClose(); }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Send WhatsApp to {member.member_name}</h5><form onSubmit={handleSubmit(onSendMessage)}><FormItem label="Message Template"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem><div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit">Open WhatsApp</Button></div></form></Dialog>); };
 const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => { const [isLoading, setIsLoading] = useState(false); const { control, handleSubmit } = useForm({ defaultValues: { title: "", users: [], message: "" }, }); const onSend = (data: any) => { setIsLoading(true); console.log("Sending in-app notification for", member.member_name, "with data:", data); setTimeout(() => { toast.push(<Notification type="success" title="Notification Sent" />); setIsLoading(false); onClose(); }, 1000); }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Add Notification for {member.member_name}</h5><form onSubmit={handleSubmit(onSend)}><FormItem label="Notification Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem><FormItem label="Send to Users"><Controller name="users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={dummyUsers} {...field} />)} /></FormItem><FormItem label="Message"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem><div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send Notification</Button></div></form></Dialog>); };
 const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({ member, onClose, }) => { const [isLoading, setIsLoading] = useState(false); const { control, handleSubmit } = useForm({ defaultValues: { title: "", assignee: null, dueDate: null, priority: null, description: "", }, }); const onAssignTask = (data: any) => { setIsLoading(true); console.log("Assigning task for", member.member_name, "with data:", data); setTimeout(() => { toast.push(<Notification type="success" title="Task Assigned" />); setIsLoading(false); onClose(); }, 1000); }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Assign Task for {member.member_name}</h5><form onSubmit={handleSubmit(onAssignTask)}><FormItem label="Task Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Follow up on KYC" />)} /></FormItem><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => (<Select placeholder="Select User" options={dummyUsers} {...field} />)} /></FormItem><FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} {...field} />)} /></FormItem></div><FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value as any} onChange={field.onChange} />)} /></FormItem><FormItem label="Description"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem><div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Assign Task</Button></div></form></Dialog>); };
-const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({ member, onClose }) => { const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false); const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), defaultValues: { event_title: `Meeting with ${member.member_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding member ${member.member_name} (ID: ${member.id}).` }, mode: 'onChange', }); const onAddEvent = async (data: ScheduleFormData) => { setIsLoading(true); const payload = { module_id: Number(member.id), module_name: 'Member', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '', }; try { await dispatch(addScheduleAction(payload)).unwrap(); toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${member.member_name}.`} />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); } }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Add Schedule for {member.member_name}</h5><UiForm onSubmit={handleSubmit(onAddEvent)}><UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} /></UiFormItem><UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></UiFormItem></div><UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></UiFormItem><UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></UiFormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div></UiForm></Dialog>); };
+const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({ member, onClose }) => { const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false); const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), defaultValues: { event_title: `Meeting with ${member.member_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding member ${member.member_name} (ID: ${member.id}).` }, mode: 'onChange', }); const onAddEvent = async (data: ScheduleFormData) => { setIsLoading(true); const payload = { module_id: Number(member.id), module_name: 'Member', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '', }; try { await dispatch(addScheduleAction(payload)).unwrap(); toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${member.member_name}.`} />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); } }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Add Schedule for {member.member_name}</h5><UiForm onSubmit={handleSubmit(onAddEvent)}><UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></UiFormItem><UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></UiFormItem></div><UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></UiFormItem><UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></UiFormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div></UiForm></Dialog>); };
 const ViewAlertDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({ member, onClose, }) => { const alertColors: Record<string, string> = { danger: "red", warning: "amber", info: "blue", }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}><h5 className="mb-4">Alerts for {member.member_name}</h5><div className="mt-4 flex flex-col gap-3">{dummyAlerts.length > 0 ? (dummyAlerts.map((alert) => (<div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`}><div className="flex justify-between items-start"><div className="flex items-start gap-2"><TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} /><p className="text-sm">{alert.message}</p></div><span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span></div></div>))) : (<p>No active alerts.</p>)}</div><div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div></Dialog>); };
 const TrackRecordDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => { return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}><h5 className="mb-4">Track Record for {member.member_name}</h5><div className="mt-4 -ml-4">{dummyTimeline.map((item, index) => (<div key={item.id} className="flex gap-4 relative">{index < dummyTimeline.length - 1 && (<div className="absolute left-6 top-0 h-full w-0.5 bg-gray-200 dark:bg-gray-600"></div>)}<div className="flex-shrink-0 z-10 h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 border-4 border-white dark:border-gray-900 text-gray-500 flex items-center justify-center">{React.cloneElement(item.icon, { size: 24 })}</div><div className="pb-8"><p className="font-semibold">{item.title}</p><p className="text-sm text-gray-600 dark:text-gray-300">{item.desc}</p><p className="text-xs text-gray-400 mt-1">{item.time}</p></div></div>))}</div><div className="text-right mt-2"><Button variant="solid" onClick={onClose}>Close</Button></div></Dialog>); };
 const ViewEngagementDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => { return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Engagement for {member.member_name}</h5><div className="grid grid-cols-2 gap-4 mt-4 text-center"><div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"><p className="text-xs text-gray-500">Last Active</p><p className="font-bold text-lg">2 days ago</p></div><div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"><p className="text-xs text-gray-500">Health Score</p><p className="font-bold text-lg text-green-500">{member.health_score || 85}%</p></div><div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"><p className="text-xs text-gray-500">Logins (30d)</p><p className="font-bold text-lg">25</p></div><div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"><p className="text-xs text-gray-500">Wall Posts</p><p className="font-bold text-lg">8</p></div></div><div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div></Dialog>); };
@@ -224,37 +224,37 @@ const ActionColumn = ({ rowData, onEdit, onViewDetail, onOpenModal, }: { rowData
 
 // --- ActiveFiltersDisplay Component ---
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
-    filterData: FilterFormData;
-    onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
-    onClearAll: () => void;
-  }) => {
-    const filterKeyToLabelMap: Record<string, string> = {
-      filterStatus: 'Status', filterBusinessType: 'Business Type', filterBusinessOpportunity: 'Opportunity',
-      filterContinent: 'Continent', filterCountry: 'Country', filterState: 'State',
-      filterCity: 'City', filterInterestedFor: 'Interest', filterBrand: 'Brand', memberGrade: 'Grade'
-    };
+  filterData: FilterFormData;
+  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onClearAll: () => void;
+}) => {
+  const filterKeyToLabelMap: Record<string, string> = {
+    filterStatus: 'Status', filterBusinessType: 'Business Type', filterBusinessOpportunity: 'Opportunity',
+    filterContinent: 'Continent', filterCountry: 'Country', filterState: 'State',
+    filterCity: 'City', filterInterestedFor: 'Interest', filterBrand: 'Brand', memberGrade: 'Grade'
+  };
 
-    const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
-      if (!value || (Array.isArray(value) && value.length === 0)) return [];
-      return (value as {value: string, label: string}[]).map((item: { value: string; label: string }) => ({
-        key, value: item.value, label: `${filterKeyToLabelMap[key] || 'Filter'}: ${item.label}`,
-      }));
-    });
+  const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
+    if (!value || (Array.isArray(value) && value.length === 0)) return [];
+    return (value as { value: string, label: string }[]).map((item: { value: string; label: string }) => ({
+      key, value: item.value, label: `${filterKeyToLabelMap[key] || 'Filter'}: ${item.label}`,
+    }));
+  });
 
-    if (activeFiltersList.length === 0) return null;
+  if (activeFiltersList.length === 0) return null;
 
-    return (
-      <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-        <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-        {activeFiltersList.map(filter => (
-          <Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
-            {filter.label}
-            <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof FilterFormData, filter.value)} />
-          </Tag>
-        ))}
-        <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-      </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {activeFiltersList.map(filter => (
+        <Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
+          {filter.label}
+          <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof FilterFormData, filter.value)} />
+        </Tag>
+      ))}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 // --- FormListTable Component ---
@@ -272,7 +272,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
 
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange", });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria, });
-  
+
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
 
   const openFilterDrawer = () => setFilterDrawerOpen(true);
@@ -280,22 +280,22 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
 
   const handleQueryChange = (newQuery: string) => { setTableData((prev) => ({ ...prev, query: newQuery, pageIndex: 1 })); };
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); };
-  
+
   const onClearFilters = () => {
     const defaultFilters: FilterFormData = {};
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     setTableData((prev) => ({ ...prev, query: "", pageIndex: 1 }));
   };
-  
+
   const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string) => {
     setFilterCriteria(prev => {
-        const newCriteria = { ...prev };
-        const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
-        if (currentFilterArray) {
-            (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove);
-        }
-        return newCriteria;
+      const newCriteria = { ...prev };
+      const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
+      if (currentFilterArray) {
+        (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove);
+      }
+      return newCriteria;
     });
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   };
@@ -303,7 +303,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const handleOpenModal = (type: MemberModalType, memberData: FormItem) => setModalState({ isOpen: true, type, data: memberData });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
-  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+  const { activeFilterCount, pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: FormItem[] = forms ? cloneDeep(forms) : [];
     const { filterStatus, filterBusinessType, filterBusinessOpportunity, filterContinent, filterCountry, filterState, filterCity, filterInterestedFor, filterBrand, memberGrade, } = filterCriteria;
     if (filterStatus?.length) { const values = filterStatus.map((opt) => opt.value); processedData = processedData.filter((item) => values.includes(item.status)); }
@@ -317,31 +317,49 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     if (filterBrand?.length) { const values = filterBrand.map((opt) => opt.value); processedData = processedData.filter((item) => item.associated_brands && item.associated_brands.some((brand) => values.includes(brand))); }
     if (memberGrade?.length) { const values = memberGrade.map((opt) => opt.value); processedData = processedData.filter((item) => item.member_grade && values.includes(item.member_grade)); }
     if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter((item) => item.name?.toLowerCase().includes(query) || item.email?.toLowerCase().includes(query) || item.company_name?.toLowerCase().includes(query) || String(item.id).includes(query)); }
+
+
+    let count = 0;
+
+    if (filterStatus?.length) count++;
+    if (filterBusinessType?.length) count++;
+    if (filterBusinessOpportunity?.length) count++;
+    if (filterContinent?.length) count++;
+    if (filterCountry?.length) count++;
+    if (filterState?.length) count++;
+    if (filterCity?.length) count++;
+    if (filterInterestedFor?.length) count++;
+    if (filterBrand?.length) count++;
+    if (memberGrade?.length) count++;
+
+
+
+
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { processedData.sort((a, b) => { const aValue = a[key as keyof FormItem] ?? ""; const bValue = b[key as keyof FormItem] ?? ""; if (typeof aValue === "string" && typeof bValue === "string") { return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue); } if (typeof aValue === "number" && typeof bValue === "number") { return order === "asc" ? aValue - bValue : bValue - aValue; } return 0; }); }
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
-    return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData, };
+    return { activeFilterCount: count, pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData, };
   }, [forms, tableData, filterCriteria]);
 
   const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "Members"; const timestamp = new Date().toISOString().split("T")[0]; const fileName = `members_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message}/>); } finally { setIsSubmittingExportReason(false); } };
-  
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "Members"; const timestamp = new Date().toISOString().split("T")[0]; const fileName = `members_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger" message={error.message} />); } finally { setIsSubmittingExportReason(false); } };
+
   const handleEdit = (form: FormItem) => navigate(`/business-entities/member-edit/${form.id}`, { state: form });
   const handleViewDetails = (form: FormItem) => navigate(`/business-entities/member-view/${form.id}`);
 
   const columns: ColumnDef<FormItem>[] = useMemo(() => [
-      { header: "Member", accessorKey: "member_name", id: 'member', size: 180, cell: (props) => (<div className="flex flex-col gap-1"><div className="flex items-center gap-1.5"><div className="text-xs"><b className="text-xs text-blue-500"><em>70892{props.row.original.id || ""}</em></b> <br /><b className="texr-xs">{props.row.original.name || ""}</b></div></div><div className="text-xs"><div className="text-xs text-gray-500">{props.row.original.email || ""}</div><div className="text-xs text-gray-500">{props.row.original.number || ""}</div><div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div></div></div>), },
-      { header: "Company", accessorKey: "company_name", id: 'company', size: 200, cell: (props) => (<div className="ml-2 rtl:mr-2 text-xs"><b className="text-xs "><em className="text-blue-500">{props.row.original.company_id_actual || ""}</em></b><div className="text-xs flex gap-1"><MdCheckCircle size={20} className="text-green-500" /><b className="">{props.row.original.company_name || "Unique Enterprise"}</b></div></div>), },
-      { header: "Status", accessorKey: "member_status", id: 'status', size: 140, cell: (props) => { const { status: member_status, created_at } = props.row.original; return (<div className="flex flex-col text-xs"><Tag className={`${statusColor[member_status as keyof typeof statusColor]} inline capitalize`}>{member_status || ""}</Tag><span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date: {new Date(created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", }).replace(/ /g, "/") || "N/A"}</div></span></div>); }, },
-      { header: "Profile", accessorKey: "profile_completion", id: 'profile', size: 220, cell: (props) => (<div className="text-xs flex flex-col"><div><Tag className="text-[10px] mb-1 bg-orange-100 text-orange-400">{props.row.original.status || ""}</Tag></div><span><b>RM: </b>{props.row.original.name || ""}</span><span><b>Grade: {props.row.original.member_grade || ""}</b></span><span><b>Business Opportunity: {props.row.original.business_opportunity || ""}</b></span><Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`}><div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%`, }}></div></div></Tooltip></div>), },
-      { header: "Preferences", accessorKey: "associated_brands", id: 'preferences', size: 300, cell: (props) => { const [isOpen, setIsOpen] = useState<boolean>(false); const openDialog = () => setIsOpen(true); const closeDialog = () => setIsOpen(false); return (<div className="flex flex-col gap-1"><span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || ""}</b></span><span className="text-xs flex items-center gap-1"><span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span><b className="text-xs">Brands: {props.row.original.brand_name || ""}</b></span><span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in}</span></span><Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}><h6>Dynamic Profile</h6><Table className="mt-6"><thead className="bg-gray-100 rounded-md"><Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr></thead><tbody><Tr><Td>INS - PREMIUM</Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td><Td><Tag>Electronics</Tag></Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td></Tr></tbody></Table></Dialog></div>); }, },
-      { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onViewDetail={() => handleViewDetails(props.row.original)} onOpenModal={handleOpenModal} />), },
-    ], [handleOpenModal]
+    { header: "Member", accessorKey: "member_name", id: 'member', size: 180, cell: (props) => (<div className="flex flex-col gap-1"><div className="flex items-center gap-1.5"><div className="text-xs"><b className="text-xs text-blue-500"><em>70892{props.row.original.id || ""}</em></b> <br /><b className="texr-xs">{props.row.original.name || ""}</b></div></div><div className="text-xs"><div className="text-xs text-gray-500">{props.row.original.email || ""}</div><div className="text-xs text-gray-500">{props.row.original.number || ""}</div><div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div></div></div>), },
+    { header: "Company", accessorKey: "company_name", id: 'company', size: 200, cell: (props) => (<div className="ml-2 rtl:mr-2 text-xs"><b className="text-xs "><em className="text-blue-500">{props.row.original.company_id_actual || ""}</em></b><div className="text-xs flex gap-1"><MdCheckCircle size={20} className="text-green-500" /><b className="">{props.row.original.company_name || "Unique Enterprise"}</b></div></div>), },
+    { header: "Status", accessorKey: "member_status", id: 'status', size: 140, cell: (props) => { const { status: member_status, created_at } = props.row.original; return (<div className="flex flex-col text-xs"><Tag className={`${statusColor[member_status as keyof typeof statusColor]} inline capitalize`}>{member_status || ""}</Tag><span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date: {new Date(created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", }).replace(/ /g, "/") || "N/A"}</div></span></div>); }, },
+    { header: "Profile", accessorKey: "profile_completion", id: 'profile', size: 220, cell: (props) => (<div className="text-xs flex flex-col"><div><Tag className="text-[10px] mb-1 bg-orange-100 text-orange-400">{props.row.original.status || ""}</Tag></div><span><b>RM: </b>{props.row.original.name || ""}</span><span><b>Grade: {props.row.original.member_grade || ""}</b></span><span><b>Business Opportunity: {props.row.original.business_opportunity || ""}</b></span><Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`}><div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%`, }}></div></div></Tooltip></div>), },
+    { header: "Preferences", accessorKey: "associated_brands", id: 'preferences', size: 300, cell: (props) => { const [isOpen, setIsOpen] = useState<boolean>(false); const openDialog = () => setIsOpen(true); const closeDialog = () => setIsOpen(false); return (<div className="flex flex-col gap-1"><span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || ""}</b></span><span className="text-xs flex items-center gap-1"><span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span><b className="text-xs">Brands: {props.row.original.brand_name || ""}</b></span><span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in}</span></span><Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}><h6>Dynamic Profile</h6><Table className="mt-6"><thead className="bg-gray-100 rounded-md"><Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr></thead><tbody><Tr><Td>INS - PREMIUM</Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td><Td><Tag>Electronics</Tag></Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td></Tr></tbody></Table></Dialog></div>); }, },
+    { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onViewDetail={() => handleViewDetails(props.row.original)} onOpenModal={handleOpenModal} />), },
+  ], [handleOpenModal]
   );
-  
+
   const [filteredColumns, setFilteredColumns] = useState(columns);
   const toggleColumn = (checked: boolean, colId: string) => { if (checked) { const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId); if (originalColumn) { setFilteredColumns(prev => { const newCols = [...prev, originalColumn]; newCols.sort((a, b) => { const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey)); const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey)); return indexA - indexB; }); return newCols; }); } } else { setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId)); } };
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
@@ -358,13 +376,13 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <FormListSearch onInputChange={handleQueryChange} value={tableData.query} />
         <div className="flex gap-2">
-            <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                    {columns.map((col) => col.header && (<div key={col.id || col.accessorKey as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(col.id || col.accessorKey as string)} onChange={(checked) => toggleColumn(checked, col.id || col.accessorKey as string)} >{col.header as string}</Checkbox></div>))}
-                </div>
-            </Dropdown>
-            <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onClearFilters} /></Tooltip>
-          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
+          <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+            <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+              {columns.map((col) => col.header && (<div key={col.id || col.accessorKey as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(col.id || col.accessorKey as string)} onChange={(checked) => toggleColumn(checked, col.id || col.accessorKey as string)} >{col.header as string}</Checkbox></div>))}
+            </div>
+          </Dropdown>
+          <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onClearFilters} /></Tooltip>
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
           <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData || allFilteredAndSortedData.length === 0}>Export</Button>
         </div>
       </div>
@@ -405,7 +423,7 @@ const FormListSelected = () => { const { selectedMembers, setSelectedMembers } =
 const Member = () => {
   const { MemberData } = useSelector(masterSelector);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
-  
+
   const counts = useMemo(() => {
     const list = MemberData?.data || [];
     const total = list.length || 0;
@@ -418,10 +436,10 @@ const Member = () => {
   const handleCardClick = useCallback((status: 'Active' | 'Disabled' | 'Unregistered' | 'All') => {
     const newCriteria: FilterFormData = {};
     if (status !== 'All') {
-        const statusOption = memberStatusOptions.find(opt => opt.value === status);
-        if (statusOption) {
-            newCriteria.filterStatus = [statusOption];
-        }
+      const statusOption = memberStatusOptions.find(opt => opt.value === status);
+      if (statusOption) {
+        newCriteria.filterStatus = [statusOption];
+      }
     }
     setFilterCriteria(newCriteria);
   }, []);

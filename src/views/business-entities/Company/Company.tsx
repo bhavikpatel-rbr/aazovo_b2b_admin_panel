@@ -318,67 +318,67 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- CSV Exporter Utility for Companies ---
 function exportToCsv(filename: string, rows: CompanyItem[]) {
-    if (!rows || !rows.length) {
-        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
-        return false;
-    }
-    const CSV_HEADERS = ["ID", "Company Name", "Owner Name", "Ownership Type", "Status", "Contact", "Email", "Country", "State", "City", "KYC Verified", "Created Date"];
-    const preparedRows = rows.map(row => ({
-        id: row.id,
-        company_name: row.company_name,
-        owner_name: row.owner_name,
-        ownership_type: row.ownership_type,
-        status: row.status,
-        primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`,
-        primary_email_id: row.primary_email_id,
-        country: row.country?.name || 'N/A',
-        state: row.state,
-        city: row.city,
-        kyc_verified: row.kyc_verified ? 'Yes' : 'No',
-        created_at: row.created_at ? new Date(row.created_at).toLocaleDateString() : 'N/A'
-    }));
-    const csvContent = [
-        CSV_HEADERS.join(','),
-        ...preparedRows.map(row => CSV_HEADERS.map(header =>
-            JSON.stringify(row[header.toLowerCase().replace(/ /g, '_') as keyof typeof row] ?? '', (key, value) => value === null ? '' : value)
-        ).join(','))
-    ].join('\n');
-    const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
-        return true;
-    }
-    toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+  if (!rows || !rows.length) {
+    toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
     return false;
+  }
+  const CSV_HEADERS = ["ID", "Company Name", "Owner Name", "Ownership Type", "Status", "Contact", "Email", "Country", "State", "City", "KYC Verified", "Created Date"];
+  const preparedRows = rows.map(row => ({
+    id: row.id,
+    company_name: row.company_name,
+    owner_name: row.owner_name,
+    ownership_type: row.ownership_type,
+    status: row.status,
+    primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`,
+    primary_email_id: row.primary_email_id,
+    country: row.country?.name || 'N/A',
+    state: row.state,
+    city: row.city,
+    kyc_verified: row.kyc_verified ? 'Yes' : 'No',
+    created_at: row.created_at ? new Date(row.created_at).toLocaleDateString() : 'N/A'
+  }));
+  const csvContent = [
+    CSV_HEADERS.join(','),
+    ...preparedRows.map(row => CSV_HEADERS.map(header =>
+      JSON.stringify(row[header.toLowerCase().replace(/ /g, '_') as keyof typeof row] ?? '', (key, value) => value === null ? '' : value)
+    ).join(','))
+  ].join('\n');
+  const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
+    return true;
+  }
+  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
+  return false;
 }
 
 // --- Status Colors & Context ---
 export const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
-    if (!statusValue) return "bg-gray-200 text-gray-600";
-    const lowerCaseStatus = statusValue.toLowerCase();
-    const companyStatusColors: Record<string, string> = {
-        active: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
-        verified: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
-        pending: "border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
-        inactive: "border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300",
-        "non verified": "border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
-    };
-    return companyStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600";
+  if (!statusValue) return "bg-gray-200 text-gray-600";
+  const lowerCaseStatus = statusValue.toLowerCase();
+  const companyStatusColors: Record<string, string> = {
+    active: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+    verified: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+    pending: "border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
+    inactive: "border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+    "non verified": "border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
+  };
+  return companyStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600";
 };
 
 const CompanyListContext = React.createContext<any>(undefined);
 const useCompanyList = () => useContext(CompanyListContext);
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { CompanyData, CountriesData, ContinentsData , getAllUserData= []} = useSelector(masterSelector);
+  const { CompanyData, CountriesData, ContinentsData, getAllUserData = [] } = useSelector(masterSelector);
 
   const dispatch = useAppDispatch();
   const [companyList, setCompanyList] = useState<CompanyItem[]>(CompanyData?.data ?? []);
@@ -404,29 +404,29 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 // --- Child Components (Search, ActionTools) ---
-const CompanyListSearch: React.FC<{onInputChange: (value: string) => void; value: string;}> = ({ onInputChange, value }) => {
-    return (
-        <DebouceInput
-          placeholder="Quick Search..."
-          suffix={<TbSearch className="text-lg" />}
-          onChange={(e) => onInputChange(e.target.value)}
-          value={value}
-        />
-    );
+const CompanyListSearch: React.FC<{ onInputChange: (value: string) => void; value: string; }> = ({ onInputChange, value }) => {
+  return (
+    <DebouceInput
+      placeholder="Quick Search..."
+      suffix={<TbSearch className="text-lg" />}
+      onChange={(e) => onInputChange(e.target.value)}
+      value={value}
+    />
+  );
 };
 const CompanyListActionTools = () => {
-    const navigate = useNavigate();
-    return (
-        <div className="flex flex-col md:flex-row gap-3">
-          <Button
-            variant="solid"
-            icon={<TbPlus className="text-lg" />}
-            onClick={() => navigate("/business-entities/company-create")}
-          >
-            Add New
-          </Button>
-        </div>
-    );
+  const navigate = useNavigate();
+  return (
+    <div className="flex flex-col md:flex-row gap-3">
+      <Button
+        variant="solid"
+        icon={<TbPlus className="text-lg" />}
+        onClick={() => navigate("/business-entities/company-create")}
+      >
+        Add New
+      </Button>
+    </div>
+  );
 };
 
 // ============================================================================
@@ -565,26 +565,26 @@ const ViewCompanyDetailDialog: React.FC<{ company: CompanyItem; onClose: () => v
             )}
             {renderDetailItem("Support Email", company.support_email)}
             {renderDetailItem("Notification Email", company.notification_email)}
-             <div className="mb-3">
+            <div className="mb-3">
               <span className="font-semibold text-gray-700 dark:text-gray-200">
                 Website:{" "}
               </span>
               <span className="text-gray-600 dark:text-gray-400">
-               {company.company_website ? (
-                <a
-                  href={company.company_website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline"
-                >
-                  {company.company_website}
-                </a>
-              ) : (
-                "N/A"
-              )}
+                {company.company_website ? (
+                  <a
+                    href={company.company_website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    {company.company_website}
+                  </a>
+                ) : (
+                  "N/A"
+                )}
               </span>
-           
-          </div>
+
+            </div>
           </div>
         </Card>
 
@@ -612,28 +612,28 @@ const ViewCompanyDetailDialog: React.FC<{ company: CompanyItem; onClose: () => v
                 KYC Verified:{" "}
               </span>
               <span className="text-gray-600 dark:text-gray-400">
-               { company.kyc_verified ? (
-                <MdCheckCircle className="text-green-500 text-xl inline-block" />
-              ) : (
-                <MdCancel className="text-red-500 text-xl inline-block" />
-              )}
+                {company.kyc_verified ? (
+                  <MdCheckCircle className="text-green-500 text-xl inline-block" />
+                ) : (
+                  <MdCancel className="text-red-500 text-xl inline-block" />
+                )}
               </span>
-           
-          </div>
-              <div className="mb-3">
+
+            </div>
+            <div className="mb-3">
               <span className="font-semibold text-gray-700 dark:text-gray-200">
                 Billing Enabled:{" "}
               </span>
               <span className="text-gray-600 dark:text-gray-400">
-               {  company.enable_billing ? (
-                <MdCheckCircle className="text-green-500 text-xl inline-block" />
-              ) : (
-                <MdCancel className="text-red-500 text-xl inline-block" />
-              )}
+                {company.enable_billing ? (
+                  <MdCheckCircle className="text-green-500 text-xl inline-block" />
+                ) : (
+                  <MdCancel className="text-red-500 text-xl inline-block" />
+                )}
               </span>
-           
-          </div>
-           
+
+            </div>
+
             {renderDetailItem(
               "Billing Due Date",
               company.due_after_3_months_date
@@ -676,13 +676,13 @@ const ViewCompanyDetailDialog: React.FC<{ company: CompanyItem; onClose: () => v
         <Card className="mb-4" bordered>
           <h5 className="mb-2">Document Verification Status</h5>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            {renderVerificationStatus( "Office Photo", company.office_photo_verified, company.office_photo_remark, company.office_photo_file )}
-            {renderVerificationStatus( "GST Certificate", company.gst_certificate_verified, company.gst_certificate_remark, company.gst_certificate_file )}
-            {renderVerificationStatus( "Authority Letter", company.authority_letter_verified, company.authority_letter_remark, company.authority_letter_file )}
-            {renderVerificationStatus( "Visiting Card", company.visiting_card_verified, company.visiting_card_remark, company.visiting_card_file )}
-            {renderVerificationStatus( "Cancel Cheque", company.cancel_cheque_verified, company.cancel_cheque_remark, company.cancel_cheque_file )}
-            {renderVerificationStatus( "Aadhar Card", company.aadhar_card_verified, company.aadhar_card_remark, company.aadhar_card_file )}
-            {renderVerificationStatus( "PAN Card", company.pan_card_verified, company.pan_card_remark, company.pan_card_file )}
+            {renderVerificationStatus("Office Photo", company.office_photo_verified, company.office_photo_remark, company.office_photo_file)}
+            {renderVerificationStatus("GST Certificate", company.gst_certificate_verified, company.gst_certificate_remark, company.gst_certificate_file)}
+            {renderVerificationStatus("Authority Letter", company.authority_letter_verified, company.authority_letter_remark, company.authority_letter_file)}
+            {renderVerificationStatus("Visiting Card", company.visiting_card_verified, company.visiting_card_remark, company.visiting_card_file)}
+            {renderVerificationStatus("Cancel Cheque", company.cancel_cheque_verified, company.cancel_cheque_remark, company.cancel_cheque_file)}
+            {renderVerificationStatus("Aadhar Card", company.aadhar_card_verified, company.aadhar_card_remark, company.aadhar_card_file)}
+            {renderVerificationStatus("PAN Card", company.pan_card_verified, company.pan_card_remark, company.pan_card_file)}
           </div>
         </Card>
 
@@ -704,20 +704,20 @@ const ViewCompanyDetailDialog: React.FC<{ company: CompanyItem; onClose: () => v
         )}
 
         {company.company_certificate && company.company_certificate.length > 0 && (
-            <Card className="mb-4" bordered>
-              <h5 className="mb-2">Certificates</h5>
-              {company.company_certificate.map((cert) => (
-                <div key={cert.id} className="mb-2 flex justify-between items-center">
-                  <span> {cert.certificate_name} ({cert.certificate_id}) </span>
-                  {cert.upload_certificate_path && (
-                    <a href={cert.upload_certificate_path} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">
-                      View Certificate
-                    </a>
-                  )}
-                </div>
-              ))}
-            </Card>
-          )}
+          <Card className="mb-4" bordered>
+            <h5 className="mb-2">Certificates</h5>
+            {company.company_certificate.map((cert) => (
+              <div key={cert.id} className="mb-2 flex justify-between items-center">
+                <span> {cert.certificate_name} ({cert.certificate_id}) </span>
+                {cert.upload_certificate_path && (
+                  <a href={cert.upload_certificate_path} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">
+                    View Certificate
+                  </a>
+                )}
+              </div>
+            ))}
+          </Card>
+        )}
       </div>
       <div className="text-right mt-6">
         <Button variant="solid" onClick={onClose}> Close </Button>
@@ -779,7 +779,7 @@ const AddCompanyNotificationDialog: React.FC<{
       setIsLoading(false);
     }
   };
-  
+
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Notify User about: {company.company_name}</h5>
@@ -839,67 +839,67 @@ const AddCompanyNotificationDialog: React.FC<{
 };
 
 const AddCompanyScheduleDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const eventTypeOptions = [{ value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" },];
 
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
-      resolver: zodResolver(scheduleSchema),
-      defaultValues: { event_title: `Meeting with ${company.company_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding company ${company.company_name} (${company.company_code}).`},
-      mode: 'onChange',
-    });
-  
-    const onAddEvent = async (data: ScheduleFormData) => {
-      setIsLoading(true);
-      const payload = {
-        module_id: Number(company.id),
-        module_name: 'Company',
-        event_title: data.event_title,
-        event_type: data.event_type,
-        date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
-        ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
-        notes: data.notes || '',
-      };
-  
-      try {
-        await dispatch(addScheduleAction(payload)).unwrap();
-        toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${company.company_name}.`} />);
-        onClose();
-      } catch (error: any) {
-        toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
-      } finally {
-        setIsLoading(false);
-      }
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: { event_title: `Meeting with ${company.company_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding company ${company.company_name} (${company.company_code}).` },
+    mode: 'onChange',
+  });
+
+  const onAddEvent = async (data: ScheduleFormData) => {
+    setIsLoading(true);
+    const payload = {
+      module_id: Number(company.id),
+      module_name: 'Company',
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+      notes: data.notes || '',
     };
-    
-    return (
-      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-        <h5 className="mb-4">Add Schedule for {company.company_name}</h5>
-        <UiForm onSubmit={handleSubmit(onAddEvent)}>
-          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
-            <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+
+    try {
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${company.company_name}.`} />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for {company.company_name}</h5>
+      <UiForm onSubmit={handleSubmit(onAddEvent)}>
+        <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+        </UiFormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
           </UiFormItem>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
-              <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} />
-            </UiFormItem>
-            <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
-              <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-            </UiFormItem>
-          </div>
-          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
-            <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+          <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
           </UiFormItem>
-          <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-            <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
-          </UiFormItem>
-          <div className="text-right mt-6">
-            <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
-          </div>
-        </UiForm>
-      </Dialog>
-    );
+        </div>
+        <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+        </UiFormItem>
+        <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
 };
 
 const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
@@ -1026,17 +1026,17 @@ const CompanyListTable = () => {
 
   const handleRemoveFilter = (key: keyof CompanyFilterFormData, valueToRemove: string) => {
     setFilterCriteria(prev => {
-        const newCriteria = { ...prev };
-        if (key === 'filterCreatedDate') {
-          (newCriteria as any)[key] = [null, null];
-        } else {
-          const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
-          if (currentFilterArray) {
-            const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove);
-            (newCriteria as any)[key] = newFilterArray;
-          }
+      const newCriteria = { ...prev };
+      if (key === 'filterCreatedDate') {
+        (newCriteria as any)[key] = [null, null];
+      } else {
+        const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
+        if (currentFilterArray) {
+          const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove);
+          (newCriteria as any)[key] = newFilterArray;
         }
-        return newCriteria;
+      }
+      return newCriteria;
     });
     handleSetTableData({ pageIndex: 1 });
   };
@@ -1062,16 +1062,16 @@ const CompanyListTable = () => {
 
     if (filterType === 'status') {
       const statusOption = statusOptions.find(opt => opt.value === value);
-      if(statusOption) {
+      if (statusOption) {
         newCriteria.filterStatus = [statusOption];
       }
     }
-    
+
     setFilterCriteria(newCriteria);
     handleSetTableData({ pageIndex: 1, query: "" });
   };
-  
-  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+
+  const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
     let filteredData = [...companyList];
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selectedStatuses = filterCriteria.filterStatus.map((s) => s.value.toLowerCase()); filteredData = filteredData.filter((company) => company.status && selectedStatuses.includes(company.status.toLowerCase())); }
     if (filterCriteria.filterCompanyType && filterCriteria.filterCompanyType.length > 0) { const selectedTypes = filterCriteria.filterCompanyType.map((t) => t.value); filteredData = filteredData.filter((company) => selectedTypes.includes(company.ownership_type)); }
@@ -1083,57 +1083,67 @@ const CompanyListTable = () => {
     if (filterCriteria.filterEnableBilling && filterCriteria.filterEnableBilling.length > 0) { const selectedBillingValues = filterCriteria.filterEnableBilling.map((b) => b.value === "Yes"); filteredData = filteredData.filter((company) => selectedBillingValues.includes(company.enable_billing)); }
     if (filterCriteria.filterCreatedDate && filterCriteria.filterCreatedDate[0] && filterCriteria.filterCreatedDate[1]) { const [startDate, endDate] = filterCriteria.filterCreatedDate; const inclusiveEndDate = new Date(endDate as Date); inclusiveEndDate.setHours(23, 59, 59, 999); filteredData = filteredData.filter((company) => { const createdDate = new Date(company.created_at); return (createdDate >= (startDate as Date) && createdDate <= inclusiveEndDate); }); }
     if (tableData.query) { filteredData = filteredData.filter((i) => Object.values(i).some((v) => { if (typeof v === "object" && v !== null) { return Object.values(v).some((nestedV) => String(nestedV).toLowerCase().includes(tableData.query.toLowerCase())); } return String(v).toLowerCase().includes(tableData.query.toLowerCase()); })); }
-    
+
+    let count = 0;
+
+    if (filterCriteria.filterStatus?.length) count++;
+    if (filterCriteria.filterCompanyType?.length) count++;
+    if (filterCriteria.filterContinent?.length) count++;
+    if (filterCriteria.filterCountry?.length) count++;
+    if (filterCriteria.filterState?.length) count++;
+    if (filterCriteria.filterCity?.length) count++;
+    if (filterCriteria.filterKycVerified?.length) count++;
+    if (filterCriteria.filterEnableBilling?.length) count++;
+
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
-        filteredData.sort((a, b) => {
-            let av = a[key as keyof CompanyItem] as any;
-            let bv = b[key as keyof CompanyItem] as any;
-            if (key.includes(".")) {
-                const keys = key.split(".");
-                av = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), a);
-                bv = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), b);
-            }
-            av = av ?? "";
-            bv = bv ?? "";
-            if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-            if (typeof av === "number" && typeof bv === "number") return order === "asc" ? av - bv : bv - av;
-            if (typeof av === "boolean" && typeof bv === "boolean") return order === "asc" ? (av === bv ? 0 : av ? -1 : 1) : (av === bv ? 0 : av ? 1 : -1);
-            return 0;
-        });
+      filteredData.sort((a, b) => {
+        let av = a[key as keyof CompanyItem] as any;
+        let bv = b[key as keyof CompanyItem] as any;
+        if (key.includes(".")) {
+          const keys = key.split(".");
+          av = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), a);
+          bv = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), b);
+        }
+        av = av ?? "";
+        bv = bv ?? "";
+        if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+        if (typeof av === "number" && typeof bv === "number") return order === "asc" ? av - bv : bv - av;
+        if (typeof av === "boolean" && typeof bv === "boolean") return order === "asc" ? (av === bv ? 0 : av ? -1 : 1) : (av === bv ? 0 : av ? 1 : -1);
+        return 0;
+      });
     }
-    
-    const pI = tableData.pageIndex as number; 
+    const pI = tableData.pageIndex as number;
     const pS = tableData.pageSize as number;
-    return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData };
+    return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
   }, [companyList, tableData, filterCriteria]);
 
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData.length) {
-        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
-        return;
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
     }
     exportReasonFormMethods.reset();
     setIsExportReasonModalOpen(true);
   };
 
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
-      setIsSubmittingExportReason(true);
-      const fileName = `companies_export_${new Date().toISOString().split('T')[0]}.csv`;
-      try {
-          await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Company', file_name: fileName })).unwrap();
-          toast.push(<Notification title="Export Reason Submitted" type="success" />);
-          const exportSuccess = exportToCsv(fileName, allFilteredAndSortedData);
-          if(exportSuccess) {
-            setIsExportReasonModalOpen(false);
-          }
-      } catch (error: any) {
-          toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
-      } finally {
-          setIsSubmittingExportReason(false);
+    setIsSubmittingExportReason(true);
+    const fileName = `companies_export_${new Date().toISOString().split('T')[0]}.csv`;
+    try {
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Company', file_name: fileName })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      const exportSuccess = exportToCsv(fileName, allFilteredAndSortedData);
+      if (exportSuccess) {
+        setIsExportReasonModalOpen(false);
       }
+    } catch (error: any) {
+      toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
   };
 
   const handleEditCompany = (id: number) => navigate(`/business-entities/company-edit/${id}`);
@@ -1147,9 +1157,10 @@ const CompanyListTable = () => {
   const [imageToView, setImageToView] = useState<string | null>(null);
   const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
   const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
-  
+
   const columns: ColumnDef<CompanyItem>[] = useMemo(() => [
-    { header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }) => {
+    {
+      header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }) => {
         const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original;
         return (
           <div className="flex flex-col">
@@ -1167,7 +1178,8 @@ const CompanyListTable = () => {
         );
       },
     },
-    { header: "Contact", accessorKey: "owner_name", id: "contact", size: 180, cell: (props) => {
+    {
+      header: "Contact", accessorKey: "owner_name", id: "contact", size: 180, cell: (props) => {
         const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original;
         return (
           <div className="text-xs flex flex-col gap-0.5">
@@ -1179,7 +1191,8 @@ const CompanyListTable = () => {
         );
       },
     },
-    { header: "Legal IDs & Status", accessorKey: "status", id: "legal", size: 180, cell: ({ row }) => {
+    {
+      header: "Legal IDs & Status", accessorKey: "status", id: "legal", size: 180, cell: ({ row }) => {
         const { gst_number, pan_number, status } = row.original;
         return (
           <div className="flex flex-col gap-0.5 text-[11px]">
@@ -1190,7 +1203,8 @@ const CompanyListTable = () => {
         );
       },
     },
-    { header: "Profile & Scores", accessorKey: "profile_completion", id: "profile", size: 190, cell: ({ row }) => {
+    {
+      header: "Profile & Scores", accessorKey: "profile_completion", id: "profile", size: 190, cell: ({ row }) => {
         const { members_count = 0, teams_count = 0, profile_completion = 0, kyc_verified, enable_billing, due_after_3_months_date } = row.original;
         const formattedDate = due_after_3_months_date ? `${new Date(due_after_3_months_date).getDate()} ${new Date(due_after_3_months_date).toLocaleString("en-US", { month: "short" })}, ${new Date(due_after_3_months_date).getFullYear()}` : "N/A";
         return (
@@ -1217,26 +1231,26 @@ const CompanyListTable = () => {
   const isColumnVisible = (colId: string) => {
     return filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   };
-  
+
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
-        const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-        if (originalColumn) {
-            setFilteredColumns(prev => {
-                const newCols = [...prev, originalColumn];
-                newCols.sort((a, b) => {
-                    const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                    const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                    return indexA - indexB;
-                });
-                return newCols;
-            });
-        }
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
+      }
     } else {
-        setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
     }
   };
-  
+
   const statusOptions = useMemo(() => Array.from(new Set(companyList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [companyList]);
   const companyTypeOptions = useMemo(() => Array.from(new Set(companyList.map((c) => c.ownership_type))).filter(Boolean).map((ct) => ({ value: ct, label: ct })), [companyList]);
   const continentOptions = useMemo(() => ContinentsData.map((co) => ({ value: co.name, label: co.name })), [ContinentsData]);
@@ -1272,23 +1286,23 @@ const CompanyListTable = () => {
             <div className="flex flex-col p-2">
               <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
               {columns.map((col) => {
-                  const id = col.id || col.accessorKey as string;
-                  if (!col.header) return null;
-                  return (
-                      <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                          <Checkbox
-                              checked={isColumnVisible(id)}
-                              onChange={(checked) => toggleColumn(checked, id)}
-                          >
-                              {col.header as string}
-                          </Checkbox>
-                      </div>
-                  )
+                const id = col.id || col.accessorKey as string;
+                if (!col.header) return null;
+                return (
+                  <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                    <Checkbox
+                      checked={isColumnVisible(id)}
+                      onChange={(checked) => toggleColumn(checked, id)}
+                    >
+                      {col.header as string}
+                    </Checkbox>
+                  </div>
+                )
               })}
             </div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
-          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
           <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData || allFilteredAndSortedData.length === 0}>Export</Button>
         </div>
       </div>
