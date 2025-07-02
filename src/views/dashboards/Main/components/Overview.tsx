@@ -1,28 +1,25 @@
-import { useState, useEffect, useRef } from 'react'
+import { DataTable, DebouceInput } from '@/components/shared'
+import { Avatar, Tag, Tooltip } from '@/components/ui'
 import Card from '@/components/ui/Card'
 import Select from '@/components/ui/Select'
-import { Avatar, Checkbox, Tooltip } from '@/components/ui'
-import GrowShrinkValue from '@/components/shared/GrowShrinkValue'
-import AbbreviateNumber from '@/components/shared/AbbreviateNumber'
-import Chart from '@/components/shared/Chart'
+import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
+import { getCompanyAction } from '@/reduxtool/master/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
 import { useThemeStore } from '@/store/themeStore'
 import classNames from '@/utils/classNames'
-import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
-import { options } from '../constants'
-import { NumericFormat } from 'react-number-format'
-import { TbCoin, TbShoppingBagCheck, TbEye, TbSearch, TbUserCircle, TbCube3dSphere, TbHeartHandshake, TbUsersGroup } from 'react-icons/tb'
 import type { ReactNode } from 'react'
-import type { StatisticData, Period, StatisticCategory } from '../types'
-import { COLORS } from '@/constants/chart.constant'
-import { Tag } from '@/components/ui'
-import IndiaIcon from "/img/countries/IN.png"
-import { MdCancel, MdCheckCircle, MdOutlineBusinessCenter } from 'react-icons/md'
-import { DataTable, DebouceInput } from '@/components/shared'
-import { FaBookmark, FaCircle } from 'react-icons/fa'
-import { FaArrowDownLong, FaArrowUpLong } from 'react-icons/fa6'
+import { useEffect, useRef, useState } from 'react'
 import { BsCake } from 'react-icons/bs'
+import { FaBookmark } from 'react-icons/fa'
+import { FaArrowDownLong, FaArrowUpLong } from 'react-icons/fa6'
 import { IoMdShare } from 'react-icons/io'
-import { Link } from 'react-router-dom'
+import { MdCancel, MdCheckCircle, MdOutlineBusinessCenter } from 'react-icons/md'
+import { TbCube3dSphere, TbHeartHandshake, TbSearch, TbUserCircle, TbUsersGroup } from 'react-icons/tb'
+import { NumericFormat } from 'react-number-format'
+import { useSelector } from 'react-redux'
+import type { Period, StatisticCategory, StatisticData } from '../types'
+import IndiaIcon from "/img/countries/IN.png"
 
 type StatisticCardProps = {
     title: string
@@ -122,6 +119,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     const sideNavCollapse = useThemeStore(
         (state) => state.layout.sideNavCollapse,
     )
+
+    const dispatch = useAppDispatch();
+    const { CompanyData } = useSelector(masterSelector);
+    useEffect(() => { dispatch(getCompanyAction()) }, [dispatch]);
+
 
     const statusColor = {
         Active: "bg-green-200 text-green-600 ",
@@ -260,165 +262,115 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
     ];
 
+    // --- Status Colors & Context ---
+    const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
+        if (!statusValue) return "bg-gray-200 text-gray-600";
+        const lowerCaseStatus = statusValue.toLowerCase();
+        const companyStatusColors: Record<string, string> = {
+            active: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+            verified: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+            pending: "border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
+            inactive: "border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+            "non verified": "border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
+        };
+        return companyStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600";
+    };
+
     const companyColumns = [
         {
-            header: 'Company Info',
-            accessorKey: 'name',
-            enableSorting: true,
-            size: 230,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <h6 className="text-xs"><Link to=""><em className='text-blue-500'>700056</em></Link> | {props.getValue()}</h6>
-                    {/* <span className="text-xs flex gap-1">
-                        ({"Phone | Email"})
-                    </span> */}
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Ownership Type : <span className='font-normal'>{props.row.original.type}</span></h6> 
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Country:</h6> {props.row.original.country}
-                    </span>
-                    <span className="text-xs">
-                        <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
-                    </span>
-                    {/* <span >Status: {props.row.original.status}</span> */}
-                </div>
-            )
-        },
-        // {
-        //     header: 'Preferences',
-        //     accessorKey: 'brands',
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1'>
-        //             <span className="text-xs flex gap-1">
-        //                 <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-        //                     return <span>{val}, </span>
-        //                 })}
-        //             </span>
-        //             <span className="text-xs flex gap-1">
-        //                 <h6 className="text-xs">Category:</h6> {props.row.original.category}
-        //             </span>
-        //             <span className="text-xs flex gap-1">
-        //                 <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
-        //             </span>
-        //         </div>
-        //     )
-        // },
-        {
-            header: 'Verified', accessorKey: 'verified',
-            size:120,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="flex flex-wrap gap-1 text-xs items-center">
-                        <h6 className="text-xs">Members: <span className='font-normal'>{props.row.original.noOfMember}</span></h6> 
-                    </span>
-                    <span className="flex flex-wrap gap-1 text-xs">
-                        <h6 className="text-xs">GST: <span className='font-normal'>AZXRFDRDSDDADA</span></h6>
-                    </span>
-                    <span className="flex flex-wrap gap-1 text-xs">
-                        <h6 className="text-xs">PAN: <span className='font-normal'>AZXRFDRDSD</span></h6> 
-                    </span>
-                    <div className='flex gap-1 items-center'>
-                        {/* <Tooltip title="KYC Verification : 48%" className='text-xs'>
-                            <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
-                                <MdCheckCircle className='text-green-500 text-lg' />
-                                <span>13/27</span>
+            header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }) => {
+                const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original;
+                return (
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <Avatar src={company_logo ? `https://aazovo.codefriend.in/${company_logo}` : undefined} size="sm" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => company_logo && openImageViewer(company_logo)} icon={<TbUserCircle />} />
+                            <div>
+                                <h6 className="text-xs font-semibold"><em className="text-blue-600">{company_code || "Company Code"}</em></h6>
+                                <span className="text-xs font-semibold leading-1">{company_name}</span>
                             </div>
-                        </Tooltip> */}
-                        <Tooltip title="Enable Billing" className='text-xs'><MdCancel className='text-red-500 text-lg' /></Tooltip>
-                    </div>
-                    <Tooltip className='text-xs' title={`Profile Completion ${props.row.original.progress}%`}>
-                        <div className='h-1.5 w-28 rounded-full bg-gray-300'>
-                            <div className={`font-bold rounded-full h-1.5 bg-blue-500 heading-text mt-1`}
-                                style={{ width: props.row.original.progress + "%" }}
-                            ></div>
                         </div>
-                    </Tooltip>
-                </div>
-            )
+                        <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || "N/A"}</span>
+                        <span className="text-xs mt-1"><b>Primary Business Type:</b> {primary_business_type || "N/A"}</span>
+                        <div className="text-xs text-gray-500">{city}, {state}, {country?.name || "N/A"}</div>
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Contact", accessorKey: "owner_name", id: "contact", size: 180, cell: (props) => {
+                const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original;
+                return (
+                    <div className="text-xs flex flex-col gap-0.5">
+                        {owner_name && (<span><b>Owner: </b> {owner_name}</span>)}
+                        {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)}
+                        {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)}
+                        {company_website && (<a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>)}
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Legal IDs & Status", accessorKey: "status", id: "legal", size: 180, cell: ({ row }) => {
+                const { gst_number, pan_number, status } = row.original;
+                return (
+                    <div className="flex flex-col gap-0.5 text-[11px]">
+                        {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>}
+                        {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>}
+                        <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{status}</Tag>
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Profile & Scores", accessorKey: "profile_completion", id: "profile", size: 190, cell: ({ row }) => {
+                const { members_count = 0, teams_count = 0, profile_completion = 0, kyc_verified, enable_billing, due_after_3_months_date } = row.original;
+                const formattedDate = due_after_3_months_date ? `${new Date(due_after_3_months_date).getDate()} ${new Date(due_after_3_months_date).toLocaleString("en-US", { month: "short" })}, ${new Date(due_after_3_months_date).getFullYear()}` : "N/A";
+                return (
+                    <div className="flex flex-col gap-1 text-xs">
+                        <span><b>Members:</b> {members_count}</span>
+                        <span><b>Teams:</b> {teams_count}</span>
+                        <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div>
+                        <div className="flex gap-1 items-center"><b>Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div>
+                        <span><b>Billing Due:</b> {formattedDate}</span>
+                        <Tooltip title={`Profile Completion ${profile_completion}%`}>
+                            <div className="h-2.5 w-full rounded-full bg-gray-300">
+                                <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div>
+                            </div>
+                        </Tooltip>
+                    </div>
+                );
+            },
         },
         {
             header: 'Business', accessorKey: 'wallCount',
-            size:180,
-            meta:{HeaderClass:'text-center'},
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
             cell: props => (
                 <div className='flex flex-col gap-4 text-center items-center '>
                     <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                            inline'>
-                            Wall Listing: 13 | 12 | 25
+                                inline'>
+                            Wall Listing: {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy}
                         </div>
                     </Tooltip>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
                         <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
-                             inline'>
-                            Opportunities: 34 | 12 | 46
+                                 inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers} | {props?.row?.original?.opportunities?.demands} | {props?.row?.original?.opportunities?.total}
                         </div>
                     </Tooltip>
-                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
-                         <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-                             inline'>
-                             Leads: 34 | 12 | 46
-                         </div>
-                    </Tooltip>
-                    <Tooltip title="PO:7 | PI: 02 | E-way: 46" className='text-xs'>
-                         <div className=' bg-red-100 text-red-600 rounded-md p-1.5 text-xs 
-                             inline'>
-                             PO:7 | PI: 02 | E-way: 46
-                         </div>
+                    <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Leads:  {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total}
+                        </div>
                     </Tooltip>
                 </div>
-                
+
             )
         },
-        // {
-        //     header: 'Opportunities', accessorKey: 'opportunity',
-        //     size:170,
-        //     cell: props => (
-        //         <div>
-        //             <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
-        //                 <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
-        //                     shadow-md inline'>
-        //                     34 | 12 | 46
-        //                 </div>
-        //             </Tooltip>
-        //         </div>
-        //     )
-        // },
-        // {
-        //     header: 'Leads', accessorKey: 'leads',
-        //     size:180,
-        //     cell: props => (
-        //         <div>
-        //             <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
-        //                 <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-        //                     shadow-md inline'>
-        //                     34 | 12 | 46
-        //                 </div>
-        //             </Tooltip>
-        //         </div>
-        //     )
-        // },
-        // {
-        //     header: 'Ratio', accessorKey: 'trustRatio',
-        //     size: 100,
-        //     meta:{HeaderClass:'text-center'},
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1 text-center items-center'>
-        //             <Tag className="flex gap-1 text-[10px]">
-        //                 <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-[10px]">
-        //                 <h6 className="text-[10px]">Trust:</h6> {props.getValue()}
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
-        //                 <h6 className="text-[10px]">Health Score:</h6> 80%
-        //             </Tag>
-        //         </div>
-        //     )
-        // },
-
     ]
+
 
     const memberData = [
         {
@@ -627,7 +579,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
         {
             header: 'Opportunities', accessorKey: 'opportunity',
-            size:160,
+            size: 160,
             cell: props => (
                 <div>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
@@ -641,7 +593,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
         {
             header: 'Leads', accessorKey: 'leads',
-            size:180,
+            size: 180,
             cell: props => (
                 <div>
                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
@@ -857,7 +809,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
         {
             header: 'Opportunities', accessorKey: 'opportunity',
-            size:160,
+            size: 160,
             cell: props => (
                 <div>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
@@ -871,7 +823,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
         {
             header: 'Leads', accessorKey: 'leads',
-            size:180,
+            size: 180,
             cell: props => (
                 <div>
                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
@@ -1134,11 +1086,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                     </Tooltip>
                     <div className='flex gap-2 items-center mt-3 text-orange-400'>
                         <Tooltip title="Total Shares: 12" wrapperClass="flex gap-1 text-xs">
-                            <IoMdShare className="text-base"/>
-                            <span>12</span> 
+                            <IoMdShare className="text-base" />
+                            <span>12</span>
                         </Tooltip>
                         <Tooltip title="Total Bookmarks: 8" wrapperClass="flex flex-row gap-1 text-xs">
-                            <FaBookmark className="text-base"/>
+                            <FaBookmark className="text-base" />
                             <span>8</span>
                         </Tooltip>
                     </div>
@@ -1261,7 +1213,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 <div className='flex flex-col gap-1'>
                     <div className='flex gap-2 items-center'>
                         <Tooltip title="Birthday : 23 May">
-                            <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm "/>
+                            <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm " />
                         </Tooltip>
                         <h6 className="text-xs">Raman Ojha</h6>
                     </div>
@@ -1302,7 +1254,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         {
             header: 'Status',
             accessorKey: 'status',
-            size:110,
+            size: 110,
             cell: props => (
                 <span className="text-xs">
                     <span className="text-xs">
@@ -1320,12 +1272,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             cell: props => (
                 <div className='flex flex-col gap-1'>
                     <span className="text-xs mb-1">
-                       <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
+                        <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
                     </span>
                     <Tooltip title="Present: 24 | Leaves: 2" className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
                             shadow-md inline'>
-                           P: 24 | L: 2
+                            P: 24 | L: 2
                         </div>
                     </Tooltip>
                 </div>
@@ -1680,14 +1632,14 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         </div> */}
                                     </div>
                                     <DebouceInput
-                                            // ref={ref}
-                                            className="w-full mb-2"
-                                            placeholder="Quick Search..."
-                                            suffix={<TbSearch className="text-lg" />}
-                                          />
+                                        // ref={ref}
+                                        className="w-full mb-2"
+                                        placeholder="Quick Search..."
+                                        suffix={<TbSearch className="text-lg" />}
+                                    />
                                     <DataTable
                                         columns={companyColumns}
-                                        data={companyData}
+                                        data={CompanyData?.data || []}
                                     // loading={isLoading}
                                     />
 
@@ -1757,11 +1709,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         </div> */}
                                     </div>
                                     <DebouceInput
-                                            // ref={ref}
-                                            className="w-full mb-2"
-                                            placeholder="Quick Search..."
-                                            suffix={<TbSearch className="text-lg" />}
-                                          />
+                                        // ref={ref}
+                                        className="w-full mb-2"
+                                        placeholder="Quick Search..."
+                                        suffix={<TbSearch className="text-lg" />}
+                                    />
                                     <DataTable
                                         columns={memberColumns}
                                         data={memberData}
@@ -1869,11 +1821,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         </div> */}
                                     </div>
                                     <DebouceInput
-                                            // ref={ref}
-                                            className="w-full mb-2"
-                                            placeholder="Quick Search..."
-                                            suffix={<TbSearch className="text-lg" />}
-                                          />
+                                        // ref={ref}
+                                        className="w-full mb-2"
+                                        placeholder="Quick Search..."
+                                        suffix={<TbSearch className="text-lg" />}
+                                    />
                                     <DataTable
                                         columns={productColumns}
                                         data={productData}
@@ -2125,11 +2077,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         </div> */}
                                     </div>
                                     <DebouceInput
-                                            // ref={ref}
-                                            className="w-full mb-2"
-                                            placeholder="Quick Search..."
-                                            suffix={<TbSearch className="text-lg" />}
-                                          />
+                                        // ref={ref}
+                                        className="w-full mb-2"
+                                        placeholder="Quick Search..."
+                                        suffix={<TbSearch className="text-lg" />}
+                                    />
                                     <DataTable
                                         columns={partnerColumns}
                                         data={wallListingData}
