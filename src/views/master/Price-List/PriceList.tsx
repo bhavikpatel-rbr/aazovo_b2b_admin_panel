@@ -1870,7 +1870,7 @@ const PriceList = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-4">
-            <h3 className="mb-4 lg:mb-0">Price List</h3>
+            <h5 className="mb-4 lg:mb-0">Price List</h5>
             <div className="flex items-center gap-2">
               <Link to="/task/task-list/create">
                 <Button icon={<TbUser />}>Assign to Task</Button>
