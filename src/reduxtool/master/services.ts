@@ -3073,7 +3073,7 @@ export const removePinnedTabAsync = async (pinData: { module_name: string }) => 
     try {
         // The endpoint '/pinned-tabs/remove' is an example. 
         // Your API might use a DELETE method or a POST with the module name.
-        const response = await axiosInstance.post(`${config.apiURL}/pinned-tabs/remove`, pinData);
+        const response = await axiosInstance.post(`${config.apiURL}/remove-pinned`, pinData);
         return response.data;
     } catch (err) {
         return isAxiosError(err);

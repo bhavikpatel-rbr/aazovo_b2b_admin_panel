@@ -1140,9 +1140,11 @@ const PriceList = () => {
       dispatch(getPriceListAction());
     } catch (error: any) {
       toast.push(
-        <Notification title="Failed to Add" type="danger">
-          {error.message}
-        </Notification>
+        <Notification
+          title="Failed to Add"
+          type="danger"
+          children={error.message}
+        />
       );
     } finally {
       setIsSubmitting(false);
@@ -1164,11 +1166,13 @@ const PriceList = () => {
       toast.push(<Notification title="Price Item Updated" type="success" />);
       closeEditDrawer();
       dispatch(getPriceListAction());
-    } catch (error: any) => {
+    } catch (error: any) {
       toast.push(
-        <Notification title="Failed to Update" type="danger">
-          {error.message}
-        </Notification>
+        <Notification
+          title="Failed to Update"
+          type="danger"
+          children={error.message}
+        />
       );
     } finally {
       setIsSubmitting(false);
@@ -1677,7 +1681,7 @@ const PriceList = () => {
       exportToExcel(fileName, dataWithQty);
       setIsExportSelectedReasonModalOpen(false);
       setSelectedRows([]);
-    } catch (error: any) => {
+    } catch (error: any) {
       toast.push(
         <Notification title="Failed to Submit Reason" type="danger">
           {error.message}
@@ -1711,7 +1715,7 @@ const PriceList = () => {
       );
       exportToCsv(fileName, allFilteredAndSortedData);
       setIsExportReasonModalOpen(false);
-    } catch (error: any) => {
+    } catch (error: any) {
       toast.push(
         <Notification title="Failed to Submit Reason" type="danger">
           {error.message}
@@ -1749,7 +1753,7 @@ const PriceList = () => {
         todayPriceListData.map((item) => ({ ...item, qty: "" }))
       );
       setIsTodayExportReasonModalOpen(false);
-    } catch (error: any) => {
+    } catch (error: any) {
       toast.push(
         <Notification title="Failed to Submit Reason" type="danger">
           {error.message}

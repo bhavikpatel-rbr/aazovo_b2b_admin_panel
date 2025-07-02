@@ -4932,11 +4932,11 @@ export const removePinnedAction = createAsyncThunk<any, any>(
     async (data, { rejectWithValue, dispatch }) => {
         try {
             const response: AxiosResponse<any> = await removePinnedTabAsync(data);
-            if (response?.data?.status === true) {
+            if (response) {
                 // On success, refresh the list of pinned tabs
                 dispatch(getPinnedTabAction());
                 // Return the response data (e.g., a success message)
-                return response.data.data;
+                return response;
             }
             return rejectWithValue(response);
         } catch (error: unknown) {
