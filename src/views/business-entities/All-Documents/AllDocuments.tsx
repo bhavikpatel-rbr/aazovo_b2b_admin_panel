@@ -1,583 +1,254 @@
-// src/views/documents/AllDocuments.tsx (or your preferred path)
-import React, { useEffect, useState, useRef, useMemo, Fragment, ReactNode } from 'react';
-import { useFileManagerStore } // Assuming types are co-located or imported
-    from './store/useFileManagerStore'; // Adjust path as needed
-
-// UI Components
-import Table from '@/components/ui/Table';
-import Drawer from '@/components/ui/Drawer';
-import Avatar from '@/components/ui/Avatar';
-import Button from '@/components/ui/Button';
-import CloseButton from '@/components/ui/CloseButton';
-import Dialog from '@/components/ui/Dialog';
-import Dropdown, { DropdownRef } from '@/components/ui/Dropdown'; // Import DropdownRef
-import Input from '@/components/ui/Input';
-import Notification from '@/components/ui/Notification';
-import Segment from '@/components/ui/Segment';
-import Upload from '@/components/ui/Upload';
-import toast from '@/components/ui/toast';
-import Card from '@/components/ui/Card'; // Added for main layout
-import ConfirmDialog from '@/components/shared/ConfirmDialog';
-import DebouceInput from '@/components/shared/DebouceInput';
-import EllipsisButton from '@/components/shared/EllipsisButton';
-import FileIcon from '@/components/view/FileIcon'; // Assuming this is a custom component
-import MediaSkeleton from '@/components/shared/loaders/MediaSkeleton';
-import TableRowSkeleton from '@/components/shared/loaders/TableRowSkeleton';
-
-// Icons
+import React, {
+    Fragment,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { create } from "zustand";
+import useSWRMutation from "swr/mutation";
+import dayjs from "dayjs";
 import {
     TbChevronRight,
-    TbLayoutGrid,
-    TbList,
     TbCloudDownload,
-    TbPencil,
-    TbUserPlus,
-    TbTrash,
     TbFolderSymlink,
+    TbLayoutGrid,
     TbLink,
-    TbPlus, // For UploadFile and Share dialog
-} from 'react-icons/tb';
-import UploadMedia from '@/assets/svg/UploadMedia'; // Ensure this path is correct
+    TbList,
+    TbPencil,
+    TbPlus,
+    TbTrash,
+    TbUserPlus,
+} from "react-icons/tb";
 
-// Utils & Services
-import fileSizeUnit from '@/utils/fileSizeUnit';
-import dayjs from 'dayjs';
-import classNames from '@/utils/classNames'; // Assuming this is from your utils
-import sleep from '@/utils/sleep'; // For simulating API calls
-import { apiGetFiles } from '@/services/FileService'; // Ensure this path is correct
-import useSWRMutation from 'swr/mutation'; // For data fetching
+// --- UI & SHARED COMPONENT IMPORTS ---
+import Avatar from "@/components/ui/Avatar";
+import Button from "@/components/ui/Button";
+import CloseButton from "@/components/ui/CloseButton";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import DebouceInput from "@/components/shared/DebouceInput";
+import Dialog from "@/components/ui/Dialog";
+import Drawer from "@/components/ui/Drawer";
+import Dropdown from "@/components/ui/Dropdown";
+import Input from "@/components/ui/Input";
+import Notification from "@/components/ui/Notification";
+import Segment from "@/components/ui/Segment";
+import Table from "@/components/ui/Table";
+import toast from "@/components/ui/toast";
+import Upload from "@/components/ui/Upload";
+import type { DropdownRef } from "@/components/ui/Dropdown";
+import type { MouseEvent, ReactNode, SyntheticEvent } from "react";
 
-// Types from your provided code
-export type FileItem = { // Renamed from 'File' to avoid conflict with global File type
+// --- REDUX IMPORTS ---
+import { useAppDispatch } from "@/reduxtool/store";
+import { useSelector } from "react-redux";
+import { getAllDocumentsAction } from "@/reduxtool/master/middleware";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+
+// --- TYPE DEFINITIONS ---
+type File = {
     id: string;
     name: string;
     fileType: string;
-    srcUrl: string;
     size: number;
-    author: {
-        name: string;
-        email: string;
-        img: string;
-    };
-    activities: {
-        userName: string;
-        userImg: string;
-        actionType: string;
-        timestamp: number;
-    }[];
-    permissions: {
-        userName: string;
-        userImg: string;
-        role: string;
-    }[];
+    srcUrl: string;
     uploadDate: number;
-    recent: boolean;
+    activities: { timestamp: number }[];
+    permissions: { userName: string; userImg: string; role: string }[];
 };
-
-export type DropdownItemCallbackProps = {
-    onOpen?: () => void;
-    onDownload?: () => void;
+type Files = File[];
+type Directory = { id: string; label: string };
+type Directories = Directory[];
+type Layout = "grid" | "list";
+type DialogProps = { id: string; open: boolean };
+type GetFileListResponse = { list: Files; directory: Directories };
+type DropdownItemCallbackProps = {
+    onDelete?: () => void;
     onShare?: () => void;
     onRename?: () => void;
-    onDelete?: () => void;
+    onDownload?: () => void;
+    onOpen?: () => void;
 };
-
-export type Layout = 'grid' | 'list';
-export type Files = FileItem[];
-export type Directories = { id: string; label: string }[];
-export type GetFileListResponse = { list: Files; directory: Directories };
-export type BaseFileItemProps = {
-    name?: string;
+type BaseFileItemProps = DropdownItemCallbackProps & {
     fileType?: string;
     size?: number;
-    loading?: boolean;
+    name?: string;
     onClick?: () => void;
-} & DropdownItemCallbackProps;
-
-
-// --- FileType Component ---
-const getFileTypeLabel = (type: string) => {
-    switch (type) {
-        case 'pdf': return 'PDF';
-        case 'xls': case 'xlsx': return 'Excel';
-        case 'doc': case 'docx': return 'Word';
-        case 'ppt': case 'pptx': return 'PowerPoint';
-        case 'figma': return 'Figma';
-        case 'image/jpeg': case 'jpeg': return 'JPEG';
-        case 'image/png': case 'png': return 'PNG';
-        case 'directory': return 'Folder';
-        default: return type.toUpperCase(); // Fallback to uppercase type
-    }
+    loading?: boolean;
 };
 
-const FileTypeDisplay = ({ type }: { type: string }) => {
-    return <>{getFileTypeLabel(type)}</>;
+// --- ZUSTAND STORE ---
+export type FileManagerState = {
+    fileList: Files; layout: Layout; selectedFile: string; openedDirectoryId: string; directories: Directories; deleteDialog: DialogProps; inviteDialog: DialogProps; renameDialog: DialogProps;
+};
+type FileManagerAction = {
+    setFileList: (p: Files) => void; setLayout: (p: Layout) => void; setOpenedDirectoryId: (p: string) => void; setDirectories: (p: Directories) => void; setSelectedFile: (p: string) => void; setDeleteDialog: (p: DialogProps) => void; setInviteDialog: (p: DialogProps) => void; setRenameDialog: (p: DialogProps) => void; deleteFile: (p: string) => void; renameFile: (p: { id: string; fileName: string }) => void;
+};
+const useFileManagerStore = create<FileManagerState & FileManagerAction>(
+    (set, get) => ({
+        fileList: [], layout: "grid", selectedFile: "", openedDirectoryId: "", directories: [], deleteDialog: { open: false, id: "" }, inviteDialog: { open: false, id: "" }, renameDialog: { open: false, id: "" },
+        setFileList: (payload) => set(() => ({ fileList: payload })),
+        setLayout: (payload) => set(() => ({ layout: payload })),
+        setOpenedDirectoryId: (payload) => set(() => ({ openedDirectoryId: payload })),
+        setSelectedFile: (payload) => set(() => ({ selectedFile: payload })),
+        setDirectories: (payload) => set(() => ({ directories: payload })),
+        setDeleteDialog: (payload) => set(() => ({ deleteDialog: payload })),
+        setInviteDialog: (payload) => set(() => ({ inviteDialog: payload })),
+        setRenameDialog: (payload) => set(() => ({ renameDialog: payload })),
+        deleteFile: (payload) => set(() => ({ fileList: get().fileList.filter((file) => file.id !== payload) })),
+        renameFile: (payload) => set(() => ({ fileList: get().fileList.map((file) => { if (file.id === payload.id) { file.name = payload.fileName } return file; }),})),
+    })
+);
+
+// --- MOCKED UTILITIES & COMPONENTS (for standalone functionality) ---
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const fileSizeUnit = (bytes: number) => { if (bytes === 0) return "0 Bytes"; const k = 1024; const i = Math.floor(Math.log(bytes) / Math.log(k)); return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${["Bytes", "KB", "MB", "GB"][i]}`; };
+const EllipsisButton = (props: { onClick: (e: MouseEvent) => void }) => (<Button {...props} shape="circle" variant="plain" size="sm" icon={<span className="text-xl">⋮</span>} />);
+const FileIcon = ({ type }: { type: string }) => { const iconMap: Record<string, string> = { pdf: "📄", doc: "📝", directory: "📁", image: "🖼️", png: "🖼️", jpeg: "🖼️", jpg: "🖼️", default: "📎", }; return <span style={{ fontSize: "24px" }}>{iconMap[type] || iconMap.default}</span>; };
+const UploadMedia = ({ width, height }: { width: number, height: number }) => (<svg width={width} height={height} viewBox="0 0 100 100"><rect width="100" height="100" fill="#f0f0f0" /><text x="50" y="55" textAnchor="middle" dominantBaseline="middle">Upload</text></svg>);
+const MediaSkeleton = ({ avatarProps }: { avatarProps: any }) => (<div style={{ display: "flex", alignItems: "center", gap: "8px" }}><div style={{ width: avatarProps.width, height: avatarProps.height, backgroundColor: "#e0e0e0", borderRadius: "50%" }}></div><div style={{ flex: 1 }}><div style={{ height: "1em", backgroundColor: "#e0e0e0", marginBottom: "4px" }}></div><div style={{ height: "0.8em", width: "60%", backgroundColor: "#e0e0e0" }}></div></div></div>);
+const TableRowSkeleton = ({ rows = 5, columns = 4, avatarInColumns = [] as number[] }) => (<tbody>{[...Array(rows)].map((_, i) => (<tr key={i}>{[...Array(columns)].map((_, j) => (<td key={j} style={{ padding: "16px" }}>{avatarInColumns.includes(j) ? <MediaSkeleton avatarProps={{ width: 30, height: 30 }} /> : <div style={{ height: "1em", backgroundColor: "#e0e0e0" }}></div>}</td>))}</tr>))}</tbody>);
+
+// --- DATA TRANSFORMATION LOGIC ---
+let fileSystemData: Record<string, GetFileListResponse> = {};
+
+const getFileNameFromUrl = (url: string) => url.substring(url.lastIndexOf("/") + 1);
+const getFileExtension = (fileName: string) => fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+const getFileTypeFromExtension = (ext: string) => { if (["jpg", "jpeg", "png", "gif", "bmp", "svg"].includes(ext)) return "image"; if (["pdf"].includes(ext)) return "pdf"; if (["doc", "docx"].includes(ext)) return "doc"; return ext;};
+const createFolder = (id: string, name: string): File => ({ id, name, fileType: "directory", size: 0, srcUrl: "", uploadDate: Date.now() / 1000, activities: [], permissions: [],});
+const createFile = (url: string, idPrefix: string): File | null => { if (!url || typeof url !== "string") return null; const name = getFileNameFromUrl(url); const extension = getFileExtension(name); return { id: `${idPrefix}-${name}`, name, fileType: getFileTypeFromExtension(extension), size: Math.floor(Math.random() * 5000000), srcUrl: url, uploadDate: Date.now() / 1000, activities: [], permissions: [], };};
+const addEntry = (parentId: string, entry: File, breadcrumbs: Directory[]) => { if (!fileSystemData[parentId]) fileSystemData[parentId] = { list: [], directory: [] }; fileSystemData[parentId].list.push(entry); if (entry.fileType === "directory") { fileSystemData[entry.id] = { list: [], directory: breadcrumbs }; }};
+
+const transformApiData = (apiData: any) => {
+    fileSystemData = { "": { list: [], directory: [] } };
+    Object.entries(apiData).forEach(([moduleKey, items]) => {
+        if (!Array.isArray(items) || items.length === 0) return;
+        const moduleName = moduleKey.charAt(0).toUpperCase() + moduleKey.slice(1).replace(/_/g, " ");
+        const moduleFolder = createFolder(`module-${moduleKey}`, moduleName);
+        addEntry("", moduleFolder, [{ id: "", label: "File Manager" }]);
+        items.forEach((item: any) => {
+            const itemName = item.company_name || item.partner_name || item.name || item.inquiry_subject || `Item ${item.id}`;
+            const itemFolder = createFolder(`item-${moduleKey}-${item.id}`, itemName);
+            addEntry(moduleFolder.id, itemFolder, [...(fileSystemData[moduleFolder.id]?.directory || []), { id: moduleFolder.id, label: moduleFolder.name }]);
+            const processDocs = (docObj: any, folderName: string, folderId: string) => {
+                const docFiles = Object.values(docObj).flatMap((doc: any) => {
+                    if (typeof doc === "string") return createFile(doc, folderId);
+                    if (Array.isArray(doc)) return doc.map((subDoc) => createFile(subDoc, folderId));
+                    return [];
+                }).filter(Boolean) as File[];
+
+                if (docFiles.length > 0) {
+                    const docFolder = createFolder(folderId, folderName);
+                    addEntry(itemFolder.id, docFolder, [...(fileSystemData[itemFolder.id]?.directory || []), { id: itemFolder.id, label: itemFolder.name }]);
+                    docFiles.forEach((file) => addEntry(docFolder.id, file, []));
+                }
+            };
+            if (item.all_documents) processDocs(item.all_documents, "All Documents",`docs-${moduleKey}-${item.id}`);
+            if (item.attachments) processDocs({ attachments: item.attachments }, "Attachments", `attach-${moduleKey}-${item.id}`);
+            if (item.images) processDocs(item.images, "Images", `images-${moduleKey}-${item.id}`);
+            if (item.icons) processDocs(item.icons, "Icons", `icons-${moduleKey}-${item.id}`);
+
+            const nestedArrays = Object.entries(item).filter(([key, value]) => Array.isArray(value) && !["attachments", "images", "icons"].includes(key));
+            nestedArrays.forEach(([key, value]) => {
+                const arrayFolderName = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " ");
+                const arrayFolder = createFolder(`array-${moduleKey}-${item.id}-${key}`, arrayFolderName);
+                addEntry(itemFolder.id, arrayFolder, [...(fileSystemData[itemFolder.id]?.directory || []), { id: itemFolder.id, label: itemFolder.name }]);
+                (value as any[]).forEach((subItem, index) => {
+                    const docPath = subItem.upload_certificate_path || subItem.photo_upload_path || subItem.document || subItem.icon_url || subItem.attachment_url || (subItem.path && subItem.name ? subItem.path : null) || subItem.attachments;
+                    const docName = subItem.certificate_name || subItem.document_name || subItem.name || subItem.title || `Sub-item ${subItem.id || index}`;
+                    if (docPath) {
+                        const file = createFile(docPath, `file-${key}-${subItem.id || index}`);
+                        if (file) {
+                            addEntry(arrayFolder.id, { ...file, name: `${docName}.${getFileExtension(file.name)}` }, []);
+                        }
+                    }
+                });
+            });
+        });
+    });
 };
 
-// --- FileItemDropdown Component ---
-const FileItemDropdown = (props: DropdownItemCallbackProps) => {
-    const { onDelete, onShare, onRename, onDownload, onOpen } = props;
-    const dropdownRef = useRef<DropdownRef>(null);
+// --- SUB-COMPONENTS (definitions are inlined for brevity) ---
+const FileType = ({ type }: { type: string }) => { const getFileTypeString = (t: string) => { switch (t) { case "pdf": return "PDF"; case "doc": return "DOC"; case "image": return "Image"; case "directory": return "Folder"; default: return t.toUpperCase(); } }; return <>{getFileTypeString(type)}</>; };
+const FileItemDropdown = (props: DropdownItemCallbackProps) => { const { onDelete, onShare, onRename, onDownload, onOpen } = props; const dropdownRef = useRef<DropdownRef>(null); const handleDropdownClick = (e: MouseEvent) => { e.stopPropagation(); dropdownRef.current?.handleDropdownOpen(); }; const handleDropdownItemClick = (e: SyntheticEvent, callback?: () => void) => { e.stopPropagation(); callback?.(); }; return <Dropdown ref={dropdownRef} renderTitle={<EllipsisButton onClick={handleDropdownClick} />} placement="bottom-end">{onOpen && <Dropdown.Item eventKey="Open" onClick={(e) => handleDropdownItemClick(e, onOpen)}><TbFolderSymlink className="text-xl" /><span>Open</span></Dropdown.Item>}<Dropdown.Item eventKey="download" onClick={(e) => handleDropdownItemClick(e, onDownload)}><TbCloudDownload className="text-xl" /><span>Download</span></Dropdown.Item><Dropdown.Item eventKey="rename" onClick={(e) => handleDropdownItemClick(e, onRename)}><TbPencil className="text-xl" /><span>Rename</span></Dropdown.Item><Dropdown.Item eventKey="share" onClick={(e) => handleDropdownItemClick(e, onShare)}><TbUserPlus className="text-xl" /><span>Share</span></Dropdown.Item><Dropdown.Item eventKey="delete" onClick={(e) => handleDropdownItemClick(e, onDelete)}><span className="flex items-center gap-2 text-red-500"><TbTrash className="text-xl" /><span>Delete</span></span></Dropdown.Item></Dropdown> };
+const FileRow = (props: BaseFileItemProps & { fileType: string, size: number, name: string }) => { const { fileType, size, name, onClick, ...rest } = props; return (<Table.Tr><Table.Td width="70%"><div className="inline-flex items-center gap-2 cursor-pointer group" role="button" onClick={onClick}><div className="text-3xl"><FileIcon type={fileType} /></div><div className="font-bold heading-text group-hover:text-primary-600">{name}</div></div></Table.Td><Table.Td>{fileSizeUnit(size)}</Table.Td><Table.Td><FileType type={fileType} /></Table.Td><Table.Td><div className="flex justify-end"><FileItemDropdown {...rest} /></div></Table.Td></Table.Tr>); };
+const FileSegment = (props: BaseFileItemProps) => { const { fileType, size, name, onClick, loading, ...rest } = props; return (<div className="bg-white rounded-2xl dark:bg-gray-800 border border-gray-200 dark:border-transparent py-4 px-3.5 flex items-center justify-between gap-2 transition-all hover:shadow-[0_0_1rem_0.25rem_rgba(0,0,0,0.04),0px_2rem_1.5rem_-1rem_rgba(0,0,0,0.12)] cursor-pointer" role="button" onClick={onClick}>{loading ? (<MediaSkeleton avatarProps={{ width: 33, height: 33 }} />) : (<><div className="flex items-center gap-2"><div className="text-3xl"><FileIcon type={fileType || ""} /></div><div><div className="font-bold heading-text">{name}</div><span className="text-xs">{fileSizeUnit(size || 0)}</span></div></div><FileItemDropdown {...rest} /></>)}</div>); };
+const FileList = ({ fileList, layout, ...rest }: any) => { const folders = useMemo(() => fileList.filter((f: File) => f.fileType === "directory"), [fileList]); const files = useMemo(() => fileList.filter((f: File) => f.fileType !== "directory"), [fileList]); const render = (list: Files, isFolder?: boolean) => layout === "grid" ? (<div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 mt-4 gap-4 lg:gap-6">{list.map((file) => <FileSegment key={file.id} {...file} onClick={() => rest.onClick(file.id)} onDownload={rest.onDownload} onShare={() => rest.onShare(file.id)} onDelete={() => rest.onDelete(file.id)} onRename={() => rest.onRename(file.id)} {...(isFolder ? { onOpen: () => rest.onOpen(file.id) } : {})} />)}</div>) : (<Table className="mt-4"><Table.THead><Table.Tr><Table.Th>File</Table.Th><Table.Th>Size</Table.Th><Table.Th>Type</Table.Th><Table.Th></Table.Th></Table.Tr></Table.THead><Table.TBody>{list.map((file) => <FileRow key={file.id} {...file} onClick={() => rest.onClick(file.id)} onDownload={rest.onDownload} onShare={() => rest.onShare(file.id)} onDelete={() => rest.onDelete(file.id)} onRename={() => rest.onRename(file.id)} {...(isFolder ? { onOpen: () => rest.onOpen(file.id) } : {})} />)}</Table.TBody></Table>); return <div>{folders.length > 0 && <div><h4>Folders</h4>{render(folders, true)}</div>}{files.length > 0 && <div className="mt-8"><h4>Files</h4>{render(files)}</div>}</div>; };
+const FileDetails = ({ onShare }: { onShare: (id: string) => void }) => { const { selectedFile, setSelectedFile, fileList } = useFileManagerStore(); const file = useMemo(() => fileList.find((f) => selectedFile === f.id), [fileList, selectedFile]); const handleDrawerClose = () => setSelectedFile(""); return (<Drawer title={null} closable={false} isOpen={Boolean(selectedFile)} showBackdrop={false} width={350} onClose={handleDrawerClose} onRequestClose={handleDrawerClose}>{file && (<div><div className="flex justify-end"><CloseButton onClick={handleDrawerClose} /></div><div className="mt-10 flex justify-center">{file.fileType.startsWith("image") ? <img src={file.srcUrl} className="max-h-[170px] rounded-xl" alt={file.name} /> : <FileIcon type={file.fileType} />}</div><div className="mt-10 text-center"><h4>{file.name}</h4></div><div className="mt-8"><h6>Info</h6><div className="mt-4 flex flex-col gap-4"><span>Size: {fileSizeUnit(file.size)}</span><span>Type: <FileType type={file.fileType} /></span><span>Created: {dayjs.unix(file.uploadDate).format("MMM DD, YYYY")}</span></div></div><div className="mt-10"><div className="flex justify-between items-center"><h6>Shared with</h6><Button type="button" shape="circle" icon={<TbPlus />} size="xs" onClick={() => onShare(file.id)} /></div></div></div>)}</Drawer>); };
+const FileManagerDeleteDialog = () => { const { deleteDialog, setDeleteDialog, deleteFile } = useFileManagerStore(); const handleClose = () => setDeleteDialog({ id: "", open: false }); const handleConfirm = () => { deleteFile(deleteDialog.id); handleClose(); }; return <ConfirmDialog isOpen={deleteDialog.open} type="danger" title="Delete file" onClose={handleClose} onCancel={handleClose} onConfirm={handleConfirm}><p>Are you sure you want to delete this file? This action cannot be undone.</p></ConfirmDialog> };
+const FileManagerInviteDialog = () => { const { inviteDialog, setInviteDialog } = useFileManagerStore(); const [inviting, setInviting] = useState(false); const handleClose = () => setInviteDialog({ id: "", open: false }); const handleInvite = async () => { setInviting(true); await sleep(500); toast.push(<Notification type="success" title="Invitation sent!"></Notification>, { placement: "top-end" }); setInviting(false); }; return <Dialog isOpen={inviteDialog.open} onClose={handleClose}><h4 className="mb-4">Share this file</h4><Input placeholder="Email" suffix={<Button size="sm" loading={inviting} onClick={handleInvite}>Invite</Button>} /><div className="mt-4 flex justify-between"><Button variant="plain" icon={<TbLink />} onClick={() => toast.push(<Notification type="success" title="Link Copied!" />)}>Copy link</Button><Button variant="solid" onClick={handleClose}>Done</Button></div></Dialog> };
+const FileManagerRenameDialog = () => { const { renameDialog, setRenameDialog, renameFile } = useFileManagerStore(); const [newName, setNewName] = useState(""); const handleClose = () => setRenameDialog({ id: "", open: false }); const handleSubmit = () => { renameFile({ id: renameDialog.id, fileName: newName }); handleClose(); }; return <Dialog isOpen={renameDialog.open} onClose={handleClose}><h4 className="mb-4">Rename</h4><DebouceInput placeholder="New name" onChange={(e) => setNewName(e.target.value)} /><div className="mt-4 text-right"><Button size="sm" className="mr-2" onClick={handleClose}>Cancel</Button><Button variant="solid" size="sm" disabled={!newName} onClick={handleSubmit}>OK</Button></div></Dialog> };
+const UploadFile = () => { const [isOpen, setIsOpen] = useState(false); const [isUploading, setUploading] = useState(false); const [files, setFiles] = useState<File[]>([]); const handleUpload = async () => { setUploading(true); await sleep(500); setUploading(false); setIsOpen(false); toast.push(<Notification title="Successfully uploaded" type="success" />, { placement: "top-center", }); }; return <><Button variant="solid" onClick={() => setIsOpen(true)}>Upload</Button><Dialog isOpen={isOpen} onClose={() => setIsOpen(false)}><h4>Upload Files</h4><Upload draggable className="mt-6" onChange={setFiles} onFileRemove={setFiles}><div className="my-4 text-center"><UploadMedia height={150} width={200} /><p className="font-semibold">Drop files here, or <span className="text-blue-500">browse</span></p></div></Upload><div className="mt-4"><Button block loading={isUploading} variant="solid" disabled={files.length === 0} onClick={handleUpload}>Upload</Button></div></Dialog></>; };
+const FileManagerHeader = ({ onEntryClick, onDirectoryClick }: { onEntryClick: () => void; onDirectoryClick: (id: string) => void; }) => { const { directories, layout, setLayout } = useFileManagerStore(); return (<div className="flex flex-col md:flex-row md:items-center justify-between gap-4"><div>{directories.length > 0 ? (<div className="flex items-center gap-2"><h3 className="flex items-center gap-2 text-base sm:text-2xl"><span className="hover:text-primary-600 cursor-pointer" role="button" onClick={onEntryClick}>File Manager</span>{directories.map((dir, index) => (<Fragment key={dir.id}><TbChevronRight className="text-lg" />{directories.length - 1 === index ? (<span>{dir.label}</span>) : (<span className="hover:text-primary-600 cursor-pointer" role="button" onClick={() => onDirectoryClick(dir.id)}>{dir.label}</span>)}</Fragment>))}</h3></div>) : (<h3>File Manager</h3>)}</div><div className="flex items-center gap-2"><Segment value={layout} onChange={(val) => setLayout(val as Layout)}><Segment.Item value="grid" className="text-xl px-3"><TbLayoutGrid /></Segment.Item><Segment.Item value="list" className="text-xl px-3"><TbList /></Segment.Item></Segment><UploadFile /></div></div>); };
 
-    const handleDropdownClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        dropdownRef.current?.handleDropdownOpen();
-    };
-
-    const handleDropdownItemClick = (e: React.SyntheticEvent, callback?: () => void) => {
-        e.stopPropagation();
-        callback?.();
-    };
-
-    return (
-        <Dropdown ref={dropdownRef} renderTitle={<EllipsisButton onClick={handleDropdownClick} />} placement="bottom-end">
-            {onOpen && <Dropdown.Item eventKey="Open" onClick={(e) => handleDropdownItemClick(e, onOpen)}><TbFolderSymlink className="text-xl mr-2" />Open</Dropdown.Item>}
-            <Dropdown.Item eventKey="download" onClick={(e) => handleDropdownItemClick(e, onDownload)}><TbCloudDownload className="text-xl mr-2" />Download</Dropdown.Item>
-            <Dropdown.Item eventKey="rename" onClick={(e) => handleDropdownItemClick(e, onRename)}><TbPencil className="text-xl mr-2" />Rename</Dropdown.Item>
-            <Dropdown.Item eventKey="share" onClick={(e) => handleDropdownItemClick(e, onShare)}><TbUserPlus className="text-xl mr-2" />Share</Dropdown.Item>
-            <Dropdown.Item eventKey="delete" onClick={(e) => handleDropdownItemClick(e, onDelete)} className="text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"><TbTrash className="text-xl mr-2" />Delete</Dropdown.Item>
-        </Dropdown>
-    );
-};
-
-// --- FileRow Component (for List View) ---
-const { Tr, Td, TBody, THead, Th } = Table; // Destructure Table components
-const FileRow = (props: BaseFileItemProps) => {
-    const { fileType = '', size = 0, name = 'Unnamed File', onClick, ...rest } = props;
-    return (
-        <Tr onClick={onClick} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
-            <Td width="70%">
-                <div className="inline-flex items-center gap-2 group">
-                    <div className="text-3xl"><FileIcon type={fileType} /></div>
-                    <div className="font-bold heading-text group-hover:text-primary-600 dark:group-hover:text-primary-400">{name}</div>
-                </div>
-            </Td>
-            <Td>{fileSizeUnit(size)}</Td>
-            <Td><FileTypeDisplay type={fileType} /></Td>
-            <Td><div className="flex justify-end"><FileItemDropdown {...rest} /></div></Td>
-        </Tr>
-    );
-};
-
-// --- FileSegment Component (for Grid View) ---
-const FileSegment = (props: BaseFileItemProps) => {
-    const { fileType = '', size = 0, name = 'Unnamed File', onClick, loading, ...rest } = props;
-    return (
-        <div
-            className="bg-white rounded-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700 py-4 px-3.5 flex items-center justify-between gap-2 transition-all hover:shadow-lg dark:hover:border-gray-600 cursor-pointer"
-            role="button"
-            onClick={onClick}
-        >
-            {loading ? (
-                <MediaSkeleton avatarProps={{ width: 33, height: 33 }} />
-            ) : (
-                <>
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <div className="text-3xl flex-shrink-0"><FileIcon type={fileType} /></div>
-                        <div className="overflow-hidden">
-                            <div className="font-bold heading-text truncate" title={name}>{name}</div>
-                            <span className="text-xs">{fileSizeUnit(size)}</span>
-                        </div>
-                    </div>
-                    <div className="flex-shrink-0"><FileItemDropdown {...rest} /></div>
-                </>
-            )}
-        </div>
-    );
-};
-
-// --- UploadFile Component ---
-const UploadFile = () => {
-    const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-    // const { addFilesToStore } = useFileManagerStore(); // Assuming you'd add this to your store
-
-    const handleUploadDialogClose = () => {
-        setUploadDialogOpen(false);
-        setUploadedFiles([]); // Clear files on close
-    };
-
-    const handleUpload = async () => {
-        setIsUploading(true);
-        await sleep(1000); // Simulate upload
-        // In a real app, you would dispatch an action or call an API here
-        // For example: addFilesToStore(uploadedFiles.map(file => ({...create FileItem structure...})));
-        console.log("Uploaded files:", uploadedFiles.map(f => f.name));
-        handleUploadDialogClose();
-        setIsUploading(false);
-        toast.push(<Notification title="Successfully uploaded" type="success" />, { placement: 'top-center' });
-    };
-
-    return (
-        <>
-            <Button variant="solid" onClick={() => setUploadDialogOpen(true)} icon={<TbPlus />}>Upload</Button>
-            <Dialog isOpen={uploadDialogOpen} onClose={handleUploadDialogClose} onRequestClose={handleUploadDialogClose}>
-                <h4 className="mb-2">Upload Files</h4>
-                <p className="mb-4 text-sm">Select files to upload to the current directory.</p>
-                <Upload
-                    draggable
-                    className="mt-6 bg-gray-100 dark:bg-gray-700/60 p-4 rounded-md"
-                    onChange={setUploadedFiles}
-                    onFileRemove={setUploadedFiles} // This might need adjustment based on Upload component's API
-                >
-                    <div className="my-4 text-center">
-                        <div className="text-6xl mb-4 flex justify-center">
-                            <UploadMedia height={120} width={150} />
-                        </div>
-                        <p className="font-semibold">
-                            <span className="text-gray-800 dark:text-white">Drop your files here, or{' '}</span>
-                            <span className="text-primary-600 dark:text-primary-400 cursor-pointer">browse</span>
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Supports all common file types.</p>
-                    </div>
-                </Upload>
-                <div className="mt-6 text-right">
-                    <Button className="mr-2" onClick={handleUploadDialogClose}>Cancel</Button>
-                    <Button block={uploadedFiles.length === 0} loading={isUploading} variant="solid" disabled={uploadedFiles.length === 0} onClick={handleUpload}>
-                        Upload {uploadedFiles.length > 0 ? `(${uploadedFiles.length})` : ''}
-                    </Button>
-                </div>
-            </Dialog>
-        </>
-    );
-};
-
-
-// --- FileManagerHeader Component ---
-type FileManagerHeaderProps = {
-    onEntryClick: () => void;
-    onDirectoryClick: (id: string) => void;
-};
-const FileManagerHeader = ({ onEntryClick, onDirectoryClick }: FileManagerHeaderProps) => {
-    const { directories, layout, setLayout } = useFileManagerStore();
-    return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-                {directories.length > 0 ? (
-                    <div className="flex items-center gap-2 flex-wrap"> {/* Added flex-wrap */}
-                        <h5 className="flex items-center gap-2">
-                            <span className="hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer" role="button" onClick={onEntryClick}>
-                                All Documents
-                            </span>
-                            {directories.map((dir, index) => (
-                                <Fragment key={dir.id}>
-                                    <TbChevronRight className="text-lg text-gray-400" />
-                                    {directories.length - 1 === index ? (
-                                        <span className="font-semibold text-gray-700 dark:text-gray-200">{dir.label}</span>
-                                    ) : (
-                                        <span className="hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer" role="button" onClick={() => onDirectoryClick(dir.id)}>
-                                            {dir.label}
-                                        </span>
-                                    )}
-                                </Fragment>
-                            ))}
-                        </h5>
-                    </div>
-                ) : (
-                    <h5>All Documents</h5>
-                )}
-            </div>
-            <div className="flex items-center gap-2">
-                <Segment value={layout} onChange={(val) => setLayout(val as Layout)} size="sm">
-                    <Segment.Item value="grid" className="text-xl py-1.5 px-2.5"><TbLayoutGrid /></Segment.Item>
-                    <Segment.Item value="list" className="text-xl py-1.5 px-2.5"><TbList /></Segment.Item>
-                </Segment>
-                <UploadFile />
-            </div>
-        </div>
-    );
-};
-
-// --- FileList Component ---
-type FileListProps = {
-    fileList: Files;
-    layout: Layout;
-    onRename: (id: string) => void;
-    onDownload: (file: FileItem) => void; // Pass the file item for potential name/type info
-    onShare: (id: string) => void;
-    onDelete: (id: string) => void;
-    onOpen: (id: string) => void;
-    onClick: (id: string) => void;
-};
-const FileListComponent = (props: FileListProps) => {
-    const { layout, fileList, onDelete, onDownload, onShare, onRename, onOpen, onClick } = props;
-    const folders = useMemo(() => fileList.filter((file) => file.fileType === 'directory'), [fileList]);
-    const files = useMemo(() => fileList.filter((file) => file.fileType !== 'directory'), [fileList]);
-
-    const renderFileSegment = (list: Files, isFolder?: boolean) => (
-        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 mt-4 gap-4 lg:gap-6">
-            {list.map((file) => (
-                <FileSegment key={file.id} {...file} onClick={() => onClick(file.id)} onDownload={() => onDownload(file)} onShare={() => onShare(file.id)} onDelete={() => onDelete(file.id)} onRename={() => onRename(file.id)} {...(isFolder ? { onOpen: () => onOpen(file.id) } : {})} />
-            ))}
-        </div>
-    );
-
-    const renderFileRow = (list: Files, isFolder?: boolean) => (
-        <Table className="mt-4">
-            <THead>
-                <Tr><Th>File</Th><Th>Size</Th><Th>Type</Th><Th></Th></Tr>
-            </THead>
-            <TBody>
-                {list.map((file) => (
-                    <FileRow key={file.id} {...file} onClick={() => onClick(file.id)} onDownload={() => onDownload(file)} onShare={() => onShare(file.id)} onDelete={() => onDelete(file.id)} onRename={() => onRename(file.id)} {...(isFolder ? { onOpen: () => onOpen(file.id) } : {})} />
-                ))}
-            </TBody>
-        </Table>
-    );
-    // Grouping by entity type (Company, Member, Partner)
-    // This assumes your API or store provides files already categorized or you have a way to determine this.
-    // For this example, I'll keep the simple folder/file distinction.
-    // To implement entity grouping, you'd need an additional property on `FileItem` like `entityType: 'Company' | 'Member' | 'Partner'`
-    // Then filter based on that. For simplicity, the original structure is maintained.
-
-    return (
-        <div>
-            {folders.length > 0 && (
-                <div>
-                    <h6 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-6 mb-2">Companies</h6>
-                    {layout === 'grid' ? renderFileSegment(folders, true) : renderFileRow(folders, true)}
-                </div>
-            )}
-            {folders.length > 0 && (
-                <div>
-                    <h6 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-6 mb-2">Members</h6>
-                    {layout === 'grid' ? renderFileSegment(folders, true) : renderFileRow(folders, true)}
-                </div>
-            )}
-            {folders.length > 0 && (
-                <div>
-                    <h6 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-6 mb-2">Partners</h6>
-                    {layout === 'grid' ? renderFileSegment(folders, true) : renderFileRow(folders, true)}
-                </div>
-            )}
-            {folders.length === 0 && files.length === 0 && (
-                 <div className="text-center py-10">
-                    <p className="text-gray-500">No files or folders in this directory.</p>
-                </div>
-            )}
-        </div>
-    );
-};
-
-// --- FileDetails Drawer Component ---
-const FileDetailsDrawer = ({ onShare }: { onShare: (id: string) => void }) => {
-    const { selectedFile, setSelectedFile, fileList } = useFileManagerStore();
-    const file = useMemo(() => fileList.find((f) => selectedFile === f.id), [fileList, selectedFile]);
-    const handleDrawerClose = () => setSelectedFile('');
-
-    const InfoRow = ({ label, value }: { label: string; value: ReactNode }) => (
-        <div className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-            <span className="text-sm text-gray-600 dark:text-gray-300">{label}</span>
-            <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{value}</span>
-        </div>
-    );
-
-    return (
-        <Drawer title={null} closable={false} isOpen={Boolean(selectedFile)} showBackdrop={false} width={350} onClose={handleDrawerClose} onRequestClose={handleDrawerClose} bodyClass="p-5">
-            {file && (
-                <div>
-                    <div className="flex justify-end"><CloseButton onClick={handleDrawerClose} /></div>
-                    <div className="mt-6 flex justify-center">
-                        {file.fileType.startsWith('image/') ? (
-                            <img src={file.srcUrl} className="max-h-[170px] rounded-xl object-contain" alt={file.name} />
-                        ) : (
-                            <FileIcon type={file.fileType} size={100} />
-                        )}
-                    </div>
-                    <div className="mt-6 text-center"><h5 className="truncate" title={file.name}>{file.name}</h5></div>
-                    <div className="mt-8">
-                        <h6 className="text-sm font-semibold mb-2">Info</h6>
-                        <div className="flex flex-col gap-1">
-                            <InfoRow label="Size" value={fileSizeUnit(file.size)} />
-                            <InfoRow label="Type" value={<FileTypeDisplay type={file.fileType} />} />
-                            <InfoRow label="Created" value={dayjs.unix(file.uploadDate).format('MMM DD, YYYY')} />
-                            {file.activities?.[0]?.timestamp && <InfoRow label="Last modified" value={dayjs.unix(file.activities[0].timestamp).format('MMM DD, YYYY')} />}
-                        </div>
-                    </div>
-                    {file.permissions && file.permissions.length > 0 && (
-                        <div className="mt-8">
-                            <div className="flex justify-between items-center mb-2">
-                                <h6 className="text-sm font-semibold">Shared with</h6>
-                                <Button type="button" shape="circle" icon={<TbPlus />} size="xs" onClick={() => onShare(file.id)} />
-                            </div>
-                            <div className="flex flex-col gap-3 max-h-40 overflow-y-auto">
-                                {file.permissions.map((user) => (
-                                    <div key={user.userName} className="flex items-center gap-2">
-                                        <Avatar src={user.userImg} size="sm" />
-                                        <div>
-                                            <div className="font-semibold text-sm">{user.userName}</div>
-                                            <div className="text-xs text-gray-500">{user.role}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-        </Drawer>
-    );
-};
-
-// --- Dialog Components ---
-const FileManagerDeleteDialog = () => {
-    const { deleteDialog, setDeleteDialog, deleteFile } = useFileManagerStore();
-    const handleDeleteDialogClose = () => setDeleteDialog({ id: '', open: false });
-    const handleDeleteConfirm = () => { deleteFile(deleteDialog.id); handleDeleteDialogClose(); };
-    return (
-        <ConfirmDialog isOpen={deleteDialog.open} type="danger" title="Delete file" onClose={handleDeleteDialogClose} onRequestClose={handleDeleteDialogClose} onCancel={handleDeleteDialogClose} onConfirm={handleDeleteConfirm}>
-            <p>Are you sure you want to delete this file/folder? This action can't be undone.</p>
-        </ConfirmDialog>
-    );
-};
-
-const FileManagerInviteDialog = () => {
-    const { inviteDialog, setInviteDialog } = useFileManagerStore();
-    const [inviting, setInviting] = useState(false);
-    const handleDialogClose = () => setInviteDialog({ id: '', open: false });
-    const handleInvite = async () => {
-        setInviting(true); await sleep(500);
-        toast.push(<Notification type="success" title="Invitation sent!" />, { placement: 'top-end' });
-        setInviting(false);
-    };
-    const handleCopy = async () => {
-        navigator.clipboard.writeText(window.location.href + `?file=${inviteDialog.id}`); // Example link
-        toast.push(<Notification type="success" title="Link Copied!" />, { placement: 'top-end' });
-    };
-    return (
-        <Dialog isOpen={inviteDialog.open} contentClassName="pb-0" onClose={handleDialogClose} onRequestClose={handleDialogClose}>
-            <h5 className="mb-4">Share this file</h5>
-            <div className="mt-6">
-                <Input placeholder="Email address" type="email"
-                    suffix={ <Button type="button" variant="solid" size="sm" loading={inviting} onClick={handleInvite}>Invite</Button> }
-                />
-            </div>
-            <div className="mt-4 flex justify-between items-center">
-                <Button variant="plain" size="sm" icon={<TbLink />} onClick={handleCopy}>Copy link</Button>
-                <Button variant="solid" size="sm" onClick={handleDialogClose}>Done</Button>
-            </div>
-        </Dialog>
-    );
-};
-
-const FileManagerRenameDialog = () => {
-    const { renameDialog, setRenameDialog, renameFile } = useFileManagerStore();
-    const [newName, setNewName] = useState('');
-    const handleDialogClose = () => { setNewName(''); setRenameDialog({ id: '', open: false }); };
-    const handleSubmit = () => { if (newName.trim()) renameFile({ id: renameDialog.id, fileName: newName.trim() }); handleDialogClose(); };
-    return (
-        <Dialog isOpen={renameDialog.open} onClose={handleDialogClose} onRequestClose={handleDialogClose}>
-            <h5 className="mb-4">Rename</h5>
-            <div className="mt-6">
-                <DebouceInput placeholder="New name" type="text" value={newName} onChange={(e) => setNewName(e.target.value)} />
-            </div>
-            <div className="mt-6 text-right">
-                <Button size="sm" className="mr-2" onClick={handleDialogClose}>Cancel</Button>
-                <Button variant="solid" size="sm" disabled={!newName.trim()} onClick={handleSubmit}>Rename</Button>
-            </div>
-        </Dialog>
-    );
-};
-
-
-// --- Main AllDocuments Page Component ---
-// API fetch function (can be outside the component or in a service file)
-async function fetchFilesApi(_: string, { arg }: { arg: string }) {
-    const data = await apiGetFiles<GetFileListResponse, { id?: string }>({ id: arg || undefined }); // Pass undefined if arg is empty
-    return data;
+// --- MAIN COMPONENT ---
+async function getFilesFromFS(_: string, { arg }: { arg: string }) {
+    await sleep(200); // Simulate FS read delay
+    return fileSystemData[arg] || { list: [], directory: [] };
 }
 
-const AllDocuments = () => {
-    const {
-        layout, fileList, setFileList, setDeleteDialog, setInviteDialog,
-        setRenameDialog, openedDirectoryId, setOpenedDirectoryId,
-        setDirectories, setSelectedFile,
-    } = useFileManagerStore();
+const FileManager = () => {
+    const dispatch = useAppDispatch();
+    const { allDocuments, status: masterLoadingStatus } = useSelector(masterSelector);
+    // console.log("allDocuments", allDocuments)
 
+    const { layout, fileList, setFileList, setDeleteDialog, setInviteDialog, setRenameDialog, openedDirectoryId, setOpenedDirectoryId, setDirectories, setSelectedFile, } = useFileManagerStore();
     const { trigger, isMutating } = useSWRMutation(
-        `/api/files?id=${openedDirectoryId}`, // Key includes ID for SWR caching
-        fetchFilesApi,
+        `/api/files/${openedDirectoryId}`,
+        getFilesFromFS,
         {
             onSuccess: (resp) => {
-                if (resp) { // Check if resp is not undefined
-                    setDirectories(resp.directory || []);
-                    setFileList(resp.list || []);
-                } else {
-                     // Handle cases where API might return undefined or an error structure
-                    setDirectories([]);
-                    setFileList([]);
-                    console.error("API response was undefined or invalid.");
-                }
+                setDirectories(resp.directory);
+                setFileList(resp.list);
             },
-            onError: (err) => {
-                console.error("Error fetching files:", err);
-                toast.push(<Notification title="Error" type="danger">Failed to load documents.</Notification>, { placement: 'top-center' });
-                setDirectories([]);
-                setFileList([]);
-            }
         }
     );
 
     useEffect(() => {
-        trigger(openedDirectoryId); // Fetch files for the current directory on mount and when ID changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [openedDirectoryId]); // Removed trigger from deps as per SWRMutation best practice
+        dispatch(getAllDocumentsAction());
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (allDocuments && Object.keys(allDocuments).length > 0) {
+            transformApiData(allDocuments);
+            trigger(""); // Trigger render for the root directory
+        }
+    }, [allDocuments, trigger]);
 
     const handleShare = (id: string) => setInviteDialog({ id, open: true });
     const handleDelete = (id: string) => setDeleteDialog({ id, open: true });
-    const handleDownload = (file: FileItem) => {
-        // In a real app, you'd fetch the actual file blob
-        console.log("Downloading:", file.name);
-        const blob = new Blob([`Mock content for ${file.name}`], { type: 'text/plain;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.download = file.name; // Use actual file name
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(link.href);
-    };
+    const handleDownload = () => { toast.push(<Notification type="success" title="Download started!" />);};
     const handleRename = (id: string) => setRenameDialog({ id, open: true });
-    const handleOpenFolder = (id: string) => setOpenedDirectoryId(id); // This will trigger useEffect to fetch new files
-    const handleEntryClick = () => setOpenedDirectoryId(''); // Go to root
-    const handleClickFile = (fileId: string) => setSelectedFile(fileId);
+    const handleNavigate = (id: string) => { setOpenedDirectoryId(id); trigger(id); };
+    const handleClick = (fileId: string) => setSelectedFile(fileId);
+
+    const isLoading = masterLoadingStatus === 'loading' || isMutating;
 
     return (
-        <>
-            <Card>
-                <FileManagerHeader onEntryClick={handleEntryClick} onDirectoryClick={handleOpenFolder} />
-                <div className="mt-6">
-                    {isMutating && fileList.length === 0 ? ( // Show skeleton only on initial load or full refresh
-                        layout === 'grid' ? (
-                            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 mt-4 gap-4 lg:gap-6">
-                                {[...Array(4)].map((_, i) => <FileSegment key={i} loading />)}
-                            </div>
-                        ) : (
-                            <Table><THead><Tr><Th>File</Th><Th>Size</Th><Th>Type</Th><Th></Th></Tr></THead>
-                                <TableRowSkeleton avatarInColumns={[0]} columns={4} rows={5} avatarProps={{ width: 30, height: 30 }} />
-                            </Table>
-                        )
+        <div className="p-4">
+            <FileManagerHeader onEntryClick={() => handleNavigate("")} onDirectoryClick={handleNavigate}/>
+            <div className="mt-6">
+                {isLoading ? (
+                    layout === "grid" ? (
+                        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 mt-4 gap-4 lg:gap-6">
+                            {[...Array(8)].map((_, i) => <FileSegment key={i} loading={isLoading} />)}
+                        </div>
                     ) : (
-                        <FileListComponent
-                            fileList={fileList}
-                            layout={layout}
-                            onDownload={handleDownload}
-                            onShare={handleShare}
-                            onDelete={handleDelete}
-                            onRename={handleRename}
-                            onOpen={handleOpenFolder}
-                            onClick={handleClickFile}
-                        />
-                    )}
-                </div>
-            </Card>
-            <FileDetailsDrawer onShare={handleShare} />
+                        <Table>
+                            <Table.THead><Table.Tr><Table.Th>File</Table.Th><Table.Th>Size</Table.Th><Table.Th>Type</Table.Th><Table.Th></Table.Th></Table.Tr></Table.THead>
+                            <TableRowSkeleton avatarInColumns={[0]} columns={4} rows={8} />
+                        </Table>
+                    )
+                ) : (
+                    <FileList fileList={fileList} layout={layout} onDownload={handleDownload} onShare={handleShare} onDelete={handleDelete} onRename={handleRename} onOpen={handleNavigate} onClick={handleClick}/>
+                )}
+            </div>
+            <FileDetails onShare={handleShare} />
             <FileManagerDeleteDialog />
             <FileManagerInviteDialog />
             <FileManagerRenameDialog />
-        </>
+        </div>
     );
 };
 
-export default AllDocuments;
+export default FileManager;
