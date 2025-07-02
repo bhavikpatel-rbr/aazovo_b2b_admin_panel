@@ -517,7 +517,7 @@ const BugReportListing = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterReportedBy: data.filterReportedBy || "" }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [closeFilterDrawer, handleSetTableData]);
-  const onClearFilters = useCallback(() => { setFilterCriteria({}); filterFormMethods.reset({ filterStatus: [], filterReportedBy: "" }); handleSetTableData({ query: "", pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
+  const onClearFilters = useCallback(() => { setFilterCriteria({}); filterFormMethods.reset({ filterStatus: [], filterReportedBy: "" }); handleSetTableData({ query: "", pageIndex: 1 }),dispatch(getBugReportsAction()) }, [filterFormMethods, handleSetTableData]);
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => { setFilterCriteria(prev => { const newFilters = { ...prev }; if (key === 'filterStatus') { const currentValues = prev.filterStatus || []; const newValues = currentValues.filter(item => item !== value); newValues.length > 0 ? newFilters.filterStatus = newValues : delete newFilters.filterStatus; } else { delete newFilters[key]; } return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
   const handleCardClick = (status?: BugReportStatusApi) => { setFilterCriteria(status ? { filterStatus: [status] } : {}); handleSetTableData({ pageIndex: 1, query: '' }); };
   
