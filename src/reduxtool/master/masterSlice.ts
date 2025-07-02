@@ -88,6 +88,7 @@ import {
   getMemberAction,
   getMembersAction,
   getMemberTypeAction,
+  getNotificationAction,
   getNumberSystemsAction,
   getOfferById,
   getOffersAction,
@@ -195,6 +196,7 @@ const INITIAL_STATE: any = {
   addNotification: {},
   getAllUserData: [],
   getSchedule: {},
+  getAllNotification: {},
   pinnedTabs: [],
   allDocuments: [],
 };
@@ -700,6 +702,10 @@ const masterSlice = createSlice({
     builder.addCase(getAllUsersAction.fulfilled, (state, { payload }) => ({
       ...state,
       getAllUserData: payload,
+    }));
+    builder.addCase(getNotificationAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      getAllNotification: payload,
     }));
     builder.addCase(getPinnedTabAction.fulfilled, (state, { payload }) => ({
       ...state,

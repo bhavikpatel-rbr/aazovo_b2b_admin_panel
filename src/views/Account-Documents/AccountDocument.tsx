@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller } from "react-hook-form"; // For Filter, Assign, Change Status drawers
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import dayjs from "dayjs";
@@ -8,6 +8,7 @@ import isBetween from "dayjs/plugin/isBetween";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import { useNavigate } from "react-router-dom";
+import classNames from "classnames";
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
@@ -35,6 +36,7 @@ import {
   Select,
   Card,
   Dialog,
+  Checkbox,
 } from "@/components/ui";
 import Dropdown from "@/components/ui/Dropdown";
 
@@ -49,13 +51,7 @@ import {
   TbPlus,
   TbDotsVertical,
   TbEye,
-  TbUserPlus,
-  TbArrowsExchange,
-  TbRocket,
-  TbInfoCircle,
-  TbBulb,
   TbReload,
-  TbUser,
   TbMailShare,
   TbBrandWhatsapp,
   TbTagStarred,
@@ -70,6 +66,9 @@ import {
   TbFileCheck,
   TbFileExcel,
   TbForms,
+  TbColumns,
+  TbX,
+  TbUser,
 } from "react-icons/tb";
 
 // Types
@@ -80,17 +79,11 @@ import type {
   CellContext,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import type {
+import {
   AccountDocumentStatus,
   EnquiryType,
   AccountDocumentListItem,
-  AccountDocumentSourcingDetails,
-} from "./types"; // Import from your types file
-import {
-  AccountDocumentStatusOptions as accountDocumentStatusOptionsConst,
-  enquiryTypeOptions as enquiryTypeOptionsConst,
-  AccountDocumentIntentOptions as accountDocumentIntentOptionsConst,
-} from "./types";
+} from "./types"; // Adjust import path as needed
 
 // Redux
 import { shallowEqual, useSelector } from "react-redux";
@@ -99,10 +92,9 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { addNotificationAction, addScheduleAction, getAllUsersAction } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
-
 // --- Define Types ---
 export type SelectOption = { value: any; label: string };
-export type ModalType = 'notification' | 'schedule'; // Added 'schedule'
+export type ModalType = 'notification' | 'schedule';
 export interface ModalState {
     isOpen: boolean;
     type: ModalType | null;
@@ -181,26 +173,20 @@ const dummyAccountDocumentData: AccountDocumentListItem[] = [
   },
 ];
 
-const accountDocumentStatusColor: Record<AccountDocumentStatus | "default", string> = {
-  New: "bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200",
-  Contacted: "bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200",
-  Qualified: "bg-indigo-100 text-indigo-700 dark:bg-indigo-700/30 dark:text-indigo-200",
-  "Proposal Sent": "bg-purple-100 text-purple-700 dark:bg-purple-700/30 dark:text-purple-200",
-  Negotiation: "bg-violet-100 text-violet-700 dark:bg-violet-700/30 dark:text-violet-200",
-  "Follow Up": "bg-amber-100 text-amber-700 dark:bg-amber-700/30 dark:text-amber-200",
-  Won: "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200",
-  Lost: "bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200",
-  default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
+const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
+  approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
+  rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
+  uploaded: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100",
+  not_uploaded: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-100",
 };
+
 const enquiryTypeColor: Record<EnquiryType | "default", string> = {
-  "Product Info": "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
-  "Quote Request": "bg-cyan-100 text-cyan-700 dark:bg-cyan-700/30 dark:text-cyan-200",
-  "Demo Request": "bg-teal-100 text-teal-700 dark:bg-teal-700/30 dark:text-teal-200",
-  Support: "bg-pink-100 text-pink-700 dark:bg-pink-700/30 dark:text-pink-200",
-  Partnership: "bg-lime-100 text-lime-700 dark:bg-lime-700/30 dark:text-lime-200",
-  Sourcing: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-700/30 dark:text-fuchsia-200",
-  Other: "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200",
-  default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
+  purchase: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200",
+  sales: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200",
+  service: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-200",
+  other: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
+  default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 
 // --- Helper Components ---
@@ -299,7 +285,71 @@ const AccountDocumentModals = ({ modalState, onClose, getAllUserDataOptions }: {
 
 const AccountDocumentSearch = React.forwardRef<HTMLInputElement, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
 AccountDocumentSearch.displayName = "AccountDocumentSearch";
-const AccountDocumentTableTools = ({ onSearchChange, onFilter }: any) => (<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"><div className="flex-grow"><AccountDocumentSearch onInputChange={onSearchChange} placeholder="Quick Search..." /></div><div className="flex gap-1"><Button icon={<TbReload />}></Button><Button icon={<TbFilter />} onClick={() => onFilter()}>Filter</Button><Button icon={<TbCloudUpload />}>Export</Button></div></div>);
+
+const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+  onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void;
+  columns: ColumnDef<AccountDocumentListItem>[]; filteredColumns: ColumnDef<AccountDocumentListItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<AccountDocumentListItem>[]>>; activeFilterCount: number;
+}) => {
+    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+    const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+        const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+        if (originalColumn) {
+          setFilteredColumns(prev => {
+            const newCols = [...prev, originalColumn];
+            newCols.sort((a, b) => {
+              const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+              const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+              return indexA - indexB;
+            });
+            return newCols;
+          });
+        }
+      } else {
+        setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      }
+    };
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow"><AccountDocumentSearch onInputChange={onSearchChange} placeholder="Quick Search..." /></div>
+            <div className="flex gap-1">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
+                    </div>
+                </Dropdown>
+                <Button icon={<TbReload />} onClick={onClearFilters}></Button>
+                <Button icon={<TbFilter />} onClick={onFilter}>Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+            </div>
+        </div>
+    )
+};
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: any,
+  onRemoveFilter: (key: string, value: any) => void;
+  onClearAll: () => void;
+}) => {
+    const filters = [
+        ...(filterData.filterStatus || []).map((f: SelectOption) => ({ key: 'filterStatus', label: `Status: ${f.label}`, value: f })),
+    ];
+    if (filters.length === 0) return null;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filters.map(filter => (
+                <Tag key={`${filter.key}-${filter.value.value}`} prefix>
+                    {filter.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key, filter.value)} />
+                </Tag>
+            ))}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+};
+
+
 const AccountDocumentTable = (props: any) => <DataTable {...props} />;
 const AccountDocumentSelectedFooter = ({ selectedItems, onDeleteSelected, }: any) => { const [open, setOpen] = useState(false); if (!selectedItems || selectedItems.length === 0) return null; return (<><StickyFooter className="p-4 border-t" stickyClass="-mx-4 sm:-mx-8"><div className="flex items-center justify-between"><span>{selectedItems.length} selected</span><Button size="sm" color="red-500" onClick={() => setOpen(true)}>Delete Selected</Button></div></StickyFooter><ConfirmDialog isOpen={open} type="danger" onConfirm={() => { onDeleteSelected(); setOpen(false); }} onClose={() => setOpen(false)} title="Delete Selected"><p>Sure?</p></ConfirmDialog></>); };
 const DialogDetailRow: React.FC<any> = ({ label, value, isLink, preWrap, breakAll, labelClassName, valueClassName, className, }) => { const defaultLabelClass = "text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider"; const defaultValueClass = "text-sm text-slate-700 dark:text-slate-100 mt-0.5"; return (<div className={`py-1.5 ${className || ""}`}><p className={`${labelClassName || defaultLabelClass}`}>{label}</p>{isLink ? (<a href={typeof value === "string" && (value.startsWith("http") ? value : `/${value}`)} target="_blank" rel="noopener noreferrer" className={`${valueClassName || defaultValueClass} hover:underline text-blue-600 dark:text-blue-400 ${breakAll ? "break-all" : ""} ${preWrap ? "whitespace-pre-wrap" : ""}`}>{value}</a>) : (<div className={`${valueClassName || defaultValueClass} ${breakAll ? "break-all" : ""} ${preWrap ? "whitespace-pre-wrap" : ""}`}>{value}</div>)}</div>); };
@@ -320,6 +370,7 @@ const AccountDocument = () => {
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "createdAt" }, query: "" });
     const [selectedItems, setSelectedItems] = useState<AccountDocumentListItem[]>([]);
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
+    const [filterCriteria, setFilterCriteria] = useState<any>({});
 
     useEffect(() => { dispatch(getAllUsersAction()); }, [dispatch]);
 
@@ -330,13 +381,19 @@ const AccountDocument = () => {
     const { pageData, total, allFilteredAndSortedData } = useMemo((): { pageData: AccountDocumentListItem[]; total: number; allFilteredAndSortedData: AccountDocumentListItem[]; } => {
         let processedData: AccountDocumentListItem[] = cloneDeep(dummyAccountDocumentData);
         if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query))); }
+        
+        if(filterCriteria.filterStatus?.length) {
+            const selectedStatuses = new Set(filterCriteria.filterStatus.map((s: SelectOption) => s.value));
+            processedData = processedData.filter(item => selectedStatuses.has(item.status));
+        }
+
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key) { processedData.sort((a, b) => { let aVal = a[key as keyof AccountDocumentListItem] as any; let bVal = b[key as keyof AccountDocumentListItem] as any; if (key === "createdAt" || key === "updatedAt") return order === "asc" ? dayjs(aVal).valueOf() - dayjs(bVal).valueOf() : dayjs(bVal).valueOf() - dayjs(aVal).valueOf(); if (typeof aVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal; return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? "")); }); }
         const currentTotal = processedData.length;
         const { pageIndex = 1, pageSize = 10 } = tableData;
         const startIndex = (pageIndex - 1) * pageSize;
         return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData, };
-    }, [tableData]);
+    }, [tableData, filterCriteria]);
 
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
     const handleDeleteClick = useCallback((item: AccountDocumentListItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
@@ -350,13 +407,59 @@ const AccountDocument = () => {
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
     const openAddNewDocumentDrawer = useCallback(() => setIsAddNewDocumentDrawerOpen(true), []);
     const closeAddNewDocumentDrawer = useCallback(() => setIsAddNewDocumentDrawerOpen(false), []);
+    
+    const onClearFilters = () => {
+        setFilterCriteria({});
+        filterForm.reset({});
+        handleSetTableData({ pageIndex: 1, query: "" });
+    };
+
+    const handleCardClick = (status: AccountDocumentStatus) => {
+        onClearFilters();
+        const statusOption = [{ value: status, label: status.charAt(0).toUpperCase() + status.slice(1)}];
+        setFilterCriteria({ filterStatus: statusOption });
+    };
+
+    const handleRemoveFilter = (key: string, value: any) => {
+        setFilterCriteria((prev: any) => {
+            const newFilters = { ...prev };
+            const currentValues = prev[key] as SelectOption[] | undefined;
+            if (currentValues) {
+                newFilters[key] = currentValues.filter(item => item.value !== value.value);
+            }
+            return newFilters;
+        });
+    };
+
     const columns: ColumnDef<AccountDocumentListItem>[] = useMemo(() => [
-        { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<AccountDocumentListItem, any>) => (<Tag className={`${accountDocumentStatusColor[props.row.original.status as keyof typeof accountDocumentStatusColor] || accountDocumentStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag>), },
+        { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<AccountDocumentListItem, any>) => (<Tag className={`${accountDocumentStatusColor[props.row.original.status as keyof typeof accountDocumentStatusColor] || 'bg-gray-100'} capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag>), },
         { header: "Lead", accessorKey: "leadNumber", size: 130, cell: (props) => { return (<div className="flex flex-col gap-0.5 text-xs"><span>{props.getValue<string>()}</span><div><Tag className={`${enquiryTypeColor[props.row.original.enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiryType}</Tag></div></div>); }, },
-        { header: "Member", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { return (<div className="flex flex-col gap-0.5 text-xs"><b>5067974</b><span>ABC Enterprise</span><b>7039521</b><span>Dharmesh Soni</span><div><b>Compant Document:</b><span>OMC</span></div></div>); }, },
+        { header: "Member", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { return (<div className="flex flex-col gap-0.5 text-xs"><b>5067974</b><span>ABC Enterprise</span><b>7039521</b><span>Dharmesh Soni</span><div><b>Company Document:</b><span>OMC</span></div></div>); }, },
         { header: "Document", size: 220, cell: (props) => { return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type: </b><span>Sales Order</span></div><div><b>Doc No: </b><span>ND-PO-2526-38</span></div><div><b>Invoice No: </b><span>OMC-117/25-26</span></div><div><b>Form Type: </b><span>CRM PI 1.0.2</span></div><b>{dayjs(props.row.original.createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
         { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original} />), },
     ], [handleDeleteClick, handleOpenModal]);
+
+    const [filteredColumns, setFilteredColumns] = useState<ColumnDef<AccountDocumentListItem>[]>(columns);
+    useEffect(() => { setFilteredColumns(columns) }, [columns]);
+
+    const activeFilterCount = useMemo(() => {
+      let count = 0;
+      if (filterCriteria.filterStatus?.length) count++;
+      return count;
+    }, [filterCriteria]);
+    
+    const counts = useMemo(() => {
+        const total = dummyAccountDocumentData.length;
+        const pending = dummyAccountDocumentData.filter(d => d.status === 'pending').length;
+        const approved = dummyAccountDocumentData.filter(d => d.status === 'approved').length;
+        const rejected = dummyAccountDocumentData.filter(d => d.status === 'rejected').length;
+        const uploaded = 0; // Placeholder
+        const not_uploaded = 0; // Placeholder
+        return { total, pending, approved, rejected, uploaded, not_uploaded };
+    }, []);
+
+    const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+    const cardBodyClass = "flex gap-2 p-2";
 
     return (
         <>
@@ -364,15 +467,16 @@ const AccountDocument = () => {
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Account Document</h5><Button variant="solid" icon={<TbPlus />} className="px-5" onClick={() => openAddNewDocumentDrawer()}>Set New Document</Button></div>
                     <div className="grid grid-cols-6 mb-4 gap-2">
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBrandGoogleDrive size={24} /></div><div><h6 className="text-blue-500">879</h6><span className="font-semibold text-xs">Total</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbFileAlert size={24} /></div><div><h6 className="text-orange-500">3</h6><span className="font-semibold text-xs">Pending</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbFileCertificate size={24} /></div><div><h6 className="text-green-500">23</h6><span className="font-semibold text-xs">Approved</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbFileDislike size={24} /></div><div><h6 className="text-red-500">34</h6><span className="font-semibold text-xs">Rejected</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500">9</h6><span className="font-semibold text-xs">Uploaded</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbFileExcel size={24} /></div><div><h6 className="text-pink-500">42</h6><span className="font-semibold text-xs">Not Uploaded</span></div></Card>
+                        <Tooltip title="Click to show all documents"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBrandGoogleDrive size={24} /></div><div><h6 className="text-blue-500">{counts.total}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show pending documents"><div onClick={() => handleCardClick('pending')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbFileAlert size={24} /></div><div><h6 className="text-orange-500">{counts.pending}</h6><span className="font-semibold text-xs">Pending</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show approved documents"><div onClick={() => handleCardClick('approved')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbFileCertificate size={24} /></div><div><h6 className="text-green-500">{counts.approved}</h6><span className="font-semibold text-xs">Approved</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show rejected documents"><div onClick={() => handleCardClick('rejected')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbFileDislike size={24} /></div><div><h6 className="text-red-500">{counts.rejected}</h6><span className="font-semibold text-xs">Rejected</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show uploaded documents"><div onClick={() => handleCardClick('uploaded')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500">{counts.uploaded}</h6><span className="font-semibold text-xs">Uploaded</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show 'not uploaded' documents"><div onClick={() => handleCardClick('not_uploaded')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbFileExcel size={24} /></div><div><h6 className="text-pink-500">{counts.not_uploaded}</h6><span className="font-semibold text-xs">Not Uploaded</span></div></Card></div></Tooltip>
                     </div>
-                    <AccountDocumentTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} />
-                    <div className="mt-4 flex-grow overflow-y-auto"><AccountDocumentTable selectable columns={columns} data={pageData} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
+                    <AccountDocumentTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={() => {}} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+                    <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
+                    <div className="mt-4 flex-grow overflow-y-auto"><AccountDocumentTable selectable columns={filteredColumns} data={pageData} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
                 </AdaptiveCard>
             </Container>
             <AccountDocumentSelectedFooter selectedItems={selectedItems} />

@@ -4870,6 +4870,23 @@ export const getAutoSpbAction = createAsyncThunk(
   }
 )
 
+
+export const getNotificationAction = createAsyncThunk(
+  "auth/getNotificationAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getNotificationAsync()
+      if (response) {
+        return response
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
 export const blockUserAction = createAsyncThunk<any, any>(
   "auth/blockUserAction",
   async (data, { rejectWithValue, dispatch }) => {

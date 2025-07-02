@@ -1,58 +1,81 @@
-import { useState, useEffect, useMemo } from 'react'
-import isEmpty from 'lodash/isEmpty'
 import dayjs from 'dayjs'
-import { TbFilter, TbCheck } from 'react-icons/tb'
+import isEmpty from 'lodash/isEmpty'
+import { useEffect, useMemo, useState } from 'react'
+import { TbCheck, TbFilter } from 'react-icons/tb'
 
 // UI & Shared Components (as they were imported)
-import Timeline from '@/components/ui/Timeline'
+import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Button from '@/components/ui/Button'
 import Dropdown from '@/components/ui/Dropdown'
 import Switcher from '@/components/ui/Switcher'
-import AdaptiveCard from '@/components/shared/AdaptiveCard'
+import Timeline from '@/components/ui/Timeline'
 
 // Activity-specific Components & Constants (as they were imported)
 import { ActivityAvatar, ActivityEvent } from '@/components/view/Activity'
 import {
-    UPDATE_TICKET,
+    ADD_FILES_TO_TICKET,
+    ADD_TAGS_TO_TICKET,
+    ASSIGN_TICKET,
     COMMENT,
     COMMENT_MENTION,
-    ASSIGN_TICKET,
-    ADD_TAGS_TO_TICKET,
-    ADD_FILES_TO_TICKET,
     CREATE_TICKET,
+    UPDATE_TICKET,
 } from '@/components/view/Activity/constants'
 
 // Services (as it was imported)
-import { apiGetLogs } from '@/services/LogService'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
+import { getNotificationAction } from '@/reduxtool/master/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
+// apiGetLogs is no longer needed since we use Redux
+// import { apiGetLogs } from '@/services/LogService' 
+import { useSelector } from 'react-redux'
 
 // --- TYPE DEFINITIONS ---
+
+// The structure required by the UI components
+export type ActivityEventData = {
+    type: string
+    dateTime: number
+    ticket?: string
+    status?: number
+    userName: string
+    userImg?: string
+    comment?: string
+    tags?: string[]
+    files?: string[]
+    assignee?: string
+}
 
 export type Activity = {
     id: string
     date: number
-    events: Array<{
-        type: string
-        dateTime: number
-        ticket?: string
-        status?: number
-        userName: string
-        userImg?: string
-        comment?: string
-        tags?: string[]
-        files?: string[]
-        assignee?: string
-    }>
+    events: ActivityEventData[]
 }
 
 export type Activities = Activity[]
 
-export type GetNotificationResponse = {
-    data: Activities
+// The structure of a single notification from YOUR API response
+export type ApiNotification = {
+    id: number;
+    notification_title: string;
+    message: string;
+    created_at: string;
+    created_by_user: {
+        name: string;
+        profile_pic_path: string | null;
+    } | null;
+}
+
+// The structure of the Redux state object for notifications
+export type NotificationState = {
+    data: ApiNotification[] | null
     loadable: boolean
 }
 
 
 // --- LOG COMPONENT ---
+// Simplified to be a "dumb" component that only renders props.
+// All Redux logic has been removed from here and centralized in the parent.
 
 type LogProps = {
     onLoadMore: () => void
@@ -69,43 +92,48 @@ const Log = ({
     onLoadMore,
     filter = [],
 }: LogProps) => {
+
     return (
         <div>
-            {activities.map((log, index) => (
-                <div key={log.id + index} className="mb-8">
-                    {log.events.filter((item) => filter.includes(item.type))
-                        .length > 0 && (
+            {isLoading && activities.length === 0 && (
+                <div className="text-center p-4">Loading...</div>
+            )}
+            {!isLoading && activities.length === 0 && (
+                <div className="text-center p-4 text-gray-500">No notifications to display.</div>
+            )}
+            {activities.map((log, index) => {
+                const visibleEvents = log.events.filter((item) => filter.includes(item.type))
+                if (visibleEvents.length === 0) {
+                    return null
+                }
+                return (
+                    <div key={log.id + index} className="mb-8">
                         <div className="mb-4 font-semibold uppercase">
                             {dayjs.unix(log.date).format('dddd, DD MMMM')}
                         </div>
-                    )}
-                    <Timeline>
-                        {isEmpty(log.events) ? (
-                            <Timeline.Item>No Activities</Timeline.Item>
-                        ) : (
-                            log.events
-                                .filter((item) => filter.includes(item.type))
-                                .map((event, index) => (
-                                    <Timeline.Item
-                                        key={log.id + event.type + index}
-                                        media={<ActivityAvatar data={event} />}
-                                    >
-                                        <div className="mt-1">
-                                            <ActivityEvent data={event} />
-                                        </div>
-                                    </Timeline.Item>
-                                ))
-                        )}
-                    </Timeline>
-                </div>
-            ))}
+                        <Timeline>
+                            {visibleEvents.map((event, eventIndex) => (
+                                <Timeline.Item
+                                    key={log.id + event.type + eventIndex}
+                                    media={<ActivityAvatar data={event} />}
+                                >
+                                    <div className="mt-1">
+                                        <ActivityEvent data={event} />
+                                    </div>
+                                </Timeline.Item>
+                            ))}
+                        </Timeline>
+                    </div>
+                )
+            }
+            )}
             <div className="text-center">
                 {loadable ? (
                     <Button loading={isLoading} onClick={onLoadMore}>
                         Load More
                     </Button>
                 ) : (
-                    'No more activity to load'
+                    activities.length > 0 && 'No more activity to load'
                 )}
             </div>
         </div>
@@ -114,6 +142,7 @@ const Log = ({
 
 
 // --- LOGACTION COMPONENT ---
+// No changes are needed in this component.
 
 type LogActionProps = {
     selectedType: string[]
@@ -189,6 +218,7 @@ const LogAction = ({
 
 
 // --- MAIN Notification COMPONENT ---
+// This component now fetches from Redux and transforms the data for its children.
 
 const defaultSelectedType = [
     UPDATE_TICKET,
@@ -201,44 +231,74 @@ const defaultSelectedType = [
 ]
 
 const Notification = () => {
-    const [isLoading, setIsLoading] = useState(false)
-    const [loadable, seLoadable] = useState(true)
-    const [activities, setActivities] = useState<Activity[]>([])
-    const [activityIndex, setActivityIndex] = useState(1)
+    const dispatch = useAppDispatch()
+
+    // 1. Get the entire notification state object from Redux
+    const getAllNotification = useSelector(masterSelector)?.getAllNotification?.data
+
+    console.log(getAllNotification, "getAllNotification");
+
+
+    // Local state is only for UI controls
     const [showMentionedOnly, setShowMentionedOnly] = useState(false)
-    const [selectedType, setSelectedType] =
-        useState<string[]>(defaultSelectedType)
+    const [selectedType, setSelectedType] = useState<string[]>(defaultSelectedType)
 
-    const getLogs = async (index: number) => {
-        setIsLoading(true)
-        const resp = await apiGetLogs<
-            GetNotificationResponse,
-            { activityIndex: number }
-        >({ activityIndex: index })
-        setActivities((prevActivities) => [...prevActivities, ...resp.data])
-        seLoadable(resp.loadable)
-        setIsLoading(false)
-    }
-
+    // 2. Fetch data on component mount
     useEffect(() => {
-        getLogs(activityIndex)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+        dispatch(getNotificationAction())
+    }, [dispatch])
+
+    // 3. Transform API data into the format the UI needs using useMemo for efficiency
+    const activities: Activities = useMemo(() => {
+        const apiData = (getAllNotification?.data as ApiNotification[]) || []
+
+        if (isEmpty(apiData)) {
+            return []
+        }
+
+        // Group notifications by the date they were created
+        const groupedByDay = apiData?.reduce((acc, notification) => {
+            const dateKey = dayjs(notification.created_at).format('YYYY-MM-DD')
+            if (!acc[dateKey]) {
+                acc[dateKey] = []
+            }
+            acc[dateKey].push(notification)
+            return acc
+        }, {} as Record<string, ApiNotification[]>)
+
+        // Map the grouped data to the Activity[] structure
+        return Object.keys(groupedByDay)
+            .map((dateKey) => ({
+                id: dateKey,
+                date: dayjs(dateKey).unix(),
+                events: groupedByDay[dateKey].map((item): ActivityEventData => ({
+                    // Map your API fields to the component's expected props
+                    type: COMMENT, // All notifications are treated as 'COMMENT' for display
+                    dateTime: dayjs(item.created_at).unix(),
+                    userName: item.created_by_user?.name || 'System User',
+                    userImg: item.created_by_user?.profile_pic_path || undefined,
+                    comment: `<strong>${item.notification_title}</strong><br/>${item.message}`,
+                    ticket: String(item.id),
+                })),
+            }))
+            .sort((a, b) => b.date - a.date) // Sort days from newest to oldest
+    }, [getAllNotification])
+
 
     const handleFilterChange = (selected: string) => {
         setShowMentionedOnly(false)
         if (selectedType.includes(selected)) {
             setSelectedType((prevData) =>
-                prevData.filter((prev) => prev !== selected),
+                prevData.filter((prev) => prev !== selected)
             )
         } else {
-            setSelectedType((prevData) => [...prevData, ...[selected]])
+            setSelectedType((prevData) => [...prevData, selected])
         }
     }
 
     const handleLoadMore = () => {
-        setActivityIndex((prevIndex) => prevIndex + 1)
-        getLogs(activityIndex + 1)
+        // This function would dispatch a Redux action for pagination if implemented
+        console.log('Load More requires pagination logic in the Redux action.')
     }
 
     const handleCheckboxChange = (bool: boolean) => {
@@ -263,8 +323,9 @@ const Notification = () => {
                     />
                 </div>
                 <Log
-                    isLoading={isLoading}
-                    loadable={loadable}
+                    // isLoading={getNotificationLoading}
+                    // 'loadable' should come from your Redux state for pagination
+                    loadable={getAllNotification?.loadable ?? false}
                     activities={activities}
                     filter={selectedType}
                     onLoadMore={handleLoadMore}
@@ -274,4 +335,4 @@ const Notification = () => {
     )
 }
 
-export default Notification;
+export default Notification
