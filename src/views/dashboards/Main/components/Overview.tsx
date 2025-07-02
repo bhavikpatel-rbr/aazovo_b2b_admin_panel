@@ -1,28 +1,26 @@
-import { useState, useEffect, useRef } from 'react'
+import { DataTable, DebouceInput } from '@/components/shared'
+import { Avatar, Dialog, Table, Tag, Tooltip } from '@/components/ui'
 import Card from '@/components/ui/Card'
 import Select from '@/components/ui/Select'
-import { Avatar, Checkbox, Tooltip } from '@/components/ui'
-import GrowShrinkValue from '@/components/shared/GrowShrinkValue'
-import AbbreviateNumber from '@/components/shared/AbbreviateNumber'
-import Chart from '@/components/shared/Chart'
+import Td from '@/components/ui/Table/Td'
+import Tr from '@/components/ui/Table/Tr'
+import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
+import { getCompanyAction, getMemberAction, getProductsAction } from '@/reduxtool/master/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
 import { useThemeStore } from '@/store/themeStore'
 import classNames from '@/utils/classNames'
-import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
-import { options } from '../constants'
-import { NumericFormat } from 'react-number-format'
-import { TbCoin, TbShoppingBagCheck, TbEye, TbSearch, TbUserCircle, TbCube3dSphere, TbHeartHandshake, TbUsersGroup } from 'react-icons/tb'
 import type { ReactNode } from 'react'
-import type { StatisticData, Period, StatisticCategory } from '../types'
-import { COLORS } from '@/constants/chart.constant'
-import { Tag } from '@/components/ui'
-import IndiaIcon from "/img/countries/IN.png"
-import { MdCancel, MdCheckCircle, MdOutlineBusinessCenter } from 'react-icons/md'
-import { DataTable, DebouceInput } from '@/components/shared'
-import { FaBookmark, FaCircle } from 'react-icons/fa'
-import { FaArrowDownLong, FaArrowUpLong } from 'react-icons/fa6'
+import { useEffect, useRef, useState } from 'react'
 import { BsCake } from 'react-icons/bs'
+import { FaBookmark } from 'react-icons/fa'
+import { FaArrowDownLong, FaArrowUpLong } from 'react-icons/fa6'
 import { IoMdShare } from 'react-icons/io'
-import { Link } from 'react-router-dom'
+import { MdCancel, MdCheckCircle, MdOutlineBusinessCenter } from 'react-icons/md'
+import { TbBox, TbCube3dSphere, TbHeartHandshake, TbInfoCircle, TbSearch, TbUserCircle, TbUsersGroup } from 'react-icons/tb'
+import { NumericFormat } from 'react-number-format'
+import { useSelector } from 'react-redux'
+import type { Period, StatisticCategory, StatisticData } from '../types'
 
 type StatisticCardProps = {
     title: string
@@ -123,6 +121,18 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         (state) => state.layout.sideNavCollapse,
     )
 
+    const dispatch = useAppDispatch();
+    const { CompanyData, MemberData, ProductsData } = useSelector(masterSelector);
+    useEffect(() => {
+        dispatch(getCompanyAction());
+        dispatch(getMemberAction());
+        dispatch(getProductsAction());
+    }, [dispatch]);
+
+
+    console.log(MemberData, "MemberData");
+
+
     const statusColor = {
         Active: "bg-green-200 text-green-600 ",
         Verified: "bg-blue-200 text-blue-600",
@@ -132,771 +142,204 @@ const Overview = ({ data }: StatisticGroupsProps) => {
 
     const isFirstRender = useRef(true)
 
-    const companyData = [
-        {
-            name: 'Global Tech Supplies',
-            type: 'Manufacture',
-            interested: 'Sell',
-            category: 'Electronics',
-            brands: ['Apple', 'Samsung'],
-            country: 'India',
-            trustRatio: '87%',
-            successRatio: '87%',
-            noOfMember: 12,
-            wallCount: 3,
-            success: 3,
-            lost: 4,
-            buy: 2,
-            sell: 1,
-            opportunity: 7,
-            offers: 3,
-            demands: 4,
-            leads: 14,
-            deals: 6,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 85,
-        },
-        {
-            name: 'Nova Agro Imports',
-            type: 'Distributor',
-            interested: 'Buy',
-            category: 'Agriculture',
-            brands: ['Bayer', 'Syngenta'],
-            country: 'Brazil',
-            trustRatio: '92%',
-            successRatio: '90%',
-            noOfMember: 8,
-            wallCount: 2,
-            success: 5,
-            lost: 1,
-            buy: 3,
-            sell: 0,
-            opportunity: 6,
-            offers: 2,
-            demands: 4,
-            leads: 11,
-            deals: 7,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Active',
-            progress: 78,
-        },
-        {
-            name: 'IronShield Industries',
-            type: 'Manufacturer',
-            interested: 'Sell',
-            category: 'Metals',
-            brands: ['JSW', 'Tata Steel'],
-            country: 'India',
-            trustRatio: '80%',
-            successRatio: '76%',
-            noOfMember: 15,
-            wallCount: 4,
-            success: 6,
-            lost: 3,
-            buy: 0,
-            sell: 4,
-            opportunity: 9,
-            offers: 5,
-            demands: 4,
-            leads: 18,
-            deals: 9,
-            risk: 'Medium',
-            action: 'View',
-            status: 'Pending',
-            progress: 68,
-        },
-        {
-            name: 'Medico HealthCare Pvt Ltd',
-            type: 'Retailer',
-            interested: 'Buy',
-            category: 'Pharmaceuticals',
-            brands: ['Cipla', 'Dr. Reddy'],
-            country: 'India',
-            trustRatio: '85%',
-            successRatio: '82%',
-            noOfMember: 6,
-            wallCount: 1,
-            success: 2,
-            lost: 2,
-            buy: 2,
-            sell: 0,
-            opportunity: 4,
-            offers: 1,
-            demands: 3,
-            leads: 6,
-            deals: 3,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 71,
-        },
-        {
-            name: 'AutoTech Exporters Ltd',
-            type: 'Exporter',
-            interested: 'Sell',
-            category: 'Automobile Parts',
-            brands: ['Bosch', 'Denso'],
-            country: 'Germany',
-            trustRatio: '90%',
-            successRatio: '88%',
-            noOfMember: 10,
-            wallCount: 2,
-            success: 7,
-            lost: 2,
-            buy: 1,
-            sell: 5,
-            opportunity: 10,
-            offers: 6,
-            demands: 4,
-            leads: 20,
-            deals: 12,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Inactive',
-            progress: 89,
-        },
-    ];
+
+    // --- Status Colors & Context ---
+    const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
+        if (!statusValue) return "bg-gray-200 text-gray-600";
+        const lowerCaseStatus = statusValue.toLowerCase();
+        const companyStatusColors: Record<string, string> = {
+            active: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+            verified: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+            pending: "border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
+            inactive: "border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+            "non verified": "border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
+        };
+        return companyStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600";
+    };
 
     const companyColumns = [
         {
-            header: 'Company Info',
-            accessorKey: 'name',
-            enableSorting: true,
-            size: 230,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <h6 className="text-xs"><Link to=""><em className='text-blue-500'>700056</em></Link> | {props.getValue()}</h6>
-                    {/* <span className="text-xs flex gap-1">
-                        ({"Phone | Email"})
-                    </span> */}
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Ownership Type : <span className='font-normal'>{props.row.original.type}</span></h6> 
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Country:</h6> {props.row.original.country}
-                    </span>
-                    <span className="text-xs">
-                        <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
-                    </span>
-                    {/* <span >Status: {props.row.original.status}</span> */}
-                </div>
-            )
-        },
-        // {
-        //     header: 'Preferences',
-        //     accessorKey: 'brands',
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1'>
-        //             <span className="text-xs flex gap-1">
-        //                 <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-        //                     return <span>{val}, </span>
-        //                 })}
-        //             </span>
-        //             <span className="text-xs flex gap-1">
-        //                 <h6 className="text-xs">Category:</h6> {props.row.original.category}
-        //             </span>
-        //             <span className="text-xs flex gap-1">
-        //                 <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
-        //             </span>
-        //         </div>
-        //     )
-        // },
-        {
-            header: 'Verified', accessorKey: 'verified',
-            size:120,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="flex flex-wrap gap-1 text-xs items-center">
-                        <h6 className="text-xs">Members: <span className='font-normal'>{props.row.original.noOfMember}</span></h6> 
-                    </span>
-                    <span className="flex flex-wrap gap-1 text-xs">
-                        <h6 className="text-xs">GST: <span className='font-normal'>AZXRFDRDSDDADA</span></h6>
-                    </span>
-                    <span className="flex flex-wrap gap-1 text-xs">
-                        <h6 className="text-xs">PAN: <span className='font-normal'>AZXRFDRDSD</span></h6> 
-                    </span>
-                    <div className='flex gap-1 items-center'>
-                        {/* <Tooltip title="KYC Verification : 48%" className='text-xs'>
-                            <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
-                                <MdCheckCircle className='text-green-500 text-lg' />
-                                <span>13/27</span>
+            header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }) => {
+                const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original;
+                return (
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <Avatar src={company_logo ? `https://aazovo.codefriend.in/${company_logo}` : undefined} size="sm" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => company_logo && openImageViewer(company_logo)} icon={<TbUserCircle />} />
+                            <div>
+                                <h6 className="text-xs font-semibold"><em className="text-blue-600">{company_code || "Company Code"}</em></h6>
+                                <span className="text-xs font-semibold leading-1">{company_name}</span>
                             </div>
-                        </Tooltip> */}
-                        <Tooltip title="Enable Billing" className='text-xs'><MdCancel className='text-red-500 text-lg' /></Tooltip>
-                    </div>
-                    <Tooltip className='text-xs' title={`Profile Completion ${props.row.original.progress}%`}>
-                        <div className='h-1.5 w-28 rounded-full bg-gray-300'>
-                            <div className={`font-bold rounded-full h-1.5 bg-blue-500 heading-text mt-1`}
-                                style={{ width: props.row.original.progress + "%" }}
-                            ></div>
                         </div>
-                    </Tooltip>
-                </div>
-            )
+                        <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || "N/A"}</span>
+                        <span className="text-xs mt-1"><b>Primary Business Type:</b> {primary_business_type || "N/A"}</span>
+                        <div className="text-xs text-gray-500">{city}, {state}, {country?.name || "N/A"}</div>
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Contact", accessorKey: "owner_name", id: "contact", size: 180, cell: (props) => {
+                const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original;
+                return (
+                    <div className="text-xs flex flex-col gap-0.5">
+                        {owner_name && (<span><b>Owner: </b> {owner_name}</span>)}
+                        {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)}
+                        {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)}
+                        {company_website && (<a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>)}
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Legal IDs & Status", accessorKey: "status", id: "legal", size: 180, cell: ({ row }) => {
+                const { gst_number, pan_number, status } = row.original;
+                return (
+                    <div className="flex flex-col gap-0.5 text-[11px]">
+                        {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>}
+                        {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>}
+                        <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{status}</Tag>
+                    </div>
+                );
+            },
+        },
+        {
+            header: "Profile & Scores", accessorKey: "profile_completion", id: "profile", size: 190, cell: ({ row }) => {
+                const { members_count = 0, teams_count = 0, profile_completion = 0, kyc_verified, enable_billing, due_after_3_months_date } = row.original;
+                const formattedDate = due_after_3_months_date ? `${new Date(due_after_3_months_date).getDate()} ${new Date(due_after_3_months_date).toLocaleString("en-US", { month: "short" })}, ${new Date(due_after_3_months_date).getFullYear()}` : "N/A";
+                return (
+                    <div className="flex flex-col gap-1 text-xs">
+                        <span><b>Members:</b> {members_count}</span>
+                        <span><b>Teams:</b> {teams_count}</span>
+                        <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div>
+                        <div className="flex gap-1 items-center"><b>Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div>
+                        <span><b>Billing Due:</b> {formattedDate}</span>
+                        <Tooltip title={`Profile Completion ${profile_completion}%`}>
+                            <div className="h-2.5 w-full rounded-full bg-gray-300">
+                                <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div>
+                            </div>
+                        </Tooltip>
+                    </div>
+                );
+            },
         },
         {
             header: 'Business', accessorKey: 'wallCount',
-            size:180,
-            meta:{HeaderClass:'text-center'},
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
             cell: props => (
                 <div className='flex flex-col gap-4 text-center items-center '>
                     <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                            inline'>
-                            Wall Listing: 13 | 12 | 25
+                                inline'>
+                            Wall Listing: {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy}
                         </div>
                     </Tooltip>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
                         <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
-                             inline'>
-                            Opportunities: 34 | 12 | 46
+                                 inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers} | {props?.row?.original?.opportunities?.demands} | {props?.row?.original?.opportunities?.total}
                         </div>
                     </Tooltip>
-                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
-                         <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-                             inline'>
-                             Leads: 34 | 12 | 46
-                         </div>
-                    </Tooltip>
-                    <Tooltip title="PO:7 | PI: 02 | E-way: 46" className='text-xs'>
-                         <div className=' bg-red-100 text-red-600 rounded-md p-1.5 text-xs 
-                             inline'>
-                             PO:7 | PI: 02 | E-way: 46
-                         </div>
+                    <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Leads:  {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total}
+                        </div>
                     </Tooltip>
                 </div>
-                
+
             )
         },
-        // {
-        //     header: 'Opportunities', accessorKey: 'opportunity',
-        //     size:170,
-        //     cell: props => (
-        //         <div>
-        //             <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
-        //                 <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
-        //                     shadow-md inline'>
-        //                     34 | 12 | 46
-        //                 </div>
-        //             </Tooltip>
-        //         </div>
-        //     )
-        // },
-        // {
-        //     header: 'Leads', accessorKey: 'leads',
-        //     size:180,
-        //     cell: props => (
-        //         <div>
-        //             <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
-        //                 <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-        //                     shadow-md inline'>
-        //                     34 | 12 | 46
-        //                 </div>
-        //             </Tooltip>
-        //         </div>
-        //     )
-        // },
-        // {
-        //     header: 'Ratio', accessorKey: 'trustRatio',
-        //     size: 100,
-        //     meta:{HeaderClass:'text-center'},
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1 text-center items-center'>
-        //             <Tag className="flex gap-1 text-[10px]">
-        //                 <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-[10px]">
-        //                 <h6 className="text-[10px]">Trust:</h6> {props.getValue()}
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
-        //                 <h6 className="text-[10px]">Health Score:</h6> 80%
-        //             </Tag>
-        //         </div>
-        //     )
-        // },
-
     ]
-
-    const memberData = [
-        {
-            name: 'Global Tech Supplies',
-            type: 'Manufacture',
-            interested: 'Sell',
-            category: 'Electronics',
-            brands: ['Apple', 'Samsung'],
-            country: 'India',
-            trustRatio: '87%',
-            successRatio: '87%',
-            noOfMember: 12,
-            wallCount: 3,
-            success: 3,
-            lost: 4,
-            buy: 2,
-            sell: 1,
-            opportunity: 7,
-            offers: 3,
-            demands: 4,
-            leads: 14,
-            deals: 6,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 85,
-        },
-        {
-            name: 'Nova Agro Imports',
-            type: 'Distributor',
-            interested: 'Buy',
-            category: 'Agriculture',
-            brands: ['Bayer', 'Syngenta'],
-            country: 'Brazil',
-            trustRatio: '92%',
-            successRatio: '90%',
-            noOfMember: 8,
-            wallCount: 2,
-            success: 5,
-            lost: 1,
-            buy: 3,
-            sell: 0,
-            opportunity: 6,
-            offers: 2,
-            demands: 4,
-            leads: 11,
-            deals: 7,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Active',
-            progress: 78,
-        },
-        {
-            name: 'IronShield Industries',
-            type: 'Manufacturer',
-            interested: 'Sell',
-            category: 'Metals',
-            brands: ['JSW', 'Tata Steel'],
-            country: 'India',
-            trustRatio: '80%',
-            successRatio: '76%',
-            noOfMember: 15,
-            wallCount: 4,
-            success: 6,
-            lost: 3,
-            buy: 0,
-            sell: 4,
-            opportunity: 9,
-            offers: 5,
-            demands: 4,
-            leads: 18,
-            deals: 9,
-            risk: 'Medium',
-            action: 'View',
-            status: 'Pending',
-            progress: 68,
-        },
-        {
-            name: 'Medico HealthCare Pvt Ltd',
-            type: 'Retailer',
-            interested: 'Buy',
-            category: 'Pharmaceuticals',
-            brands: ['Cipla', 'Dr. Reddy'],
-            country: 'India',
-            trustRatio: '85%',
-            successRatio: '82%',
-            noOfMember: 6,
-            wallCount: 1,
-            success: 2,
-            lost: 2,
-            buy: 2,
-            sell: 0,
-            opportunity: 4,
-            offers: 1,
-            demands: 3,
-            leads: 6,
-            deals: 3,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 71,
-        },
-        {
-            name: 'AutoTech Exporters Ltd',
-            type: 'Exporter',
-            interested: 'Sell',
-            category: 'Automobile Parts',
-            brands: ['Bosch', 'Denso'],
-            country: 'Germany',
-            trustRatio: '90%',
-            successRatio: '88%',
-            noOfMember: 10,
-            wallCount: 2,
-            success: 7,
-            lost: 2,
-            buy: 1,
-            sell: 5,
-            opportunity: 10,
-            offers: 6,
-            demands: 4,
-            leads: 20,
-            deals: 12,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Inactive',
-            progress: 89,
-        },
-    ];
 
     const memberColumns = [
+        { header: "Member", accessorKey: "member_name", id: 'member', size: 180, cell: (props) => (<div className="flex flex-col gap-1"><div className="flex items-center gap-1.5"><div className="text-xs"><b className="text-xs text-blue-500"><em>70892{props.row.original.id || ""}</em></b> <br /><b className="texr-xs">{props.row.original.name || ""}</b></div></div><div className="text-xs"><div className="text-xs text-gray-500">{props.row.original.email || ""}</div><div className="text-xs text-gray-500">{props.row.original.number || ""}</div><div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div></div></div>), },
+        { header: "Company", accessorKey: "company_name", id: 'company', size: 200, cell: (props) => (<div className="ml-2 rtl:mr-2 text-xs"><b className="text-xs "><em className="text-blue-500">{props.row.original.company_id_actual || ""}</em></b><div className="text-xs flex gap-1"><MdCheckCircle size={20} className="text-green-500" /><b className="">{props.row.original.company_name || "Unique Enterprise"}</b></div></div>), },
+        { header: "Status", accessorKey: "member_status", id: 'status', size: 140, cell: (props) => { const { status: member_status, created_at } = props.row.original; return (<div className="flex flex-col text-xs"><Tag className={`${statusColor[member_status as keyof typeof statusColor]} inline capitalize`}>{member_status || ""}</Tag><span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date: {new Date(created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", }).replace(/ /g, "/") || "N/A"}</div></span></div>); }, },
+        { header: "Profile", accessorKey: "profile_completion", id: 'profile', size: 220, cell: (props) => (<div className="text-xs flex flex-col"><span><b>RM: </b>{props.row.original.name || ""}</span><span><b>Grade: {props.row.original.member_grade || ""}</b></span><span><b>Business Opportunity: {props.row.original.business_opportunity || ""}</b></span><Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`}><div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%`, }}></div></div></Tooltip></div>), },
+        { header: "Preferences", accessorKey: "associated_brands", id: 'preferences', size: 300, cell: (props) => { const [isOpen, setIsOpen] = useState<boolean>(false); const openDialog = () => setIsOpen(true); const closeDialog = () => setIsOpen(false); return (<div className="flex flex-col gap-1"><span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || ""}</b></span><span className="text-xs flex items-center gap-1"><span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span><b className="text-xs">Brands: {props.row.original.brand_name || ""}</b></span><span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in}</span></span><Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}><h6>Dynamic Profile</h6><Table className="mt-6"><thead className="bg-gray-100 rounded-md"><Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr></thead><tbody><Tr><Td>INS - PREMIUM</Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td><Td><Tag>Electronics</Tag></Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td></Tr></tbody></Table></Dialog></div>); }, },
         {
-            header: 'Member Info',
-            accessorKey: 'name',
-            enableSorting: true,
-            size: 230,
+            header: 'Business', accessorKey: 'wallCount',
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
             cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <h6 className="text-xs">{props.getValue()}</h6>
-                    <span className="text-xs flex">
-                        <h6 className="text-xs"></h6> ({"XYZ Company Name"})
-                    </span>
-                    <span className="text-xs flex gap-1">9582850192</span>
-                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
-                    <span className="text-xs">
-                        <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
-                    </span>
-                    {/* <span >Status: {props.row.original.status}</span> */}
-                </div>
-            )
-        },
-        {
-            header: 'Preferences',
-            accessorKey: 'brands',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-                            return <span>{val}, </span>
-                        })}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
-                    </span>
-                </div>
-            )
-        },
-        {
-            header: 'Verified', accessorKey: 'verified',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="flex gap-1 text-black dark:text-white text-xs font-semibold">INS - PREMIUM</span>
-                    <div className='flex gap-1 items-center'>
-                        {/* <Tooltip title="KYC Verification" className='text-xs'>
-                            <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
-                                <MdCheckCircle className='text-green-500 text-lg' />
-                                <span>13/27</span>
-                            </div>
-                        </Tooltip> */}
-                        <Tooltip title="Email Verification" className='text-xs'><MdCancel className='text-red-500 text-lg' /></Tooltip>
-                    </div>
-                    <Tooltip className='text-xs' title={`Profile Completion ${props.row.original.progress}%`}>
-                        <div className='h-1.5 w-28 rounded-full bg-gray-300'>
-                            <div className={`font-bold rounded-full h-1.5 bg-blue-500 heading-text mt-1`}
-                                style={{ width: props.row.original.progress + "%" }}
-                            ></div>
-                        </div>
-                    </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Walls', accessorKey: 'wallCount',
-            cell: props => (
-                <div>
+                <div className='flex flex-col gap-4 text-center items-center '>
                     <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            13 | 12 | 25
+                                inline'>
+                            Wall Listing: {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy}
                         </div>
                     </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Opportunities', accessorKey: 'opportunity',
-            size:160,
-            cell: props => (
-                <div>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
                         <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            34 | 12 | 46
+                                 inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers} | {props?.row?.original?.opportunities?.demands} | {props?.row?.original?.opportunities?.total}
                         </div>
                     </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Leads', accessorKey: 'leads',
-            size:180,
-            cell: props => (
-                <div>
                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
                         <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            34 | 12 | 46
+                                 inline'>
+                            Leads:  {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total}
                         </div>
                     </Tooltip>
                 </div>
+
             )
         },
-        // {
-        //     header: 'Ratio', accessorKey: 'trustRatio',
-        //     size:190,
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1'>
-        //             <Tag className="flex gap-1 text-[10px]">
-        //                 <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-[10px]">
-        //                 <h6 className="text-[10px]">Trust:</h6> {props.getValue()}
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
-        //                 <h6 className="text-[10px]">Activity Level:</h6> 80%
-        //             </Tag>
-        //         </div>
-        //     )
-        // },
-
     ]
 
-    const productData = [
-        {
-            name: 'Global Tech Supplies',
-            type: 'Manufacture',
-            interested: 'Sell',
-            category: 'Electronics',
-            brands: ['Apple', 'Samsung'],
-            country: 'India',
-            trustRatio: '87%',
-            successRatio: '87%',
-            noOfMember: 12,
-            wallCount: 3,
-            success: 3,
-            lost: 4,
-            buy: 2,
-            sell: 1,
-            opportunity: 7,
-            offers: 3,
-            demands: 4,
-            leads: 14,
-            deals: 6,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 85,
-        },
-        {
-            name: 'Nova Agro Imports',
-            type: 'Distributor',
-            interested: 'Buy',
-            category: 'Agriculture',
-            brands: ['Bayer', 'Syngenta'],
-            country: 'Brazil',
-            trustRatio: '92%',
-            successRatio: '90%',
-            noOfMember: 8,
-            wallCount: 2,
-            success: 5,
-            lost: 1,
-            buy: 3,
-            sell: 0,
-            opportunity: 6,
-            offers: 2,
-            demands: 4,
-            leads: 11,
-            deals: 7,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Active',
-            progress: 78,
-        },
-        {
-            name: 'IronShield Industries',
-            type: 'Manufacturer',
-            interested: 'Sell',
-            category: 'Metals',
-            brands: ['JSW', 'Tata Steel'],
-            country: 'India',
-            trustRatio: '80%',
-            successRatio: '76%',
-            noOfMember: 15,
-            wallCount: 4,
-            success: 6,
-            lost: 3,
-            buy: 0,
-            sell: 4,
-            opportunity: 9,
-            offers: 5,
-            demands: 4,
-            leads: 18,
-            deals: 9,
-            risk: 'Medium',
-            action: 'View',
-            status: 'Pending',
-            progress: 68,
-        },
-        {
-            name: 'Medico HealthCare Pvt Ltd',
-            type: 'Retailer',
-            interested: 'Buy',
-            category: 'Pharmaceuticals',
-            brands: ['Cipla', 'Dr. Reddy'],
-            country: 'India',
-            trustRatio: '85%',
-            successRatio: '82%',
-            noOfMember: 6,
-            wallCount: 1,
-            success: 2,
-            lost: 2,
-            buy: 2,
-            sell: 0,
-            opportunity: 4,
-            offers: 1,
-            demands: 3,
-            leads: 6,
-            deals: 3,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 71,
-        },
-        {
-            name: 'AutoTech Exporters Ltd',
-            type: 'Exporter',
-            interested: 'Sell',
-            category: 'Automobile Parts',
-            brands: ['Bosch', 'Denso'],
-            country: 'Germany',
-            trustRatio: '90%',
-            successRatio: '88%',
-            noOfMember: 10,
-            wallCount: 2,
-            success: 7,
-            lost: 2,
-            buy: 1,
-            sell: 5,
-            opportunity: 10,
-            offers: 6,
-            demands: 4,
-            leads: 20,
-            deals: 12,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Inactive',
-            progress: 89,
-        },
-    ];
+    const productStatusColor = {
+        active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+        inactive: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-100", // Changed Inactive to Slate
+        pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
+        draft: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100", // Changed Draft to Violet
+        rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
+    };
 
     const productColumns = [
+        { header: "ID", accessorKey: "id", size: 60, meta: { tdClass: "text-center", thClass: "text-center" }, cell: ({ getValue }) => getValue().toString().padStart(6, '0'), },
         {
-            header: 'Product Info',
-            accessorKey: 'name',
-            enableSorting: true,
-            size: 230,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    {/* Product Name */}
-                    <div className="flex items-start gap-2">
-                        <Avatar src={IndiaIcon} size="sm" />
-                        <div>
-                            <h6 className="text-xs mb-0.5">Product Name</h6>
-                            <span className="text-xs">
-                                <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
-                            </span>
-                        </div>
-                    </div>
-                    {/* <span >Status: {props.row.original.status}</span> */}
+            header: "Product", id: "productInfo", size: 300, cell: (props: CellContext<ProductItem, any>) => (
+                <div className="flex items-center gap-3">
+                    <Avatar size={30} shape="circle" src={props.row.original.thumbImageFullPath || undefined} icon={<TbBox />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => props.row.original.thumbImageFullPath && openImageViewer(props.row.original.thumbImageFullPath)}></Avatar>
+                    <Tooltip title={props.row.original.name}>
+                        <div className="truncate"><span className="font-semibold hover:text-blue-600 cursor-pointer" onClick={() => openViewDetailModal(props.row.original)}>{props.row.original.name}</span><div className="text-xs text-gray-500">SKU: {props.row.original.skuCode || "-"}</div></div>
+                    </Tooltip>
                 </div>
-            )
+            ),
         },
+        { header: "Category", accessorKey: "categoryName", cell: (props) => props.row.original.categoryName || "-", },
+        { header: "Sub Cat", accessorKey: "subCategoryName", cell: (props) => props.row.original.subCategoryName || "-", },
+        { header: "Brand", accessorKey: "brandName", cell: (props) => props.row.original.brandName || "-", },
+        { header: "Status", accessorKey: "status", cell: (props: CellContext<ProductItem, any>) => (<Tag className={`${productStatusColor[props.row.original.status] || "bg-gray-200"} capitalize font-semibold border-0`}>{props.row.original.status}</Tag>), },
         {
-            header: 'Brand/Category',
-            accessorKey: 'brand',
+            header: 'Business', accessorKey: 'wallCount',
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
             cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-                            return <span>{val}, </span>
-                        })}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Subcategory:</h6> {props.row.original.interested}
-                    </span>
-                </div>
-            )
-        },
-        {
-            header: 'Walls', accessorKey: 'wallCount',
-            cell: props => (
-                <div>
+                <div className='flex flex-col gap-4 text-center items-center '>
                     <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            13 | 12 | 25
+                                inline'>
+                            Wall Listing: {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy}
                         </div>
                     </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Opportunities', accessorKey: 'opportunity',
-            size:160,
-            cell: props => (
-                <div>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
                         <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            34 | 12 | 46
+                                 inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers} | {props?.row?.original?.opportunities?.demands} | {props?.row?.original?.opportunities?.total}
                         </div>
                     </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Leads', accessorKey: 'leads',
-            size:180,
-            cell: props => (
-                <div>
                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
                         <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            34 | 12 | 46
+                                 inline'>
+                            Leads:  {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total}
                         </div>
                     </Tooltip>
                 </div>
+
             )
         },
-        // {
-        //     header: 'Ratio', accessorKey: 'trustRatio',
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1'>
-        //             <Tag className="flex gap-1 text-[10px]">
-        //                 <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
-        //                 <h6 className="text-[10px]">Engagement:</h6> 80%
-        //             </Tag>
-        //         </div>
-        //     )
-        // },
-
     ]
 
     const wallListingData = [
@@ -1134,11 +577,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                     </Tooltip>
                     <div className='flex gap-2 items-center mt-3 text-orange-400'>
                         <Tooltip title="Total Shares: 12" wrapperClass="flex gap-1 text-xs">
-                            <IoMdShare className="text-base"/>
-                            <span>12</span> 
+                            <IoMdShare className="text-base" />
+                            <span>12</span>
                         </Tooltip>
                         <Tooltip title="Total Bookmarks: 8" wrapperClass="flex flex-row gap-1 text-xs">
-                            <FaBookmark className="text-base"/>
+                            <FaBookmark className="text-base" />
                             <span>8</span>
                         </Tooltip>
                     </div>
@@ -1261,7 +704,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 <div className='flex flex-col gap-1'>
                     <div className='flex gap-2 items-center'>
                         <Tooltip title="Birthday : 23 May">
-                            <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm "/>
+                            <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm " />
                         </Tooltip>
                         <h6 className="text-xs">Raman Ojha</h6>
                     </div>
@@ -1302,7 +745,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         {
             header: 'Status',
             accessorKey: 'status',
-            size:110,
+            size: 110,
             cell: props => (
                 <span className="text-xs">
                     <span className="text-xs">
@@ -1320,12 +763,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
             cell: props => (
                 <div className='flex flex-col gap-1'>
                     <span className="text-xs mb-1">
-                       <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
+                        <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
                     </span>
                     <Tooltip title="Present: 24 | Leaves: 2" className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
                             shadow-md inline'>
-                           P: 24 | L: 2
+                            P: 24 | L: 2
                         </div>
                     </Tooltip>
                 </div>
@@ -1680,14 +1123,14 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         </div> */}
                                     </div>
                                     <DebouceInput
-                                            // ref={ref}
-                                            className="w-full mb-2"
-                                            placeholder="Quick Search..."
-                                            suffix={<TbSearch className="text-lg" />}
-                                          />
+                                        // ref={ref}
+                                        className="w-full mb-2"
+                                        placeholder="Quick Search..."
+                                        suffix={<TbSearch className="text-lg" />}
+                                    />
                                     <DataTable
                                         columns={companyColumns}
-                                        data={companyData}
+                                        data={CompanyData?.data || []}
                                     // loading={isLoading}
                                     />
 
@@ -1757,14 +1200,14 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         </div> */}
                                     </div>
                                     <DebouceInput
-                                            // ref={ref}
-                                            className="w-full mb-2"
-                                            placeholder="Quick Search..."
-                                            suffix={<TbSearch className="text-lg" />}
-                                          />
+                                        // ref={ref}
+                                        className="w-full mb-2"
+                                        placeholder="Quick Search..."
+                                        suffix={<TbSearch className="text-lg" />}
+                                    />
                                     <DataTable
                                         columns={memberColumns}
-                                        data={memberData}
+                                        data={MemberData?.data || []}
                                     // loading={isLoading}
                                     />
 
@@ -1869,14 +1312,14 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         </div> */}
                                     </div>
                                     <DebouceInput
-                                            // ref={ref}
-                                            className="w-full mb-2"
-                                            placeholder="Quick Search..."
-                                            suffix={<TbSearch className="text-lg" />}
-                                          />
+                                        // ref={ref}
+                                        className="w-full mb-2"
+                                        placeholder="Quick Search..."
+                                        suffix={<TbSearch className="text-lg" />}
+                                    />
                                     <DataTable
                                         columns={productColumns}
-                                        data={productData}
+                                        data={ProductsData || []}
                                     // loading={isLoading}
                                     />
 
@@ -2125,11 +1568,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         </div> */}
                                     </div>
                                     <DebouceInput
-                                            // ref={ref}
-                                            className="w-full mb-2"
-                                            placeholder="Quick Search..."
-                                            suffix={<TbSearch className="text-lg" />}
-                                          />
+                                        // ref={ref}
+                                        className="w-full mb-2"
+                                        placeholder="Quick Search..."
+                                        suffix={<TbSearch className="text-lg" />}
+                                    />
                                     <DataTable
                                         columns={partnerColumns}
                                         data={wallListingData}

@@ -346,7 +346,6 @@ const _Search = ({ className }: { className?: string }) => {
         status: masterLoadingStatus = "idle",
     } = useSelector(masterSelector, shallowEqual);
     const inputRef = useRef<HTMLInputElement>(null)
-console.log("pinnedTabs", pinnedTabs)
     // --- Data Fetching ---
     useEffect(() => {
         if (searchDialogOpen) {
