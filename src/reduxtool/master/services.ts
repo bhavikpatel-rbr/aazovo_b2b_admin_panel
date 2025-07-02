@@ -3026,3 +3026,14 @@ export const getAutoSpbAsync = async () => {
     return isAxiosError(err)
   }
 }
+
+
+export const getNotificationAsync = async (payload) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/notification_message`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
