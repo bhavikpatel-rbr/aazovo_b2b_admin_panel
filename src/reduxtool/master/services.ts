@@ -3027,6 +3027,18 @@ export const getAutoSpbAsync = async () => {
   }
 }
 
+
+export const getNotificationAsync = async (payload) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/setting/notification_message`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+
 export const blockUserAsync = async (payload: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/blocked-ips`, { ...payload })
@@ -3073,7 +3085,7 @@ export const removePinnedTabAsync = async (pinData: { module_name: string }) => 
     try {
         // The endpoint '/pinned-tabs/remove' is an example. 
         // Your API might use a DELETE method or a POST with the module name.
-        const response = await axiosInstance.post(`${config.apiURL}/pinned-tabs/remove`, pinData);
+        const response = await axiosInstance.post(`${config.apiURL}/remove-pinned`, pinData);
         return response.data;
     } catch (err) {
         return isAxiosError(err);
