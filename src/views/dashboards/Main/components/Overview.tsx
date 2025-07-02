@@ -1,10 +1,10 @@
 import { DataTable, DebouceInput } from '@/components/shared'
-import { Avatar, Tag, Tooltip } from '@/components/ui'
+import { Avatar, Dialog, Table, Tag, Tooltip } from '@/components/ui'
 import Card from '@/components/ui/Card'
 import Select from '@/components/ui/Select'
 import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
-import { getCompanyAction } from '@/reduxtool/master/middleware'
+import { getCompanyAction, getMemberAction } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
 import { useThemeStore } from '@/store/themeStore'
 import classNames from '@/utils/classNames'
@@ -15,11 +15,13 @@ import { FaBookmark } from 'react-icons/fa'
 import { FaArrowDownLong, FaArrowUpLong } from 'react-icons/fa6'
 import { IoMdShare } from 'react-icons/io'
 import { MdCancel, MdCheckCircle, MdOutlineBusinessCenter } from 'react-icons/md'
-import { TbCube3dSphere, TbHeartHandshake, TbSearch, TbUserCircle, TbUsersGroup } from 'react-icons/tb'
+import { TbCube3dSphere, TbHeartHandshake, TbInfoCircle, TbSearch, TbUserCircle, TbUsersGroup } from 'react-icons/tb'
 import { NumericFormat } from 'react-number-format'
 import { useSelector } from 'react-redux'
 import type { Period, StatisticCategory, StatisticData } from '../types'
 import IndiaIcon from "/img/countries/IN.png"
+import Tr from '@/components/ui/Table/Tr'
+import Td from '@/components/ui/Table/Td'
 
 type StatisticCardProps = {
     title: string
@@ -121,8 +123,10 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     )
 
     const dispatch = useAppDispatch();
-    const { CompanyData } = useSelector(masterSelector);
-    useEffect(() => { dispatch(getCompanyAction()) }, [dispatch]);
+    const { CompanyData, MemberData } = useSelector(masterSelector);
+    useEffect(() => { dispatch(getCompanyAction()); dispatch(getMemberAction()); }, [dispatch]);
+
+    console.log(MemberData, "MemberData");
 
 
     const statusColor = {
@@ -134,133 +138,6 @@ const Overview = ({ data }: StatisticGroupsProps) => {
 
     const isFirstRender = useRef(true)
 
-    const companyData = [
-        {
-            name: 'Global Tech Supplies',
-            type: 'Manufacture',
-            interested: 'Sell',
-            category: 'Electronics',
-            brands: ['Apple', 'Samsung'],
-            country: 'India',
-            trustRatio: '87%',
-            successRatio: '87%',
-            noOfMember: 12,
-            wallCount: 3,
-            success: 3,
-            lost: 4,
-            buy: 2,
-            sell: 1,
-            opportunity: 7,
-            offers: 3,
-            demands: 4,
-            leads: 14,
-            deals: 6,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 85,
-        },
-        {
-            name: 'Nova Agro Imports',
-            type: 'Distributor',
-            interested: 'Buy',
-            category: 'Agriculture',
-            brands: ['Bayer', 'Syngenta'],
-            country: 'Brazil',
-            trustRatio: '92%',
-            successRatio: '90%',
-            noOfMember: 8,
-            wallCount: 2,
-            success: 5,
-            lost: 1,
-            buy: 3,
-            sell: 0,
-            opportunity: 6,
-            offers: 2,
-            demands: 4,
-            leads: 11,
-            deals: 7,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Active',
-            progress: 78,
-        },
-        {
-            name: 'IronShield Industries',
-            type: 'Manufacturer',
-            interested: 'Sell',
-            category: 'Metals',
-            brands: ['JSW', 'Tata Steel'],
-            country: 'India',
-            trustRatio: '80%',
-            successRatio: '76%',
-            noOfMember: 15,
-            wallCount: 4,
-            success: 6,
-            lost: 3,
-            buy: 0,
-            sell: 4,
-            opportunity: 9,
-            offers: 5,
-            demands: 4,
-            leads: 18,
-            deals: 9,
-            risk: 'Medium',
-            action: 'View',
-            status: 'Pending',
-            progress: 68,
-        },
-        {
-            name: 'Medico HealthCare Pvt Ltd',
-            type: 'Retailer',
-            interested: 'Buy',
-            category: 'Pharmaceuticals',
-            brands: ['Cipla', 'Dr. Reddy'],
-            country: 'India',
-            trustRatio: '85%',
-            successRatio: '82%',
-            noOfMember: 6,
-            wallCount: 1,
-            success: 2,
-            lost: 2,
-            buy: 2,
-            sell: 0,
-            opportunity: 4,
-            offers: 1,
-            demands: 3,
-            leads: 6,
-            deals: 3,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 71,
-        },
-        {
-            name: 'AutoTech Exporters Ltd',
-            type: 'Exporter',
-            interested: 'Sell',
-            category: 'Automobile Parts',
-            brands: ['Bosch', 'Denso'],
-            country: 'Germany',
-            trustRatio: '90%',
-            successRatio: '88%',
-            noOfMember: 10,
-            wallCount: 2,
-            success: 7,
-            lost: 2,
-            buy: 1,
-            sell: 5,
-            opportunity: 10,
-            offers: 6,
-            demands: 4,
-            leads: 20,
-            deals: 12,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Inactive',
-            progress: 89,
-        },
-    ];
 
     // --- Status Colors & Context ---
     const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
@@ -371,258 +248,40 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
     ]
 
-
-    const memberData = [
-        {
-            name: 'Global Tech Supplies',
-            type: 'Manufacture',
-            interested: 'Sell',
-            category: 'Electronics',
-            brands: ['Apple', 'Samsung'],
-            country: 'India',
-            trustRatio: '87%',
-            successRatio: '87%',
-            noOfMember: 12,
-            wallCount: 3,
-            success: 3,
-            lost: 4,
-            buy: 2,
-            sell: 1,
-            opportunity: 7,
-            offers: 3,
-            demands: 4,
-            leads: 14,
-            deals: 6,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 85,
-        },
-        {
-            name: 'Nova Agro Imports',
-            type: 'Distributor',
-            interested: 'Buy',
-            category: 'Agriculture',
-            brands: ['Bayer', 'Syngenta'],
-            country: 'Brazil',
-            trustRatio: '92%',
-            successRatio: '90%',
-            noOfMember: 8,
-            wallCount: 2,
-            success: 5,
-            lost: 1,
-            buy: 3,
-            sell: 0,
-            opportunity: 6,
-            offers: 2,
-            demands: 4,
-            leads: 11,
-            deals: 7,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Active',
-            progress: 78,
-        },
-        {
-            name: 'IronShield Industries',
-            type: 'Manufacturer',
-            interested: 'Sell',
-            category: 'Metals',
-            brands: ['JSW', 'Tata Steel'],
-            country: 'India',
-            trustRatio: '80%',
-            successRatio: '76%',
-            noOfMember: 15,
-            wallCount: 4,
-            success: 6,
-            lost: 3,
-            buy: 0,
-            sell: 4,
-            opportunity: 9,
-            offers: 5,
-            demands: 4,
-            leads: 18,
-            deals: 9,
-            risk: 'Medium',
-            action: 'View',
-            status: 'Pending',
-            progress: 68,
-        },
-        {
-            name: 'Medico HealthCare Pvt Ltd',
-            type: 'Retailer',
-            interested: 'Buy',
-            category: 'Pharmaceuticals',
-            brands: ['Cipla', 'Dr. Reddy'],
-            country: 'India',
-            trustRatio: '85%',
-            successRatio: '82%',
-            noOfMember: 6,
-            wallCount: 1,
-            success: 2,
-            lost: 2,
-            buy: 2,
-            sell: 0,
-            opportunity: 4,
-            offers: 1,
-            demands: 3,
-            leads: 6,
-            deals: 3,
-            risk: 'Low',
-            action: 'View',
-            status: 'Active',
-            progress: 71,
-        },
-        {
-            name: 'AutoTech Exporters Ltd',
-            type: 'Exporter',
-            interested: 'Sell',
-            category: 'Automobile Parts',
-            brands: ['Bosch', 'Denso'],
-            country: 'Germany',
-            trustRatio: '90%',
-            successRatio: '88%',
-            noOfMember: 10,
-            wallCount: 2,
-            success: 7,
-            lost: 2,
-            buy: 1,
-            sell: 5,
-            opportunity: 10,
-            offers: 6,
-            demands: 4,
-            leads: 20,
-            deals: 12,
-            risk: 'Very Low',
-            action: 'View',
-            status: 'Inactive',
-            progress: 89,
-        },
-    ];
-
     const memberColumns = [
+        { header: "Member", accessorKey: "member_name", id: 'member', size: 180, cell: (props) => (<div className="flex flex-col gap-1"><div className="flex items-center gap-1.5"><div className="text-xs"><b className="text-xs text-blue-500"><em>70892{props.row.original.id || ""}</em></b> <br /><b className="texr-xs">{props.row.original.name || ""}</b></div></div><div className="text-xs"><div className="text-xs text-gray-500">{props.row.original.email || ""}</div><div className="text-xs text-gray-500">{props.row.original.number || ""}</div><div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div></div></div>), },
+        { header: "Company", accessorKey: "company_name", id: 'company', size: 200, cell: (props) => (<div className="ml-2 rtl:mr-2 text-xs"><b className="text-xs "><em className="text-blue-500">{props.row.original.company_id_actual || ""}</em></b><div className="text-xs flex gap-1"><MdCheckCircle size={20} className="text-green-500" /><b className="">{props.row.original.company_name || "Unique Enterprise"}</b></div></div>), },
+        { header: "Status", accessorKey: "member_status", id: 'status', size: 140, cell: (props) => { const { status: member_status, created_at } = props.row.original; return (<div className="flex flex-col text-xs"><Tag className={`${statusColor[member_status as keyof typeof statusColor]} inline capitalize`}>{member_status || ""}</Tag><span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date: {new Date(created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", }).replace(/ /g, "/") || "N/A"}</div></span></div>); }, },
+        { header: "Profile", accessorKey: "profile_completion", id: 'profile', size: 220, cell: (props) => (<div className="text-xs flex flex-col"><span><b>RM: </b>{props.row.original.name || ""}</span><span><b>Grade: {props.row.original.member_grade || ""}</b></span><span><b>Business Opportunity: {props.row.original.business_opportunity || ""}</b></span><Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`}><div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%`, }}></div></div></Tooltip></div>), },
+        { header: "Preferences", accessorKey: "associated_brands", id: 'preferences', size: 300, cell: (props) => { const [isOpen, setIsOpen] = useState<boolean>(false); const openDialog = () => setIsOpen(true); const closeDialog = () => setIsOpen(false); return (<div className="flex flex-col gap-1"><span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || ""}</b></span><span className="text-xs flex items-center gap-1"><span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span><b className="text-xs">Brands: {props.row.original.brand_name || ""}</b></span><span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in}</span></span><Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}><h6>Dynamic Profile</h6><Table className="mt-6"><thead className="bg-gray-100 rounded-md"><Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr></thead><tbody><Tr><Td>INS - PREMIUM</Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td><Td><Tag>Electronics</Tag></Td><Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td></Tr></tbody></Table></Dialog></div>); }, },
         {
-            header: 'Member Info',
-            accessorKey: 'name',
-            enableSorting: true,
-            size: 230,
+            header: 'Business', accessorKey: 'wallCount',
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
             cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <h6 className="text-xs">{props.getValue()}</h6>
-                    <span className="text-xs flex">
-                        <h6 className="text-xs"></h6> ({"XYZ Company Name"})
-                    </span>
-                    <span className="text-xs flex gap-1">9582850192</span>
-                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
-                    <span className="text-xs">
-                        <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
-                    </span>
-                    {/* <span >Status: {props.row.original.status}</span> */}
-                </div>
-            )
-        },
-        {
-            header: 'Preferences',
-            accessorKey: 'brands',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-                            return <span>{val}, </span>
-                        })}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
-                    </span>
-                </div>
-            )
-        },
-        {
-            header: 'Verified', accessorKey: 'verified',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="flex gap-1 text-black dark:text-white text-xs font-semibold">INS - PREMIUM</span>
-                    <div className='flex gap-1 items-center'>
-                        {/* <Tooltip title="KYC Verification" className='text-xs'>
-                            <div className=' border border-gray-300 rounded-md py-1 px-1.5 text-xs flex items-center gap-1'>
-                                <MdCheckCircle className='text-green-500 text-lg' />
-                                <span>13/27</span>
-                            </div>
-                        </Tooltip> */}
-                        <Tooltip title="Email Verification" className='text-xs'><MdCancel className='text-red-500 text-lg' /></Tooltip>
-                    </div>
-                    <Tooltip className='text-xs' title={`Profile Completion ${props.row.original.progress}%`}>
-                        <div className='h-1.5 w-28 rounded-full bg-gray-300'>
-                            <div className={`font-bold rounded-full h-1.5 bg-blue-500 heading-text mt-1`}
-                                style={{ width: props.row.original.progress + "%" }}
-                            ></div>
-                        </div>
-                    </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Walls', accessorKey: 'wallCount',
-            cell: props => (
-                <div>
+                <div className='flex flex-col gap-4 text-center items-center '>
                     <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            13 | 12 | 25
+                                inline'>
+                            Wall Listing: {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy}
                         </div>
                     </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Opportunities', accessorKey: 'opportunity',
-            size: 160,
-            cell: props => (
-                <div>
                     <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
                         <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            34 | 12 | 46
+                                 inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers} | {props?.row?.original?.opportunities?.demands} | {props?.row?.original?.opportunities?.total}
                         </div>
                     </Tooltip>
-                </div>
-            )
-        },
-        {
-            header: 'Leads', accessorKey: 'leads',
-            size: 180,
-            cell: props => (
-                <div>
                     <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
                         <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            34 | 12 | 46
+                                 inline'>
+                            Leads:  {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total}
                         </div>
                     </Tooltip>
                 </div>
+
             )
         },
-        // {
-        //     header: 'Ratio', accessorKey: 'trustRatio',
-        //     size:190,
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1'>
-        //             <Tag className="flex gap-1 text-[10px]">
-        //                 <h6 className="text-[10px]">Success:</h6> {props.row.original.successRatio}
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-[10px]">
-        //                 <h6 className="text-[10px]">Trust:</h6> {props.getValue()}
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
-        //                 <h6 className="text-[10px]">Activity Level:</h6> 80%
-        //             </Tag>
-        //         </div>
-        //     )
-        // },
-
     ]
 
     const productData = [
@@ -1716,7 +1375,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     />
                                     <DataTable
                                         columns={memberColumns}
-                                        data={memberData}
+                                        data={MemberData?.data || []}
                                     // loading={isLoading}
                                     />
 
