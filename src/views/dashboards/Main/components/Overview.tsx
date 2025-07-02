@@ -6,7 +6,7 @@ import Td from '@/components/ui/Table/Td'
 import Tr from '@/components/ui/Table/Tr'
 import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
-import { getCompanyAction, getMemberAction, getpartnerAction, getProductsAction } from '@/reduxtool/master/middleware'
+import { getCompanyAction, getEmployeesListingAction, getMemberAction, getpartnerAction, getProductsAction } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
 import { useThemeStore } from '@/store/themeStore'
 import classNames from '@/utils/classNames'
@@ -21,6 +21,7 @@ import { TbBox, TbCube3dSphere, TbHeartHandshake, TbInfoCircle, TbSearch, TbUser
 import { NumericFormat } from 'react-number-format'
 import { useSelector } from 'react-redux'
 import type { Period, StatisticCategory, StatisticData } from '../types'
+import dayjs from 'dayjs'
 
 type StatisticCardProps = {
     title: string
@@ -122,12 +123,13 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     )
 
     const dispatch = useAppDispatch();
-    const { CompanyData, MemberData, ProductsData, partnerData } = useSelector(masterSelector);
+    const { CompanyData, MemberData, ProductsData, partnerData, EmployeesList: Employees } = useSelector(masterSelector);
     useEffect(() => {
         dispatch(getCompanyAction());
         dispatch(getMemberAction());
         dispatch(getProductsAction());
         dispatch(getpartnerAction());
+        dispatch(getEmployeesListingAction())
     }, [dispatch]);
 
 
@@ -679,133 +681,178 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         },
     ]
 
+    // const teamColumns = [
+    //     {
+    //         header: 'Team Info',
+    //         accessorKey: 'name',
+    //         enableSorting: true,
+    //         size: 190,
+    //         cell: props => (
+    //             <div className='flex flex-col gap-1'>
+    //                 <div className='flex gap-2 items-center'>
+    //                     <Tooltip title="Birthday : 23 May">
+    //                         <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm " />
+    //                     </Tooltip>
+    //                     <h6 className="text-xs">Raman Ojha</h6>
+    //                 </div>
+    //                 <span className="text-xs flex">
+    //                     <h6 className="text-xs"></h6> {"IT Department"}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">Frontend Developer</span>
+    //                 <span className="text-xs flex gap-1">xyz@gmail.com</span>
+    //                 <span className="text-xs flex gap-1">+91 8923572494</span>
+    //             </div>
+    //         )
+    //     },
+    //     {
+    //         header: 'Assigned',
+    //         accessorKey: 'brands',
+    //         cell: props => (
+    //             <div className='flex flex-col gap-1'>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
+    //                         return <span>{val}, </span>
+    //                     })}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Category:</h6> {props.row.original.category}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Subcategory:</h6> {props.row.original.subcategory}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Country:</h6> {props.row.original.country}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Product:</h6> {props.row.original.product}
+    //                 </span>
+    //             </div>
+    //         )
+    //     },
+    //     {
+    //         header: 'Status',
+    //         accessorKey: 'status',
+    //         size: 110,
+    //         cell: props => (
+    //             <span className="text-xs">
+    //                 <span className="text-xs">
+    //                     <h6 className="text-xs mt-1">Joined:</h6> 10 Mar, 2025
+    //                 </span>
+    //                 <br />
+    //                 <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
+    //             </span>
+    //         )
+    //     },
+    //     {
+    //         header: 'Activity',
+    //         accessorKey: 'status',
+    //         size: 150,
+    //         cell: props => (
+    //             <div className='flex flex-col gap-1'>
+    //                 <span className="text-xs mb-1">
+    //                     <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
+    //                 </span>
+    //                 <Tooltip title="Present: 24 | Leaves: 2" className='text-xs'>
+    //                     <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
+    //                         shadow-md inline'>
+    //                         P: 24 | L: 2
+    //                     </div>
+    //                 </Tooltip>
+    //             </div>
+    //         )
+    //     },
+    //     {
+    //         header: 'Performance',
+    //         accessorKey: 'status',
+    //         size: 150,
+    //         cell: props => (
+    //             <div className='flex flex-col gap-3'>
+    //                 <div>
+    //                     <Tooltip title="Completed: 23 | Pending: 4" className='text-xs'>
+    //                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
+    //                             shadow-md inline'>
+    //                             Task : 23 | 4
+    //                         </div>
+    //                     </Tooltip>
+    //                 </div>
+    //                 <div>
+    //                     <Tooltip title="Buy: 12 | Sell: 11 | Total: 23" className='text-xs'>
+    //                         <div className=' bg-pink-100 text-pink-600 rounded-md p-1.5 text-xs 
+    //                             shadow-md inline'>
+    //                             Listing : 12 | 11 | 23
+    //                         </div>
+    //                     </Tooltip>
+    //                 </div>
+    //                 <div>
+    //                     <Tooltip title="Offer: 12 | Demand: 11 | Total: 23" className='text-xs'>
+    //                         <div className=' bg-violet-100 text-violet-600 rounded-md p-1.5 text-xs 
+    //                             shadow-md inline'>
+    //                             O & D : 12 | 11 | 23
+    //                         </div>
+    //                     </Tooltip>
+    //                 </div>
+    //                 <div>
+    //                     <Tooltip title="Success: 4 | Lost: 10 | Total: 14" className='text-xs'>
+    //                         <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+    //                             shadow-md inline'>
+    //                             Leads : 4 | 10 | 14
+    //                         </div>
+    //                     </Tooltip>
+    //                 </div>
+    //                 <Tag className="text-xs flex flex-wrap text-[10px]">
+    //                     <h6 className="text-[10px]">Performance Score : </h6>
+    //                     <span> 79%</span>
+    //                 </Tag>
+    //             </div>
+    //         )
+    //     },
+
+    // ]
+
+    const employeeStatusColor = {
+        active: "bg-blue-500",
+        inactive: "bg-emerald-500",
+        on_leave: "bg-amber-500",
+        terminated: "bg-red-500",
+    };
+
     const teamColumns = [
+        { header: "Status", accessorKey: "status", cell: (props) => { const { status } = props.row.original || {}; const displayStatus = status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toLowerCase()); return (<Tag className={`${employeeStatusColor[displayStatus as keyof typeof employeeStatusColor]} text-white capitalize`}>{displayStatus}</Tag>); }, },
+        { header: "Name", accessorKey: "name", cell: (props) => { const { name, email, mobile, avatar } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={28} shape="circle" src={avatar} icon={<TbUserCircle />}>{!avatar ? name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2 rtl:mr-2"><span className="font-semibold">{name}</span><div className="text-xs text-gray-500">{email}</div><div className="text-xs text-gray-500">{mobile}</div></div></div>); }, },
+        { header: "Designation", accessorKey: "designation", size: 200, cell: (props: any) => { const data = props.row.original || {}; return (<div className="flex items-center"><div className="ml-2 rtl:mr-2"><span className="font-semibold">{data?.designation_id ?? ""}</span></div></div>); }, },
+        { header: "Department", accessorKey: "department", size: 200, cell: (props: any) => { const { department } = props.row.original || {}; return (<div className="flex items-center"><div className="ml-2 rtl:mr-2"><span className="font-semibold">{department?.name ?? ""}</span></div></div>); }, },
+        { header: "Roles", accessorKey: "roles", cell: (props: any) => { const { roles } = props.row.original || {}; return (<div className="flex flex-wrap gap-1 text-xs">{props?.row?.original?.roles?.map((role: any) => (<Tag key={role} className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]">{role?.name || ""}</Tag>))}</div>) }, },
+        { header: "Joined At", accessorKey: "joiningDate", size: 200, cell: (props: any) => props?.row?.original?.date_of_joining ? <span className="text-xs"> {dayjs(props?.row?.original?.date_of_joining).format("D MMM YYYY, h:mm A")}</span> : '-' },
         {
-            header: 'Team Info',
-            accessorKey: 'name',
-            enableSorting: true,
-            size: 190,
+            header: 'Business', accessorKey: 'wallCount',
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
             cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <div className='flex gap-2 items-center'>
-                        <Tooltip title="Birthday : 23 May">
-                            <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm " />
-                        </Tooltip>
-                        <h6 className="text-xs">Raman Ojha</h6>
-                    </div>
-                    <span className="text-xs flex">
-                        <h6 className="text-xs"></h6> {"IT Department"}
-                    </span>
-                    <span className="text-xs flex gap-1">Frontend Developer</span>
-                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
-                    <span className="text-xs flex gap-1">+91 8923572494</span>
-                </div>
-            )
-        },
-        {
-            header: 'Assigned',
-            accessorKey: 'brands',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-                            return <span>{val}, </span>
-                        })}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Subcategory:</h6> {props.row.original.subcategory}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Country:</h6> {props.row.original.country}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Product:</h6> {props.row.original.product}
-                    </span>
-                </div>
-            )
-        },
-        {
-            header: 'Status',
-            accessorKey: 'status',
-            size: 110,
-            cell: props => (
-                <span className="text-xs">
-                    <span className="text-xs">
-                        <h6 className="text-xs mt-1">Joined:</h6> 10 Mar, 2025
-                    </span>
-                    <br />
-                    <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
-                </span>
-            )
-        },
-        {
-            header: 'Activity',
-            accessorKey: 'status',
-            size: 150,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs mb-1">
-                        <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
-                    </span>
-                    <Tooltip title="Present: 24 | Leaves: 2" className='text-xs'>
+                <div className='flex flex-col gap-4 text-center items-center '>
+                    <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            P: 24 | L: 2
+                                inline'>
+                            Wall Listing: {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers} | {props?.row?.original?.opportunities?.demands} | {props?.row?.original?.opportunities?.total}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Leads:  {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total}
                         </div>
                     </Tooltip>
                 </div>
-            )
-        },
-        {
-            header: 'Performance',
-            accessorKey: 'status',
-            size: 150,
-            cell: props => (
-                <div className='flex flex-col gap-3'>
-                    <div>
-                        <Tooltip title="Completed: 23 | Pending: 4" className='text-xs'>
-                            <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                                shadow-md inline'>
-                                Task : 23 | 4
-                            </div>
-                        </Tooltip>
-                    </div>
-                    <div>
-                        <Tooltip title="Buy: 12 | Sell: 11 | Total: 23" className='text-xs'>
-                            <div className=' bg-pink-100 text-pink-600 rounded-md p-1.5 text-xs 
-                                shadow-md inline'>
-                                Listing : 12 | 11 | 23
-                            </div>
-                        </Tooltip>
-                    </div>
-                    <div>
-                        <Tooltip title="Offer: 12 | Demand: 11 | Total: 23" className='text-xs'>
-                            <div className=' bg-violet-100 text-violet-600 rounded-md p-1.5 text-xs 
-                                shadow-md inline'>
-                                O & D : 12 | 11 | 23
-                            </div>
-                        </Tooltip>
-                    </div>
-                    <div>
-                        <Tooltip title="Success: 4 | Lost: 10 | Total: 14" className='text-xs'>
-                            <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-                                shadow-md inline'>
-                                Leads : 4 | 10 | 14
-                            </div>
-                        </Tooltip>
-                    </div>
-                    <Tag className="text-xs flex flex-wrap text-[10px]">
-                        <h6 className="text-[10px]">Performance Score : </h6>
-                        <span> 79%</span>
-                    </Tag>
-                </div>
-            )
-        },
 
+            )
+        },
     ]
+
 
     useEffect(() => {
         if (!sideNavCollapse && isFirstRender.current) {
@@ -1674,7 +1721,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     </div>
                                     <DataTable
                                         columns={teamColumns}
-                                        data={wallListingData}
+                                        data={Employees?.data?.data || []}
                                     // loading={isLoading}
                                     />
 
