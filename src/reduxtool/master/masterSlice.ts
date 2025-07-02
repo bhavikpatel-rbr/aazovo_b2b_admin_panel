@@ -94,6 +94,7 @@ import {
   getParentCategoriesAction,
   getpartnerAction,
   getPaymentTermAction,
+  getPinnedTabAction,
   getPriceListAction,
   getProductsAction,
   getProductsDataAsync,
@@ -193,6 +194,7 @@ const INITIAL_STATE: any = {
   addNotification: {},
   getAllUserData: [],
   getSchedule: {},
+  pinnedTabs: [],
 };
 
 const masterSlice = createSlice({
@@ -696,6 +698,10 @@ const masterSlice = createSlice({
     builder.addCase(getAllUsersAction.fulfilled, (state, { payload }) => ({
       ...state,
       getAllUserData: payload,
+    }));
+    builder.addCase(getPinnedTabAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      pinnedTabs: payload,
     }));
   },
 });

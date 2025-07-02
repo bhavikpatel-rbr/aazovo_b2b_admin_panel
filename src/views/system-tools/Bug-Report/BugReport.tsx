@@ -143,7 +143,7 @@ type BugReportFormData = z.infer<typeof bugReportFormSchema>;
 const filterFormSchema = z.object({ filterStatus: z.array(z.string()).optional(), filterReportedBy: z.string().optional() });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters.") });
+const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters.") });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 const scheduleSchema = z.object({

@@ -164,7 +164,7 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
-  reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."),
+  reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 

@@ -46,7 +46,7 @@ export type SelectOption = { value: string | number; label: string };
 type UnitFilterSchema = { names: string[]; categoryIds: string[]; status: ('Active' | 'Inactive')[]; };
 const unitFormSchema = z.object({ name: z.string().min(1, "Unit name is required.").max(100, "Name cannot exceed 100 characters."), category_ids: z.array(z.number()).min(1, "Please select at least one category."), status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }), });
 type UnitFormData = z.infer<typeof unitFormSchema>;
-const exportReasonSchema = z.object({ reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."), });
+const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."), });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
 

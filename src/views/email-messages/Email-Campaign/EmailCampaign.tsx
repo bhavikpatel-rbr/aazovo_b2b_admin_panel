@@ -153,7 +153,7 @@ export type EmailCampaignItem = {
 const exportReasonSchema = z.object({
   reason: z
     .string()
-    .min(10, "Reason for export is required.")
+    .min(10, "Reason for export is required minimum 10 characters.")
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
