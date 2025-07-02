@@ -10,6 +10,7 @@ import React, {
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -24,11 +25,12 @@ import {
   DatePicker,
   Drawer,
   Dropdown,
-  Checkbox, // Added
+  Checkbox,
   Form as UiForm,
   FormItem as UiFormItem,
   Input,
   Select as UiSelect,
+  Card,
 } from "@/components/ui";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
@@ -53,8 +55,15 @@ import {
   TbSearch,
   TbTagStarred,
   TbUser,
-  TbColumns, // Added
-  TbX,      // Added
+  TbColumns,
+  TbX,
+  TbListDetails,
+  TbProgress,
+  TbCircleCheck,
+  TbCircleX,
+  TbUrgent,
+  TbAlarm,
+  TbArrowDown,
 } from "react-icons/tb";
 
 // Types
@@ -72,7 +81,7 @@ import {
   getDepartmentsAction,
   getInquiriesAction,
   submitExportReasonAction,
-  addNotificationAction, 
+  addNotificationAction,
   getAllUsersAction,
   addScheduleAction,
 } from "@/reduxtool/master/middleware";
@@ -83,10 +92,10 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 
 // --- Export Reason Schema ---
 const exportReasonSchema = z.object({
-    reason: z
-        .string()
-        .min(1, 'Reason for export is required.')
-        .max(255, 'Reason cannot exceed 255 characters.'),
+  reason: z
+    .string()
+    .min(1, 'Reason for export is required.')
+    .max(255, 'Reason cannot exceed 255 characters.'),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
@@ -317,40 +326,38 @@ const InquiriesModals: React.FC<{
 // --- API Inquiry Item Type ---
 export type ApiInquiryItem = {
   id: number;
-  name: string | null; // This seems to be contact_person_name
-  email: string | null; // This seems to be contact_person_email
-  mobile_no: string | null; // This seems to be contact_person_phone
+  name: string | null;
+  email: string | null;
+  mobile_no: string | null;
   company_name: string | null;
-  requirements: string | null; // Used as inquiry_description if inquiry_description is null
+  requirements: string | null;
   inquiry_type: string | null;
   inquiry_subject: string | null;
   inquiry_description: string | null;
-  inquiry_priority: string | null; // API might send 'priority'
-  inquiry_status: string | null; // API might send 'status'
-  assigned_to: number | string | null; // ID
+  inquiry_priority: string | null;
+  inquiry_status: string | null;
+  assigned_to: number | string | null;
   inquiry_date: string | null;
   response_date: string | null;
   resolution_date: string | null;
   follow_up_date: string | null;
   feedback_status: string | null;
   inquiry_resolution: string | null;
-  inquiry_attachments: string | null; // JSON string of attachment URLs
+  inquiry_attachments: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
-  inquiry_id: string; // The user-facing ID
-  inquiry_department: string | null; // Department ID
+  inquiry_id: string;
+  inquiry_department: string | null;
   inquiry_from: string | null;
-  inquiry_attachments_array: string[]; // Processed from inquiry_attachments
-  assigned_to_name: string; // Name of the assignee
-  inquiry_department_name: string; // Name of the department
-
-  // Fields that might be present in API but not explicitly listed:
-  contact_person_name?: string | null; // Explicitly for clarity, use `name` if this is the source
-  contact_person_email?: string | null; // Explicitly for clarity, use `email` if this is the source
-  contact_person?: string | null; // Explicitly for clarity, use `mobile_no` if this is the source
-  priority?: string | null; // Alternative for inquiry_priority
-  status?: string | null; // Alternative for inquiry_status (current progress status)
+  inquiry_attachments_array: string[];
+  assigned_to_name: string;
+  inquiry_department_name: string;
+  contact_person_name?: string | null;
+  contact_person_email?: string | null;
+  contact_person?: string | null;
+  priority?: string | null;
+  status?: string | null;
 };
 
 
@@ -446,7 +453,7 @@ const processApiDataToInquiryItems = (apiData: ApiInquiryItem[]): InquiryItem[] 
     inquiry_subject: apiItem.inquiry_subject || "N/A",
     inquiry_description: apiItem.requirements || apiItem.inquiry_description || "N/A",
     inquiry_priority: apiItem.inquiry_priority || apiItem.priority || "N/A",
-    inquiry_status: apiItem.inquiry_status || apiItem.status || "N/A", // This is current progress status
+    inquiry_status: apiItem.inquiry_status || apiItem.status || "N/A",
     assigned_to: apiItem.assigned_to_name || "Unassigned",
     department: apiItem.inquiry_department_name || undefined,
     inquiry_date: apiItem.inquiry_date || apiItem.created_at || "N/A",
@@ -456,7 +463,7 @@ const processApiDataToInquiryItems = (apiData: ApiInquiryItem[]): InquiryItem[] 
     feedback_status: apiItem.feedback_status || "N/A",
     inquiry_resolution: apiItem.inquiry_resolution || "N/A",
     inquiry_attachments: apiItem.inquiry_attachments_array || [],
-    status: apiItem.deleted_at ? "inactive" : "active", // This is record status (active/inactive)
+    status: apiItem.deleted_at ? "inactive" : "active",
   }));
 };
 
@@ -526,21 +533,11 @@ const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOp
       <Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400" role="button" onClick={() => onViewDetail(rowData.id)}><TbEye /></div></Tooltip>
       <Tooltip title="More">
         <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-          <Dropdown.Item className="flex items-center gap-2">
-            <TbMail size={18} /> <span className="text-xs">Send Email</span>
-          </Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2">
-            <TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span>
-          </Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification', rowData)}>
-            <TbBell size={18} /> <span className="text-xs">Add Notification</span>
-          </Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2">
-            <TbUser size={18} /> <span className="text-xs">Assign Task</span>
-          </Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule', rowData)}>
-            <TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span>
-          </Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification', rowData)}><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule', rowData)}><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
         </Dropdown>
       </Tooltip>
     </div>
@@ -673,6 +670,36 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({ isOpen, onClose, in
   );
 };
 
+// --- ActiveFiltersDisplay Component ---
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: InquiryFilterFormData,
+  onRemoveFilter: (key: keyof InquiryFilterFormData, value: any) => void;
+  onClearAll: () => void;
+}) => {
+    const filters = [
+        ...(filterData.filterRecordStatus || []).map(f => ({ key: 'filterRecordStatus', label: `Status: ${f.label}`, value: f })),
+        ...(filterData.filterInquiryType || []).map(f => ({ key: 'filterInquiryType', label: `Type: ${f.label}`, value: f })),
+        ...(filterData.filterInquiryPriority || []).map(f => ({ key: 'filterInquiryPriority', label: `Priority: ${f.label}`, value: f })),
+        ...(filterData.filterInquiryCurrentStatus || []).map(f => ({ key: 'filterInquiryCurrentStatus', label: `Current Status: ${f.label}`, value: f })),
+        ...(filterData.filterAssignedTo || []).map(f => ({ key: 'filterAssignedTo', label: `Assigned: ${f.label}`, value: f })),
+        ...(filterData.filterDepartment || []).map(f => ({ key: 'filterDepartment', label: `Dept: ${f.label}`, value: f })),
+    ];
+
+    if (filters.length === 0) return null;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filters.map(filter => (
+                <Tag key={`${filter.key}-${filter.value.value}`} prefix>
+                    {filter.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as any, filter.value)} />
+                </Tag>
+            ))}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+};
+
 // --- InquiryListTable Component ---
 const InquiryListTable = () => {
   const dispatch = useAppDispatch();
@@ -700,9 +727,32 @@ const InquiryListTable = () => {
   const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); };
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
   const onApplyFiltersSubmit = (data: InquiryFilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); };
+  
   const onClearFilters = () => {
     const defaultFilters: InquiryFilterFormData = { filterRecordStatus: [], filterInquiryType: [], filterInquiryPriority: [], filterInquiryCurrentStatus: [], filterAssignedTo: [], filterDepartment: [], filterFeedbackStatus: [], filterInquiryDate: [null, null], filterResponseDate: [null, null], filterResolutionDate: [null, null], filterFollowUpDate: [null, null] };
     filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: "" }); dispatch(getInquiriesAction());
+  };
+
+  const handleCardClick = (type: 'status' | 'priority', value: string) => {
+    onClearFilters();
+    if (type === 'status') {
+      const statusOption = inquiryCurrentStatusOptions.find(opt => opt.value === value);
+      if (statusOption) setFilterCriteria({ filterInquiryCurrentStatus: [statusOption] });
+    } else if (type === 'priority') {
+      const priorityOption = inquiryPriorityOptions.find(opt => opt.value === value);
+      if (priorityOption) setFilterCriteria({ filterInquiryPriority: [priorityOption] });
+    }
+  };
+
+  const handleRemoveFilter = (key: keyof InquiryFilterFormData, value: any) => {
+    setFilterCriteria(prev => {
+        const newFilters = { ...prev };
+        const currentValues = prev[key] as SelectOption[] | undefined;
+        if (currentValues) {
+            (newFilters[key] as SelectOption[]) = currentValues.filter(item => item.value !== value.value);
+        }
+        return newFilters;
+    });
   };
 
   const handleDeleteItemClick = (item: InquiryItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); };
@@ -758,9 +808,7 @@ const InquiryListTable = () => {
   const handleViewDetails = (id: string) => {
     const inquiry = allFilteredAndSortedData.find(item => item.id === id);
     if (inquiry) {
-      // setInquiryToView(inquiry);
        navigate(`/business-entities/inquiry-view/${id}`);
-      // setIsViewDetailsModalOpen(true);
     } else {
       toast.push(<Notification type="danger" title="Error">Inquiry details not found.</Notification>);
     }
@@ -849,8 +897,43 @@ const InquiryListTable = () => {
   const feedbackStatusOptions = useMemo(() => Array.from(new Set(inquiryList.map((item) => item.feedback_status).filter((f) => f && f !== "N/A"))).map((status) => ({ value: status, label: status })), [inquiryList]);
   const { DatePickerRange } = DatePicker;
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterCriteria.filterRecordStatus?.length) count++;
+    if (filterCriteria.filterInquiryType?.length) count++;
+    if (filterCriteria.filterInquiryPriority?.length) count++;
+    if (filterCriteria.filterInquiryCurrentStatus?.length) count++;
+    if (filterCriteria.filterAssignedTo?.length) count++;
+    if (filterCriteria.filterDepartment?.length) count++;
+    return count;
+  }, [filterCriteria]);
+  
+  const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const cardBodyClass = "flex items-center gap-2 p-2";
+  const counts = useMemo(() => {
+    const total = inquiryList.length;
+    const newCount = inquiryList.filter(i => i.inquiry_status === 'New').length;
+    const inProgressCount = inquiryList.filter(i => i.inquiry_status === 'In Progress').length;
+    const resolvedCount = inquiryList.filter(i => i.inquiry_status === 'Resolved').length;
+    const closedCount = inquiryList.filter(i => i.inquiry_status === 'Closed').length;
+    const highPriority = inquiryList.filter(i => i.inquiry_priority === 'High').length;
+    const mediumPriority = inquiryList.filter(i => i.inquiry_priority === 'Medium').length;
+    const lowPriority = inquiryList.filter(i => i.inquiry_priority === 'Low').length;
+    return { total, newCount, inProgressCount, resolvedCount, closedCount, highPriority, mediumPriority, lowPriority };
+  }, [inquiryList]);
+
   return (
     <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
+          <Tooltip title="Click to show all inquiries"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div><h6 className="text-blue-500">{counts.total}</h6><span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
+          <Tooltip title="Click to show 'New' inquiries"><div onClick={() => handleCardClick('status', 'New')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-sky-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-sky-100 text-sky-500"><TbPlus size={20} /></div><div><h6 className="text-sky-500">{counts.newCount}</h6><span className="font-semibold text-[11px]">New</span></div></Card></div></Tooltip>
+          <Tooltip title="Click to show 'In Progress' inquiries"><div onClick={() => handleCardClick('status', 'In Progress')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbProgress size={20} /></div><div><h6 className="text-amber-500">{counts.inProgressCount}</h6><span className="font-semibold text-[11px]">In Progress</span></div></Card></div></Tooltip>
+          <Tooltip title="Click to show 'Resolved' inquiries"><div onClick={() => handleCardClick('status', 'Resolved')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={20} /></div><div><h6 className="text-emerald-500">{counts.resolvedCount}</h6><span className="font-semibold text-[11px]">Resolved</span></div></Card></div></Tooltip>
+          <Tooltip title="Click to show 'Closed' inquiries"><div onClick={() => handleCardClick('status', 'Closed')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-gray-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-gray-100 text-gray-500"><TbCircleX size={20} /></div><div><h6 className="text-gray-500">{counts.closedCount}</h6><span className="font-semibold text-[11px]">Closed</span></div></Card></div></Tooltip>
+          <Tooltip title="Click to show 'High' priority inquiries"><div onClick={() => handleCardClick('priority', 'High')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUrgent size={20} /></div><div><h6 className="text-red-500">{counts.highPriority}</h6><span className="font-semibold text-[11px]">High Priority</span></div></Card></div></Tooltip>
+          <Tooltip title="Click to show 'Medium' priority inquiries"><div onClick={() => handleCardClick('priority', 'Medium')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbAlarm size={20} /></div><div><h6 className="text-yellow-500">{counts.mediumPriority}</h6><span className="font-semibold text-[11px]">Medium Priority</span></div></Card></div></Tooltip>
+          <Tooltip title="Click to show 'Low' priority inquiries"><div onClick={() => handleCardClick('priority', 'Low')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbArrowDown size={20} /></div><div><h6 className="text-blue-500">{counts.lowPriority}</h6><span className="font-semibold text-[11px]">Low Priority</span></div></Card></div></Tooltip>
+      </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearchInputChange(e.target.value)} />
         <div className="flex gap-2">
@@ -861,10 +944,11 @@ const InquiryListTable = () => {
             </div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onClearFilters} /></Tooltip>
-          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
           <Button icon={<TbCloudUpload />} onClick={handleExport} disabled={allFilteredAndSortedData.length === 0}>Export</Button>
         </div>
       </div>
+      <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
       <DataTable
         selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading || isDeleting || isSubmittingExportReason}
         pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
@@ -979,7 +1063,6 @@ const Inquiries = () =>{
               <h5>Inquiries</h5>
               <div className="flex flex-col md:flex-row gap-3">
                 <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => {
-                   
                     navigate("/business-entities/create-inquiry");
                 }}>Add New</Button>
               </div>
