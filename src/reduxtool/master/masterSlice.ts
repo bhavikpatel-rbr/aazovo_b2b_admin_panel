@@ -41,6 +41,7 @@ import {
   editUnitAction,
   getActivityLogAction,
   getAllCompany,
+  getAllDocumentsAction,
   getAllNotificationAction,
   getAllProductAction,
   getAllProductsAction,
@@ -195,6 +196,7 @@ const INITIAL_STATE: any = {
   getAllUserData: [],
   getSchedule: {},
   pinnedTabs: [],
+  allDocuments: [],
 };
 
 const masterSlice = createSlice({
@@ -702,6 +704,10 @@ const masterSlice = createSlice({
     builder.addCase(getPinnedTabAction.fulfilled, (state, { payload }) => ({
       ...state,
       pinnedTabs: payload,
+    }));
+    builder.addCase(getAllDocumentsAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      allDocuments: payload,
     }));
   },
 });

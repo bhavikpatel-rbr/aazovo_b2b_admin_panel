@@ -3079,3 +3079,13 @@ export const removePinnedTabAsync = async (pinData: { module_name: string }) => 
         return isAxiosError(err);
     }
 };
+
+
+export const getAllDocumentsAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/all-documents`)
+    return response.data.data;
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
