@@ -13,7 +13,7 @@ import Spinner from "@/components/ui/Spinner";
 import toast from "@/components/ui/toast";
 
 // Icons
-import { TbCopy } from "react-icons/tb";
+import { TbAlertTriangle, TbBrandWhatsapp, TbCopy, TbMail } from "react-icons/tb";
 
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -29,6 +29,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
+import { Tooltip } from "react-tooltip";
 
 // --- Zod Schema for Create Offer Form ---
 const offerFormSchema = z.object({
@@ -154,7 +155,7 @@ const CreateDemand = () => {
         // **ASSUMPTION**: The API response for a single offer includes 'price_list_details'
         productStatus: offerData.price_list_details?.status || "active",
         productSpec: offerData.price_list_details?.spec_id || null,
-      };  
+      };
 
       reset(defaultValues);
 
@@ -470,7 +471,12 @@ const CreateDemand = () => {
                     <FormItem invalid={!!errors.groupA_notes} errorMessage={errors.groupA_notes?.message}>
                       <Controller name="groupA_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Notes will be auto-generated after selecting products and entering quantities..." rows={12} />} />
                     </FormItem>
-                    <div className="text-right mt-1"><Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues("groupA_notes") || ""); toast.push(<Notification title="Copied" type="info">Group A notes copied to clipboard.</Notification>); }} /></div>
+
+                    <div className="text-right mt-1">
+                      <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues("groupA_notes") || ""); toast.push(<Notification title="Copied" type="info">Group A notes copied to clipboard.</Notification>); }} />
+                      <Button type="button" shape="circle" icon={<TbMail />} onClick={() => toast.push(<Notification title="Action" type="info">Send Email action triggered.</Notification>)} />
+                      <Button type="button" shape="circle" icon={<TbBrandWhatsapp />} onClick={() => toast.push(<Notification title="Action" type="info">Send WhatsApp action triggered.</Notification>)} />
+                    </div>
                   </div>
                 </Card>
                 <Card>
@@ -479,20 +485,30 @@ const CreateDemand = () => {
                     <FormItem invalid={!!errors.groupB_notes} errorMessage={errors.groupB_notes?.message}>
                       <Controller name="groupB_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Notes will be auto-generated after selecting products and entering quantities..." rows={12} />} />
                     </FormItem>
-                    <div className="text-right mt-1"><Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues("groupB_notes") || ""); toast.push(<Notification title="Copied" type="info">Group B notes copied to clipboard.</Notification>); }} /></div>
+                    <div className="text-right mt-1">
+                      <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues("groupB_notes") || ""); toast.push(<Notification title="Copied" type="info">Group B notes copied to clipboard.</Notification>); }} />
+                      <Button type="button" shape="circle" icon={<TbMail />} onClick={() => toast.push(<Notification title="Action" type="info">Send Email action triggered.</Notification>)} />
+                      <Button type="button" shape="circle" icon={<TbBrandWhatsapp />} onClick={() => toast.push(<Notification title="Action" type="info">Send WhatsApp action triggered.</Notification>)} />
+                    </div>
                   </div>
                 </Card>
               </div>
+              <div className="p-4 mb-4 rounded-md bg-yellow-100 dark:bg-yellow-500/20 border-l-4 border-yellow-400 dark:border-yellow-500 text-yellow-800 dark:text-yellow-200 flex items-center gap-3">
+                <TbAlertTriangle className="h-5 w-5" />
+                <div>
+                  <span className="font-semibold">Note:</span> The UI for the product table data  is not saving to the backend.
+                </div>
+              </div>
             </>
           )}
-        </Card>
+        </Card >
 
         <Card bodyClass="flex justify-end gap-2" className="mt-4">
           <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
           {/* --- DYNAMIC BUTTON TEXT --- */}
           <Button type="submit" form="offerForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || isLoading}>{isSubmitting ? "Saving..." : (isEdit ? 'Update Demands' : 'Save Demands')}</Button>
         </Card>
-      </Form>
+      </Form >
     </>
   );
 };
