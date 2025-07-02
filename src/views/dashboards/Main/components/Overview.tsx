@@ -6,7 +6,7 @@ import Td from '@/components/ui/Table/Td'
 import Tr from '@/components/ui/Table/Tr'
 import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
-import { getCompanyAction, getMemberAction, getProductsAction } from '@/reduxtool/master/middleware'
+import { getCompanyAction, getEmployeesListingAction, getMemberAction, getpartnerAction, getProductsAction } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
 import { useThemeStore } from '@/store/themeStore'
 import classNames from '@/utils/classNames'
@@ -21,6 +21,7 @@ import { TbBox, TbCube3dSphere, TbHeartHandshake, TbInfoCircle, TbSearch, TbUser
 import { NumericFormat } from 'react-number-format'
 import { useSelector } from 'react-redux'
 import type { Period, StatisticCategory, StatisticData } from '../types'
+import dayjs from 'dayjs'
 
 type StatisticCardProps = {
     title: string
@@ -122,11 +123,13 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     )
 
     const dispatch = useAppDispatch();
-    const { CompanyData, MemberData, ProductsData } = useSelector(masterSelector);
+    const { CompanyData, MemberData, ProductsData, partnerData, EmployeesList: Employees } = useSelector(masterSelector);
     useEffect(() => {
         dispatch(getCompanyAction());
         dispatch(getMemberAction());
         dispatch(getProductsAction());
+        dispatch(getpartnerAction());
+        dispatch(getEmployeesListingAction())
     }, [dispatch]);
 
 
@@ -588,239 +591,268 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 </div>
             )
         },
-        // {
-        //     header: 'Ratio', accessorKey: 'trustRatio',
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1'>
-        //             <Tag className="flex gap-1 text-xs flex-wrap">
-        //                 <h6 className="text-xs">Approach:</h6> 80%
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-xs">
-        //                 <h6 className="text-xs">Conversion:</h6> {props.row.original.successRatio}
-        //             </Tag>
-        //             <span className="flex gap-1 text-xs flex-wrap">
-        //                 Minimum Buying strong seller profile, focus on selling
-        //             </span>
-        //         </div>
-        //     )
-        // },
 
     ]
+    const getPartnerStatusClass = (statusValue): string => {
+        if (!statusValue) return "bg-gray-200 text-gray-600";
+        const lowerCaseStatus = statusValue.toLowerCase();
+        const partnerStatusColors: Record<string, string> = {
+            active: "bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+            verified: "bg-blue-200 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
+            pending: "bg-orange-200 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
+            inactive: "bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+            "non verified": "bg-yellow-200 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
+        };
+        return partnerStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600";
+    };
+
     const partnerColumns = [
         {
-            header: 'Partner Info',
-            accessorKey: 'name',
-            enableSorting: true,
-            size: 230,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <h6 className="text-xs">{props.getValue()}</h6>
-                    <span className="text-xs flex">
-                        <h6 className="text-xs"></h6> ({"XYZ Company Name"})
-                    </span>
-                    <span className="text-xs flex gap-1">{props.row.original.type}</span>
-                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
-                    <span className="text-xs flex gap-1">India</span>
-                </div>
-            )
-        },
-        {
-            header: 'Preferences',
-            accessorKey: 'brands',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-                            return <span>{val}, </span>
-                        })}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
-                    </span>
-                </div>
-            )
-        },
-        {
-            header: 'Status',
-            accessorKey: 'status',
-            cell: props => (
-                <span className="text-xs">
-                    <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
-                </span>
-            )
-        },
-        {
-            header: 'Verified',
-            accessorKey: 'status',
-            size: 100,
-            cell: props => (
-                <span className="text-xs">
-                    <Tag className={statusColor[props.row.original.status]}> Yes</Tag>
-                </span>
-            )
-        },
-        {
-            header: 'Team',
-            accessorKey: 'status',
-            size: 80,
-            cell: props => (
-                <span className="text-xs flex items-center justify-center rounded-full bg-blue-100 
-                text-blue-600 font-semibold w-8 h-8">7</span>
-            )
-        },
-        {
-            header: 'Joined Date',
-            accessorKey: 'status',
-            cell: props => (
-                <span className="text-xs">10 May, 2025</span>
-            )
-        },
-        // {
-        //     header: 'Score', accessorKey: 'trustRatio',
-        //     size: 180,
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1'>
-        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
-        //                 <h6 className="text-[10px]">Trust Score:</h6> 80%
-        //             </Tag>
-        //             <span className="flex gap-1 text-xs flex-wrap">
-        //                 Minimum Buying strong seller profile, focus on selling
-        //             </span>
-        //         </div>
-        //     )
-        // },
-
-    ]
-    const teamColumns = [
-        {
-            header: 'Team Info',
-            accessorKey: 'name',
-            enableSorting: true,
-            size: 190,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <div className='flex gap-2 items-center'>
-                        <Tooltip title="Birthday : 23 May">
-                            <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm " />
-                        </Tooltip>
-                        <h6 className="text-xs">Raman Ojha</h6>
-                    </div>
-                    <span className="text-xs flex">
-                        <h6 className="text-xs"></h6> {"IT Department"}
-                    </span>
-                    <span className="text-xs flex gap-1">Frontend Developer</span>
-                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
-                    <span className="text-xs flex gap-1">+91 8923572494</span>
-                </div>
-            )
-        },
-        {
-            header: 'Assigned',
-            accessorKey: 'brands',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-                            return <span>{val}, </span>
-                        })}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Subcategory:</h6> {props.row.original.subcategory}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Country:</h6> {props.row.original.country}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Product:</h6> {props.row.original.product}
-                    </span>
-                </div>
-            )
-        },
-        {
-            header: 'Status',
-            accessorKey: 'status',
-            size: 110,
-            cell: props => (
-                <span className="text-xs">
-                    <span className="text-xs">
-                        <h6 className="text-xs mt-1">Joined:</h6> 10 Mar, 2025
-                    </span>
-                    <br />
-                    <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
-                </span>
-            )
-        },
-        {
-            header: 'Activity',
-            accessorKey: 'status',
-            size: 150,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs mb-1">
-                        <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
-                    </span>
-                    <Tooltip title="Present: 24 | Leaves: 2" className='text-xs'>
-                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                            shadow-md inline'>
-                            P: 24 | L: 2
+            header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => (
+                <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                        <Avatar src={row.original.partner_logo ? `https://aazovo.codefriend.in/${row.original.partner_logo}` : ''} size="md" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.original.partner_logo || null)} icon={<TbUserCircle />} />
+                        <div>
+                            <h6 className="text-xs font-semibold">{row.original.partner_code}</h6>
+                            <span className="text-xs font-semibold">{row.original.partner_name}</span>
                         </div>
+                    </div>
+                    <span className="text-xs mt-1"><b>Type:</b> {row.original.ownership_type}</span>
+                    <div className="text-xs text-gray-500">{row.original.city}, {row.original.state}, {row.original.country?.name}</div>
+                </div>
+            ),
+        },
+        {
+            header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }) => (
+                <div className="text-xs flex flex-col gap-0.5">
+                    {row.original.owner_name && <span><b>Owner:</b> {row.original.owner_name}</span>}
+                    {row.original.primary_contact_number && <span>{row.original.primary_contact_number_code} {row.original.primary_contact_number}</span>}
+                    {row.original.primary_email_id && <a href={`mailto:${row.original.primary_email_id}`} className="text-blue-600 hover:underline">{row.original.primary_email_id}</a>}
+                    {row.original.partner_website && <a href={row.original.partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{row.original.partner_website}</a>}
+                </div>
+            )
+        },
+        {
+            header: "Legal IDs & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => (
+                <div className="flex flex-col gap-1 text-[10px]">
+                    {row.original.gst_number && <div><b>GST:</b> <span className="break-all">{row.original.gst_number}</span></div>}
+                    {row.original.pan_number && <div><b>PAN:</b> <span className="break-all">{row.original.pan_number}</span></div>}
+                    <Tag className={`${getPartnerStatusClass(row.original.status)} capitalize mt-1 self-start !text-[10px] px-1.5 py-0.5`}>{row.original.status}</Tag>
+                </div>
+            )
+        },
+        {
+            header: "Profile & Scores", size: 190, accessorKey: 'profile_completion', id: 'profile', cell: ({ row }) => (
+                <div className="flex flex-col gap-1.5 text-xs">
+                    <span><b>Teams:</b> {row.original.teams_count || 0}</span>
+                    <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${row.original.kyc_verified ? 'Yes' : 'No'}`}>{row.original.kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}</Tooltip></div>
+                    <Tooltip title={`Profile Completion ${row.original.profile_completion}%`}>
+                        <div className="h-2.5 w-full rounded-full bg-gray-300"><div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${row.original.profile_completion}%` }}></div></div>
                     </Tooltip>
                 </div>
             )
-        },
-        {
-            header: 'Performance',
-            accessorKey: 'status',
-            size: 150,
+        }, {
+            header: 'Business', accessorKey: 'wallCount',
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
             cell: props => (
-                <div className='flex flex-col gap-3'>
-                    <div>
-                        <Tooltip title="Completed: 23 | Pending: 4" className='text-xs'>
-                            <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
-                                shadow-md inline'>
-                                Task : 23 | 4
-                            </div>
-                        </Tooltip>
-                    </div>
-                    <div>
-                        <Tooltip title="Buy: 12 | Sell: 11 | Total: 23" className='text-xs'>
-                            <div className=' bg-pink-100 text-pink-600 rounded-md p-1.5 text-xs 
-                                shadow-md inline'>
-                                Listing : 12 | 11 | 23
-                            </div>
-                        </Tooltip>
-                    </div>
-                    <div>
-                        <Tooltip title="Offer: 12 | Demand: 11 | Total: 23" className='text-xs'>
-                            <div className=' bg-violet-100 text-violet-600 rounded-md p-1.5 text-xs 
-                                shadow-md inline'>
-                                O & D : 12 | 11 | 23
-                            </div>
-                        </Tooltip>
-                    </div>
-                    <div>
-                        <Tooltip title="Success: 4 | Lost: 10 | Total: 14" className='text-xs'>
-                            <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
-                                shadow-md inline'>
-                                Leads : 4 | 10 | 14
-                            </div>
-                        </Tooltip>
-                    </div>
-                    <Tag className="text-xs flex flex-wrap text-[10px]">
-                        <h6 className="text-[10px]">Performance Score : </h6>
-                        <span> 79%</span>
-                    </Tag>
+                <div className='flex flex-col gap-4 text-center items-center '>
+                    <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
+                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
+                                inline'>
+                            Wall Listing: {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers} | {props?.row?.original?.opportunities?.demands} | {props?.row?.original?.opportunities?.total}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Leads:  {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total}
+                        </div>
+                    </Tooltip>
                 </div>
+
             )
         },
-
     ]
+
+    // const teamColumns = [
+    //     {
+    //         header: 'Team Info',
+    //         accessorKey: 'name',
+    //         enableSorting: true,
+    //         size: 190,
+    //         cell: props => (
+    //             <div className='flex flex-col gap-1'>
+    //                 <div className='flex gap-2 items-center'>
+    //                     <Tooltip title="Birthday : 23 May">
+    //                         <BsCake className=" bg-red-200 h-5 w-5 p-1 text-red-600 rounded-sm " />
+    //                     </Tooltip>
+    //                     <h6 className="text-xs">Raman Ojha</h6>
+    //                 </div>
+    //                 <span className="text-xs flex">
+    //                     <h6 className="text-xs"></h6> {"IT Department"}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">Frontend Developer</span>
+    //                 <span className="text-xs flex gap-1">xyz@gmail.com</span>
+    //                 <span className="text-xs flex gap-1">+91 8923572494</span>
+    //             </div>
+    //         )
+    //     },
+    //     {
+    //         header: 'Assigned',
+    //         accessorKey: 'brands',
+    //         cell: props => (
+    //             <div className='flex flex-col gap-1'>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
+    //                         return <span>{val}, </span>
+    //                     })}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Category:</h6> {props.row.original.category}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Subcategory:</h6> {props.row.original.subcategory}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Country:</h6> {props.row.original.country}
+    //                 </span>
+    //                 <span className="text-xs flex gap-1">
+    //                     <h6 className="text-xs">Product:</h6> {props.row.original.product}
+    //                 </span>
+    //             </div>
+    //         )
+    //     },
+    //     {
+    //         header: 'Status',
+    //         accessorKey: 'status',
+    //         size: 110,
+    //         cell: props => (
+    //             <span className="text-xs">
+    //                 <span className="text-xs">
+    //                     <h6 className="text-xs mt-1">Joined:</h6> 10 Mar, 2025
+    //                 </span>
+    //                 <br />
+    //                 <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
+    //             </span>
+    //         )
+    //     },
+    //     {
+    //         header: 'Activity',
+    //         accessorKey: 'status',
+    //         size: 150,
+    //         cell: props => (
+    //             <div className='flex flex-col gap-1'>
+    //                 <span className="text-xs mb-1">
+    //                     <h6 className="text-xs">Last Active : </h6> 12 Mar, 2024 10:00 PM
+    //                 </span>
+    //                 <Tooltip title="Present: 24 | Leaves: 2" className='text-xs'>
+    //                     <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
+    //                         shadow-md inline'>
+    //                         P: 24 | L: 2
+    //                     </div>
+    //                 </Tooltip>
+    //             </div>
+    //         )
+    //     },
+    //     {
+    //         header: 'Performance',
+    //         accessorKey: 'status',
+    //         size: 150,
+    //         cell: props => (
+    //             <div className='flex flex-col gap-3'>
+    //                 <div>
+    //                     <Tooltip title="Completed: 23 | Pending: 4" className='text-xs'>
+    //                         <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
+    //                             shadow-md inline'>
+    //                             Task : 23 | 4
+    //                         </div>
+    //                     </Tooltip>
+    //                 </div>
+    //                 <div>
+    //                     <Tooltip title="Buy: 12 | Sell: 11 | Total: 23" className='text-xs'>
+    //                         <div className=' bg-pink-100 text-pink-600 rounded-md p-1.5 text-xs 
+    //                             shadow-md inline'>
+    //                             Listing : 12 | 11 | 23
+    //                         </div>
+    //                     </Tooltip>
+    //                 </div>
+    //                 <div>
+    //                     <Tooltip title="Offer: 12 | Demand: 11 | Total: 23" className='text-xs'>
+    //                         <div className=' bg-violet-100 text-violet-600 rounded-md p-1.5 text-xs 
+    //                             shadow-md inline'>
+    //                             O & D : 12 | 11 | 23
+    //                         </div>
+    //                     </Tooltip>
+    //                 </div>
+    //                 <div>
+    //                     <Tooltip title="Success: 4 | Lost: 10 | Total: 14" className='text-xs'>
+    //                         <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+    //                             shadow-md inline'>
+    //                             Leads : 4 | 10 | 14
+    //                         </div>
+    //                     </Tooltip>
+    //                 </div>
+    //                 <Tag className="text-xs flex flex-wrap text-[10px]">
+    //                     <h6 className="text-[10px]">Performance Score : </h6>
+    //                     <span> 79%</span>
+    //                 </Tag>
+    //             </div>
+    //         )
+    //     },
+
+    // ]
+
+    const employeeStatusColor = {
+        active: "bg-blue-500",
+        inactive: "bg-emerald-500",
+        on_leave: "bg-amber-500",
+        terminated: "bg-red-500",
+    };
+
+    const teamColumns = [
+        { header: "Status", accessorKey: "status", cell: (props) => { const { status } = props.row.original || {}; const displayStatus = status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toLowerCase()); return (<Tag className={`${employeeStatusColor[displayStatus as keyof typeof employeeStatusColor]} text-white capitalize`}>{displayStatus}</Tag>); }, },
+        { header: "Name", accessorKey: "name", cell: (props) => { const { name, email, mobile, avatar } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={28} shape="circle" src={avatar} icon={<TbUserCircle />}>{!avatar ? name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2 rtl:mr-2"><span className="font-semibold">{name}</span><div className="text-xs text-gray-500">{email}</div><div className="text-xs text-gray-500">{mobile}</div></div></div>); }, },
+        { header: "Designation", accessorKey: "designation", size: 200, cell: (props: any) => { const data = props.row.original || {}; return (<div className="flex items-center"><div className="ml-2 rtl:mr-2"><span className="font-semibold">{data?.designation_id ?? ""}</span></div></div>); }, },
+        { header: "Department", accessorKey: "department", size: 200, cell: (props: any) => { const { department } = props.row.original || {}; return (<div className="flex items-center"><div className="ml-2 rtl:mr-2"><span className="font-semibold">{department?.name ?? ""}</span></div></div>); }, },
+        { header: "Roles", accessorKey: "roles", cell: (props: any) => { const { roles } = props.row.original || {}; return (<div className="flex flex-wrap gap-1 text-xs">{props?.row?.original?.roles?.map((role: any) => (<Tag key={role} className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]">{role?.name || ""}</Tag>))}</div>) }, },
+        { header: "Joined At", accessorKey: "joiningDate", size: 200, cell: (props: any) => props?.row?.original?.date_of_joining ? <span className="text-xs"> {dayjs(props?.row?.original?.date_of_joining).format("D MMM YYYY, h:mm A")}</span> : '-' },
+        {
+            header: 'Business', accessorKey: 'wallCount',
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
+            cell: props => (
+                <div className='flex flex-col gap-4 text-center items-center '>
+                    <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
+                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
+                                inline'>
+                            Wall Listing: {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers} | {props?.row?.original?.opportunities?.demands} | {props?.row?.original?.opportunities?.total}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Leads:  {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total}
+                        </div>
+                    </Tooltip>
+                </div>
+
+            )
+        },
+    ]
+
 
     useEffect(() => {
         if (!sideNavCollapse && isFirstRender.current) {
@@ -915,8 +947,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             value={
                                 <NumericFormat
                                     displayType="text"
-                                    value="68"
                                     thousandSeparator={true}
+                                    value={MemberData.data.length || 0}
                                 />
                             }
                             iconClass="bg-emerald-200"
@@ -933,8 +965,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             value={
                                 <NumericFormat
                                     displayType="text"
-                                    value="12"
                                     prefix={''}
+                                    value={ProductsData.length || 0}
                                     thousandSeparator={true}
                                 />
                             }
@@ -973,7 +1005,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             value={
                                 <NumericFormat
                                     displayType="text"
-                                    value="23"
+                                    value={partnerData?.data?.length || 0}
                                     thousandSeparator={true}
                                 />
                             }
@@ -993,7 +1025,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             value={
                                 <NumericFormat
                                     displayType="text"
-                                    value="12"
+                                    value={Employees?.data?.data.length || 0}
                                     prefix={''}
                                     thousandSeparator={true}
                                 />
@@ -1033,23 +1065,23 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'Companies' && (
                             <div>
                                 <div className='lg:flex  gap-2 justify-between mt-4'>
-                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                    {/* <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
                                             <h3>22%</h3>
                                             <span className='text-green-600 text-lg'><FaArrowUpLong /></span>
                                         </div>
-                                    </div>
+                                    </div> */}
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
                                             field="Total"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.total || 0}
                                             color='text-[#6610f2]'
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         {/* <Bar
                                             field="Active"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#28a745]'
                                             className="bg-[#28a745] dark:opacity-70"
                                         /> */}
@@ -1067,37 +1099,37 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         /> */}
                                         <Bar
                                             field="Verified"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#20c997]'
                                             className="bg-[#20c997] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Non Verified"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.non_verified || 0}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
                                         {/* <Bar
                                             field="Offerer"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         /> */}
                                         <Bar
                                             field="Eligible"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.eligible || 0}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Not Eligible"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.not_eligible || 0}
                                             color='text-[#ffc107]'
                                             className="bg-[#ffc107] dark:opacity-70"
                                         />
                                         {/* <Bar
                                             field="Avg Score"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-gray-500'
                                             className="bg-gray-500 dark:opacity-70"
                                         /> */}
@@ -1146,35 +1178,35 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'Members' && (
                             <div>
                                 <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                    {/* <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
                                             <h3>2%</h3>
                                             <span className='text-red-600 text-lg'><FaArrowDownLong /></span>
                                         </div>
-                                    </div>
+                                    </div> */}
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
                                             field="Total"
-                                            percent={20}
+                                            percent={MemberData?.counts?.total || 0}
                                             color='text-[#6610f2]'
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Active"
-                                            percent={20}
+                                            percent={MemberData?.counts?.active || 0}
                                             color='text-[#28a745]'
                                             className="bg-[#28a745] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Disabled"
-                                            percent={28}
+                                            percent={MemberData?.counts?.disabled || 0}
                                             color='text-[#6c757d]'
                                             className="bg-[#6c757d] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Unregistered"
-                                            percent={20}
+                                            percent={MemberData?.counts?.unregistered || 0}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
@@ -1222,71 +1254,71 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'Products' && (
                             <div>
                                 <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                    {/* <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
                                             <h3>17%</h3>
                                             <span className='text-green-600 text-lg'><FaArrowUpLong /></span>
                                         </div>
-                                    </div>
+                                    </div> */}
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
                                             field="Total"
-                                            percent={20}
+                                            percent={ProductsData?.counts?.total || 0}
                                             color='text-[#6610f2]'
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Active"
-                                            percent={20}
+                                            percent={ProductsData?.counts?.active || 0}
                                             color='text-[#28a745]'
                                             className="bg-[#28a745] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Inactive"
-                                            percent={28}
+                                            percent={ProductsData?.counts?.inactive || 0}
                                             color='text-[#6c757d]'
                                             className="bg-[#6c757d] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Pending"
-                                            percent={32}
+                                            percent={ProductsData?.counts?.pending || 0}
                                             color='text-[#ffc107]'
                                             className="bg-[#ffc107] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Categories(3/5)"
-                                            percent={20}
+                                            percent={ProductsData?.counts?.categories || 0}
                                             color='text-[#2ecc71]'
                                             className="bg-[#2ecc71] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Brands(2/6)"
-                                            percent={20}
+                                            percent={ProductsData?.counts?.brands || 0}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Wall"
-                                            percent={32}
+                                           percent={ProductsData?.counts?.wall || 0}
                                             color='text-[#ffc107]'
                                             className="bg-[#ffc107] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Leads"
-                                            percent={20}
+                                            percent={ProductsData?.counts?.leads || 0}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Opportunity"
-                                            percent={20}
+                                            percent={ProductsData?.counts?.opportunity || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         {/* <Bar
                                             field="Activity Score"
-                                            percent={20}
+                                            percent={ProductsData?.counts?.verified || 0}
                                             color='text-gray-500'
                                             className="bg-gray-500 dark:opacity-70"
                                         /> */}
@@ -1334,23 +1366,23 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'Wall Listings' && (
                             <div>
                                 <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                    {/* <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
                                             <h3>34%</h3>
                                             <span className='text-green-600 text-lg'><FaArrowUpLong /></span>
                                         </div>
-                                    </div>
+                                    </div> */}
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
                                             field="Total"
-                                            percent={20}
+                                            percent={ProductsData?.counts?.verified || 0}
                                             color='text-[#6610f2]'
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Buy"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#28a745]'
                                             className="bg-[#28a745] dark:opacity-70"
                                         />
@@ -1362,13 +1394,13 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         />
                                         <Bar
                                             field="Active"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#2ecc71]'
                                             className="bg-[#2ecc71] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Inactive"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
@@ -1380,37 +1412,37 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         />
                                         <Bar
                                             field="Reject"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Category"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Subcat"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Brand"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Product"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-gray-500'
                                             className="bg-gray-500 dark:opacity-70"
                                         />
                                         <Bar
                                             field="Members"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-gray-500'
                                             className="bg-gray-500 dark:opacity-70"
                                         />
@@ -1453,29 +1485,29 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'Partners' && (
                             <div>
                                 <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                    {/* <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
                                             <h3>13%</h3>
                                             <span className='text-green-600 text-lg'><FaArrowUpLong /></span>
                                         </div>
-                                    </div>
+                                    </div> */}
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
                                             field="Total"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#6610f2]'
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Active"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#2ecc71]'
                                             className="bg-[#2ecc71] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Unregistered"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
@@ -1487,19 +1519,19 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         />
                                         <Bar
                                             field="Verified"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#6610f2]'
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Unverified"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         {/* <Bar
                                             field="Inactive"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
@@ -1512,19 +1544,19 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         
                                         <Bar
                                             field="Blocked"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Category"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Type"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#28a745]'
                                             className="bg-[#28a745] dark:opacity-70"
                                         />
@@ -1536,13 +1568,13 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         />
                                         <Bar
                                             field="International"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         <Bar
                                             field="National"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         /> */}
@@ -1575,7 +1607,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     />
                                     <DataTable
                                         columns={partnerColumns}
-                                        data={wallListingData}
+                                        data={partnerData?.data || []}
                                     // loading={isLoading}
                                     />
 
@@ -1589,17 +1621,17 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'Teams' && (
                             <div>
                                 <div className='lg:flex gap-2 justify-between mt-4'>
-                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                    {/* <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
                                             <h3>17%</h3>
                                             <span className='text-green-600 text-lg'><FaArrowUpLong /></span>
                                         </div>
-                                    </div>
+                                    </div> */}
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
                                             field="Active"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#2ecc71]'
                                             className="bg-[#2ecc71] dark:opacity-70"
                                         />
@@ -1611,7 +1643,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         />
                                         <Bar
                                             field="Blocked"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
@@ -1629,40 +1661,40 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         />
                                         <Bar
                                             field="Designations"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         {/* <Bar
                                             field="Inactive"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
                                          
                                         <Bar
                                             field="Unapproved"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         
                                         <Bar
                                             field="Resigned"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#28a745]'
                                             className="bg-[#28a745] dark:opacity-70"
                                         />
                                         
                                         <Bar
                                             field="Task"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Performance"
-                                            percent={20}
+                                            percent={CompanyData?.counts?.verified || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         /> */}
@@ -1689,7 +1721,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     </div>
                                     <DataTable
                                         columns={teamColumns}
-                                        data={wallListingData}
+                                        data={Employees?.data?.data || []}
                                     // loading={isLoading}
                                     />
 
