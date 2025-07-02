@@ -4,6 +4,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Avatar from "@/components/ui/Avatar";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -26,6 +27,8 @@ import {
   Tag,
   Dialog,
   Select,
+  Checkbox,
+  Dropdown,
 } from "@/components/ui";
 
 // Icons
@@ -60,7 +63,9 @@ import {
   TbCancel,
   TbCategory2,
   TbCalendar,
-  TbBlocks, // Generic photo icon
+  TbBlocks,
+  TbColumns,
+  TbX,
 } from "react-icons/tb";
 
 // Types for Categories
@@ -77,8 +82,9 @@ import {
   editCategoryAction,
   deleteCategoryAction,
   deleteAllCategoriesAction,
-  submitExportReasonAction, // Added for export with reason
-  // importCategoriesAction, // Added for new import modal
+  submitExportReasonAction,
+  getParentCategoriesAction,
+  // importCategoriesAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
@@ -88,9 +94,9 @@ type ApiCategoryItem = {
   id: number;
   name: string;
   slug: string;
-  web_icon: string | null; // Changed from icon
-  mobile_icon: string | null; // New
-  banner_icon: string | null; // New
+  web_icon: string | null;
+  mobile_icon: string | null;
+  banner_icon: string | null;
   parent_category: string | number | null;
   show_home_page: string | number;
   show_header: string | number;
@@ -102,9 +108,9 @@ type ApiCategoryItem = {
   comingsoon?: string | number;
   created_at: string;
   updated_at: string;
-  web_icon_full_path?: string; // Changed from icon_full_path
-  mobile_icon_full_path?: string; // New
-  category_icon_full_path?: string; // New
+  web_icon_full_path?: string;
+  mobile_icon_full_path?: string;
+  category_icon_full_path?: string;
   parent_category_name?: string;
 };
 export type CategoryStatus = "active" | "inactive";
@@ -112,12 +118,12 @@ export type CategoryItem = {
   id: number;
   name: string;
   slug: string;
-  webIcon: string | null; // Changed
-  webIconFullPath: string | null; // Changed
-  mobileIcon: string | null; // New
-  mobileIconFullPath: string | null; // New
-  bannerIcon: string | null; // New
-  bannerIconFullPath: string | null; // New
+  webIcon: string | null;
+  webIconFullPath: string | null;
+  mobileIcon: string | null;
+  mobileIconFullPath: string | null;
+  bannerIcon: string | null;
+  bannerIconFullPath: string | null;
   parentId: number | null;
   parentCategoryName?: string;
   showHomePage: number;
@@ -141,9 +147,9 @@ const categoryFormSchema = z.object({
     .transform((val) => (val === "" ? null : val === null ? null : Number(val)))
     .optional()
     .nullable(),
-  web_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(), // Changed from icon
-  mobile_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(), // New
-  category_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(), // New
+  web_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(),
+  mobile_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(),
+  category_icon: z.union([z.instanceof(File), z.null()]).optional().nullable(),
   show_home_page: z
     .enum(["0", "1"], { errorMap: () => ({ message: "Please select." }) })
     .transform((val) => Number(val)),
@@ -176,11 +182,17 @@ const filterFormCategorySchema = z.object({
 });
 type FilterCategoryFormData = z.infer<typeof filterFormCategorySchema>;
 
-// --- Zod Schema for Export Reason Form ---
+type FilterCriteria = {
+  filterNames?: { value: string; label: string }[];
+  filterStatuses?: { value: string; label: string }[];
+  filterParentIds?: { value: number; label: string }[];
+  filterSpecial?: 'main' | 'sub' | 'comingSoon' | null;
+};
+
 const exportReasonSchema = z.object({
   reason: z
     .string()
-    .min(10, "Reason for export is required.")
+    .min(10, "Reason for export is required minimum 10 characters.")
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
@@ -188,16 +200,16 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 // --- CSV Export (Categories) ---
 const CSV_HEADERS_CATEGORY = [
   "ID", "Name", "Slug",
-  "Web Icon URL", "Mobile Icon URL", "Banner Icon URL", // New
+  "Web Icon URL", "Mobile Icon URL", "Banner Icon URL",
   "Parent ID", "Parent Name",
   "Show Home", "Show Header", "Show Page Name", "Coming Soon", "Status",
   "Meta Title", "Meta Desc", "Meta Keyword", "Created At", "Updated At",
 ];
 type CategoryCsvItem = {
   id: number; name: string; slug: string;
-  webIconFullPath: string | null; // New
-  mobileIconFullPath: string | null; // New
-  bannerIconFullPath: string | null; // New
+  webIconFullPath: string | null;
+  mobileIconFullPath: string | null;
+  bannerIconFullPath: string | null;
   parentId: number | null; parentCategoryName?: string; showHomePage: number;
   showHeader: number; showPageName: string | null; comingSoon: number;
   status: CategoryStatus; metaTitle: string | null; metaDescription: string | null;
@@ -211,9 +223,9 @@ function exportToCsvCategory(filename: string, rows: CategoryItem[]) {
   }
   const transformedRows: CategoryCsvItem[] = rows.map((item) => ({
     id: item.id, name: item.name, slug: item.slug,
-    webIconFullPath: item.webIconFullPath, // New
-    mobileIconFullPath: item.mobileIconFullPath, // New
-    bannerIconFullPath: item.bannerIconFullPath, // New
+    webIconFullPath: item.webIconFullPath,
+    mobileIconFullPath: item.mobileIconFullPath,
+    bannerIconFullPath: item.bannerIconFullPath,
     parentId: item.parentId, parentCategoryName: item.parentCategoryName,
     showHomePage: item.showHomePage, showHeader: item.showHeader, showPageName: item.showPageName,
     comingSoon: item.comingSoon, status: item.status, metaTitle: item.metaTitle,
@@ -223,7 +235,7 @@ function exportToCsvCategory(filename: string, rows: CategoryItem[]) {
   }));
   const csvKeys: (keyof CategoryCsvItem)[] = [
     "id", "name", "slug",
-    "webIconFullPath", "mobileIconFullPath", "bannerIconFullPath", // New
+    "webIconFullPath", "mobileIconFullPath", "bannerIconFullPath",
     "parentId", "parentCategoryName",
     "showHomePage", "showHeader", "showPageName", "comingSoon", "status",
     "metaTitle", "metaDescription", "metaKeyword", "createdAt", "updatedAt",
@@ -258,7 +270,7 @@ function exportToCsvCategory(filename: string, rows: CategoryItem[]) {
 }
 
 // --- Constants & Options (Categories) ---
-const CATEGORY_ICON_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "https://your-api-domain.com/storage/"; // More generic base
+const CATEGORY_ICON_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "https://your-api-domain.com/storage/";
 const categoryStatusColor: Record<CategoryStatus, string> = {
   active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
   inactive: "bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-100",
@@ -334,24 +346,105 @@ const CategorySearch = React.forwardRef<
 CategorySearch.displayName = "CategorySearch";
 
 const CategoryTableTools = ({
-  onSearchChange, onFilter, onExport, onImport, onClearFilters
+  onSearchChange, onFilter, onExport, onImport, onClearFilters,
+  columns, filteredColumns, setFilteredColumns, activeFilterCount
 }: {
   onSearchChange: (query: string) => void; onFilter: () => void;
   onExport: () => void; onImport: () => void;
   onClearFilters: () => void;
-}) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-    <div className="flex-grow">
-      <CategorySearch onInputChange={onSearchChange} />
+  columns: ColumnDef<CategoryItem>[];
+  filteredColumns: ColumnDef<CategoryItem>[];
+  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<CategoryItem>[]>>;
+  activeFilterCount: number;
+}) => {
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
+      }
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <CategorySearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2">
+            <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => {
+              const id = col.id || col.accessorKey as string;
+              return col.header && (
+                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                  <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                    {col.header as string}
+                  </Checkbox>
+                </div>
+              )
+            })}
+          </div>
+        </Dropdown>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+          Filter {activeFilterCount > 0 && (
+            <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+              {activeFilterCount}
+            </span>
+          )}
+        </Button>
+        <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+      </div>
     </div>
-    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
-      <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button>
-      <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
-      <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+  );
+};
+
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: FilterCriteria;
+  onRemoveFilter: (key: keyof FilterCriteria, value: any) => void;
+  onClearAll: () => void;
+}) => {
+  const { filterNames, filterStatuses, filterParentIds, filterSpecial } = filterData;
+  const hasFilters = filterNames?.length || filterStatuses?.length || filterParentIds?.length || filterSpecial;
+
+  if (!hasFilters) return null;
+
+  const getSpecialFilterLabel = (key: string) => {
+    switch (key) {
+      case 'main': return 'Main Categories';
+      case 'sub': return 'Sub Categories';
+      case 'comingSoon': return 'Coming Soon';
+      default: return '';
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
+      {filterStatuses?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', item.value)} /></Tag>)}
+      {filterParentIds?.map(item => <Tag key={`parent-${item.value}`} prefix>Parent: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterParentIds', item.value)} /></Tag>)}
+      {filterSpecial && <Tag prefix>{getSpecialFilterLabel(filterSpecial)} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterSpecial', filterSpecial)} /></Tag>}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
     </div>
-  </div>
-);
+  );
+};
+
 
 type CategoryTableProps = {
   columns: ColumnDef<CategoryItem>[]; data: CategoryItem[]; loading: boolean;
@@ -452,7 +545,7 @@ const Categories = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [singleDeleteOpen, setSingleDeleteOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<CategoryItem | null>(null);
-  
+
   // New States for Export/Import
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
@@ -460,9 +553,7 @@ const Categories = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  const [filterCriteria, setFilterCriteria] = useState<FilterCategoryFormData>({
-    filterNames: [], filterStatuses: [], filterParentIds: [],
-  });
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({});
 
   // Image Preview States
   const [addWebIconPreview, setAddWebIconPreview] = useState<string | null>(null);
@@ -479,8 +570,8 @@ const Categories = () => {
   const [isViewDetailModalOpen, setIsViewDetailModalOpen] = useState(false);
   const [categoryToView, setCategoryToView] = useState<CategoryItem | null>(null);
 
-  const { CategoriesData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
-  useEffect(() => { dispatch(getCategoriesAction()); }, [dispatch]);
+  const { CategoriesData = [], status: masterLoadingStatus = "idle", ParentCategories = [] } = useSelector(masterSelector);
+  useEffect(() => { dispatch(getCategoriesAction()); dispatch(getParentCategoriesAction()); }, [dispatch]);
 
   useEffect(() => {
     return () => {
@@ -494,9 +585,9 @@ const Categories = () => {
   }, [addWebIconPreview, addMobileIconPreview, addBannerIconPreview, editWebIconPreview, editMobileIconPreview, editBannerPreview]);
 
   const defaultCategoryFormValues: Omit<CategoryFormData, "show_home_page" | "show_header" | "comingsoon"> &
-    { show_home_page: "0" | "1"; show_header: "0" | "1"; comingsoon: "0" | "1"; web_icon: null; mobile_icon: null; category_icon: null; parent_category: null; } = {
+  { show_home_page: "0" | "1"; show_header: "0" | "1"; comingsoon: "0" | "1"; web_icon: null; mobile_icon: null; category_icon: null; parent_category: null; } = {
     name: "", slug: "", parent_category: null,
-    web_icon: null, mobile_icon: null, category_icon: null, // New icon fields
+    web_icon: null, mobile_icon: null, category_icon: null,
     show_home_page: "0", show_header: "0",
     status: "Active", meta_title: null, meta_descr: null, meta_keyword: null,
     comingsoon: "0", show_page_name: null,
@@ -508,11 +599,11 @@ const Categories = () => {
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
   const parentCategoryOptions = useMemo(() => {
-    if (!Array.isArray(CategoriesData)) return [{ value: null, label: "No Parent Category" }];
-    const options = CategoriesData.filter(cat => !editingCategory || cat.id !== editingCategory.id)
+    if (!Array.isArray(ParentCategories)) return [{ value: null, label: "No Parent Category" }];
+    const options = ParentCategories.filter(cat => !editingCategory || cat.id !== editingCategory.id)
       .map((cat: ApiCategoryItem) => ({ value: cat.id, label: cat.name, }));
     return [{ value: null, label: "No Parent Category" }, ...options];
-  }, [CategoriesData, editingCategory]);
+  }, [ParentCategories, editingCategory]);
 
   const getFullPath = (apiPath?: string | null, filename?: string | null, typeFolder: string = 'category_icons/') => {
     if (apiPath) return apiPath;
@@ -602,7 +693,7 @@ const Categories = () => {
     setEditingCategory(category);
     editFormMethods.reset({
       name: category.name, slug: category.slug, parent_category: category.parentId,
-      web_icon: null, mobile_icon: null, category_icon: null, // Files are reset, previews will show current
+      web_icon: null, mobile_icon: null, category_icon: null,
       show_home_page: String(category.showHomePage) as "0" | "1",
       show_header: String(category.showHeader) as "0" | "1",
       status: category.status === "active" ? "Active" : "Inactive",
@@ -612,11 +703,10 @@ const Categories = () => {
       show_page_name: category.showPageName || null,
     });
 
-    resetEditFormPreviews(); // Clear any previous dynamic previews
-    // Set previews from existing category data if available
+    resetEditFormPreviews();
     if (category.webIconFullPath) setEditWebIconPreview(category.webIconFullPath);
     if (category.mobileIconFullPath) setEditMobileIconPreview(category.mobileIconFullPath);
-    if (category.bannerIconFullPath) setEditBannerPreview(category.bannerIconFullPath); //  <-- MODIFICATION HERE
+    if (category.bannerIconFullPath) setEditBannerPreview(category.bannerIconFullPath);
 
     setEditDrawerOpen(true);
   };
@@ -687,12 +777,6 @@ const Categories = () => {
     setCategoryToView(null);
   }, []);
 
-
-  const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); };
-  const closeFilterDrawer = () => setFilterDrawerOpen(false);
-  const onApplyFiltersSubmit = (data: FilterCategoryFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); };
-  const onClearFilters = () => { const defaultFilters = { filterNames: [], filterStatuses: [], filterParentIds: [] }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1 }); };
-
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<CategoryItem[]>([]);
   const categoryNameOptions = useMemo(() => {
@@ -701,8 +785,66 @@ const Categories = () => {
     return Array.from(uniqueNames).sort((a, b) => a.localeCompare(b)).map((name) => ({ value: name, label: name }));
   }, [mappedCategories]);
 
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
+
+  const onClearFilters = () => {
+    const defaultFilters: FilterCriteria = { filterNames: [], filterStatuses: [], filterParentIds: [], filterSpecial: null };
+    filterFormMethods.reset({ filterNames: [], filterStatuses: [], filterParentIds: [] });
+    setFilterCriteria(defaultFilters);
+    handleSetTableData({ query: "", pageIndex: 1 });
+  };
+  
+  const handleCardClick = (type: 'active' | 'inactive' | 'main' | 'sub' | 'comingSoon' | 'all') => {
+    onClearFilters(); // Clear all existing filters first
+
+    if (type === 'all') return;
+
+    if (type === 'active') {
+        setFilterCriteria({ filterStatuses: [{ value: 'active', label: 'Active' }] });
+    } else if (type === 'inactive') {
+        setFilterCriteria({ filterStatuses: [{ value: 'inactive', label: 'Inactive' }] });
+    } else if (type === 'main' || type === 'sub' || type === 'comingSoon') {
+        setFilterCriteria({ filterSpecial: type });
+    }
+    handleSetTableData({ pageIndex: 1 });
+  };
+
+  const handleRemoveFilter = useCallback((key: keyof FilterCriteria, value: any) => {
+    setFilterCriteria(prev => {
+        const newFilters = { ...prev };
+        if (key === 'filterSpecial') {
+            newFilters.filterSpecial = null;
+        } else {
+            const currentValues = prev[key] as { value: any; label: string }[] | undefined;
+            if (currentValues) {
+                const newValues = currentValues.filter(item => item.value !== value);
+                if (newValues.length > 0) {
+                    (newFilters as any)[key] = newValues;
+                } else {
+                    delete newFilters[key];
+                }
+            }
+        }
+        return newFilters;
+    });
+    handleSetTableData({ pageIndex: 1 });
+  }, [handleSetTableData]);
+
+  const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); };
+  const closeFilterDrawer = () => setFilterDrawerOpen(false);
+  const onApplyFiltersSubmit = (data: FilterCategoryFormData) => { setFilterCriteria(prev => ({ ...prev, ...data })); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); };
+
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: CategoryItem[] = cloneDeep(mappedCategories);
+
+    if (filterCriteria.filterSpecial === 'main') {
+      processedData = processedData.filter(item => item.parentId === null);
+    } else if (filterCriteria.filterSpecial === 'sub') {
+      processedData = processedData.filter(item => item.parentId !== null);
+    } else if (filterCriteria.filterSpecial === 'comingSoon') {
+      processedData = processedData.filter(item => item.comingSoon === 1);
+    }
+
     if (filterCriteria.filterNames && filterCriteria.filterNames.length > 0) {
       const selectedNames = filterCriteria.filterNames.map((opt) => opt.value.toLowerCase());
       processedData = processedData.filter((item) => selectedNames.includes(item.name.toLowerCase()));
@@ -744,6 +886,16 @@ const Categories = () => {
     const startIndex = (pageIndex - 1) * pageSize; const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
     return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: dataToExport };
   }, [mappedCategories, tableData, filterCriteria]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterCriteria.filterNames?.length) count++;
+    if (filterCriteria.filterStatuses?.length) count++;
+    if (filterCriteria.filterParentIds?.length) count++;
+    if (filterCriteria.filterSpecial) count++;
+    return count;
+  }, [filterCriteria]);
+
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -858,7 +1010,6 @@ const Categories = () => {
   };
 
 
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
   const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
   const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort: sort, pageIndex: 1 }), [handleSetTableData]);
@@ -882,9 +1033,9 @@ const Categories = () => {
       cell: ({ getValue }) => getValue().toString().padStart(6, '0'),
     },
     {
-      header: "Name", accessorKey: "name", enableSorting: true,
+      header: "Name", accessorKey: "name", id: "name", enableSorting: true,
       cell: (props) => {
-        const { webIconFullPath, name } = props.row.original; // Using webIconFullPath
+        const { webIconFullPath, name } = props.row.original;
         return (
           <div className="flex items-center gap-2 min-w-[200px]">
             <Avatar size={30} shape="circle" src={webIconFullPath || undefined} icon={<TbCategory />}
@@ -896,9 +1047,9 @@ const Categories = () => {
         );
       },
     },
-    { header: "Parent Category", accessorKey: "parentCategoryName", enableSorting: true, cell: (props) => props.row.original.parentCategoryName || <span className="text-gray-400 dark:text-gray-500">-</span> },
+    { header: "Parent Category", accessorKey: "parentCategoryName", id: "parentCategoryName", enableSorting: true, cell: (props) => props.row.original.parentCategoryName || <span className="text-gray-400 dark:text-gray-500">-</span> },
     {
-      header: "Status", accessorKey: "status", enableSorting: true,
+      header: "Status", accessorKey: "status", id: "status", enableSorting: true,
       cell: (props) => { const status = props.row.original.status; return <Tag className={`${categoryStatusColor[status]} capitalize font-semibold border-0`}>{status}</Tag>; },
     },
     {
@@ -912,10 +1063,14 @@ const Categories = () => {
         />
       ),
     },
-  ], [openImageViewer, openEditCategoryDrawer, openViewDetailModal, handleDeleteCategoryClick]);
+  ], []);
 
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<CategoryItem>[]>(columns);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
   const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isProcessing || isImporting;
+  const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const cardBodyClass = "flex items-center gap-2 p-2";
 
   return (
     <>
@@ -926,69 +1081,72 @@ const Categories = () => {
             <Button variant="solid" icon={<TbPlus />} onClick={openAddCategoryDrawer}>Add New</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                <TbCategory size={24} />
+            <Tooltip title="Click to show all categories">
+              <div onClick={() => handleCardClick('all')}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbCategory size={24} /></div>
+                  <div><h6 className="text-blue-500">{mappedCategories.length}</h6><span className="font-semibold text-[11px]">Total</span></div>
+                </Card>
               </div>
-              <div>
-                <h6 className="text-blue-500">12</h6>
-                <span className="font-semibold text-[11px]">Total</span>
+            </Tooltip>
+            <Tooltip title="Click to show active categories">
+              <div onClick={() => handleCardClick('active')}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={24} /></div>
+                  <div><h6 className="text-green-500">{mappedCategories.filter(c => c.status === 'active').length}</h6><span className="font-semibold text-[11px]">Active</span></div>
+                </Card>
               </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300" >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                <TbCircleCheck size={24} />
+            </Tooltip>
+            <Tooltip title="Click to show inactive categories">
+              <div onClick={() => handleCardClick('inactive')}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={24} /></div>
+                  <div><h6 className="text-red-500">{mappedCategories.filter(c => c.status === 'inactive').length}</h6><span className="font-semibold text-[11px]">Inactive</span></div>
+                </Card>
               </div>
-              <div>
-                <h6 className="text-green-500">12</h6>
-                <span className="font-semibold text-[11px]">Active</span>
+            </Tooltip>
+            <Tooltip title="Click to show main categories">
+              <div onClick={() => handleCardClick('main')}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCategory2 size={24} /></div>
+                  <div><h6 className="text-violet-500">{mappedCategories.filter(c => c.parentId === null).length}</h6><span className="font-semibold text-[11px]">Main Category</span></div>
+                </Card>
               </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                <TbCancel size={24} />
+            </Tooltip>
+            <Tooltip title="Click to show sub categories">
+              <div onClick={() => handleCardClick('sub')}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbBlocks size={24} /></div>
+                  <div><h6 className="text-pink-500">{mappedCategories.filter(c => c.parentId !== null).length}</h6><span className="font-semibold text-[11px]">Sub Category</span></div>
+                </Card>
               </div>
-              <div>
-                <h6 className="text-red-500">12</h6>
-                <span className="font-semibold text-[11px]">Inactive</span>
+            </Tooltip>
+            <Tooltip title="Click to show 'coming soon' categories">
+              <div onClick={() => handleCardClick('comingSoon')}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}>
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbCalendar size={24} /></div>
+                  <div><h6 className="text-orange-500">{mappedCategories.filter(c => c.comingSoon === 1).length}</h6><span className="font-semibold text-[11px]">Coming Soon</span></div>
+                </Card>
               </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                <TbCategory2 size={24} />
-              </div>
-              <div>
-                <h6 className="text-violet-500">12</h6>
-                <span className="font-semibold text-[11px]">Main Category</span>
-              </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-pink-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                <TbBlocks size={24} />
-              </div>
-              <div>
-                <h6 className=" text-pink-500">12</h6>
-                <span className="font-semibold text-[11px]">Sub Category</span>
-              </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                <TbCalendar size={24} />
-              </div>
-              <div>
-                <h6 className="text-orange-500">12</h6>
-                <span className="font-semibold text-[11px]">Coming Soon</span>
-              </div>
-            </Card>
+            </Tooltip>
           </div>
-          <CategoryTableTools
-            onClearFilters={onClearFilters}
-            onSearchChange={handleSearchChange} onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal} onImport={openImportModal}
-          />
+          <div className="mb-4">
+            <CategoryTableTools
+              onClearFilters={onClearFilters}
+              onSearchChange={handleSearchChange}
+              onFilter={openFilterDrawer}
+              onExport={handleOpenExportReasonModal}
+              onImport={openImportModal}
+              columns={columns}
+              filteredColumns={filteredColumns}
+              setFilteredColumns={setFilteredColumns}
+              activeFilterCount={activeFilterCount}
+            />
+          </div>
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4 flex-grow overflow-y-auto">
             <CategoryTable
-              columns={columns} data={pageData} loading={tableLoading}
+              columns={filteredColumns} data={pageData} loading={tableLoading}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange}
@@ -1079,7 +1237,7 @@ const Categories = () => {
                 <Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const file = e.target.files?.[0] || null;
                   onChange(file);
-                  if (editWebIconPreview && !editingCategory?.webIconFullPath?.includes(editWebIconPreview)) URL.revokeObjectURL(editWebIconPreview); // Revoke only if it's a blob URL
+                  if (editWebIconPreview && !editingCategory?.webIconFullPath?.includes(editWebIconPreview)) URL.revokeObjectURL(editWebIconPreview);
                   setEditWebIconPreview(file ? URL.createObjectURL(file) : (editingCategory?.webIconFullPath || null));
                 }} accept="image/*" />} />
               {!editWebIconPreview && editingCategory?.webIconFullPath && <small className="text-xs text-gray-500">Current icon will be kept if no new file is uploaded.</small>}
@@ -1099,7 +1257,6 @@ const Categories = () => {
             </FormItem>
             {editMobileIconPreview && <div className="mb-2"><Avatar src={editMobileIconPreview} size={70} className="rounded-sm" icon={<TbPhoto />} /></div>}
           </div>
-
 
           <FormItem
             label={<div>Category Banner (Recommended: 1920x400 or similar)<span className="text-red-500"> * </span></div>}
@@ -1161,7 +1318,7 @@ const Categories = () => {
         isOpen={isViewDetailModalOpen}
         onClose={closeViewDetailModal}
         onRequestClose={closeViewDetailModal}
-        size="md" // Adjusted size for more content
+        size="md"
         title=""
         contentClassName="!p-0 bg-slate-50 dark:bg-slate-800 rounded-xl shadow-2xl"
       >
@@ -1171,7 +1328,6 @@ const Categories = () => {
               <div className="p-3 bg-white dark:bg-slate-700/60 rounded-lg space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {/* Main Icon (Web Icon) Display */}
                     {categoryToView.webIconFullPath && (
                       <Avatar
                         size={48}
@@ -1191,7 +1347,6 @@ const Categories = () => {
                   </div>
                 </div>
 
-                {/* --- MODIFICATION START --- Display other icons */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   {categoryToView.mobileIconFullPath && (
                     <div>
@@ -1218,8 +1373,6 @@ const Categories = () => {
                     </div>
                   )}
                 </div>
-                {/* --- MODIFICATION END --- */}
-
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 text-sm text-slate-700 dark:text-slate-200 pt-2">
                   <DialogDetailRow

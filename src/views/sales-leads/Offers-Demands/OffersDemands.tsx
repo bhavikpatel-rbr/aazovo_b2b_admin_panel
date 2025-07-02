@@ -18,7 +18,6 @@ import { z } from "zod";
 dayjs.extend(localizedFormat);
 dayjs.extend(relativeTime);
 
-
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
@@ -29,6 +28,7 @@ import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
   Card,
+  Checkbox,
   DatePicker,
   Drawer,
   Dropdown,
@@ -36,6 +36,7 @@ import {
   FormItem,
   Input,
   Select,
+  Tag,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -54,6 +55,7 @@ import {
   TbArrowUpRight,
   TbBell,
   TbBrandWhatsapp,
+  TbBulb,
   TbCalendar,
   TbCalendarDown,
   TbCalendarEvent,
@@ -64,6 +66,8 @@ import {
   TbClipboardText,
   TbClockHour4,
   TbCloudUpload,
+  TbColumns,
+  TbDiscount,
   TbDownload,
   TbEye,
   TbFileText,
@@ -71,32 +75,32 @@ import {
   TbFilter,
   TbListDetails,
   TbMail,
+  TbNotebook,
   TbPencil,
   TbPlus,
   TbRefresh,
+  TbReload,
   TbSearch,
   TbTagStarred,
   TbTrash,
   TbUser,
   TbUserCircle,
   TbUserSearch,
-  TbBulb,
-  TbNotebook,
-  TbDiscount,
+  TbX,
 } from "react-icons/tb";
 
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addNotificationAction,
-  addScheduleAction, // <-- IMPORT THE ACTION
+  addScheduleAction,
   deleteAllDemandsAction,
   deleteAllOffersAction,
   deleteDemandAction,
   deleteOfferAction,
+  getAllUsersAction,
   getDemandsAction,
   getOffersAction,
-  getAllUsersAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -118,7 +122,7 @@ interface TableQueries extends CommonTableQueries { }
 const exportReasonSchema = z.object({
   reason: z
     .string()
-    .min(10, "Reason for export is required.")
+    .min(10, "Reason for export is required minimum 10 characters.")
     .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
@@ -127,12 +131,11 @@ const filterFormSchema = z.object({
   createdDateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
   updatedDateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
   itemType: z.enum(["Offer", "Demand"]).nullable().optional(),
-  creatorIds: z.array(z.string()).optional().default([]), // Will be sent as created_by=id1,id2
-  assigneeIds: z.array(z.string()).optional().default([]), // Will be sent as assign_user=id1,id2
+  creatorIds: z.array(z.string()).optional().default([]), 
+  assigneeIds: z.array(z.string()).optional().default([]),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
-// Zod Schema for Schedule Form
 const scheduleSchema = z.object({
   event_title: z.string().min(3, "Title must be at least 3 characters."),
   event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
@@ -143,13 +146,12 @@ const scheduleSchema = z.object({
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 
-// --- API Item Types (Adjusted based on sample and requirements for transformation) ---
+// --- API Item Types ---
 export type ApiUserShape = {
   id: number;
   name: string;
   roles?: Array<{ display_name: string; }>;
 };
-
 export type ActualApiOfferShape = {
   id: number;
   generate_id: string;
@@ -171,7 +173,6 @@ export type ActualApiOfferShape = {
   created_by_user?: ApiUserShape;
   assign_user_data?: ApiUserShape | null;
 };
-
 export type ActualApiDemandShape = {
   id: number;
   generate_id: string;
@@ -189,25 +190,13 @@ export type ActualApiDemandShape = {
   updated_by_name?: string;
   updated_by_role?: string;
 };
-
-export type ApiGroupItem = {
-  groupName: string;
-  items: string[];
-};
-
+export type ApiGroupItem = { groupName: string; items: string[]; };
 export type OfferDemandItem = {
   id: string;
   type: "Offer" | "Demand";
   name: string;
-  createdByInfo: {
-    userId: string;
-    userName: string;
-    email: string;
-  };
-  assignedToInfo?: {
-    userId: string;
-    userName: string;
-  };
+  createdByInfo: { userId: string; userName: string; email: string; };
+  assignedToInfo?: { userId: string; userName: string; };
   createdDate: Date;
   updated_at?: Date;
   numberOfBuyers?: number;
@@ -226,24 +215,13 @@ const TABS = { ALL: "all", OFFER: "offer", DEMAND: "demand" };
 // ============================================================================
 // --- MODALS SECTION ---
 // ============================================================================
-export type OfferDemandModalType =
-  | "email" | "whatsapp" | "notification" | "task" | "active" | "calendar"
-  | "alert" | "trackRecord" | "engagement" | "document" | "feedback" | "wallLink"
-  | "viewDetails"; // Added new modal type for viewing details
-
+export type OfferDemandModalType = | "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "alert" | "trackRecord" | "engagement" | "document" | "feedback" | "wallLink" | "viewDetails";
 export interface OfferDemandModalState { isOpen: boolean; type: OfferDemandModalType | null; data: OfferDemandItem | null; }
 interface OfferDemandModalsProps { modalState: OfferDemandModalState; onClose: () => void; getAllUserDataOptions: SelectOption[] }
 
-const dummyUsersForModals = [
-  { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },
-];
+const dummyUsersForModals = [ { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" }, ];
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
-const eventTypeOptions = [
-  { value: "Meeting", label: "Meeting" },
-  { value: "Call", label: "Follow-up Call" },
-  { value: "Deadline", label: "Project Deadline" },
-  { value: "Reminder", label: "Reminder" },
-];
+const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
 const dummyAlerts = [{ id: 1, severity: "danger", message: "Offer #OD123 has low engagement.", time: "2 days ago", }, { id: 2, severity: "warning", message: "Demand #DD456 is approaching its expiration date.", time: "5 days ago", },];
 const dummyTimeline = [{ id: 1, icon: <TbMail />, title: "Initial Offer Created", desc: "Offer was created and sent.", time: "2023-11-01", }, { id: 2, icon: <TbCalendar />, title: "Follow-up Call Scheduled", desc: "Scheduled a call.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Item Assigned", desc: "Assigned to team.", time: "2023-10-27", },];
 const dummyDocs = [{ id: "doc1", name: "Offer_Details.pdf", type: "pdf", size: "1.2 MB", }, { id: "doc2", name: "Images.zip", type: "zip", size: "8.5 MB", },];
@@ -253,44 +231,16 @@ const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
       <div className="flex items-start justify-between">
         <h5 className="mb-4">Details for: {item.name}</h5>
-        <span
-          className={`px-2 py-1 text-xs font-semibold rounded-full ${item.type === 'Offer'
-            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-            : 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300'
-            }`}
-        >
-          {item.type}
-        </span>
+        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.type === 'Offer' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300'}`}>{item.type}</span>
       </div>
       <div className="mt-4 space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-2">
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">Created By</span>
-          <span className="text-gray-600 dark:text-gray-400">{item.createdByInfo.userName}</span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">Assigned To</span>
-          <span className="text-gray-600 dark:text-gray-400">{item.assignedToInfo?.userName || 'N/A'}</span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">Created Date</span>
-          <span className="text-gray-600 dark:text-gray-400">{dayjs(item.createdDate).format('D MMM YYYY, h:mm A')}</span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">Last Updated</span>
-          <span className="text-gray-600 dark:text-gray-400">{item.updated_at ? dayjs(item.updated_at).format('D MMM YYYY, h:mm A') : 'N/A'}</span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">Updated By</span>
-          <span className="text-gray-600 dark:text-gray-400">{item.updated_by_name || 'N/A'} {item.updated_by_role && `(${item.updated_by_role})`}</span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">Number of Buyers</span>
-          <span className="text-gray-600 dark:text-gray-400">{item.numberOfBuyers ?? 'N/A'}</span>
-        </div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600">
-          <span className="font-semibold text-gray-700 dark:text-gray-200">Number of Sellers</span>
-          <span className="text-gray-600 dark:text-gray-400">{item.numberOfSellers ?? 'N/A'}</span>
-        </div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Created By</span><span className="text-gray-600 dark:text-gray-400">{item.createdByInfo.userName}</span></div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Assigned To</span><span className="text-gray-600 dark:text-gray-400">{item.assignedToInfo?.userName || 'N/A'}</span></div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Created Date</span><span className="text-gray-600 dark:text-gray-400">{dayjs(item.createdDate).format('D MMM YYYY, h:mm A')}</span></div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Last Updated</span><span className="text-gray-600 dark:text-gray-400">{item.updated_at ? dayjs(item.updated_at).format('D MMM YYYY, h:mm A') : 'N/A'}</span></div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Updated By</span><span className="text-gray-600 dark:text-gray-400">{item.updated_by_name || 'N/A'} {item.updated_by_role && `(${item.updated_by_role})`}</span></div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Number of Buyers</span><span className="text-gray-600 dark:text-gray-400">{item.numberOfBuyers ?? 'N/A'}</span></div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Number of Sellers</span><span className="text-gray-600 dark:text-gray-400">{item.numberOfSellers ?? 'N/A'}</span></div>
         {item.groups && item.groups.length > 0 && (
           <div className="pt-2">
             <span className="font-semibold text-gray-700 dark:text-gray-200">Group Details</span>
@@ -298,11 +248,7 @@ const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
               {item.groups.map((group, index) => (
                 <div key={index} className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
                   <p className="font-semibold text-gray-800 dark:text-gray-100">{group.groupName}</p>
-                  <ul className="list-disc list-inside pl-2 mt-1 text-gray-600 dark:text-gray-400">
-                    {group.items.map((gItem, gIndex) => (
-                      <li key={gIndex}>{gItem}</li>
-                    ))}
-                  </ul>
+                  <ul className="list-disc list-inside pl-2 mt-1 text-gray-600 dark:text-gray-400">{group.items.map((gItem, gIndex) => (<li key={gIndex}>{gItem}</li>))}</ul>
                 </div>
               ))}
             </div>
@@ -313,7 +259,6 @@ const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
     </Dialog>
   );
 };
-
 const SendEmailDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({ defaultValues: { subject: "", message: "" }, });
@@ -333,7 +278,6 @@ const SendEmailDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }>
     </Dialog>
   );
 };
-
 const SendWhatsAppDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi ${item.createdByInfo.userName}, re: ${item.type} "${item.name}"...` }, });
   const onSendMessage = (data: { message: string }) => {
@@ -351,73 +295,31 @@ const SendWhatsAppDialog: React.FC<{ item: OfferDemandItem; onClose: () => void;
     </Dialog>
   );
 };
-
 const AddNotificationDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; getAllUserDataOptions: SelectOption[] }> = ({ item, onClose, getAllUserDataOptions }) => {
     const dispatch = useAppDispatch();
     const [isLoading, setIsLoading] = useState(false);
-    const notificationSchema = z.object({
-      notification_title: z.string().min(3, "Title must be at least 3 characters long."),
-      send_users: z.array(z.number()).min(1, "Please select at least one user."),
-      message: z.string().min(10, "Message must be at least 10 characters long."),
-    });
-  
+    const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
     type NotificationFormData = z.infer<typeof notificationSchema>;
-  
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
-      resolver: zodResolver(notificationSchema),
-      defaultValues: {
-        notification_title: `Regarding ${item.type}: ${item.name}`,
-        send_users: [],
-        message: `This is a notification for the ${item.type.toLowerCase()}: "${item.name}".`
-      },
-      mode: 'onChange'
-    });
-  
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Regarding ${item.type}: ${item.name}`, send_users: [], message: `This is a notification for the ${item.type.toLowerCase()}: "${item.name}".` }, mode: 'onChange' });
     const onSend = async (formData: NotificationFormData) => {
       setIsLoading(true);
-      const payload = {
-        send_users: formData.send_users,
-        notification_title: formData.notification_title,
-        message: formData.message,
-        module_id: String(item.id),
-        module_name: 'OfferDemand',
-      };
-  
-      try {
-        await dispatch(addNotificationAction(payload)).unwrap();
-        toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
-        onClose();
-      } catch (error: any) {
-        toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
-      } finally {
-        setIsLoading(false);
-      }
+      const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(item.id), module_name: 'OfferDemand', };
+      try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); } 
+      catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); }
+      finally { setIsLoading(false); }
     };
-  
     return (
       <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
         <h5 className="mb-4">Add Notification for {item.name}</h5>
         <Form onSubmit={handleSubmit(onSend)}>
-          <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}>
-            <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
-          </FormItem>
-          <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}>
-            <Controller name="send_users" control={control} render={({ field }) => (
-              <Select isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />
-            )} />
-          </FormItem>
-          <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
-            <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} />
-          </FormItem>
-          <div className="text-right mt-6">
-            <Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button>
-          </div>
+          <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+          <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => ( <Select isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} /> )}/></FormItem>
+          <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
+          <div className="text-right mt-6"><Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
         </Form>
       </Dialog>
     );
 };
-
 const AssignTaskDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({ defaultValues: { title: `Follow up: ${item.type} ${item.name}`, assignee: null, dueDate: null, priority: null, description: "", }, });
@@ -441,78 +343,36 @@ const AssignTaskDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }
     </Dialog>
   );
 };
-
 const AddScheduleDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
-
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
-    resolver: zodResolver(scheduleSchema),
-    defaultValues: {
-      event_title: `Regarding ${item.type}: ${item.name}`,
-      event_type: undefined,
-      date_time: null as any,
-      remind_from: null,
-      notes: `Details for ${item.type.toLowerCase()} "${item.name}" (ID: ${item.id}).`,
-    },
-    mode: 'onChange',
-  });
-
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), defaultValues: { event_title: `Regarding ${item.type}: ${item.name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Details for ${item.type.toLowerCase()} "${item.name}" (ID: ${item.id}).`, }, mode: 'onChange', });
   const onAddEvent = async (data: ScheduleFormData) => {
     setIsLoading(true);
-    const payload = {
-      module_id: Number((item.originalApiItem as any).id), // Use the numeric ID
-      module_name: 'OfferDemand',
-      event_title: data.event_title,
-      event_type: data.event_type,
-      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
-      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
-      notes: data.notes || '',
-    };
-
+    const payload = { module_id: Number((item.originalApiItem as any).id), module_name: 'OfferDemand', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '', };
     try {
       await dispatch(addScheduleAction(payload)).unwrap();
       toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${item.name}.`} />);
       onClose();
-    } catch (error: any) {
-      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />); }
+    finally { setIsLoading(false); }
   };
-  
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {item.name}</h5>
       <Form onSubmit={handleSubmit(onAddEvent)}>
-        <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
-          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
-        </FormItem>
+        <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
-            <Controller name="event_type" control={control} render={({ field }) => (
-              <Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
-            )} />
-          </FormItem>
-          <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
-            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} />
-          </FormItem>
+          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
+          <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} /></FormItem>
         </div>
-        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
-          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-        </FormItem>
-        <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
-        </div>
+        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+        <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+        <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div>
       </Form>
     </Dialog>
   );
 };
-
 const ViewAlertDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   const alertColors: Record<string, string> = { danger: "red", warning: "amber", info: "blue" };
   return (
@@ -532,7 +392,6 @@ const ViewAlertDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }>
     </Dialog>
   );
 };
-
 const TrackRecordDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
@@ -550,7 +409,6 @@ const TrackRecordDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
     </Dialog>
   );
 };
-
 const ViewEngagementDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
@@ -565,7 +423,6 @@ const ViewEngagementDialog: React.FC<{ item: OfferDemandItem; onClose: () => voi
     </Dialog>
   );
 };
-
 const DownloadDocumentDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   const iconMap: Record<string, React.ReactElement> = { pdf: <TbFileText className="text-red-500" />, zip: <TbFileZip className="text-amber-500" />, };
   return (
@@ -582,7 +439,6 @@ const DownloadDocumentDialog: React.FC<{ item: OfferDemandItem; onClose: () => v
     </Dialog>
   );
 };
-
 const GenericActionDialog: React.FC<{ type: OfferDemandModalType | null; item: OfferDemandItem; onClose: () => void; }> = ({ type, item, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : "Confirm Action";
@@ -597,7 +453,6 @@ const GenericActionDialog: React.FC<{ type: OfferDemandModalType | null; item: O
     </Dialog>
   );
 };
-
 const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const { type, data: item, isOpen } = modalState;
   if (!isOpen || !item) return null;
@@ -618,6 +473,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClo
   };
   return <>{renderModalContent()}</>;
 };
+
 // ============================================================================
 // --- END MODALS SECTION ---
 // ============================================================================
@@ -745,26 +601,60 @@ const ItemSearch = React.memo(React.forwardRef<HTMLInputElement, { onInputChange
 )));
 ItemSearch.displayName = "ItemSearch";
 
-const ItemTableTools = React.memo(({ onSearchChange, onExport, searchQuery, }: { onSearchChange: (query: string) => void; onExport: () => void; searchQuery: string; }) => (
-  <div className="flex items-center w-full gap-2">
-    <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} initialValue={searchQuery} /></div>
-    <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
-  </div>
-));
+const ItemTableTools = React.memo(({ onSearchChange, onExport, searchQuery, onOpenFilter, onClearFilters, activeFilterCount, columns, filteredColumns, setFilteredColumns }: { onSearchChange: (query: string) => void; onExport: () => void; searchQuery: string; onOpenFilter: () => void; onClearFilters: () => void; activeFilterCount: number; columns: ColumnDef<OfferDemandItem>[]; filteredColumns: ColumnDef<OfferDemandItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<OfferDemandItem>[]>>; }) => {
+    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+    const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+        const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+        if (originalColumn) {
+          setFilteredColumns(prev => {
+            const newCols = [...prev, originalColumn];
+            newCols.sort((a, b) => {
+              const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+              const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+              return indexA - indexB;
+            });
+            return newCols;
+          });
+        }
+      } else {
+        setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      }
+    };
+
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow">
+                <ItemSearch onInputChange={onSearchChange} initialValue={searchQuery} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
+                    </div>
+                </Dropdown>
+                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+                <Button icon={<TbFilter />} onClick={onOpenFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+            </div>
+        </div>
+    )
+});
 ItemTableTools.displayName = "ItemTableTools";
 
-const ItemActionTools = React.memo(({ onRefresh, onOpenFilter }: { onRefresh: () => void; onOpenFilter: () => void }) => {
-  const navigate = useNavigate();
-  return (
-    <div className="flex flex-col md:flex-row gap-2">
-      <Button icon={<TbRefresh />} onClick={onRefresh} title="Refresh Data">Refresh</Button>
-      <Button icon={<TbFilter />} onClick={onOpenFilter} block>Filter</Button>
-      <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/sales-leads/offers/create")} block>Add Offer</Button>
-      <Button icon={<TbPlus />} variant="solid" onClick={() => navigate("/sales-leads/demands/create")} block>Add Demand</Button>
-    </div>
-  );
-});
-ItemActionTools.displayName = "ItemActionTools";
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: FilterFormData, onRemoveFilter: (key: keyof FilterFormData, value: any) => void; onClearAll: () => void; }) => {
+  
+  
+  const hasFilters = Object.values(filterData).some(val => val && (!Array.isArray(val) || val.length > 0));
+    if (!hasFilters) return null;
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filterData.quickFilters.value && <Tag prefix>Type: {filterData.quickFilters.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('quickFilters', filterData.quickFilters.value)} /></Tag>}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+};
 
 const ItemSelected = React.memo(({ selectedItems, onDeleteSelected, activeTab, isDeleting, }: { selectedItems: OfferDemandItem[]; onDeleteSelected: () => void; activeTab: string; isDeleting: boolean; }) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -790,37 +680,23 @@ const OffersDemands = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const {
-    Offers: { counts: offerDemandCounts, data: offersStoreData },
-    Demands: demandsStoreData,
-    offersStatus,
-    demandsStatus,
-    offersError,
-    demandsError,
-    getAllUserData,
-  } = useSelector(masterSelector, shallowEqual);
-
-
+  const { Offers: { counts: offerDemandCounts, data: offersStoreData }, Demands: demandsStoreData, offersStatus, demandsStatus, offersError, demandsError, getAllUserData } = useSelector(masterSelector, shallowEqual);
   const [currentTab, setCurrentTab] = useState<string>(TABS.ALL);
   const initialTableQueries: TableQueries = { pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" };
   const [offerTableConfig, setOfferTableConfig] = useState<TableQueries>(initialTableQueries);
   const [demandTableConfig, setDemandTableConfig] = useState<TableQueries>(initialTableQueries);
   const [allTableConfig, setAllTableConfig] = useState<TableQueries>(initialTableQueries);
-
   const [selectedOffers, setSelectedOffers] = useState<OfferDemandItem[]>([]);
   const [selectedDemands, setSelectedDemands] = useState<OfferDemandItem[]>([]);
   const [selectedAll, setSelectedAll] = useState<OfferDemandItem[]>([]);
-
   const [isDeleting, setIsDeleting] = useState(false);
   const [itemToDeleteConfirm, setItemToDeleteConfirm] = useState<OfferDemandItem | null>(null);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
   const [dataForExportLoading, setDataForExportLoading] = useState(false);
-
   const [modalState, setModalState] = useState<OfferDemandModalState>({ isOpen: false, type: null, data: null });
   const handleOpenModal = useCallback((type: OfferDemandModalType, itemData: OfferDemandItem) => setModalState({ isOpen: true, type, data: itemData }), []);
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
-
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
@@ -832,14 +708,14 @@ const OffersDemands = () => {
     if (currentTab === TABS.ALL) return allTableConfig;
     if (currentTab === TABS.OFFER) return offerTableConfig;
     if (currentTab === TABS.DEMAND) return demandTableConfig;
-    return allTableConfig; // Default to 'all' config
+    return allTableConfig; 
   }, [currentTab, allTableConfig, offerTableConfig, demandTableConfig]);
 
   const setCurrentTableConfig = useMemo(() => {
     if (currentTab === TABS.ALL) return setAllTableConfig;
     if (currentTab === TABS.OFFER) return setOfferTableConfig;
     if (currentTab === TABS.DEMAND) return setDemandTableConfig;
-    return setAllTableConfig; // Default to 'all' config setter
+    return setAllTableConfig;
   }, [currentTab]);
 
   const currentSelectedItems = useMemo(() => {
@@ -853,90 +729,56 @@ const OffersDemands = () => {
     if (currentTab === TABS.ALL) return setSelectedAll;
     if (currentTab === TABS.OFFER) return setSelectedOffers;
     if (currentTab === TABS.DEMAND) return setSelectedDemands;
-    return setSelectedAll; // Default to 'all' setter
+    return setSelectedAll;
   }, [currentTab]);
 
   const prepareApiParams = useCallback((tableConfig: TableQueries, filters: FilterFormData, forExport: boolean = false) => {
-    const params: any = {
-      search: tableConfig.query,
-    };
-
-    if (forExport) {
-      params.fetch_all = true;
-    } else {
-      params.page = tableConfig.pageIndex;
-      params.per_page = tableConfig.pageSize;
-      if (tableConfig.sort.key && tableConfig.sort.order) {
-        params.sortBy = tableConfig.sort.key;
-        params.sortOrder = tableConfig.sort.order;
-      }
+    const params: any = { search: tableConfig.query, };
+    if (forExport) { params.fetch_all = true; } else {
+      params.page = tableConfig.pageIndex; params.per_page = tableConfig.pageSize;
+      if (tableConfig.sort.key && tableConfig.sort.order) { params.sortBy = tableConfig.sort.key; params.sortOrder = tableConfig.sort.order; }
     }
-
     if (filters.createdDateRange?.[0]) params.created_from = dayjs(filters.createdDateRange[0]).format('YYYY-MM-DD');
     if (filters.createdDateRange?.[1]) params.created_to = dayjs(filters.createdDateRange[1]).format('YYYY-MM-DD');
     if (filters.updatedDateRange?.[0]) params.updated_from = dayjs(filters.updatedDateRange[0]).format('YYYY-MM-DD');
     if (filters.updatedDateRange?.[1]) params.updated_to = dayjs(filters.updatedDateRange[1]).format('YYYY-MM-DD');
-
     if (filters.creatorIds?.length) params.created_by = filters.creatorIds.join(',');
     if (filters.assigneeIds?.length) params.assign_user = filters.assigneeIds.join(',');
-
-    if (filters.itemType) {
-      params.item_type = filters.itemType.toLowerCase(); // Assuming backend expects 'offer' or 'demand'
-    }
-
+    const itemType = filters.quickFilters?.type === 'item' ? filters.quickFilters.value : filters.itemType;
+    if (itemType) { params.item_type = itemType.toLowerCase(); }
     return params;
   }, []);
 
-
   const fetchData = useCallback(() => {
     const params = prepareApiParams(currentTableConfig, filterCriteria);
-    dispatch(getAllUsersAction()) // Fetch users for modals
-    
+    dispatch(getAllUsersAction()) 
     const shouldFetchOffers = currentTab === TABS.OFFER || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Offer"));
     const shouldFetchDemands = currentTab === TABS.DEMAND || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Demand"));
-
-    if (shouldFetchOffers) {
-      dispatch(getOffersAction(params));
-    }
-    if (shouldFetchDemands) {
-      dispatch(getDemandsAction(params));
-    }
-
+    if (shouldFetchOffers) { dispatch(getOffersAction(params)); }
+    if (shouldFetchDemands) { dispatch(getDemandsAction(params)); }
   }, [dispatch, currentTab, currentTableConfig, filterCriteria, prepareApiParams]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
+  useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { if (offersStatus === "failed" && offersError) toast.push(<Notification title="Error Fetching Offers" type="danger">{String(offersError)}</Notification>); }, [offersStatus, offersError]);
   useEffect(() => { if (demandsStatus === "failed" && demandsError) toast.push(<Notification title="Error Fetching Demands" type="danger">{String(demandsError)}</Notification>); }, [demandsStatus, demandsError]);
 
   const { pageData, totalItems } = useMemo(() => {
-    let itemsToDisplay: OfferDemandItem[] = [];
-    let currentTotal = 0;
-
+    let itemsToDisplay: OfferDemandItem[] = []; let currentTotal = 0;
     const safeOffersItems = Array.isArray(offersStoreData?.data) ? offersStoreData.data : [];
     const safeDemandsItems = Array.isArray(demandsStoreData?.data) ? demandsStoreData.data : [];
     const safeOffersTotal = typeof offersStoreData?.total === 'number' ? offersStoreData.total : 0;
     const safeDemandsTotal = typeof demandsStoreData?.total === 'number' ? demandsStoreData.total : 0;
 
-    if (currentTab === TABS.OFFER) {
-      itemsToDisplay = safeOffersItems.map(transformApiOffer);
-      currentTotal = safeOffersTotal;
-    } else if (currentTab === TABS.DEMAND) {
-      itemsToDisplay = safeDemandsItems.map(transformApiDemand);
-      currentTotal = safeDemandsTotal;
-    } else { // TABS.ALL
+    const itemTypeFilter = filterCriteria.quickFilters?.type === 'item' ? filterCriteria.quickFilters.value : filterCriteria.itemType;
+
+    if (currentTab === TABS.OFFER) { itemsToDisplay = safeOffersItems.map(transformApiOffer); currentTotal = safeOffersTotal; }
+    else if (currentTab === TABS.DEMAND) { itemsToDisplay = safeDemandsItems.map(transformApiDemand); currentTotal = safeDemandsTotal; }
+    else {
       let combined = [];
-      if (!filterCriteria.itemType || filterCriteria.itemType === "Offer") { combined.push(...safeOffersItems.map(transformApiOffer)); }
-      if (!filterCriteria.itemType || filterCriteria.itemType === "Demand") { combined.push(...safeDemandsItems.map(transformApiDemand)); }
-
+      if (!itemTypeFilter || itemTypeFilter === "Offer") { combined.push(...safeOffersItems.map(transformApiOffer)); }
+      if (!itemTypeFilter || itemTypeFilter === "Demand") { combined.push(...safeDemandsItems.map(transformApiDemand)); }
       itemsToDisplay = combined;
-
-      if (filterCriteria.itemType === "Offer") currentTotal = safeOffersTotal;
-      else if (filterCriteria.itemType === "Demand") currentTotal = safeDemandsTotal;
-      else currentTotal = safeOffersTotal + safeDemandsTotal;
-
+      if (itemTypeFilter === "Offer") currentTotal = safeOffersTotal; else if (itemTypeFilter === "Demand") currentTotal = safeDemandsTotal; else currentTotal = safeOffersTotal + safeDemandsTotal;
       const { order, key } = allTableConfig.sort as OnSortParam;
       if (order && key && itemsToDisplay.length > 0) {
         itemsToDisplay.sort((a, b) => {
@@ -947,19 +789,20 @@ const OffersDemands = () => {
           else { aValue = (a as any)[key]; bValue = (b as any)[key]; }
           if (aValue === null || aValue === undefined) aValue = ""; if (bValue === null || bValue === undefined) bValue = "";
           if (typeof aValue === "string" && typeof bValue === "string") return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-          if (typeof aValue === "number" && typeof bValue === "number") return order === "asc" ? aValue - bValue : bValue - aValue;
-          return 0;
+          if (typeof aValue === "number" && typeof bValue === "number") return order === "asc" ? aValue - bValue : bValue - aValue; return 0;
         });
       }
     }
     return { pageData: itemsToDisplay, totalItems: currentTotal };
-  }, [offersStoreData, demandsStoreData, currentTab, filterCriteria.itemType, allTableConfig.sort]);
+  }, [offersStoreData, demandsStoreData, currentTab, filterCriteria.itemType, filterCriteria.quickFilters, allTableConfig.sort]);
 
   const handleSetTableConfig = useCallback((data: Partial<TableQueries>) => { setCurrentTableConfig((prev) => ({ ...prev, ...data, pageIndex: data.pageIndex !== undefined ? data.pageIndex : 1 })); }, [setCurrentTableConfig]);
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); handleSetTableConfig({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableConfig, closeFilterDrawer]);
-  const onClearFilters = useCallback(() => { const d = filterFormSchema.parse({}); filterFormMethods.reset(d); setFilterCriteria(d); handleSetTableConfig({ pageIndex: 1, query: currentTableConfig.query }); closeFilterDrawer(); }, [filterFormMethods, handleSetTableConfig, closeFilterDrawer, currentTableConfig.query]);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ ...data, quickFilters: null }); handleSetTableConfig({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableConfig, closeFilterDrawer]);
+  const onClearFilters = useCallback(() => { const d = filterFormSchema.parse({}); filterFormMethods.reset(d); setFilterCriteria(d); handleSetTableConfig({ pageIndex: 1, query: "" }); closeFilterDrawer(); }, [filterFormMethods, handleSetTableConfig, closeFilterDrawer]);
+  const handleCardClick = (type: 'item', value: 'Offer' | 'Demand' | 'Today') => { onClearFilters(); setFilterCriteria({ quickFilters: { type, value } }); };
+  const handleRemoveFilter = (key: keyof FilterFormData) => { setFilterCriteria(prev => ({ ...prev, [key]: undefined })); };
 
   const handlePaginationChange = useCallback((page: number) => handleSetTableConfig({ pageIndex: page }), [handleSetTableConfig]);
   const handlePageSizeChange = useCallback((value: number) => { handleSetTableConfig({ pageSize: value, pageIndex: 1 }); setCurrentSelectedItems([]); }, [handleSetTableConfig, setCurrentSelectedItems]);
@@ -969,21 +812,12 @@ const OffersDemands = () => {
   const handleRowSelect = useCallback((checked: boolean, row: OfferDemandItem) => { setCurrentSelectedItems((prev) => checked ? (prev.some(i => i.id === row.id) ? prev : [...prev, row]) : prev.filter((i) => i.id !== row.id)); }, [setCurrentSelectedItems]);
   const handleAllRowSelect = useCallback((checked: boolean, currentTableRows: Row<OfferDemandItem>[]) => {
     const cVIds = new Set(currentTableRows.map((r) => r.original.id));
-    if (checked) {
-      setCurrentSelectedItems((prev) => { const nI = currentTableRows.map((r) => r.original).filter(i => !prev.some(pI => pI.id === i.id)); return [...prev, ...nI]; });
-    } else { setCurrentSelectedItems((prev) => prev.filter(i => !cVIds.has(i.id))); }
+    if (checked) { setCurrentSelectedItems((prev) => { const nI = currentTableRows.map((r) => r.original).filter(i => !prev.some(pI => pI.id === i.id)); return [...prev, ...nI]; }); }
+    else { setCurrentSelectedItems((prev) => prev.filter(i => !cVIds.has(i.id))); }
   }, [setCurrentSelectedItems]);
 
-  const handleEdit = useCallback((item: OfferDemandItem) => {
-    const baseRoute = item.type === "Offer" ? "offers" : "demands";
-    const itemId = (item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id;
-    navigate(`/sales-leads/${baseRoute}/create`, { state: item });
-  }, [navigate]);
-
-  const handleView = useCallback((item: OfferDemandItem) => {
-    handleOpenModal("viewDetails", item);
-  }, [handleOpenModal]);
-
+  const handleEdit = useCallback((item: OfferDemandItem) => { const baseRoute = item.type === "Offer" ? "offers" : "demands"; const itemId = (item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id; navigate(`/sales-leads/${baseRoute}/create`, { state: item }); }, [navigate]);
+  const handleView = useCallback((item: OfferDemandItem) => { handleOpenModal("viewDetails", item); }, [handleOpenModal]);
   const handleDeleteClick = useCallback((item: OfferDemandItem) => setItemToDeleteConfirm(item), []);
 
   const onConfirmDelete = useCallback(async () => {
@@ -1008,19 +842,13 @@ const OffersDemands = () => {
     finally { setIsDeleting(false); }
   }, [dispatch, currentSelectedItems, fetchData, setCurrentSelectedItems]);
 
-  const handleTabChange = useCallback((tabKey: string) => {
-    if (tabKey === currentTab) return; setCurrentTab(tabKey);
-    const d = filterFormSchema.parse({}); filterFormMethods.reset(d); setFilterCriteria(d); setCurrentSelectedItems([]);
-    if (tabKey === TABS.ALL) setAllTableConfig(initialTableQueries); else if (tabKey === TABS.OFFER) setOfferTableConfig(initialTableQueries); else if (tabKey === TABS.DEMAND) setDemandTableConfig(initialTableQueries);
-  }, [currentTab, filterFormMethods, setCurrentSelectedItems]);
+  const handleTabChange = useCallback((tabKey: string) => { if (tabKey === currentTab) return; setCurrentTab(tabKey); const d = filterFormSchema.parse({}); filterFormMethods.reset(d); setFilterCriteria(d); setCurrentSelectedItems([]); if (tabKey === TABS.ALL) setAllTableConfig(initialTableQueries); else if (tabKey === TABS.OFFER) setOfferTableConfig(initialTableQueries); else if (tabKey === TABS.DEMAND) setDemandTableConfig(initialTableQueries); }, [currentTab, filterFormMethods, setCurrentSelectedItems]);
 
   const handleOpenExportReasonModal = useCallback(async () => {
     const totalO = offersStoreData?.total ?? 0; const totalD = demandsStoreData?.total ?? 0;
     let exportable = false;
     if (currentTab === TABS.OFFER) exportable = totalO > 0; else if (currentTab === TABS.DEMAND) exportable = totalD > 0; else exportable = (totalO + totalD) > 0;
-    if (!exportable && !(filterCriteria.creatorIds?.length || filterCriteria.assigneeIds?.length || filterCriteria.createdDateRange?.[0] || filterCriteria.updatedDateRange?.[0] || currentTableConfig.query)) { // Check if filters might yield results
-      toast.push(<Notification title="No Data" type="info">Nothing to export based on current view.</Notification>); return;
-    }
+    if (!exportable && !(filterCriteria.creatorIds?.length || filterCriteria.assigneeIds?.length || filterCriteria.createdDateRange?.[0] || filterCriteria.updatedDateRange?.[0] || currentTableConfig.query)) { toast.push(<Notification title="No Data" type="info">Nothing to export based on current view.</Notification>); return; }
     exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true);
   }, [offersStoreData, demandsStoreData, currentTab, exportReasonFormMethods, filterCriteria, currentTableConfig.query]);
 
@@ -1029,9 +857,7 @@ const OffersDemands = () => {
     const moduleName = "Offers & Demands"; const date = dayjs().format('YYYYMMDD'); const filename = `offers_demands_export_${date}.csv`;
     try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: filename })).unwrap(); }
     catch (e) { /* Optional: log reason submission error */ }
-
     const exportParams = prepareApiParams(currentTableConfig, filterCriteria, true); // true for export
-
     let allOffersForExport: ActualApiOfferShape[] = []; let allDemandsForExport: ActualApiDemandShape[] = [];
     try {
       if (currentTab === TABS.OFFER || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Offer"))) {
@@ -1044,41 +870,24 @@ const OffersDemands = () => {
       let dataToExport: OfferDemandItem[] = [];
       if (currentTab === TABS.OFFER) dataToExport = transformedO; else if (currentTab === TABS.DEMAND) dataToExport = transformedD;
       else { if (!filterCriteria.itemType || filterCriteria.itemType === "Offer") dataToExport.push(...transformedO); if (!filterCriteria.itemType || filterCriteria.itemType === "Demand") dataToExport.push(...transformedD); }
-
       const success = exportToCsvOffersDemands(filename, dataToExport);
       if (success) toast.push(<Notification title="Export OK" type="success">Data exported.</Notification>);
     } catch (err) { toast.push(<Notification title="Export Failed" type="danger">Could not fetch all data.</Notification>); }
     finally { setIsSubmittingExportReason(false); setIsExportReasonModalOpen(false); setDataForExportLoading(false); fetchData(); }
   }, [dispatch, filterCriteria, currentTableConfig, currentTab, fetchData, prepareApiParams]);
 
+
+  
   const columns: ColumnDef<OfferDemandItem>[] = useMemo(() => [
-    { header: "ID", accessorKey: "id", enableSorting: true, size: 70, cell: (props: CellContext<OfferDemandItem, any>) => (<span className="font-mono text-xs">{props.getValue<string>()}</span>), },
+    { header: "ID", accessorKey: "id", enableSorting: true, size: 70, cell: (props: CellContext<OfferDemandItem, any>) =>(<span className="font-mono text-xs">{props.row.original.originalApiItem.id}</span>), },
     { header: "Name", accessorKey: "name", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => (<div><div className="font-semibold">{props.row.original.name}</div>{(props.row.original.numberOfBuyers !== undefined || props.row.original.numberOfSellers !== undefined) && (<><div className="text-xs text-gray-600 dark:text-gray-300">Buyers: {props.row.original.numberOfBuyers ?? "N/A"}</div><div className="text-xs text-gray-600 dark:text-gray-300">Sellers: {props.row.original.numberOfSellers ?? "N/A"}</div></>)}</div>), },
     {
-      header: "Section Details", id: "sectionDetails", size: 220, cell: ({ row }: CellContext<OfferDemandItem, any>) => {
-        const { groups } = row.original;
-        if (!groups || groups.length === 0) {
-          return <span className="text-xs text-gray-500">No group details</span>;
-        }
+      header: "Section Details", id: "sectionDetails", size: 220, cell: ({ row }: CellContext<OfferDemandItem, any>) => { const { groups } = row.original;
+        if (!groups || groups.length === 0) { return <span className="text-xs text-gray-500">No group details</span>; }
         return (
           <div className="space-y-1">
-            {groups.map((group, index) => {
-              const isSpecialGroup =
-                group.groupName === 'Group A' || group.groupName === 'Group B';
-
-              if (isSpecialGroup && group.items?.[0]) {
-                const fullText = group.items[0];
-                return (
-                  <div key={index} className="text-xs">
-                    <b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b>
-                    <Tooltip title={fullText}>
-                      <p className="line-clamp-2 pl-2 text-gray-600 dark:text-gray-400">
-                        {fullText}
-                      </p>
-                    </Tooltip>
-                  </div>
-                );
-              }
+            {groups.map((group, index) => { const isSpecialGroup = group.groupName === 'Group A' || group.groupName === 'Group B';
+              if (isSpecialGroup && group.items?.[0]) { const fullText = group.items[0]; return ( <div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><Tooltip title={fullText}><p className="line-clamp-2 pl-2 text-gray-600 dark:text-gray-400">{fullText}</p></Tooltip></div> ); }
               return (<div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><div className="pl-2 flex flex-col gap-0.5 text-gray-600 dark:text-gray-400">{group.items.slice(0, 3).map((item, itemIdx) => (<span key={itemIdx}>{item}</span>))}{group.items.length > 3 && (<span className="italic">...and {group.items.length - 3} more</span>)}</div></div>);
             })}
           </div>
@@ -1090,29 +899,35 @@ const OffersDemands = () => {
     { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 120, cell: (props: CellContext<OfferDemandItem, any>) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onView={() => handleView(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />), },
   ], [handleEdit, handleView, handleDeleteClick, handleOpenModal]);
 
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<OfferDemandItem>[]>(columns);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
+  
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterCriteria.itemType) count++;
+    if (filterCriteria.creatorIds?.length) count++;
+    if (filterCriteria.assigneeIds?.length) count++;
+    if (filterCriteria.createdDateRange?.[0] || filterCriteria.createdDateRange?.[1]) count++;
+    if (filterCriteria.updatedDateRange?.[0] || filterCriteria.updatedDateRange?.[1]) count++;
+    if (filterCriteria.quickFilters) count++;
+    return count;
+  }, [filterCriteria]);
+  
   const isLoadingO = offersStatus === 'loading' || offersStatus === 'idle'; const isLoadingD = demandsStatus === 'loading' || demandsStatus === 'idle';
   let isOverallLoading = false;
   if (currentTab === TABS.OFFER) isOverallLoading = isLoadingO; else if (currentTab === TABS.DEMAND) isOverallLoading = isLoadingD; else isOverallLoading = isLoadingO || isLoadingD;
-
   const allApiUsersForFilterDropdown = useMemo(() => {
     const users = new Map<string, string>();
     const safeOItems = Array.isArray(offersStoreData?.data) ? offersStoreData.data : [];
     const safeDItems = Array.isArray(demandsStoreData?.data) ? demandsStoreData.data : [];
-
-    safeOItems.forEach((o: ActualApiOfferShape) => {
-      const creator = o.created_by_user || o.created_by;
-      const assignee = o.assign_user_data || o.assign_user;
-      if (creator) users.set(String(creator.id), creator.name);
-      if (assignee) users.set(String(assignee.id), assignee.name);
-    });
-    safeDItems.forEach((d: ActualApiDemandShape) => {
-      if (d.created_by) users.set(String(d.created_by.id), d.created_by.name);
-      if (d.assign_user) users.set(String(d.assign_user.id), d.assign_user.name);
-    });
+    safeOItems.forEach((o: ActualApiOfferShape) => { const creator = o.created_by_user || o.created_by; const assignee = o.assign_user_data || o.assign_user; if (creator) users.set(String(creator.id), creator.name); if (assignee) users.set(String(assignee.id), assignee.name); });
+    safeDItems.forEach((d: ActualApiDemandShape) => { if (d.created_by) users.set(String(d.created_by.id), d.created_by.name); if (d.assign_user) users.set(String(d.assign_user.id), d.assign_user.name); });
     return Array.from(users.entries()).map(([value, label]) => ({ value, label }));
   }, [offersStoreData, demandsStoreData]);
 
   const itemTypeOptions = [{ value: "Offer" as const, label: "Offer" }, { value: "Demand" as const, label: "Demand" }];
+  const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const cardBodyClass = "flex gap-2 p-2";
 
   if ((isOverallLoading || dataForExportLoading) && pageData.length === 0 && !currentTableConfig.query && Object.values(filterCriteria).every(v => !v || (Array.isArray(v) && v.length === 0))) {
     return (<Container className="h-full"><div className="h-full flex flex-col items-center justify-center"><Spinner size="xl" /><p className="mt-2">{dataForExportLoading ? 'Preparing export...' : 'Loading Data...'}</p></div></Container>);
@@ -1122,58 +937,30 @@ const OffersDemands = () => {
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-          <div className="lg:flex items-center justify-between mb-4"><h5 className="mb-4 lg:mb-0">Offers & Demands</h5><ItemActionTools onRefresh={() => fetchData()} onOpenFilter={openFilterDrawer} /></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={24} /></div>
-              <div><h6 className="text-blue-500">{offerDemandCounts?.total ?? 0}</h6><span className="font-semibold text-xs">Total</span></div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbArrowUpRight size={24} /></div>
-              <div><h6 className="text-green-500">{offerDemandCounts?.offers ?? 0}</h6><span className="font-semibold text-xs">Offers</span></div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
-              <div><h6 className="text-violet-500">{offerDemandCounts?.demands ?? 0}</h6><span className="font-semibold text-xs">Demands</span></div>
-            </Card>
-            <Card
-              bodyClass="flex gap-2 p-2"
-              className="rounded-md border border-amber-300"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500">
-                <TbClockHour4 size={24} />
-              </div>
-              <div>
-                <h6 className="text-amber-500">
-                  {offerDemandCounts?.today ?? 0}
-                </h6>
-                <span className="font-semibold text-xs">Today</span>
-              </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-teal-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
-              <div><h6 className="text-teal-500">{offerDemandCounts?.today_offers ?? 0}</h6><span className="font-semibold text-xs">Today Offers</span></div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-rose-200">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div>
-              <div><h6 className="text-rose-500">{offerDemandCounts?.today_demands ?? 0}</h6><span className="font-semibold text-xs">Today Demands</span></div>
-            </Card>
+          <div className="lg:flex items-center justify-between mb-4">
+            <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
+            <div className="flex flex-col md:flex-row gap-2">
+                <Button icon={<TbRefresh />} onClick={() => fetchData()} title="Refresh Data">Refresh</Button>
+                <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/sales-leads/offers/create")} block>Add Offer</Button>
+                <Button icon={<TbPlus />} variant="solid" onClick={() => navigate("/sales-leads/demands/create")} block>Add Demand</Button>
+            </div>
           </div>
-          <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
-            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-              {[TABS.ALL, TABS.OFFER, TABS.DEMAND].map((tabKey) =>
-              (<button key={tabKey} onClick={() => handleTabChange(tabKey)} className={classNames("whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize",
-                currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>
-                {tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}
-              </button>))}</nav></div>
-          <div className="mb-4">
-            <ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchQuery={currentTableConfig.query} /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+            <Tooltip title="Click to show all items"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={24} /></div><div><h6 className="text-blue-500">{offerDemandCounts?.total ?? 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show only offers"><div onClick={() => handleCardClick('item', 'Offer')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbArrowUpRight size={24} /></div><div><h6 className="text-green-500">{offerDemandCounts?.offers ?? 0}</h6><span className="font-semibold text-xs">Offers</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show only demands"><div onClick={() => handleCardClick('item', 'Demand')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div><div><h6 className="text-violet-500">{offerDemandCounts?.demands ?? 0}</h6><span className="font-semibold text-xs">Demands</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show items created today"><div onClick={() => handleCardClick('item', 'Today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbClockHour4 size={24} /></div><div><h6 className="text-amber-500">{offerDemandCounts?.today ?? 0}</h6><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show offers created today"><div onClick={() => handleCardClick('item', 'Today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-teal-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div><div><h6 className="text-teal-500">{offerDemandCounts?.today_offers ?? 0}</h6><span className="font-semibold text-xs">Today Offers</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show demands created today"><div onClick={() => handleCardClick('item', 'Today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-rose-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div><div><h6 className="text-rose-500">{offerDemandCounts?.today_demands ?? 0}</h6><span className="font-semibold text-xs">Today Demands</span></div></Card></div></Tooltip>
+          </div>
+          <div className="mb-4 border-b border-gray-200 dark:border-gray-700"><nav className="-mb-px flex space-x-8" aria-label="Tabs">{[TABS.ALL, TABS.OFFER, TABS.DEMAND].map((tabKey) =>(<button key={tabKey} onClick={() => handleTabChange(tabKey)} className={classNames("whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize", currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>{tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}</button>))}</nav></div>
+          <div className="mb-4"><ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchQuery={currentTableConfig.query} onOpenFilter={openFilterDrawer} onClearFilters={onClearFilters} activeFilterCount={activeFilterCount} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} /></div>
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="flex-grow overflow-auto">
-            <ItemTable columns={columns} data={pageData} loading={isOverallLoading || dataForExportLoading}
+            <ItemTable columns={filteredColumns} data={pageData} loading={isOverallLoading || dataForExportLoading}
               pagingData={{ total: totalItems, pageIndex: currentTableConfig.pageIndex as number, pageSize: currentTableConfig.pageSize as number }}
               selectedItems={currentSelectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange}
-              onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect}
-            />
+              onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
         <ItemSelected selectedItems={currentSelectedItems} onDeleteSelected={handleDeleteSelected} activeTab={currentTab} isDeleting={isDeleting} />
@@ -1190,9 +977,7 @@ const OffersDemands = () => {
       ><Form id="exportReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2"><FormItem label="Reason for exporting:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
       <Drawer title="Filter Options" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="flex justify-end gap-2 w-full"><Button size="sm" onClick={onClearFilters}>Clear All</Button><Button size="sm" variant="solid" form="filterForm" type="submit">Apply</Button></div>}>
         <Form id="filterForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-y-6 p-4 h-full overflow-y-auto">
-          {currentTab === TABS.ALL && (
-            <FormItem label="Type"><Controller name="itemType" control={filterFormMethods.control} render={({ field }) => (<Select placeholder="Filter by Offer/Demand" options={itemTypeOptions} value={itemTypeOptions.find(opt => opt.value === field.value)} onChange={(option: any) => field.onChange(option?.value || null)} isClearable />)} /></FormItem>
-          )}
+          {currentTab === TABS.ALL && (<FormItem label="Type"><Controller name="itemType" control={filterFormMethods.control} render={({ field }) => (<Select placeholder="Filter by Offer/Demand" options={itemTypeOptions} value={itemTypeOptions.find(opt => opt.value === field.value)} onChange={(option: any) => field.onChange(option?.value || null)} isClearable />)} /></FormItem>)}
           <FormItem label="Created Date"><Controller name="createdDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange} placeholder="Start - End" inputFormat="DD MMM YYYY" />)} /></FormItem>
           <FormItem label="Updated Date"><Controller name="updatedDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange} placeholder="Start - End" inputFormat="DD MMM YYYY" />)} /></FormItem>
         </Form>

@@ -3037,3 +3037,57 @@ export const getNotificationAsync = async (payload) => {
   }
 }
 
+
+
+export const blockUserAsync = async (payload: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/blocked-ips`, { ...payload })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getPinnedTabsAsync = async () => {
+    try {
+        const response = await axiosInstance.post(`${config.apiURL}/get-all-pinned`);
+        console.log(response.data.data)
+        return response.data.data;
+    } catch (err) {
+        // The isAxiosError function is likely a custom helper you have.
+        // If not, you can handle the error directly.
+        return isAxiosError(err);
+    }
+};
+
+/**
+ * @description Adds a new tab to the user's pinned list.
+ * @param {object} pinData - The data for the tab to pin, e.g., { module_name: 'Dashboard' }.
+ * @returns {Promise} Axios response promise.
+ */
+export const addPinnedTabAsync = async (pinData: { module_name: string, is_pinned: boolean }) => {
+    try {
+        // The endpoint '/pinned-tabs/add' is an example. 
+        // Your API might just use POST on '/pinned-tabs'.
+        const response = await axiosInstance.post(`${config.apiURL}/mark-as-pinned`, pinData);
+        return response.data;
+    } catch (err) {
+        return isAxiosError(err);
+    }
+};
+
+/**
+ * @description Removes a tab from the user's pinned list.
+ * @param {object} pinData - The identifier for the tab to unpin, e.g., { module_name: 'Dashboard' }.
+ * @returns {Promise} Axios response promise.
+ */
+export const removePinnedTabAsync = async (pinData: { module_name: string }) => {
+    try {
+        // The endpoint '/pinned-tabs/remove' is an example. 
+        // Your API might use a DELETE method or a POST with the module name.
+        const response = await axiosInstance.post(`${config.apiURL}/remove-pinned`, pinData);
+        return response.data;
+    } catch (err) {
+        return isAxiosError(err);
+    }
+};

@@ -17,9 +17,9 @@ import { BiChevronRight } from 'react-icons/bi';
 import { HiOutlineTrash } from 'react-icons/hi';
 import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById, getCategoriesAction } from '@/reduxtool/master/middleware';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
-import { 
-    getRolesAction, getDepartmentsAction, getDesignationsAction, 
-    getCountriesAction, getParentCategoriesAction, 
+import {
+    getRolesAction, getDepartmentsAction, getDesignationsAction,
+    getCountriesAction, getParentCategoriesAction,
     getBrandAction, getAllProductsAction, getMemberAction, getReportingTo
 } from '@/reduxtool/master/middleware';
 
@@ -70,14 +70,14 @@ const employeeFormValidationSchema = z.object({
         localAddress: z.string().optional().nullable(),
         maritalStatus: z.object({ label: z.string(), value: z.string() }).nullable(),
     }),
-   
+
 }).passthrough().refine(data => {
     // Conditionally require password only if it's NOT in edit mode (i.e., no ID)
     if (!data.id && (!data.registration.password || data.registration.password.length < 6)) {
-      return false;
+        return false;
     }
     return true;
-  }, {
+}, {
     message: "Password is required and must be at least 6 characters for new employees",
     path: ["registration", "password"],
 });
@@ -161,7 +161,7 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
 
 const DocumentSubmissionSection = ({ control, errors }: FormSectionBaseProps) => {
     const documentFields = [
-        { name: 'profile_pic', label: "Profile Picture", accept: "image/*" },
+        { name: 'profile_pic', label: "Profile Picture", accept: ".pdf,.jpg,.jpeg,.png"  },
         { name: 'identity_proof', label: "Identity Proof (e.g., Aadhaar, Passport)", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'address_proof', label: "Address Proof (e.g., Utility Bill)", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'educational_certificates', label: "Educational Certificates", accept: ".pdf,.zip" },
@@ -175,24 +175,24 @@ const DocumentSubmissionSection = ({ control, errors }: FormSectionBaseProps) =>
         { name: 'pan_card', label: "PAN Card", accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'passport_size_photograph', label: "Passport Size Photograph", accept: ".jpg,.jpeg,.png" },
     ];
-    
+
     return (
         <Card id="documentSubmission"><h4 className="mb-6">Document Submission</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 items-start">
-            {documentFields.map(doc => ( 
-            <FormItem key={doc.name} label={<>{doc.label}{doc.required && <span className="text-red-500"> *</span>}</>} invalid={!!(errors.documentSubmission as any)?.[doc.name]} errorMessage={(errors.documentSubmission as any)?.[doc.name]?.message}>
-                <Controller name={`documentSubmission.${doc.name}` as any} control={control} render={({ field: { onChange, value, ...rest } }) => {
-                    const isImage = typeof value === 'string' && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(value);
-                    const isFileObject = value instanceof File;
-                    return (
-                        <div className="flex items-center gap-4">
-                            <Input type="file" {...rest} accept={doc.accept} onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} />
-                            { (isFileObject && value.type.startsWith('image/')) && <img src={URL.createObjectURL(value)} alt="Preview" className="w-16 h-16 rounded-md object-cover" /> }
-                            { isImage && <img src={value} alt="Preview" className="w-16 h-16 rounded-md object-cover" /> }
-                            { (typeof value === 'string' && !isImage) && <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">View Document</a>}
-                        </div>
-                    )
-                }} />
-            </FormItem>
+            {documentFields.map(doc => (
+                <FormItem key={doc.name} label={<>{doc.label}{doc.required && <span className="text-red-500"> *</span>}</>} invalid={!!(errors.documentSubmission as any)?.[doc.name]} errorMessage={(errors.documentSubmission as any)?.[doc.name]?.message}>
+                    <Controller name={`documentSubmission.${doc.name}` as any} control={control} render={({ field: { onChange, value, ...rest } }) => {
+                        const isImage = typeof value === 'string' && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(value);
+                        const isFileObject = value instanceof File;
+                        return (
+                            <div className="flex items-center gap-4">
+                                <Input type="file" {...rest} accept={doc.accept} onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} />
+                                {(isFileObject && value.type.startsWith('image/')) && <img src={URL.createObjectURL(value)} alt="Preview" className="w-16 h-16 rounded-md object-cover" />}
+                                {isImage && <img src={value} alt="Preview" className="w-16 h-16 rounded-md object-cover" />}
+                                {(typeof value === 'string' && !isImage) && <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">View Document</a>}
+                            </div>
+                        )
+                    }} />
+                </FormItem>
             ))}
         </div></Card>
     );
@@ -207,7 +207,7 @@ const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) =>
         dispatch(getCountriesAction());
     }, [dispatch]);
 
-    
+
     const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => toOptions(departmentsData?.data), [departmentsData]);
@@ -252,8 +252,8 @@ const EquipmentsAssetsSection = ({ control, errors }: FormSectionBaseProps) => {
                                 return (
                                     <div className='flex items-center gap-4'>
                                         <Input type="file" {...rest} onChange={(e) => onChange(e.target.files ? e.target.files[0] : null)} />
-                                        {(isFileObject && value.type.startsWith('image/')) && <img src={URL.createObjectURL(value)} alt="Preview" className="w-16 h-16 rounded-md object-cover" /> }
-                                        {isImage && <img src={value} alt="Preview" className="w-16 h-16 rounded-md object-cover" /> }
+                                        {(isFileObject && value.type.startsWith('image/')) && <img src={URL.createObjectURL(value)} alt="Preview" className="w-16 h-16 rounded-md object-cover" />}
+                                        {isImage && <img src={value} alt="Preview" className="w-16 h-16 rounded-md object-cover" />}
                                         {(typeof value === 'string' && !isImage) && <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">View Doc</a>}
                                     </div>
                                 )
@@ -329,7 +329,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('email', values.registration?.email || '');
         formData.append('experience', values.registration?.experience || '');
         if (!isEdit && values.registration.password) formData.append('password', values.registration.password);
-        
+
         formData.append('status', objToValue(values.personalInformation?.status));
         formData.append('date_of_birth', formatDate(values.personalInformation?.dateOfBirth));
         formData.append('age', String(values.personalInformation?.age || ''));
@@ -338,8 +338,8 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('blood_group', objToValue(values.personalInformation?.bloodGroup));
         formData.append('permanent_address', values.personalInformation?.permanentAddress || '');
         formData.append('local_address', values.personalInformation?.localAddress || '');
-        formData.append('marital_status', objToValue(values.personalInformation?.maritalStatus));
-        
+        formData.append('maritual_status', objToValue(values.personalInformation?.maritalStatus));
+
         formData.append('role_id', objToValue(values.roleResponsibility?.roleId));
         formData.append('department_id', arrayToCommaString(values.roleResponsibility?.departmentId));
         formData.append('designation_id', objToValue(values.roleResponsibility?.designationId));
@@ -350,7 +350,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('product_service_id', arrayToCommaString(values.roleResponsibility?.productServiceId));
         formData.append('reporting_hr_id', arrayToCommaString(values.roleResponsibility?.reportingHrId));
         formData.append('reporting_head_id', objToValue(values.roleResponsibility?.reportingHeadId));
-        
+
         Object.entries(values.documentSubmission || {}).forEach(([key, file]) => {
             if (file instanceof File) {
                 formData.append(key, file);
@@ -381,7 +381,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
                 }
             });
         }
-        
+
         onFormSubmit(formData, defaultValues?.id);
     };
 
@@ -398,7 +398,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
             default: return <RegistrationSection {...sectionProps} />;
         }
     };
-    
+
     const handleNext = () => activeSectionIndex < sectionKeys.length - 1 && setActiveSection(sectionKeys[activeSectionIndex + 1]);
     const handlePrevious = () => activeSectionIndex > 0 && setActiveSection(sectionKeys[activeSectionIndex - 1]);
 
@@ -419,7 +419,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
                     </div>
                 </div>
                 <div className="bg-white sticky bottom-0 -mx-8 px-8 py-4 border-t dark:border-gray-700 dark:bg-gray-800">
-                     <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center">
                         <div>
                             <Button type="button" icon={<HiOutlineTrash />} onClick={onDiscard} disabled={isSubmitting}>Discard</Button>
                         </div>
@@ -440,7 +440,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
 const EmployeeFormPage = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { id:employeeId } = useParams<{ id: string }>();
+    const { id: employeeId } = useParams<{ id: string }>();
     const isEditMode = !!employeeId;
 
     const [employeeData, setEmployeeData] = useState<Partial<EmployeeFormSchema> | null>(null);
@@ -449,7 +449,7 @@ const EmployeeFormPage = () => {
     const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
 
     const lookups = useSelector(masterSelector);
-    
+
     useEffect(() => {
         dispatch(getRolesAction());
         dispatch(getDepartmentsAction());
@@ -463,10 +463,10 @@ const EmployeeFormPage = () => {
     }, [dispatch]);
 
     useEffect(() => {
-     
+
         const apiToForm = (apiData: any): Partial<EmployeeFormSchema> => {
-            const findOption = (options: {value:string, label:string}[], value: any) => options.find(o => String(o.value) === String(value));
-            const findMultiOptions = (options: {value:string, label:string}[], values: any[]) => Array.isArray(values) ? options.filter(o => values.includes(String(o.value))) : [];
+            const findOption = (options: { value: string, label: string }[], value: any) => options.find(o => String(o.value) === String(value));
+            const findMultiOptions = (options: { value: string, label: string }[], values: any[]) => Array.isArray(values) ? options.filter(o => values.includes(String(o.value))) : [];
             const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
             const mapApiBoolToYesNo = (value: any): 'yes' | 'no' | '' => {
                 if (value === true || value === 1 || value === '1') return 'yes';
@@ -483,7 +483,7 @@ const EmployeeFormPage = () => {
             const productOptions = toOptions(lookups.AllProducts);
             const reportingHrOptions = toOptions(lookups.reportingTo?.data);
             const reportingHeadOptions = toOptions(lookups.memberData?.data?.data || lookups.memberData?.data);
-            
+
             const commaStringToArray = (str: string | null | undefined): string[] => (str ? String(str).split(',') : []);
 
             return {
@@ -502,10 +502,10 @@ const EmployeeFormPage = () => {
                     age: apiData.age || '',
                     gender: { value: apiData.gender || '', label: apiData.gender || '' },
                     nationalityId: findOption(countryOptions, apiData.nationality_id),
-                    bloodGroup: { value: apiData.blood_group || '', label: apiData.blood_group || '' },
+                    bloodGroup: { value: apiData.blood_group || '', label: apiData.blood_tgroup || '' },
                     permanentAddress: apiData.permanent_address || '',
                     localAddress: apiData.local_address || '',
-                    maritalStatus: { value: apiData.marital_status || '', label: apiData.marital_status || '' },
+                    maritalStatus: { value: apiData.maritual_status || '', label: apiData.maritual_status || '' },
                 },
                 roleResponsibility: {
                     roleId: findOption(roleOptions, apiData.role_id),
@@ -553,13 +553,13 @@ const EmployeeFormPage = () => {
             };
             return transformed;
         };
-        
+
         const fetchCompanyData = async () => {
             if (isEditMode && employeeId) {
                 setIsLoading(true);
                 const actionResult = await dispatch(apiGetEmployeeById(employeeId)).unwrap();
                 console.log(actionResult, 'actionResult');
-                
+
                 try {
                     if (actionResult) {
                         setEmployeeData(apiToForm(actionResult?.data?.data))
@@ -571,6 +571,9 @@ const EmployeeFormPage = () => {
                 } catch {
 
                 }
+            } else if (!isEditMode) {
+                setEmployeeData({});
+                setIsLoading(false);
             }
         };
         fetchCompanyData();
@@ -607,9 +610,9 @@ const EmployeeFormPage = () => {
     return (
         <Container className="h-full">
             {employeeData && (
-                <EmployeeFormComponent 
-                    isEdit={isEditMode} 
-                    defaultValues={employeeData} 
+                <EmployeeFormComponent
+                    isEdit={isEditMode}
+                    defaultValues={employeeData}
                     onFormSubmit={handleFormSubmit}
                     isSubmitting={isSubmitting}
                     onDiscard={onDiscardOpen}

@@ -1,5 +1,3 @@
-// src/views/your-path/Inquiries.tsx
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import cloneDeep from "lodash/cloneDeep";
 import React, {
@@ -9,9 +7,8 @@ import React, {
   useMemo,
   useState,
 } from "react";
-// import { CSVLink } from "react-csv"; // CSVLink will no longer be used directly for the button
 import { Controller, useForm } from "react-hook-form";
-import { /* Form, // Removed Form from react-router-dom as UiForm is used */ useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
@@ -27,10 +24,10 @@ import {
   DatePicker,
   Drawer,
   Dropdown,
-  FormItem, // Already imported from @/components/ui
-  Input,    // Already imported from @/components/ui
-  Form as UiForm, // Already imported as UiForm
-  // FormItem as FormItem, // This is a duplicate, FormItem is fine
+  Checkbox, // Added
+  Form as UiForm,
+  FormItem as UiFormItem,
+  Input,
   Select as UiSelect,
 } from "@/components/ui";
 import Dialog from "@/components/ui/Dialog";
@@ -41,30 +38,23 @@ import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-  TbAlarm,
   TbBell,
   TbBrandWhatsapp,
-  TbBuilding,
   TbCalendarEvent,
   TbChecks,
-  TbClipboardText,
   TbCloudUpload,
-  TbDotsVertical,
   TbDownload,
   TbEye,
   TbFilter,
   TbMail,
-  TbMessageReport,
-  TbNotebook,
   TbPencil,
   TbPlus,
-  TbReceipt,
   TbReload,
   TbSearch,
-  TbShare,
   TbTagStarred,
-  TbTrash,
   TbUser,
+  TbColumns, // Added
+  TbX,      // Added
 } from "react-icons/tb";
 
 // Types
@@ -84,10 +74,10 @@ import {
   submitExportReasonAction,
   addNotificationAction, 
   getAllUsersAction,
-  addScheduleAction, // Added
+  addScheduleAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import dayjs from "dayjs"; // Added
+import dayjs from "dayjs";
 import { useSelector } from "react-redux";
 import { BsThreeDotsVertical } from "react-icons/bs";
 
@@ -109,7 +99,6 @@ const scheduleSchema = z.object({
   notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
-
 
 // ============================================================================
 // --- MODALS SECTION ---
@@ -185,7 +174,7 @@ const AddInquiryNotificationDialog: React.FC<{
         <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
             <h5 className="mb-4">Notify User about: {inquiry.inquiry_id}</h5>
             <UiForm onSubmit={handleSubmit(onSend)}>
-                <FormItem
+                <UiFormItem
                     label="Title"
                     invalid={!!errors.notification_title}
                     errorMessage={errors.notification_title?.message}
@@ -195,8 +184,8 @@ const AddInquiryNotificationDialog: React.FC<{
                         control={control}
                         render={({ field }) => <Input {...field} />}
                     />
-                </FormItem>
-                <FormItem
+                </UiFormItem>
+                <UiFormItem
                     label="Send To"
                     invalid={!!errors.send_users}
                     errorMessage={errors.send_users?.message}
@@ -218,14 +207,14 @@ const AddInquiryNotificationDialog: React.FC<{
                             />
                         )}
                     />
-                </FormItem>
-                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+                </UiFormItem>
+                <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
                     <Controller
                         name="message"
                         control={control}
                         render={({ field }) => <Input textArea {...field} rows={4} />}
                     />
-                </FormItem>
+                </UiFormItem>
                 <div className="text-right mt-6">
                     <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
                         Cancel
@@ -278,23 +267,23 @@ const AddInquiryScheduleDialog: React.FC<{ inquiry: InquiryItem; onClose: () => 
       <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
         <h5 className="mb-4">Add Schedule for Inquiry: {inquiry.inquiry_id}</h5>
         <UiForm onSubmit={handleSubmit(onAddEvent)}>
-          <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
             <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
-          </FormItem>
+          </UiFormItem>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
               <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} />
-            </FormItem>
-            <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            </UiFormItem>
+            <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
               <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-            </FormItem>
+            </UiFormItem>
           </div>
-          <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
             <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-          </FormItem>
-          <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          </UiFormItem>
+          <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
             <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
-          </FormItem>
+          </UiFormItem>
           <div className="text-right mt-6">
             <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
             <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
@@ -479,7 +468,7 @@ interface InquiryListStore {
   setSelectedInquiries: React.Dispatch<React.SetStateAction<InquiryItem[]>>;
   departments: Department[];
   isLoading: boolean;
-  getAllUserDataOptions: SelectOption[]; // Added
+  getAllUserDataOptions: SelectOption[];
 }
 const InquiryListContext = React.createContext<InquiryListStore | undefined>(undefined);
 const useInquiryList = (): InquiryListStore => {
@@ -500,7 +489,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     dispatch(getDepartmentsAction());
     dispatch(getInquiriesAction());
-    dispatch(getAllUsersAction()); // Added
+    dispatch(getAllUsersAction());
   }, [dispatch]);
 
   useEffect(() => {
@@ -528,22 +517,6 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// --- InquiryListSearch Component ---
-interface InquiryListSearchProps { onInputChange: (value: string) => void; }
-const InquiryListSearch: React.FC<InquiryListSearchProps> = ({ onInputChange }) => (
-  <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
-);
-
-// --- InquiryListActionTools Component (Page Header) ---
-const InquiryListActionTools = () => {
-  const navigate = useNavigate();
-  return (
-    <div className="flex flex-col md:flex-row gap-3">
-      <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/create-inquiry")}>Add New</Button>
-    </div>
-  );
-};
-
 // --- InquiryActionColumn Component (DataTable Actions) ---
 const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOpenModal }: { rowData: InquiryItem; onViewDetail: (id: string) => void; onDeleteItem: (item: InquiryItem) => void; onEdit?: (id: string) => void; onShare?: (id: string) => void; onChangeItemStatus?: (id: string, currentStatus: InquiryItem["status"]) => void; onOpenModal: (type: InquiryModalType, data: InquiryItem) => void; }) => {
   const handleEdit = () => onEdit && onEdit(rowData.id);
@@ -552,82 +525,43 @@ const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOp
       {onEdit && (<Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400" role="button" onClick={handleEdit}><TbPencil /></div></Tooltip>)}
       <Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400" role="button" onClick={() => onViewDetail(rowData.id)}><TbEye /></div></Tooltip>
       <Tooltip title="More">
-<Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-  {/* 1. Send Email */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbMail size={18} /> <span className="text-xs">Send Email</span>
-  </Dropdown.Item>
-
-  {/* 2. Send WhatsApp */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span>
-  </Dropdown.Item>
-
-  {/* 3. Add Notification */}
-  <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification', rowData)}>
-    <TbBell size={18} /> <span className="text-xs">Add Notification</span>
-  </Dropdown.Item>
-
-  {/* 4. Assign Task */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbUser size={18} /> <span className="text-xs">Assign Task</span>
-  </Dropdown.Item>
-
-  {/* 5. Add Schedule */}
-  <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule', rowData)}>
-    <TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span>
-  </Dropdown.Item>
-
-  {/* 6. Add Active */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbTagStarred size={18} /> <span className="text-xs">Add Active</span>
-  </Dropdown.Item>
-
-  {/* 7. Download Document */}
-  <Dropdown.Item className="flex items-center gap-2">
-    <TbDownload size={18} /> <span className="text-xs">Download Document</span>
-  </Dropdown.Item>
-</Dropdown>
-
+        <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+          <Dropdown.Item className="flex items-center gap-2">
+            <TbMail size={18} /> <span className="text-xs">Send Email</span>
+          </Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2">
+            <TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span>
+          </Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification', rowData)}>
+            <TbBell size={18} /> <span className="text-xs">Add Notification</span>
+          </Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2">
+            <TbUser size={18} /> <span className="text-xs">Assign Task</span>
+          </Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule', rowData)}>
+            <TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span>
+          </Dropdown.Item>
+        </Dropdown>
       </Tooltip>
     </div>
   );
 };
 
-// Type for CSV headers, used by exportToCsv function
-export type CsvHeader = {
-    label: string;
-    key: string; 
-};
+// --- CsvHeader Type and exportToCsv Function ---
+export type CsvHeader = { label: string; key: string; };
 
-// --- exportToCsv Function ---
-function exportToCsv<T extends Record<string, any>>(
-    filename: string,
-    rows: T[],
-    headers: CsvHeader[] // Using the CsvHeader type
-): boolean {
+function exportToCsv<T extends Record<string, any>>(filename: string, rows: T[], headers: CsvHeader[]): boolean {
     if (!rows || !rows.length) {
-        toast.push(
-            <Notification title="No Data" type="info" duration={3000}>
-                Nothing to export.
-            </Notification>,
-        );
+        toast.push(<Notification title="No Data" type="info" duration={3000}>Nothing to export.</Notification>);
         return false;
     }
-
     if (!headers || !headers.length) {
-        toast.push(
-            <Notification title="Configuration Error" type="danger" duration={3000}>
-                CSV Headers are not defined. Cannot export.
-            </Notification>,
-        );
+        toast.push(<Notification title="Configuration Error" type="danger" duration={3000}>CSV Headers are not defined. Cannot export.</Notification>);
         return false;
     }
 
     const separator = ',';
-    const headerRow = headers
-        .map(header => `"${String(header.label).replace(/"/g, '""')}"`)
-        .join(separator);
+    const headerRow = headers.map(header => `"${String(header.label).replace(/"/g, '""')}"`).join(separator);
 
     const dataRows = rows.map(row => {
         return headers.map(header => {
@@ -661,52 +595,30 @@ function exportToCsv<T extends Record<string, any>>(
         URL.revokeObjectURL(url);
         return true;
     } else {
-        toast.push(
-            <Notification title="Export Failed" type="danger" duration={3000}>
-                Your browser does not support this feature.
-            </Notification>,
-        );
+        toast.push(<Notification title="Export Failed" type="danger" duration={3000}>Your browser does not support this feature.</Notification>);
         return false;
     }
 }
 
 // --- InquiryViewModal Component ---
-interface InquiryViewModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  inquiry: InquiryItem | null;
-}
+interface InquiryViewModalProps { isOpen: boolean; onClose: () => void; inquiry: InquiryItem | null; }
 
 const InquiryViewModal: React.FC<InquiryViewModalProps> = ({ isOpen, onClose, inquiry }) => {
   if (!inquiry) return null;
-
   return (
-    <Dialog
-      isOpen={isOpen}
-      onClose={onClose}
-      onRequestClose={onClose}
-      title={`Inquiry Details: ${inquiry.inquiry_id}`}
-      width={700} 
-    >
+    <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} title={`Inquiry Details: ${inquiry.inquiry_id}`} width={700}>
       <div className="py-4 px-1">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          {/* Section 1: Basic Info */}
           <div>
             <h6 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">Basic Information</h6>
             <div className="space-y-1 text-sm">
               <p><strong>Inquiry ID:</strong> {inquiry.inquiry_id}</p>
               <p><strong>Company:</strong> {inquiry.company_name}</p>
               <p><strong>Subject:</strong> {inquiry.inquiry_subject}</p>
-              <div className="flex items-center gap-2">
-                <strong>Type:</strong> <Tag className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{inquiry.inquiry_type}</Tag>
-              </div>
-              <div className="flex items-center gap-2">
-                <strong>Record Status:</strong> <Tag className={`${recordStatusColor[inquiry.status]} capitalize text-[10px] px-1.5 py-0.5`}>{inquiry.status}</Tag>
-              </div>
+              <div className="flex items-center gap-2"><strong>Type:</strong> <Tag className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{inquiry.inquiry_type}</Tag></div>
+              <div className="flex items-center gap-2"><strong>Record Status:</strong> <Tag className={`${recordStatusColor[inquiry.status]} capitalize text-[10px] px-1.5 py-0.5`}>{inquiry.status}</Tag></div>
             </div>
           </div>
-
-          {/* Section 2: Contact Person */}
           <div>
             <h6 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">Contact Person</h6>
             <div className="space-y-1 text-sm">
@@ -715,18 +627,12 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({ isOpen, onClose, in
               <p><strong>Phone:</strong> {inquiry.contact_person_phone}</p>
             </div>
           </div>
-
-          {/* Section 3: Inquiry Details */}
           <div className="md:col-span-2">
             <h6 className="text-sm font-semibold mb-2 mt-3 text-gray-700 dark:text-gray-200">Inquiry Specifics</h6>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                    <strong>Priority:</strong> <Tag className={`${priorityColors[inquiry.inquiry_priority] || priorityColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{inquiry.inquiry_priority}</Tag>
-                </div>
-                <div className="flex items-center gap-2 mb-1">
-                    <strong>Current Status:</strong> <Tag className={`${inquiryCurrentStatusColors[inquiry.inquiry_status] || inquiryCurrentStatusColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{inquiry.inquiry_status}</Tag>
-                </div>
+                <div className="flex items-center gap-2 mb-1"><strong>Priority:</strong> <Tag className={`${priorityColors[inquiry.inquiry_priority] || priorityColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{inquiry.inquiry_priority}</Tag></div>
+                <div className="flex items-center gap-2 mb-1"><strong>Current Status:</strong> <Tag className={`${inquiryCurrentStatusColors[inquiry.inquiry_status] || inquiryCurrentStatusColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{inquiry.inquiry_status}</Tag></div>
                  <p><strong>Assigned To:</strong> {inquiry.assigned_to}</p>
                  {inquiry.department && <p><strong>Department:</strong> {inquiry.department}</p>}
               </div>
@@ -735,9 +641,6 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({ isOpen, onClose, in
               </div>
             </div>
           </div>
-
-
-          {/* Section 4: Description & Resolution */}
            <div className="md:col-span-2 mt-2">
              <h6 className="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">Description</h6>
              <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md whitespace-pre-wrap max-h-40 overflow-y-auto">{inquiry.inquiry_description}</div>
@@ -748,45 +651,27 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({ isOpen, onClose, in
                <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md whitespace-pre-wrap max-h-40 overflow-y-auto">{inquiry.inquiry_resolution}</div>
              </div>
            )}
-
-
-          {/* Section 5: Timeline */}
           <div className="md:col-span-2">
             <h6 className="text-sm font-semibold mb-2 mt-3 text-gray-700 dark:text-gray-200">Timeline</h6>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-sm">
                 <FormattedDateDisplay dateString={inquiry.inquiry_date} label="Inquired" />
                 <FormattedDateDisplay dateString={inquiry.response_date} label="Responded" />
-              
             </div>
           </div>
-
-          {/* Section 6: Attachments */}
           {inquiry.inquiry_attachments && inquiry.inquiry_attachments.length > 0 && (
             <div className="md:col-span-2">
               <h6 className="text-sm font-semibold mb-2 mt-3 text-gray-700 dark:text-gray-200">Attachments</h6>
               <ul className="list-disc list-inside text-sm space-y-1 max-h-32 overflow-y-auto">
-                {inquiry.inquiry_attachments.map((attachment, index) => (
-                  <li key={index}>
-                    <a href={attachment} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline dark:text-blue-400">
-                      {attachment.split('/').pop()?.split('?')[0] || `Attachment ${index + 1}`} {/* Try to get a cleaner name */}
-                    </a>
-                  </li>
-                ))}
+                {inquiry.inquiry_attachments.map((attachment, index) => (<li key={index}><a href={attachment} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline dark:text-blue-400">{attachment.split('/').pop()?.split('?')[0] || `Attachment ${index + 1}`}</a></li>))}
               </ul>
             </div>
           )}
         </div>
-
-        <div className="text-right mt-6">
-          <Button size="sm" onClick={onClose}>
-            Close
-          </Button>
-        </div>
+        <div className="text-right mt-6"><Button size="sm" onClick={onClose}>Close</Button></div>
       </div>
     </Dialog>
   );
 };
-
 
 // --- InquiryListTable Component ---
 const InquiryListTable = () => {
@@ -798,23 +683,18 @@ const InquiryListTable = () => {
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<InquiryItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // --- State for Export Reason Modal ---
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
-
-  // --- State for View Details Modal ---
   const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = useState(false);
   const [inquiryToView, setInquiryToView] = useState<InquiryItem | null>(null);
-
-  // --- State for Action Modals (e.g., Notification) ---
   const [modalState, setModalState] = useState<InquiryModalState>({ isOpen: false, type: null, data: null });
-  const handleOpenModal = useCallback((type: InquiryModalType, itemData: InquiryItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
-  const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
-
+  
   const filterFormMethods = useForm<InquiryFilterFormData>({ resolver: zodResolver(inquiryFilterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: '' }, mode: 'onChange' });
   
+  const handleOpenModal = useCallback((type: InquiryModalType, itemData: InquiryItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
+  const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
+
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
 
   const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); };
@@ -822,7 +702,7 @@ const InquiryListTable = () => {
   const onApplyFiltersSubmit = (data: InquiryFilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); };
   const onClearFilters = () => {
     const defaultFilters: InquiryFilterFormData = { filterRecordStatus: [], filterInquiryType: [], filterInquiryPriority: [], filterInquiryCurrentStatus: [], filterAssignedTo: [], filterDepartment: [], filterFeedbackStatus: [], filterInquiryDate: [null, null], filterResponseDate: [null, null], filterResolutionDate: [null, null], filterFollowUpDate: [null, null] };
-    filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1 }); dispatch(getInquiriesAction());
+    filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: "" }); dispatch(getInquiriesAction());
   };
 
   const handleDeleteItemClick = (item: InquiryItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); };
@@ -876,10 +756,11 @@ const InquiryListTable = () => {
   }, [inquiryList, tableData, filterCriteria]);
 
   const handleViewDetails = (id: string) => {
-    const inquiry = allFilteredAndSortedData.find(item => item.id === id); // Use allFilteredAndSortedData for current view or inquiryList for global
+    const inquiry = allFilteredAndSortedData.find(item => item.id === id);
     if (inquiry) {
-      setInquiryToView(inquiry);
-      setIsViewDetailsModalOpen(true);
+      // setInquiryToView(inquiry);
+       navigate(`/business-entities/inquiry-view/${id}`);
+      // setIsViewDetailsModalOpen(true);
     } else {
       toast.push(<Notification type="danger" title="Error">Inquiry details not found.</Notification>);
     }
@@ -887,15 +768,39 @@ const InquiryListTable = () => {
 
   const navigate = useNavigate();
   const handleEditInquiry = (id: string) => { 
-    navigate("/business-entities/create-inquiry", { state: id }); }; // Pass ID in state
-// navigate("/business-entities/create-inquiry", { state: id });
+    navigate("/business-entities/create-inquiry", { state: id });
+  };
+  
   const columns: ColumnDef<InquiryItem>[] = useMemo(() => [
-    { header: "Inquiry Overview", accessorKey: "inquiry_id", enableSorting: true, size: 280, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{d.inquiry_id}</span><span className="text-xs text-gray-700 dark:text-gray-300">{d.company_name || "Company Name"}</span><Tooltip title={d.inquiry_subject}><span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{d.inquiry_subject}</span></Tooltip><div className="flex items-center gap-2 mt-1"><Tag className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{d.inquiry_type || "Inquiry Type"}</Tag><Tag className={`${recordStatusColor[d.status]} capitalize text-[10px] px-1.5 py-0.5`}>{d.status}</Tag></div></div>); } },
-    { header: "Contact Person", accessorKey: "contact_person_name", enableSorting: true, size: 240, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-gray-800 dark:text-gray-100">{d.contact_person_name}</span><a href={`mailto:${d.contact_person_email}`} className="text-blue-600 hover:underline dark:text-blue-400">{d.contact_person_email}</a><span className="text-gray-600 dark:text-gray-300">{d.contact_person_phone}</span></div>); } },
-    { header: "Inquiry Details", accessorKey: "inquiry_priority", enableSorting: true, size: 280, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-1 text-xs"><div className="flex items-center gap-2"><Tag className={`${priorityColors[d.inquiry_priority] || priorityColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_priority} </Tag><Tag className={`${inquiryCurrentStatusColors[d.inquiry_status] || inquiryCurrentStatusColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_status}</Tag></div><span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Assigned:</span> {d.assigned_to}</span>{d.department && (<span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Dept:</span> {d.department}</span>)}<Tooltip title={d.inquiry_description}><p className="text-gray-600 dark:text-gray-400 line-clamp-2">{d.inquiry_description}</p></Tooltip></div>); } },
-    { header: "Timeline", accessorKey: "inquiry_date", enableSorting: true, size: 180, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><FormattedDateDisplay dateString={d.inquiry_date} label="Inquired" /><FormattedDateDisplay dateString={d.response_date} label="Responded" /></div>); } },
+    { header: "Inquiry Overview", accessorKey: "inquiry_id", id: 'overview', enableSorting: true, size: 280, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{d.inquiry_id}</span><span className="text-xs text-gray-700 dark:text-gray-300">{d.company_name || "Company Name"}</span><Tooltip title={d.inquiry_subject}><span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{d.inquiry_subject}</span></Tooltip><div className="flex items-center gap-2 mt-1"><Tag className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{d.inquiry_type || "Inquiry Type"}</Tag><Tag className={`${recordStatusColor[d.status]} capitalize text-[10px] px-1.5 py-0.5`}>{d.status}</Tag></div></div>); } },
+    { header: "Contact Person", accessorKey: "contact_person_name", id: 'contact', enableSorting: true, size: 240, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-gray-800 dark:text-gray-100">{d.contact_person_name}</span><a href={`mailto:${d.contact_person_email}`} className="text-blue-600 hover:underline dark:text-blue-400">{d.contact_person_email}</a><span className="text-gray-600 dark:text-gray-300">{d.contact_person_phone}</span></div>); } },
+    { header: "Inquiry Details", accessorKey: "inquiry_priority", id: 'details', enableSorting: true, size: 280, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-1 text-xs"><div className="flex items-center gap-2"><Tag className={`${priorityColors[d.inquiry_priority] || priorityColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_priority} </Tag><Tag className={`${inquiryCurrentStatusColors[d.inquiry_status] || inquiryCurrentStatusColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_status}</Tag></div><span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Assigned:</span> {d.assigned_to}</span>{d.department && (<span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Dept:</span> {d.department}</span>)}<Tooltip title={d.inquiry_description}><p className="text-gray-600 dark:text-gray-400 line-clamp-2">{d.inquiry_description}</p></Tooltip></div>); } },
+    { header: "Timeline", accessorKey: "inquiry_date", id: 'timeline', enableSorting: true, size: 180, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><FormattedDateDisplay dateString={d.inquiry_date} label="Inquired" /><FormattedDateDisplay dateString={d.response_date} label="Responded" /></div>); } },
     { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props) => (<InquiryActionColumn rowData={props.row.original} onViewDetail={handleViewDetails} onDeleteItem={handleDeleteItemClick} onEdit={handleEditInquiry} onOpenModal={handleOpenModal} />) },
-  ], [navigate, allFilteredAndSortedData, handleOpenModal]); // Added navigate, allFilteredAndSortedData, handleOpenModal dependency
+  ], [navigate, allFilteredAndSortedData, handleOpenModal]);
+
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<InquiryItem>[]>(columns);
+
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+        setFilteredColumns(currentCols => {
+            const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+            if (!originalColumn) return currentCols;
+            const newCols = [...currentCols, originalColumn];
+            newCols.sort((a, b) => {
+                const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                return indexA - indexB;
+            });
+            return newCols;
+        });
+    } else {
+        setFilteredColumns(currentCols => currentCols.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
@@ -905,17 +810,9 @@ const InquiryListTable = () => {
   const handleRowSelect = useCallback((checked: boolean, row: InquiryItem) => { setSelectedInquiries((prev) => checked ? (prev.find((i) => i.id === row.id) ? prev : [...prev, row]) : prev.filter((item) => item.id !== row.id)); }, [setSelectedInquiries]);
   const handleAllRowSelect = useCallback((checked: boolean, rows: Row<InquiryItem>[]) => { const currentIds = new Set(rows.map((r) => r.original.id)); if (checked) { setSelectedInquiries((prev) => { const newItems = rows.map((r) => r.original).filter((item) => !prev.find((pi) => pi.id === item.id)); return [...prev, ...newItems]; }); } else { setSelectedInquiries((prev) => prev.filter((item) => !currentIds.has(item.id))); } }, [setSelectedInquiries]);
   
-  const csvHeaders: CsvHeader[] = useMemo(() => { 
-    if (allFilteredAndSortedData.length === 0) return [];
-    // Ensure all keys are present, even if some objects might not have them (though InquiryItem type should enforce this)
-    const allKeys = new Set<string>();
-    allFilteredAndSortedData.forEach(item => Object.keys(item).forEach(key => allKeys.add(key)));
-    
-    return Array.from(allKeys).map((key) => ({
-      label: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-      key: key,
-    }));
-  }, [allFilteredAndSortedData]);
+  const csvHeaders: CsvHeader[] = useMemo(() => [
+      { label: "Inquiry ID", key: "inquiry_id" }, { label: "Company Name", key: "company_name" }, { label: "Contact Name", key: "contact_person_name" }, { label: "Email", key: "contact_person_email" }, { label: "Phone", key: "contact_person_phone" }, { label: "Inquiry Type", key: "inquiry_type" }, { label: "Subject", key: "inquiry_subject" }, { label: "Priority", key: "inquiry_priority" }, { label: "Status", key: "inquiry_status" }, { label: "Assigned To", key: "assigned_to" }, { label: "Department", key: "department" }, { label: "Inquiry Date", key: "inquiry_date" },
+  ], []);
 
   const handleExport = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -929,25 +826,15 @@ const InquiryListTable = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const moduleName = 'Inquiries'; 
-    const timestamp = new Date().toISOString().split('T')[0];
+    const timestamp = dayjs().format('YYYY-MM-DD');
     const fileName = `inquiries_export_${timestamp}.csv`;
     try {
-        await dispatch(
-            submitExportReasonAction({
-                reason: data.reason,
-                module: moduleName,
-                file_name: fileName,
-            }),
-        ).unwrap();
+        await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap();
         toast.push(<Notification title="Export Reason Submitted" type="success" />);
-
         const exportSuccessful = exportToCsv(fileName, allFilteredAndSortedData, csvHeaders);
-        if (exportSuccessful) {
-            toast.push(<Notification title="Export Initiated" type="success">Download of {fileName} has started.</Notification>);
-        }
-        setIsExportReasonModalOpen(false);
+        if (exportSuccessful) { setIsExportReasonModalOpen(false); }
     } catch (error: any) {
-        toast.push(<Notification title="Operation Failed" type="danger" message={error.message || 'Could not submit reason or export data.'} />);
+        toast.push(<Notification title="Operation Failed" type="danger">{error.message || 'Could not submit reason or export data.'}</Notification>);
     } finally {
         setIsSubmittingExportReason(false);
     }
@@ -965,21 +852,21 @@ const InquiryListTable = () => {
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <InquiryListSearch onInputChange={handleSearchInputChange} />
+        <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearchInputChange(e.target.value)} />
         <div className="flex gap-2">
-          <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters" />
+          <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+            <div className="flex flex-col p-2">
+              <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+              {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
+            </div>
+          </Dropdown>
+          <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onClearFilters} /></Tooltip>
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
-          <Button 
-            icon={<TbCloudUpload />} 
-            onClick={handleExport} 
-            disabled={allFilteredAndSortedData.length === 0}
-          >
-            Export
-          </Button>
+          <Button icon={<TbCloudUpload />} onClick={handleExport} disabled={allFilteredAndSortedData.length === 0}>Export</Button>
         </div>
       </div>
       <DataTable
-        selectable columns={columns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading || isDeleting || isSubmittingExportReason}
+        selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading || isDeleting || isSubmittingExportReason}
         pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
         checkboxChecked={(row) => selectedInquiries.some((selected) => selected.id === row.id)}
         onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect}
@@ -990,79 +877,30 @@ const InquiryListTable = () => {
       >
         <UiForm id="filterInquiryForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
-            <FormItem label="Record Status"><Controller name="filterRecordStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={recordStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-            <FormItem label="Inquiry Type"><Controller name="filterInquiryType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Type" options={inquiryTypeOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-            <FormItem label="Inquiry Priority"><Controller name="filterInquiryPriority" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Priority" options={inquiryPriorityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-            <FormItem label="Inquiry Current Status"><Controller name="filterInquiryCurrentStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={inquiryCurrentStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-            <FormItem label="Assigned To"><Controller name="filterAssignedTo" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Assignee" options={assignedToOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-            <FormItem label="Department"><Controller name="filterDepartment" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Department" options={departmentFilterOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-            <FormItem label="Feedback Status" className="col-span-2"><Controller name="filterFeedbackStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={feedbackStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-            <FormItem label="Inquiry Date Range" className="col-span-2"><Controller name="filterInquiryDate" control={filterFormMethods.control} render={({ field }) => (<DatePickerRange placeholder="Select Inquiry Dates" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></FormItem>
-            <FormItem label="Response Date Range" className="col-span-2"><Controller name="filterResponseDate" control={filterFormMethods.control} render={({ field }) => (<DatePickerRange placeholder="Select Response Dates" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></FormItem>
-           
+            <UiFormItem label="Record Status"><Controller name="filterRecordStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={recordStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+            <UiFormItem label="Inquiry Type"><Controller name="filterInquiryType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Type" options={inquiryTypeOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+            <UiFormItem label="Inquiry Priority"><Controller name="filterInquiryPriority" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Priority" options={inquiryPriorityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+            <UiFormItem label="Inquiry Current Status"><Controller name="filterInquiryCurrentStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={inquiryCurrentStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+            <UiFormItem label="Assigned To"><Controller name="filterAssignedTo" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Assignee" options={assignedToOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+            <UiFormItem label="Department"><Controller name="filterDepartment" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Department" options={departmentFilterOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+            <UiFormItem label="Feedback Status" className="col-span-2"><Controller name="filterFeedbackStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={feedbackStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+            <UiFormItem label="Inquiry Date Range" className="col-span-2"><Controller name="filterInquiryDate" control={filterFormMethods.control} render={({ field }) => (<DatePickerRange placeholder="Select Inquiry Dates" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></UiFormItem>
+            <UiFormItem label="Response Date Range" className="col-span-2"><Controller name="filterResponseDate" control={filterFormMethods.control} render={({ field }) => (<DatePickerRange placeholder="Select Response Dates" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></UiFormItem>
           </div>
         </UiForm>
       </Drawer>
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Inquiry" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting}>
         <p>Are you sure you want to delete inquiry "<strong>{itemToDelete?.inquiry_id}</strong>"?</p>
       </ConfirmDialog>
-
-      <ConfirmDialog
-            isOpen={isExportReasonModalOpen}
-            type="info"
-            title="Reason for Export"
-            onClose={() => setIsExportReasonModalOpen(false)}
-            onRequestClose={() => setIsExportReasonModalOpen(false)}
-            onCancel={() => setIsExportReasonModalOpen(false)}
-            onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
-            loading={isSubmittingExportReason}
-            confirmText={isSubmittingExportReason ? 'Submitting...' : 'Submit & Export'}
-            cancelText="Cancel"
-            confirmButtonProps={{
-                disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason,
-            }}
-        >
-            <UiForm 
-                id="exportReasonForm"
-                onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
-                className="flex flex-col gap-4 mt-2"
-            >
-                <FormItem 
-                    label="Please provide a reason for exporting this data:"
-                    invalid={!!exportReasonFormMethods.formState.errors.reason}
-                    errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
-                >
-                    <Controller
-                        name="reason"
-                        control={exportReasonFormMethods.control}
-                        render={({ field }) => (
-                            <Input 
-                                textArea
-                                {...field}
-                                placeholder="Enter reason..."
-                                rows={3}
-                            />
-                        )}
-                    />
-                </FormItem>
-            </UiForm>
-        </ConfirmDialog>
-
-        {/* View Details Modal */}
-        <InquiryViewModal
-            isOpen={isViewDetailsModalOpen}
-            onClose={() => {
-                setIsViewDetailsModalOpen(false);
-                setInquiryToView(null);
-            }}
-            inquiry={inquiryToView}
-        />
-        {/* Action Modals */}
-        <InquiriesModals
-            modalState={modalState}
-            onClose={handleCloseModal}
-            getAllUserDataOptions={getAllUserDataOptions}
-        />
+      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? 'Submitting...' : 'Submit & Export'} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
+        <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
+          <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+          </UiFormItem>
+        </UiForm>
+      </ConfirmDialog>
+      <InquiryViewModal isOpen={isViewDetailsModalOpen} onClose={() => { setIsViewDetailsModalOpen(false); setInquiryToView(null); }} inquiry={inquiryToView} />
+      <InquiriesModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
     </>
   );
 };
@@ -1129,7 +967,9 @@ const InquiryListSelected = () => {
 };
 
 // --- Main Inquiries Page Component ---
-const Inquiries = () => (
+const Inquiries = () =>{
+  const navigate = useNavigate();
+  return (
   <InquiryListProvider>
     <>
       <Container>
@@ -1137,7 +977,12 @@ const Inquiries = () => (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
               <h5>Inquiries</h5>
-              <InquiryListActionTools />
+              <div className="flex flex-col md:flex-row gap-3">
+                <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => {
+                   
+                    navigate("/business-entities/create-inquiry");
+                }}>Add New</Button>
+              </div>
             </div>
             <InquiryListTable />
           </div>
@@ -1147,5 +992,6 @@ const Inquiries = () => (
     </>
   </InquiryListProvider>
 );
+}
 
 export default Inquiries;

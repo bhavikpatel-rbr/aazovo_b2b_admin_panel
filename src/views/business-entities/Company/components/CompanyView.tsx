@@ -35,7 +35,8 @@ import {
   TbBuildingBank,
   TbUsersGroup,
   TbReportMoney,
-  TbLicense
+  TbLicense,
+  TbArrowLeft
 } from 'react-icons/tb';
 
 // Types and Data
@@ -55,7 +56,7 @@ const CompanyProfileHeader = ({ company }: CompanyProfileHeaderProps) => {
   const navigate = useNavigate();
 
   console.log(company, 'company');
-  
+
   if (!company) {
     return <p className="text-center">Company not found.</p>;
   }
@@ -111,6 +112,7 @@ const CompanyProfileHeader = ({ company }: CompanyProfileHeaderProps) => {
         <Button variant="solid" icon={<TbPencil />} onClick={handleEdit}>
           Edit Company
         </Button>
+        <Button icon={<TbArrowLeft />} onClick={() => navigate('/business-entities/company')}>Back to List</Button>
       </div>
     </div>
   );
@@ -130,29 +132,29 @@ type NavigatorComponentProps = {
 };
 
 const CompanyViewNavigator = ({ activeSection, onNavigate }: NavigatorComponentProps) => {
-    return (
-      <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
-        {companyViewNavigationList.map((nav) => (
-          <button
-            type="button"
-            key={nav.link}
-            className={classNames(
-              "cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max flex items-center justify-center gap-2",
-              "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none",
-              {
-                "bg-indigo-50 dark:bg-indigo-700/60 text-indigo-600 dark:text-indigo-200 font-semibold": activeSection === nav.link,
-                "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200": activeSection !== nav.link,
-              }
-            )}
-            onClick={() => onNavigate(nav.link)}
-            title={nav.label}
-          >
-            {nav.icon}
-            <span className="font-medium text-xs sm:text-sm truncate">{nav.label}</span>
-          </button>
-        ))}
-      </div>
-    );
+  return (
+    <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
+      {companyViewNavigationList.map((nav) => (
+        <button
+          type="button"
+          key={nav.link}
+          className={classNames(
+            "cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max flex items-center justify-center gap-2",
+            "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none",
+            {
+              "bg-indigo-50 dark:bg-indigo-700/60 text-indigo-600 dark:text-indigo-200 font-semibold": activeSection === nav.link,
+              "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200": activeSection !== nav.link,
+            }
+          )}
+          onClick={() => onNavigate(nav.link)}
+          title={nav.label}
+        >
+          {nav.icon}
+          <span className="font-medium text-xs sm:text-sm truncate">{nav.label}</span>
+        </button>
+      ))}
+    </div>
+  );
 };
 
 const DetailSection = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode; }) => (
@@ -174,125 +176,127 @@ const InfoPair = ({ label, value }: { label: string; value: React.ReactNode | st
 // --- TAB COMPONENTS ---
 
 const DetailsTab = ({ company }: { company: CompanyItem }) => {
-    return (
-        <div>
-            <DetailSection title="Basic Information" icon={<TbBuilding size={22} />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                    <InfoPair label="Company Code" value={company.company_code} />
-                    <InfoPair label="Ownership Type" value={company.ownership_type} />
-                    <InfoPair label="Owner Name" value={company.owner_name} />
-                    <InfoPair label="Establishment Year" value={company.establishment_year} />
-                    <InfoPair label="No. of Employees" value={company.no_of_employees} />
-                    <InfoPair label="Primary Business" value={company.primary_business_type} />
-                </div>
-            </DetailSection>
-            <DetailSection title="Contact Information" icon={<TbPhone size={22} />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                    <InfoPair label="Primary Email" value={company.primary_email_id} />
-                    <InfoPair label="Primary Contact" value={`${company.primary_contact_number_code} ${company.primary_contact_number}`} />
-                    <InfoPair label="Alternate Email" value={company.alternate_email_id} />
-                    <InfoPair label="Alternate Contact" value={company.alternate_contact_number ? `${company.alternate_contact_number_code} ${company.alternate_contact_number}` : 'N/A'} />
-                    <InfoPair label="Website" value={company.company_website ? <a href={company.company_website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{company.company_website}</a> : 'N/A'} />
-                </div>
-            </DetailSection>
-            <DetailSection title="Address" icon={<TbBuildingBank size={22} />}>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                    <InfoPair label="Full Address" value={company.company_address} />
-                    <InfoPair label="City" value={company.city} />
-                    <InfoPair label="State" value={company.state} />
-                    <InfoPair label="Zip Code" value={company.zip_code} />
-                    <InfoPair label="Country" value={company.country?.name} />
-                    <InfoPair label="Continent" value={company.continent?.name} />
-                </div>
-            </DetailSection>
-            <DetailSection title="Legal & Financial IDs" icon={<TbLicense size={22} />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                    <InfoPair label="GST Number" value={company.gst_number} />
-                    <InfoPair label="PAN Number" value={company.pan_number} />
-                    <InfoPair label="TRN Number" value={company.trn_number} />
-                    <InfoPair label="TAN Number" value={company.tan_number} />
-                </div>
-            </DetailSection>
+  return (
+    <div>
+      <DetailSection title="Basic Information" icon={<TbBuilding size={22} />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <InfoPair label="Company Code" value={company.company_code} />
+          <InfoPair label="Ownership Type" value={company.ownership_type} />
+          <InfoPair label="Owner Name" value={company.owner_name} />
+          <InfoPair label="Establishment Year" value={company.establishment_year} />
+          <InfoPair label="No. of Employees" value={company.no_of_employees} />
+          <InfoPair label="Primary Business" value={company.primary_business_type} />
         </div>
-    );
+      </DetailSection>
+      <DetailSection title="Contact Information" icon={<TbPhone size={22} />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <InfoPair label="Primary Email" value={company.primary_email_id} />
+          <InfoPair label="Primary Contact" value={`${company.primary_contact_number_code} ${company.primary_contact_number}`} />
+          <InfoPair label="Alternate Email" value={company.alternate_email_id} />
+          <InfoPair label="Alternate Contact" value={company.alternate_contact_number ? `${company.alternate_contact_number_code} ${company.alternate_contact_number}` : 'N/A'} />
+          <InfoPair label="Website" value={company.company_website ? <a href={company.company_website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{company.company_website}</a> : 'N/A'} />
+        </div>
+      </DetailSection>
+      <DetailSection title="Address" icon={<TbBuildingBank size={22} />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <InfoPair label="Full Address" value={company.company_address} />
+          <InfoPair label="City" value={company.city} />
+          <InfoPair label="State" value={company.state} />
+          <InfoPair label="Zip Code" value={company.zip_code} />
+          <InfoPair label="Country" value={company.country?.name} />
+          <InfoPair label="Continent" value={company.continent?.name} />
+        </div>
+      </DetailSection>
+      <DetailSection title="Legal & Financial IDs" icon={<TbLicense size={22} />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <InfoPair label="GST Number" value={company.gst_number} />
+          <InfoPair label="PAN Number" value={company.pan_number} />
+          <InfoPair label="TRN Number" value={company.trn_number} />
+          <InfoPair label="TAN Number" value={company.tan_number} />
+        </div>
+      </DetailSection>
+    </div>
+  );
 };
 
 const DocumentsTab = ({ company }: { company: CompanyItem }) => {
-    type DocumentRecord = { id: string; name: string; type: 'Certificate' | 'Billing'; url: string; };
-    
-    const combinedDocs: DocumentRecord[] = [
-        ...(company.company_certificate || []).map(doc => ({ id: `cert-${doc.id}`, name: doc.certificate_name, type: 'Certificate' as const, url: doc.upload_certificate_path })),
-        ...(company.billing_documents || []).map(doc => ({ id: `bill-${doc.id}`, name: doc.document_name, type: 'Billing' as const, url: doc.document || '' })),
-    ];
+  type DocumentRecord = { id: string; name: string; type: 'Certificate' | 'Billing'; url: string; };
 
-    const columns = useMemo<ColumnDef<DocumentRecord>[]>(() => [
-        { header: 'Document Name', accessorKey: 'name', size: 400 },
-        { header: 'Type', accessorKey: 'type', cell: props => <Tag>{props.row.original.type}</Tag> },
-        { header: 'Action', id: 'action', cell: props => (
-            <Tooltip title="Download">
-                <a href={props.row.original.url} target="_blank" rel="noopener noreferrer">
-                    <Button shape="circle" size="sm" icon={<TbDownload />} disabled={!props.row.original.url} />
-                </a>
-            </Tooltip>
-        )}
-    ], []);
+  const combinedDocs: DocumentRecord[] = [
+    ...(company.company_certificate || []).map(doc => ({ id: `cert-${doc.id}`, name: doc.certificate_name, type: 'Certificate' as const, url: doc.upload_certificate_path })),
+    ...(company.billing_documents || []).map(doc => ({ id: `bill-${doc.id}`, name: doc.document_name, type: 'Billing' as const, url: doc.document || '' })),
+  ];
 
-    return <DataTable columns={columns} data={combinedDocs} noData={<p className="text-center">No documents found.</p>} />;
+  const columns = useMemo<ColumnDef<DocumentRecord>[]>(() => [
+    { header: 'Document Name', accessorKey: 'name', size: 400 },
+    { header: 'Type', accessorKey: 'type', cell: props => <Tag>{props.row.original.type}</Tag> },
+    {
+      header: 'Action', id: 'action', cell: props => (
+        <Tooltip title="Download">
+          <a href={props.row.original.url} target="_blank" rel="noopener noreferrer">
+            <Button shape="circle" size="sm" icon={<TbDownload />} disabled={!props.row.original.url} />
+          </a>
+        </Tooltip>
+      )
+    }
+  ], []);
+
+  return <DataTable columns={columns} data={combinedDocs} noData={<p className="text-center">No documents found.</p>} />;
 };
 
 const MembersTab = ({ company }: { company: CompanyItem }) => {
-    type MemberRecord = { id: number; name: string; designation: string; team: string; number: string };
-    const data: MemberRecord[] = company.company_team_members?.map(m => ({ id: m.id, name: m.person_name, designation: m.designation, team: m.team_name, number: m.number })) || [];
+  type MemberRecord = { id: number; name: string; designation: string; team: string; number: string };
+  const data: MemberRecord[] = company.company_team_members?.map(m => ({ id: m.id, name: m.person_name, designation: m.designation, team: m.team_name, number: m.number })) || [];
 
-    const columns = useMemo<ColumnDef<MemberRecord>[]>(() => [
-        { header: "Name", accessorKey: "name" },
-        { header: "Designation", accessorKey: "designation" },
-        { header: "Team", accessorKey: "team" },
-        { header: "Contact Number", accessorKey: "number" },
-    ], []);
-    
-    return <DataTable columns={columns} data={data} noData={<p className="text-center">No team members found.</p>} />;
+  const columns = useMemo<ColumnDef<MemberRecord>[]>(() => [
+    { header: "Name", accessorKey: "name" },
+    { header: "Designation", accessorKey: "designation" },
+    { header: "Team", accessorKey: "team" },
+    { header: "Contact Number", accessorKey: "number" },
+  ], []);
+
+  return <DataTable columns={columns} data={data} noData={<p className="text-center">No team members found.</p>} />;
 };
 
 const BillingTab = ({ company }: { company: CompanyItem }) => {
-    type BankRecord = { id: number; bankName: string; accountNumber: string; ifsc: string; type: string | null };
-    const bankData: BankRecord[] = company.company_bank_details?.map(b => ({ id: b.id, bankName: b.bank_name, accountNumber: b.bank_account_number, ifsc: b.ifsc_code, type: b.type })) || [];
+  type BankRecord = { id: number; bankName: string; accountNumber: string; ifsc: string; type: string | null };
+  const bankData: BankRecord[] = company.company_bank_details?.map(b => ({ id: b.id, bankName: b.bank_name, accountNumber: b.bank_account_number, ifsc: b.ifsc_code, type: b.type })) || [];
 
-    const bankColumns = useMemo<ColumnDef<BankRecord>[]>(() => [
-        { header: "Bank Name", accessorKey: "bankName" },
-        { header: "Account Number", accessorKey: "accountNumber" },
-        { header: "IFSC Code", accessorKey: "ifsc" },
-        { header: "Type", accessorKey: "type", cell: props => <Tag>{props.getValue() as string || 'N/A'}</Tag> },
-    ], []);
+  const bankColumns = useMemo<ColumnDef<BankRecord>[]>(() => [
+    { header: "Bank Name", accessorKey: "bankName" },
+    { header: "Account Number", accessorKey: "accountNumber" },
+    { header: "IFSC Code", accessorKey: "ifsc" },
+    { header: "Type", accessorKey: "type", cell: props => <Tag>{props.getValue() as string || 'N/A'}</Tag> },
+  ], []);
 
-    return (
-        <div>
-            <DetailSection title="Billing Status" icon={<TbReportMoney size={22} />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                    <InfoPair label="Billing Enabled" value={company.enable_billing ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} />
-                    <InfoPair label="KYC Verified" value={company.kyc_verified ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} />
-                    <InfoPair label="Billing Due Date" value={company.due_after_3_months_date ? dayjs(company.due_after_3_months_date).format('D MMM YYYY') : 'N/A'} />
-                </div>
-            </DetailSection>
-            <DetailSection title="Bank Details" icon={<TbBuildingBank size={22} />}>
-                <DataTable columns={bankColumns} data={bankData} noData={<p className="text-center">No bank details found.</p>} />
-            </DetailSection>
+  return (
+    <div>
+      <DetailSection title="Billing Status" icon={<TbReportMoney size={22} />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <InfoPair label="Billing Enabled" value={company.enable_billing ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} />
+          <InfoPair label="KYC Verified" value={company.kyc_verified ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} />
+          <InfoPair label="Billing Due Date" value={company.due_after_3_months_date ? dayjs(company.due_after_3_months_date).format('D MMM YYYY') : 'N/A'} />
         </div>
-    );
+      </DetailSection>
+      <DetailSection title="Bank Details" icon={<TbBuildingBank size={22} />}>
+        <DataTable columns={bankColumns} data={bankData} noData={<p className="text-center">No bank details found.</p>} />
+      </DetailSection>
+    </div>
+  );
 };
 
 const OfficesTab = ({ company }: { company: CompanyItem }) => {
-    type OfficeRecord = { id: number; name: string; type: string; address: string; city: string; state: string; };
-    const data: OfficeRecord[] = company.office_info?.map(o => ({ id: o.id, name: o.office_name, type: o.office_type, address: o.address, city: o.city, state: o.state })) || [];
-    
-    const columns = useMemo<ColumnDef<OfficeRecord>[]>(() => [
-        { header: "Office Name", accessorKey: "name" },
-        { header: "Type", accessorKey: "type" },
-        { header: "Address", accessorKey: "address", size: 300 },
-        { header: "Location", cell: props => `${props.row.original.city}, ${props.row.original.state}` },
-    ], []);
-    
-    return <DataTable columns={columns} data={data} noData={<p className="text-center">No office information found.</p>} />;
+  type OfficeRecord = { id: number; name: string; type: string; address: string; city: string; state: string; };
+  const data: OfficeRecord[] = company.office_info?.map(o => ({ id: o.id, name: o.office_name, type: o.office_type, address: o.address, city: o.city, state: o.state })) || [];
+
+  const columns = useMemo<ColumnDef<OfficeRecord>[]>(() => [
+    { header: "Office Name", accessorKey: "name" },
+    { header: "Type", accessorKey: "type" },
+    { header: "Address", accessorKey: "address", size: 300 },
+    { header: "Location", cell: props => `${props.row.original.city}, ${props.row.original.state}` },
+  ], []);
+
+  return <DataTable columns={columns} data={data} noData={<p className="text-center">No office information found.</p>} />;
 };
 
 
@@ -304,22 +308,22 @@ const CompanyView = () => {
   const [activeSection, setActiveSection] = useState<string>(companyViewNavigationList[0].link);
 
   const { CompanyData } = useSelector(masterSelector);
-    const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch();
   const company = useMemo(() => {
-      if (!id || !CompanyData?.data) return null;
-      return CompanyData?.data.find((c: CompanyItem) => c.id === parseInt(id));
+    if (!id || !CompanyData?.data) return null;
+    return CompanyData?.data.find((c: CompanyItem) => c.id === parseInt(id));
   }, [id, CompanyData?.data]);
-  
+
   useEffect(() => {
     if (CompanyData?.data) { // Data is ready
-        setLoading(false);
+      setLoading(false);
     }
   }, [CompanyData?.data]);
 
   useEffect(() => { dispatch(getCompanyAction()); }, [dispatch]);
   const renderActiveSection = () => {
     if (!company) return <p>Company data is not available.</p>;
-    
+
     switch (activeSection) {
       case "details": return <DetailsTab company={company} />;
       case "documents": return <DocumentsTab company={company} />;
@@ -336,15 +340,15 @@ const CompanyView = () => {
 
   if (!company) {
     return (
-        <Container>
-            <Card className="text-center">
-                <h4 className="mb-4">Company Not Found</h4>
-                <p>The company you are looking for does not exist.</p>
-                <Button className="mt-4" onClick={() => navigate('/business-entities/company-list')}>
-                    Back to List
-                </Button>
-            </Card>
-        </Container>
+      <Container>
+        <Card className="text-center">
+          <h4 className="mb-4">Company Not Found</h4>
+          <p>The company you are looking for does not exist.</p>
+          <Button className="mt-4" onClick={() => navigate('/business-entities/company-list')}>
+            Back to List
+          </Button>
+        </Card>
+      </Container>
     );
   }
 
@@ -357,7 +361,7 @@ const CompanyView = () => {
         <BiChevronRight size={18} />
         <h6 className="font-semibold text-primary-600">{company.company_name}</h6>
       </div>
-      
+
       <Card bodyClass="p-0">
         <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
           <CompanyProfileHeader company={company} />

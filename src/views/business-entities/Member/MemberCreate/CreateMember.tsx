@@ -1901,7 +1901,6 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     label: sc.name,
   }));
 
-  console.log(ProductsData, "allproductOptions");
 
 
   const opportunityOptions = [
@@ -1914,6 +1913,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     { value: "A", label: "A" },
     { value: "B", label: "B" },
     { value: "C", label: "C" },
+    { value: "D", label: "D" },
   ];
   const managerOptions = Employees.map((m: any) => ({
     value: String(m.id),
@@ -2009,7 +2009,7 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
           />
         </FormItem>
         <FormItem
-          label={<div>Interested Categories</div>}
+          label={<div>Interested For</div>}
           invalid={!!errors.interested_in}
           errorMessage={errors.interested_in?.message as string}
         >

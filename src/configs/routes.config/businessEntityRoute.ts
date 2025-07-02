@@ -68,6 +68,15 @@ const businessEntityRoute: Routes = [
         },
     },
     {
+        key: 'businessEntities.member',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/member-view/:id`,
+        component: lazy(() => import('@/views/business-entities/Member/MemberView')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'businessEntities.partner',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/partner`,
         component: lazy(() => import('@/views/business-entities/Partners')),
@@ -116,6 +125,15 @@ const businessEntityRoute: Routes = [
         key: 'businessEntities.inquiries',
         path: `${BUSINESS_ENTITIES_PREFIX_PATH}/create-inquiry`,
         component: lazy(() => import('@/views/business-entities/Inquiries/InquiryCreate/CreateInquiry')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
+        key: 'businessEntities.inquiries',
+        path: `${BUSINESS_ENTITIES_PREFIX_PATH}/inquiry-view/:id`,
+        component: lazy(() => import('@/views/business-entities/Inquiries/InquiryView')),
         authority: [ADMIN, USER],
         meta: {
             pageContainerType: 'contained',

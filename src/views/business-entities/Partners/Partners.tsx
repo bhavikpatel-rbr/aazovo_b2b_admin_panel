@@ -126,7 +126,7 @@ type PartnerFilterFormData = z.infer<typeof partnerFilterFormSchema>;
 
 // --- Zod Schema for Export Reason ---
 const exportReasonSchema = z.object({
-  reason: z.string().min(10, "Reason must be at least 10 characters.").max(255, "Reason cannot exceed 255 characters."),
+  reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
@@ -142,14 +142,13 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- CSV Exporter Utility ---
 const PARTNER_CSV_HEADERS = ["ID", "Name", "Partner Code", "Ownership Type", "Status", "Country", "State", "City", "KYC Verified", "Created Date", "Owner", "Contact Number", "Email", "Website", "GST", "PAN"];
-type PartnerExportItem = { [key: string]: any };
 
 function exportToCsv(filename: string, rows: PartnerItem[]) {
   if (!rows || !rows.length) {
     toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
     return false;
   }
-  const transformedRows: PartnerExportItem[] = rows.map(row => ({
+  const transformedRows = rows.map(row => ({
     id: String(row.id) || "N/A",
     name: row.partner_name || "N/A",
     partner_code: row.partner_code || "N/A",
@@ -167,9 +166,17 @@ function exportToCsv(filename: string, rows: PartnerItem[]) {
     gst_number: row.gst_number || "N/A",
     pan_number: row.pan_number || "N/A",
   }));
+
+  const headerToKeyMap: Record<string, keyof typeof transformedRows[0]> = {
+    "ID": 'id', "Name": 'name', "Partner Code": 'partner_code', "Ownership Type": 'ownership_type',
+    "Status": 'status', "Country": 'country', "State": 'state', "City": 'city', "KYC Verified": 'kyc_verified',
+    "Created Date": 'created_at', "Owner": 'owner_name', "Contact Number": 'primary_contact_number',
+    "Email": 'primary_email_id', "Website": 'partner_website', "GST": 'gst_number', "PAN": 'pan_number'
+  };
+
   const csvContent = [
     PARTNER_CSV_HEADERS.join(','),
-    ...transformedRows.map(row => PARTNER_CSV_HEADERS.map(header => JSON.stringify(row[header.toLowerCase().replace(/ /g, '_')] || '', (key, value) => value === null ? '' : value)).join(','))
+    ...transformedRows.map(row => PARTNER_CSV_HEADERS.map(header => JSON.stringify(row[headerToKeyMap[header]] ?? '')).join(','))
   ].join('\n');
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
@@ -484,19 +491,17 @@ const PartnerListTable = () => {
   };
 
   const handleCardClick = (filterType: string, value: string) => {
-    const newCriteria: PartnerFilterFormData = {
-      filterCreatedDate: [null, null],
-      filterStatus: [], filterOwnershipType: [], filterContinent: [], filterCountry: [],
-      filterState: [], filterCity: [], filterKycVerified: [],
-    };
+    onClearFilters();
     if (filterType === 'status') {
-      newCriteria.filterStatus = [{ value, label: value }];
+        const statusOption = statusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
+        if (statusOption) {
+            setFilterCriteria(prev => ({ ...prev, filterStatus: [statusOption] }));
+        }
     }
-    setFilterCriteria(newCriteria);
     handleSetTableData({ pageIndex: 1, query: "" });
   };
 
-  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+  const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
     let filteredData = [...partnerList];
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selected = filterCriteria.filterStatus.map(s => s.value.toLowerCase()); filteredData = filteredData.filter(p => p.status && selected.includes(p.status.toLowerCase())); }
     if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) { const selected = filterCriteria.filterOwnershipType.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.ownership_type)); }
@@ -507,10 +512,23 @@ const PartnerListTable = () => {
     if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) { const selected = filterCriteria.filterKycVerified.map(k => k.value === "Yes"); filteredData = filteredData.filter(p => selected.includes(p.kyc_verified)); }
     if (filterCriteria.filterCreatedDate?.[0] && filterCriteria.filterCreatedDate?.[1]) { const [start, end] = filterCriteria.filterCreatedDate; end.setHours(23, 59, 59, 999); filteredData = filteredData.filter(p => { const date = new Date(p.created_at); return date >= start && date <= end; }); }
     if (tableData.query) { filteredData = filteredData.filter(i => Object.values(i).some(v => String(v).toLowerCase().includes(tableData.query.toLowerCase()))); }
+  
+  
+   let count = 0;
+
+     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) count++;
+    if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) count++;
+    if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) count++;
+    if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) count++;
+    if (filterCriteria.filterState && filterCriteria.filterState.length > 0) count++;
+    if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) count++;
+    if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) count++;
+   
+
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { filteredData.sort((a, b) => { const av = a[key as keyof PartnerItem] ?? ""; const bv = b[key as keyof PartnerItem] ?? ""; if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); return 0; }); }
     const pI = tableData.pageIndex as number, pS = tableData.pageSize as number;
-    return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData };
+    return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
   }, [partnerList, tableData, filterCriteria]);
 
   const handleSetTableData = useCallback((d: Partial<TableQueries>) => setTableData(p => ({ ...p, ...d })), []);
@@ -518,10 +536,40 @@ const PartnerListTable = () => {
   const handleSelectChange = useCallback((v: number) => handleSetTableData({ pageSize: v, pageIndex: 1 }), [handleSetTableData]);
   const handleSort = useCallback((s: OnSortParam) => handleSetTableData({ sort: s, pageIndex: 1 }), [handleSetTableData]);
   const handleRowSelect = useCallback((c: boolean, r: PartnerItem) => setSelectedPartners(p => c ? [...p, r] : p.filter(i => i.id !== r.id)), [setSelectedPartners]);
-  const handleAllRowSelect = useCallback((c: boolean, r: Row<PartnerItem>[]) => setSelectedPartners(c ? r.map(i => i.original) : []), [setSelectedPartners]);
+  const handleAllRowSelect = useCallback((c: boolean, r: Row<PartnerItem>[]) => {
+    const originalRows = r.map(i => i.original);
+    if(c){
+        setSelectedPartners(prev => [...prev, ...originalRows.filter(o => !prev.some(p => p.id === o.id))]);
+    } else {
+        const currentIds = new Set(originalRows.map(o => o.id));
+        setSelectedPartners(prev => prev.filter(p => !currentIds.has(p.id)));
+    }
+}, [setSelectedPartners]);
 
-  const handleOpenExportReasonModal = () => { /* ... */ };
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { /* ... */ };
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData.length) {
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
+    }
+    exportReasonFormMethods.reset();
+    setIsExportReasonModalOpen(true);
+  };
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const fileName = `partners_export_${new Date().toISOString().split('T')[0]}.csv`;
+    try {
+        await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Partner', file_name: fileName })).unwrap();
+        toast.push(<Notification title="Export Reason Submitted" type="success" />);
+        const success = exportToCsv(fileName, allFilteredAndSortedData);
+        if (success) {
+            setIsExportReasonModalOpen(false);
+        }
+    } catch (error: any) {
+        toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
+    } finally {
+        setIsSubmittingExportReason(false);
+    }
+  };
 
   const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
@@ -574,8 +622,29 @@ const PartnerListTable = () => {
   ], [navigate, openImageViewer, handleOpenModal]);
 
   const [filteredColumns, setFilteredColumns] = useState(columns);
-  const toggleColumn = (checked: boolean, colId: string) => { /* ... */ };
-  const isColumnVisible = (colId: string) => { /* ... */ };
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+        const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+        if (originalColumn) {
+            setFilteredColumns(prev => {
+                const newCols = [...prev, originalColumn];
+                newCols.sort((a, b) => {
+                    const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                    const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                    return indexA - indexB;
+                });
+                return newCols;
+            });
+        }
+    } else {
+        setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+
+  const isColumnVisible = (colId: string) => {
+    return filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  };
+
   const statusOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [partnerList]);
   const ownershipTypeOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.ownership_type))).filter(Boolean).map((t) => ({ value: t, label: t })), [partnerList]);
   const continentOptions = useMemo(() => ContinentsData.map((co) => ({ value: co.name, label: co.name })), [ContinentsData]);
@@ -603,7 +672,7 @@ const PartnerListTable = () => {
             <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}</div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
-          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter</Button>
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
           <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
         </div>
       </div>
@@ -624,9 +693,11 @@ const PartnerListTable = () => {
         </UiForm>
       </Drawer>
       <PartnerModals modalState={modalState} onClose={handleCloseModal} />
-      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
-        <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}>
-          <UiFormItem label="Please provide a reason:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => <Input textArea {...field} placeholder="Enter reason..." rows={3} />} /></UiFormItem>
+      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
+        <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
+          <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+          </UiFormItem>
         </UiForm>
       </ConfirmDialog>
       <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>

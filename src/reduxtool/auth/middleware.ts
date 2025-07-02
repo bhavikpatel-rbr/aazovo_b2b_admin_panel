@@ -1,10 +1,11 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 import { AxiosResponse } from "axios"
 
-import { loginWithEmailAsync } from "./services"
+import { forgotPasswordAsync, loginWithEmailAsync } from "./services"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
 import { logOutAsync } from "../master/services"
+import { apiForgotPassword } from "@/services/AuthService"
 
 /**
  * Logout Action
@@ -110,3 +111,33 @@ export const loginUserByEmailAction = createAsyncThunk<
   }
 )
 
+export const forgotPasswordAction = createAsyncThunk<
+  any,
+  any,
+  { rejectValue: any }
+>(
+    'auth/forgotPassword', // Action type prefix
+    async (data, { rejectWithValue }) => {
+        try {
+            // Call the API service function
+            const response = await forgotPasswordAsync(data)
+
+            // Check for successful response from the API
+            if (response.data && response.data.status) {
+                // Return the successful response data
+                // This will be the payload of the 'fulfilled' action
+                return response.data
+            } else {
+                // If API returns a known error (e.g., status: false)
+                // Use rejectWithValue to send a specific error message
+                return rejectWithValue(response.data.message || 'Invalid request')
+            }
+        } catch (error: any) {
+            // Catch network errors or other exceptions
+            // and send a generic or specific error message
+            return rejectWithValue(
+                error.response?.data?.message || error.message || 'An unknown error occurred'
+            )
+        }
+    }
+)

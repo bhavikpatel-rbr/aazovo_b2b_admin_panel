@@ -44,7 +44,7 @@ export type SelectOption = { value: string; label: string };
 type ContinentFilterSchema = { names: string[]; status: ('Active' | 'Inactive')[]; };
 const continentFormSchema = z.object({ name: z.string().min(1, "Continent name is required.").max(100, "Name cannot exceed 100 characters."), status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }), });
 type ContinentFormData = z.infer<typeof continentFormSchema>;
-const exportReasonSchema = z.object({ reason: z.string().min(1, "Reason for export is required.").max(255, "Reason cannot exceed 255 characters."), });
+const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."), });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 const statusOptions: SelectOption[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
 
