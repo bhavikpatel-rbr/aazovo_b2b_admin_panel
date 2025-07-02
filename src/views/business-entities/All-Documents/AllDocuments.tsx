@@ -474,7 +474,7 @@ const FileRow = (
           </div>
         </div>
       </Table.Td>
-      <Table.Td>{fileSizeUnit(size)}</Table.Td>
+      {/* <Table.Td>{fileSizeUnit(size)}</Table.Td> */}
       <Table.Td>
         <FileType type={fileType} />
       </Table.Td>
@@ -543,7 +543,7 @@ const FileList = ({ fileList, layout, ...rest }: any) => {
         <Table.THead>
           <Table.Tr>
             <Table.Th>File</Table.Th>
-            <Table.Th>Size</Table.Th>
+            {/* <Table.Th>Size</Table.Th> */}
             <Table.Th>Type</Table.Th>
             <Table.Th></Table.Th>
           </Table.Tr>
@@ -755,9 +755,9 @@ const UploadFile = () => {
   };
   return (
     <>
-      <Button variant="solid" onClick={() => setIsOpen(true)}>
+      {/* <Button variant="solid" onClick={() => setIsOpen(true)}>
         Upload
-      </Button>
+      </Button> */}
       <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)}>
         <h4>Upload Files</h4>
         <Upload
