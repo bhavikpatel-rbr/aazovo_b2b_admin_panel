@@ -6,7 +6,7 @@ import Td from '@/components/ui/Table/Td'
 import Tr from '@/components/ui/Table/Tr'
 import { COLOR_1, COLOR_2, COLOR_4 } from '@/constants/chart.constant'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
-import { getCompanyAction, getMemberAction, getProductsAction } from '@/reduxtool/master/middleware'
+import { getCompanyAction, getMemberAction, getpartnerAction, getProductsAction } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
 import { useThemeStore } from '@/store/themeStore'
 import classNames from '@/utils/classNames'
@@ -122,11 +122,12 @@ const Overview = ({ data }: StatisticGroupsProps) => {
     )
 
     const dispatch = useAppDispatch();
-    const { CompanyData, MemberData, ProductsData } = useSelector(masterSelector);
+    const { CompanyData, MemberData, ProductsData, partnerData } = useSelector(masterSelector);
     useEffect(() => {
         dispatch(getCompanyAction());
         dispatch(getMemberAction());
         dispatch(getProductsAction());
+        dispatch(getpartnerAction());
     }, [dispatch]);
 
 
@@ -588,112 +589,96 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                 </div>
             )
         },
-        // {
-        //     header: 'Ratio', accessorKey: 'trustRatio',
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1'>
-        //             <Tag className="flex gap-1 text-xs flex-wrap">
-        //                 <h6 className="text-xs">Approach:</h6> 80%
-        //             </Tag>
-        //             <Tag className="flex gap-1 text-xs">
-        //                 <h6 className="text-xs">Conversion:</h6> {props.row.original.successRatio}
-        //             </Tag>
-        //             <span className="flex gap-1 text-xs flex-wrap">
-        //                 Minimum Buying strong seller profile, focus on selling
-        //             </span>
-        //         </div>
-        //     )
-        // },
 
     ]
+    const getPartnerStatusClass = (statusValue): string => {
+        if (!statusValue) return "bg-gray-200 text-gray-600";
+        const lowerCaseStatus = statusValue.toLowerCase();
+        const partnerStatusColors: Record<string, string> = {
+            active: "bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+            verified: "bg-blue-200 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
+            pending: "bg-orange-200 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
+            inactive: "bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+            "non verified": "bg-yellow-200 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
+        };
+        return partnerStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600";
+    };
+
     const partnerColumns = [
         {
-            header: 'Partner Info',
-            accessorKey: 'name',
-            enableSorting: true,
-            size: 230,
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <h6 className="text-xs">{props.getValue()}</h6>
-                    <span className="text-xs flex">
-                        <h6 className="text-xs"></h6> ({"XYZ Company Name"})
-                    </span>
-                    <span className="text-xs flex gap-1">{props.row.original.type}</span>
-                    <span className="text-xs flex gap-1">xyz@gmail.com</span>
-                    <span className="text-xs flex gap-1">India</span>
+            header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => (
+                <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                        <Avatar src={row.original.partner_logo ? `https://aazovo.codefriend.in/${row.original.partner_logo}` : ''} size="md" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.original.partner_logo || null)} icon={<TbUserCircle />} />
+                        <div>
+                            <h6 className="text-xs font-semibold">{row.original.partner_code}</h6>
+                            <span className="text-xs font-semibold">{row.original.partner_name}</span>
+                        </div>
+                    </div>
+                    <span className="text-xs mt-1"><b>Type:</b> {row.original.ownership_type}</span>
+                    <div className="text-xs text-gray-500">{row.original.city}, {row.original.state}, {row.original.country?.name}</div>
+                </div>
+            ),
+        },
+        {
+            header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }) => (
+                <div className="text-xs flex flex-col gap-0.5">
+                    {row.original.owner_name && <span><b>Owner:</b> {row.original.owner_name}</span>}
+                    {row.original.primary_contact_number && <span>{row.original.primary_contact_number_code} {row.original.primary_contact_number}</span>}
+                    {row.original.primary_email_id && <a href={`mailto:${row.original.primary_email_id}`} className="text-blue-600 hover:underline">{row.original.primary_email_id}</a>}
+                    {row.original.partner_website && <a href={row.original.partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{row.original.partner_website}</a>}
                 </div>
             )
         },
         {
-            header: 'Preferences',
-            accessorKey: 'brands',
-            cell: props => (
-                <div className='flex flex-col gap-1'>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Brands:</h6> {props.row.original.brands?.map(val => {
-                            return <span>{val}, </span>
-                        })}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Category:</h6> {props.row.original.category}
-                    </span>
-                    <span className="text-xs flex gap-1">
-                        <h6 className="text-xs">Interested:</h6> {props.row.original.interested}
-                    </span>
+            header: "Legal IDs & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => (
+                <div className="flex flex-col gap-1 text-[10px]">
+                    {row.original.gst_number && <div><b>GST:</b> <span className="break-all">{row.original.gst_number}</span></div>}
+                    {row.original.pan_number && <div><b>PAN:</b> <span className="break-all">{row.original.pan_number}</span></div>}
+                    <Tag className={`${getPartnerStatusClass(row.original.status)} capitalize mt-1 self-start !text-[10px] px-1.5 py-0.5`}>{row.original.status}</Tag>
                 </div>
             )
         },
         {
-            header: 'Status',
-            accessorKey: 'status',
-            cell: props => (
-                <span className="text-xs">
-                    <Tag className={statusColor[props.row.original.status]}> {props.row.original.status}</Tag>
-                </span>
+            header: "Profile & Scores", size: 190, accessorKey: 'profile_completion', id: 'profile', cell: ({ row }) => (
+                <div className="flex flex-col gap-1.5 text-xs">
+                    <span><b>Teams:</b> {row.original.teams_count || 0}</span>
+                    <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${row.original.kyc_verified ? 'Yes' : 'No'}`}>{row.original.kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}</Tooltip></div>
+                    <Tooltip title={`Profile Completion ${row.original.profile_completion}%`}>
+                        <div className="h-2.5 w-full rounded-full bg-gray-300"><div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${row.original.profile_completion}%` }}></div></div>
+                    </Tooltip>
+                </div>
             )
-        },
-        {
-            header: 'Verified',
-            accessorKey: 'status',
-            size: 100,
+        }, {
+            header: 'Business', accessorKey: 'wallCount',
+            size: 180,
+            meta: { HeaderClass: 'text-center' },
             cell: props => (
-                <span className="text-xs">
-                    <Tag className={statusColor[props.row.original.status]}> Yes</Tag>
-                </span>
-            )
-        },
-        {
-            header: 'Team',
-            accessorKey: 'status',
-            size: 80,
-            cell: props => (
-                <span className="text-xs flex items-center justify-center rounded-full bg-blue-100 
-                text-blue-600 font-semibold w-8 h-8">7</span>
-            )
-        },
-        {
-            header: 'Joined Date',
-            accessorKey: 'status',
-            cell: props => (
-                <span className="text-xs">10 May, 2025</span>
-            )
-        },
-        // {
-        //     header: 'Score', accessorKey: 'trustRatio',
-        //     size: 180,
-        //     cell: props => (
-        //         <div className='flex flex-col gap-1'>
-        //             <Tag className="flex gap-1 text-[10px] flex-wrap">
-        //                 <h6 className="text-[10px]">Trust Score:</h6> 80%
-        //             </Tag>
-        //             <span className="flex gap-1 text-xs flex-wrap">
-        //                 Minimum Buying strong seller profile, focus on selling
-        //             </span>
-        //         </div>
-        //     )
-        // },
+                <div className='flex flex-col gap-4 text-center items-center '>
+                    <Tooltip title="Buy: 13 | Sell: 12 | Total: 25 " className='text-xs'>
+                        <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs 
+                                inline'>
+                            Wall Listing: {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy} | {props?.row?.original?.wall?.buy}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Offers: 34 | Demands: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Opportunities: {props?.row?.original?.opportunities?.offers} | {props?.row?.original?.opportunities?.demands} | {props?.row?.original?.opportunities?.total}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title="Success: 34 | Lost: 12 | Total: 46" className='text-xs'>
+                        <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs 
+                                 inline'>
+                            Leads:  {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total} | {props?.row?.original?.leads?.total}
+                        </div>
+                    </Tooltip>
+                </div>
 
+            )
+        },
     ]
+
     const teamColumns = [
         {
             header: 'Team Info',
@@ -1575,7 +1560,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     />
                                     <DataTable
                                         columns={partnerColumns}
-                                        data={wallListingData}
+                                        data={partnerData?.data || []}
                                     // loading={isLoading}
                                     />
 
