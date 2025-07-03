@@ -582,7 +582,7 @@ const RecipientFilterModal = ({
     [CompanyData]
   );
   const brandOptions = useMemo(() =>
-    BrandData?.map((b: any) => ({ value: String(b.id), label: b.name })),
+    BrandData?.data?.map((b: any) => ({ value: String(b.id), label: b.name })),
     [BrandData]
   );
   const categoryOptions = useMemo(() =>

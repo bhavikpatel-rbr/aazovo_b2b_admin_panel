@@ -1948,7 +1948,7 @@ export const getBuyerListingsAsync = async () => {
 }
 export const getAutoMatchDataAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/opportunity/autospb`)
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity/autospb`)
     return response
   } catch (err) {
     return isAxiosError(err)

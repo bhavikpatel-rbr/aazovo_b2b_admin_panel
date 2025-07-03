@@ -3166,7 +3166,7 @@ export const getAutoMatchDataAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getAutoMatchDataAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)

@@ -948,7 +948,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 <NumericFormat
                                     displayType="text"
                                     thousandSeparator={true}
-                                    value={MemberData.data.length || 0}
+                                    value={MemberData?.data?.length || 0}
                                 />
                             }
                             iconClass="bg-emerald-200"
