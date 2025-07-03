@@ -6,7 +6,7 @@ import classNames from 'classnames'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import dayjs from 'dayjs' // <-- ADDED
+import dayjs from 'dayjs'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -26,8 +26,7 @@ import {
     FormItem as UiFormItem,
 } from '@/components/ui/Form'
 import Badge from '@/components/ui/Badge'
-// MODIFIED: Replaced Drawer with Dialog
-import { DatePicker, Dialog, Dropdown, Select, Input, Drawer } from '@/components/ui'
+import { DatePicker, Dialog, Dropdown, Select, Input, Drawer, Checkbox } from '@/components/ui'
 
 // Icons
 import {
@@ -51,6 +50,7 @@ import {
     TbAlignLeft,
     TbPaperclip,
     TbMessageCircle,
+    TbColumns,
 } from 'react-icons/tb'
 import { BsThreeDotsVertical } from 'react-icons/bs'
 
@@ -70,7 +70,7 @@ import {
     getAllTaskAction,
     submitExportReasonAction,
     addNotificationAction,
-    addScheduleAction, // <-- IMPORT THE ACTION
+    addScheduleAction,
     getAllUsersAction
 } from '@/reduxtool/master/middleware'
 
@@ -103,13 +103,11 @@ export interface TaskItem {
     _originalData?: any
 }
 
-// Type for Select options used in filters
 type FilterSelectOption = {
     value: string
     label: string
 }
-// For Modals
-export type ModalType = 'notification' | 'schedule'; // <-- MODIFIED
+export type ModalType = 'notification' | 'schedule';
 export interface ModalState {
     isOpen: boolean;
     type: ModalType | null;
@@ -121,10 +119,6 @@ export type SelectOption = { value: any; label: string };
 const filterValidationSchema = z.object({
     status: z.array(z.string()).optional().default([]),
     assignTo: z.array(z.string()).optional().default([]),
-    // priority: z.array(z.string()).optional().default([]),
-    // category: z.array(z.string()).optional().default([]),
-    // createdDateRange: z.object({ start: z.date().nullable(), end: z.date().nullable() }).optional(),
-    // dueDateRange: z.object({ start: z.date().nullable(), end: z.date().nullable() }).optional(),
 })
 export type FilterFormSchema = z.infer<typeof filterValidationSchema>
 
@@ -136,13 +130,12 @@ const exportReasonSchema = z.object({
 })
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>
 
-// --- Zod Schema for Schedule Form ---
 const scheduleSchema = z.object({
-  event_title: z.string().min(3, "Title must be at least 3 characters."),
-  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
-  date_time: z.date({ required_error: "Event date & time is required." }),
-  remind_from: z.date().nullable().optional(),
-  notes: z.string().optional(),
+    event_title: z.string().min(3, "Title must be at least 3 characters."),
+    event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+    date_time: z.date({ required_error: "Event date & time is required." }),
+    remind_from: z.date().nullable().optional(),
+    notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
@@ -158,10 +151,10 @@ export const taskStatusColor: Record<TaskStatus, string> = {
 }
 
 const eventTypeOptions = [
-  { value: "Meeting", label: "Meeting" },
-  { value: "Call", label: "Follow-up Call" },
-  { value: "Deadline", label: "Project Deadline" },
-  { value: "Reminder", label: "Reminder" },
+    { value: "Meeting", label: "Meeting" },
+    { value: "Call", label: "Follow-up Call" },
+    { value: "Deadline", label: "Project Deadline" },
+    { value: "Reminder", label: "Reminder" },
 ];
 
 
@@ -184,7 +177,7 @@ const TASK_CSV_HEADERS = [
 type TaskExportItem = {
     id: string
     note: string
-    status: string // Formatted status
+    status: string
     assignToString: string
     createdBy: string
     createdDateFormatted: string
@@ -307,12 +300,11 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
     if (!task) return null
 
     return (
-        // MODIFIED: Replaced Drawer with Dialog
         <Dialog
             isOpen={isOpen}
             onClose={onClose}
-            onRequestClose={onClose} // Assuming Dialog supports this similar to Drawer/ConfirmDialog
-            title={ // Assuming Dialog supports a title prop
+            onRequestClose={onClose}
+            title={
                 <span className="truncate max-w-md">
                     Task Details: {task.note}
                 </span>
@@ -332,9 +324,8 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                     <p className="text-sm flex items-center">
                         <strong>Status:</strong>
                         <Tag
-                            className={`ml-2 text-white capitalize text-xs px-1.5 py-0.5 ${
-                                taskStatusColor[task.status] || 'bg-gray-400'
-                            }`}
+                            className={`ml-2 text-white capitalize text-xs px-1.5 py-0.5 ${taskStatusColor[task.status] || 'bg-gray-400'
+                                }`}
                         >
                             {task.status.replace(/_/g, ' ')}
                         </Tag>
@@ -455,7 +446,7 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                 )}
 
                 {task.attachments && task.attachments.length > 0 && (
-                     <div className="border-b pb-3">
+                    <div className="border-b pb-3">
                         <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1.5">
                             <TbPaperclip className="text-lg text-gray-500" />{' '}
                             Attachments
@@ -481,7 +472,7 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                         </ul>
                     </div>
                 )}
-                 {!task.description && (!task.comments || task.comments.length === 0) && (!task.attachments || task.attachments.length === 0) && (
+                {!task.description && (!task.comments || task.comments.length === 0) && (!task.attachments || task.attachments.length === 0) && (
                     <p className="text-sm text-gray-500 text-center py-4">No additional details, comments, or attachments for this task.</p>
                 )}
             </div>
@@ -536,45 +527,39 @@ export const ActionColumn = ({
                 </div>
             </Tooltip>
             <Dropdown
-            renderTitle={
-                <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
-            }
+                renderTitle={
+                    <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+                }
             >
-            {/* 1. Send Email */}
-            <Dropdown.Item className="flex items-center gap-2">
-                <TbMail size={18} />
-                <span className="text-xs">Send Email</span>
-            </Dropdown.Item>
+                <Dropdown.Item className="flex items-center gap-2">
+                    <TbMail size={18} />
+                    <span className="text-xs">Send Email</span>
+                </Dropdown.Item>
 
-            {/* 2. Send WhatsApp */}
-            <Dropdown.Item className="flex items-center gap-2">
-                <TbBrandWhatsapp size={18} />
-                <span className="text-xs">Send Whatsapp</span>
-            </Dropdown.Item>
+                <Dropdown.Item className="flex items-center gap-2">
+                    <TbBrandWhatsapp size={18} />
+                    <span className="text-xs">Send Whatsapp</span>
+                </Dropdown.Item>
 
-            {/* 3. Add Notification */}
-            <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification')}>
-                <TbBell size={18} />
-                <span className="text-xs">Add Notification</span>
-            </Dropdown.Item>
+                <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification')}>
+                    <TbBell size={18} />
+                    <span className="text-xs">Add Notification</span>
+                </Dropdown.Item>
 
-            {/* 4. Add Schedule */}
-            <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule')}>
-                <TbCalendarEvent size={18} />
-                <span className="text-xs">Add Schedule</span>
-            </Dropdown.Item>
+                <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule')}>
+                    <TbCalendarEvent size={18} />
+                    <span className="text-xs">Add Schedule</span>
+                </Dropdown.Item>
 
-            {/* 5. Add Active */}
-            <Dropdown.Item className="flex items-center gap-2">
-                <TbTagStarred size={18} />
-                <span className="text-xs">Add Active</span>
-            </Dropdown.Item>
+                <Dropdown.Item className="flex items-center gap-2">
+                    <TbTagStarred size={18} />
+                    <span className="text-xs">Add Active</span>
+                </Dropdown.Item>
 
-            {/* 6. Add/View Activity */}
-            <Dropdown.Item className="flex items-center gap-2">
-                <TbActivity size={18} />
-                <span className="text-xs">Add / View Activity</span>
-            </Dropdown.Item>
+                <Dropdown.Item className="flex items-center gap-2">
+                    <TbActivity size={18} />
+                    <span className="text-xs">Add / View Activity</span>
+                </Dropdown.Item>
             </Dropdown>
 
         </div>
@@ -700,15 +685,8 @@ export const TaskFilter = ({
         <>
             <Button icon={<TbFilter />} onClick={openDialog} className="relative">
                 <span>Filter</span>{' '}
-                {activeFilterCount > 0 && (
-                    <Badge
-                        content={activeFilterCount}
-                        className="absolute -top-2 -right-2"
-                        innerClass="text-xs"
-                    />
-                )}
+                {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
             </Button>
-            {/* MODIFIED: This Drawer is for filters, not the TaskView. Kept as is. */}
             <Drawer
                 title="Filters"
                 isOpen={dialogIsOpen}
@@ -752,8 +730,8 @@ export const TaskFilter = ({
                                         field.onChange(
                                             selectedVal
                                                 ? selectedVal.map(
-                                                      (opt: any) => opt.value,
-                                                  )
+                                                    (opt: any) => opt.value,
+                                                )
                                                 : [],
                                         )
                                     }
@@ -778,8 +756,8 @@ export const TaskFilter = ({
                                         field.onChange(
                                             selectedVal
                                                 ? selectedVal.map(
-                                                      (opt: any) => opt.value,
-                                                  )
+                                                    (opt: any) => opt.value,
+                                                )
                                                 : [],
                                         )
                                     }
@@ -788,15 +766,12 @@ export const TaskFilter = ({
                             )}
                         />
                     </UiFormItem>
-                    {/* Placeholder for DatePickers if needed */}
-                     <UiFormItem label="Created Date">
-                        <DatePicker.DatePickerRange placeholder="Select Date Range" 
-                        // value={field.value} onChange={field.onChange} 
+                    <UiFormItem label="Created Date">
+                        <DatePicker.DatePickerRange placeholder="Select Date Range"
                         />
                     </UiFormItem>
-                     <UiFormItem label="Due Date">
-                        <DatePicker.DatePickerRange placeholder="Select Date Range" 
-                        // value={field.value} onChange={field.onChange} 
+                    <UiFormItem label="Due Date">
+                        <DatePicker.DatePickerRange placeholder="Select Date Range"
                         />
                     </UiFormItem>
                 </UiFormComponents>
@@ -813,6 +788,9 @@ export const TaskTableTools = ({
     uniqueStatuses,
     onExport,
     onClearFilters,
+    columns,
+    visibleColumns,
+    onColumnToggle,
 }: {
     onSearchChange: (query: string) => void
     filterData: FilterFormSchema
@@ -821,20 +799,58 @@ export const TaskTableTools = ({
     uniqueStatuses: TaskStatus[]
     onExport: () => void
     onClearFilters: () => void
+    columns: ColumnDef<TaskItem>[]
+    visibleColumns: ColumnDef<TaskItem>[]
+    onColumnToggle: (checked: boolean, colId: string) => void
 }) => {
+    const isColumnVisible = (colId: string) =>
+        visibleColumns.some((c) => (c.id || c.accessorKey) === colId)
+
     return (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
             <div className="flex-grow">
                 <TaskSearch onInputChange={onSearchChange} />
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-                <Tooltip title="Clear Filters">
+                <Dropdown
+                    renderTitle={
+                        <Button
+                            icon={<TbColumns />}
+                           
+                        />
+                    }
+                    placement="bottom-end"
+                >
+                    <div className="flex flex-col p-2">
+                        <div className="font-semibold mb-1 border-b pb-1">
+                            Toggle Columns
+                        </div>
+                        {columns.map((col) => {
+                            const id = col.id || (col.accessorKey as string)
+                            if (!col.header) return null
+                            return (
+                                <div
+                                    key={id}
+                                    className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"
+                                >
+                                    <Checkbox
+                                        checked={isColumnVisible(id)}
+                                        onChange={(checked) =>
+                                            onColumnToggle(checked, id)
+                                        }
+                                    >
+                                        {col.header as string}
+                                    </Checkbox>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </Dropdown>
+                <Tooltip title="Clear Filters & Reload">
                     <Button
                         icon={<TbReload />}
                         onClick={onClearFilters}
-                        variant="plain"
-                        shape="circle"
-                        size="sm"
+
                     />
                 </Tooltip>
                 <TaskFilter
@@ -967,9 +983,8 @@ export const TaskSelected = ({
             <ConfirmDialog
                 isOpen={deleteConfirmationOpen}
                 type="danger"
-                title={`Delete ${selectedTasks.length} Task${
-                    selectedTasks.length > 1 ? 's' : ''
-                }`}
+                title={`Delete ${selectedTasks.length} Task${selectedTasks.length > 1 ? 's' : ''
+                    }`}
                 onClose={handleCancelDelete}
                 onRequestClose={handleCancelDelete}
                 onCancel={handleCancelDelete}
@@ -1078,74 +1093,74 @@ const AddNotificationDialog = ({ task, onClose, getAllUserDataOptions }: { task:
 
 // --- AddScheduleDialog Component ---
 const AddScheduleDialog: React.FC<{ task: TaskItem; onClose: () => void }> = ({ task, onClose }) => {
-  const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
 
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
-    resolver: zodResolver(scheduleSchema),
-    defaultValues: {
-      event_title: `Regarding Task: ${task.note}`,
-      event_type: undefined,
-      date_time: null as any,
-      remind_from: null,
-      notes: `Details for task "${task.note}".`,
-    },
-    mode: 'onChange',
-  });
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+        resolver: zodResolver(scheduleSchema),
+        defaultValues: {
+            event_title: `Regarding Task: ${task.note}`,
+            event_type: undefined,
+            date_time: null as any,
+            remind_from: null,
+            notes: `Details for task "${task.note}".`,
+        },
+        mode: 'onChange',
+    });
 
-  const onAddEvent = async (data: ScheduleFormData) => {
-    setIsLoading(true);
-    const payload = {
-      module_id: Number(task.id),
-      module_name: 'Task',
-      event_title: data.event_title,
-      event_type: data.event_type,
-      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
-      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
-      notes: data.notes || '',
+    const onAddEvent = async (data: ScheduleFormData) => {
+        setIsLoading(true);
+        const payload = {
+            module_id: Number(task.id),
+            module_name: 'Task',
+            event_title: data.event_title,
+            event_type: data.event_type,
+            date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+            ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+            notes: data.notes || '',
+        };
+
+        try {
+            await dispatch(addScheduleAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for task "${task.note}".`} />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    try {
-      await dispatch(addScheduleAction(payload)).unwrap();
-      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for task "${task.note}".`} />);
-      onClose();
-    } catch (error: any) {
-      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Schedule for Task: {task.note}</h5>
-      <UiFormComponents onSubmit={handleSubmit(onAddEvent)}>
-        <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
-          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
-        </UiFormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
-            <Controller name="event_type" control={control} render={({ field }) => (
-              <Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
-            )} />
-          </UiFormItem>
-          <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
-            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-          </UiFormItem>
-        </div>
-        <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
-          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-        </UiFormItem>
-        <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
-        </UiFormItem>
-        <div className="text-right mt-6">
-          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
-        </div>
-      </UiFormComponents>
-    </Dialog>
-  );
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Add Schedule for Task: {task.note}</h5>
+            <UiFormComponents onSubmit={handleSubmit(onAddEvent)}>
+                <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+                    <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+                </UiFormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+                        <Controller name="event_type" control={control} render={({ field }) => (
+                            <Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
+                        )} />
+                    </UiFormItem>
+                    <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+                        <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+                    </UiFormItem>
+                </div>
+                <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+                    <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+                </UiFormItem>
+                <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+                    <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+                </UiFormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+                </div>
+            </UiFormComponents>
+        </Dialog>
+    );
 };
 
 
@@ -1179,9 +1194,8 @@ const transformApiTaskToTaskItem = (apiTask: any): TaskItem => {
         Array.isArray(apiTask.assign_to) &&
         apiTask.assign_to.length > 0
     ) {
-        // Fallback if assign_to_users is not present but assign_to (array of IDs) is
         assignToArray = apiTask.assign_to.map(
-            (id: string) => `User ID ${id}`, // Placeholder, real app might map IDs to names
+            (id: string) => `User ID ${id}`,
         )
     }
 
@@ -1190,11 +1204,10 @@ const transformApiTaskToTaskItem = (apiTask: any): TaskItem => {
     let transformedStatus = statusString
         .toLowerCase()
         .replace(/\s+/g, '_') as TaskStatus
-    
-    // Ensure the transformed status is a valid TaskStatus enum member
+
     const validStatuses: TaskStatus[] = ['completed', 'on_hold', 'pending', 'cancelled', 'in_progress', 'review', 'not_started'];
     if (!validStatuses.includes(transformedStatus)) {
-        transformedStatus = 'pending'; // Default to pending if unknown
+        transformedStatus = 'pending';
     }
 
 
@@ -1260,6 +1273,7 @@ export const useTaskListingLogic = () => {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false)
     const [viewingTask, setViewingTask] = useState<TaskItem | null>(null)
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
+    const [visibleColumns, setVisibleColumns] = useState<ColumnDef<TaskItem>[]>([])
 
 
     const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
@@ -1480,10 +1494,10 @@ export const useTaskListingLogic = () => {
     )
     const handleChangeStatus = useCallback(
         (taskToUpdate: TaskItem, newStatus: TaskStatus = 'completed') => {
-            setTasks(prevTasks => prevTasks.map(task => 
+            setTasks(prevTasks => prevTasks.map(task =>
                 task.id === taskToUpdate.id ? { ...task, status: newStatus } : task
             ));
-            toast.push(<Notification title="Status Updated" type="success" message={`Task "${taskToUpdate.note}" marked as ${newStatus.replace(/_/g, " ")}.`} />);
+            toast.push(<Notification title="Status Updated" type="success" children={`Task "${taskToUpdate.note}" marked as ${newStatus.replace(/_/g, " ")}.`} />);
         },
         [setTasks]
     );
@@ -1537,7 +1551,7 @@ export const useTaskListingLogic = () => {
                 <Notification
                     title="Failed to Submit Reason"
                     type="danger"
-                    message={error.message || 'Unknown error occurred'}
+                    children={error.message || 'Unknown error occurred'}
                 />,
             )
         } finally {
@@ -1554,7 +1568,7 @@ export const useTaskListingLogic = () => {
         setIsViewModalOpen(false)
         setViewingTask(null)
     }, [])
-    
+
     const handleOpenModal = useCallback((type: ModalType, itemData: TaskItem) => {
         setModalState({ isOpen: true, type, data: itemData });
     }, []);
@@ -1589,7 +1603,7 @@ export const useTaskListingLogic = () => {
                                     {createdBy}
                                 </span>
                                 <span className="text-gray-500 dark:text-gray-400">
-                                  {(props.row.original._originalData as any)?.created_by_user?.roles?.[0]?.display_name || ''}
+                                    {(props.row.original._originalData as any)?.created_by_user?.roles?.[0]?.display_name || ''}
                                 </span>
                             </div>
                         </div>
@@ -1625,7 +1639,7 @@ export const useTaskListingLogic = () => {
             },
             {
                 header: 'Details',
-                accessorKey: 'category', // Can sort by category
+                accessorKey: 'category',
                 enableSorting: true,
                 size: 200,
                 cell: (props) => {
@@ -1655,14 +1669,14 @@ export const useTaskListingLogic = () => {
             {
                 header: 'Assigned To',
                 accessorKey: 'assignTo',
-                enableSorting: false, // Sorting array of strings is non-trivial for display
+                enableSorting: false,
                 size: 150,
                 cell: (props) => {
                     const task = props.row.original
                     return (
                         <div className="flex flex-col gap-1.5 items-start">
                             {Array.isArray(task.assignTo) &&
-                            task.assignTo.length > 0 ? (
+                                task.assignTo.length > 0 ? (
                                 <Avatar.Group
                                     chained
                                     maxCount={3}
@@ -1697,7 +1711,7 @@ export const useTaskListingLogic = () => {
                                 className={classNames(
                                     `text-white capitalize text-xs px-2 py-0.5`,
                                     taskStatusColor[task.status] ||
-                                        'bg-gray-400',
+                                    'bg-gray-400',
                                 )}
                             >
                                 {task.status.replace(/_/g, ' ')}
@@ -1724,6 +1738,58 @@ export const useTaskListingLogic = () => {
         [handleEdit, handleDelete, handleChangeStatus, handleOpenViewModal, handleOpenModal],
     )
 
+    useEffect(() => {
+        setVisibleColumns(columns)
+    }, [columns])
+
+    const handleCardClick = useCallback(
+        (status: TaskStatus | 'all') => {
+            const defaultFilters = filterValidationSchema.parse({})
+            if (status === 'all') {
+                setFilterData(defaultFilters)
+            } else {
+                setFilterData({ ...defaultFilters, status: [status] })
+            }
+            handleSetTableData({ pageIndex: 1, query: '' })
+            setSelectedTasks([])
+        },
+        [handleSetTableData],
+    )
+
+    const handleColumnToggle = useCallback(
+        (checked: boolean, colId: string) => {
+            if (checked) {
+                const originalColumn = columns.find(
+                    (c) => (c.id || c.accessorKey) === colId,
+                )
+                if (originalColumn) {
+                    setVisibleColumns((prev) => {
+                        const newCols = [...prev, originalColumn]
+                        newCols.sort((a, b) => {
+                            const indexA = columns.findIndex(
+                                (c) =>
+                                    (c.id || c.accessorKey) ===
+                                    (a.id || a.accessorKey),
+                            )
+                            const indexB = columns.findIndex(
+                                (c) =>
+                                    (c.id || c.accessorKey) ===
+                                    (b.id || b.accessorKey),
+                            )
+                            return indexA - indexB
+                        })
+                        return newCols
+                    })
+                }
+            } else {
+                setVisibleColumns((prev) =>
+                    prev.filter((c) => (c.id || c.accessorKey) !== colId),
+                )
+            }
+        },
+        [columns],
+    )
+
     return {
         isLoading,
         tasks,
@@ -1736,6 +1802,7 @@ export const useTaskListingLogic = () => {
         total,
         allFilteredAndSortedData,
         columns,
+        visibleColumns,
         handlePaginationChange,
         handleSelectChange,
         handleSort,
@@ -1760,8 +1827,147 @@ export const useTaskListingLogic = () => {
         handleCloseViewModal,
         modalState,
         handleCloseModal,
-        getAllUserDataOptions
+        getAllUserDataOptions,
+        handleCardClick,
+        handleColumnToggle,
     }
+}
+
+// --- StatusSummaryCards Component ---
+interface StatusSummaryCardsProps {
+    tasks: TaskItem[]
+    onCardClick: (status: TaskStatus | 'all') => void
+}
+
+const StatusSummaryCards: React.FC<StatusSummaryCardsProps> = ({
+    tasks,
+    onCardClick,
+}) => {
+    const stats = useMemo(() => {
+        const total = tasks.length
+        const pending = tasks.filter((t) => t.status === 'pending').length
+        const in_progress = tasks.filter(
+            (t) => t.status === 'in_progress',
+        ).length
+        const completed = tasks.filter((t) => t.status === 'completed').length
+        return { total, pending, in_progress, completed }
+    }, [tasks])
+
+    const cardClass =
+        'rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg'
+    const cardBodyClass = 'flex items-center gap-4 p-4'
+    const iconWrapperClass = 'p-3 rounded-full'
+
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Tooltip title="Click to show all tasks">
+                <div onClick={() => onCardClick('all')}>
+                    <AdaptiveCard
+                        bodyClass={cardBodyClass}
+                        className={classNames(
+                            cardClass,
+                            'border-blue-200 dark:border-blue-700',
+                        )}
+                    >
+                        <div
+                            className={classNames(
+                                iconWrapperClass,
+                                'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+                            )}
+                        >
+                            <TbActivity size={24} />
+                        </div>
+                        <div>
+                            <h6 className="font-semibold">{stats.total}</h6>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Total Tasks
+                            </p>
+                        </div>
+                    </AdaptiveCard>
+                </div>
+            </Tooltip>
+            <Tooltip title="Click to show 'Pending' tasks">
+                <div onClick={() => onCardClick('pending')}>
+                    <AdaptiveCard
+                        bodyClass={cardBodyClass}
+                        className={classNames(
+                            cardClass,
+                            'border-amber-200 dark:border-amber-700',
+                        )}
+                    >
+                        <div
+                            className={classNames(
+                                iconWrapperClass,
+                                'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
+                            )}
+                        >
+                            <TbBell size={24} />
+                        </div>
+                        <div>
+                            <h6 className="font-semibold">{stats.pending}</h6>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Pending
+                            </p>
+                        </div>
+                    </AdaptiveCard>
+                </div>
+            </Tooltip>
+            <Tooltip title="Click to show 'In Progress' tasks">
+                <div onClick={() => onCardClick('in_progress')}>
+                    <AdaptiveCard
+                        bodyClass={cardBodyClass}
+                        className={classNames(
+                            cardClass,
+                            'border-sky-200 dark:border-sky-700',
+                        )}
+                    >
+                        <div
+                            className={classNames(
+                                iconWrapperClass,
+                                'bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-100',
+                            )}
+                        >
+                            <TbReload size={24} />
+                        </div>
+                        <div>
+                            <h6 className="font-semibold">
+                                {stats.in_progress}
+                            </h6>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                In Progress
+                            </p>
+                        </div>
+                    </AdaptiveCard>
+                </div>
+            </Tooltip>
+            <Tooltip title="Click to show 'Completed' tasks">
+                <div onClick={() => onCardClick('completed')}>
+                    <AdaptiveCard
+                        bodyClass={cardBodyClass}
+                        className={classNames(
+                            cardClass,
+                            'border-emerald-200 dark:border-emerald-700',
+                        )}
+                    >
+                        <div
+                            className={classNames(
+                                iconWrapperClass,
+                                'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+                            )}
+                        >
+                            <TbChecks size={24} />
+                        </div>
+                        <div>
+                            <h6 className="font-semibold">{stats.completed}</h6>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Completed
+                            </p>
+                        </div>
+                    </AdaptiveCard>
+                </div>
+            </Tooltip>
+        </div>
+    )
 }
 
 // --- Main TaskList Component ---
@@ -1769,6 +1975,7 @@ const TaskList = () => {
     const pageTitle = 'Task List'
     const {
         isLoading,
+        tasks,
         tableData,
         selectedTasks,
         setSelectedTasks,
@@ -1776,6 +1983,7 @@ const TaskList = () => {
         pageData,
         total,
         columns,
+        visibleColumns,
         handlePaginationChange,
         handleSelectChange,
         handleSort,
@@ -1799,7 +2007,9 @@ const TaskList = () => {
         handleCloseViewModal,
         modalState,
         handleCloseModal,
-        getAllUserDataOptions
+        getAllUserDataOptions,
+        handleCardClick,
+        handleColumnToggle,
     } = useTaskListingLogic()
 
     return (
@@ -1810,6 +2020,12 @@ const TaskList = () => {
                         <h5 className="mb-4 lg:mb-0">{pageTitle}</h5>
                         <TaskListActionTools pageTitle={pageTitle} />
                     </div>
+
+                    <StatusSummaryCards
+                        tasks={tasks}
+                        onCardClick={handleCardClick}
+                    />
+
                     <div className="mb-2">
                         <TaskTableTools
                             onSearchChange={handleSearchChange}
@@ -1819,6 +2035,9 @@ const TaskList = () => {
                             uniqueStatuses={uniqueStatuses}
                             onExport={handleOpenExportReasonModal}
                             onClearFilters={handleClearAllFilters}
+                            columns={columns}
+                            visibleColumns={visibleColumns}
+                            onColumnToggle={handleColumnToggle}
                         />
                     </div>
                     <ActiveFiltersDisplay
@@ -1828,7 +2047,7 @@ const TaskList = () => {
                     />
                     <div className="flex-grow overflow-auto">
                         <TaskTable
-                            columns={columns}
+                            columns={visibleColumns}
                             data={pageData}
                             loading={isLoading}
                             pagingData={{
@@ -1916,7 +2135,7 @@ const TaskList = () => {
                 isOpen={isViewModalOpen}
                 onClose={handleCloseViewModal}
             />
-            
+
             <TaskModals
                 modalState={modalState}
                 onClose={handleCloseModal}
