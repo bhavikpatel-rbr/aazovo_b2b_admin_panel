@@ -810,7 +810,7 @@ const CompanyDetailsSection = ({
           {companyLogoValue && (
             <div className="mt-2">
               {companyLogoValue instanceof File ? (<img src={URL.createObjectURL(companyLogoValue)} alt="logo preview" className="h-16 w-auto object-contain border rounded" />)
-              : typeof companyLogoValue === 'string' ? (<img src={`https://aazovo.codefriend.in/${companyLogoValue}`} alt="logo preview" className="h-16 w-auto object-contain border rounded" />)
+              : typeof companyLogoValue === 'string' ? (<img src={`${companyLogoValue}`} alt="logo preview" className="h-16 w-auto object-contain border rounded" />)
               : null}
             </div>
           )}
@@ -841,7 +841,7 @@ const CompanyDetailsSection = ({
                 {uploadCertificateValue && (
                   <div className="mt-1">
                     {uploadCertificateValue instanceof File ? (<span className="text-sm text-gray-500">{uploadCertificateValue.name}</span>)
-                    : typeof uploadCertificateValue === 'string' ? (<a href={`https://aazovo.codefriend.in/${uploadCertificateValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
+                    : typeof uploadCertificateValue === 'string' ? (<a href={`${uploadCertificateValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
                     : null}
                   </div>
                 )}
@@ -946,11 +946,11 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                   {isImageFile(fileValue) ? (
                     <img src={URL.createObjectURL(fileValue)} alt="Preview" className="h-20 w-auto object-contain border rounded p-1" />
                   ) : isImageUrl(fileValue) ? (
-                    <img src={`https://aazovo.codefriend.in/${fileValue}`} alt="Preview" className="h-20 w-auto object-contain border rounded p-1" />
+                    <img src={`${fileValue}`} alt="Preview" className="h-20 w-auto object-contain border rounded p-1" />
                   ) : (
                     <div className="text-xs">
                       {typeof fileValue === "string" ? (
-                        <a href={`https://aazovo.codefriend.in/${fileValue}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline"> View Document </a>
+                        <a href={`${fileValue}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline"> View Document </a>
                       ) : (
                         <p className="text-gray-600 dark:text-gray-300">{(fileValue as File).name}</p>
                       )}
@@ -997,7 +997,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
           {primaryBankPhotoValue && (
             <div className="mt-1">
                 {primaryBankPhotoValue instanceof File ? (<img src={URL.createObjectURL(primaryBankPhotoValue)} alt="Primary bank photo" className="h-16 w-auto"/>)
-                : typeof primaryBankPhotoValue === 'string' ? (<img src={`https://aazovo.codefriend.in/${primaryBankPhotoValue}`} alt="Primary bank photo" className="h-16 w-auto"/>)
+                : typeof primaryBankPhotoValue === 'string' ? (<img src={`${primaryBankPhotoValue}`} alt="Primary bank photo" className="h-16 w-auto"/>)
                 : null}
             </div>
           )}
@@ -1021,7 +1021,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
            {secondaryBankPhotoValue && (
              <div className="mt-1">
                 {secondaryBankPhotoValue instanceof File ? (<img src={URL.createObjectURL(secondaryBankPhotoValue)} alt="Secondary bank photo" className="h-16 w-auto"/>)
-                : typeof secondaryBankPhotoValue === 'string' ? (<img src={`https://aazovo.codefriend.in/${secondaryBankPhotoValue}`} alt="Secondary bank photo" className="h-16 w-auto"/>)
+                : typeof secondaryBankPhotoValue === 'string' ? (<img src={`${secondaryBankPhotoValue}`} alt="Secondary bank photo" className="h-16 w-auto"/>)
                 : null}
             </div>
            )}
@@ -1056,7 +1056,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                  {bankPhotoValue && (
                     <div className="mt-1">
                         {bankPhotoValue instanceof File ? (<img src={URL.createObjectURL(bankPhotoValue)} alt={`Bank ${index + 1} photo`} className="h-16 w-auto"/>)
-                        : typeof bankPhotoValue === 'string' ? (<img src={`https://aazovo.codefriend.in/${bankPhotoValue}`} alt={`Bank ${index + 1} photo`} className="h-16 w-auto"/>)
+                        : typeof bankPhotoValue === 'string' ? (<img src={`${bankPhotoValue}`} alt={`Bank ${index + 1} photo`} className="h-16 w-auto"/>)
                         : null}
                     </div>
                  )}
@@ -1097,7 +1097,7 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
                 {photoValue && (
                   <div className="mt-1">
                     {photoValue instanceof File ? (<span className="text-sm text-gray-500">{photoValue.name}</span>)
-                    : typeof photoValue === 'string' ? (<a href={`https://aazovo.codefriend.in/${photoValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
+                    : typeof photoValue === 'string' ? (<a href={`${photoValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
                     : null}
                   </div>
                 )}
@@ -1196,7 +1196,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
                   {docFileValue && (
                      <div className="mt-1">
                         {docFileValue instanceof File ? (<span className="text-sm text-gray-500">{docFileValue.name}</span>)
-                        : typeof docFileValue === 'string' ? (<a href={`https://aazovo.codefriend.in/${docFileValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
+                        : typeof docFileValue === 'string' ? (<a href={`${docFileValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
                         : null}
                     </div>
                   )}

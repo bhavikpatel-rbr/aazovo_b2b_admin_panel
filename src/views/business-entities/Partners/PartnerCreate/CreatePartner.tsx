@@ -1081,7 +1081,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           {typeof companyLogoBrochureValue === "string" &&
             companyLogoBrochureValue && (
               <img
-                src={`https://aazovo.codefriend.in/${companyLogoBrochureValue}`}
+                src={`${companyLogoBrochureValue}`}
                 alt="logo preview"
                 className="mt-2 h-16 w-auto"
               />
@@ -1161,7 +1161,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
                 {typeof uploadCertificateValue === "string" &&
                   uploadCertificateValue && (
                     <a
-                      href={`https://aazovo.codefriend.in/${uploadCertificateValue}`}
+                      href={`${uploadCertificateValue}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-blue-500 hover:underline mt-1 inline-block"
@@ -1306,7 +1306,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                     />
                   ) : isImageUrl(fileValue) ? (
                     <img
-                      src={`https://aazovo.codefriend.in/${fileValue}`}
+                      src={`${fileValue}`}
                       alt="Preview"
                       className="h-24 w-auto object-contain border rounded p-1"
                     />
@@ -1314,7 +1314,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                     <div className="text-sm">
                       {typeof fileValue === "string" ? (
                         <a
-                          href={`https://aazovo.codefriend.in/${fileValue}`}
+                          href={`${fileValue}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-500 hover:underline"
@@ -1422,7 +1422,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
           {typeof primaryBankPhotoValue === "string" &&
             primaryBankPhotoValue && (
               <img
-                src={`https://aazovo.codefriend.in/${primaryBankPhotoValue}`}
+                src={`${primaryBankPhotoValue}`}
                 alt="Primary bank photo"
                 className="mt-2 h-16 w-auto"
               />
@@ -1477,7 +1477,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
           {typeof secondaryBankPhotoValue === "string" &&
             secondaryBankPhotoValue && (
               <img
-                src={`https://aazovo.codefriend.in/${secondaryBankPhotoValue}`}
+                src={`${secondaryBankPhotoValue}`}
                 alt="Secondary bank photo"
                 className="mt-2 h-16 w-auto"
               />
@@ -1569,7 +1569,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                 />
                 {typeof bankPhotoValue === "string" && bankPhotoValue && (
                   <img
-                    src={`https://aazovo.codefriend.in/${bankPhotoValue}`}
+                    src={`${bankPhotoValue}`}
                     alt={`Bank ${index + 1} photo`}
                     className="mt-2 h-16 w-auto"
                   />
