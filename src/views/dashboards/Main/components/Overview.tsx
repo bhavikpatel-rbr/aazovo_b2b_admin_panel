@@ -869,7 +869,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
         <Card>
             <div className="flex items-center justify-between">
                 <h4>Overview</h4>
-                <div className='flex gap-2'>
+                {/* <div className='flex gap-2'>
                     <Select
                         className="w-auto"
                         size="sm"
@@ -917,7 +917,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             { label: "Food", value: "Food" },
                         ]}
                     />
-                </div>
+                </div> */}
             </div>
 
             <section className='block  gap-4 w-full'>
@@ -1495,37 +1495,37 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
                                             field="Total"
-                                            percent={CompanyData?.counts?.verified || 0}
+                                            percent={partnerData?.counts?.total || 0}
                                             color='text-[#6610f2]'
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Active"
-                                            percent={CompanyData?.counts?.verified || 0}
+                                            percent={partnerData?.counts?.active || 0}
                                             color='text-[#2ecc71]'
                                             className="bg-[#2ecc71] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Unregistered"
-                                            percent={CompanyData?.counts?.verified || 0}
+                                            percent={partnerData?.counts?.unregistered || 0}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Disabled"
-                                            percent={28}
+                                            percent={partnerData?.counts?.disabled || 0}
                                             color='text-[#6c757d]'
                                             className="bg-[#6c757d] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Verified"
-                                            percent={CompanyData?.counts?.verified || 0}
+                                            percent={partnerData?.counts?.verified || 0}
                                             color='text-[#6610f2]'
                                             className="bg-[#6610f2] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Unverified"
-                                            percent={CompanyData?.counts?.verified || 0}
+                                            percent={partnerData?.counts?.unverified || 0}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
@@ -1631,37 +1631,37 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar
                                             field="Active"
-                                            percent={CompanyData?.counts?.verified || 0}
+                                            percent={Employees?.counts?.active || 0}
                                             color='text-[#2ecc71]'
                                             className="bg-[#2ecc71] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Disabled"
-                                            percent={28}
+                                            percent={Employees?.counts?.disabled || 0}
                                             color='text-[#e74c3c]'
                                             className="bg-[#e74c3c] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Blocked"
-                                            percent={CompanyData?.counts?.verified || 0}
+                                            percent={Employees?.counts?.blocked || 0}
                                             color='text-[#fd7e14]'
                                             className="bg-[#fd7e14] dark:opacity-70"
                                         />
                                         <Bar
                                             field="On Notice"
-                                            percent={32}
+                                            percent={Employees?.counts?.onnotice || 0}
                                             color='text-[#ffc107]'
                                             className="bg-[#ffc107] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Departments"
-                                            percent={28}
+                                            percent={Employees?.counts?.department || 0}
                                             color='text-[#6c757d]'
                                             className="bg-[#6c757d] dark:opacity-70"
                                         />
                                         <Bar
                                             field="Designations"
-                                            percent={CompanyData?.counts?.verified || 0}
+                                            percent={Employees?.counts?.designation || 0}
                                             color='text-[#007bff]'
                                             className="bg-[#007bff] dark:opacity-70"
                                         />
