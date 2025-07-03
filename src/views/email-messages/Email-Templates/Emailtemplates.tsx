@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown } from "@/components/ui";
 
 // Icons
 import {
@@ -46,6 +46,7 @@ import {
   TbAlignBoxCenterBottom,
   TbBuildingCog,
   TbBuildingOff,
+  TbColumns,
 } from "react-icons/tb";
 
 // Types
@@ -179,8 +180,90 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 ItemSearch.displayName = "ItemSearch";
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void };
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => (<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"><div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div><div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"><Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button><Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button><Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button></div></div>);
+
+const EmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+  onSearchChange: (query: string) => void;
+  onFilter: () => void;
+  onExport: () => void;
+  onClearFilters: () => void;
+  columns: ColumnDef<EmailTemplateItem>[];
+  filteredColumns: ColumnDef<EmailTemplateItem>[];
+  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<EmailTemplateItem>[]>>;
+  activeFilterCount: number;
+}) => {
+    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+    const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+          if (originalColumn) {
+              setFilteredColumns(prev => {
+                  const newCols = [...prev, originalColumn];
+                  newCols.sort((a, b) => {
+                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                      return indexA - indexB;
+                  });
+                  return newCols;
+              });
+          }
+      } else {
+          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      }
+    };
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow">
+                <ItemSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2">
+                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => {
+                            const id = col.id || col.accessorKey as string;
+                            return col.header && (
+                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                                        {col.header as string}
+                                    </Checkbox>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Dropdown>
+                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+                </Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+            </div>
+        </div>
+    );
+};
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: FilterFormData,
+  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onClearAll: () => void;
+}) => {
+    const { filterNames, filterTemplateIds, filterCategoryIds, filterSubCategoryIds, filterBrandIds, filterRoleIds, filterDepartmentIds, filterDesignationIds, filterStatus } = filterData;
+    const hasFilters = [filterNames, filterTemplateIds, filterCategoryIds, filterSubCategoryIds, filterBrandIds, filterRoleIds, filterDepartmentIds, filterDesignationIds, filterStatus].some(f => f && f.length > 0);
+    if (!hasFilters) return null;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
+            {filterTemplateIds?.map(item => <Tag key={`id-${item.value}`} prefix>ID: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterTemplateIds', item.value)} /></Tag>)}
+            {filterCategoryIds?.map(item => <Tag key={`cat-${item.value}`} prefix>Cat: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategoryIds', item.value)} /></Tag>)}
+            {filterDepartmentIds?.map(item => <Tag key={`dept-${item.value}`} prefix>Dept: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterDepartmentIds', item.value)} /></Tag>)}
+            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+            {/* Add other filters as needed */}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+};
+
 type EmailTemplatesTableProps = { columns: ColumnDef<EmailTemplateItem>[]; data: EmailTemplateItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: EmailTemplateItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: EmailTemplateItem) => void; onAllRowSelect: (checked: boolean, rows: Row<EmailTemplateItem>[]) => void; };
 const EmailTemplatesTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: EmailTemplatesTableProps) => (<DataTable columns={columns} data={data} noData={!loading && data.length === 0} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} />);
 type EmailTemplatesSelectedFooterProps = { selectedItems: EmailTemplateItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
@@ -325,8 +408,31 @@ const EmailTemplatesListing = () => {
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
-  const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); dispatch(getEmailTemplatesAction()); setIsFilterDrawerOpen(false); }, [filterFormMethods]);
+  const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); dispatch(getEmailTemplatesAction()); setIsFilterDrawerOpen(false); }, [filterFormMethods, dispatch]);
   
+  const handleCardClick = useCallback((status: 'Active' | 'Inactive' | 'all') => {
+      onClearFilters();
+      if(status !== 'all') {
+          const statusOption = statusOptions.find(opt => opt.value === status);
+          if(statusOption) {
+            setFilterCriteria({ filterStatus: [statusOption] });
+          }
+      }
+  }, [onClearFilters]);
+
+  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: string) => {
+    setFilterCriteria(prev => {
+        const newFilters = { ...prev };
+        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+        if (currentValues) {
+            const newValues = currentValues.filter(item => item.value !== value);
+            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+        }
+        return newFilters;
+    });
+    setTableData(prev => ({ ...prev, pageIndex: 1 }));
+  }, []);
+
   const handleOpenExportModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportModalOpen(true); };
   const handleConfirmExport = async (data: ExportReasonFormData) => { setIsSubmittingExport(true); const moduleName = "Email Templates"; const date = new Date().toISOString().split("T")[0]; const fileName = `email_templates_${date}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap(); const success = exportToCsv(fileName, allFilteredAndSortedData); if (success) { toast.push(<Notification title="Data Exported" type="success">Templates exported successfully.</Notification>); } setIsExportModalOpen(false); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger">{error.message || "Could not complete export."}</Notification>); } finally { setIsSubmittingExport(false); } };
 
@@ -347,6 +453,10 @@ const EmailTemplatesListing = () => {
     return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
   }, [emailTemplatesData, tableData, filterCriteria, categoryOptions, allSubCategoryOptionsForFilter, brandOptions, roleOptions, departmentOptions, designationOptions]);
   
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
+  }, [filterCriteria]);
+
   const handlePaginationChange = useCallback((page: number) => setTableData(prev => ({ ...prev, pageIndex: page })), []);
   const handleSelectPageSizeChange = useCallback((value: number) => { setTableData(prev => ({ ...prev, pageSize: Number(value), pageIndex: 1 })); setSelectedItems([]); }, []);
   const handleSort = useCallback((sort: OnSortParam) => { setTableData(prev => ({ ...prev, sort: sort, pageIndex: 1 })); }, []);
@@ -363,6 +473,9 @@ const EmailTemplatesListing = () => {
     { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? dayjs(updated_at).format('D MMM YYYY, h:mm A') : 'N/A'; return (<div className="text-xs"><span>{updated_by_user?.name || 'N/A'}{updated_by_user?.roles?.[0]?.display_name && (<><br /><b>{updated_by_user.roles[0].display_name}</b></>)}</span><br /><span>{formattedDate}</span></div>); }},
     { header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
   ], [openEditDrawer, handleDeleteClick]);
+  
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<EmailTemplateItem>[]>(columns);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods, currentVariablesArray: typeof variablesFieldArray) => {
     const { control: currentControl, formState: { errors: currentErrors }, watch: currentWatch } = currentFormMethods;
@@ -384,6 +497,9 @@ const EmailTemplatesListing = () => {
     );
   };
 
+  const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const cardBodyClass = "flex gap-2 p-2";
+
   return (
     <>
       <Container className="h-auto">
@@ -393,14 +509,26 @@ const EmailTemplatesListing = () => {
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
           </div>
           <div className="grid grid-cols-4 mb-4 gap-2">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbAlignBoxCenterBottom size={24} /></div><div><h6 className="text-blue-500">{counts.total ?? '0'}</h6><span className="font-semibold text-xs">Total</span></div></Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBuildingCog size={24} /></div><div><h6 className="text-violet-500">{counts.active ?? '0'}</h6><span className="font-semibold text-xs">Active</span></div></Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBuildingOff size={24} /></div><div><h6 className="text-red-500">{counts.inactive ?? '0'}</h6><span className="font-semibold text-xs">Inactive</span></div></Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMailForward size={24} /></div><div><h6 className="text-green-500">{counts.total_used_count ?? '0'}</h6><span className="font-semibold text-xs">Count Used</span></div></Card>
+            <Tooltip title="Click to show all templates"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbAlignBoxCenterBottom size={24} /></div><div><h6 className="text-blue-500">{counts.total ?? '0'}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show active templates"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBuildingCog size={24} /></div><div><h6 className="text-violet-500">{counts.active ?? '0'}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show inactive templates"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBuildingOff size={24} /></div><div><h6 className="text-red-500">{counts.inactive ?? '0'}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
+            <Tooltip title="Total times templates were used"><Card bodyClass={cardBodyClass} className="rounded-md border border-green-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMailForward size={24} /></div><div><h6 className="text-green-500">{counts.total_used_count ?? '0'}</h6><span className="font-semibold text-xs">Count Used</span></div></Card></Tooltip>
           </div>
-          <ItemTableTools onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleOpenExportModal} onClearFilters={onClearFilters} />
+          <div className="mb-4">
+            <EmailTemplatesTableTools 
+                onSearchChange={handleSearchInputChange} 
+                onFilter={openFilterDrawer} 
+                onExport={handleOpenExportModal} 
+                onClearFilters={onClearFilters}
+                columns={columns}
+                filteredColumns={filteredColumns}
+                setFilteredColumns={setFilteredColumns}
+                activeFilterCount={activeFilterCount}
+            />
+          </div>
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4">
-            <EmailTemplatesTable columns={columns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
+            <EmailTemplatesTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>

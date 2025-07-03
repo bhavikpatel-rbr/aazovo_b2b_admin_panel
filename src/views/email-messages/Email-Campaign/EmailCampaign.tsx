@@ -33,6 +33,7 @@ import {
   Card,
   Tag,
   Checkbox,
+  Dropdown,
 } from "@/components/ui";
 
 // Icons
@@ -73,6 +74,8 @@ import {
   TbCalendarCancel, // For file import
   TbShoppingCart, // For Products
   TbDatabaseSearch, // For DB Filter
+  TbColumns,
+  TbX,
 } from "react-icons/tb";
 
 // Types
@@ -476,45 +479,93 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
   )
 );
 ItemSearch.displayName = "ItemSearch";
-type ItemTableToolsProps = {
+
+const EmailCampaignTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
   onClearFilters: () => void;
+  columns: ColumnDef<EmailCampaignItem>[];
+  filteredColumns: ColumnDef<EmailCampaignItem>[];
+  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<EmailCampaignItem>[]>>;
+  activeFilterCount: number;
+}) => {
+    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+    const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+          if (originalColumn) {
+              setFilteredColumns(prev => {
+                  const newCols = [...prev, originalColumn];
+                  newCols.sort((a, b) => {
+                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                      return indexA - indexB;
+                  });
+                  return newCols;
+              });
+          }
+      } else {
+          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      }
+    };
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow">
+                <ItemSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2">
+                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => {
+                            const id = col.id || col.accessorKey as string;
+                            return col.header && (
+                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                                        {col.header as string}
+                                    </Checkbox>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Dropdown>
+                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+                </Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+            </div>
+        </div>
+    );
 };
-const ItemTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-  onClearFilters,
-}: ItemTableToolsProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-    {" "}
-    <div className="flex-grow">
-      <ItemSearch onInputChange={onSearchChange} />
-    </div>{" "}
-    <Tooltip title="Clear Filters">
-      <Button icon={<TbReload />} onClick={onClearFilters}></Button>
-    </Tooltip>
-    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-      {" "}
-      <Button
-        icon={<TbFilter />}
-        onClick={onFilter}
-        className="w-full sm:w-auto"
-      >
-        Filter
-      </Button>{" "}
-      <Button
-        icon={<TbCloudUpload />}
-        onClick={onExport}
-        className="w-full sm:w-auto"
-      >
-        Export
-      </Button>{" "}
-    </div>{" "}
-  </div>
-);
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, allStatusOptions }: {
+  filterData: Partial<CampaignFilterFormData>,
+  onRemoveFilter: (key: keyof CampaignFilterFormData, value?: any) => void;
+  onClearAll: () => void;
+  allStatusOptions: SelectOption[];
+}) => {
+    const { status, date_range } = filterData;
+    const hasFilters = status || (date_range && (date_range[0] || date_range[1]));
+    if (!hasFilters) return null;
+
+    const statusLabel = allStatusOptions.find(opt => opt.value === status)?.label || status;
+    const dateLabel = date_range && (date_range[0] || date_range[1])
+        ? `${date_range[0] ? dayjs(date_range[0]).format('DD/MM/YY') : '...'} - ${date_range[1] ? dayjs(date_range[1]).format('DD/MM/YY') : '...'}`
+        : null;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {status && <Tag prefix>Status: {statusLabel} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('status')} /></Tag>}
+            {dateLabel && <Tag prefix>Date: {dateLabel} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('date_range')} /></Tag>}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+};
+
+
 type EmailCampaignsTableProps = {
   columns: ColumnDef<EmailCampaignItem>[];
   data: EmailCampaignItem[];
@@ -1356,7 +1407,24 @@ const EmailCampaignListing = () => {
     filterFormMethods.reset({ status: "", date_range: [null, null] });
     handleSetTableData({ pageIndex: 1, query: "" });
     closeFilterDrawer();
-  }, [filterFormMethods, handleSetTableData]);
+  }, [filterFormMethods, handleSetTableData, closeFilterDrawer]);
+  
+  const handleCardClick = useCallback((status?: string) => {
+      onClearFilters(); // Always clear previous filters
+      if (status) {
+          setFilterCriteria({ status });
+      }
+      // If no status is passed (for 'Total' card), filters are just cleared.
+  }, [onClearFilters]);
+
+  const handleRemoveFilter = useCallback((key: keyof CampaignFilterFormData) => {
+    setFilterCriteria(prev => {
+        const newFilters = { ...prev };
+        delete newFilters[key];
+        return newFilters;
+    });
+    setTableData(prev => ({ ...prev, pageIndex: 1 }));
+  }, []);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: EmailCampaignItem[] = Array.isArray(
@@ -1447,6 +1515,14 @@ const EmailCampaignListing = () => {
       allFilteredAndSortedData: processedData,
     };
   }, [emailCampaignsData.data, tableData, filterCriteria]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterCriteria.status) count++;
+    if (filterCriteria.date_range && (filterCriteria.date_range[0] || filterCriteria.date_range[1])) count++;
+    return count;
+  }, [filterCriteria]);
+
 
   const handleOpenExportReasonModal = useCallback(() => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -1597,6 +1673,9 @@ const EmailCampaignListing = () => {
     ],
     [openViewDialog, openCreateDrawer, handleDeleteClick]
   );
+  
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<EmailCampaignItem>[]>(columns);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
   const renderWizardStep = () => {
     switch (currentWizardStep) {
@@ -2010,6 +2089,9 @@ const EmailCampaignListing = () => {
         return <div>Unknown Step</div>;
     }
   };
+  
+  const cardClass = "rounded-md transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const cardBodyClass = "flex gap-2 p-3";
 
   return (
     <>
@@ -2026,100 +2108,101 @@ const EmailCampaignListing = () => {
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4 gap-4">
-            <Card
-              bodyClass="flex gap-2 p-3"
-              className="rounded-md border border-blue-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                <TbCaravan size={24} />
+            <Tooltip title="Click to show all campaigns">
+              <div onClick={() => handleCardClick()} className={cardClass}>
+                <Card bodyClass={cardBodyClass} className="border-blue-200 w-full">
+                  <div className="h-12 w-12  flex items-center justify-center bg-blue-100 text-blue-500">
+                    <TbCaravan size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-blue-500">{emailCampaignsData?.counts?.total || 0}</h6>
+                    <span className="font-semibold text-xs">Total</span>
+                  </div>
+                </Card>
               </div>
-              <div>
-                <h6 className="text-blue-500">
-                  {emailCampaignsData?.counts?.total || 0}
-                </h6>
-                <span className="font-semibold text-xs">Total</span>
+            </Tooltip>
+            <Tooltip title="Total subscribers (not filterable)">
+              <div className={classNames(cardClass, "cursor-default")}>
+                <Card bodyClass={cardBodyClass} className="border-orange-200 w-full">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                    <TbCalendarUser size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-orange-500">{emailCampaignsData?.counts?.subscriber || 0}</h6>
+                    <span className="font-semibold text-xs">Subscribers</span>
+                  </div>
+                </Card>
               </div>
-            </Card>
-            <Card
-              bodyClass="flex gap-2 p-3"
-              className="rounded-md border border-orange-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                <TbCalendarUser size={24} />
+            </Tooltip>
+             <Tooltip title="Click to show draft campaigns">
+              <div onClick={() => handleCardClick('draft')} className={cardClass}>
+                <Card bodyClass={cardBodyClass} className="border-violet-200 w-full">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                    <TbPencilCheck size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-violet-500">{emailCampaignsData?.counts?.draft || 0}</h6>
+                    <span className="font-semibold text-xs">Draft</span>
+                  </div>
+                </Card>
               </div>
-              <div>
-                <h6 className="text-orange-500">
-                  {emailCampaignsData?.counts?.subscriber || 0}
-                </h6>
-                <span className="font-semibold text-xs">Subscribers</span>
+            </Tooltip>
+            <Tooltip title="Click to show scheduled campaigns">
+              <div onClick={() => handleCardClick('scheduled')} className={cardClass}>
+                <Card bodyClass={cardBodyClass} className="border-pink-200 w-full">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                    <TbCalendarClock size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-pink-500">{emailCampaignsData?.counts?.scheduled || 0}</h6>
+                    <span className="font-semibold text-xs">Scheduled</span>
+                  </div>
+                </Card>
               </div>
-            </Card>
-            <Card
-              bodyClass="flex gap-2 p-3"
-              className="rounded-md border border-violet-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                <TbPencilCheck size={24} />
+            </Tooltip>
+            <Tooltip title="Click to show sent campaigns">
+              <div onClick={() => handleCardClick('sent')} className={cardClass}>
+                <Card bodyClass={cardBodyClass} className="border-green-200 w-full">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                    <TbMailForward size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-green-500">{emailCampaignsData?.counts?.sent || 0}</h6>
+                    <span className="font-semibold text-xs">Sent</span>
+                  </div>
+                </Card>
               </div>
-              <div>
-                <h6 className="text-violet-500">
-                  {emailCampaignsData?.counts?.draft || 0}
-                </h6>
-                <span className="font-semibold text-xs">Draft</span>
+            </Tooltip>
+            <Tooltip title="Click to show cancelled campaigns">
+              <div onClick={() => handleCardClick('cancelled')} className={cardClass}>
+                <Card bodyClass={cardBodyClass} className="border-red-200 w-full">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                    <TbCalendarCancel size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-red-500">{emailCampaignsData?.counts?.cancelled || 0}</h6>
+                    <span className="font-semibold text-xs">Cancelled</span>
+                  </div>
+                </Card>
               </div>
-            </Card>
-            <Card
-              bodyClass="flex gap-2 p-3"
-              className="rounded-md border border-pink-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                <TbCalendarClock size={24} />
-              </div>
-              <div>
-                <h6 className="text-pink-500">
-                  {emailCampaignsData?.counts?.scheduled || 0}
-                </h6>
-                <span className="font-semibold text-xs">Scheduled</span>
-              </div>
-            </Card>
-            <Card
-              bodyClass="flex gap-2 p-3"
-              className="rounded-md border border-green-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                <TbMailForward size={24} />
-              </div>
-              <div>
-                <h6 className="text-green-500">
-                  {emailCampaignsData?.counts?.sent || 0}
-                </h6>
-                <span className="font-semibold text-xs">Sent</span>
-              </div>
-            </Card>
-            <Card
-              bodyClass="flex gap-2 p-3"
-              className="rounded-md border border-red-200"
-            >
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                <TbCalendarCancel size={24} />
-              </div>
-              <div>
-                <h6 className="text-red-500">
-                  {emailCampaignsData?.counts?.cancelled || 0}
-                </h6>
-                <span className="font-semibold text-xs">Cancelled</span>
-              </div>
-            </Card>
+            </Tooltip>
           </div>
-          <ItemTableTools
-            onClearFilters={onClearFilters}
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal}
-          />
+          <div className="mb-4">
+            <EmailCampaignTableTools
+                onClearFilters={onClearFilters}
+                onSearchChange={handleSearchChange}
+                onFilter={openFilterDrawer}
+                onExport={handleOpenExportReasonModal}
+                columns={columns}
+                filteredColumns={filteredColumns}
+                setFilteredColumns={setFilteredColumns}
+                activeFilterCount={activeFilterCount}
+            />
+          </div>
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} allStatusOptions={CAMPAIGN_STATUS_OPTIONS_FILTER} />
           <div className="mt-4">
             <EmailCampaignsTable
-              columns={columns}
+              columns={filteredColumns}
               data={pageData}
               loading={
                 masterLoadingStatus === "loading" ||
