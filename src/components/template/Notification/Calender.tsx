@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { BsCameraVideo, BsClipboardCheck } from 'react-icons/bs'
 import { FiRefreshCw } from 'react-icons/fi'
-import { HiOutlineCalendar, HiPlus } from 'react-icons/hi'
+import { HiOutlineCalendar, HiPlus, HiCheck } from 'react-icons/hi'
 import { IoCalendarOutline } from 'react-icons/io5'
 import { MdOutlineGridView } from 'react-icons/md'
 import { useSelector } from 'react-redux'
@@ -54,16 +54,43 @@ type ScheduleData = { [date: string]: ScheduleEvent[] }
 
 const scheduleContentHeight = 'h-[320px]'
 
+// REFINED: More descriptive visual styles for different event types.
 const EVENT_TYPE_STYLE: Record<
     string,
-    { icon: JSX.Element; accentClass: string }
+    { icon: JSX.Element; badgeClass: string; dotClass: string }
 > = {
-    Meeting: { icon: <BsCameraVideo />, accentClass: 'bg-blue-500' },
-    Reminder: { icon: <BsClipboardCheck />, accentClass: 'bg-purple-500' },
-    default: { icon: <BsClipboardCheck />, accentClass: 'bg-gray-400' },
+    Meeting: {
+        icon: <BsCameraVideo />,
+        badgeClass:
+            'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
+        dotClass: 'bg-blue-500',
+    },
+    Reminder: {
+        icon: <BsClipboardCheck />,
+        badgeClass:
+            'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
+        dotClass: 'bg-purple-500',
+    },
+    Task: {
+        icon: <BsClipboardCheck />,
+        badgeClass:
+            'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
+        dotClass: 'bg-amber-500',
+    },
+    Call: {
+        icon: <BsCameraVideo />,
+        badgeClass:
+            'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+        dotClass: 'bg-emerald-500',
+    },
+    default: {
+        icon: <BsClipboardCheck />,
+        badgeClass:
+            'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-200',
+        dotClass: 'bg-gray-400',
+    },
 }
 
-// The full, original list of event types for the Add/Edit form
 const fullEventTypeOptions = [
     { value: 'Meeting', label: 'Meeting' },
     { value: 'Demo', label: 'Product Demo' },
@@ -132,18 +159,21 @@ const fullEventTypeOptions = [
     { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
     { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
     { value: 'SendQuote', label: 'Send Quote/Estimate' },
-];
+]
 
-const uniqueFullEventTypeOptions = [...new Map(fullEventTypeOptions.map(item => [item['value'], item])).values()];
+const uniqueFullEventTypeOptions = [
+    ...new Map(
+        fullEventTypeOptions.map((item) => [item['value'], item])
+    ).values(),
+]
 
-// Zod schema for the general "Add Schedule" form (Restored to original)
 const scheduleFormSchema = z.object({
     event_title: z
         .string()
         .min(3, 'Title must be at least 3 characters long.'),
     event_type: z.string({ required_error: 'Event type is required.' }),
     date_time: z.date({ required_error: 'Event date & time are required.' }),
-    remind_from: z.date().nullable().optional(), // Restored field
+    remind_from: z.date().nullable().optional(),
     notes: z.string().optional(),
 })
 type ScheduleFormData = z.infer<typeof scheduleFormSchema>
@@ -175,7 +205,7 @@ const AddScheduleModal = ({
             event_title: '',
             event_type: undefined,
             date_time: null as any,
-            remind_from: null, // Restored field
+            remind_from: null,
             notes: '',
         },
         mode: 'onChange',
@@ -192,7 +222,7 @@ const AddScheduleModal = ({
             event_title: data.event_title,
             event_type: data.event_type,
             date_time: dayjs(data.date_time).format('YYYY-MM-DD HH:mm:ss'),
-            ...(data.remind_from && { // Restored logic
+            ...(data.remind_from && {
                 remind_from: dayjs(data.remind_from).format(
                     'YYYY-MM-DD HH:mm:ss'
                 ),
@@ -219,7 +249,11 @@ const AddScheduleModal = ({
     }
 
     return (
-        <Dialog isOpen={isOpen} onClose={handleClose} onRequestClose={handleClose}>
+        <Dialog
+            isOpen={isOpen}
+            onClose={handleClose}
+            onRequestClose={handleClose}
+        >
             <h5 className="mb-4">Add New Schedule</h5>
             <UiForm onSubmit={handleSubmit(onFormSubmit)}>
                 <UiFormItem
@@ -245,7 +279,7 @@ const AddScheduleModal = ({
                             render={({ field }) => (
                                 <UiSelect
                                     placeholder="Select Type"
-                                    options={uniqueFullEventTypeOptions} // Using the full original list
+                                    options={uniqueFullEventTypeOptions}
                                     value={uniqueFullEventTypeOptions.find(
                                         (o) => o.value === field.value
                                     )}
@@ -274,7 +308,7 @@ const AddScheduleModal = ({
                         />
                     </UiFormItem>
                 </div>
-                <UiFormItem // Restored field
+                <UiFormItem
                     label="Reminder Date & Time (Optional)"
                     invalid={!!errors.remind_from}
                     errorMessage={errors.remind_from?.message}
@@ -316,6 +350,7 @@ const AddScheduleModal = ({
                         type="submit"
                         loading={isLoading}
                         disabled={!isValid || isLoading}
+                        icon={<HiCheck />}
                     >
                         Save Event
                     </Button>
@@ -323,22 +358,31 @@ const AddScheduleModal = ({
             </UiForm>
         </Dialog>
     )
-};
-
+}
 
 // ======================================================
 //        COMPACT ALL SCHEDULES MODAL & SUB-COMPONENTS
 // ======================================================
 
+// REFINED: Event item with icon badge for better visual distinction.
 const CompactEventItem = ({ event }: { event: ScheduleEvent }) => {
-    const { accentClass } =
+    const { icon, badgeClass } =
         EVENT_TYPE_STYLE[event.event_type] || EVENT_TYPE_STYLE.default
 
     return (
-        <div className="flex items-center gap-3 py-3">
-            <div className={classNames('w-2 h-2 rounded-full', accentClass)} />
+        <div className="flex items-center gap-4 py-3">
+            <div
+                className={classNames(
+                    'w-10 h-10 rounded-lg flex items-center justify-center text-xl',
+                    badgeClass
+                )}
+            >
+                {icon}
+            </div>
             <div className="flex-grow">
-                <p className="font-bold leading-tight">{event.event_title}</p>
+                <p className="font-semibold leading-tight text-gray-800 dark:text-gray-100">
+                    {event.event_title}
+                </p>
                 <p className="text-xs text-gray-500">{event.event_type}</p>
             </div>
             <div className="text-right">
@@ -350,14 +394,14 @@ const CompactEventItem = ({ event }: { event: ScheduleEvent }) => {
     )
 }
 
+// REFINED: Cleaner, more modern date divider.
 const DateDivider = ({ date }: { date: string }) => (
-    <div className="py-2">
-        <div className="w-full border-t border-gray-200 dark:border-gray-600"></div>
-        <p className="text-center text-xs font-semibold uppercase text-gray-400 dark:text-gray-500 -mt-2.5">
-            <span className="px-2 bg-white dark:bg-gray-800">
-                {dayjs(date).format('MMMM D, YYYY')}
-            </span>
-        </p>
+    <div className="flex items-center gap-3 my-3">
+        <hr className="flex-grow border-gray-200 dark:border-gray-700" />
+        <span className="text-xs font-medium text-gray-400 dark:text-gray-500">
+            {dayjs(date).format('MMMM D, YYYY')}
+        </span>
+        <hr className="flex-grow border-gray-200 dark:border-gray-700" />
     </div>
 )
 
@@ -381,23 +425,28 @@ const CompactAllSchedulesModal = ({
         return Object.values(scheduleData)
             .flat()
             .filter(
-                (event) => !eventTypeFilter || event.event_type === eventTypeFilter
+                (event) =>
+                    !eventTypeFilter || event.event_type === eventTypeFilter
             )
             .sort(
                 (a, b) =>
                     dayjs(a.date_time).valueOf() - dayjs(b.date_time).valueOf()
             )
     }, [scheduleData, eventTypeFilter])
-    
+
     const uniqueEventTypesForFilter = useMemo(
         () => [
             { value: '', label: 'All Event Types' },
             ...Array.from(
-                new Set(Object.values(scheduleData || {}).flat().map((e) => e.event_type))
+                new Set(
+                    Object.values(scheduleData || {})
+                        .flat()
+                        .map((e) => e.event_type)
+                )
             ).map((type) => ({ value: type, label: type })),
         ],
         [scheduleData]
-    );
+    )
 
     let lastRenderedDate: string | null = null
 
@@ -407,105 +456,190 @@ const CompactAllSchedulesModal = ({
             onClose={onClose}
             onRequestClose={onClose}
             width="lg"
+            contentClassName="flex flex-col" // Make dialog content a flex container
         >
-            <div className="flex flex-col h-full">
-                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <h5 className="font-bold">All Schedules</h5>
-                </div>
-                <div className="p-4 flex flex-col min-h-0 flex-grow">
-                    <UiSelect
-                        placeholder="Filter by event type..."
-                        options={uniqueEventTypesForFilter}
-                        isClearable
-                        className="mb-4"
-                        value={uniqueEventTypesForFilter.find(o => o.value === eventTypeFilter)}
-                        onChange={(opt: any) => setEventTypeFilter(opt?.value || null)}
-                    />
-                    <div className="flex-grow min-h-0">
-                         <ScrollBar autoHide style={{maxHeight: '55vh'}}>
-                            <div className="pr-2">
-                                {loading && <div className="flex justify-center p-10"><Spinner /></div>}
-                                {!loading && sortedEvents.length === 0 && (
-                                    <EmptyState message="No schedules found" />
-                                )}
-                                {!loading && sortedEvents.map(event => {
-                                    const eventDate = dayjs(event.date_time).format('YYYY-MM-DD');
-                                    const showDivider = eventDate !== lastRenderedDate;
-                                    lastRenderedDate = eventDate;
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <MdOutlineGridView className="text-xl" />
+                <h5 className="font-semibold text-lg">All Schedules</h5>
+            </div>
+            <div className="p-6 flex flex-col min-h-0 flex-grow">
+                <UiSelect
+                    placeholder="Filter by event type..."
+                    options={uniqueEventTypesForFilter}
+                    isClearable
+                    className="mb-4"
+                    value={uniqueEventTypesForFilter.find(
+                        (o) => o.value === eventTypeFilter
+                    )}
+                    onChange={(opt: any) =>
+                        setEventTypeFilter(opt?.value || null)
+                    }
+                />
+                <div className="flex-grow min-h-0">
+                    <ScrollBar autoHide style={{ maxHeight: '55vh' }}>
+                        <div className="pr-2">
+                            {loading && (
+                                <div className="flex justify-center p-10">
+                                    <Spinner />
+                                </div>
+                            )}
+                            {!loading && sortedEvents.length === 0 && (
+                                <EmptyState message="No schedules found" />
+                            )}
+                            {!loading &&
+                                sortedEvents.map((event) => {
+                                    const eventDate = dayjs(
+                                        event.date_time
+                                    ).format('YYYY-MM-DD')
+                                    const showDivider =
+                                        eventDate !== lastRenderedDate
+                                    lastRenderedDate = eventDate
                                     return (
                                         <div key={event.id}>
-                                            {showDivider && <DateDivider date={eventDate} />}
+                                            {showDivider && (
+                                                <DateDivider date={eventDate} />
+                                            )}
                                             <CompactEventItem event={event} />
                                         </div>
                                     )
                                 })}
-                            </div>
-                        </ScrollBar>
-                    </div>
+                        </div>
+                    </ScrollBar>
                 </div>
-                <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
-                    <Button variant="solid" icon={<HiPlus />} onClick={onAddNew}>
-                        Add New
-                    </Button>
-                    <Button onClick={onClose}>Close</Button>
-                </div>
+            </div>
+            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
+                <Button variant="solid" icon={<HiPlus />} onClick={onAddNew}>
+                    Add New
+                </Button>
+                <Button onClick={onClose}>Close</Button>
             </div>
         </Dialog>
     )
 }
 
-
 // ======================================================
 //        DROPDOWN & GENERIC SUB-COMPONENTS
 // ======================================================
 
-const ScheduleToggle = ({ className }: { className?: string }) => ( 
+const ScheduleToggle = ({ className }: { className?: string }) => (
     <div className={classNames('text-2xl', className)}>
         <IoCalendarOutline />
-    </div> 
-);
+    </div>
+)
 
-const DynamicHeader = ({ title, onRefresh, }: { title: string; onRefresh: (e: React.MouseEvent) => void; }) => ( 
+const DynamicHeader = ({
+    title,
+    onRefresh,
+}: {
+    title: string
+    onRefresh: (e: React.MouseEvent) => void
+}) => (
     <div className="flex items-center justify-between">
         <h6 className="font-bold">{title}</h6>
         <Tooltip title="Refresh">
-            <Button shape="circle" variant="plain" size="sm" icon={<FiRefreshCw className="text-lg" />} onClick={onRefresh}/>
+            <Button
+                shape="circle"
+                variant="plain"
+                size="sm"
+                icon={<FiRefreshCw className="text-lg" />}
+                onClick={onRefresh}
+            />
         </Tooltip>
-    </div> 
-);
+    </div>
+)
 
-const TimelineEvent = ({ event, isLast, }: { event: ScheduleEvent; isLast: boolean; }) => {
-    const { accentClass } = EVENT_TYPE_STYLE[event.event_type] || EVENT_TYPE_STYLE.default;
+// REFINED: Timeline event with styled badge for event type.
+const TimelineEvent = ({
+    event,
+    isLast,
+}: {
+    event: ScheduleEvent
+    isLast: boolean
+}) => {
+    const { dotClass, badgeClass } =
+        EVENT_TYPE_STYLE[event.event_type] || EVENT_TYPE_STYLE.default
     return (
         <div className="relative pl-10 pr-4 py-2">
-            <div className={classNames('absolute top-5 left-[18px] -translate-x-1/2 w-4 h-4 rounded-full border-4 border-gray-50 dark:border-gray-800', accentClass)} />
-            {!isLast && <div className="absolute top-7 left-[18px] -translate-x-1/2 w-0.5 h-full bg-gray-200 dark:bg-gray-600" />}
+            <div
+                className={classNames(
+                    'absolute top-5 left-[18px] -translate-x-1/2 w-3 h-3 rounded-full border-2 border-gray-50 dark:border-gray-800',
+                    dotClass
+                )}
+            />
+            {!isLast && (
+                <div className="absolute top-6 left-[18px] -translate-x-1/2 w-0.5 h-full bg-gray-200 dark:bg-gray-600" />
+            )}
             <div className="flex items-start justify-between">
-                <div className="flex-grow">
-                    <p className="font-bold heading-text -mt-1">{event.event_title}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{event.event_type}</p>
-                </div>
-                <span className="font-semibold text-sm whitespace-nowrap text-gray-600 dark:text-gray-300">{dayjs(event.date_time).format('h:mm A')}</span>
+                <p className="font-semibold heading-text -mt-1 flex-grow mr-3">
+                    {event.event_title}
+                </p>
+                <span className="font-semibold text-sm whitespace-nowrap text-gray-600 dark:text-gray-300">
+                    {dayjs(event.date_time).format('h:mm A')}
+                </span>
             </div>
-            <p className="text-sm mt-2 text-gray-700 dark:text-gray-200">{event.notes}</p>
+            <div className="mt-1">
+                <span
+                    className={classNames(
+                        'text-xs font-semibold px-2 py-0.5 rounded-full inline-block',
+                        badgeClass
+                    )}
+                >
+                    {event.event_type}
+                </span>
+            </div>
+            {event.notes && (
+                <p className="text-sm mt-2 text-gray-700 dark:text-gray-200">
+                    {event.notes}
+                </p>
+            )}
         </div>
-    );
-};
+    )
+}
 
-const EmptyState = ({ message = 'No Events' }: { message?: string }) => ( 
+// REFINED: Softer icon color for empty state.
+const EmptyState = ({ message = 'No Events' }: { message?: string }) => (
     <div className="flex flex-col items-center justify-center text-center h-full p-6 text-gray-500">
         <HiOutlineCalendar className="w-20 h-20 mb-4 text-gray-300 dark:text-gray-600" />
-        <h6 className="font-semibold text-gray-600 dark:text-gray-200">{message}</h6>
-        <p className="mt-1 text-sm">Enjoy your free time!</p>
-    </div> 
-);
+        <h6 className="font-semibold text-gray-600 dark:text-gray-200">
+            {message}
+        </h6>
+        <p className="mt-1 text-sm">You have a free day!</p>
+    </div>
+)
 
-const TimelineView = ({ loading, events, }: { loading: boolean; events: ScheduleEvent[]; }) => {
-    if (loading) { return <div className="flex items-center justify-center h-full"><Spinner size={40} /></div>; }
-    if (!events || events.length === 0) { return <EmptyState message="No Events Scheduled" />; }
-    const sortedEvents = [...events].sort((a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime());
-    return <div className="py-5">{sortedEvents.map((event, index) => <TimelineEvent key={event.id} event={event} isLast={index === sortedEvents.length - 1} />)}</div>;
-};
+const TimelineView = ({
+    loading,
+    events,
+}: {
+    loading: boolean
+    events: ScheduleEvent[]
+}) => {
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Spinner size={40} />
+            </div>
+        )
+    }
+    if (!events || events.length === 0) {
+        return <EmptyState message="No Events Scheduled" />
+    }
+    const sortedEvents = [...events].sort(
+        (a, b) =>
+            new Date(a.date_time).getTime() - new Date(b.date_time).getTime()
+    )
+    return (
+        <div className="py-5">
+            {sortedEvents.map((event, index) => (
+                <TimelineEvent
+                    key={event.id}
+                    event={event}
+                    isLast={index === sortedEvents.length - 1}
+                />
+            ))}
+        </div>
+    )
+}
 
 // ======================================================
 //              MAIN DROPDOWN COMPONENT
@@ -514,7 +648,7 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
     const [loading, setLoading] = useState(false)
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     const [isAddModalOpen, setAddModalOpen] = useState(false)
-    const [isCompactModalOpen, setCompactModalOpen] = useState(false) 
+    const [isCompactModalOpen, setCompactModalOpen] = useState(false)
 
     const { larger } = useResponsive()
     const dispatch = useAppDispatch()
@@ -561,21 +695,21 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
         await dispatch(getAllScheduleAction())
         setLoading(false)
     }
-    
+
     const onScheduleAdded = () => {
         setLoading(true)
         dispatch(getAllScheduleAction()).finally(() => setLoading(false))
     }
-    
+
     const handleOpenAddModal = () => {
-        setCompactModalOpen(false); 
-        setAddModalOpen(true);
-        dropdownRef.current?.handleDropdownClose();
+        setCompactModalOpen(false)
+        setAddModalOpen(true)
+        dropdownRef.current?.handleDropdownClose()
     }
-    
+
     const handleOpenCompactModal = () => {
-        setCompactModalOpen(true);
-        dropdownRef.current?.handleDropdownClose();
+        setCompactModalOpen(true)
+        dropdownRef.current?.handleDropdownClose()
     }
 
     const handleDateChange = (date: Date | null) => {
@@ -622,11 +756,7 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
 
                 <Dropdown.Item variant="footer" className="!p-3 !border-t-0">
                     <div className="flex gap-2">
-                        <Button
-                           block
-                           icon={<MdOutlineGridView />}
-                           onClick={handleOpenCompactModal}
-                        >
+                        <Button block onClick={handleOpenCompactModal}>
                             View All
                         </Button>
                         <Button
@@ -646,7 +776,7 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
                 onClose={() => setAddModalOpen(false)}
                 onScheduleAdded={onScheduleAdded}
             />
-            
+
             <CompactAllSchedulesModal
                 isOpen={isCompactModalOpen}
                 onClose={() => setCompactModalOpen(false)}
