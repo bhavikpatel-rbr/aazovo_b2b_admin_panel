@@ -4,7 +4,6 @@ import classNames from 'classnames'
 import dayjs from 'dayjs'
 
 // --- UI Components & Icons ---
-import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
 import DatePicker from '@/components/ui/DatePicker'
 import Dropdown from '@/components/ui/Dropdown'
@@ -14,6 +13,7 @@ import Tooltip from '@/components/ui/Tooltip'
 import { IoCalendarOutline } from 'react-icons/io5'
 import { BsCameraVideo, BsClipboardCheck } from 'react-icons/bs'
 import { FiRefreshCw } from 'react-icons/fi'
+import { HiOutlineCalendar, HiPlus } from 'react-icons/hi'
 
 // --- Redux & HOCs/Hooks ---
 import { useAppDispatch } from '@/reduxtool/store'
@@ -22,6 +22,7 @@ import { getAllScheduleAction } from '@/reduxtool/master/middleware'
 import withHeaderItem from '@/utils/hoc/withHeaderItem'
 import useResponsive from '@/utils/hooks/useResponsive'
 import { useSelector } from 'react-redux'
+import { DropdownRef } from '@/components/ui'
 
 // --- Types ---
 type ScheduleEvent = {
@@ -37,9 +38,12 @@ type ScheduleData = { [date: string]: ScheduleEvent[] }
 //               CONFIGURATION & CONSTANTS
 // ======================================================
 
-const scheduleContentHeight = 'h-[280px]'
+const scheduleContentHeight = 'h-[320px]' // Increased height for better timeline view
 
-const EVENT_TYPE_STYLE: Record<string, { icon: JSX.Element; accentClass: string }> = {
+const EVENT_TYPE_STYLE: Record<
+    string,
+    { icon: JSX.Element; accentClass: string }
+> = {
     Meeting: {
         icon: <BsCameraVideo />,
         accentClass: 'bg-blue-500',
@@ -55,9 +59,8 @@ const EVENT_TYPE_STYLE: Record<string, { icon: JSX.Element; accentClass: string 
 }
 
 // ======================================================
-//             LOGICAL & REUSABLE SUB-COMPONENTS
+//        RE-IMAGINED & UNIQUE SUB-COMPONENTS
 // ======================================================
-// (These sub-components remain unchanged)
 
 const ScheduleToggle = ({ className }: { className?: string }) => (
     <div className={classNames('text-2xl', className)}>
@@ -68,70 +71,90 @@ const ScheduleToggle = ({ className }: { className?: string }) => (
 const DynamicHeader = ({
     title,
     onRefresh,
-    onViewAll,
 }: {
     title: string
     onRefresh: (e: React.MouseEvent) => void
-    onViewAll: () => void
 }) => (
     <div className="flex items-center justify-between">
-        <h6>{title}</h6>
-        <div className="flex items-center gap-x-1">
-            <Tooltip title="Refresh">
-                <Button
-                    shape="circle"
-                    variant="plain"
-                    size="sm"
-                    icon={<FiRefreshCw />}
-                    onClick={onRefresh}
-                />
-            </Tooltip>
-            {/* <Button size="sm" onClick={onViewAll}>
-                View All
-            </Button> */}
-        </div>
+        <h6 className="font-bold">{title}</h6>
+        <Tooltip title="Refresh">
+            <Button
+                shape="circle"
+                variant="plain"
+                size="sm"
+                icon={<FiRefreshCw className="text-lg" />}
+                onClick={onRefresh}
+            />
+        </Tooltip>
     </div>
 )
 
-const ScheduleItem = ({ event }: { event: ScheduleEvent }) => {
-    const { icon, accentClass } =
+/**
+ * A visually distinct component to render a single event on the timeline.
+ */
+const TimelineEvent = ({
+    event,
+    isLast,
+}: {
+    event: ScheduleEvent
+    isLast: boolean
+}) => {
+    const { accentClass } =
         EVENT_TYPE_STYLE[event.event_type] || EVENT_TYPE_STYLE.default
 
     return (
-        <div className="flex gap-x-4 rounded-lg p-3 transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-700/60">
-            <div className={classNames('w-1.5 rounded-full', accentClass)} />
-            <div className="flex-grow">
-                <div className="flex justify-between">
-                    <div>
-                        <p className="font-bold heading-text">{event.event_title}</p>
-                        <p className="text-sm">{event.notes}</p>
-                    </div>
-                    <span className="font-semibold text-sm whitespace-nowrap">
-                        {dayjs(event.date_time).format('h:mm A')}
-                    </span>
+        <div className="relative pl-10 pr-4 py-2">
+            {/* Timeline Dot */}
+            <div
+                className={classNames(
+                    'absolute top-5 left-[18px] -translate-x-1/2 w-4 h-4 rounded-full border-4 border-gray-50 dark:border-gray-800',
+                    accentClass
+                )}
+            />
+
+            {/* Timeline Connector Line */}
+            {!isLast && (
+                <div className="absolute top-7 left-[18px] -translate-x-1/2 w-0.5 h-full bg-gray-200 dark:bg-gray-600" />
+            )}
+
+            {/* Event Details Card */}
+            <div className="flex items-start justify-between">
+                <div className="flex-grow">
+                    <p className="font-bold heading-text -mt-1">
+                        {event.event_title}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {event.event_type}
+                    </p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-2">
-                    {icon}
-                    <span>{event.event_type}</span>
-                </div>
+                <span className="font-semibold text-sm whitespace-nowrap text-gray-600 dark:text-gray-300">
+                    {dayjs(event.date_time).format('h:mm A')}
+                </span>
             </div>
+            <p className="text-sm mt-2 text-gray-700 dark:text-gray-200">
+                {event.notes}
+            </p>
         </div>
     )
 }
 
+/**
+ * A cleaner, icon-based empty state.
+ */
 const EmptyState = () => (
-    <div className="flex flex-col items-center justify-center text-center h-full p-6">
-        <img
-            className="w-24 mb-4"
-            src="/img/others/no-event.png"
-            alt="No events scheduled"
-        />
-        <h6 className="font-semibold">No Events Scheduled</h6>
-        <p className="mt-1 text-sm text-gray-500">This day is all yours.</p>
+    <div className="flex flex-col items-center justify-center text-center h-full p-6 text-gray-500">
+        <HiOutlineCalendar className="w-20 h-20 mb-4 text-gray-300 dark:text-gray-600" />
+        <h6 className="font-semibold text-gray-600 dark:text-gray-200">
+            No Events Scheduled
+        </h6>
+        <p className="mt-1 text-sm">Enjoy your free day!</p>
     </div>
 )
 
-const ScheduleList = ({
+/**
+ * Renders events in a vertical timeline view.
+ */
+const TimelineView = ({
     loading,
     events,
 }: {
@@ -146,47 +169,58 @@ const ScheduleList = ({
         )
     }
 
-    if (events.length === 0) {
+    if (!events || events.length === 0) {
         return <EmptyState />
     }
 
     const sortedEvents = [...events].sort(
-        (a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime()
+        (a, b) =>
+            new Date(a.date_time).getTime() - new Date(b.date_time).getTime()
     )
 
     return (
-        <div className="flex flex-col gap-y-2 p-3">
-            {sortedEvents.map((event) => (
-                <ScheduleItem key={event.id} event={event} />
+        <div className="py-5">
+            {sortedEvents.map((event, index) => (
+                <TimelineEvent
+                    key={event.id}
+                    event={event}
+                    isLast={index === sortedEvents.length - 1}
+                />
             ))}
         </div>
     )
 }
 
 // ======================================================
-//                 MAIN DROPDOWN COMPONENT
+//              MAIN DROPDOWN COMPONENT
 // ======================================================
-const _Calender = ({ className }: { className?: string }) => {
+const _ScheduleDropdown = ({ className }: { className?: string }) => {
     const [loading, setLoading] = useState(false)
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+
     const { larger } = useResponsive()
-    const navigate = useNavigate()
     const dispatch = useAppDispatch()
     const dropdownRef = useRef<DropdownRef>(null)
 
-    const scheduleData = useSelector(masterSelector).getSchedule?.data as ScheduleData | undefined
+    const scheduleData = useSelector(masterSelector).getSchedule
+        ?.data as ScheduleData | undefined
 
+    // Memoized calculation for events and a more descriptive header title
     const { eventsForSelectedDate, headerTitle } = useMemo(() => {
         const dateKey = dayjs(selectedDate).format('YYYY-MM-DD')
         const events = scheduleData?.[dateKey] || []
+        const today = dayjs()
+        const sDate = dayjs(selectedDate)
 
-        // --- START OF CHANGE ---
-        // Changed the date format to match the picker for consistency
-        let title = `Schedule for ${dayjs(selectedDate).format('DD/MM/YYYY')}`
-        // --- END OF CHANGE ---
-
-        if (dayjs(selectedDate).isSame(dayjs(), 'day')) {
-            title = "Today's Schedule"
+        let title = ''
+        if (sDate.isSame(today, 'day')) {
+            title = "Today's Agenda"
+        } else if (sDate.isSame(today.add(1, 'day'), 'day')) {
+            title = "Tomorrow's Agenda"
+        } else if (sDate.isSame(today.subtract(1, 'day'), 'day')) {
+            title = "Yesterday's Agenda"
+        } else {
+            title = sDate.format('dddd, MMMM D') // e.g., "Monday, June 23"
         }
 
         return {
@@ -195,6 +229,7 @@ const _Calender = ({ className }: { className?: string }) => {
         }
     }, [scheduleData, selectedDate])
 
+    // Initial data fetch
     useEffect(() => {
         const fetchInitialData = async () => {
             setLoading(true)
@@ -204,20 +239,17 @@ const _Calender = ({ className }: { className?: string }) => {
         fetchInitialData()
     }, [dispatch])
 
-    // --- User Action Handlers (unchanged) ---
+    // --- User Action Handlers ---
     const handleRefresh = async (e: React.MouseEvent) => {
-        e.stopPropagation()
+        e.stopPropagation() // Prevent dropdown from closing
         setLoading(true)
         await dispatch(getAllScheduleAction())
         setLoading(false)
     }
 
-    const handleViewAll = () => {
-        navigate('/schedule')
-        dropdownRef.current?.handleDropdownClose()
-    }
-
     const handleAddEvent = () => {
+        // Here you would navigate to an "add event" page or open a modal
+        console.log('Navigate to add event page/modal...')
         dropdownRef.current?.handleDropdownClose()
     }
 
@@ -231,15 +263,11 @@ const _Calender = ({ className }: { className?: string }) => {
         <Dropdown
             ref={dropdownRef}
             renderTitle={<ScheduleToggle className={className} />}
-            menuClass="!p-0 min-w-[340px] md:min-w-[420px]"
+            menuClass="!p-0 min-w-[340px] md:min-w-[420px] bg-gray-50 dark:bg-gray-800"
             placement={larger.md ? 'bottom-end' : 'bottom'}
         >
             <Dropdown.Item variant="header" className="!px-4 !py-3">
-                <DynamicHeader
-                    title={headerTitle}
-                    onRefresh={handleRefresh}
-                    onViewAll={handleViewAll}
-                />
+                <DynamicHeader title={headerTitle} onRefresh={handleRefresh} />
             </Dropdown.Item>
 
             <div className="px-4 py-3 border-y border-gray-200 dark:border-gray-600">
@@ -251,15 +279,22 @@ const _Calender = ({ className }: { className?: string }) => {
                 />
             </div>
 
-            <ScrollBar className={classNames('overflow-y-auto', scheduleContentHeight)}>
-                <ScheduleList
+            <ScrollBar
+                className={classNames('overflow-y-auto', scheduleContentHeight)}
+            >
+                <TimelineView
                     loading={loading}
                     events={eventsForSelectedDate}
                 />
             </ScrollBar>
 
-            {/* <Dropdown.Item variant="footer" className="!border-t-0 !p-3">
-                <Button block variant="solid" onClick={handleAddEvent}>
+            {/* <Dropdown.Item variant="footer" className="!p-3 !border-t-0">
+                <Button
+                    block
+                    variant="solid"
+                    icon={<HiPlus />}
+                    onClick={handleAddEvent}
+                >
                     Add New Event
                 </Button>
             </Dropdown.Item> */}
@@ -267,5 +302,5 @@ const _Calender = ({ className }: { className?: string }) => {
     )
 }
 
-const Calender = withHeaderItem(_Calender)
-export default Calender
+const ScheduleDropdown = withHeaderItem(_ScheduleDropdown)
+export default ScheduleDropdown
