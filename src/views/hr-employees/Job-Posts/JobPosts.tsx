@@ -4,7 +4,7 @@ import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
-import dayjs from 'dayjs' 
+import dayjs from 'dayjs'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -21,7 +21,7 @@ import Select from '@/components/ui/Select'
 import Dialog from '@/components/ui/Dialog'
 import {
     Card,
-    DatePicker, 
+    DatePicker,
     Drawer,
     Dropdown,
     Form,
@@ -103,18 +103,18 @@ export type JobPostItem = {
 }
 
 // --- Constants for Form Selects ---
-const JOB_POST_STATUS_OPTIONS_FORM: { value: JobPostStatusForm; label: string }[] = [ { value: 'Active', label: 'Active' }, { value: 'Disabled', label: 'Disabled' } ]
+const JOB_POST_STATUS_OPTIONS_FORM: { value: JobPostStatusForm; label: string }[] = [{ value: 'Active', label: 'Active' }, { value: 'Disabled', label: 'Disabled' }]
 const jobPostStatusFormValues = JOB_POST_STATUS_OPTIONS_FORM.map((s) => s.value) as [JobPostStatusForm, ...JobPostStatusForm[]]
 const jobStatusColor: Record<JobPostStatusApi, string> = { Active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100', Disabled: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100' }
-const PORTAL_OPTIONS = [ { label: 'Linkedin', value: 'Linkedin' }, { label: 'Naukri', value: 'Naukri' }, { label: 'Internal', value: 'Internal' }, { label: 'Glassdoor', value: 'Glassdoor' } ]
+const PORTAL_OPTIONS = [{ label: 'Linkedin', value: 'Linkedin' }, { label: 'Naukri', value: 'Naukri' }, { label: 'Internal', value: 'Internal' }, { label: 'Glassdoor', value: 'Glassdoor' }]
 
 // --- Zod Schema for Schedule Form ---
 const scheduleSchema = z.object({
-  event_title: z.string().min(3, "Title must be at least 3 characters."),
-  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
-  date_time: z.date({ required_error: "Event date & time is required." }),
-  remind_from: z.date().nullable().optional(),
-  notes: z.string().optional(),
+    event_title: z.string().min(3, "Title must be at least 3 characters."),
+    event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+    date_time: z.date({ required_error: "Event date & time is required." }),
+    remind_from: z.date().nullable().optional(),
+    notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
@@ -138,9 +138,9 @@ const exportReasonSchema = z.object({ reason: z.string().min(1, 'Reason for expo
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS_JOB = [ 'ID', 'Job Title', 'Status', 'Department Name', 'Location', 'Experience', 'Vacancies', 'Created At', 'Updated At', 'Updated By' ]
+const CSV_HEADERS_JOB = ['ID', 'Job Title', 'Status', 'Department Name', 'Location', 'Experience', 'Vacancies', 'Created At', 'Updated At', 'Updated By']
 type JobPostExportItem = Omit<JobPostItem, 'created_at' | 'updated_at' | 'description' | 'job_plateforms' | 'created_by_user' | 'updated_by_user'> & { job_department_name?: string; created_at_formatted?: string; updated_at_formatted?: string; updated_by_name?: string }
-const CSV_KEYS_JOB: (keyof JobPostExportItem)[] = [ 'id', 'job_title', 'status', 'job_department_name', 'location', 'experience', 'vacancies', 'created_at_formatted', 'updated_at_formatted', 'updated_by_name' ]
+const CSV_KEYS_JOB: (keyof JobPostExportItem)[] = ['id', 'job_title', 'status', 'job_department_name', 'location', 'experience', 'vacancies', 'created_at_formatted', 'updated_at_formatted', 'updated_by_name']
 function exportJobPostsToCsv(filename: string, rows: JobPostItem[], departmentOptions: JobDepartmentOption[]) { if (!rows || !rows.length) { return false } const transformedRows: JobPostExportItem[] = rows.map((row) => ({ id: row.id, job_title: row.job_title, status: row.status, job_department_name: departmentOptions.find((d) => String(d.value) === String(row.job_department_id))?.label || String(row.job_department_id), location: row.location, experience: row.experience, vacancies: String(row.vacancies), created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleString() : 'N/A', updated_at_formatted: row.updated_at ? new Date(row.updated_at).toLocaleString() : 'N/A', updated_by_name: row.updated_by_user?.name || 'N/A' })); const separator = ','; const csvContent = CSV_HEADERS_JOB.join(separator) + '\n' + transformedRows.map((row) => { return CSV_KEYS_JOB.map((k) => { let cell = row[k as keyof JobPostExportItem]; if (cell === null || cell === undefined) { cell = '' } else { cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) { cell = `"${cell}"` } } return cell }).join(separator) }).join('\n'); const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute('href', url); link.setAttribute('download', filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true } return false }
 
 // ============================================================================
@@ -149,9 +149,85 @@ function exportJobPostsToCsv(filename: string, rows: JobPostItem[], departmentOp
 export type ModalType = 'email' | 'whatsapp' | 'notification' | 'task' | 'schedule' | 'active' | 'share'
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: JobPostItem | null }
 interface JobPostModalsProps { modalState: ModalState; onClose: () => void }
-const dummyUsers = [ { value: 'user1', label: 'Alice Johnson' }, { value: 'user2', label: 'Bob Williams' }, { value: 'user3', label: 'Charlie Brown' } ]
-const priorityOptions = [ { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' } ]
-const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'Call', label: 'Follow-up Call' }, { value: 'Deadline', label: 'Project Deadline' }, { value: 'Reminder', label: 'Reminder' } ]
+const dummyUsers = [{ value: 'user1', label: 'Alice Johnson' }, { value: 'user2', label: 'Bob Williams' }, { value: 'user3', label: 'Charlie Brown' }]
+const priorityOptions = [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]
+const eventTypeOptions = [
+    // Customer Engagement & Sales
+    { value: 'Meeting', label: 'Meeting' },
+    { value: 'Demo', label: 'Product Demo' },
+    { value: 'IntroCall', label: 'Introductory Call' },
+    { value: 'FollowUpCall', label: 'Follow-up Call' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'CheckIn', label: 'Customer Check-in' },
+    { value: 'LogEmail', label: 'Log an Email' },
+
+    // Project & Task Management
+    { value: 'Milestone', label: 'Project Milestone' },
+    { value: 'Task', label: 'Task' },
+    { value: 'FollowUp', label: 'General Follow-up' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+    // Customer Onboarding & Support
+    { value: 'OnboardingSession', label: 'Onboarding Session' },
+    { value: 'Training', label: 'Training Session' },
+    { value: 'SupportCall', label: 'Support Call' },
+
+    // General & Administrative
+    { value: 'Reminder', label: 'Reminder' },
+    { value: 'Note', label: 'Add a Note' },
+    { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+    { value: 'StrategySession', label: 'Strategy Session' },
+    { value: 'TeamMeeting', label: 'Team Meeting' },
+    { value: 'PerformanceReview', label: 'Performance Review' },
+    { value: 'Lunch', label: 'Lunch / Break' },
+    { value: 'Appointment', label: 'Personal Appointment' },
+    { value: 'Other', label: 'Other' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+    { value: 'InternalSync', label: 'Internal Team Sync' },
+    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+    { value: 'ProjectSignOff', label: 'Project Sign-off' },
+    { value: 'PrepareReport', label: 'Prepare Report' },
+    { value: 'PresentFindings', label: 'Present Findings' },
+    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+    { value: 'BugReplication', label: 'Bug Replication Session' },
+    { value: 'IssueEscalation', label: 'Escalate Issue' },
+    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+    { value: 'FeatureRequest', label: 'Log Feature Request' },
+    { value: 'IntegrationSupport', label: 'Integration Support Call' },
+    { value: 'DataMigration', label: 'Data Migration/Import Task' },
+    { value: 'ColdCall', label: 'Cold Call' },
+    { value: 'DiscoveryCall', label: 'Discovery Call' },
+    { value: 'QualificationCall', label: 'Qualification Call' },
+    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+    { value: 'ContractSent', label: 'Contract Sent' },
+    { value: 'NegotiationCall', label: 'Negotiation Call' },
+    { value: 'TrialSetup', label: 'Product Trial Setup' },
+    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+    { value: 'WelcomeCall', label: 'Welcome Call' },
+    { value: 'ImplementationSession', label: 'Implementation Session' },
+    { value: 'UserTraining', label: 'User Training Session' },
+    { value: 'AdminTraining', label: 'Admin Training Session' },
+    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'HealthCheck', label: 'Customer Health Check' },
+    { value: 'FeedbackSession', label: 'Feedback Session' },
+    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+    { value: 'InvoiceDue', label: 'Invoice Due' },
+    { value: 'SendInvoice', label: 'Send Invoice' },
+    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+    { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
 
 // --- Individual Dialog Components ---
 const SendEmailDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => { const [isLoading, setIsLoading] = useState(false); const { control, handleSubmit } = useForm({ defaultValues: { subject: `Regarding Job Post: ${jobPost.job_title}`, message: '' } }); const onSendEmail = (data: { subject: string; message: string }) => { setIsLoading(true); console.log('Sending email for job post', jobPost.id, 'with data:', data); setTimeout(() => { toast.push(<Notification type="success" title="Email Sent Successfully" />); setIsLoading(false); onClose() }, 1000) }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Send Email about "{jobPost.job_title}"</h5><Form onSubmit={handleSubmit(onSendEmail)}><FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => <Input {...field} />} /></FormItem><FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<Input textArea {...field} rows={5} placeholder="Compose your email..." />)} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send</Button></div></Form></Dialog>) }
@@ -237,33 +313,33 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInpu
 ItemSearch.displayName = 'ItemSearch'
 
 const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
-  onSearchChange: (query: string) => void;
-  onFilter: () => void;
-  onExport: () => void;
-  onClearFilters: () => void;
-  columns: ColumnDef<JobPostItem>[];
-  filteredColumns: ColumnDef<JobPostItem>[];
-  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<JobPostItem>[]>>;
-  activeFilterCount: number;
+    onSearchChange: (query: string) => void;
+    onFilter: () => void;
+    onExport: () => void;
+    onClearFilters: () => void;
+    columns: ColumnDef<JobPostItem>[];
+    filteredColumns: ColumnDef<JobPostItem>[];
+    setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<JobPostItem>[]>>;
+    activeFilterCount: number;
 }) => {
     const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
     const toggleColumn = (checked: boolean, colId: string) => {
-      if (checked) {
-          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-          if (originalColumn) {
-              setFilteredColumns(prev => {
-                  const newCols = [...prev, originalColumn];
-                  newCols.sort((a, b) => {
-                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                      return indexA - indexB;
-                  });
-                  return newCols;
-              });
-          }
-      } else {
-          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
-      }
+        if (checked) {
+            const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+            if (originalColumn) {
+                setFilteredColumns(prev => {
+                    const newCols = [...prev, originalColumn];
+                    newCols.sort((a, b) => {
+                        const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                        const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                        return indexA - indexB;
+                    });
+                    return newCols;
+                });
+            }
+        } else {
+            setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+        }
     };
     return (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
@@ -297,10 +373,10 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, departmentOptions }: {
-  filterData: FilterFormData;
-  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
-  onClearAll: () => void;
-  departmentOptions: JobDepartmentOption[];
+    filterData: FilterFormData;
+    onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+    onClearAll: () => void;
+    departmentOptions: JobDepartmentOption[];
 }) => {
     const { filterStatus, filterDepartment } = filterData;
     if (!filterStatus?.length && !filterDepartment?.length) return null;
@@ -397,7 +473,7 @@ const JobPostsListing = () => {
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })) }, []);
     const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterDepartment: data.filterDepartment || [] }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer() }, [closeFilterDrawer, handleSetTableData]);
-    
+
     const onClearFilters = useCallback(() => { const defaultFilters = { filterStatus: [], filterDepartment: [] }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: '' }); dispatch(getJobPostsAction()); setIsFilterDrawerOpen(false) }, [filterFormMethods, dispatch, handleSetTableData]);
 
     const handleCardClick = (status?: JobPostStatusForm | 'all') => {
@@ -409,7 +485,7 @@ const JobPostsListing = () => {
             }
         }
     };
-    
+
     const handleRemoveFilter = (key: keyof FilterFormData, value: string) => {
         setFilterCriteria(prev => {
             const newFilters = { ...prev };
@@ -424,11 +500,11 @@ const JobPostsListing = () => {
     };
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => { const sourceData: JobPostItem[] = Array.isArray(jobPostsData?.data) ? jobPostsData?.data : []; let processedData: JobPostItem[] = cloneDeep(sourceData); if (filterCriteria.filterStatus?.length) { const statusValues = filterCriteria.filterStatus.map((s) => s.value); processedData = processedData.filter((item) => statusValues.includes(item.status)) } if (filterCriteria.filterDepartment?.length) { const deptValues = filterCriteria.filterDepartment.map((d) => d.value); processedData = processedData.filter((item) => deptValues.includes(String(item.job_department_id))) } if (tableData.query && tableData.query.trim() !== '') { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query))) } const { order, key } = tableData.sort as OnSortParam; if (order && key && processedData.length > 0 && typeof key === 'string') { processedData.sort((a, b) => { const aVal = a[key as keyof JobPostItem]; const bVal = b[key as keyof JobPostItem]; if (key === 'created_at' || key === 'updated_at') { const dateA = aVal ? new Date(aVal as string).getTime() : 0; const dateB = bVal ? new Date(bVal as string).getTime() : 0; return order === 'asc' ? dateA - dateB : dateB - dateA } if (key === 'vacancies') { const numA = parseInt(String(aVal), 10); const numB = parseInt(String(bVal), 10); if (!isNaN(numA) && !isNaN(numB)) { return order === 'asc' ? numA - numB : numB - numA } } const aStr = String(aVal ?? '').toLowerCase(); const bStr = String(bVal ?? '').toLowerCase(); return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr) }) } const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize; return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData } }, [jobPostsData?.data, tableData, filterCriteria]);
-    
+
     const activeFilterCount = useMemo(() => {
         return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
     }, [filterCriteria]);
-    
+
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return } exportReasonFormMethods.reset({ reason: '' }); setIsExportReasonModalOpen(true) };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = 'JobPosts'; const timestamp = new Date().toISOString().split('T')[0]; const fileName = `job_posts_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); const exportSuccess = exportJobPostsToCsv(fileName, allFilteredAndSortedData, departmentOptions); if (exportSuccess) { toast.push(<Notification title="Export Successful" type="success">Data exported to {fileName}.</Notification>) } else if (allFilteredAndSortedData && allFilteredAndSortedData.length > 0) { toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>) } setIsExportReasonModalOpen(false) } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message || 'Could not submit export reason.'}</Notification>) } finally { setIsSubmittingExportReason(false) } };
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
@@ -447,7 +523,7 @@ const JobPostsListing = () => {
         { header: 'Updated Info', accessorKey: 'updated_at', size: 150, enableSorting: true, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A'; return (<div className="text-xs"><span>{updated_by_user?.name || 'N/A'}</span>{updated_by_user?.roles?.[0]?.display_name && (<><br /><b>{updated_by_user.roles[0].display_name}</b></>)}<br /><span>{formattedDate}</span></div>) } },
         { header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100, cell: (props) => (<ActionColumn item={props.row.original} onEdit={openEditDrawer} onDelete={handleDeleteClick} onOpenModal={handleOpenModal} />) },
     ], [departmentOptions, openEditDrawer, handleDeleteClick, handleOpenModal]);
-    
+
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<JobPostItem>[]>(columns);
 
 
@@ -478,7 +554,7 @@ const JobPostsListing = () => {
             {currentEditingItem && (<div className=""><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded"><div><b className="font-semibold text-primary">Latest Update:</b><p className="text-sm font-semibold mt-1">{currentEditingItem.updated_by_user?.name || 'N/A'}</p><p>{currentEditingItem.updated_by_user?.roles?.[0]?.display_name || 'N/A'}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{currentEditingItem.created_at ? `${new Date(currentEditingItem.created_at).getDate()} ${new Date(currentEditingItem.created_at).toLocaleString('en-US', { month: 'short' })} ${new Date(currentEditingItem.created_at).getFullYear()}, ${new Date(currentEditingItem.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A'}</span><br /><span className="font-semibold">Updated At:</span> <span>{currentEditingItem.updated_at ? `${new Date(currentEditingItem.updated_at).getDate()} ${new Date(currentEditingItem.updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(currentEditingItem.updated_at).getFullYear()}, ${new Date(currentEditingItem.updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A'}</span></div></div></div>)}
         </>)
     }
-    
+
     const cardClass = "rounded-md transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
 
     return (
@@ -494,10 +570,10 @@ const JobPostsListing = () => {
                         <Tooltip title="Total applicants for all jobs"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbFileLike size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{jobPostsData?.counts?.applicants || 0}</h6><span className="font-semibold text-xs">Applicants</span></div></Card></Tooltip>
                     </div>
                     <div className="mb-4">
-                        <ItemTableTools 
-                            onSearchChange={handleSearchChange} 
-                            onFilter={openFilterDrawer} 
-                            onExport={handleOpenExportReasonModal} 
+                        <ItemTableTools
+                            onSearchChange={handleSearchChange}
+                            onFilter={openFilterDrawer}
+                            onExport={handleOpenExportReasonModal}
                             onClearFilters={onClearFilters}
                             columns={columns}
                             filteredColumns={filteredColumns}

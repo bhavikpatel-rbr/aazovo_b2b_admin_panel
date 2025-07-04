@@ -24,52 +24,52 @@ import toast from "@/components/ui/toast";
 import DebouceInput from "@/components/shared/DebouceInput";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import {
-  Drawer,
-  Form,
-  FormItem,
-  Input,
-  DatePicker,
-  Tooltip,
-  Tag,
-  Select,
-  Card,
-  Dialog,
-  Checkbox,
+    Drawer,
+    Form,
+    FormItem,
+    Input,
+    DatePicker,
+    Tooltip,
+    Tag,
+    Select,
+    Card,
+    Dialog,
+    Checkbox,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dropdown from "@/components/ui/Dropdown";
 
 // Icons
 import {
-  TbSearch,
-  TbFilter,
-  TbCloudUpload,
-  TbReload,
-  TbPlus,
-  TbPencil,
-  TbTrash,
-  TbUserCircle,
-  TbMail,
-  TbPhone,
-  TbCalendarEvent,
-  TbTag,
-  TbWorld,
-  TbStar,
-  TbFileText,
-  TbCaravan,
-  TbUserStar,
-  TbMailForward,
-  TbCalendarCancel,
-  TbAlignBoxCenterBottom,
-  TbMailbox,
-  TbSend,
-  TbEye,
-  TbBell,
-  TbCalendarClock,
-  TbChecklist,
-  TbCloudDownload,
-  TbColumns,
-  TbX,
+    TbSearch,
+    TbFilter,
+    TbCloudUpload,
+    TbReload,
+    TbPlus,
+    TbPencil,
+    TbTrash,
+    TbUserCircle,
+    TbMail,
+    TbPhone,
+    TbCalendarEvent,
+    TbTag,
+    TbWorld,
+    TbStar,
+    TbFileText,
+    TbCaravan,
+    TbUserStar,
+    TbMailForward,
+    TbCalendarCancel,
+    TbAlignBoxCenterBottom,
+    TbMailbox,
+    TbSend,
+    TbEye,
+    TbBell,
+    TbCalendarClock,
+    TbChecklist,
+    TbCloudDownload,
+    TbColumns,
+    TbX,
 } from "react-icons/tb";
 
 // Types
@@ -80,13 +80,13 @@ import { SelectOption } from "../RequestFeedback/RequestAndFeedback"; // Adjust 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
 import {
-  addSubscriberAction,
-  editSubscriberAction,
-  getSubscribersAction,
-  submitExportReasonAction,
-  addNotificationAction,
-  addScheduleAction,
-  getAllUsersAction,
+    addSubscriberAction,
+    editSubscriberAction,
+    getSubscribersAction,
+    submitExportReasonAction,
+    addNotificationAction,
+    addScheduleAction,
+    getAllUsersAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector, shallowEqual } from "react-redux";
@@ -185,25 +185,96 @@ const addEditSubscriberFormSchema = z.object({
 type AddEditSubscriberFormData = z.infer<typeof addEditSubscriberFormSchema>;
 
 const exportReasonSchema = z.object({
-  reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."),
+    reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 const scheduleSchema = z.object({
-  event_title: z.string().min(3, "Title must be at least 3 characters."),
-  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
-  date_time: z.date({ required_error: "Event date & time is required." }),
-  remind_from: z.date().nullable().optional(),
-  notes: z.string().optional(),
+    event_title: z.string().min(3, "Title must be at least 3 characters."),
+    event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+    date_time: z.date({ required_error: "Event date & time is required." }),
+    remind_from: z.date().nullable().optional(),
+    notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 const eventTypeOptions = [
+    // Customer Engagement & Sales
     { value: 'Meeting', label: 'Meeting' },
-    { value: 'Call', label: 'Follow-up Call' },
-    { value: 'Deadline', label: 'Project Deadline' },
+    { value: 'Demo', label: 'Product Demo' },
+    { value: 'IntroCall', label: 'Introductory Call' },
+    { value: 'FollowUpCall', label: 'Follow-up Call' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'CheckIn', label: 'Customer Check-in' },
+    { value: 'LogEmail', label: 'Log an Email' },
+
+    // Project & Task Management
+    { value: 'Milestone', label: 'Project Milestone' },
+    { value: 'Task', label: 'Task' },
+    { value: 'FollowUp', label: 'General Follow-up' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+    // Customer Onboarding & Support
+    { value: 'OnboardingSession', label: 'Onboarding Session' },
+    { value: 'Training', label: 'Training Session' },
+    { value: 'SupportCall', label: 'Support Call' },
+
+    // General & Administrative
     { value: 'Reminder', label: 'Reminder' },
-];
+    { value: 'Note', label: 'Add a Note' },
+    { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+    { value: 'StrategySession', label: 'Strategy Session' },
+    { value: 'TeamMeeting', label: 'Team Meeting' },
+    { value: 'PerformanceReview', label: 'Performance Review' },
+    { value: 'Lunch', label: 'Lunch / Break' },
+    { value: 'Appointment', label: 'Personal Appointment' },
+    { value: 'Other', label: 'Other' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+    { value: 'InternalSync', label: 'Internal Team Sync' },
+    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+    { value: 'ProjectSignOff', label: 'Project Sign-off' },
+    { value: 'PrepareReport', label: 'Prepare Report' },
+    { value: 'PresentFindings', label: 'Present Findings' },
+    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+    { value: 'BugReplication', label: 'Bug Replication Session' },
+    { value: 'IssueEscalation', label: 'Escalate Issue' },
+    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+    { value: 'FeatureRequest', label: 'Log Feature Request' },
+    { value: 'IntegrationSupport', label: 'Integration Support Call' },
+    { value: 'DataMigration', label: 'Data Migration/Import Task' },
+    { value: 'ColdCall', label: 'Cold Call' },
+    { value: 'DiscoveryCall', label: 'Discovery Call' },
+    { value: 'QualificationCall', label: 'Qualification Call' },
+    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+    { value: 'ContractSent', label: 'Contract Sent' },
+    { value: 'NegotiationCall', label: 'Negotiation Call' },
+    { value: 'TrialSetup', label: 'Product Trial Setup' },
+    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+    { value: 'WelcomeCall', label: 'Welcome Call' },
+    { value: 'ImplementationSession', label: 'Implementation Session' },
+    { value: 'UserTraining', label: 'User Training Session' },
+    { value: 'AdminTraining', label: 'Admin Training Session' },
+    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'HealthCheck', label: 'Customer Health Check' },
+    { value: 'FeedbackSession', label: 'Feedback Session' },
+    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+    { value: 'InvoiceDue', label: 'Invoice Due' },
+    { value: 'SendInvoice', label: 'Send Invoice' },
+    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+    { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
 
 // --- CSV Exporter Utility ---
 const CSV_HEADERS = ['ID', 'Name', 'Email', 'Mobile No', 'Subscribed Date', 'Subscription Type', 'Source', 'Status', 'Rating', 'Notes', 'Unsubscribe Reason'];
@@ -252,7 +323,7 @@ const AddScheduleDialog: React.FC<{ document: SubscriberItem; onClose: () => voi
     const [isLoading, setIsLoading] = useState(false);
     const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
         resolver: zodResolver(scheduleSchema),
-        defaultValues: { event_title: `Follow-up with Subscriber ${document.name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding subscriber ${document.name} (${document.email}).`},
+        defaultValues: { event_title: `Follow-up with Subscriber ${document.name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding subscriber ${document.name} (${document.email}).` },
         mode: 'onChange',
     });
     const onAddEvent = async (data: ScheduleFormData) => {
@@ -289,31 +360,31 @@ const SubscriberModals = ({ modalState, onClose, getAllUserDataOptions }: { moda
 };
 
 type SubscriberSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
-const SubscriberSearch = React.forwardRef<HTMLInputElement, SubscriberSearchProps>(({ onInputChange }, ref) => ( <DebouceInput ref={ref} className="w-full" placeholder="Quick Search (ID, Email, Name, Mobile)..." suffix={<TbSearch className="text-lg" />} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)} /> ));
+const SubscriberSearch = React.forwardRef<HTMLInputElement, SubscriberSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search (ID, Email, Name, Mobile)..." suffix={<TbSearch className="text-lg" />} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)} />));
 SubscriberSearch.displayName = 'SubscriberSearch';
 
 const SubscriberTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
-  onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void;
-  columns: ColumnDef<SubscriberItem>[]; filteredColumns: ColumnDef<SubscriberItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<SubscriberItem>[]>>; activeFilterCount: number;
+    onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void;
+    columns: ColumnDef<SubscriberItem>[]; filteredColumns: ColumnDef<SubscriberItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<SubscriberItem>[]>>; activeFilterCount: number;
 }) => {
     const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
     const toggleColumn = (checked: boolean, colId: string) => {
-      if (checked) {
-        const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-        if (originalColumn) {
-          setFilteredColumns(prev => {
-            const newCols = [...prev, originalColumn];
-            newCols.sort((a, b) => {
-              const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-              const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-              return indexA - indexB;
-            });
-            return newCols;
-          });
+        if (checked) {
+            const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+            if (originalColumn) {
+                setFilteredColumns(prev => {
+                    const newCols = [...prev, originalColumn];
+                    newCols.sort((a, b) => {
+                        const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                        const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                        return indexA - indexB;
+                    });
+                    return newCols;
+                });
+            }
+        } else {
+            setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
         }
-      } else {
-        setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
-      }
     };
     return (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
@@ -321,7 +392,7 @@ const SubscriberTableTools = ({ onSearchChange, onFilter, onExport, onClearFilte
                 <SubscriberSearch onInputChange={onSearchChange} />
             </div>
             <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                 <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
                     <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
                         {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
                     </div>
@@ -336,9 +407,9 @@ const SubscriberTableTools = ({ onSearchChange, onFilter, onExport, onClearFilte
 SubscriberTableTools.displayName = 'SubscriberTableTools';
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
-  filterData: FilterFormData,
-  onRemoveFilter: (key: keyof FilterFormData) => void;
-  onClearAll: () => void;
+    filterData: FilterFormData,
+    onRemoveFilter: (key: keyof FilterFormData) => void;
+    onClearAll: () => void;
 }) => {
     const hasFilters = (filterData.status && filterData.status !== "") || (filterData.dateRange && (filterData.dateRange[0] || filterData.dateRange[1]));
     if (!hasFilters) return null;
@@ -349,7 +420,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
             {filterData.status && (
                 <Tag prefix>Status: {filterData.status} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('status')} /></Tag>
             )}
-             {filterData.dateRange && (filterData.dateRange[0] || filterData.dateRange[1]) && (
+            {filterData.dateRange && (filterData.dateRange[0] || filterData.dateRange[1]) && (
                 <Tag prefix>Date: {dayjs(filterData.dateRange[0]).format('MMM D')} - {dayjs(filterData.dateRange[1]).format('MMM D, YYYY')} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('dateRange')} /></Tag>
             )}
             <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
@@ -435,7 +506,7 @@ const SubscribersListing = () => {
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
     const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
     const onClearFilters = useCallback(() => { const defaultFilters = filterFormSchema.parse({}); filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); }, [filterFormMethods]);
-    
+
     const handleCardClick = (status: string) => { onClearFilters(); const statusOption = FILTER_STATUS_OPTIONS.find(opt => opt.value === status); if (statusOption) { setFilterCriteria({ status: statusOption.value }); } };
     const handleRemoveFilter = (key: keyof FilterFormData) => { setFilterCriteria(prev => ({ ...prev, [key]: undefined })); };
 
@@ -502,11 +573,11 @@ const SubscribersListing = () => {
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
     const tableIsLoading = masterLoadingStatus === "loading" || isDeleting;
-    
+
     const activeFilterCount = useMemo(() => {
         let count = 0;
-        if(filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) count++;
-        if(filterCriteria.status && filterCriteria.status !== "") count++;
+        if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) count++;
+        if (filterCriteria.status && filterCriteria.status !== "") count++;
         return count;
     }, [filterCriteria]);
 
@@ -521,7 +592,7 @@ const SubscribersListing = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Subscribers</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-4 gap-2">
                         <Tooltip title="Click to show all subscribers"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200 dark:border-blue-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbCaravan size={24} /></div><div><h6 className="text-blue-500 dark:text-blue-200">{counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show new subscribers"><div onClick={() => {}}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 dark:border-violet-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbUserStar size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{counts?.new || 0}</h6><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show new subscribers"><div onClick={() => { }}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 dark:border-violet-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbUserStar size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{counts?.new || 0}</h6><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
                         <Tooltip title="Click to show active subscribers"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200 dark:border-green-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbMailForward size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{counts?.active || 0}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
                         <Tooltip title="Click to show unsubscribed"><div onClick={() => handleCardClick('Unsubscribed')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200 dark:border-red-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbCalendarCancel size={24} /></div><div><h6 className="text-red-500 dark:text-red-200">{counts?.unsubscribed || 0}</h6><span className="font-semibold text-xs">Unsubscribed</span></div></Card></div></Tooltip>
                     </div>
@@ -556,14 +627,14 @@ const SubscribersListing = () => {
                         <FormItem label={<div>Subscription Date<span className="text-red-500"> *</span></div>} invalid={!!errors.subscribedDate} errorMessage={errors.subscribedDate?.message}><Controller name="subscribedDate" control={control} render={({ field }) => <DatePicker {...field} placeholder='Pick Subscription Date' value={field.value} />} /></FormItem>
                     </div>
                     <div className='md:grid grid-cols-2 gap-3'>
-                        <FormItem label={<div>Subscription Type<span className="text-red-500"> *</span></div>} invalid={!!errors.subscriptionType} errorMessage={errors.subscriptionType?.message}><Controller name="subscriptionType" control={control} render={({ field }) => ( <Select {...field} placeholder="Select Subscription Type" options={SUBSCRIPTION_TYPE_OPTIONS} value={SUBSCRIPTION_TYPE_OPTIONS.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )}/></FormItem>
+                        <FormItem label={<div>Subscription Type<span className="text-red-500"> *</span></div>} invalid={!!errors.subscriptionType} errorMessage={errors.subscriptionType?.message}><Controller name="subscriptionType" control={control} render={({ field }) => (<Select {...field} placeholder="Select Subscription Type" options={SUBSCRIPTION_TYPE_OPTIONS} value={SUBSCRIPTION_TYPE_OPTIONS.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} /></FormItem>
                         <FormItem label={<div>Source<span className="text-red-500"> *</span></div>} invalid={!!errors.source} errorMessage={errors.source?.message}><Controller name="source" control={control} render={({ field }) => <Input {...field} placeholder='Enter Source (e.g., Website, Facebook)' prefix={<TbWorld />} />} /></FormItem>
                     </div>
                     <div className='md:grid grid-cols-2 gap-3'>
-                        <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!errors.status} errorMessage={errors.status?.message}><Controller name="status" control={control} render={({ field }) => ( <Select {...field} placeholder="Select Status" options={STATUS_OPTIONS} value={STATUS_OPTIONS.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )}/></FormItem>
+                        <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!errors.status} errorMessage={errors.status?.message}><Controller name="status" control={control} render={({ field }) => (<Select {...field} placeholder="Select Status" options={STATUS_OPTIONS} value={STATUS_OPTIONS.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} /></FormItem>
                         <FormItem label="Rating (1-5)" invalid={!!errors.rating} errorMessage={errors.rating?.message}><Controller name="rating" control={control} render={({ field }) => <Input {...field} type="number" min="1" max="5" placeholder='Enter Rating (Optional)' value={field.value ?? ""} onChange={e => field.onChange(e.target.value === '' ? null : Number(e.target.value))} prefix={<TbStar />} />} /></FormItem>
                     </div>
-                     {currentStatusWatch === 'Unsubscribed' && (<FormItem label={<div>Unsubscribe Reason<span className="text-red-500"> *</span></div>} invalid={!!errors.unsubscribeReason} errorMessage={errors.unsubscribeReason?.message}><Controller name="unsubscribeReason" control={control} render={({ field }) => <Input {...field} placeholder='Describe unsubscribe reason' textArea rows={3} />} /></FormItem>)}
+                    {currentStatusWatch === 'Unsubscribed' && (<FormItem label={<div>Unsubscribe Reason<span className="text-red-500"> *</span></div>} invalid={!!errors.unsubscribeReason} errorMessage={errors.unsubscribeReason?.message}><Controller name="unsubscribeReason" control={control} render={({ field }) => <Input {...field} placeholder='Describe unsubscribe reason' textArea rows={3} />} /></FormItem>)}
                     <FormItem label="Notes" invalid={!!errors.note} errorMessage={errors.note?.message}><Controller name="note" control={control} render={({ field }) => <Input {...field} placeholder='Write a note (Optional)' textArea rows={3} prefix={<TbFileText />} />} /></FormItem>
                 </Form>
             </Drawer>
@@ -652,17 +723,17 @@ const SubscribersListing = () => {
                 confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
             >
                 <Form
-                id="exportSubscriberReasonForm"
-                onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
-                className="flex flex-col gap-4 mt-2"
+                    id="exportSubscriberReasonForm"
+                    onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }}
+                    className="flex flex-col gap-4 mt-2"
                 >
-                <FormItem
-                    label="Please provide a reason for exporting this data:"
-                    invalid={!!exportReasonFormMethods.formState.errors.reason}
-                    errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
-                >
-                    <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
-                </FormItem>
+                    <FormItem
+                        label="Please provide a reason for exporting this data:"
+                        invalid={!!exportReasonFormMethods.formState.errors.reason}
+                        errorMessage={exportReasonFormMethods.formState.errors.reason?.message}
+                    >
+                        <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+                    </FormItem>
                 </Form>
             </ConfirmDialog>
             <SubscriberModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />

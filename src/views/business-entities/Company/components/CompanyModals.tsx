@@ -12,13 +12,89 @@ import { CompanyItem } from '../Company'; // Adjust the import path as needed
 import { TbUserCircle, TbFileText, TbFileZip, TbClock, TbMessageCircle, TbCheck, TbAlertTriangle, TbReportMoney, TbDownload, TbCalendar, TbMail, TbUser, TbClipboardText } from 'react-icons/tb';
 
 // --- Helper Data (for demos) ---
-const dummyUsers = [ { value: 'user1', label: 'Alice Johnson' }, { value: 'user2', label: 'Bob Williams' }, { value: 'user3', label: 'Charlie Brown' }];
-const priorityOptions = [ { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }];
-const eventTypeOptions = [ { value: 'meeting', label: 'Meeting' }, { value: 'call', label: 'Follow-up Call' }, { value: 'deadline', label: 'Project Deadline' }];
-const dummyMembers = [ { id: 'm1', name: 'Eleanor Vance', role: 'CEO', avatar: '/img/avatars/thumb-1.jpg' }, { id: 'm2', name: 'Cedric Diggory', role: 'CTO', avatar: '/img/avatars/thumb-2.jpg' }, { id: 'm3', name: 'Frank Bryce', role: 'Lead Developer', avatar: '/img/avatars/thumb-3.jpg' }];
-const dummyAlerts = [ { id: 1, severity: 'danger', message: 'Invoice #INV-0012 is 30 days overdue.', time: '2 days ago' }, { id: 2, severity: 'warning', message: 'Subscription ends in 7 days.', time: '5 days ago' }];
-const dummyTimeline = [ { id: 1, icon: <TbMail />, title: 'Email Sent', desc: 'Sent Q4 proposal.', time: '2023-10-25' }, { id: 2, icon: <TbCalendar />, title: 'Meeting Scheduled', desc: 'Discovery call with their tech lead.', time: '2023-10-20' }, { id: 3, icon: <TbUser />, title: 'Member Added', desc: 'Jane Doe joined as a contact.', time: '2023-10-18' }];
-const dummyTransactions = [ { id: 'tx1', date: '2023-10-15', desc: 'Invoice #INV-0012', amount: '$5,000.00', status: 'Overdue' }, { id: 'tx2', date: '2023-09-20', desc: 'Subscription Fee', amount: '$500.00', status: 'Paid' }];
+const dummyUsers = [{ value: 'user1', label: 'Alice Johnson' }, { value: 'user2', label: 'Bob Williams' }, { value: 'user3', label: 'Charlie Brown' }];
+const priorityOptions = [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }];
+const eventTypeOptions = [
+    // Customer Engagement & Sales
+    { value: 'Meeting', label: 'Meeting' },
+    { value: 'Demo', label: 'Product Demo' },
+    { value: 'IntroCall', label: 'Introductory Call' },
+    { value: 'FollowUpCall', label: 'Follow-up Call' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'CheckIn', label: 'Customer Check-in' },
+    { value: 'LogEmail', label: 'Log an Email' },
+
+    // Project & Task Management
+    { value: 'Milestone', label: 'Project Milestone' },
+    { value: 'Task', label: 'Task' },
+    { value: 'FollowUp', label: 'General Follow-up' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+    // Customer Onboarding & Support
+    { value: 'OnboardingSession', label: 'Onboarding Session' },
+    { value: 'Training', label: 'Training Session' },
+    { value: 'SupportCall', label: 'Support Call' },
+
+    // General & Administrative
+    { value: 'Reminder', label: 'Reminder' },
+    { value: 'Note', label: 'Add a Note' },
+    { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+    { value: 'StrategySession', label: 'Strategy Session' },
+    { value: 'TeamMeeting', label: 'Team Meeting' },
+    { value: 'PerformanceReview', label: 'Performance Review' },
+    { value: 'Lunch', label: 'Lunch / Break' },
+    { value: 'Appointment', label: 'Personal Appointment' },
+    { value: 'Other', label: 'Other' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+    { value: 'InternalSync', label: 'Internal Team Sync' },
+    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+    { value: 'ProjectSignOff', label: 'Project Sign-off' },
+    { value: 'PrepareReport', label: 'Prepare Report' },
+    { value: 'PresentFindings', label: 'Present Findings' },
+    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+    { value: 'BugReplication', label: 'Bug Replication Session' },
+    { value: 'IssueEscalation', label: 'Escalate Issue' },
+    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+    { value: 'FeatureRequest', label: 'Log Feature Request' },
+    { value: 'IntegrationSupport', label: 'Integration Support Call' },
+    { value: 'DataMigration', label: 'Data Migration/Import Task' },
+    { value: 'ColdCall', label: 'Cold Call' },
+    { value: 'DiscoveryCall', label: 'Discovery Call' },
+    { value: 'QualificationCall', label: 'Qualification Call' },
+    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+    { value: 'ContractSent', label: 'Contract Sent' },
+    { value: 'NegotiationCall', label: 'Negotiation Call' },
+    { value: 'TrialSetup', label: 'Product Trial Setup' },
+    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+    { value: 'WelcomeCall', label: 'Welcome Call' },
+    { value: 'ImplementationSession', label: 'Implementation Session' },
+    { value: 'UserTraining', label: 'User Training Session' },
+    { value: 'AdminTraining', label: 'Admin Training Session' },
+    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'HealthCheck', label: 'Customer Health Check' },
+    { value: 'FeedbackSession', label: 'Feedback Session' },
+    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+    { value: 'InvoiceDue', label: 'Invoice Due' },
+    { value: 'SendInvoice', label: 'Send Invoice' },
+    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+    { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
+const dummyMembers = [{ id: 'm1', name: 'Eleanor Vance', role: 'CEO', avatar: '/img/avatars/thumb-1.jpg' }, { id: 'm2', name: 'Cedric Diggory', role: 'CTO', avatar: '/img/avatars/thumb-2.jpg' }, { id: 'm3', name: 'Frank Bryce', role: 'Lead Developer', avatar: '/img/avatars/thumb-3.jpg' }];
+const dummyAlerts = [{ id: 1, severity: 'danger', message: 'Invoice #INV-0012 is 30 days overdue.', time: '2 days ago' }, { id: 2, severity: 'warning', message: 'Subscription ends in 7 days.', time: '5 days ago' }];
+const dummyTimeline = [{ id: 1, icon: <TbMail />, title: 'Email Sent', desc: 'Sent Q4 proposal.', time: '2023-10-25' }, { id: 2, icon: <TbCalendar />, title: 'Meeting Scheduled', desc: 'Discovery call with their tech lead.', time: '2023-10-20' }, { id: 3, icon: <TbUser />, title: 'Member Added', desc: 'Jane Doe joined as a contact.', time: '2023-10-18' }];
+const dummyTransactions = [{ id: 'tx1', date: '2023-10-15', desc: 'Invoice #INV-0012', amount: '$5,000.00', status: 'Overdue' }, { id: 'tx2', date: '2023-09-20', desc: 'Subscription Fee', amount: '$500.00', status: 'Paid' }];
 const dummyDocs = [{ id: 'doc1', name: 'Service_Agreement.pdf', type: 'pdf', size: '2.5 MB' }, { id: 'doc2', name: 'Onboarding_Kit.zip', type: 'zip', size: '10.1 MB' }];
 
 // --- Type Definitions for Modals ---
@@ -65,10 +141,10 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose }) =>
 
 // --- Individual Dialog Components ---
 
-const SendEmailDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => { /* ... same as previous answer ... */ return <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>...</Dialog>;};
-const AssignTaskDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => { /* ... same as previous answer ... */ return <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>...</Dialog>;};
-const AddScheduleDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => { /* ... same as previous answer ... */ return <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>...</Dialog>;};
-const ViewMembersDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => { /* ... same as previous answer ... */ return <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>...</Dialog>;};
+const SendEmailDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => { /* ... same as previous answer ... */ return <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>...</Dialog>; };
+const AssignTaskDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => { /* ... same as previous answer ... */ return <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>...</Dialog>; };
+const AddScheduleDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => { /* ... same as previous answer ... */ return <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>...</Dialog>; };
+const ViewMembersDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => { /* ... same as previous answer ... */ return <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>...</Dialog>; };
 
 const SendWhatsAppDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => {
     const [isLoading, setIsLoading] = useState(false);
@@ -89,7 +165,7 @@ const SendWhatsAppDialog: React.FC<{ company: CompanyItem; onClose: () => void }
             <h5 className="mb-4">Send WhatsApp to {company.name}</h5>
             <form onSubmit={handleSubmit(onSendMessage)}>
                 <FormItem label="Message Template">
-                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4}/>} />
+                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
                 </FormItem>
                 <div className="text-right mt-6">
                     <Button className="mr-2" onClick={onClose}>Cancel</Button>
@@ -121,11 +197,11 @@ const AddNotificationDialog: React.FC<{ company: CompanyItem; onClose: () => voi
                 <FormItem label="Notification Title">
                     <Controller name="title" control={control} render={({ field }) => <Input {...field} />} />
                 </FormItem>
-                 <FormItem label="Send to Users">
+                <FormItem label="Send to Users">
                     <Controller name="users" control={control} render={({ field }) => <Select isMulti placeholder="Select Users" options={dummyUsers} {...field} />} />
                 </FormItem>
                 <FormItem label="Message">
-                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3}/>} />
+                    <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} />
                 </FormItem>
                 <div className="text-right mt-6">
                     <Button className="mr-2" onClick={onClose}>Cancel</Button>
@@ -145,10 +221,10 @@ const ViewAlertDialog: React.FC<{ company: CompanyItem; onClose: () => void }> =
                 {dummyAlerts.length > 0 ? dummyAlerts.map(alert => (
                     <div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`}>
                         <div className="flex justify-between items-start">
-                           <div className="flex items-start gap-2">
-                                <TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20}/>
+                            <div className="flex items-start gap-2">
+                                <TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} />
                                 <p className="text-sm">{alert.message}</p>
-                           </div>
+                            </div>
                             <span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span>
                         </div>
                     </div>
@@ -178,7 +254,7 @@ const TrackRecordDialog: React.FC<{ company: CompanyItem; onClose: () => void }>
                     </div>
                 ))}
             </div>
-             <div className="text-right mt-2"><Button variant="solid" onClick={onClose}>Close</Button></div>
+            <div className="text-right mt-2"><Button variant="solid" onClick={onClose}>Close</Button></div>
         </Dialog>
     );
 };
@@ -196,7 +272,7 @@ const ViewEngagementDialog: React.FC<{ company: CompanyItem; onClose: () => void
                     <p className="text-xs text-gray-500">Health Score</p>
                     <p className="font-bold text-lg text-green-500">{company.health_score}%</p>
                 </div>
-                 <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <p className="text-xs text-gray-500">Emails Opened</p>
                     <p className="font-bold text-lg">12 / 15</p>
                 </div>

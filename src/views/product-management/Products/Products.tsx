@@ -231,9 +231,85 @@ interface ProductsModalsProps {
   getAllUserDataOptions: { value: any; label: string }[];
 }
 
-const dummyUsers = [ { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" }, ];
-const priorityOptions = [ { value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, ];
-const eventTypeOptions = [ { value: "meeting", label: "Meeting" }, { value: "call", label: "Follow-up Call" }, { value: "deadline", label: "Project Deadline" }, ];
+const dummyUsers = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },];
+const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
+const eventTypeOptions = [
+  // Customer Engagement & Sales
+  { value: 'Meeting', label: 'Meeting' },
+  { value: 'Demo', label: 'Product Demo' },
+  { value: 'IntroCall', label: 'Introductory Call' },
+  { value: 'FollowUpCall', label: 'Follow-up Call' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'CheckIn', label: 'Customer Check-in' },
+  { value: 'LogEmail', label: 'Log an Email' },
+
+  // Project & Task Management
+  { value: 'Milestone', label: 'Project Milestone' },
+  { value: 'Task', label: 'Task' },
+  { value: 'FollowUp', label: 'General Follow-up' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+  // Customer Onboarding & Support
+  { value: 'OnboardingSession', label: 'Onboarding Session' },
+  { value: 'Training', label: 'Training Session' },
+  { value: 'SupportCall', label: 'Support Call' },
+
+  // General & Administrative
+  { value: 'Reminder', label: 'Reminder' },
+  { value: 'Note', label: 'Add a Note' },
+  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+  { value: 'StrategySession', label: 'Strategy Session' },
+  { value: 'TeamMeeting', label: 'Team Meeting' },
+  { value: 'PerformanceReview', label: 'Performance Review' },
+  { value: 'Lunch', label: 'Lunch / Break' },
+  { value: 'Appointment', label: 'Personal Appointment' },
+  { value: 'Other', label: 'Other' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+  { value: 'InternalSync', label: 'Internal Team Sync' },
+  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+  { value: 'ProjectSignOff', label: 'Project Sign-off' },
+  { value: 'PrepareReport', label: 'Prepare Report' },
+  { value: 'PresentFindings', label: 'Present Findings' },
+  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+  { value: 'BugReplication', label: 'Bug Replication Session' },
+  { value: 'IssueEscalation', label: 'Escalate Issue' },
+  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+  { value: 'FeatureRequest', label: 'Log Feature Request' },
+  { value: 'IntegrationSupport', label: 'Integration Support Call' },
+  { value: 'DataMigration', label: 'Data Migration/Import Task' },
+  { value: 'ColdCall', label: 'Cold Call' },
+  { value: 'DiscoveryCall', label: 'Discovery Call' },
+  { value: 'QualificationCall', label: 'Qualification Call' },
+  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+  { value: 'ContractSent', label: 'Contract Sent' },
+  { value: 'NegotiationCall', label: 'Negotiation Call' },
+  { value: 'TrialSetup', label: 'Product Trial Setup' },
+  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+  { value: 'WelcomeCall', label: 'Welcome Call' },
+  { value: 'ImplementationSession', label: 'Implementation Session' },
+  { value: 'UserTraining', label: 'User Training Session' },
+  { value: 'AdminTraining', label: 'Admin Training Session' },
+  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'HealthCheck', label: 'Customer Health Check' },
+  { value: 'FeedbackSession', label: 'Feedback Session' },
+  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+  { value: 'InvoiceDue', label: 'Invoice Due' },
+  { value: 'SendInvoice', label: 'Send Invoice' },
+  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+  { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
 
 const SendEmailDialog: React.FC<{ item: ProductItem; onClose: () => void; }> = ({ item, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -248,7 +324,7 @@ const SendEmailDialog: React.FC<{ item: ProductItem; onClose: () => void; }> = (
       <h5 className="mb-4">Send Email to {item.name}</h5>
       <form onSubmit={handleSubmit(onSendEmail)}>
         <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => ( <RichTextEditor value={field.value} onChange={field.onChange} /> )} /></FormItem>
+        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} /></FormItem>
         <div className="text-right mt-6">
           <Button className="mr-2" onClick={onClose}>Cancel</Button>
           <Button variant="solid" type="submit" loading={isLoading}>Send</Button>
@@ -284,36 +360,36 @@ const SendWhatsAppDialog: React.FC<{ item: ProductItem; onClose: () => void; }> 
   );
 };
 const AddNotificationDialog: React.FC<{ item: ProductItem; onClose: () => void; getAllUserDataOptions: { value: any; label: string }[]; }> = ({ item, onClose, getAllUserDataOptions }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const notificationSchema = z.object({ notification_title: z.string().min(3, 'Title must be at least 3 characters long.'), send_users: z.array(z.number()).min(1, 'Please select at least one user.'), message: z.string().min(10, 'Message must be at least 10 characters long.'), });
-    type NotificationFormData = z.infer<typeof notificationSchema>;
-    const { control, handleSubmit, formState: { errors, isValid }, } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Product Update: ${item.name}`, send_users: [], message: `This is a notification regarding the product "${item.name}". Please review the details.`, }, mode: 'onChange', });
-    const onSend = async (formData: NotificationFormData) => {
-        setIsLoading(true);
-        const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(item.id), module_name: 'Product', };
-        try {
-            await dispatch(addNotificationAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
-            onClose();
-        } catch (error: any) {
-            toast.push( <Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} /> );
-        } finally { setIsLoading(false); }
-    };
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Notify User about: {item.name}</h5>
-            <Form onSubmit={handleSubmit(onSend)}>
-                <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-                <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => ( <UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} /> )} /></FormItem>
-                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
-                </div>
-            </Form>
-        </Dialog>
-    );
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const notificationSchema = z.object({ notification_title: z.string().min(3, 'Title must be at least 3 characters long.'), send_users: z.array(z.number()).min(1, 'Please select at least one user.'), message: z.string().min(10, 'Message must be at least 10 characters long.'), });
+  type NotificationFormData = z.infer<typeof notificationSchema>;
+  const { control, handleSubmit, formState: { errors, isValid }, } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Product Update: ${item.name}`, send_users: [], message: `This is a notification regarding the product "${item.name}". Please review the details.`, }, mode: 'onChange', });
+  const onSend = async (formData: NotificationFormData) => {
+    setIsLoading(true);
+    const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(item.id), module_name: 'Product', };
+    try {
+      await dispatch(addNotificationAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+    } finally { setIsLoading(false); }
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Notify User about: {item.name}</h5>
+      <Form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+        <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></FormItem>
+        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
+        </div>
+      </Form>
+    </Dialog>
+  );
 };
 const AssignTaskDialog: React.FC<{ item: ProductItem; onClose: () => void; }> = ({ item, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -329,8 +405,8 @@ const AssignTaskDialog: React.FC<{ item: ProductItem; onClose: () => void; }> = 
       <form onSubmit={handleSubmit(onSubmit)}>
         <FormItem label="Assign To"><Controller name="assignTo" control={control} render={({ field }) => <UiSelect options={dummyUsers} {...field} />} /></FormItem>
         <FormItem label="Task Description"><Controller name="taskDescription" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
-        <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => ( <UiSelect options={priorityOptions} {...field} /> )}/></FormItem>
-        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => ( <DatePicker placeholder="Pick a date" {...field} /> )}/></FormItem>
+        <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<UiSelect options={priorityOptions} {...field} />)} /></FormItem>
+        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Pick a date" {...field} />)} /></FormItem>
         <div className="text-right mt-6">
           <Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
           <Button variant="solid" type="submit" loading={isLoading}>Assign</Button>
@@ -351,8 +427,8 @@ const AddScheduleDialog: React.FC<{ item: ProductItem; onClose: () => void; }> =
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {item.name}</h5>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <FormItem label="Event Type"><Controller name="eventType" control={control} render={({ field }) => ( <UiSelect options={eventTypeOptions} {...field} /> )}/></FormItem>
-        <FormItem label="Event Date & Time"><Controller name="eventDate" control={control} render={({ field }) => ( <DatePicker placeholder="Pick a date" {...field} /> )}/></FormItem>
+        <FormItem label="Event Type"><Controller name="eventType" control={control} render={({ field }) => (<UiSelect options={eventTypeOptions} {...field} />)} /></FormItem>
+        <FormItem label="Event Date & Time"><Controller name="eventDate" control={control} render={({ field }) => (<DatePicker placeholder="Pick a date" {...field} />)} /></FormItem>
         <FormItem label="Description / Notes"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
         <div className="text-right mt-6">
           <Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
@@ -505,7 +581,7 @@ const ActionColumn = React.memo(
     <div className="flex items-center justify-center">
       <Tooltip title="View"><div className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400" role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
       <Tooltip title="Edit"><div className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
-      <Dropdown placement="bottom-end" renderTitle={ <Tooltip title="More"><div className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"><TbDotsVertical /></div></Tooltip> }>
+      <Dropdown placement="bottom-end" renderTitle={<Tooltip title="More"><div className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"><TbDotsVertical /></div></Tooltip>}>
         <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
@@ -516,7 +592,7 @@ const ActionColumn = React.memo(
     </div>
   )
 );
-const ProductSearch = React.memo( React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void }> (({ onInputChange }, ref) => ( <DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} /> )) );
+const ProductSearch = React.memo(React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void }>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />)));
 ProductSearch.displayName = "ProductSearch";
 
 const ProductTableTools = ({ onSearchChange, onFilter, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
@@ -545,22 +621,22 @@ const ProductTableTools = ({ onSearchChange, onFilter, onClearFilters, columns, 
       setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
     }
   };
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <ProductSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
-                    </div>
-                </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-            </div>
-        </div>
-    )
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <ProductSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
+          </div>
+        </Dropdown>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
+      </div>
+    </div>
+  )
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, categoryOptions, brandOptions }: {
@@ -570,19 +646,19 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, category
   categoryOptions: { value: number; label: string }[];
   brandOptions: { value: number; label: string }[];
 }) => {
-    const { filterNameOrSku, filterCategoryIds, filterBrandIds, filterStatuses } = filterData;
-    if (!filterNameOrSku && !filterCategoryIds?.length && !filterBrandIds?.length && !filterStatuses?.length) return null;
+  const { filterNameOrSku, filterCategoryIds, filterBrandIds, filterStatuses } = filterData;
+  if (!filterNameOrSku && !filterCategoryIds?.length && !filterBrandIds?.length && !filterStatuses?.length) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 my-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterNameOrSku && <Tag prefix>Search: {filterNameOrSku} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNameOrSku', filterNameOrSku)} /></Tag>}
-            {filterCategoryIds?.map(id => <Tag key={`cat-${id}`} prefix>Category: {categoryOptions.find(o => o.value === id)?.label || id} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategoryIds', id)} /></Tag>)}
-            {filterBrandIds?.map(id => <Tag key={`brand-${id}`} prefix>Brand: {brandOptions.find(o => o.value === id)?.label || id} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterBrandIds', id)} /></Tag>)}
-            {filterStatuses?.map(status => <Tag key={`status-${status}`} prefix className="capitalize">Status: {status} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', status)} /></Tag>)}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 my-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterNameOrSku && <Tag prefix>Search: {filterNameOrSku} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNameOrSku', filterNameOrSku)} /></Tag>}
+      {filterCategoryIds?.map(id => <Tag key={`cat-${id}`} prefix>Category: {categoryOptions.find(o => o.value === id)?.label || id} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategoryIds', id)} /></Tag>)}
+      {filterBrandIds?.map(id => <Tag key={`brand-${id}`} prefix>Brand: {brandOptions.find(o => o.value === id)?.label || id} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterBrandIds', id)} /></Tag>)}
+      {filterStatuses?.map(status => <Tag key={`status-${status}`} prefix className="capitalize">Status: {status} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', status)} /></Tag>)}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 }
 
 const ProductSelectedFooter = React.memo(
@@ -617,7 +693,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = React.memo(
   ({ label, value, isLink, preWrap, breakAll, labelClassName = "text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider", valueClassName = "text-sm text-slate-700 dark:text-slate-100 mt-0.5", className = "", }) => (
     <div className={`py-1.5 ${className}`}>
       <p className={`${labelClassName}`}>{label}</p>
-      {isLink ? (<a href={ (typeof value === "string" && (value.startsWith("http") ? value : `/${value}`)) || "#" } target="_blank" rel="noopener noreferrer" className={`${valueClassName} hover:underline text-blue-600 dark:text-blue-400 ${ breakAll ? "break-all" : "" } ${preWrap ? "whitespace-pre-wrap" : ""}`}>{value}</a>) : (<div className={`${valueClassName} ${breakAll ? "break-all" : ""} ${ preWrap ? "whitespace-pre-wrap" : "" }`}>{value}</div>)}
+      {isLink ? (<a href={(typeof value === "string" && (value.startsWith("http") ? value : `/${value}`)) || "#"} target="_blank" rel="noopener noreferrer" className={`${valueClassName} hover:underline text-blue-600 dark:text-blue-400 ${breakAll ? "break-all" : ""} ${preWrap ? "whitespace-pre-wrap" : ""}`}>{value}</a>) : (<div className={`${valueClassName} ${breakAll ? "break-all" : ""} ${preWrap ? "whitespace-pre-wrap" : ""}`}>{value}</div>)}
     </div>
   )
 );
@@ -799,7 +875,7 @@ const Products = () => {
     if (filterCriteria.filterStatuses?.length) count++;
     return count;
   }, [filterCriteria]);
-  
+
 
   const handleListTabChange = useCallback((tabKey: string) => {
     setCurrentListTab(tabKey);
@@ -820,50 +896,50 @@ const Products = () => {
     setTimeout(() => (isInitializingFormRef.current = false), 0);
   }, [resetForm, thumbImagePreviewUrl, galleryImages]);
   const openEditDrawer = useCallback(async (product: ProductItem) => {
-      isInitializingFormRef.current = true;
-      setEditingProduct(product);
-      if (product.categoryId) { try { await dispatch(getSubcategoriesByCategoryIdAction(product.categoryId)).unwrap(); } catch (e) { console.error("Failed to preload subcategories for edit:", e); } } else { setSubcategoryOptions([]); }
-      resetForm({ name: product.name, slug: product.slug, sku_code: product.skuCode || "", status: apiProductStatusOptions.find((s) => s.value.toLowerCase() === product.status)?.value || "Draft", domain_ids: product.domainIds || [], category_id: product.categoryId, sub_category_id: product.subCategoryId, brand_id: product.brandId, unit_id: product.unitId, country_id: product.countryId, color: product.color || "", hsn_code: product.hsnCode || "", shelf_life: product.shelfLife || "", packaging_size: product.packagingSize || "", packaging_type: product.packagingType || "", tax_rate: String(product.taxRate || ""), procurement_lead_time: product.procurementLeadTime || "", thumb_image_input: null, description: product.description || "", short_description: product.shortDescription || "", payment_term: product.paymentTerm || "", delivery_details: product.deliveryDetails || "", product_specification: product.productSpecification || "", meta_title: product.metaTitle || "", meta_descr: product.metaDescription || "", meta_keyword: product.metaKeyword || "" });
-      setCurrentFormTab(FORM_TABS.GENERAL);
-      if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(thumbImagePreviewUrl);
-      setThumbImagePreviewUrl(product.thumbImageFullPath); setNewThumbImageFile(null);
-      galleryImages.forEach((img) => { if (img.isNew && img.previewUrl && img.previewUrl.startsWith("blob:")) URL.revokeObjectURL(img.previewUrl); });
-      setGalleryImages(product.productImages?.map((img) => ({ ...img, isNew: false, isDeleted: false, })) || []);
-      setIsAddEditDrawerOpen(true);
-      setTimeout(() => (isInitializingFormRef.current = false), 0);
-    }, [resetForm, thumbImagePreviewUrl, galleryImages, dispatch]);
+    isInitializingFormRef.current = true;
+    setEditingProduct(product);
+    if (product.categoryId) { try { await dispatch(getSubcategoriesByCategoryIdAction(product.categoryId)).unwrap(); } catch (e) { console.error("Failed to preload subcategories for edit:", e); } } else { setSubcategoryOptions([]); }
+    resetForm({ name: product.name, slug: product.slug, sku_code: product.skuCode || "", status: apiProductStatusOptions.find((s) => s.value.toLowerCase() === product.status)?.value || "Draft", domain_ids: product.domainIds || [], category_id: product.categoryId, sub_category_id: product.subCategoryId, brand_id: product.brandId, unit_id: product.unitId, country_id: product.countryId, color: product.color || "", hsn_code: product.hsnCode || "", shelf_life: product.shelfLife || "", packaging_size: product.packagingSize || "", packaging_type: product.packagingType || "", tax_rate: String(product.taxRate || ""), procurement_lead_time: product.procurementLeadTime || "", thumb_image_input: null, description: product.description || "", short_description: product.shortDescription || "", payment_term: product.paymentTerm || "", delivery_details: product.deliveryDetails || "", product_specification: product.productSpecification || "", meta_title: product.metaTitle || "", meta_descr: product.metaDescription || "", meta_keyword: product.metaKeyword || "" });
+    setCurrentFormTab(FORM_TABS.GENERAL);
+    if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(thumbImagePreviewUrl);
+    setThumbImagePreviewUrl(product.thumbImageFullPath); setNewThumbImageFile(null);
+    galleryImages.forEach((img) => { if (img.isNew && img.previewUrl && img.previewUrl.startsWith("blob:")) URL.revokeObjectURL(img.previewUrl); });
+    setGalleryImages(product.productImages?.map((img) => ({ ...img, isNew: false, isDeleted: false, })) || []);
+    setIsAddEditDrawerOpen(true);
+    setTimeout(() => (isInitializingFormRef.current = false), 0);
+  }, [resetForm, thumbImagePreviewUrl, galleryImages, dispatch]);
   const closeAddEditDrawer = useCallback(() => { setIsAddEditDrawerOpen(false); setEditingProduct(null); resetForm(); }, [resetForm]);
 
   const onProductFormSubmit = useCallback(async (data: ProductFormData) => {
-      setIsSubmittingForm(true);
-      const formData = new FormData();
-      if (editingProduct) formData.append("_method", "PUT");
-      (Object.keys(data) as Array<keyof ProductFormData>).forEach((key) => {
-        const value = data[key];
-        if (key === "thumb_image_input") return;
-        if (key === "domain_ids" && Array.isArray(value)) { value.forEach((id) => formData.append("domain_ids[]", String(id))); } else if (value !== null && value !== undefined && String(value).trim() !== "") { formData.append(key, String(value)); } else if (value === null && ["category_id", "sub_category_id", "brand_id", "unit_id", "country_id"].includes(key)) { formData.append(key, ""); }
-      });
-      if (newThumbImageFile) formData.append("thumb_image", newThumbImageFile);
-      else if (editingProduct && !thumbImagePreviewUrl && editingProduct.thumbImage) formData.append("delete_thumb_image", "1");
-      let imageIndex = 0;
-      galleryImages.forEach((img) => {
-        if (img.file && img.isNew && !img.isDeleted) { formData.append(`product_images[${imageIndex}]`, img.file); imageIndex++; } else if (img.id && img.isDeleted) { formData.append("deleted_image_ids[]", String(img.id)); }
-      });
-      try {
-        if (editingProduct) {
-          await dispatch(editProductAction({ id: editingProduct.id, formData })).unwrap();
-          toast.push(<Notification type="success" title="Product Updated">Product "{data.name}" updated successfully.</Notification>);
-        } else {
-          await dispatch(addProductAction(formData)).unwrap();
-          toast.push(<Notification type="success" title="Product Added">Product "{data.name}" added successfully.</Notification>);
-        }
-        closeAddEditDrawer(); dispatch(getProductsAction());
-      } catch (error: any) {
-        const errorMsg = error?.response?.data?.message || error?.message || (editingProduct ? "Could not update product." : "Could not add product.");
-        toast.push(<Notification type="danger" title="Operation Failed">{errorMsg}</Notification>);
-        if (error?.response?.data?.errors) console.error("Backend validation errors:", error.response.data.errors);
-      } finally { setIsSubmittingForm(false); }
-    }, [editingProduct, dispatch, closeAddEditDrawer, newThumbImageFile, galleryImages, thumbImagePreviewUrl]);
+    setIsSubmittingForm(true);
+    const formData = new FormData();
+    if (editingProduct) formData.append("_method", "PUT");
+    (Object.keys(data) as Array<keyof ProductFormData>).forEach((key) => {
+      const value = data[key];
+      if (key === "thumb_image_input") return;
+      if (key === "domain_ids" && Array.isArray(value)) { value.forEach((id) => formData.append("domain_ids[]", String(id))); } else if (value !== null && value !== undefined && String(value).trim() !== "") { formData.append(key, String(value)); } else if (value === null && ["category_id", "sub_category_id", "brand_id", "unit_id", "country_id"].includes(key)) { formData.append(key, ""); }
+    });
+    if (newThumbImageFile) formData.append("thumb_image", newThumbImageFile);
+    else if (editingProduct && !thumbImagePreviewUrl && editingProduct.thumbImage) formData.append("delete_thumb_image", "1");
+    let imageIndex = 0;
+    galleryImages.forEach((img) => {
+      if (img.file && img.isNew && !img.isDeleted) { formData.append(`product_images[${imageIndex}]`, img.file); imageIndex++; } else if (img.id && img.isDeleted) { formData.append("deleted_image_ids[]", String(img.id)); }
+    });
+    try {
+      if (editingProduct) {
+        await dispatch(editProductAction({ id: editingProduct.id, formData })).unwrap();
+        toast.push(<Notification type="success" title="Product Updated">Product "{data.name}" updated successfully.</Notification>);
+      } else {
+        await dispatch(addProductAction(formData)).unwrap();
+        toast.push(<Notification type="success" title="Product Added">Product "{data.name}" added successfully.</Notification>);
+      }
+      closeAddEditDrawer(); dispatch(getProductsAction());
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.message || error?.message || (editingProduct ? "Could not update product." : "Could not add product.");
+      toast.push(<Notification type="danger" title="Operation Failed">{errorMsg}</Notification>);
+      if (error?.response?.data?.errors) console.error("Backend validation errors:", error.response.data.errors);
+    } finally { setIsSubmittingForm(false); }
+  }, [editingProduct, dispatch, closeAddEditDrawer, newThumbImageFile, galleryImages, thumbImagePreviewUrl]);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; item: ProductItem | null; isBulk: boolean; }>({ isOpen: false, item: null, isBulk: false });
   const handleDeleteProductClick = useCallback((product: ProductItem) => { setDeleteConfirm({ isOpen: true, item: product, isBulk: false }); }, []);
@@ -908,18 +984,18 @@ const Products = () => {
     exportReasonFormMethods.reset({ reason: "" }); setExportModalType(type);
   }, [allFilteredAndSortedData, exportReasonFormMethods]);
   const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
-      if (!exportModalType) return;
-      setIsSubmittingExportReason(true);
-      const moduleName = exportModalType === "products" ? "Products" : "Product Keywords";
-      try {
-        const fileName = `products_export_${new Date().toISOString().split('T')[0]}.csv`;
-        await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        toast.push(<Notification title="Export reason logged" type="info" duration={2000} />);
-        if (exportModalType === "products") { exportProductsToCsv(allFilteredAndSortedData); } else if (exportModalType === "keywords") { exportKeywordsToCsv(allFilteredAndSortedData); }
-        setExportModalType(null);
-      } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger">{error.message || "Could not complete export."}</Notification>); } finally { setIsSubmittingExportReason(false); }
-    }, [dispatch, allFilteredAndSortedData, exportModalType]);
+    if (!exportModalType) return;
+    setIsSubmittingExportReason(true);
+    const moduleName = exportModalType === "products" ? "Products" : "Product Keywords";
+    try {
+      const fileName = `products_export_${new Date().toISOString().split('T')[0]}.csv`;
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      toast.push(<Notification title="Export reason logged" type="info" duration={2000} />);
+      if (exportModalType === "products") { exportProductsToCsv(allFilteredAndSortedData); } else if (exportModalType === "keywords") { exportKeywordsToCsv(allFilteredAndSortedData); }
+      setExportModalType(null);
+    } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger">{error.message || "Could not complete export."}</Notification>); } finally { setIsSubmittingExportReason(false); }
+  }, [dispatch, allFilteredAndSortedData, exportModalType]);
 
   const openImportModal = useCallback((type: ImportType) => setImportModalType(type), []);
   const closeImportModal = useCallback(() => { setImportModalType(null); setSelectedFile(null); }, []);
@@ -955,7 +1031,7 @@ const Products = () => {
   const openFilterDrawer = useCallback(() => { resetFilterForm(filterCriteria); setIsFilterDrawerOpen(true); }, [resetFilterForm, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
-  
+
   const onClearFilters = useCallback(() => {
     resetFilterForm({});
     setFilterCriteria({});
@@ -966,25 +1042,25 @@ const Products = () => {
   }, [resetFilterForm, setFilterFormValue, closeFilterDrawer, dispatch]);
 
   const handleCardClick = (status: ProductStatus | 'all') => {
-      onClearFilters();
-      if(status !== 'all') {
-        setFilterCriteria({ filterStatuses: [status] });
-      }
-      handleListTabChange(TABS.ALL); // Switch to all tab to see the filter result
+    onClearFilters();
+    if (status !== 'all') {
+      setFilterCriteria({ filterStatuses: [status] });
+    }
+    handleListTabChange(TABS.ALL); // Switch to all tab to see the filter result
   };
 
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        const currentValues = prev[key] as any[] | string | undefined;
+      const newFilters = { ...prev };
+      const currentValues = prev[key] as any[] | string | undefined;
 
-        if (Array.isArray(currentValues)) {
-            const newValues = currentValues.filter(item => item !== value);
-            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
-        } else {
-            (newFilters as any)[key] = undefined;
-        }
-        return newFilters;
+      if (Array.isArray(currentValues)) {
+        const newValues = currentValues.filter(item => item !== value);
+        (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+      } else {
+        (newFilters as any)[key] = undefined;
+      }
+      return newFilters;
     });
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
   }, []);
@@ -992,7 +1068,8 @@ const Products = () => {
   const columns: ColumnDef<ProductItem>[] = useMemo(
     () => [
       { header: "ID", accessorKey: "id", size: 60, meta: { tdClass: "text-center", thClass: "text-center" }, cell: ({ getValue }) => getValue().toString().padStart(6, '0'), },
-      { header: "Product", id: "productInfo", size: 300, cell: (props: CellContext<ProductItem, any>) => (
+      {
+        header: "Product", id: "productInfo", size: 300, cell: (props: CellContext<ProductItem, any>) => (
           <div className="flex items-center gap-3">
             <Avatar size={30} shape="circle" src={props.row.original.thumbImageFullPath || undefined} icon={<TbBox />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => props.row.original.thumbImageFullPath && openImageViewer(props.row.original.thumbImageFullPath)}></Avatar>
             <Tooltip title={props.row.original.name}>
@@ -1009,7 +1086,7 @@ const Products = () => {
     ],
     [openImageViewer, openEditDrawer, openViewDetailModal, handleDeleteProductClick, handleChangeStatusClick, handleOpenModal]
   );
-  
+
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<ProductItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
@@ -1049,7 +1126,7 @@ const Products = () => {
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
               {[TABS.ALL, TABS.PENDING].map((tab) => (
-                <button key={tab} onClick={() => handleListTabChange(tab)} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize ${ currentListTab === tab ? "border-indigo-500 text-indigo-600 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300" }`}>
+                <button key={tab} onClick={() => handleListTabChange(tab)} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize ${currentListTab === tab ? "border-indigo-500 text-indigo-600 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"}`}>
                   {tab.replace("_", " ")} Products
                 </button>
               ))}
@@ -1097,20 +1174,19 @@ const Products = () => {
           <div className="border-b border-gray-200 dark:border-gray-700 sticky top-0 pt-3 bg-white dark:bg-gray-800 z-10 px-4">
             <nav className=" flex space-x-6" aria-label="Tabs">
               {[FORM_TABS.GENERAL, FORM_TABS.DESCRIPTION, FORM_TABS.MEDIA, FORM_TABS.META].map((tab) => (
-                  <button key={tab} type="button" onClick={() => handleFormTabChange(tab)}
-                    className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm capitalize flex items-center gap-2 ${
-                      currentFormTab === tab
-                        ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                <button key={tab} type="button" onClick={() => handleFormTabChange(tab)}
+                  className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm capitalize flex items-center gap-2 ${currentFormTab === tab
+                      ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
                     }`}
-                  >
-                    {tab === FORM_TABS.GENERAL && <TbSettings />}
-                    {tab === FORM_TABS.DESCRIPTION && <TbFileText />}
-                    {tab === FORM_TABS.MEDIA && <TbPhoto />}
-                    {tab === FORM_TABS.META && <TbClipboardText />}
-                    {tab.replace("_", " ")}
-                  </button>
-                ))}
+                >
+                  {tab === FORM_TABS.GENERAL && <TbSettings />}
+                  {tab === FORM_TABS.DESCRIPTION && <TbFileText />}
+                  {tab === FORM_TABS.MEDIA && <TbPhoto />}
+                  {tab === FORM_TABS.META && <TbClipboardText />}
+                  {tab.replace("_", " ")}
+                </button>
+              ))}
             </nav>
           </div>
           <div className="flex-grow overflow-y-auto pt-4 px-4 pb-4">
@@ -1127,104 +1203,104 @@ const Products = () => {
                 </FormItem>
                 <FormItem label={<div>Status<span className="text-red-500"> * </span></div>} isRequired invalid={!!formErrors.status} errorMessage={formErrors.status?.message}>
                   <Controller name="status" control={formControl} render={({ field }) => (
-                      <UiSelect options={apiProductStatusOptions} value={apiProductStatusOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)}/>
-                  )}/>
+                    <UiSelect options={apiProductStatusOptions} value={apiProductStatusOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />
+                  )} />
                 </FormItem>
                 <FormItem label={<div>Domains<span className="text-red-500"> * </span></div>} isRequired className="md:col-span-2" invalid={!!formErrors.domain_ids} errorMessage={formErrors.domain_ids?.message}>
                   <Controller name="domain_ids" control={formControl} render={({ field }) => (
                     <UiSelect isMulti options={domainOptions} value={domainOptions.filter((opt) => field.value?.includes(opt.value))} onChange={(opts) => field.onChange(opts ? opts.map((opt) => opt.value) : [])} />
-                  )}/>
+                  )} />
                 </FormItem>
                 <FormItem label={<div>Category<span className="text-red-500"> * </span></div>} isRequired invalid={!!formErrors.category_id} errorMessage={formErrors.category_id?.message}>
                   <Controller name="category_id" control={formControl} render={({ field }) => (
-                      <UiSelect options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />
-                  )}/>
+                    <UiSelect options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />
+                  )} />
                 </FormItem>
                 <FormItem label="Sub Category" invalid={!!formErrors.sub_category_id} errorMessage={formErrors.sub_category_id?.message as string | undefined}>
                   <Controller name="sub_category_id" control={formControl} render={({ field }) => (
-                      <UiSelect
-                        options={subcategoryOptions} value={subcategoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable
-                        isDisabled={ !watchedFormCategoryId || (subcategoryOptions.length === 0 && masterLoadingStatus !== "loading") }
-                        placeholder={!watchedFormCategoryId ? "Select category first" : masterLoadingStatus === "loading" && !subcategoryOptions.length ? "Loading subcategories..." : subcategoryOptions.length === 0 ? "No subcategories" : "Select subcategory"}/>
-                  )}/>
+                    <UiSelect
+                      options={subcategoryOptions} value={subcategoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable
+                      isDisabled={!watchedFormCategoryId || (subcategoryOptions.length === 0 && masterLoadingStatus !== "loading")}
+                      placeholder={!watchedFormCategoryId ? "Select category first" : masterLoadingStatus === "loading" && !subcategoryOptions.length ? "Loading subcategories..." : subcategoryOptions.length === 0 ? "No subcategories" : "Select subcategory"} />
+                  )} />
                 </FormItem>
                 <FormItem label={<div>Brand<span className="text-red-500"> * </span></div>} isRequired invalid={!!formErrors.brand_id} errorMessage={formErrors.brand_id?.message}>
                   <Controller name="brand_id" control={formControl} render={({ field }) => (
-                      <UiSelect options={brandOptions} value={brandOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />
-                  )}/>
+                    <UiSelect options={brandOptions} value={brandOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />
+                  )} />
                 </FormItem>
                 <FormItem label={<div>Unit<span className="text-red-500"> * </span></div>} isRequired invalid={!!formErrors.unit_id} errorMessage={formErrors.unit_id?.message}>
                   <Controller name="unit_id" control={formControl} render={({ field }) => (
-                      <UiSelect options={unitOptions} value={unitOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />
-                  )}/>
+                    <UiSelect options={unitOptions} value={unitOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />
+                  )} />
                 </FormItem>
                 <FormItem label={<div>Country of Origin<span className="text-red-500"> * </span></div>} isRequired invalid={!!formErrors.country_id} errorMessage={formErrors.country_id?.message}>
                   <Controller name="country_id" control={formControl} render={({ field }) => (
-                      <UiSelect options={countryOptions} value={countryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />
-                  )}/>
+                    <UiSelect options={countryOptions} value={countryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />
+                  )} />
                 </FormItem>
                 <FormItem label="Color" invalid={!!formErrors.color} errorMessage={formErrors.color?.message}>
-                  <Controller name="color" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)}/>
+                  <Controller name="color" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="HSN Code" invalid={!!formErrors.hsn_code} errorMessage={formErrors.hsn_code?.message}>
-                  <Controller name="hsn_code" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)}/>
+                  <Controller name="hsn_code" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Shelf Life" invalid={!!formErrors.shelf_life} errorMessage={formErrors.shelf_life?.message}>
-                  <Controller name="shelf_life" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)}/>
+                  <Controller name="shelf_life" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Packaging Size" invalid={!!formErrors.packaging_size} errorMessage={formErrors.packaging_size?.message}>
-                  <Controller name="packaging_size" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)}/>
+                  <Controller name="packaging_size" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Packaging Type" invalid={!!formErrors.packaging_type} errorMessage={formErrors.packaging_type?.message}>
-                  <Controller name="packaging_type" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)}/>
+                  <Controller name="packaging_type" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Tax Rate (%)" invalid={!!formErrors.tax_rate} errorMessage={formErrors.tax_rate?.message}>
-                  <Controller name="tax_rate" control={formControl} render={({ field }) => (<Input type="text" {...field} value={field.value ?? ""} />)}/>
+                  <Controller name="tax_rate" control={formControl} render={({ field }) => (<Input type="text" {...field} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Procurement Lead Time" invalid={!!formErrors.procurement_lead_time} errorMessage={formErrors.procurement_lead_time?.message}>
-                  <Controller name="procurement_lead_time" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)}/>
+                  <Controller name="procurement_lead_time" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)} />
                 </FormItem>
               </div>
             )}
             {currentFormTab === FORM_TABS.DESCRIPTION && (
               <div className="flex flex-col gap-y-4">
                 <FormItem label="Description" invalid={!!formErrors.description} errorMessage={formErrors.description?.message}>
-                  <Controller name="description" control={formControl} render={({ field }) => ( <Input textArea {...field} rows={8} value={field.value ?? ""}/>)}/>
+                  <Controller name="description" control={formControl} render={({ field }) => (<Input textArea {...field} rows={8} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Short Description" invalid={!!formErrors.short_description} errorMessage={formErrors.short_description?.message}>
-                  <Controller name="short_description" control={formControl} render={({ field }) => ( <Input textArea {...field} rows={4} value={field.value ?? ""}/>)}/>
+                  <Controller name="short_description" control={formControl} render={({ field }) => (<Input textArea {...field} rows={4} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Payment Term" invalid={!!formErrors.payment_term} errorMessage={formErrors.payment_term?.message}>
-                  <Controller name="payment_term" control={formControl} render={({ field }) => ( <Input textArea {...field} rows={3} value={field.value ?? ""}/>)}/>
+                  <Controller name="payment_term" control={formControl} render={({ field }) => (<Input textArea {...field} rows={3} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Delivery Details" invalid={!!formErrors.delivery_details} errorMessage={formErrors.delivery_details?.message}>
-                  <Controller name="delivery_details" control={formControl} render={({ field }) => ( <Input textArea {...field} rows={3} value={field.value ?? ""}/>)}/>
+                  <Controller name="delivery_details" control={formControl} render={({ field }) => (<Input textArea {...field} rows={3} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Product Specification" invalid={!!formErrors.product_specification} errorMessage={formErrors.product_specification?.message}>
-                  <Controller name="product_specification" control={formControl} render={({ field }) => ( <Input textArea {...field} rows={5} value={field.value ?? ""}/>)}/>
+                  <Controller name="product_specification" control={formControl} render={({ field }) => (<Input textArea {...field} rows={5} value={field.value ?? ""} />)} />
                 </FormItem>
               </div>
             )}
             {currentFormTab === FORM_TABS.MEDIA && (
               <div>
-                <FormItem label="Thumbnail Image (Max 1MB, 600x600 recommended)" className="mb-4" invalid={!!formErrors.thumb_image_input} errorMessage={ formErrors.thumb_image_input?.message as string | undefined }>
+                <FormItem label="Thumbnail Image (Max 1MB, 600x600 recommended)" className="mb-4" invalid={!!formErrors.thumb_image_input} errorMessage={formErrors.thumb_image_input?.message as string | undefined}>
                   <Controller name="thumb_image_input" control={formControl} render={({ field: { onChange, onBlur, name, ref } }) => (
-                      <Input
-                        type="file" name={name} ref={ref} onBlur={onBlur}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          onChange(file);
-                          setNewThumbImageFile(file);
-                          if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(thumbImagePreviewUrl);
-                          setThumbImagePreviewUrl(file ? URL.createObjectURL(file) : editingProduct?.thumbImageFullPath || null);
-                        }}
-                        accept="image/*"
-                      />
-                    )}
+                    <Input
+                      type="file" name={name} ref={ref} onBlur={onBlur}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        onChange(file);
+                        setNewThumbImageFile(file);
+                        if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(thumbImagePreviewUrl);
+                        setThumbImagePreviewUrl(file ? URL.createObjectURL(file) : editingProduct?.thumbImageFullPath || null);
+                      }}
+                      accept="image/*"
+                    />
+                  )}
                   />
                   {thumbImagePreviewUrl && (
                     <div className="mt-2 relative w-32 h-32">
-                      <Avatar src={thumbImagePreviewUrl} size={120} shape="rounded" className="w-full h-full"/>
+                      <Avatar src={thumbImagePreviewUrl} size={120} shape="rounded" className="w-full h-full" />
                     </div>
                   )}
                 </FormItem>
@@ -1237,11 +1313,11 @@ const Products = () => {
                     const files = Array.from(e.target.files || []);
                     const currentNonDeletedCount = galleryImages.filter((img) => !img.isDeleted).length;
                     const newImages = files.slice(0, 5 - currentNonDeletedCount).map((file) => ({
-                        file,
-                        previewUrl: URL.createObjectURL(file),
-                        isNew: true,
-                        isDeleted: false,
-                      }));
+                      file,
+                      previewUrl: URL.createObjectURL(file),
+                      isNew: true,
+                      isDeleted: false,
+                    }));
                     setGalleryImages((prev) => [...prev.filter((img) => !img.isDeleted), ...newImages]);
                     if (e.target) e.target.value = "";
                     setFormValue("name", getFormValues("name"), { shouldDirty: true });
@@ -1250,23 +1326,23 @@ const Products = () => {
                 />
                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {galleryImages.filter((img) => !img.isDeleted).map((image) => (
-                      <div key={image.id || image.previewUrl} className="relative group w-32 h-32">
-                        <Avatar src={image.previewUrl} size={120} shape="rounded" className="w-full h-full"/>
-                      </div>
-                    ))}
+                    <div key={image.id || image.previewUrl} className="relative group w-32 h-32">
+                      <Avatar src={image.previewUrl} size={120} shape="rounded" className="w-full h-full" />
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
             {currentFormTab === FORM_TABS.META && (
               <div className="flex flex-col gap-y-4">
                 <FormItem label="Meta Tag Title" invalid={!!formErrors.meta_title} errorMessage={formErrors.meta_title?.message}>
-                  <Controller name="meta_title" control={formControl} render={({ field }) => ( <Input {...field} value={field.value ?? ""} />)}/>
+                  <Controller name="meta_title" control={formControl} render={({ field }) => (<Input {...field} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Meta Tag Description" invalid={!!formErrors.meta_descr} errorMessage={formErrors.meta_descr?.message}>
-                  <Controller name="meta_descr" control={formControl} render={({ field }) => ( <Input textArea {...field} rows={4} value={field.value ?? ""}/>)}/>
+                  <Controller name="meta_descr" control={formControl} render={({ field }) => (<Input textArea {...field} rows={4} value={field.value ?? ""} />)} />
                 </FormItem>
                 <FormItem label="Meta Tag Keywords" invalid={!!formErrors.meta_keyword} errorMessage={formErrors.meta_keyword?.message}>
-                  <Controller name="meta_keyword" control={formControl} render={({ field }) => ( <Input textArea {...field} rows={3} placeholder="keyword1, keyword2" value={field.value ?? ""}/>)}/>
+                  <Controller name="meta_keyword" control={formControl} render={({ field }) => (<Input textArea {...field} rows={3} placeholder="keyword1, keyword2" value={field.value ?? ""} />)} />
                 </FormItem>
               </div>
             )}
@@ -1287,45 +1363,45 @@ const Products = () => {
       >
         <Form id="filterProductForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Name or SKU">
-            <Controller name="filterNameOrSku" control={filterFormControl} render={({ field }) => (<Input {...field} placeholder="Enter Name or SKU" />)}/>
+            <Controller name="filterNameOrSku" control={filterFormControl} render={({ field }) => (<Input {...field} placeholder="Enter Name or SKU" />)} />
           </FormItem>
           <FormItem label="Categories">
             <Controller name="filterCategoryIds" control={filterFormControl} render={({ field }) => (
-                <UiSelect
-                  isMulti placeholder="Select Categories" options={categoryOptions}
-                  value={categoryOptions.filter((o) => field.value?.includes(o.value))}
-                  onChange={(opts) => {
-                    field.onChange(opts?.map((o) => o.value));
-                    if (!opts || opts.length !== 1) {
-                      const currentFilterSubCatIds = getFilterValues("filterSubCategoryIds");
-                      if (currentFilterSubCatIds && currentFilterSubCatIds.length > 0) setFilterFormValue("filterSubCategoryIds", []);
-                    }
-                  }}
-                />
-              )}
+              <UiSelect
+                isMulti placeholder="Select Categories" options={categoryOptions}
+                value={categoryOptions.filter((o) => field.value?.includes(o.value))}
+                onChange={(opts) => {
+                  field.onChange(opts?.map((o) => o.value));
+                  if (!opts || opts.length !== 1) {
+                    const currentFilterSubCatIds = getFilterValues("filterSubCategoryIds");
+                    if (currentFilterSubCatIds && currentFilterSubCatIds.length > 0) setFilterFormValue("filterSubCategoryIds", []);
+                  }
+                }}
+              />
+            )}
             />
           </FormItem>
           <FormItem label="Sub Categories">
             <Controller name="filterSubCategoryIds" control={filterFormControl} render={({ field }) => (
-                <UiSelect
-                  isMulti placeholder={ !watchedFilterCategoryIds || watchedFilterCategoryIds.length !== 1 ? "Select one category first" : subcategoryOptions.length === 0 && masterLoadingStatus !== "loading" ? "No subcategories" : "Select Sub Categories" }
-                  options={subcategoryOptions} value={subcategoryOptions.filter((o) => field.value?.includes(o.value))}
-                  onChange={(opts) => field.onChange(opts?.map((o) => o.value))}
-                  isDisabled={ !watchedFilterCategoryIds || watchedFilterCategoryIds.length !== 1 || (subcategoryOptions.length === 0 && masterLoadingStatus !== "loading") }
-                />
-              )}
+              <UiSelect
+                isMulti placeholder={!watchedFilterCategoryIds || watchedFilterCategoryIds.length !== 1 ? "Select one category first" : subcategoryOptions.length === 0 && masterLoadingStatus !== "loading" ? "No subcategories" : "Select Sub Categories"}
+                options={subcategoryOptions} value={subcategoryOptions.filter((o) => field.value?.includes(o.value))}
+                onChange={(opts) => field.onChange(opts?.map((o) => o.value))}
+                isDisabled={!watchedFilterCategoryIds || watchedFilterCategoryIds.length !== 1 || (subcategoryOptions.length === 0 && masterLoadingStatus !== "loading")}
+              />
+            )}
             />
           </FormItem>
           <FormItem label="Brands">
             <Controller name="filterBrandIds" control={filterFormControl} render={({ field }) => (
-                <UiSelect isMulti placeholder="Select Brands" options={brandOptions} value={brandOptions.filter((o) => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map((o) => o.value))}/>
-              )}
+              <UiSelect isMulti placeholder="Select Brands" options={brandOptions} value={brandOptions.filter((o) => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map((o) => o.value))} />
+            )}
             />
           </FormItem>
           <FormItem label="Status">
             <Controller name="filterStatuses" control={filterFormControl} render={({ field }) => (
-                <UiSelect isMulti placeholder="Select Status" options={uiProductStatusOptions} value={uiProductStatusOptions.filter((o) => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map((o) => o.value))}/>
-              )}
+              <UiSelect isMulti placeholder="Select Status" options={uiProductStatusOptions} value={uiProductStatusOptions.filter((o) => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map((o) => o.value))} />
+            )}
             />
           </FormItem>
         </Form>
@@ -1349,7 +1425,7 @@ const Products = () => {
       >
         <div className="p-4">
           <FormItem label="New Status" className="mb-4">
-            <UiSelect options={uiProductStatusOptions} value={uiProductStatusOptions.find((o) => o.value === selectedNewStatus)} onChange={(opt) => setSelectedNewStatus(opt?.value || "")}/>
+            <UiSelect options={uiProductStatusOptions} value={uiProductStatusOptions.find((o) => o.value === selectedNewStatus)} onChange={(opt) => setSelectedNewStatus(opt?.value || "")} />
           </FormItem>
           <div className="text-right">
             <Button size="sm" className="mr-2" onClick={() => setIsChangeStatusDialogOpen(false)} disabled={isSubmittingForm}>
@@ -1365,7 +1441,7 @@ const Products = () => {
         isOpen={importModalType !== null}
         onClose={closeImportModal}
         onRequestClose={closeImportModal}
-        title={ importModalType === 'products' ? "Import Products" : "Import Product Keywords" }
+        title={importModalType === 'products' ? "Import Products" : "Import Product Keywords"}
         width={600}
       >
         <div className="py-4">
@@ -1374,13 +1450,13 @@ const Products = () => {
           </p>
           <p className="mb-4 text-xs text-gray-500">
             {importModalType === 'products' ? (
-                <span>Required headers: <code>name, slug, sku_code, status, etc.</code></span>
+              <span>Required headers: <code>name, slug, sku_code, status, etc.</code></span>
             ) : (
-                <span>Required headers: <code>product_id, meta_keywords</code></span>
+              <span>Required headers: <code>product_id, meta_keywords</code></span>
             )}
           </p>
           <FormItem label="Upload File" className="mb-4">
-            <Input type="file" name="file" accept=".csv, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleFileChange} prefix={<TbFileSpreadsheet className="text-xl" />}/>
+            <Input type="file" name="file" accept=".csv, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleFileChange} prefix={<TbFileSpreadsheet className="text-xl" />} />
             {selectedFile && (
               <div className="mt-2 text-xs text-gray-500">
                 Selected: <span className="font-semibold">{selectedFile.name}</span>
@@ -1407,7 +1483,7 @@ const Products = () => {
         onCancel={() => setExportModalType(null)}
         onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
         loading={isSubmittingExportReason}
-        confirmText={ isSubmittingExportReason ? "Submitting..." : "Submit & Export" }
+        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
         confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}
       >
         <Form
@@ -1417,8 +1493,8 @@ const Products = () => {
         >
           <FormItem label="Please state the reason for this data export:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
             <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (
-                <Input textArea {...field} placeholder="e.g., Monthly sales report, Partner data sync" rows={3}/>
-              )}
+              <Input textArea {...field} placeholder="e.g., Monthly sales report, Partner data sync" rows={3} />
+            )}
             />
           </FormItem>
         </Form>
@@ -1441,66 +1517,66 @@ const Products = () => {
               <Card>
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">Basic Information</h6>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                  <DialogDetailRow label="ID" value={String(productToView.id)}/>
-                  <DialogDetailRow label="SKU Code" value={productToView.skuCode || "-"}/>
-                  <DialogDetailRow label="Status" value={<Tag className={`${productStatusColor[productToView.status]} capitalize font-semibold border-0`}>{productToView.status}</Tag>}/>
-                  <DialogDetailRow label="Slug" value={productToView.slug} isLink breakAll/>
-                  <DialogDetailRow label="Color" value={productToView.color || "-"}/>
-                  <DialogDetailRow label="HSN Code" value={productToView.hsnCode || "-"}/>
+                  <DialogDetailRow label="ID" value={String(productToView.id)} />
+                  <DialogDetailRow label="SKU Code" value={productToView.skuCode || "-"} />
+                  <DialogDetailRow label="Status" value={<Tag className={`${productStatusColor[productToView.status]} capitalize font-semibold border-0`}>{productToView.status}</Tag>} />
+                  <DialogDetailRow label="Slug" value={productToView.slug} isLink breakAll />
+                  <DialogDetailRow label="Color" value={productToView.color || "-"} />
+                  <DialogDetailRow label="HSN Code" value={productToView.hsnCode || "-"} />
                 </div>
               </Card>
               <Card>
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">Categorization & Origin</h6>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                  <DialogDetailRow label="Category" value={productToView.categoryName || "-"}/>
-                  <DialogDetailRow label="Sub Category" value={productToView.subCategoryName || "-"}/>
-                  <DialogDetailRow label="Brand" value={productToView.brandName || "-"}/>
-                  <DialogDetailRow label="Unit" value={productToView.unitName || "-"}/>
-                  <DialogDetailRow label="Country of Origin" value={productToView.countryName || "-"}/>
-                  <DialogDetailRow label="Domains" value={productToView.domainNames?.join(", ") || "-"}/>
+                  <DialogDetailRow label="Category" value={productToView.categoryName || "-"} />
+                  <DialogDetailRow label="Sub Category" value={productToView.subCategoryName || "-"} />
+                  <DialogDetailRow label="Brand" value={productToView.brandName || "-"} />
+                  <DialogDetailRow label="Unit" value={productToView.unitName || "-"} />
+                  <DialogDetailRow label="Country of Origin" value={productToView.countryName || "-"} />
+                  <DialogDetailRow label="Domains" value={productToView.domainNames?.join(", ") || "-"} />
                 </div>
               </Card>
               <Card>
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">Logistics & Specifications</h6>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                  <DialogDetailRow label="Shelf Life" value={productToView.shelfLife || "-"}/>
-                  <DialogDetailRow label="Packaging Size" value={productToView.packagingSize || "-"}/>
-                  <DialogDetailRow label="Packaging Type" value={productToView.packagingType || "-"}/>
-                  <DialogDetailRow label="Tax Rate" value={productToView.taxRate ? `${productToView.taxRate}%` : "-"}/>
-                  <DialogDetailRow label="Procurement Lead Time" value={productToView.procurementLeadTime || "-"}/>
+                  <DialogDetailRow label="Shelf Life" value={productToView.shelfLife || "-"} />
+                  <DialogDetailRow label="Packaging Size" value={productToView.packagingSize || "-"} />
+                  <DialogDetailRow label="Packaging Type" value={productToView.packagingType || "-"} />
+                  <DialogDetailRow label="Tax Rate" value={productToView.taxRate ? `${productToView.taxRate}%` : "-"} />
+                  <DialogDetailRow label="Procurement Lead Time" value={productToView.procurementLeadTime || "-"} />
                 </div>
-                {productToView.productSpecification && (<DialogDetailRow label="Product Specification" value={productToView.productSpecification} preWrap className="md:col-span-2 lg:col-span-3"/>)}
+                {productToView.productSpecification && (<DialogDetailRow label="Product Specification" value={productToView.productSpecification} preWrap className="md:col-span-2 lg:col-span-3" />)}
               </Card>
               {(productToView.description || productToView.shortDescription || productToView.paymentTerm || productToView.deliveryDetails) && (
                 <Card>
                   <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">Descriptions & Terms</h6>
-                  {productToView.shortDescription && (<DialogDetailRow label="Short Description" value={productToView.shortDescription} preWrap/>)}
-                  {productToView.description && (<DialogDetailRow label="Full Description" value={productToView.description} preWrap/>)}
-                  {productToView.paymentTerm && (<DialogDetailRow label="Payment Term" value={productToView.paymentTerm} preWrap/>)}
-                  {productToView.deliveryDetails && (<DialogDetailRow label="Delivery Details" value={productToView.deliveryDetails} preWrap/>)}
+                  {productToView.shortDescription && (<DialogDetailRow label="Short Description" value={productToView.shortDescription} preWrap />)}
+                  {productToView.description && (<DialogDetailRow label="Full Description" value={productToView.description} preWrap />)}
+                  {productToView.paymentTerm && (<DialogDetailRow label="Payment Term" value={productToView.paymentTerm} preWrap />)}
+                  {productToView.deliveryDetails && (<DialogDetailRow label="Delivery Details" value={productToView.deliveryDetails} preWrap />)}
                 </Card>
               )}
               {productToView.productImages && productToView.productImages.length > 0 && (
-                  <Card>
-                    <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">Product Gallery</h6>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                      {productToView.productImages.filter((img) => !img.isDeleted).map((img, idx) => (<Avatar key={idx} src={img.previewUrl} size={100} shape="rounded" className="cursor-pointer hover:ring-2 ring-indigo-500" onClick={() => openImageViewer(img.previewUrl)}/>))}
-                    </div>
-                  </Card>
-                )}
+                <Card>
+                  <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">Product Gallery</h6>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {productToView.productImages.filter((img) => !img.isDeleted).map((img, idx) => (<Avatar key={idx} src={img.previewUrl} size={100} shape="rounded" className="cursor-pointer hover:ring-2 ring-indigo-500" onClick={() => openImageViewer(img.previewUrl)} />))}
+                  </div>
+                </Card>
+              )}
               {(productToView.metaTitle || productToView.metaDescription || productToView.metaKeyword) && (
                 <Card>
                   <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">SEO Information</h6>
-                  {productToView.metaTitle && (<DialogDetailRow label="Meta Title" value={productToView.metaTitle}/>)}
-                  {productToView.metaDescription && (<DialogDetailRow label="Meta Description" value={productToView.metaDescription} preWrap/>)}
-                  {productToView.metaKeyword && (<DialogDetailRow label="Meta Keywords" value={productToView.metaKeyword}/>)}
+                  {productToView.metaTitle && (<DialogDetailRow label="Meta Title" value={productToView.metaTitle} />)}
+                  {productToView.metaDescription && (<DialogDetailRow label="Meta Description" value={productToView.metaDescription} preWrap />)}
+                  {productToView.metaKeyword && (<DialogDetailRow label="Meta Keywords" value={productToView.metaKeyword} />)}
                 </Card>
               )}
               <Card>
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">Timestamps</h6>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                  <DialogDetailRow label="Created At" value={new Date(productToView.createdAt).toLocaleString()}/>
-                  <DialogDetailRow label="Last Updated At" value={new Date(productToView.updatedAt).toLocaleString()}/>
+                  <DialogDetailRow label="Created At" value={new Date(productToView.createdAt).toLocaleString()} />
+                  <DialogDetailRow label="Last Updated At" value={new Date(productToView.updatedAt).toLocaleString()} />
                 </div>
               </Card>
             </div>
@@ -1510,7 +1586,7 @@ const Products = () => {
           </div>
         ) : (
           <div className="p-8 text-center">
-            <TbInfoCircle size={42} className="text-slate-400 dark:text-slate-500 mb-2 mx-auto"/>
+            <TbInfoCircle size={42} className="text-slate-400 dark:text-slate-500 mb-2 mx-auto" />
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No Product Information</p>
             <p className="text-xs text-slate-500 mt-1">Details could not be loaded.</p>
             <div className="mt-5"><Button variant="solid" color="blue-600" onClick={closeViewDetailModal} size="sm">Dismiss</Button></div>
@@ -1519,10 +1595,10 @@ const Products = () => {
       </Dialog>
       <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} title="View Image" width={600} style={{ zIndex: 100 }} footer={<Button onClick={closeImageViewer}>Close</Button>}>
         <div className="p-4 flex justify-center items-center">
-          {imageToView && (<img src={imageToView} alt="Product view" className="max-w-full max-h-[80vh] object-contain"/>)}
+          {imageToView && (<img src={imageToView} alt="Product view" className="max-w-full max-h-[80vh] object-contain" />)}
         </div>
       </Dialog>
-      <ProductsModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions}/>
+      <ProductsModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
     </>
   );
 };

@@ -156,12 +156,82 @@ const scheduleSchema = z.object({
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 const eventTypeOptions: SelectOption[] = [
-  { value: "Meeting", label: "Meeting" },
-  { value: "Call", label: "Follow-up Call" },
-  { value: "Deadline", label: "Project Deadline" },
-  { value: "Reminder", label: "Reminder" },
-];
+  // Customer Engagement & Sales
+  { value: 'Meeting', label: 'Meeting' },
+  { value: 'Demo', label: 'Product Demo' },
+  { value: 'IntroCall', label: 'Introductory Call' },
+  { value: 'FollowUpCall', label: 'Follow-up Call' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'CheckIn', label: 'Customer Check-in' },
+  { value: 'LogEmail', label: 'Log an Email' },
 
+  // Project & Task Management
+  { value: 'Milestone', label: 'Project Milestone' },
+  { value: 'Task', label: 'Task' },
+  { value: 'FollowUp', label: 'General Follow-up' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+  // Customer Onboarding & Support
+  { value: 'OnboardingSession', label: 'Onboarding Session' },
+  { value: 'Training', label: 'Training Session' },
+  { value: 'SupportCall', label: 'Support Call' },
+
+  // General & Administrative
+  { value: 'Reminder', label: 'Reminder' },
+  { value: 'Note', label: 'Add a Note' },
+  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+  { value: 'StrategySession', label: 'Strategy Session' },
+  { value: 'TeamMeeting', label: 'Team Meeting' },
+  { value: 'PerformanceReview', label: 'Performance Review' },
+  { value: 'Lunch', label: 'Lunch / Break' },
+  { value: 'Appointment', label: 'Personal Appointment' },
+  { value: 'Other', label: 'Other' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+  { value: 'InternalSync', label: 'Internal Team Sync' },
+  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+  { value: 'ProjectSignOff', label: 'Project Sign-off' },
+  { value: 'PrepareReport', label: 'Prepare Report' },
+  { value: 'PresentFindings', label: 'Present Findings' },
+  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+  { value: 'BugReplication', label: 'Bug Replication Session' },
+  { value: 'IssueEscalation', label: 'Escalate Issue' },
+  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+  { value: 'FeatureRequest', label: 'Log Feature Request' },
+  { value: 'IntegrationSupport', label: 'Integration Support Call' },
+  { value: 'DataMigration', label: 'Data Migration/Import Task' },
+  { value: 'ColdCall', label: 'Cold Call' },
+  { value: 'DiscoveryCall', label: 'Discovery Call' },
+  { value: 'QualificationCall', label: 'Qualification Call' },
+  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+  { value: 'ContractSent', label: 'Contract Sent' },
+  { value: 'NegotiationCall', label: 'Negotiation Call' },
+  { value: 'TrialSetup', label: 'Product Trial Setup' },
+  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+  { value: 'WelcomeCall', label: 'Welcome Call' },
+  { value: 'ImplementationSession', label: 'Implementation Session' },
+  { value: 'UserTraining', label: 'User Training Session' },
+  { value: 'AdminTraining', label: 'Admin Training Session' },
+  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'HealthCheck', label: 'Customer Health Check' },
+  { value: 'FeedbackSession', label: 'Feedback Session' },
+  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+  { value: 'InvoiceDue', label: 'Invoice Due' },
+  { value: 'SendInvoice', label: 'Send Invoice' },
+  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+  { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
 // --- Helper Functions and Reusable Components ---
 function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
   if (!rows || rows.length === 0) {
@@ -204,17 +274,17 @@ const itemPath = (filename: any) => {
 };
 
 const ActionColumn = ({ onEdit, onViewDetail, onAddNotification, onAddSchedule }: { onEdit: () => void; onViewDetail: () => void; onAddNotification: () => void; onAddSchedule: () => void; }) => (
-    <div className="flex items-center justify-center text-center">
-      <Tooltip title="View Details"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip>
-      <Tooltip title="Edit Report"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip>
-      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item className="flex items-center gap-2" onClick={onAddNotification}><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><Link to="/task/task-list/create" className="flex w-full items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Link></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2" onClick={onAddSchedule}><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span></Dropdown.Item>
-      </Dropdown>
-    </div>
+  <div className="flex items-center justify-center text-center">
+    <Tooltip title="View Details"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip>
+    <Tooltip title="Edit Report"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip>
+    <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onAddNotification}><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><Link to="/task/task-list/create" className="flex w-full items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Link></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onAddSchedule}><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span></Dropdown.Item>
+    </Dropdown>
+  </div>
 );
 
 const ItemSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void; value: string }>(({ onInputChange, value }, ref) => (
@@ -223,41 +293,41 @@ const ItemSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: s
 ItemSearch.displayName = "ItemSearch";
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: Partial<FilterFormData>, onRemoveFilter: (key: keyof FilterFormData, value: any) => void, onClearAll: () => void }) => {
-    const activeStatuses = filterData.filterStatus || [];
-    const activeReportedBy = filterData.filterReportedBy;
-    const hasActiveFilters = activeStatuses.length > 0 || !!activeReportedBy;
-    if (!hasActiveFilters) return null;
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {activeStatuses.map(status => (<Tag key={`status-${status}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">Status: {status}<TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterStatus', status)} /></Tag>))}
-            {activeReportedBy && (<Tag prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">Reported By: {activeReportedBy}<TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterReportedBy', activeReportedBy)} /></Tag>)}
-            {hasActiveFilters && <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>}
-        </div>
-    );
+  const activeStatuses = filterData.filterStatus || [];
+  const activeReportedBy = filterData.filterReportedBy;
+  const hasActiveFilters = activeStatuses.length > 0 || !!activeReportedBy;
+  if (!hasActiveFilters) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {activeStatuses.map(status => (<Tag key={`status-${status}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">Status: {status}<TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterStatus', status)} /></Tag>))}
+      {activeReportedBy && (<Tag prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">Reported By: {activeReportedBy}<TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterReportedBy', activeReportedBy)} /></Tag>)}
+      {hasActiveFilters && <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>}
+    </div>
+  );
 };
 
 const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, searchVal, columns, filteredColumns, setFilteredColumns, activeFilterCount }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; searchVal: string; columns: ColumnDef<BugReportItem>[]; filteredColumns: ColumnDef<BugReportItem>[]; setFilteredColumns: (cols: ColumnDef<BugReportItem>[]) => void; activeFilterCount: number; }) => {
-    const toggleColumn = (checked: boolean, colHeader: string) => {
-        const newCols = checked
-            ? [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a, b) => columns.indexOf(a as any) - columns.indexOf(b as any))
-            : filteredColumns.filter(c => c.header !== colHeader);
-        setFilteredColumns(newCols);
-    };
-    const isColumnVisible = (header: string) => filteredColumns.some(c => c.header === header);
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} value={searchVal} /></div>
-            <div className="flex items-center gap-2">
-                <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.filter(c => c.id !== 'select' && c.header).map(col => (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}</div>
-                </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-            </div>
-        </div>
-    );
+  const toggleColumn = (checked: boolean, colHeader: string) => {
+    const newCols = checked
+      ? [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a, b) => columns.indexOf(a as any) - columns.indexOf(b as any))
+      : filteredColumns.filter(c => c.header !== colHeader);
+    setFilteredColumns(newCols);
+  };
+  const isColumnVisible = (header: string) => filteredColumns.some(c => c.header === header);
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow"><ItemSearch onInputChange={onSearchChange} value={searchVal} /></div>
+      <div className="flex items-center gap-2">
+        <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.filter(c => c.id !== 'select' && c.header).map(col => (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}</div>
+        </Dropdown>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+      </div>
+    </div>
+  );
 };
 
 const BugReportsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: { selectedItems: BugReportItem[]; onDeleteSelected: () => void; isDeleting: boolean; }) => {
@@ -410,12 +480,12 @@ const BugReportListing = () => {
     if (!Array.isArray(rawBugReportsData?.data)) return [];
     return rawBugReportsData?.data.map((item: any) => ({ ...item, updated_by_name: item.updated_by_user?.name || item.updated_by_name, updated_by_role: item.updated_by_user?.roles?.[0]?.display_name || item.updated_by_role }));
   }, [rawBugReportsData?.data]);
-  
+
   const defaultAddFormValues: BugReportFormData = { name: "", email: "", mobile_no: "", report: "", severity: "Low", status: "New", attachment: undefined };
   const formMethods = useForm<BugReportFormData>({ resolver: zodResolver(bugReportFormSchema), defaultValues: defaultAddFormValues, mode: "onChange" });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
-  
+
   const openAddDrawer = useCallback(() => { formMethods.reset(defaultAddFormValues); setSelectedFile(null); setEditingItem(null); setIsAddDrawerOpen(true); }, [formMethods, defaultAddFormValues]);
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
   const openEditDrawer = useCallback((item: BugReportItem) => { setEditingItem(item); setSelectedFile(null); formMethods.reset({ name: item.name, email: item.email, mobile_no: item.mobile_no || "", report: item.report, severity: item.severity || "Low", status: item.status as BugReportFormData['status'], attachment: undefined }); setIsEditDrawerOpen(true); }, [formMethods]);
@@ -426,7 +496,7 @@ const BugReportListing = () => {
   const closeNotificationModal = useCallback(() => { setNotificationItem(null); setIsNotificationModalOpen(false); }, []);
   const openScheduleModal = useCallback((item: BugReportItem) => { setScheduleItem(item); setIsScheduleModalOpen(true); }, []);
   const closeScheduleModal = useCallback(() => { setScheduleItem(null); setIsScheduleModalOpen(false); }, []);
-  
+
   const onSubmitHandler = async (data: BugReportFormData) => {
     setIsSubmitting(true);
     const formDataPayload = new FormData();
@@ -517,10 +587,10 @@ const BugReportListing = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterReportedBy: data.filterReportedBy || "" }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [closeFilterDrawer, handleSetTableData]);
-  const onClearFilters = useCallback(() => { setFilterCriteria({}); filterFormMethods.reset({ filterStatus: [], filterReportedBy: "" }); handleSetTableData({ query: "", pageIndex: 1 }),dispatch(getBugReportsAction()) }, [filterFormMethods, handleSetTableData]);
+  const onClearFilters = useCallback(() => { setFilterCriteria({}); filterFormMethods.reset({ filterStatus: [], filterReportedBy: "" }); handleSetTableData({ query: "", pageIndex: 1 }), dispatch(getBugReportsAction()) }, [filterFormMethods, handleSetTableData]);
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => { setFilterCriteria(prev => { const newFilters = { ...prev }; if (key === 'filterStatus') { const currentValues = prev.filterStatus || []; const newValues = currentValues.filter(item => item !== value); newValues.length > 0 ? newFilters.filterStatus = newValues : delete newFilters.filterStatus; } else { delete newFilters[key]; } return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
   const handleCardClick = (status?: BugReportStatusApi) => { setFilterCriteria(status ? { filterStatus: [status] } : {}); handleSetTableData({ pageIndex: 1, query: '' }); };
-  
+
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: BugReportItem[] = cloneDeep(bugReportsData);
     if (filterCriteria.filterStatus?.length) {
@@ -569,7 +639,7 @@ const BugReportListing = () => {
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `bug-reports_${new Date().toISOString().split("T")[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Bug Reports", file_name: fileName })).unwrap(); if (exportBugReportsToCsv(fileName, allFilteredAndSortedData)) { toast.push(<Notification title="Data Exported" type="success">Bug reports data exported successfully.</Notification>); } setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" children={error.message || "Could not complete export."} />); } finally { setIsSubmittingExportReason(false); } };
   const handleRowSelect = useCallback((checked: boolean, row: BugReportItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<BugReportItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => r.id && !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id).filter((id) => id !== undefined)); setSelectedItems((pS) => pS.filter((i) => i.id && !cPRIds.has(i.id))); } }, []);
-  
+
   const baseColumns: ColumnDef<BugReportItem>[] = useMemo(() => [
     { header: "Reported By", accessorKey: "name", size: 180, enableSorting: true, cell: (props) => (<span className="font-semibold">{props.getValue<string>()}</span>) },
     { header: "Contact", accessorKey: "email", size: 200, cell: (props) => (<div><span>{props.row.original.email}</span> <br /><span className="text-xs text-gray-500">{props.row.original.mobile_no}</span></div>) },
@@ -582,7 +652,7 @@ const BugReportListing = () => {
   useEffect(() => { setFilteredColumns(baseColumns) }, [baseColumns]);
 
   const activeFilterCount = useMemo(() => Object.values(filterCriteria).filter(v => (Array.isArray(v) ? v.length > 0 : !!v)).length, [filterCriteria]);
-  
+
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormItem label={<div>Name<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}><Controller name="name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle className="text-lg" />} placeholder="Your Name" />)} /></FormItem>
@@ -590,7 +660,7 @@ const BugReportListing = () => {
       <FormItem label="Mobile No." className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.mobile_no} errorMessage={currentFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone className="text-lg" />} placeholder="+XX-XXXXXXXXXX" />)} /></FormItem>
       <FormItem label="Severity" className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.severity} errorMessage={currentFormMethods.formState.errors.severity?.message}><Controller name="severity" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Severity" value={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }].find((opt) => opt.value === field.value)} options={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }]} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem>
       <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
-          <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" value={BUG_REPORT_STATUS_OPTIONS.find((opt) => opt.value === field.value)} options={BUG_REPORT_STATUS_OPTIONS} onChange={(opt) => field.onChange(opt?.value)} />)} />
+        <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" value={BUG_REPORT_STATUS_OPTIONS.find((opt) => opt.value === field.value)} options={BUG_REPORT_STATUS_OPTIONS} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
       <FormItem label="Report Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.report} errorMessage={currentFormMethods.formState.errors.report?.message}><Controller name="report" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} rows={6} prefix={<TbFileDescription className="text-lg mt-2.5" />} placeholder="Please describe the bug in detail..." />)} /></FormItem>
       <FormItem label="Attachment" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.attachment} errorMessage={currentFormMethods.formState.errors.attachment?.message as string}><Controller name="attachment" control={currentFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); }} prefix={<TbPaperclip className="text-lg" />} />)} />{editingItem?.attachment && !selectedFile && (<div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Current:{" "}<a href={itemPath(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{editingItem.attachment}</a></div>)}</FormItem>
@@ -608,7 +678,7 @@ const BugReportListing = () => {
       {item.created_at && (<div className="flex items-start"><TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reported On</h6><p className="text-gray-800 dark:text-gray-100 text-base">{new Date(item.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p></div></div>)}
     </div>
   );
-  
+
   const tableLoading = masterLoadingStatus === "pending" || isSubmitting || isDeleting || isChangingStatus;
 
   return (
@@ -616,7 +686,7 @@ const BugReportListing = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Bug Reports</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button></div>
-         <div className="grid grid-cols-5 gap-2 w-full sm:w-auto mb-4 gap-4">
+          <div className="grid grid-cols-5 gap-2 w-full sm:w-auto mb-4 gap-4">
             <Tooltip title="View All Reports (Clear Filters)"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBug size={24} /></div><div><h6 className="text-blue-500">{rawBugReportsData?.counts?.total ?? "..."}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
             <Tooltip title="Filter by Status: New"><div className="cursor-pointer" onClick={() => handleCardClick("New")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-pink-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbMailPlus size={24} /></div><div><h6 className="text-pink-500">{rawBugReportsData?.counts?.new ?? "..."}</h6><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
             <Tooltip title="Filter by Status: Under Review"><div className="cursor-pointer" onClick={() => handleCardClick("Under Review")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-orange-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbLoader size={24} /></div><div><h6 className="text-orange-500">{rawBugReportsData?.counts?.under_review ?? "..."}</h6><span className="font-semibold text-xs">Under Review</span></div></Card></div></Tooltip>
