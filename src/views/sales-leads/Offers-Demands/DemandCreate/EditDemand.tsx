@@ -1,241 +1,272 @@
-// src/views/your-path/EditDemand.tsx
-
-import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { useNavigate, useParams, NavLink } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
+import { Button, Input, Radio, Select as UiSelect } from "@/components/ui";
 import Card from "@/components/ui/Card";
-import { Input, Select as UiSelect, Button, Radio } from "@/components/ui"; // MODIFICATION: Imported Radio
 import { Form, FormItem } from "@/components/ui/Form";
 import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
 import Spinner from "@/components/ui/Spinner";
+import toast from "@/components/ui/toast";
 import Container from "@/components/shared/Container";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
-import { TbAlertTriangle, TbBrandWhatsapp, TbCopy, TbMail } from "react-icons/tb";
+import { TbFileText, TbPlus, TbTrash } from "react-icons/tb";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
-import { useSelector } from 'react-redux';
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  getDemandById,
   editDemandAction,
-  getUsersAction,
   getAllProductAction,
+  getDemandById,
   getMembersAction,
+  getProductsAction,
+  getProductSpecificationsAction,
+  getUsersAction,
 } from "@/reduxtool/master/middleware";
-import { masterSelector } from '@/reduxtool/master/masterSlice';
+import { useAppDispatch } from "@/reduxtool/store";
+import { useSelector } from "react-redux";
 
-// --- Type Definitions ---
-export type ApiUserObject = {
-  id: number;
-  name: string;
-};
-
-export type ApiFetchedDemand = {
-  id: number;
-  generate_id: string;
-  name: string;
-  product_ids: number[] | null;
-  buyer_section: number[] | null;
-  seller_section: number[] | null;
-  groupA: string | null;
-  groupB: string | null;
-  assign_user: ApiUserObject | null;
-  created_by: ApiUserObject;
-  created_at: string;
-  updated_at: string;
-};
-
-// --- MODIFICATION: Updated Zod schema for new fields ---
-const demandFormSchema = z.object({
-  name: z.string().min(1, "Demand Name is required."),
-  assignedUserId: z.number().min(1, "Assigned User is required.").nullable(),
-  productIds: z.array(z.number()).min(1, "At least one product is required."),
-  buyers: z.array(z.number()).min(1, "At least one buyer is required."),
-  groupA_notes: z.string().optional().nullable(),
-  sellers: z.array(z.number()).min(1, "At least one seller is required."),
-  groupB_notes: z.string().optional().nullable(),
-
-  // Fields for the price list section controls
-  priceListProduct: z.number().nullable(),
-  productStatus: z.enum(["active", "non-active"]).default("active"),
-  productSpec: z.string().optional().nullable(),
+// --- New nested Zod Schema structure (same as Create/Offer) ---
+const priceListItemSchema = z.object({
+  color: z.string(),
+  qty: z.number().optional(),
+  price: z.number().optional(),
 });
 
-type DemandEditFormData = z.infer<typeof demandFormSchema>;
+const productDataSchema = z.object({
+  product_id: z.number({ required_error: "Product is required." }).nullable(),
+  seller_ids: z.array(z.number()).min(1, "At least one seller is required."),
+  buyer_ids: z.array(z.number()).min(1, "At least one buyer is required."),
+  status: z.enum(["active", "non-active"]).default("active"),
+  spec_id: z.number().nullable().default(null),
+  items: z.array(priceListItemSchema).default([]),
+});
+
+const demandFormSchema = z.object({
+  name: z.string().min(1, "Demand Name is required."),
+  assign_user: z.number({ required_error: "Assigned User is required."}).nullable(),
+  product_data: z.array(productDataSchema).min(1, "Add at least one product group."),
+  groupA: z.string().optional().nullable(),
+  groupB: z.string().optional().nullable(),
+});
+
+type DemandFormData = z.infer<typeof demandFormSchema>;
 type OptionType = { value: number | string; label: string };
 
-// MODIFICATION: Static data for the price list table
-const staticPriceListData = [
-  { id: 1, color: "Red", qty: 15, price: 120.5 },
-  { id: 2, color: "Blue", qty: 25, price: 115.0 },
-  { id: 3, color: "Green", qty: 10, price: 125.75 },
-  { id: 4, color: "Black", qty: 50, price: 110.0 },
-];
+// Helper to parse stringified JSON from the old API structure
+const parseJsonArray = (jsonString: string | null | undefined): number[] => {
+  if (!jsonString) return [];
+  try {
+    const parsed = JSON.parse(jsonString);
+    return Array.isArray(parsed) ? parsed.map(Number).filter(n => !isNaN(n)) : [];
+  } catch (e) {
+    return [];
+  }
+};
 
 const EditDemand = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { id: demandIdFromParams } = useParams<{ id: string }>();
+  const { id } = useParams<{ id: string }>(); // Use useParams for route params
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // --- MODIFICATION: State for editable price list table ---
-  const [priceListData, setPriceListData] = useState(staticPriceListData);
 
-  const {
-    currentDemand,
-    currentDemandStatus = 'idle',
-    usersData = [],
-    productsMasterData = [],
-    memberData = [],
-    status: masterLoadingStatus = 'idle',
-  } = useSelector(masterSelector);
-
-  const { control, handleSubmit, reset, getValues, formState: { errors, isDirty } } = useForm<DemandEditFormData>({
-    resolver: zodResolver(demandFormSchema),
-    defaultValues: {
-      name: "",
-      assignedUserId: null,
-      productIds: [],
-      buyers: [],
-      groupA_notes: "",
-      sellers: [],
-      groupB_notes: "",
-      priceListProduct: null,
-      productStatus: "active",
-      productSpec: null,
-    }
-  });
-
-  // --- Memoized Options for Dropdowns ---
-  const userOptions = useMemo(() => {
-    if (!Array.isArray(usersData)) return [];
-    return usersData.map((u: ApiUserObject) => ({ value: u.id, label: u.name }));
-  }, [usersData]);
-
-  const productOptions = useMemo(() => {
-    if (!Array.isArray(productsMasterData)) return [];
-    return productsMasterData.map((p: any) => ({ value: p.id, label: p.name }));
-  }, [productsMasterData]);
-
-  const memberOptions = useMemo(() => {
-    if (!Array.isArray(memberData)) return [];
-    return memberData.map((m: any) => ({ value: m.id, label: m.name }));
-  }, [memberData]);
-
-  const statusOptions: OptionType[] = [
-    { value: "active", label: "Active" },
-    { value: "non-active", label: "Non-Active" },
-  ];
-
-  const specOptions: OptionType[] = [
-    { value: "spec-a", label: "Specification A" },
-    { value: "spec-b", label: "Specification B" },
-    { value: "spec-c", label: "Specification C" },
-  ];
-
-  // --- MODIFICATION: Handler for updating price list state ---
-  const handlePriceListChange = (index: number, field: 'qty' | 'price', value: string) => {
-    const updatedList = [...priceListData];
-    const numericValue = parseFloat(value) || 0; // Ensure value is a number
-    updatedList[index] = { ...updatedList[index], [field]: numericValue };
-    setPriceListData(updatedList);
-  };
-
-  // --- MODIFICATION: Totals calculation now depends on the editable state ---
-  const totals = useMemo(() => {
-    const totalQty = priceListData.reduce((sum, item) => sum + Number(item.qty), 0);
-    const totalPrice = priceListData.reduce((sum, item) => sum + Number(item.qty) * Number(item.price), 0);
-    return { totalQty, totalPrice };
-  }, [priceListData]);
-
-
-  // --- Fetch Initial Data ---
   useEffect(() => {
+    // Fetch all necessary master data
     dispatch(getUsersAction());
     dispatch(getAllProductAction());
     dispatch(getMembersAction());
-    if (demandIdFromParams) {
-      dispatch(getDemandById(demandIdFromParams));
+    dispatch(getProductsAction());
+    dispatch(getProductSpecificationsAction());
+
+    // Fetch the specific demand to edit
+    if (id) {
+      dispatch(getDemandById(id));
     } else {
-      toast.push(<Notification title="Error" type="danger">Demand ID is missing.</Notification>);
-      navigate("/sales-leads/offers-demands");
-    }
-  }, [dispatch, demandIdFromParams, navigate]);
-
-  // --- Populate Form When Data Arrives ---
-  useEffect(() => {
-    if (currentDemandStatus === 'succeeded' && currentDemand) {
-      reset({
-        name: currentDemand.name || "",
-        assignedUserId: currentDemand.assign_user?.id || null,
-        productIds: currentDemand.product_ids || [],
-        buyers: currentDemand.buyer_section || [],
-        sellers: currentDemand.seller_section || [],
-        groupA_notes: currentDemand.groupA || "",
-        groupB_notes: currentDemand.groupB || "",
-      });
-      // You might also populate priceListData here if it comes from the API
-    } else if (currentDemandStatus === 'failed') {
-      toast.push(<Notification title="Load Error" type="danger">Failed to load demand details.</Notification>);
-    }
-  }, [currentDemand, currentDemandStatus, reset]);
-
-  const onFormSubmit = useCallback(
-    async (formData: DemandEditFormData) => {
-      if (!currentDemand?.id) {
-        toast.push(<Notification title="Error" type="danger">Cannot submit: Demand ID is missing.</Notification>);
-        return;
-      }
-      setIsSubmitting(true);
-
-      const apiPayload = {
-        id: currentDemand.id,
-        name: formData.name,
-        assign_user: formData.assignedUserId,
-        product_ids: formData.productIds,
-        buyer_section: formData.buyers,
-        seller_section: formData.sellers,
-        groupA: formData.groupA_notes,
-        groupB: formData.groupB_notes,
-      };
-
-      try {
-        await dispatch(editDemandAction(apiPayload)).unwrap();
-        toast.push(<Notification title="Demand Updated" type="success">Demand "{formData.name}" updated.</Notification>);
+        toast.push(<Notification title="Error" type="danger">Demand ID is missing.</Notification>);
         navigate("/sales-leads/offers-demands");
-      } catch (error: any) {
-        const errorMessage = error?.message || "Could not update demand.";
-        toast.push(<Notification title="Update Failed" type="danger">{errorMessage}</Notification>);
-      } finally {
-        setIsSubmitting(false);
-      }
+    }
+  }, [dispatch, id, navigate]);
+
+  const {
+    usersData = [],
+    productsMasterData = [],
+    memberData = [],
+    ProductsData = [],
+    ProductSpecificationsData = [],
+    currentDemand: demandData,
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector);
+
+  // Memoized options for select dropdowns
+  const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: u.name })) : [], [usersData]);
+  const productOptions: OptionType[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
+  const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label: m.name })) : [], [memberData]);
+  const statusOptions: OptionType[] = [{ value: "active", label: "Active" }, { value: "non-active", label: "Non-Active" }];
+  const productSpecOptions: OptionType[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((spec: any) => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors, isDirty },
+  } = useForm<DemandFormData>({
+    resolver: zodResolver(demandFormSchema),
+    defaultValues: {
+      name: "",
+      assign_user: null,
+      product_data: [], // Start empty, will be populated by useEffect
+      groupA: "",
+      groupB: "",
     },
-    [dispatch, navigate, currentDemand]
-  );
+  });
+  
+  const { fields, append, remove } = useFieldArray({ control, name: "product_data" });
+  
+  const watchedProductGroups = watch("product_data");
+
+  // --- Populate form when editing data is loaded ---
+  useEffect(() => {
+    if (demandData && ProductsData.length) {
+        const sellerIds = parseJsonArray(demandData.seller_section);
+        const buyerIds = parseJsonArray(demandData.buyer_section);
+
+        const itemsByProduct = (demandData.price_list_details?.items || []).reduce((acc: any, item: any) => {
+            const productId = parseInt(item.product_id);
+            if (!acc[productId]) acc[productId] = [];
+            acc[productId].push({ color: item.color, qty: item.qty, price: item.price });
+            return acc;
+        }, {});
+
+        const reconstructedProductData = Object.keys(itemsByProduct).length > 0
+            ? Object.keys(itemsByProduct).map(productIdStr => {
+                const productId = parseInt(productIdStr);
+                return {
+                    product_id: productId,
+                    seller_ids: sellerIds,
+                    buyer_ids: buyerIds,
+                    status: demandData.price_list_details?.status || 'active',
+                    spec_id: demandData.price_list_details?.spec_id || null,
+                    items: itemsByProduct[productId],
+                };
+            })
+            : [{ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] }];
+
+        reset({
+            name: demandData.name || "",
+            assign_user: demandData.assign_user ? Number(demandData.assign_user) : null,
+            groupA: demandData.groupA || "",
+            groupB: demandData.groupB || "",
+            product_data: reconstructedProductData,
+        });
+    }
+  }, [demandData, ProductsData, reset]);
+
+  const handleProductChange = (groupIndex: number, productId: number | null) => {
+    setValue(`product_data.${groupIndex}.product_id`, productId);
+    
+    if (!productId) {
+      setValue(`product_data.${groupIndex}.items`, []);
+      return;
+    }
+
+    const productDetails = ProductsData.find((p: any) => parseInt(p.id) === productId);
+    const colors = productDetails?.color?.split(',') || [];
+    
+    const newItems = colors.map((c: string) => c.trim()).filter(Boolean).map((color: string) => ({ color }));
+
+    setValue(`product_data.${groupIndex}.items`, newItems, { shouldValidate: true });
+  };
+
+  const totals = useMemo(() => {
+    let totalQty = 0;
+    let totalPrice = 0;
+    watchedProductGroups.forEach(group => {
+      group.items.forEach(item => {
+        totalQty += item.qty || 0;
+        totalPrice += (item.qty || 0) * (item.price || 0);
+      });
+    });
+    return { totalQty, totalPrice };
+  }, [watchedProductGroups]);
+
+  const handleGenerateAndCopyNotes = () => {
+    // This function is identical to the one in CreateDemand and works perfectly here.
+    const relevantGroups = watchedProductGroups.filter(g => g.product_id && g.items.some(i => i.qty && i.qty > 0));
+    if (relevantGroups.length === 0) {
+      toast.push(<Notification title="No Data" type="warning">Enter a quantity for at least one item.</Notification>);
+      return;
+    }
+    let messageA = "", messageB = "";
+    relevantGroups.forEach(group => {
+        const productName = productOptions.find(p => p.value === group.product_id)?.label || "Unknown Product";
+        const selectedSpec = productSpecOptions.find(s => s.value === group.spec_id);
+        messageA += `Product: ${productName}\n`;
+        messageB += `Product: ${productName}\n`;
+        if (selectedSpec) {
+          messageA += `Specification: ${selectedSpec.label}\n`;
+          messageB += `Specification: ${selectedSpec.label}\n`;
+        }
+        messageA += `Status: ${group.status.toUpperCase()}\n\n`;
+        messageB += `Status: ${group.status.toUpperCase()}\n\n`;
+        group.items.forEach(item => {
+            if (item.qty && item.qty > 0) {
+                messageA += `  - Color: ${item.color}, Qty: ${item.qty}, Price: $${(item.price || 0).toFixed(2)}\n`;
+                messageB += `  - Color: ${item.color}, Qty: ${item.qty}\n`;
+            }
+        });
+        messageA += "--------------------------------\n\n";
+        messageB += "--------------------------------\n\n";
+    });
+    messageA += `\nGrand Total Qty: ${totals.totalQty}\nGrand Total Price: $${totals.totalPrice.toFixed(2)}`;
+    messageB += `\nTotal Qty: ${totals.totalQty}`;
+    setValue("groupA", messageA, { shouldDirty: true });
+    setValue("groupB", messageB, { shouldDirty: true });
+    toast.push(<Notification title="Success" type="info">Notes generated and copied below.</Notification>);
+  };
+
+  const onFormSubmit = useCallback(async (data: DemandFormData) => {
+    if (!id) return;
+    setIsSubmitting(true);
+    const apiPayload = {
+      id,
+      name: data.name,
+      groupA: data.groupA,
+      groupB: data.groupB,
+      assign_user: data.assign_user,
+      product_data: data.product_data.filter(p => p.product_id).map(group => ({
+          ...group,
+          items: group.items.filter(item => item.qty && item.qty > 0)
+      })),
+    };
+
+    try {
+      await dispatch(editDemandAction(apiPayload)).unwrap();
+      toast.push(<Notification title="Demand Updated" type="success">Demand "{data.name}" has been successfully updated.</Notification>);
+      navigate("/sales-leads/offers-demands");
+    } catch (error: any) {
+      const errorMessage = error?.message || "Could not update demand. Please try again.";
+      toast.push(<Notification title="Update Failed" type="danger">{errorMessage}</Notification>);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [dispatch, navigate, id]);
 
   const handleCancel = () => {
     navigate("/sales-leads/offers-demands");
   };
 
-  const isLoading = currentDemandStatus === 'loading' || masterLoadingStatus === 'loading';
+  const isLoading = masterLoadingStatus === "loading" && !demandData;
 
-  if (isLoading && !currentDemand) {
-    return (
-      <Container className="flex justify-center items-center h-full"><Spinner size={40} /><span className="ml-2">Loading Demand...</span></Container>
-    );
-  }
-
-  if (currentDemandStatus === 'succeeded' && !currentDemand) {
-    return (
-      <Container className="text-center p-8"><h4 className="font-semibold mb-2">Demand Not Found</h4><p>ID "{demandIdFromParams}" not found.</p><Button className="mt-4" onClick={() => navigate(-1)}>Back</Button></Container>
-    );
+  if (isLoading) {
+    return <Container className="flex justify-center items-center h-full"><Spinner size={40} /><span className="ml-2">Loading Demand...</span></Container>;
   }
 
   return (
@@ -243,176 +274,107 @@ const EditDemand = () => {
       <div className='flex gap-1 items-end mb-3 '>
         <NavLink to="/sales-leads/offers-demands"><h6 className='font-semibold hover:text-primary-600 dark:hover:text-primary-400'>Offers & Demands</h6></NavLink>
         <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
-        <h6 className='font-semibold text-primary'>Edit Demand (ID: {currentDemand?.generate_id || demandIdFromParams})</h6>
+        <h6 className='font-semibold text-primary'>Edit Demand (ID: {demandData?.generate_id || id})</h6>
       </div>
-      <Form id="editDemandForm" onSubmit={handleSubmit(onFormSubmit)}>
+      <Form id="editDemandForm" onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
         <Card>
-          <div className="flex justify-between items-center mb-6">
-            <h4>Edit Demand Details</h4>
-            <Button type="button" variant="solid" onClick={() => toast.push(<Notification title="Info" type="info">Price List feature coming soon!</Notification>)}>
-              View Price List
-            </Button>
-          </div>
-
+          <h4 className="mb-6">Edit Demand</h4>
           <div className="grid md:grid-cols-2 gap-4">
-            <FormItem label="Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
-              <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Demand Name" />} />
+            <FormItem label="Demand Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
+              <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Q4 Gadget Demand" />} />
             </FormItem>
-            <FormItem label="Assign User" invalid={!!errors.assignedUserId} errorMessage={errors.assignedUserId?.message}>
-              <Controller name="assignedUserId" control={control} render={({ field }) => (
-                <UiSelect placeholder="Select Employee" options={userOptions}
-                  value={userOptions.find((opt) => opt.value === field.value)}
-                  onChange={(option: OptionType | null) => field.onChange(option ? option.value : null)}
-                  isClearable />
-              )} />
-            </FormItem>
-
-            <FormItem label="Products" invalid={!!errors.productIds} errorMessage={errors.productIds?.message} className="md:col-span-2">
-              <Controller name="productIds" control={control} render={({ field }) => (
-                <UiSelect isMulti placeholder="Select Products" options={productOptions}
-                  value={productOptions.filter((opt) => field.value?.includes(opt.value as number))}
-                  onChange={(options: readonly OptionType[]) => field.onChange(options ? options.map(opt => opt.value) : [])}
-                  isLoading={isLoading} />
-              )} />
+            <FormItem label="Assign To User" invalid={!!errors.assign_user} errorMessage={errors.assign_user?.message}>
+              <Controller name="assign_user" control={control} render={({ field }) => <UiSelect placeholder="Select Employee" options={userOptions} value={userOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} isClearable />} />
             </FormItem>
           </div>
-
-          {/* --- MODIFICATION START: Reordered Layout --- */}
-          {/* --- Buyer and Seller Selection --- */}
-          <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <Card>
-              <h5>Buyer Section</h5>
-              <div className="mt-4">
-                <FormItem label="Buyers" invalid={!!errors.buyers} errorMessage={errors.buyers?.message}>
-                  <Controller name="buyers" control={control} render={({ field }) => (
-                    <UiSelect isMulti placeholder="Select Buyers" options={memberOptions}
-                      value={memberOptions.filter((opt) => field.value?.includes(opt.value as number))}
-                      onChange={(options: readonly OptionType[]) => field.onChange(options ? options.map(opt => opt.value) : [])}
-                      isLoading={isLoading} />
-                  )} />
-                </FormItem>
-              </div>
-            </Card>
-            <Card>
-              <h5>Seller Section</h5>
-              <div className="mt-4">
-                <FormItem label="Sellers" invalid={!!errors.sellers} errorMessage={errors.sellers?.message}>
-                  <Controller name="sellers" control={control} render={({ field }) => (
-                    <UiSelect isMulti placeholder="Select Sellers" options={memberOptions}
-                      value={memberOptions.filter((opt) => field.value?.includes(opt.value as number))}
-                      onChange={(options: readonly OptionType[]) => field.onChange(options ? options.map(opt => opt.value) : [])}
-                      isLoading={isLoading} />
-                  )} />
-                </FormItem>
-              </div>
-            </Card>
-          </div>
-
-          {/* --- Price List Table View (Moved) --- */}
-          <Card className="mt-4">
-            {/* <h5 className="mb-4">Price List Details</h5> */}
-
-            <div className="grid lg:grid-cols-3 gap-4 mb-4">
-              <FormItem label="Add Product">
-                <Controller name="priceListProduct" control={control} render={({ field }) => (
-                  <UiSelect placeholder="Select a Product" options={productOptions}
-                    value={productOptions.find((o) => o.value === field.value)}
-                    onChange={(option: OptionType | null) => field.onChange(option ? option.value : null)} />
-                )} />
-              </FormItem>
-              <FormItem label="Status">
-                <Controller name="productStatus" control={control} render={({ field }) => (
-                  <Radio.Group value={field.value} onChange={field.onChange} className="flex items-center gap-x-6 h-full">
-                    {statusOptions.map((option) => (
-                      <Radio key={option.value} value={option.value}>{option.label}</Radio>
-                    ))}
-                  </Radio.Group>
-                )} />
-              </FormItem>
-              <FormItem label="Product Spec Options">
-                <Controller name="productSpec" control={control} render={({ field }) => (
-                  <UiSelect placeholder="Select a Spec" options={specOptions}
-                    value={specOptions.find((o) => o.value === field.value)}
-                    onChange={(option: OptionType | null) => field.onChange(option ? option.value : null)} />
-                )} />
-              </FormItem>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr No</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {priceListData.map((item, index) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 whitespace-nowrap">{index + 1}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{item.color}</td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <Input type="number" size="sm" value={item.qty} onChange={(e) => handlePriceListChange(index, 'qty', e.target.value)} />
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <Input type="number" size="sm" step="0.01" value={item.price} onChange={(e) => handlePriceListChange(index, 'price', e.target.value)} prefix="$" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex justify-end items-center gap-4 mt-4">
-              <Input readOnly value={totals.totalQty} prefix="Total Qty:" className="w-48" />
-              <Input readOnly value={`$${totals.totalPrice.toFixed(2)}`} prefix="Total Price:" className="w-56" />
-            </div>
-          </Card>
-       
-          {/* --- Group Notes --- */}
-          <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <Card>
-              <h5>Group A Notes (Buyer Notes)</h5>
-              <div className="mt-4">
-                <FormItem invalid={!!errors.groupA_notes} errorMessage={errors.groupA_notes?.message}>
-                  <Controller name="groupA_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Notes for Buyer Section" rows={3} />} />
-                </FormItem>
-                <div className="text-right mt-1">
-                  <div className="text-right mt-1">
-                    <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues("groupA_notes") || ""); toast.push(<Notification title="Copied" type="info">Group A notes copied to clipboard.</Notification>); }} />
-                    <Button type="button" shape="circle" icon={<TbMail />} onClick={() => toast.push(<Notification title="Action" type="info">Send Email action triggered.</Notification>)} />
-                    <Button type="button" shape="circle" icon={<TbBrandWhatsapp />} onClick={() => toast.push(<Notification title="Action" type="info">Send WhatsApp action triggered.</Notification>)} />
-                  </div>
-                </div>
-              </div>
-            </Card>
-            <Card>
-              <h5>Group B Notes (Seller Notes)</h5>
-              <div className="mt-4">
-                <FormItem invalid={!!errors.groupB_notes} errorMessage={errors.groupB_notes?.message}>
-                  <Controller name="groupB_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Notes for Seller Section" rows={3} />} />
-                </FormItem>
-                <div className="text-right mt-1">
-                  <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues("groupB_notes") || ""); toast.push(<Notification title="Copied" type="info">Group B notes copied to clipboard.</Notification>); }} />
-                  <Button type="button" shape="circle" icon={<TbMail />} onClick={() => toast.push(<Notification title="Action" type="info">Send Email action triggered.</Notification>)} />
-                  <Button type="button" shape="circle" icon={<TbBrandWhatsapp />} onClick={() => toast.push(<Notification title="Action" type="info">Send WhatsApp action triggered.</Notification>)} />
-                </div>
-              </div>
-            </Card>
-          </div>
-             <div className="p-4 mb-4 rounded-md bg-yellow-100 dark:bg-yellow-500/20 border-l-4 border-yellow-400 dark:border-yellow-500 text-yellow-800 dark:text-yellow-200 flex items-center gap-3">
-            <TbAlertTriangle className="h-5 w-5" />
-            <div>
-              <span className="font-semibold">Note:</span> The UI for the product table data is not saving to the backend.
-            </div>
-          </div>
-          {/* --- MODIFICATION END --- */}
         </Card>
 
-        <Card bodyClass="flex justify-end gap-2" className='mt-4'>
+        {fields.map((field, index) => (
+          <Card key={field.id}>
+              <div className="flex justify-between items-center mb-4">
+                  <h5 className="mb-0">Product Group #{index + 1}</h5>
+                  <div className="flex items-center gap-2">
+                    {fields.length > 1 && <Button shape="circle" size="sm" type="button" color="red-600" icon={<TbTrash />} onClick={() => remove(index)} />}
+                    <Button size="xs" type="button" icon={<TbPlus />} onClick={() => append({ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] })}>Add Group</Button>
+                  </div>
+              </div>
+              <div className="p-4 border rounded-md dark:border-gray-600 grid lg:grid-cols-3 gap-4 items-start mb-6">
+                  <FormItem label="Product" invalid={!!errors.product_data?.[index]?.product_id} errorMessage={errors.product_data?.[index]?.product_id?.message}>
+                      <Controller name={`product_data.${index}.product_id`} control={control} render={({ field: { value }}) => 
+                          <UiSelect placeholder="Select Product..." options={productOptions} value={productOptions.find(opt => opt.value === value)} onChange={(option) => handleProductChange(index, option ? option.value as number : null)} />
+                      } />
+                  </FormItem>
+                  <FormItem label="Sellers" invalid={!!errors.product_data?.[index]?.seller_ids} errorMessage={errors.product_data?.[index]?.seller_ids?.message}>
+                      <Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value }}) => 
+                          <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} />
+                      } />
+                  </FormItem>
+                  <FormItem label="Buyers" invalid={!!errors.product_data?.[index]?.buyer_ids} errorMessage={errors.product_data?.[index]?.buyer_ids?.message}>
+                      <Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value }}) => 
+                          <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} />
+                      } />
+                  </FormItem>
+              </div>
+
+              {watchedProductGroups[index]?.product_id && (
+                  <>
+                      <div className="grid lg:grid-cols-2 gap-4 mb-4">
+                          <FormItem label="Status">
+                              <Controller name={`product_data.${index}.status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={option.value} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
+                          </FormItem>
+                          <FormItem label="Product Spec Options">
+                              <Controller name={`product_data.${index}.spec_id`} control={control} render={({ field }) => <UiSelect placeholder="Select a Spec" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} />} />
+                          </FormItem>
+                      </div>
+                      <div className="overflow-x-auto">
+                          <table className="min-w-full">
+                              <thead className="bg-gray-50 dark:bg-gray-700">
+                                  <tr>
+                                      <th className="px-4 py-3 text-left text-xs font-medium uppercase">Color</th>
+                                      <th className="px-4 py-3 text-left text-xs font-medium uppercase w-32">Qty</th>
+                                      <th className="px-4 py-3 text-left text-xs font-medium uppercase w-40">Price</th>
+                                  </tr>
+                              </thead>
+                              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                  {watchedProductGroups[index].items.map((item, itemIndex) => (
+                                  <tr key={`${field.id}-item-${itemIndex}`}>
+                                      <td className="px-4 py-3 font-semibold">{item.color}</td>
+                                      <td className="px-2 py-1"><Controller name={`product_data.${index}.items.${itemIndex}.qty`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0" />} /></td>
+                                      <td className="px-2 py-1"><Controller name={`product_data.${index}.items.${itemIndex}.price`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" step="0.01" prefix="$" placeholder="0.00" />} /></td>
+                                  </tr>
+                                  ))}
+                              </tbody>
+                          </table>
+                      </div>
+                  </>
+              )}
+          </Card>
+        ))}
+
+        <Card>
+          <div className="flex justify-between items-center gap-4">
+              <Button type="button" variant="outline" icon={<TbFileText />} onClick={handleGenerateAndCopyNotes}>Generate & Copy Notes</Button>
+              <div className="flex items-center gap-4">
+                  <Input readOnly value={totals.totalQty} prefix="Total Qty:" className="w-48" />
+                  <Input readOnly value={`$${totals.totalPrice.toFixed(2)}`} prefix="Total Price:" className="w-56" />
+              </div>
+          </div>
+        </Card>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <h5 className="mb-4">Group A Notes</h5>
+            <FormItem invalid={!!errors.groupA} errorMessage={errors.groupA?.message}><Controller name="groupA" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate & Copy Notes' to populate..." rows={12} />} /></FormItem>
+          </Card>
+          <Card>
+            <h5 className="mb-4">Group B Notes</h5>
+            <FormItem invalid={!!errors.groupB} errorMessage={errors.groupB?.message}><Controller name="groupB" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate & Copy Notes' to populate..." rows={12} />} /></FormItem>
+          </Card>
+        </div>
+
+        <Card bodyClass="flex justify-end gap-2">
           <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
-          <Button type="submit" form="editDemandForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !isDirty || isLoading}>
+          <Button type="submit" form="editDemandForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !isDirty}>
             {isSubmitting ? "Saving..." : "Save Changes"}
           </Button>
         </Card>
