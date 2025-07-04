@@ -110,11 +110,11 @@ const FrameLessSide = ({ children }: CommonProps) => {
                 </div>
             )}
         >
-            <div className="flex flex-auto min-w-0">
+            <div className="flex flex-auto min-w-0 ">
                 {larger.lg && (
                     <SideNav
                         background={false}
-                        className={classNames('contrast-dark pt-6')}
+                        className={classNames('contrast-dark pt-6 pb-5')}
                         contentClass="h-[calc(100vh-8rem)]"
                         mode="dark"
                     />
