@@ -6,7 +6,7 @@ import dayjs from 'dayjs'
 // --- UI Components & Icons ---
 import Avatar from '@/components/ui/Avatar'
 import Button from '@/components/ui/Button'
-import Calendar from '@/components/ui/Calendar'
+import DatePicker from '@/components/ui/DatePicker'
 import Dropdown from '@/components/ui/Dropdown'
 import ScrollBar from '@/components/ui/ScrollBar'
 import Spinner from '@/components/ui/Spinner'
@@ -39,7 +39,6 @@ type ScheduleData = { [date: string]: ScheduleEvent[] }
 
 const scheduleContentHeight = 'h-[280px]'
 
-// A centralized place to manage event styles for easy updates
 const EVENT_TYPE_STYLE: Record<string, { icon: JSX.Element; accentClass: string }> = {
     Meeting: {
         icon: <BsCameraVideo />,
@@ -58,15 +57,14 @@ const EVENT_TYPE_STYLE: Record<string, { icon: JSX.Element; accentClass: string 
 // ======================================================
 //             LOGICAL & REUSABLE SUB-COMPONENTS
 // ======================================================
+// (These sub-components remain unchanged)
 
-// --- 1. Header Icon Toggle ---
 const ScheduleToggle = ({ className }: { className?: string }) => (
     <div className={classNames('text-2xl', className)}>
         <IoCalendarOutline />
     </div>
 )
 
-// --- 2. Dynamic Dropdown Header ---
 const DynamicHeader = ({
     title,
     onRefresh,
@@ -88,14 +86,13 @@ const DynamicHeader = ({
                     onClick={onRefresh}
                 />
             </Tooltip>
-            <Button size="sm" onClick={onViewAll}>
+            {/* <Button size="sm" onClick={onViewAll}>
                 View All
-            </Button>
+            </Button> */}
         </div>
     </div>
 )
 
-// --- 3. Visually Appealing Event Item Card ---
 const ScheduleItem = ({ event }: { event: ScheduleEvent }) => {
     const { icon, accentClass } =
         EVENT_TYPE_STYLE[event.event_type] || EVENT_TYPE_STYLE.default
@@ -122,7 +119,6 @@ const ScheduleItem = ({ event }: { event: ScheduleEvent }) => {
     )
 }
 
-// --- 4. Engaging Empty State ---
 const EmptyState = () => (
     <div className="flex flex-col items-center justify-center text-center h-full p-6">
         <img
@@ -135,7 +131,6 @@ const EmptyState = () => (
     </div>
 )
 
-// --- 5. Logic Container for the List ---
 const ScheduleList = ({
     loading,
     events,
@@ -155,7 +150,6 @@ const ScheduleList = ({
         return <EmptyState />
     }
 
-    // Sort events by time for a chronological view
     const sortedEvents = [...events].sort(
         (a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime()
     )
@@ -174,7 +168,7 @@ const ScheduleList = ({
 // ======================================================
 const _Calender = ({ className }: { className?: string }) => {
     const [loading, setLoading] = useState(false)
-    const [selectedDate, setSelectedDate] = useState(new Date())
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     const { larger } = useResponsive()
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
@@ -182,31 +176,25 @@ const _Calender = ({ className }: { className?: string }) => {
 
     const scheduleData = useSelector(masterSelector).getSchedule?.data as ScheduleData | undefined
 
-    // Memoize derived data to prevent unnecessary recalculations
-    const { eventsForSelectedDate, headerTitle, dayClassName } = useMemo(() => {
+    const { eventsForSelectedDate, headerTitle } = useMemo(() => {
         const dateKey = dayjs(selectedDate).format('YYYY-MM-DD')
         const events = scheduleData?.[dateKey] || []
 
-        let title = `Schedule for ${dayjs(selectedDate).format('MMMM D')}`
+        // --- START OF CHANGE ---
+        // Changed the date format to match the picker for consistency
+        let title = `Schedule for ${dayjs(selectedDate).format('DD/MM/YYYY')}`
+        // --- END OF CHANGE ---
+
         if (dayjs(selectedDate).isSame(dayjs(), 'day')) {
             title = "Today's Schedule"
-        }
-
-        const dayClass = (date: Date) => {
-            const key = dayjs(date).format('YYYY-MM-DD')
-            return scheduleData && scheduleData[key]?.length > 0
-                ? 'has-event'
-                : ''
         }
 
         return {
             eventsForSelectedDate: events,
             headerTitle: title,
-            dayClassName: dayClass,
         }
     }, [scheduleData, selectedDate])
 
-    // Fetch data on component mount
     useEffect(() => {
         const fetchInitialData = async () => {
             setLoading(true)
@@ -216,9 +204,9 @@ const _Calender = ({ className }: { className?: string }) => {
         fetchInitialData()
     }, [dispatch])
 
-    // --- User Action Handlers ---
+    // --- User Action Handlers (unchanged) ---
     const handleRefresh = async (e: React.MouseEvent) => {
-        e.stopPropagation() // Prevent dropdown from closing
+        e.stopPropagation()
         setLoading(true)
         await dispatch(getAllScheduleAction())
         setLoading(false)
@@ -230,71 +218,52 @@ const _Calender = ({ className }: { className?: string }) => {
     }
 
     const handleAddEvent = () => {
-        // Navigate or open modal for adding an event
         dropdownRef.current?.handleDropdownClose()
     }
 
+    const handleDateChange = (date: Date | null) => {
+        if (date) {
+            setSelectedDate(date)
+        }
+    }
+
     return (
-        <>
-            {/* 
-                Best Practice: This CSS should be in your global stylesheet
-                or a dedicated CSS module, not in an inline <style> tag.
-                It's placed here for demonstration purposes.
-            */}
-            <style>{`
-                .rbc-day-bg.has-event {
-                    position: relative;
-                }
-                .rbc-day-bg.has-event::after {
-                    content: '';
-                    position: absolute;
-                    bottom: 4px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 5px;
-                    height: 5px;
-                    border-radius: 50%;
-                    background-color: var(--color-primary-500, #6366f1);
-                    opacity: 0.8;
-                }
-            `}</style>
+        <Dropdown
+            ref={dropdownRef}
+            renderTitle={<ScheduleToggle className={className} />}
+            menuClass="!p-0 min-w-[340px] md:min-w-[420px]"
+            placement={larger.md ? 'bottom-end' : 'bottom'}
+        >
+            <Dropdown.Item variant="header" className="!px-4 !py-3">
+                <DynamicHeader
+                    title={headerTitle}
+                    onRefresh={handleRefresh}
+                    onViewAll={handleViewAll}
+                />
+            </Dropdown.Item>
 
-            <Dropdown
-                ref={dropdownRef}
-                renderTitle={<ScheduleToggle className={className} />}
-                menuClass="!p-0 min-w-[340px] md:min-w-[420px]"
-                placement={larger.md ? 'bottom-end' : 'bottom'}
-            >
-                <Dropdown.Item variant="header" className="!px-4 !py-3">
-                    <DynamicHeader
-                        title={headerTitle}
-                        onRefresh={handleRefresh}
-                        onViewAll={handleViewAll}
-                    />
-                </Dropdown.Item>
+            <div className="px-4 py-3 border-y border-gray-200 dark:border-gray-600">
+                <DatePicker
+                    value={selectedDate}
+                    onChange={handleDateChange}
+                    inputFormat="DD/MM/YYYY"
+                    className="w-full"
+                />
+            </div>
 
-                <div className="px-4 py-2 border-y border-gray-200 dark:border-gray-600">
-                    <Calendar
-                        value={selectedDate}
-                        onChange={setSelectedDate}
-                        dayClassName={dayClassName}
-                    />
-                </div>
+            <ScrollBar className={classNames('overflow-y-auto', scheduleContentHeight)}>
+                <ScheduleList
+                    loading={loading}
+                    events={eventsForSelectedDate}
+                />
+            </ScrollBar>
 
-                <ScrollBar className={classNames('overflow-y-auto', scheduleContentHeight)}>
-                    <ScheduleList
-                        loading={loading}
-                        events={eventsForSelectedDate}
-                    />
-                </ScrollBar>
-
-                <Dropdown.Item variant="footer" className="!border-t-0 !p-3">
-                    <Button block variant="solid" onClick={handleAddEvent}>
-                        Add New Event
-                    </Button>
-                </Dropdown.Item>
-            </Dropdown>
-        </>
+            {/* <Dropdown.Item variant="footer" className="!border-t-0 !p-3">
+                <Button block variant="solid" onClick={handleAddEvent}>
+                    Add New Event
+                </Button>
+            </Dropdown.Item> */}
+        </Dropdown>
     )
 }
 
