@@ -24,7 +24,7 @@ import {
 
 // Services (as it was imported)
 import { masterSelector } from '@/reduxtool/master/masterSlice'
-import { getNotificationAction } from '@/reduxtool/master/middleware'
+import { getAllNotificationAction, getNotificationAction } from '@/reduxtool/master/middleware'
 import { useAppDispatch } from '@/reduxtool/store'
 // apiGetLogs is no longer needed since we use Redux
 // import { apiGetLogs } from '@/services/LogService' 
@@ -234,7 +234,7 @@ const Notification = () => {
     const dispatch = useAppDispatch()
 
     // 1. Get the entire notification state object from Redux
-    const getAllNotification = useSelector(masterSelector)?.getAllNotification?.data?.data
+    const getAllNotification = useSelector(masterSelector)?.getNotification.data
 
     // Local state is only for UI controls
     const [showMentionedOnly, setShowMentionedOnly] = useState(false)
@@ -242,7 +242,7 @@ const Notification = () => {
 
     // 2. Fetch data on component mount
     useEffect(() => {
-        dispatch(getNotificationAction())
+        dispatch(getAllNotificationAction())
     }, [dispatch])
 
     // 3. Transform API data into the format the UI needs using useMemo for efficiency
