@@ -84,7 +84,7 @@ export const loginUserByEmailAction = createAsyncThunk<
         showMessage({
           ...defaultMessageObj,
           type: "error",
-          messageText: response?.message,
+          messageText: response?.data?.message,
         })
       )
 

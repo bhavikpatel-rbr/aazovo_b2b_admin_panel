@@ -116,8 +116,9 @@ const ForgotPasswordForm = ({
                     disabled={isSubmitting}
                     variant="solid"
                     type="submit"
+                    className='mt-2'
                 >
-                    {isSubmitting ? 'Sending...' : 'Send reset link'}
+                    {isSubmitting ? 'Sending...' : 'Send Request'}
                 </Button>
             </form>
         </FormContainer>
