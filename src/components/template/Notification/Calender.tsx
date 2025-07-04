@@ -63,8 +63,8 @@ const EVENT_TYPE_STYLE: Record<
     default: { icon: <BsClipboardCheck />, accentClass: 'bg-gray-400' },
 }
 
-const eventTypeOptions = [
-    // Customer Engagement & Sales
+// The full, original list of event types for the Add/Edit form
+const fullEventTypeOptions = [
     { value: 'Meeting', label: 'Meeting' },
     { value: 'Demo', label: 'Product Demo' },
     { value: 'IntroCall', label: 'Introductory Call' },
@@ -72,19 +72,13 @@ const eventTypeOptions = [
     { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
     { value: 'CheckIn', label: 'Customer Check-in' },
     { value: 'LogEmail', label: 'Log an Email' },
-
-    // Project & Task Management
     { value: 'Milestone', label: 'Project Milestone' },
     { value: 'Task', label: 'Task' },
     { value: 'FollowUp', label: 'General Follow-up' },
     { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-    // Customer Onboarding & Support
     { value: 'OnboardingSession', label: 'Onboarding Session' },
     { value: 'Training', label: 'Training Session' },
     { value: 'SupportCall', label: 'Support Call' },
-
-    // General & Administrative
     { value: 'Reminder', label: 'Reminder' },
     { value: 'Note', label: 'Add a Note' },
     { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
@@ -125,7 +119,6 @@ const eventTypeOptions = [
     { value: 'UserTraining', label: 'User Training Session' },
     { value: 'AdminTraining', label: 'Admin Training Session' },
     { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
     { value: 'HealthCheck', label: 'Customer Health Check' },
     { value: 'FeedbackSession', label: 'Feedback Session' },
     { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
@@ -139,21 +132,24 @@ const eventTypeOptions = [
     { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
     { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
     { value: 'SendQuote', label: 'Send Quote/Estimate' },
-]
-const uniqueEventTypeOptions = [...new Map(eventTypeOptions.map(item => [item['value'], item])).values()];
+];
 
+const uniqueFullEventTypeOptions = [...new Map(fullEventTypeOptions.map(item => [item['value'], item])).values()];
+
+// Zod schema for the general "Add Schedule" form (Restored to original)
 const scheduleFormSchema = z.object({
     event_title: z
         .string()
         .min(3, 'Title must be at least 3 characters long.'),
     event_type: z.string({ required_error: 'Event type is required.' }),
     date_time: z.date({ required_error: 'Event date & time are required.' }),
+    remind_from: z.date().nullable().optional(), // Restored field
     notes: z.string().optional(),
 })
 type ScheduleFormData = z.infer<typeof scheduleFormSchema>
 
 // ======================================================
-//        ADD SCHEDULE MODAL COMPONENT
+//        ADD SCHEDULE MODAL COMPONENT (RESTORED)
 // ======================================================
 
 const AddScheduleModal = ({
@@ -167,6 +163,7 @@ const AddScheduleModal = ({
 }) => {
     const dispatch = useAppDispatch()
     const [isLoading, setIsLoading] = useState(false)
+
     const {
         control,
         handleSubmit,
@@ -174,45 +171,154 @@ const AddScheduleModal = ({
         formState: { errors, isValid },
     } = useForm<ScheduleFormData>({
         resolver: zodResolver(scheduleFormSchema),
-        defaultValues: { event_title: '', event_type: undefined, date_time: null as any, notes: '' },
+        defaultValues: {
+            event_title: '',
+            event_type: undefined,
+            date_time: null as any,
+            remind_from: null, // Restored field
+            notes: '',
+        },
         mode: 'onChange',
     })
 
-    const handleClose = () => { reset(); onClose(); }
+    const handleClose = () => {
+        reset()
+        onClose()
+    }
 
     const onFormSubmit = async (data: ScheduleFormData) => {
-        setIsLoading(true);
-        const payload = { event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DD HH:mm:ss'), notes: data.notes || '' };
+        setIsLoading(true)
+        const payload = {
+            event_title: data.event_title,
+            event_type: data.event_type,
+            date_time: dayjs(data.date_time).format('YYYY-MM-DD HH:mm:ss'),
+            ...(data.remind_from && { // Restored logic
+                remind_from: dayjs(data.remind_from).format(
+                    'YYYY-MM-DD HH:mm:ss'
+                ),
+            }),
+            notes: data.notes || '',
+        }
+
         try {
-            await dispatch(addScheduleAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Event Scheduled" />);
-            onScheduleAdded(); handleClose();
+            await dispatch(addScheduleAction(payload)).unwrap()
+            toast.push(<Notification type="success" title="Event Scheduled" />)
+            onScheduleAdded()
+            handleClose()
         } catch (error: any) {
-            toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
-        } finally { setIsLoading(false); }
+            toast.push(
+                <Notification
+                    type="danger"
+                    title="Scheduling Failed"
+                    children={error?.message || 'An unknown error occurred.'}
+                />
+            )
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     return (
         <Dialog isOpen={isOpen} onClose={handleClose} onRequestClose={handleClose}>
             <h5 className="mb-4">Add New Schedule</h5>
             <UiForm onSubmit={handleSubmit(onFormSubmit)}>
-                <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message} >
-                    <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+                <UiFormItem
+                    label="Event Title"
+                    invalid={!!errors.event_title}
+                    errorMessage={errors.event_title?.message}
+                >
+                    <Controller
+                        name="event_title"
+                        control={control}
+                        render={({ field }) => <Input {...field} />}
+                    />
                 </UiFormItem>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message} >
-                        <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={uniqueEventTypeOptions} value={uniqueEventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
+                    <UiFormItem
+                        label="Event Type"
+                        invalid={!!errors.event_type}
+                        errorMessage={errors.event_type?.message}
+                    >
+                        <Controller
+                            name="event_type"
+                            control={control}
+                            render={({ field }) => (
+                                <UiSelect
+                                    placeholder="Select Type"
+                                    options={uniqueFullEventTypeOptions} // Using the full original list
+                                    value={uniqueFullEventTypeOptions.find(
+                                        (o) => o.value === field.value
+                                    )}
+                                    onChange={(opt: any) =>
+                                        field.onChange(opt?.value)
+                                    }
+                                />
+                            )}
+                        />
                     </UiFormItem>
-                    <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message} >
-                        <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+                    <UiFormItem
+                        label="Event Date & Time"
+                        invalid={!!errors.date_time}
+                        errorMessage={errors.date_time?.message}
+                    >
+                        <Controller
+                            name="date_time"
+                            control={control}
+                            render={({ field }) => (
+                                <DatePicker.DateTimepicker
+                                    placeholder="Select date and time"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                />
+                            )}
+                        />
                     </UiFormItem>
                 </div>
-                <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message} >
-                    <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+                <UiFormItem // Restored field
+                    label="Reminder Date & Time (Optional)"
+                    invalid={!!errors.remind_from}
+                    errorMessage={errors.remind_from?.message}
+                >
+                    <Controller
+                        name="remind_from"
+                        control={control}
+                        render={({ field }) => (
+                            <DatePicker.DateTimepicker
+                                placeholder="Select date and time"
+                                value={field.value}
+                                onChange={field.onChange}
+                            />
+                        )}
+                    />
+                </UiFormItem>
+                <UiFormItem
+                    label="Notes"
+                    invalid={!!errors.notes}
+                    errorMessage={errors.notes?.message}
+                >
+                    <Controller
+                        name="notes"
+                        control={control}
+                        render={({ field }) => <Input textArea {...field} />}
+                    />
                 </UiFormItem>
                 <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={handleClose} disabled={isLoading} > Cancel </Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} > Save Event </Button>
+                    <Button
+                        type="button"
+                        className="mr-2"
+                        onClick={handleClose}
+                        disabled={isLoading}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="solid"
+                        type="submit"
+                        loading={isLoading}
+                        disabled={!isValid || isLoading}
+                    >
+                        Save Event
+                    </Button>
                 </div>
             </UiForm>
         </Dialog>
@@ -282,7 +388,7 @@ const CompactAllSchedulesModal = ({
                     dayjs(a.date_time).valueOf() - dayjs(b.date_time).valueOf()
             )
     }, [scheduleData, eventTypeFilter])
-
+    
     const uniqueEventTypesForFilter = useMemo(
         () => [
             { value: '', label: 'All Event Types' },
@@ -316,7 +422,7 @@ const CompactAllSchedulesModal = ({
                         onChange={(opt: any) => setEventTypeFilter(opt?.value || null)}
                     />
                     <div className="flex-grow min-h-0">
-                        <ScrollBar autoHide style={{ maxHeight: '55vh' }}>
+                         <ScrollBar autoHide style={{maxHeight: '55vh'}}>
                             <div className="pr-2">
                                 {loading && <div className="flex justify-center p-10"><Spinner /></div>}
                                 {!loading && sortedEvents.length === 0 && (
@@ -353,19 +459,19 @@ const CompactAllSchedulesModal = ({
 //        DROPDOWN & GENERIC SUB-COMPONENTS
 // ======================================================
 
-const ScheduleToggle = ({ className }: { className?: string }) => (
+const ScheduleToggle = ({ className }: { className?: string }) => ( 
     <div className={classNames('text-2xl', className)}>
         <IoCalendarOutline />
-    </div>
+    </div> 
 );
 
-const DynamicHeader = ({ title, onRefresh, }: { title: string; onRefresh: (e: React.MouseEvent) => void; }) => (
+const DynamicHeader = ({ title, onRefresh, }: { title: string; onRefresh: (e: React.MouseEvent) => void; }) => ( 
     <div className="flex items-center justify-between">
         <h6 className="font-bold">{title}</h6>
         <Tooltip title="Refresh">
-            <Button shape="circle" variant="plain" size="sm" icon={<FiRefreshCw className="text-lg" />} onClick={onRefresh} />
+            <Button shape="circle" variant="plain" size="sm" icon={<FiRefreshCw className="text-lg" />} onClick={onRefresh}/>
         </Tooltip>
-    </div>
+    </div> 
 );
 
 const TimelineEvent = ({ event, isLast, }: { event: ScheduleEvent; isLast: boolean; }) => {
@@ -386,12 +492,12 @@ const TimelineEvent = ({ event, isLast, }: { event: ScheduleEvent; isLast: boole
     );
 };
 
-const EmptyState = ({ message = 'No Events' }: { message?: string }) => (
+const EmptyState = ({ message = 'No Events' }: { message?: string }) => ( 
     <div className="flex flex-col items-center justify-center text-center h-full p-6 text-gray-500">
         <HiOutlineCalendar className="w-20 h-20 mb-4 text-gray-300 dark:text-gray-600" />
         <h6 className="font-semibold text-gray-600 dark:text-gray-200">{message}</h6>
         <p className="mt-1 text-sm">Enjoy your free time!</p>
-    </div>
+    </div> 
 );
 
 const TimelineView = ({ loading, events, }: { loading: boolean; events: ScheduleEvent[]; }) => {
@@ -408,7 +514,7 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
     const [loading, setLoading] = useState(false)
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     const [isAddModalOpen, setAddModalOpen] = useState(false)
-    const [isCompactModalOpen, setCompactModalOpen] = useState(false)
+    const [isCompactModalOpen, setCompactModalOpen] = useState(false) 
 
     const { larger } = useResponsive()
     const dispatch = useAppDispatch()
@@ -455,18 +561,18 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
         await dispatch(getAllScheduleAction())
         setLoading(false)
     }
-
+    
     const onScheduleAdded = () => {
         setLoading(true)
         dispatch(getAllScheduleAction()).finally(() => setLoading(false))
     }
-
+    
     const handleOpenAddModal = () => {
-        setCompactModalOpen(false);
+        setCompactModalOpen(false); 
         setAddModalOpen(true);
         dropdownRef.current?.handleDropdownClose();
     }
-
+    
     const handleOpenCompactModal = () => {
         setCompactModalOpen(true);
         dropdownRef.current?.handleDropdownClose();
@@ -517,9 +623,9 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
                 <Dropdown.Item variant="footer" className="!p-3 !border-t-0">
                     <div className="flex gap-2">
                         <Button
-                            block
-                            icon={<MdOutlineGridView />}
-                            onClick={handleOpenCompactModal}
+                           block
+                           icon={<MdOutlineGridView />}
+                           onClick={handleOpenCompactModal}
                         >
                             View All
                         </Button>
@@ -540,7 +646,7 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
                 onClose={() => setAddModalOpen(false)}
                 onScheduleAdded={onScheduleAdded}
             />
-
+            
             <CompactAllSchedulesModal
                 isOpen={isCompactModalOpen}
                 onClose={() => setCompactModalOpen(false)}
