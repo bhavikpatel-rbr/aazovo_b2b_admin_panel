@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown } from "@/components/ui";
 
 // Icons
 import {
@@ -36,6 +36,8 @@ import {
   TbUserX,
   TbUser,
   TbTrash,
+  TbColumns,
+  TbX,
 } from "react-icons/tb";
 
 // Types
@@ -57,17 +59,17 @@ import {
   getEmployeesAction,
   getDepartmentsAction,
   submitExportReasonAction,
-  getReportingTo, // <-- ADDED
+  getReportingTo,
 } from "@/reduxtool/master/middleware";
 import { useSelector, shallowEqual } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import classNames from "@/utils/classNames";
+import classNames from "classnames";
 
 // --- Define Types ---
 export type DesignationItem = {
   id: string | number;
   name: string;
-  department?: { id: number; name: string };
+  department?: { id: number; name: string } | { id: number; name: string }[]; // MODIFIED: Can be single or array from API
   reporting_manager?: { id: number; name: string };
   total_employees?: number;
   status?: "Active" | "Inactive";
@@ -100,7 +102,8 @@ const designationFormSchema = z.object({
     .string()
     .min(1, "Designation name is required.")
     .max(150, "Designation name cannot exceed 150 characters."),
-  department_id: z.string().min(1, "Department is required."),
+  // MODIFIED: Accept an array of strings for department_id
+  department_id: z.array(z.string()).min(1, "At least one department is required."),
   reporting_manager: z.string().min(1, "Reporting person is required."),
   status: z.enum(["Active", "Inactive"], {
     required_error: "Status is required.",
@@ -110,9 +113,8 @@ type DesignationFormData = z.infer<typeof designationFormSchema>;
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
-  filterNames: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
+  filterNames: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterStatuses: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -167,7 +169,7 @@ function exportDesignationsToCsv(filename: string, rows: DesignationItem[]) {
   }
   const preparedRows: DesignationExportItem[] = rows.map((row) => ({
     ...row,
-    department: row.department?.name || "N/A",
+    department: Array.isArray(row.department) ? row.department.map(d => d.name).join(', ') : row.department?.name || "N/A",
     reporting_manager: row.reporting_manager?.name || "N/A",
     created_at_formatted: row.created_at
       ? new Date(row.created_at).toLocaleString()
@@ -235,15 +237,6 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete">
-        <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
-          role="button"
-          onClick={onDelete}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip> */}
     </div>
   );
 };
@@ -260,45 +253,87 @@ const DesignationsSearch = React.forwardRef<
     onChange={(e) => onInputChange(e.target.value)}
   />
 ));
+DesignationsSearch.displayName = "DesignationsSearch";
 
-const DesignationsTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-  onClearFilters,
-}: {
+
+const DesignationsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
   onClearFilters: () => void;
-}) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-    <div className="flex-grow">
-      <DesignationsSearch onInputChange={onSearchChange} />
-    </div>
-    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Button
-        icon={<TbReload />}
-        onClick={onClearFilters}
-        title="Clear Filters"
-      />
-      <Button
-        icon={<TbFilter />}
-        onClick={onFilter}
-        className="w-full sm:w-auto"
-      >
-        Filter
-      </Button>
-      <Button
-        icon={<TbCloudUpload />}
-        onClick={onExport}
-        className="w-full sm:w-auto"
-      >
-        Export
-      </Button>
-    </div>
-  </div>
-);
+  columns: ColumnDef<DesignationItem>[];
+  filteredColumns: ColumnDef<DesignationItem>[];
+  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<DesignationItem>[]>>;
+  activeFilterCount: number;
+}) => {
+    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+    const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+          if (originalColumn) {
+              setFilteredColumns(prev => {
+                  const newCols = [...prev, originalColumn];
+                  newCols.sort((a, b) => {
+                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                      return indexA - indexB;
+                  });
+                  return newCols;
+              });
+          }
+      } else {
+          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      }
+    };
+
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow">
+                <DesignationsSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2">
+                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => {
+                            const id = col.id || col.accessorKey as string;
+                            return col.header && (
+                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                                        {col.header as string}
+                                    </Checkbox>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Dropdown>
+                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" />
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+                </Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+            </div>
+        </div>
+    );
+};
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: FilterFormData;
+  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onClearAll: () => void;
+}) => {
+    const { filterNames, filterStatuses } = filterData;
+    if (!filterNames?.length && !filterStatuses?.length) return null;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
+            {filterStatuses?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', item.value)} /></Tag>)}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+};
 
 const DesignationsSelectedFooter = ({
   selectedItems,
@@ -372,6 +407,7 @@ const DesignationListing = () => {
   const {
     designationsData: rawDesignationsData = {},
     reportingTo = [],
+    Employees = [],
     departmentsData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
@@ -381,17 +417,14 @@ const DesignationListing = () => {
   const [editingItem, setEditingItem] = useState<DesignationItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
-
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<DesignationItem | null>(
     null
   );
-
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -420,13 +453,13 @@ const DesignationListing = () => {
 
   const employeeOptions: SelectOption[] = useMemo(
     () =>
-      Array.isArray(reportingTo.data)
-        ? reportingTo.data.map((emp: GeneralListItem) => ({
+      Array.isArray(Employees)
+        ? Employees?.map((emp: GeneralListItem) => ({
             value: String(emp.id),
             label: emp.name,
           }))
         : [],
-    [reportingTo.data]
+    [Employees]
   );
   const departmentOptions: SelectOption[] = useMemo(
     () =>
@@ -455,15 +488,17 @@ const DesignationListing = () => {
 
   const watchedDepartmentId = formMethods.watch("department_id");
   useEffect(() => {
-    if (watchedDepartmentId) {
-      dispatch(getReportingTo(watchedDepartmentId));
+    if (watchedDepartmentId && watchedDepartmentId.length > 0) {
+      // For multi-select, you might want to fetch for the first/last selected, or all.
+      // Here, we'll fetch for the last selected department.
+      dispatch(getReportingTo(watchedDepartmentId[watchedDepartmentId.length - 1]));
     }
   }, [watchedDepartmentId, dispatch]);
 
   const openAddDrawer = useCallback(() => {
     formMethods.reset({
       name: "",
-      department_id: "",
+      department_id: [],
       reporting_manager: undefined,
       status: "Active",
     });
@@ -473,12 +508,15 @@ const DesignationListing = () => {
 
   const openEditDrawer = useCallback(
     (item: DesignationItem) => {
-      console.log("item.reporting_manager?.id ", item.reporting_manager )
       setEditingItem(item);
+      const departmentIds = Array.isArray(item.department)
+        ? item.department.map(d => String(d.id))
+        : item.department ? [String(item.department.id)] : [];
+      
       formMethods.reset({
         name: item.name,
-        department_id: String(item.department?.id || ""),
-        reporting_manager: item.reporting_manager || "",
+        department_id: departmentIds,
+        reporting_manager: String(item.reporting_manager?.id || ""),
         status: item.status || "Active",
       });
       setIsEditDrawerOpen(true);
@@ -498,33 +536,16 @@ const DesignationListing = () => {
           await dispatch(
             editDesignationAction({ id: editingItem.id, ...data })
           ).unwrap();
-          toast.push(
-            <Notification
-              title="Designation Updated"
-              type="success"
-            >{`Designation "${data.name}" updated.`}</Notification>
-          );
+          toast.push(<Notification title="Designation Updated" type="success" />);
           closeEditDrawer();
         } else {
           await dispatch(addDesignationAction(data)).unwrap();
-          toast.push(
-            <Notification
-              title="Designation Added"
-              type="success"
-            >{`Designation "${data.name}" added.`}</Notification>
-          );
+          toast.push(<Notification title="Designation Added" type="success" />);
           closeAddDrawer();
         }
         dispatch(getDesignationsAction());
       } catch (error: any) {
-        toast.push(
-          <Notification
-            title={editingItem ? "Update Failed" : "Add Failed"}
-            type="danger"
-          >
-            {error?.message || "An error occurred."}
-          </Notification>
-        );
+        toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger" >{error?.message || "An error occurred."}</Notification>);
       } finally {
         setIsSubmitting(false);
       }
@@ -542,23 +563,12 @@ const DesignationListing = () => {
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
-      // await dispatch(deleteDesignationAction({ id: itemToDelete.id })).unwrap();
-      toast.push(
-        <Notification
-          title="Designation Deleted"
-          type="success"
-        >{`Designation "${itemToDelete.name}" deleted.`}</Notification>
-      );
-      setSelectedItems((prev) =>
-        prev.filter((item) => item.id !== itemToDelete!.id)
-      );
+      await dispatch(deleteDesignationAction({ id: itemToDelete.id })).unwrap();
+      toast.push(<Notification title="Designation Deleted" type="success" >{`Designation "${itemToDelete.name}" deleted.`}</Notification>);
+      setSelectedItems((prev) => prev.filter((item) => item.id !== itemToDelete!.id));
       dispatch(getDesignationsAction());
     } catch (error: any) {
-      toast.push(
-        <Notification title="Delete Failed" type="danger">
-          {error?.message || "Could not delete designation."}
-        </Notification>
-      );
+      toast.push(<Notification title="Delete Failed" type="danger">{error?.message || "Could not delete designation."}</Notification>);
     } finally {
       setIsDeleting(false);
       setItemToDelete(null);
@@ -570,23 +580,12 @@ const DesignationListing = () => {
     setIsDeleting(true);
     const idsToDelete = selectedItems.map((item) => String(item.id));
     try {
-      // await dispatch(
-      //   deleteAllDesignationsAction({ ids: idsToDelete.join(",") })
-      // ).unwrap();
-      toast.push(
-        <Notification
-          title="Deletion Successful"
-          type="success"
-        >{`${idsToDelete.length} designation(s) deleted.`}</Notification>
-      );
+      await dispatch(deleteAllDesignationsAction({ ids: idsToDelete.join(",") })).unwrap();
+      toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} designation(s) deleted.`}</Notification>);
       setSelectedItems([]);
       dispatch(getDesignationsAction());
     } catch (error: any) {
-      toast.push(
-        <Notification title="Deletion Failed" type="danger">
-          {error?.message || "Failed to delete selected designations."}
-        </Notification>
-      );
+      toast.push(<Notification title="Deletion Failed" type="danger">{error?.message || "Failed to delete selected designations."}</Notification>);
     } finally {
       setIsDeleting(false);
     }
@@ -605,7 +604,7 @@ const DesignationListing = () => {
 
   const onApplyFiltersSubmit = useCallback(
     (data: FilterFormData) => {
-      setFilterCriteria({ filterNames: data.filterNames || [] });
+      setFilterCriteria(data);
       handleSetTableData({ pageIndex: 1 });
       closeFilterDrawer();
     },
@@ -617,7 +616,30 @@ const DesignationListing = () => {
     handleSetTableData({ pageIndex: 1, query: "" });
     dispatch(getDesignationsAction());
     setIsFilterDrawerOpen(false);
-  }, [filterFormMethods, handleSetTableData]);
+  }, [filterFormMethods, dispatch, handleSetTableData]);
+
+  const handleCardClick = useCallback((status: 'Active' | 'Inactive' | 'all') => {
+      onClearFilters();
+      if(status !== 'all') {
+          const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
+          if(statusOption) {
+            setFilterCriteria({ filterStatuses: [statusOption] });
+          }
+      }
+  }, [onClearFilters]);
+
+  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: string) => {
+    setFilterCriteria(prev => {
+        const newFilters = { ...prev };
+        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+        if (currentValues) {
+            const newValues = currentValues.filter(item => item.value !== value);
+            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+        }
+        return newFilters;
+    });
+    setTableData(prev => ({ ...prev, pageIndex: 1 }));
+  }, []);
 
   const designationNameOptions = useMemo(
     () =>
@@ -637,13 +659,17 @@ const DesignationListing = () => {
         selectedNames.includes(item.name.toLowerCase())
       );
     }
+     if (filterCriteria.filterStatuses?.length) {
+      const selectedStatuses = filterCriteria.filterStatuses.map(opt => opt.value);
+      processedData = processedData.filter(item => item.status && selectedStatuses.includes(item.status));
+    }
     if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter(
         (item) =>
           String(item.id).toLowerCase().includes(query) ||
           item.name.toLowerCase().includes(query) ||
-          item.department?.name?.toLowerCase().includes(query)
+          (Array.isArray(item.department) ? item.department.some(d => d.name.toLowerCase().includes(query)) : item.department?.name?.toLowerCase().includes(query))
       );
     }
     const { order, key } = tableData.sort as OnSortParam;
@@ -673,14 +699,14 @@ const DesignationListing = () => {
     };
   }, [designationsData, tableData, filterCriteria]);
 
-  // --- EXPORT MODAL HANDLERS ---
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
+  }, [filterCriteria]);
+
+
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
-      toast.push(
-        <Notification title="No Data" type="info">
-          Nothing to export.
-        </Notification>
-      );
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
       return;
     }
     exportReasonFormMethods.reset({ reason: "" });
@@ -693,96 +719,50 @@ const DesignationListing = () => {
     const date = new Date().toISOString().split("T")[0];
     const fileName = `designations_${date}.csv`;
     try {
-      await dispatch(
-        submitExportReasonAction({
-          reason: data.reason,
-          module: moduleName,
-          file_name: fileName,
-        })
-      ).unwrap();
-      const success = exportDesignationsToCsv(
-        fileName,
-        allFilteredAndSortedData
-      );
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+      const success = exportDesignationsToCsv(fileName, allFilteredAndSortedData);
       if (success) {
-        toast.push(
-          <Notification title="Data Exported" type="success">
-            Designations exported successfully.
-          </Notification>
-        );
+        toast.push(<Notification title="Data Exported" type="success">Designations exported successfully.</Notification>);
       }
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
-      toast.push(
-        <Notification
-          title="Operation Failed"
-          type="danger"
-          message={error.message || "Could not complete export."}
-        />
-      );
+      toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
     } finally {
       setIsSubmittingExportReason(false);
     }
   };
 
-  const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
-    [handleSetTableData]
-  );
-  const handleSelectChange = useCallback(
-    (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-      setSelectedItems([]);
-    },
-    [handleSetTableData]
-  );
-  const handleSort = useCallback(
-    (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: DesignationItem) =>
-      setSelectedItems((prev) =>
-        checked ? [...prev, row] : prev.filter((item) => item.id !== row.id)
-      ),
-    []
-  );
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<DesignationItem>[]) => {
-      const cPOR = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((pS) => {
-          const pSIds = new Set(pS.map((i) => i.id));
-          const nRTA = cPOR.filter((r) => !pSIds.has(r.id));
-          return [...pS, ...nRTA];
-        });
-      } else {
-        const cPRIds = new Set(cPOR.map((r) => r.id));
-        setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id)));
-      }
-    },
-    []
-  );
+  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+  const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
+  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
+  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
+  const handleRowSelect = useCallback((checked: boolean, row: DesignationItem) => setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id)), []);
+  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<DesignationItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
   const columns: ColumnDef<DesignationItem>[] = useMemo(
     () => [
       { header: "Designation", accessorKey: "name", enableSorting: true },
       {
         header: "Department",
-        accessorKey: "department.name",
+        accessorKey: "department",
         enableSorting: true,
-        cell: (props) => props.row.original.department?.name || "N/A",
+        cell: (props) => {
+          const depts = props.getValue() as DesignationItem['department'];
+          if (Array.isArray(depts)) {
+            return (
+              <div className="flex flex-wrap gap-1">
+                {depts.map(d => <Tag key={d.id} className="bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200">{d.name}</Tag>)}
+              </div>
+            )
+          }
+          return depts?.name || "N/A";
+        },
       },
       {
         header: "Reporting to",
         accessorKey: "reporting_manager.name",
         enableSorting: true,
-        cell: (props) =>
-          props.row.original.reporting_manager_user?.name || "N/A",
+        cell: (props) => props.row.original.reporting_manager?.name || "N/A",
       },
       {
         header: "Total Employees",
@@ -795,16 +775,7 @@ const DesignationListing = () => {
         accessorKey: "status",
         enableSorting: true,
         size: 100,
-        cell: (props) => (
-          <Tag
-            className={classNames(
-              "capitalize",
-              statusColors[props.getValue<string>()]
-            )}
-          >
-            {props.getValue<string>() || "N/A"}
-          </Tag>
-        ),
+        cell: (props) => (<Tag className={classNames("capitalize", statusColors[props.getValue<string>()])}>{props.getValue<string>() || "N/A"}</Tag>),
       },
       {
         header: "Updated Info",
@@ -812,33 +783,9 @@ const DesignationListing = () => {
         enableSorting: true,
         size: 170,
         cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } =
-            props.row.original;
-          const formattedDate = updated_at
-            ? `${new Date(updated_at).getDate()} ${new Date(
-                updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(
-                updated_at
-              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
-                "en-US",
-                { hour: "numeric", minute: "2-digit", hour12: true }
-              )}`
-            : "N/A";
-          return (
-            <div className="text-xs">
-              <span>
-                {updated_by_name || "N/A"}
-                {updated_by_role && (
-                  <>
-                    <br />
-                    <b>{updated_by_role}</b>
-                  </>
-                )}
-              </span>
-              <br />
-              <span>{formattedDate}</span>
-            </div>
-          );
+          const { updated_at, updated_by_name, updated_by_role } = props.row.original;
+          const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A";
+          return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
         },
       },
       {
@@ -846,115 +793,44 @@ const DesignationListing = () => {
         id: "action",
         size: 120,
         meta: { HeaderClass: "text-center" },
-        cell: (props) => (
-          <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-            onDelete={() => handleDeleteClick(props.row.original)}
-          />
-        ),
+        cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />),
       },
     ],
     [openEditDrawer, handleDeleteClick]
   );
 
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DesignationItem>[]>(columns);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
+
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <>
-      <FormItem
-        label={
-          <div>
-            Designation Name<span className="text-red-500"> *</span>
-          </div>
-        }
-        invalid={!!currentFormMethods.formState.errors.name}
-        errorMessage={currentFormMethods.formState.errors.name?.message}
-      >
-        <Controller
-          name="name"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Input {...field} placeholder="Enter Designation Name" />
-          )}
-        />
+      <FormItem label={<div>Designation Name<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}>
+        <Controller name="name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Designation Name" />)} />
       </FormItem>
-      <FormItem
-        label={
-          <div>
-            Department<span className="text-red-500"> *</span>
-          </div>
-        }
-        invalid={!!currentFormMethods.formState.errors.department_id}
-        errorMessage={
-          currentFormMethods.formState.errors.department_id?.message
-        }
-      >
-        <Controller
-          name="department_id"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              {...field}
-              placeholder="Select Department"
-              options={departmentOptions}
-              value={departmentOptions.find((o) => o.value === field.value)}
-              onChange={(opt) => field.onChange(opt?.value)}
-            />
-          )}
-        />
+      <FormItem label={<div>Department<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.department_id} errorMessage={currentFormMethods.formState.errors.department_id?.message}>
+        <Controller name="department_id" control={currentFormMethods.control} render={({ field }) => (
+          <Select
+            isMulti
+            placeholder="Select Department(s)"
+            options={departmentOptions}
+            value={departmentOptions.filter((o) => field.value?.includes(o.value))}
+            onChange={(options) => field.onChange(options ? options.map(o => o.value) : [])}
+          />
+        )} />
       </FormItem>
-      <FormItem
-        label={
-          <div>
-            Reporting To<span className="text-red-500"> *</span>
-          </div>
-        }
-        invalid={!!currentFormMethods.formState.errors.reporting_manager}
-        errorMessage={
-          currentFormMethods.formState.errors.reporting_manager?.message
-        }
-      >
-        <Controller
-          name="reporting_manager"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              {...field}
-              placeholder="Select Reporting Person"
-              options={employeeOptions}
-              value={employeeOptions.find((o) => o.value === field.value)}
-              onChange={(opt) => field.onChange(opt?.value)}
-            />
-          )}
-        />
+      <FormItem label={<div>Reporting To<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.reporting_manager} errorMessage={currentFormMethods.formState.errors.reporting_manager?.message}>
+        <Controller name="reporting_manager" control={currentFormMethods.control} render={({ field }) => (<Select {...field} placeholder="Select Reporting Person" options={employeeOptions} value={employeeOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
-      <FormItem
-        label={
-          <div>
-            Status<span className="text-red-500"> *</span>
-          </div>
-        }
-        invalid={!!currentFormMethods.formState.errors.status}
-        errorMessage={currentFormMethods.formState.errors.status?.message}
-      >
-        <Controller
-          name="status"
-          control={currentFormMethods.control}
-          render={({ field }) => (
-            <Select
-              {...field}
-              placeholder="Select Status"
-              options={STATUS_OPTIONS}
-              value={STATUS_OPTIONS.find((o) => o.value === field.value)}
-              onChange={(opt) => field.onChange(opt?.value)}
-            />
-          )}
-        />
+      <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
+        <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select {...field} placeholder="Select Status" options={STATUS_OPTIONS} value={STATUS_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
     </>
   );
 
-  const tableIsLoading =
-    masterLoadingStatus === "loading" || isSubmitting || isDeleting;
+  const tableIsLoading = masterLoadingStatus === "loading" || isSubmitting || isDeleting;
   const counts = rawDesignationsData?.counts || {};
+  const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const cardBodyClass = "flex gap-2 p-2";
 
   return (
     <>
@@ -962,365 +838,39 @@ const DesignationListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Designations</h5>
-            <Button
-              variant="solid"
-              icon={<TbPlus />}
-              onClick={openAddDrawer}
-              disabled={tableIsLoading}
-            >
-              Add New
-            </Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableIsLoading}>Add New</Button>
           </div>
-
-          <div className="grid grid-cols-6 mb-4 gap-2">
-            {[
-              {
-                icon: TbPresentation,
-                color: "blue",
-                label: "Total",
-                count: counts.total,
-              },
-              {
-                icon: TbPresentationAnalytics,
-                color: "violet",
-                label: "Active",
-                count: counts.active,
-              },
-              {
-                icon: TbPresentationOff,
-                color: "pink",
-                label: "Inactive",
-                count: counts.inactive,
-              },
-              {
-                icon: TbUsers,
-                color: "orange",
-                label: "Total Emp.",
-                count: counts.total_employees,
-              },
-              {
-                icon: TbUser,
-                color: "green",
-                label: "Active Emp.",
-                count: counts.active_employees,
-              },
-              {
-                icon: TbUserX,
-                color: "red",
-                label: "Inactive Emp.",
-                count: counts.inactive_employees,
-              },
-            ].map((card, index) => (
-              <Card
-                key={index}
-                bodyClass="flex gap-2 p-2"
-                className={`rounded-md border border-${card.color}-200`}
-              >
-                <div
-                  className={`h-12 w-12 rounded-md flex items-center justify-center bg-${card.color}-100 text-${card.color}-500`}
-                >
-                  <card.icon size={24} />
-                </div>
-                <div>
-                  <h6 className={`text-${card.color}-500`}>
-                    {card.count ?? "..."}
-                  </h6>
-                  <span className="font-semibold text-xs">{card.label}</span>
-                </div>
-              </Card>
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+            <Tooltip title="Click to show all designations"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbPresentation size={24} /></div><div><h6 className="text-blue-500">{counts.total ?? "..."}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show active designations"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbPresentationAnalytics size={24} /></div><div><h6 className="text-violet-500">{counts.active ?? "..."}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show inactive designations"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbPresentationOff size={24} /></div><div><h6 className="text-pink-500">{counts.inactive ?? "..."}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
+            <Tooltip title="Total employees in these designations"><Card bodyClass={cardBodyClass} className="rounded-md border border-orange-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUsers size={24} /></div><div><h6 className="text-orange-500">{counts.total_employees ?? "..."}</h6><span className="font-semibold text-xs">Total Emp.</span></div></Card></Tooltip>
+            <Tooltip title="Active employees in these designations"><Card bodyClass={cardBodyClass} className="rounded-md border border-green-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUser size={24} /></div><div><h6 className="text-green-500">{counts.active_employees ?? "..."}</h6><span className="font-semibold text-xs">Active Emp.</span></div></Card></Tooltip>
+            <Tooltip title="Inactive employees in these designations"><Card bodyClass={cardBodyClass} className="rounded-md border border-red-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserX size={24} /></div><div><h6 className="text-red-500">{counts.inactive_employees ?? "..."}</h6><span className="font-semibold text-xs">Inactive Emp.</span></div></Card></Tooltip>
           </div>
-
-          <DesignationsTableTools
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal}
-            onClearFilters={onClearFilters}
-          />
+          <div className="mb-4">
+            <DesignationsTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+          </div>
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4 flex-grow overflow-auto">
-            <DataTable
-              columns={columns}
-              data={pageData}
-              loading={tableIsLoading}
-              pagingData={{
-                total,
-                pageIndex: tableData.pageIndex,
-                pageSize: tableData.pageSize,
-              }}
-              selectable
-              checkboxChecked={(row) =>
-                selectedItems.some((selected) => selected.id === row.id)
-              }
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort}
-              onCheckBoxChange={handleRowSelect}
-              onIndeterminateCheckBoxChange={handleAllRowSelect}
-              noData={!tableIsLoading && pageData.length === 0}
-            />
+            <DataTable columns={filteredColumns} data={pageData} loading={tableIsLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} selectable checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!tableIsLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
-
-      <DesignationsSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-        disabled={tableIsLoading}
-      />
-
-      <Drawer
-        title="Add Designation"
-        isOpen={isAddDrawerOpen}
-        onClose={closeAddDrawer}
-        onRequestClose={closeAddDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeAddDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="designationForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!formMethods.formState.isValid || isSubmitting}
-            >
-              {isSubmitting ? "Adding..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="designationForm"
-          onSubmit={formMethods.handleSubmit(onSubmitHandler)}
-          className="flex flex-col gap-y-6"
-        >
-          {renderDrawerForm(formMethods)}
+      <DesignationsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} disabled={tableIsLoading} />
+      <Drawer title="Add Designation" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="designationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Adding..." : "Save"}</Button></div>}>
+        <Form id="designationForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-y-6">{renderDrawerForm(formMethods)}</Form>
+      </Drawer>
+      <Drawer title="Edit Designation" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={480} onRequestClose={closeEditDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editDesignationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting || !formMethods.formState.isDirty}>{isSubmitting ? "Saving..." : "Save"}</Button></div>}>
+        <Form id="editDesignationForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-y-6 relative pb-28">{renderDrawerForm(formMethods)}
+          {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p><p>{editingItem.updated_by_role || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{editingItem.created_at ? `${new Date(editingItem.created_at).getDate()} ${new Date(editingItem.created_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(editingItem.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A"}</span><br /><span className="font-semibold">Updated At:</span> <span>{editingItem.updated_at ? `${new Date(editingItem.updated_at).getDate()} ${new Date(editingItem.updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(editingItem.updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A"}</span></div></div></div>)}
         </Form>
       </Drawer>
-
-      <Drawer
-        title="Edit Designation"
-        isOpen={isEditDrawerOpen}
-        onClose={closeEditDrawer}
-        width={480}
-        onRequestClose={closeEditDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={closeEditDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="designationForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={
-                !formMethods.formState.isValid ||
-                isSubmitting ||
-                !formMethods.formState.isDirty
-              }
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="designationForm"
-          onSubmit={formMethods.handleSubmit(onSubmitHandler)}
-          className="flex flex-col gap-y-6 relative pb-28"
-        >
-          {renderDrawerForm(formMethods)}
-          {editingItem && (
-            <div className="absolute bottom-0 w-full">
-              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                <div>
-                  <b className="font-semibold text-primary">Latest Update:</b>
-                  <br />
-                  <p className="text-sm font-semibold">
-                    {editingItem.updated_by_name || "N/A"}
-                  </p>
-                  <p>{editingItem.updated_by_role || "N/A"}</p>
-                </div>
-                <div className="text-right">
-                  <br />
-                  <span className="font-semibold">Created At:</span>{" "}
-                  <span>
-                    {editingItem.created_at
-                      ? `${new Date(editingItem.created_at).getDate()} ${new Date(
-                          editingItem.created_at
-                        ).toLocaleString("en-US", {
-                          month: "short",
-                        })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(
-                          editingItem.created_at
-                        ).toLocaleTimeString("en-US", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}`
-                      : "N/A"}
-                  </span>
-                  <br />
-                  <span className="font-semibold">Updated At:</span>{" "}
-                  <span>
-                    {editingItem.updated_at
-                      ? `${new Date(editingItem.updated_at).getDate()} ${new Date(
-                          editingItem.updated_at
-                        ).toLocaleString("en-US", {
-                          month: "short",
-                        })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(
-                          editingItem.updated_at
-                        ).toLocaleTimeString("en-US", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}`
-                      : "N/A"}
-                  </span>
-
-                </div>
-              </div>
-            </div>
-          )}
-        </Form>
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterDesignationForm" type="submit">Apply</Button></div>}>
+        <Form id="filterDesignationForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-y-6"><FormItem label="Designation Name"><Controller name="filterNames" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select names..." options={designationNameOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem><FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select status..." options={STATUS_OPTIONS} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem></Form>
       </Drawer>
-
-      <Drawer
-        title="Filters"
-        isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
-        footer={
-          <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterDesignationForm"
-              type="submit"
-            >
-              Apply
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="filterDesignationForm"
-          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-y-6"
-        >
-          <FormItem label="Designation Name">
-            <Controller
-              name="filterNames"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select names..."
-                  options={designationNameOptions}
-                  value={field.value || []}
-                  onChange={(val) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </Drawer>
-
-      <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Designation"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onRequestClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
-      >
-        <p>
-          Are you sure you want to delete the designation "
-          <strong>{itemToDelete?.name}</strong>"? This action cannot be undone.
-        </p>
-      </ConfirmDialog>
-
-      {/* --- EXPORT REASON MODAL --- */}
-      <ConfirmDialog
-        isOpen={isExportReasonModalOpen}
-        type="info"
-        title="Reason for Exporting Designations"
-        onClose={() => setIsExportReasonModalOpen(false)}
-        onRequestClose={() => setIsExportReasonModalOpen(false)}
-        onCancel={() => setIsExportReasonModalOpen(false)}
-        onConfirm={exportReasonFormMethods.handleSubmit(
-          handleConfirmExportWithReason
-        )}
-        loading={isSubmittingExportReason}
-        confirmText={
-          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
-        }
-        cancelText="Cancel"
-        confirmButtonProps={{
-          disabled:
-            !exportReasonFormMethods.formState.isValid ||
-            isSubmittingExportReason,
-        }}
-      >
-        <Form
-          id="exportDesignationsReasonForm"
-          onSubmit={(e) => {
-            e.preventDefault();
-            exportReasonFormMethods.handleSubmit(
-              handleConfirmExportWithReason
-            )();
-          }}
-          className="flex flex-col gap-4 mt-2"
-        >
-          <FormItem
-            label="Please provide a reason for exporting this data:"
-            invalid={!!exportReasonFormMethods.formState.errors.reason}
-            errorMessage={
-              exportReasonFormMethods.formState.errors.reason?.message
-            }
-          >
-            <Controller
-              name="reason"
-              control={exportReasonFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  textArea
-                  {...field}
-                  placeholder="Enter reason..."
-                  rows={3}
-                />
-              )}
-            />
-          </FormItem>
-        </Form>
-      </ConfirmDialog>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Designation" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null) }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null) }} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null) }} onConfirm={onConfirmSingleDelete} loading={isDeleting}><p>Are you sure you want to delete the designation "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p></ConfirmDialog>
+      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Exporting Designations" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}><Form id="exportDesignationsReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)() }} className="flex flex-col gap-4 mt-2"><FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
     </>
   );
 };

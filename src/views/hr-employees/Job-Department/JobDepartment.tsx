@@ -1,10 +1,9 @@
-// src/views/your-path/JobDepartment.tsx
-
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -17,8 +16,8 @@ import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
-import Select from "@/components/ui/Select"; // For filter, if needed later
-import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import Select from "@/components/ui/Select";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown } from "@/components/ui";
 
 // Icons
 import {
@@ -34,7 +33,9 @@ import {
   TbBuilding,
   TbBuildingCog,
   TbBuildingOff,
-  TbUsers, // Icon for Job Department (example)
+  TbUsers,
+  TbColumns,
+  TbX,
 } from "react-icons/tb";
 
 // Types
@@ -49,44 +50,49 @@ import type { TableQueries } from "@/@types/common";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
 import {
-  getJobDepartmentsAction, // Placeholder for your actual action
-  addJobDepartmentAction, // Placeholder
-  editJobDepartmentAction, // Placeholder
-  deleteJobDepartmentAction, // Placeholder
-  deleteAllJobDepartmentsAction, // Placeholder
-} from "@/reduxtool/master/middleware"; // Adjust path as necessary
-import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust as necessary
+  getJobDepartmentsAction,
+  addJobDepartmentAction,
+  editJobDepartmentAction,
+  deleteJobDepartmentAction,
+  deleteAllJobDepartmentsAction,
+} from "@/reduxtool/master/middleware";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // --- Define JobDepartmentItem Type (Matches your API response) ---
 export type JobDepartmentItem = {
   id: string | number;
   name: string;
-  status: "Active" | "Inactive" | string; // API returns 'Active', allow string for flexibility
+  status: "Active" | "Inactive" | string;
   deleted_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
 
-// --- Zod Schema for Add/Edit Form (Only Name) ---
+// --- Zod Schema for Add/Edit Form ---
 const jobDepartmentFormSchema = z.object({
   name: z
     .string()
     .min(1, "Department name is required.")
     .max(100, "Department name cannot exceed 100 characters."),
-  // Status is handled implicitly, not part of the form schema visible to user
+  status: z.enum(["Active", "Inactive"], {
+    required_error: "Status is required.",
+  }),
 });
 type JobDepartmentFormData = z.infer<typeof jobDepartmentFormSchema>;
 
-// --- Zod Schema for Filter Form (Example: by name) ---
+// --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
   filterNames: z
+    .array(z.object({ value: z.string(), label: z.string() }))
+    .optional(),
+  filterStatus: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS_JOB_DEPT = ["ID", "Name", "Status"]; // Include status in export
+const CSV_HEADERS_JOB_DEPT = ["ID", "Name", "Status"];
 const CSV_KEYS_JOB_DEPT: (keyof JobDepartmentItem)[] = ["id", "name", "status"];
 
 function exportJobDepartmentsToCsv(
@@ -165,19 +171,7 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete Job Department">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
-          role="button"
-          onClick={onDelete}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip> */}
+      {/* <Tooltip title="Delete Job Department"> ... </Tooltip> */}
     </div>
   );
 };
@@ -201,42 +195,85 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
 ItemSearch.displayName = "ItemSearch";
 
 // --- TableTools Component ---
-const ItemTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-  onClearFilters
-}: {
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
   onClearFilters: () => void;
-}) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-    <div className="flex-grow">
-      <ItemSearch onInputChange={onSearchChange} />
-    </div>
-    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Tooltip title="Clear Filters">
-        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
-      </Tooltip>
-      <Button
-        icon={<TbFilter />}
-        onClick={onFilter}
-        className="w-full sm:w-auto"
-      >
-        Filter
-      </Button>
-      <Button
-        icon={<TbCloudUpload />}
-        onClick={onExport}
-        className="w-full sm:w-auto"
-      >
-        Export
-      </Button>
-    </div>
-  </div>
-);
+  columns: ColumnDef<JobDepartmentItem>[];
+  filteredColumns: ColumnDef<JobDepartmentItem>[];
+  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<JobDepartmentItem>[]>>;
+  activeFilterCount: number;
+}) => {
+    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+    const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+          if (originalColumn) {
+              setFilteredColumns(prev => {
+                  const newCols = [...prev, originalColumn];
+                  newCols.sort((a, b) => {
+                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                      return indexA - indexB;
+                  });
+                  return newCols;
+              });
+          }
+      } else {
+          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      }
+    };
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow">
+                <ItemSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2">
+                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => {
+                            const id = col.id || col.accessorKey as string;
+                            return col.header && (
+                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                                        {col.header as string}
+                                    </Checkbox>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Dropdown>
+                <Tooltip title="Clear Filters">
+                    <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button>
+                </Tooltip>
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+                </Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+            </div>
+        </div>
+    );
+};
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: FilterFormData;
+  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onClearAll: () => void;
+}) => {
+    const { filterNames, filterStatus } = filterData;
+    if (!filterNames?.length && !filterStatus?.length) return null;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
+            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+};
 
 // --- SelectedFooter Component ---
 type JobDepartmentsSelectedFooterProps = {
@@ -311,7 +348,7 @@ const JobDepartmentsSelectedFooter = ({
 const JobDepartment = () => {
   const dispatch = useAppDispatch();
   const {
-    jobDepartmentsData = [], // Ensure this is provided by masterSelector
+    jobDepartmentsData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
@@ -329,6 +366,7 @@ const JobDepartment = () => {
   );
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
+    filterStatus: [],
   });
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
@@ -344,7 +382,7 @@ const JobDepartment = () => {
 
   const formMethods = useForm<JobDepartmentFormData>({
     resolver: zodResolver(jobDepartmentFormSchema),
-    defaultValues: { name: "" },
+    defaultValues: { name: "", status: "Active" },
     mode: "onChange",
   });
 
@@ -354,8 +392,8 @@ const JobDepartment = () => {
   });
 
   const openAddDrawer = useCallback(() => {
-    formMethods.reset({ name: "" });
-    setEditingItem(null); // Ensure editingItem is null for add mode
+    formMethods.reset({ name: "", status: "Active" });
+    setEditingItem(null); 
     setIsAddDrawerOpen(true);
   }, [formMethods]);
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
@@ -363,7 +401,7 @@ const JobDepartment = () => {
   const openEditDrawer = useCallback(
     (item: JobDepartmentItem) => {
       setEditingItem(item);
-      formMethods.reset({ name: item.name });
+      formMethods.reset({ name: item.name, status: item.status as "Active" | "Inactive" });
       setIsEditDrawerOpen(true);
     },
     [formMethods]
@@ -378,16 +416,9 @@ const JobDepartment = () => {
     let payload;
 
     if (editingItem) {
-      // For editing, include the ID and existing status
-      payload = {
-        id: editingItem.id,
-        name: data.name,
-      };
+      payload = { id: editingItem.id, ...data };
     } else {
-      // For adding, set status to 'Active' by default
-      payload = {
-        name: data.name,
-      };
+      payload = data;
     }
 
     try {
@@ -517,19 +548,42 @@ const JobDepartment = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = useCallback(
     (data: FilterFormData) => {
-      setFilterCriteria({ filterNames: data.filterNames || [] });
+      setFilterCriteria({ filterNames: data.filterNames || [], filterStatus: data.filterStatus || [] });
       setTableData((prev) => ({ ...prev, pageIndex: 1 }));
       closeFilterDrawer();
     },
     [closeFilterDrawer]
   );
   const onClearFilters = useCallback(() => {
-    const defaultFilters = { filterNames: [] };
+    const defaultFilters = { filterNames: [], filterStatus: [] };
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
-    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+    setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     closeFilterDrawer();
   }, [filterFormMethods]);
+
+  const handleCardClick = (status?: 'Active' | 'Inactive' | 'all') => {
+      onClearFilters();
+      if(status && status !== 'all') {
+          const statusOption = statusOptions.find(opt => opt.value === status);
+          if(statusOption) {
+            setFilterCriteria({ filterStatus: [statusOption] });
+          }
+      }
+  };
+
+  const handleRemoveFilter = (key: keyof FilterFormData, value: string) => {
+    setFilterCriteria(prev => {
+        const newFilters = { ...prev };
+        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+        if (currentValues) {
+            const newValues = currentValues.filter(item => item.value !== value);
+            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+        }
+        return newFilters;
+    });
+    setTableData(prev => ({ ...prev, pageIndex: 1 }));
+  };
 
   const jobDepartmentNameOptions = useMemo(() => {
     const sourceData: JobDepartmentItem[] = Array.isArray(jobDepartmentsData)
@@ -557,6 +611,11 @@ const JobDepartment = () => {
       );
     }
 
+    if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) {
+        const selectedStatuses = filterCriteria.filterStatus.map(opt => opt.value);
+        processedData = processedData.filter(item => selectedStatuses.includes(item.status));
+    }
+
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter(
@@ -566,8 +625,7 @@ const JobDepartment = () => {
       );
     }
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key && ["id", "name"].includes(String(key))) {
-      // Only ID and Name are sortable in the table
+    if (order && key && ["id", "name", "status"].includes(String(key))) {
       processedData.sort((a, b) => {
         const aVal = a[key as keyof JobDepartmentItem];
         const bVal = b[key as keyof JobDepartmentItem];
@@ -579,7 +637,7 @@ const JobDepartment = () => {
       });
     }
 
-    const dataToExport = [...processedData]; // For CSV export, includes status
+    const dataToExport = [...processedData];
     const currentTotal = processedData.length;
     const pageIndex = tableData.pageIndex as number;
     const pageSize = tableData.pageSize as number;
@@ -591,6 +649,11 @@ const JobDepartment = () => {
       allFilteredAndSortedData: dataToExport,
     };
   }, [jobDepartmentsData, tableData, filterCriteria]);
+
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
+  }, [filterCriteria]);
+
 
   const handleExportData = useCallback(() => {
     const success = exportJobDepartmentsToCsv(
@@ -658,17 +721,20 @@ const JobDepartment = () => {
     []
   );
 
-  // Columns for Listing: ID, Name
   const columns: ColumnDef<JobDepartmentItem>[] = useMemo(
     () => [
       { header: "Department Name", accessorKey: "name", enableSorting: true },
-      { header: "No. of Jobs", accessorKey: "name", enableSorting: true, cell : props => <div className="">12</div> },
-      { header: "No. of Post", accessorKey: "name", enableSorting: true, cell : props => <div className="">18</div> },
-      { header: "No. of Applicants", accessorKey: "name", enableSorting: true, cell : props => <div className="">67</div> },
-      { header: "Status", accessorKey: "status", enableSorting: true, size: 100, meta : {HeaderClass: "text-red-500"},
-        cell : ()=>{
-          return  (
-            <Tag className="bg-green-200 text-green-500">Active</Tag>
+      { header: "No. of Jobs", accessorKey: "jobsCount", enableSorting: false, cell: props => <div className="">12</div> },
+      { header: "No. of Posts", accessorKey: "postsCount", enableSorting: false, cell: props => <div className="">18</div> },
+      { header: "No. of Applicants", accessorKey: "applicantsCount", enableSorting: false, cell: props => <div className="">67</div> },
+      { header: "Status", accessorKey: "status", enableSorting: true, size: 100,
+        cell: (props) => {
+          const status = props.row.original.status
+          return (
+            <Tag className={classNames('capitalize', {
+              'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100': status === 'Active',
+              'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100': status === 'Inactive'
+            })}>{status}</Tag>
           )
         }
       },
@@ -685,8 +751,14 @@ const JobDepartment = () => {
         ),
       },
     ],
-    [openEditDrawer, handleDeleteClick] // These are stable due to useCallback
+    [openEditDrawer, handleDeleteClick]
   );
+  
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<JobDepartmentItem>[]>(columns);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
+
+  const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const cardBodyClass = "flex gap-2 p-2";
 
   return (
     <>
@@ -700,7 +772,7 @@ const JobDepartment = () => {
           </div>
 
           <div className="grid grid-cols-4 mb-4 gap-2">
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
+            <Tooltip title="Click to show all departments"><div onClick={() => handleCardClick('all')} className={cardClass}><Card bodyClass={cardBodyClass} className="border-blue-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
                 <TbBuilding size={24} />
               </div>
@@ -708,8 +780,8 @@ const JobDepartment = () => {
                 <h6 className="text-blue-500">12</h6>
                 <span className="font-semibold text-xs">Total Departments</span>
               </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
+            </Card></div></Tooltip>
+            <Tooltip title="Departments with active jobs"><Card bodyClass={cardBodyClass} className="rounded-md border border-violet-200 cursor-default">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
                 <TbBuildingCog size={24} />
               </div>
@@ -717,8 +789,8 @@ const JobDepartment = () => {
                 <h6 className="text-violet-500">4</h6>
                 <span className="font-semibold text-xs">Departments with jobs</span>
               </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
+            </Card></Tooltip>
+            <Tooltip title="Departments with no jobs posted"><Card bodyClass={cardBodyClass} className="rounded-md border border-red-200 cursor-default">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
                 <TbBuildingOff size={24} />
               </div>
@@ -726,8 +798,8 @@ const JobDepartment = () => {
                 <h6 className="text-red-500">8</h6>
                 <span className="font-semibold text-xs">No jobs posted</span>
               </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-200">
+            </Card></Tooltip>
+            <Tooltip title="Total applicants across all departments"><Card bodyClass={cardBodyClass} className="rounded-md border border-green-200 cursor-default">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
                 <TbUsers size={24} />
               </div>
@@ -735,18 +807,25 @@ const JobDepartment = () => {
                 <h6 className="text-green-500">34</h6>
                 <span className="font-semibold text-xs">Total Applicants</span>
               </div>
-            </Card>
+            </Card></Tooltip>
           </div>
-
-          <ItemTableTools
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleExportData}
-            onClearFilters={onClearFilters}
-          />
+          
+          <div className="mb-4">
+            <ItemTableTools
+              onSearchChange={handleSearchChange}
+              onFilter={openFilterDrawer}
+              onExport={handleExportData}
+              onClearFilters={onClearFilters}
+              columns={columns}
+              filteredColumns={filteredColumns}
+              setFilteredColumns={setFilteredColumns}
+              activeFilterCount={activeFilterCount}
+            />
+          </div>
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4">
             <DataTable
-              columns={columns}
+              columns={filteredColumns}
               data={pageData}
               loading={
                 masterLoadingStatus === "loading" || isSubmitting || isDeleting
@@ -756,16 +835,9 @@ const JobDepartment = () => {
                 pageIndex: tableData.pageIndex as number,
                 pageSize: tableData.pageSize as number,
               }}
-              // selectable
-              checkboxChecked={(row) =>
-                selectedItems.some((selected) => selected.id === row.id)
-              }
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
-              onCheckBoxChange={handleRowSelect}
-              onIndeterminateCheckBoxChange={handleAllRowSelect}
-            // noData={!loading && pageData.length === 0}
             />
           </div>
         </AdaptiveCard>
@@ -830,6 +902,8 @@ const JobDepartment = () => {
           </FormItem>
           <FormItem
             label={<div>Status<span className="text-red-500"> * </span></div>}
+            invalid={!!formMethods.formState.errors.status}
+            errorMessage={formMethods.formState.errors.status?.message}
           >
             <Controller
               name="status"
@@ -838,16 +912,15 @@ const JobDepartment = () => {
                 <Select  
                   {...field} 
                   placeholder="Select Status" 
-                  options={[
-                    {label : "Active", value: "Active"},
-                    {label : "Inactive", value: "Inactive"},
-                  ]}
+                  options={statusOptions}
+                  value={statusOptions.find(o => o.value === field.value) || null}
+                  onChange={(opt) => field.onChange(opt?.value)}
                 />
               )}
             />
           </FormItem>
-          {/* Status field is not rendered in the form */}
         </Form>
+        {isEditDrawerOpen && editingItem && (
         <div className="absolute bottom-[14%] w-[88%]">
           <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
             <div className="">
@@ -861,9 +934,9 @@ const JobDepartment = () => {
             </div>
           </div>
         </div>
+        )}
       </Drawer>
 
-      {/* Filter Drawer (Simplified to filter by name) */}
       <Drawer
         title="Filters"
         isOpen={isFilterDrawerOpen}
@@ -871,7 +944,6 @@ const JobDepartment = () => {
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-
             <div>
               <Button
                 size="sm"
@@ -913,6 +985,21 @@ const JobDepartment = () => {
               )}
             />
           </FormItem>
+            <FormItem label="Status">
+            <Controller
+              name="filterStatus"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select status..."
+                  options={statusOptions}
+                  value={field.value || []}
+                  onChange={(selectedVal) => field.onChange(selectedVal || [])}
+                />
+              )}
+            />
+          </FormItem>
         </Form>
       </Drawer>
 
@@ -946,7 +1033,3 @@ const JobDepartment = () => {
 };
 
 export default JobDepartment;
-
-function classNames(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
-}

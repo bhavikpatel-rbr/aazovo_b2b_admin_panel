@@ -4,7 +4,7 @@ import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
-import dayjs from 'dayjs' // <-- IMPORT DAYJS
+import dayjs from 'dayjs' 
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -21,13 +21,14 @@ import Select from '@/components/ui/Select'
 import Dialog from '@/components/ui/Dialog'
 import {
     Card,
-    DatePicker, // <-- IMPORT DATEPICKER
+    DatePicker, 
     Drawer,
     Dropdown,
     Form,
     FormItem,
     Input,
     Tag,
+    Checkbox,
 } from '@/components/ui'
 
 // Icons
@@ -53,6 +54,8 @@ import {
     TbBrandWhatsapp,
     TbBell,
     TbCalendarEvent,
+    TbColumns,
+    TbX,
 } from 'react-icons/tb'
 
 // Types
@@ -70,11 +73,11 @@ import {
     deleteAllJobPostsAction,
     submitExportReasonAction,
     getDepartmentsAction,
-    addScheduleAction, // <-- IMPORT ACTION
+    addScheduleAction,
 } from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { BsThreeDotsVertical } from 'react-icons/bs'
-import classNames from '@/utils/classNames'
+import classNames from 'classnames'
 
 // --- Define Types ---
 export type JobDepartmentListItem = { id: string | number; name: string }
@@ -232,8 +235,88 @@ const ActionColumn = ({ item, onEdit, onDelete, onOpenModal, }: { item: JobPostI
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement> }
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 ItemSearch.displayName = 'ItemSearch'
-type ItemTableToolsProps = { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void }
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters }: ItemTableToolsProps) => (<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full"><div className="flex-grow"><ItemSearch onInputChange={onSearchChange} /></div><div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto"><Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters"></Button><Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter</Button><Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button></div></div>)
+
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+  onSearchChange: (query: string) => void;
+  onFilter: () => void;
+  onExport: () => void;
+  onClearFilters: () => void;
+  columns: ColumnDef<JobPostItem>[];
+  filteredColumns: ColumnDef<JobPostItem>[];
+  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<JobPostItem>[]>>;
+  activeFilterCount: number;
+}) => {
+    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+    const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+          if (originalColumn) {
+              setFilteredColumns(prev => {
+                  const newCols = [...prev, originalColumn];
+                  newCols.sort((a, b) => {
+                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                      return indexA - indexB;
+                  });
+                  return newCols;
+              });
+          }
+      } else {
+          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      }
+    };
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow">
+                <ItemSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2">
+                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => {
+                            const id = col.id || col.accessorKey as string;
+                            return col.header && (
+                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                                        {col.header as string}
+                                    </Checkbox>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Dropdown>
+                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters" />
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+                </Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+            </div>
+        </div>
+    );
+};
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, departmentOptions }: {
+  filterData: FilterFormData;
+  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onClearAll: () => void;
+  departmentOptions: JobDepartmentOption[];
+}) => {
+    const { filterStatus, filterDepartment } = filterData;
+    if (!filterStatus?.length && !filterDepartment?.length) return null;
+
+    const departmentLabelMap = new Map(departmentOptions.map(d => [d.value, d.label]));
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+            {filterDepartment?.map(item => <Tag key={`dept-${item.value}`} prefix>Dept: {departmentLabelMap.get(item.value) || item.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterDepartment', item.value)} /></Tag>)}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+};
+
 type JobPostsTableProps = { columns: ColumnDef<JobPostItem>[]; data: JobPostItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: JobPostItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: JobPostItem) => void; onAllRowSelect: (checked: boolean, rows: Row<JobPostItem>[]) => void }
 const JobPostsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: JobPostsTableProps) => (<DataTable selectable columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} />)
 type JobPostsSelectedFooterProps = { selectedItems: JobPostItem[]; onDeleteSelected: () => void; isDeleting: boolean }
@@ -314,8 +397,38 @@ const JobPostsListing = () => {
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })) }, []);
     const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterDepartment: data.filterDepartment || [] }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer() }, [closeFilterDrawer, handleSetTableData]);
+    
     const onClearFilters = useCallback(() => { const defaultFilters = { filterStatus: [], filterDepartment: [] }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: '' }); dispatch(getJobPostsAction()); setIsFilterDrawerOpen(false) }, [filterFormMethods, dispatch, handleSetTableData]);
+
+    const handleCardClick = (status?: JobPostStatusForm | 'all') => {
+        onClearFilters();
+        if (status && status !== 'all') {
+            const statusOption = JOB_POST_STATUS_OPTIONS_FORM.find(opt => opt.value === status);
+            if (statusOption) {
+                setFilterCriteria({ filterStatus: [statusOption] });
+            }
+        }
+    };
+    
+    const handleRemoveFilter = (key: keyof FilterFormData, value: string) => {
+        setFilterCriteria(prev => {
+            const newFilters = { ...prev };
+            const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+            if (currentValues) {
+                const newValues = currentValues.filter(item => item.value !== value);
+                (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+            }
+            return newFilters;
+        });
+        setTableData(prev => ({ ...prev, pageIndex: 1 }));
+    };
+
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => { const sourceData: JobPostItem[] = Array.isArray(jobPostsData?.data) ? jobPostsData?.data : []; let processedData: JobPostItem[] = cloneDeep(sourceData); if (filterCriteria.filterStatus?.length) { const statusValues = filterCriteria.filterStatus.map((s) => s.value); processedData = processedData.filter((item) => statusValues.includes(item.status)) } if (filterCriteria.filterDepartment?.length) { const deptValues = filterCriteria.filterDepartment.map((d) => d.value); processedData = processedData.filter((item) => deptValues.includes(String(item.job_department_id))) } if (tableData.query && tableData.query.trim() !== '') { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query))) } const { order, key } = tableData.sort as OnSortParam; if (order && key && processedData.length > 0 && typeof key === 'string') { processedData.sort((a, b) => { const aVal = a[key as keyof JobPostItem]; const bVal = b[key as keyof JobPostItem]; if (key === 'created_at' || key === 'updated_at') { const dateA = aVal ? new Date(aVal as string).getTime() : 0; const dateB = bVal ? new Date(bVal as string).getTime() : 0; return order === 'asc' ? dateA - dateB : dateB - dateA } if (key === 'vacancies') { const numA = parseInt(String(aVal), 10); const numB = parseInt(String(bVal), 10); if (!isNaN(numA) && !isNaN(numB)) { return order === 'asc' ? numA - numB : numB - numA } } const aStr = String(aVal ?? '').toLowerCase(); const bStr = String(bVal ?? '').toLowerCase(); return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr) }) } const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize; return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData } }, [jobPostsData?.data, tableData, filterCriteria]);
+    
+    const activeFilterCount = useMemo(() => {
+        return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
+    }, [filterCriteria]);
+    
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return } exportReasonFormMethods.reset({ reason: '' }); setIsExportReasonModalOpen(true) };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = 'JobPosts'; const timestamp = new Date().toISOString().split('T')[0]; const fileName = `job_posts_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); const exportSuccess = exportJobPostsToCsv(fileName, allFilteredAndSortedData, departmentOptions); if (exportSuccess) { toast.push(<Notification title="Export Successful" type="success">Data exported to {fileName}.</Notification>) } else if (allFilteredAndSortedData && allFilteredAndSortedData.length > 0) { toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>) } setIsExportReasonModalOpen(false) } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message || 'Could not submit export reason.'}</Notification>) } finally { setIsSubmittingExportReason(false) } };
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
@@ -334,6 +447,9 @@ const JobPostsListing = () => {
         { header: 'Updated Info', accessorKey: 'updated_at', size: 150, enableSorting: true, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A'; return (<div className="text-xs"><span>{updated_by_user?.name || 'N/A'}</span>{updated_by_user?.roles?.[0]?.display_name && (<><br /><b>{updated_by_user.roles[0].display_name}</b></>)}<br /><span>{formattedDate}</span></div>) } },
         { header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100, cell: (props) => (<ActionColumn item={props.row.original} onEdit={openEditDrawer} onDelete={handleDeleteClick} onOpenModal={handleOpenModal} />) },
     ], [departmentOptions, openEditDrawer, handleDeleteClick, handleOpenModal]);
+    
+    const [filteredColumns, setFilteredColumns] = useState<ColumnDef<JobPostItem>[]>(columns);
+
 
     const renderDrawerForm = (currentFormMethods: typeof formMethods, currentEditingItem: JobPostItem | null) => {
         const { fields, append, remove } = useFieldArray({ control: currentFormMethods.control, name: 'job_plateforms' });
@@ -362,6 +478,8 @@ const JobPostsListing = () => {
             {currentEditingItem && (<div className=""><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded"><div><b className="font-semibold text-primary">Latest Update:</b><p className="text-sm font-semibold mt-1">{currentEditingItem.updated_by_user?.name || 'N/A'}</p><p>{currentEditingItem.updated_by_user?.roles?.[0]?.display_name || 'N/A'}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{currentEditingItem.created_at ? `${new Date(currentEditingItem.created_at).getDate()} ${new Date(currentEditingItem.created_at).toLocaleString('en-US', { month: 'short' })} ${new Date(currentEditingItem.created_at).getFullYear()}, ${new Date(currentEditingItem.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A'}</span><br /><span className="font-semibold">Updated At:</span> <span>{currentEditingItem.updated_at ? `${new Date(currentEditingItem.updated_at).getDate()} ${new Date(currentEditingItem.updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(currentEditingItem.updated_at).getFullYear()}, ${new Date(currentEditingItem.updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A'}</span></div></div></div>)}
         </>)
     }
+    
+    const cardClass = "rounded-md transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
 
     return (
         <>
@@ -369,14 +487,26 @@ const JobPostsListing = () => {
                 <AdaptiveCard className="h-full" bodyClass="h-full">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Job Posts</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-4 gap-4">
-                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbBriefcase size={24} /></div><div><h6 className="text-blue-500 dark:text-blue-200">{jobPostsData?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-violet-200 dark:border-violet-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{jobPostsData?.counts?.active || 0}</h6><span className="font-semibold text-xs">Active</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-red-200 dark:border-red-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbFileExcel size={24} /></div><div><h6 className="text-red-500 dark:text-red-200">{jobPostsData?.counts?.expired || 0}</h6><span className="font-semibold text-xs">Expired</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-orange-200 dark:border-orange-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbFileSmile size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-200">{jobPostsData?.counts?.views || 0}</h6><span className="font-semibold text-xs">Total Views</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbFileLike size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{jobPostsData?.counts?.applicants || 0}</h6><span className="font-semibold text-xs">Applicants</span></div></Card>
+                        <Tooltip title="Click to show all job posts"><div onClick={() => handleCardClick('all')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-blue-200 dark:border-blue-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbBriefcase size={24} /></div><div><h6 className="text-blue-500 dark:text-blue-200">{jobPostsData?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active job posts"><div onClick={() => handleCardClick('Active')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-violet-200 dark:border-violet-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{jobPostsData?.counts?.active || 0}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show disabled/expired posts"><div onClick={() => handleCardClick('Disabled')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-red-200 dark:border-red-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbFileExcel size={24} /></div><div><h6 className="text-red-500 dark:text-red-200">{jobPostsData?.counts?.expired || 0}</h6><span className="font-semibold text-xs">Expired</span></div></Card></div></Tooltip>
+                        <Tooltip title="Total views across all job posts"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-orange-200 dark:border-orange-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbFileSmile size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-200">{jobPostsData?.counts?.views || 0}</h6><span className="font-semibold text-xs">Total Views</span></div></Card></Tooltip>
+                        <Tooltip title="Total applicants for all jobs"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbFileLike size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{jobPostsData?.counts?.applicants || 0}</h6><span className="font-semibold text-xs">Applicants</span></div></Card></Tooltip>
                     </div>
-                    <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} />
-                    <div className="mt-4"><JobPostsTable columns={columns} data={pageData} loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
+                    <div className="mb-4">
+                        <ItemTableTools 
+                            onSearchChange={handleSearchChange} 
+                            onFilter={openFilterDrawer} 
+                            onExport={handleOpenExportReasonModal} 
+                            onClearFilters={onClearFilters}
+                            columns={columns}
+                            filteredColumns={filteredColumns}
+                            setFilteredColumns={setFilteredColumns}
+                            activeFilterCount={activeFilterCount}
+                        />
+                    </div>
+                    <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} departmentOptions={departmentOptions} />
+                    <div className="mt-4"><JobPostsTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
                 </AdaptiveCard>
             </Container>
             <JobPostsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />

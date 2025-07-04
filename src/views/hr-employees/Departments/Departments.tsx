@@ -1,5 +1,3 @@
-// src/views/your-path/Departments.tsx
-
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
@@ -15,17 +13,15 @@ import Tooltip from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog"; // Now used for export reason too
+import ConfirmDialog from "@/components/shared/ConfirmDialog"; 
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
-  // TbTrash, // Commented out
-  // TbChecks, // Commented out
   TbSearch,
   TbFilter,
   TbPlus,
@@ -35,6 +31,8 @@ import {
   TbBuilding,
   TbInbox,
   TbUserScan,
+  TbColumns,
+  TbX,
 } from "react-icons/tb";
 
 // Types
@@ -51,9 +49,9 @@ import {
   getDepartmentsAction,
   addDepartmentAction,
   editDepartmentAction,
-  deleteDepartmentAction, // Kept for reference
-  deleteAllDepartmentsAction, // Kept for reference
-  submitExportReasonAction, // Added for export reason
+  deleteDepartmentAction, 
+  deleteAllDepartmentsAction, 
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -143,7 +141,6 @@ const CSV_KEYS_DEPT: (keyof DepartmentExportItem)[] = [
 
 function exportDepartmentsToCsv(filename: string, rows: DepartmentItem[]) {
   if (!rows || !rows.length) {
-    // Toast notification is handled by the calling function now for consistency
     return false;
   }
   const transformedRows: DepartmentExportItem[] = rows.map((row) => ({
@@ -191,10 +188,8 @@ function exportDepartmentsToCsv(filename: string, rows: DepartmentItem[]) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    // Toast notification moved to the calling function
     return true;
   }
-  // Toast notification moved to the calling function
   return false;
 }
 
@@ -237,44 +232,83 @@ const DepartmentsSearch = React.forwardRef<
 ));
 DepartmentsSearch.displayName = "DepartmentsSearch";
 
-const DepartmentsTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport, // This will now open the reason modal
-  onClearFilters,
-}: {
+const DepartmentsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
   onClearFilters: () => void;
-}) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-    <div className="flex-grow">
-      <DepartmentsSearch onInputChange={onSearchChange} />
-    </div>
-    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Button
-        title="Clear Filters"
-        icon={<TbReload />}
-        onClick={onClearFilters}
-      ></Button>
-      <Button
-        icon={<TbFilter />}
-        onClick={onFilter}
-        className="w-full sm:w-auto"
-      >
-        Filter
-      </Button>
-      <Button
-        icon={<TbCloudUpload />}
-        onClick={onExport} // Changed to open reason modal
-        className="w-full sm:w-auto"
-      >
-        Export
-      </Button>
-    </div>
-  </div>
-);
+  columns: ColumnDef<DepartmentItem>[];
+  filteredColumns: ColumnDef<DepartmentItem>[];
+  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<DepartmentItem>[]>>;
+  activeFilterCount: number;
+}) => {
+    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+    const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+          if (originalColumn) {
+              setFilteredColumns(prev => {
+                  const newCols = [...prev, originalColumn];
+                  newCols.sort((a, b) => {
+                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                      return indexA - indexB;
+                  });
+                  return newCols;
+              });
+          }
+      } else {
+          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      }
+    };
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow">
+                <DepartmentsSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2">
+                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => {
+                            const id = col.id || col.accessorKey as string;
+                            return col.header && (
+                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                                        {col.header as string}
+                                    </Checkbox>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Dropdown>
+                <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} />
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+                </Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+            </div>
+        </div>
+    );
+};
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: FilterFormData;
+  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onClearAll: () => void;
+}) => {
+    const { filterNames, filterStatus } = filterData;
+    if (!filterNames?.length && !filterStatus?.length) return null;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
+            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
+};
 
 type DepartmentsTableProps = {
   columns: ColumnDef<DepartmentItem>[];
@@ -317,7 +351,6 @@ const Departments = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // State for export reason modal
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
 
@@ -355,7 +388,7 @@ const Departments = () => {
     resolver: zodResolver(filterFormSchema),
     defaultValues: filterCriteria,
   });
-  const exportReasonFormMethods = useForm<ExportReasonFormData>({ // Added for export reason
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
     resolver: zodResolver(exportReasonSchema),
     defaultValues: { reason: "" },
     mode: "onChange",
@@ -457,6 +490,10 @@ const Departments = () => {
 
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
 
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
+    setTableData((prev) => ({ ...prev, ...data }));
+  }, []);
+
   const onApplyFiltersSubmit = useCallback(
     (data: FilterFormData) => {
       setFilterCriteria({
@@ -466,9 +503,9 @@ const Departments = () => {
       handleSetTableData({ pageIndex: 1 });
       closeFilterDrawer();
     },
-    [closeFilterDrawer] // Added handleSetTableData to dependencies, but it's memoized
+    [closeFilterDrawer, handleSetTableData]
   );
-
+  
   const onClearFilters = useCallback(() => {
     const defaultFilters = { filterNames: [], filterStatus: [] };
     filterFormMethods.reset(defaultFilters);
@@ -476,7 +513,30 @@ const Departments = () => {
     handleSetTableData({ pageIndex: 1, query: "" });
     dispatch(getDepartmentsAction());
     setIsFilterDrawerOpen(false);
-  }, [filterFormMethods, dispatch]); // Added handleSetTableData to dependencies
+  }, [filterFormMethods, dispatch, handleSetTableData]);
+
+  const handleCardClick = (status: 'Active' | 'Inactive' | 'all') => {
+      onClearFilters();
+      if(status !== 'all') {
+          const statusOption = statusOptions.find(opt => opt.value === status);
+          if(statusOption) {
+            setFilterCriteria({ filterStatus: [statusOption] });
+          }
+      }
+  };
+
+  const handleRemoveFilter = (key: keyof FilterFormData, value: string) => {
+    setFilterCriteria(prev => {
+        const newFilters = { ...prev };
+        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+        if (currentValues) {
+            const newValues = currentValues.filter(item => item.value !== value);
+            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+        }
+        return newFilters;
+    });
+    setTableData(prev => ({ ...prev, pageIndex: 1 }));
+  };
 
   const departmentNameOptions = useMemo(() => {
     const sourceData: DepartmentItem[] = Array.isArray(departmentsData?.data)
@@ -561,8 +621,11 @@ const Departments = () => {
     };
   }, [departmentsData?.data, tableData, filterCriteria]);
 
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
+  }, [filterCriteria]);
 
-  const handleOpenExportReasonModal = () => { // Added function
+  const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
       toast.push(
         <Notification title="No Data" type="info">
@@ -575,11 +638,11 @@ const Departments = () => {
     setIsExportReasonModalOpen(true);
   };
 
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { // Added function
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
-    const moduleName = "Departments"; // Changed module name
+    const moduleName = "Departments";
     const timestamp = new Date().toISOString().split("T")[0];
-    const fileName = `departments_export_${timestamp}.csv`; // Changed file name
+    const fileName = `departments_export_${timestamp}.csv`;
     try {
       await dispatch(
         submitExportReasonAction({
@@ -592,7 +655,6 @@ const Departments = () => {
         <Notification title="Export Reason Submitted" type="success" />
       );
 
-      // Proceed with export
       const exportSuccess = exportDepartmentsToCsv(fileName, allFilteredAndSortedData);
       if (exportSuccess) {
         toast.push(
@@ -601,9 +663,7 @@ const Departments = () => {
             </Notification>
         );
       } else {
-         // exportDepartmentsToCsv handles its own "No Data" toast, but we might want a general failure one.
-         // However, if it reaches here and exportSuccess is false, it's likely the browser feature issue.
-         if(allFilteredAndSortedData && allFilteredAndSortedData.length > 0) { // Only show this if there was data
+         if(allFilteredAndSortedData && allFilteredAndSortedData.length > 0) { 
             toast.push(
                 <Notification title="Export Failed" type="danger">
                 Browser does not support this feature.
@@ -626,10 +686,6 @@ const Departments = () => {
     }
   };
 
-
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-    setTableData((prev) => ({ ...prev, ...data }));
-  }, []);
   const handlePaginationChange = useCallback(
     (page: number) => handleSetTableData({ pageIndex: page }),
     [handleSetTableData]
@@ -684,21 +740,21 @@ const Departments = () => {
         accessorKey: "totalemployee",
         enableSorting: false,
         size: 120,
-        cell: (props) => <span>{props.row.original.total_employees || 0}</span>,
+        cell: (props) => <span>{props.row.original.totalemployee || 0}</span>,
       },
       {
         header: "Total Job Post",
         accessorKey: "totaljobpost",
         enableSorting: false,
         size: 120,
-        cell: (props) => <span>{props.row.original.total_job_posts || 0}</span>,
+        cell: (props) => <span>{props.row.original.totaljobpost || 0}</span>,
       },
       {
         header: "Total Application",
         accessorKey: "totalapplication",
         enableSorting: false,
         size: 130,
-        cell: (props) => <span>{props.row.original.total_applicants || 0}</span>,
+        cell: (props) => <span>{props.row.original.totalapplication || 0}</span>,
       },
       {
         header: "Updated Info",
@@ -748,6 +804,9 @@ const Departments = () => {
     ],
     [openEditDrawer]
   );
+  
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DepartmentItem>[]>(columns);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
   return (
     <>
@@ -761,7 +820,7 @@ const Departments = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4 gap-4">
-            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700">
+            <Tooltip title="Click to show all departments"><div onClick={() => handleCardClick('all')} className="cursor-pointer"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200">
                 <TbBuilding size={24} />
               </div>
@@ -769,8 +828,8 @@ const Departments = () => {
                 <h6 className="text-blue-500 dark:text-blue-200">{departmentsData?.counts?.departments || 0}</h6>
                 <span className="font-semibold text-xs">Total Departments</span>
               </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-violet-200 dark:border-violet-700">
+            </Card></div></Tooltip>
+            <Tooltip title="Total employees across all departments"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-violet-200 dark:border-violet-700 cursor-default">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200">
                 <TbUserScan size={24} />
               </div>
@@ -778,8 +837,8 @@ const Departments = () => {
                 <h6 className="text-violet-500 dark:text-violet-200">{departmentsData?.counts?.employees || 0}</h6>
                 <span className="font-semibold text-xs">Total Employees</span>
               </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-pink-200 dark:border-pink-700">
+            </Card></Tooltip>
+            <Tooltip title="Total jobs posted across all departments"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-pink-200 dark:border-pink-700 cursor-default">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 dark:bg-pink-500/20 text-pink-500 dark:text-pink-200">
                 <TbInbox size={24} />
               </div>
@@ -787,8 +846,8 @@ const Departments = () => {
                 <h6 className="text-pink-500 dark:text-pink-200">{departmentsData?.counts?.job_posts || 0}</h6>
                 <span className="font-semibold text-xs">Jobs Posted</span>
               </div>
-            </Card>
-            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700">
+            </Card></Tooltip>
+            <Tooltip title="Total applicants for all jobs"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
                 <TbUsers size={24} />
               </div>
@@ -796,18 +855,25 @@ const Departments = () => {
                 <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.applicants || 0}</h6>
                 <span className="font-semibold text-xs">Total Applicants</span>
               </div>
-            </Card>
+            </Card></Tooltip>
           </div>
 
-          <DepartmentsTableTools
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal} // Changed to open reason modal
-            onClearFilters={onClearFilters}
-          />
+          <div className="mb-4">
+            <DepartmentsTableTools
+                onSearchChange={handleSearchChange}
+                onFilter={openFilterDrawer}
+                onExport={handleOpenExportReasonModal}
+                onClearFilters={onClearFilters}
+                columns={columns}
+                filteredColumns={filteredColumns}
+                setFilteredColumns={setFilteredColumns}
+                activeFilterCount={activeFilterCount}
+            />
+          </div>
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4">
             <DepartmentsTable
-              columns={columns}
+              columns={filteredColumns}
               data={pageData}
               loading={masterLoadingStatus === "loading" || isSubmitting}
               pagingData={{
@@ -1005,7 +1071,7 @@ const Departments = () => {
         </Form>
       </Drawer>
 
-      <ConfirmDialog // Added for Export Reason
+      <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"
         title="Reason for Export"
@@ -1022,7 +1088,7 @@ const Departments = () => {
       >
         <Form
           id="exportReasonForm"
-          onSubmit={(e) => { // Prevent default form submission and trigger RHF submit
+          onSubmit={(e) => {
             e.preventDefault();
             exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)();
           }}

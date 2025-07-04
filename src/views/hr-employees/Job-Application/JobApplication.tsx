@@ -1,5 +1,3 @@
-// src/views/hiring/JobApplicationListing.tsx
-
 import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
@@ -9,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import dayjs from 'dayjs'
 import type { MouseEvent } from 'react'
-import * as XLSX from 'xlsx' // For export functionality
+import * as XLSX from 'xlsx' 
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
@@ -29,7 +27,7 @@ import { Input } from '@/components/ui/Input'
 import { FormItem, FormContainer, Form } from '@/components/ui/Form'
 import DatePicker from '@/components/ui/DatePicker'
 import Select from '@/components/ui/Select'
-import { Card, Drawer, Dropdown } from '@/components/ui'
+import { Card, Drawer, Dropdown, Checkbox } from '@/components/ui'
 
 // Icons
 import {
@@ -60,6 +58,8 @@ import {
     TbDownload,
     TbBell,
     TbTagStarred,
+    TbColumns,
+    TbX,
 } from 'react-icons/tb'
 import { BsThreeDotsVertical } from 'react-icons/bs'
 
@@ -84,7 +84,7 @@ import type {
     ApplicationStatus,
     JobApplicationItem as JobApplicationItemInternal,
     ApplicationFormData,
-} from './types' // Renamed to avoid conflict
+} from './types' 
 import { applicationStatusOptions as appStatusOptionsConst } from './types'
 import { applicationFormSchema as editApplicationFormSchema } from './types'
 
@@ -101,33 +101,30 @@ interface JobApplicationApiItem {
     nationality?: string | null
     work_experience: string | null
     job_title: string | null
-    application_date: string | null // e.g., "2025-05-29"
-    status: string // Ensure this string matches ApplicationStatus values or can be mapped
+    application_date: string | null 
+    status: string 
     resume_url?: string | null
-    application_link?: string | null // Will be mapped to jobApplicationLink
+    application_link?: string | null 
     note?: string | null
     job_id?: string | null
-    avatar?: string | null // Assuming avatar might come from API or be handled locally
-    // Add other snake_case fields from your API response
-    [key: string]: any // Allow other properties
+    avatar?: string | null
+    [key: string]: any 
 }
 
 // Department Item Type (from API/Redux)
 interface DepartmentItem {
     id: string | number
     name: string
-    // ... other department fields
 }
 
 let inreview = 'In Review'
 // --- Constants ---
 const applicationStatusColor: { [key in ApplicationStatus]?: string } = {
     New: 'bg-blue-500',
-    'In Review': 'bg-yellow-500', // As per your request
+    'In Review': 'bg-yellow-500', 
     Shortlisted: 'bg-violet-500',
     Hired: 'bg-emerald-500',
     Rejected: 'bg-red-500',
-    // 'Withdrawn': "bg-gray-500", // If 'Withdrawn' is still a status, add it here and in types.ts
 }
 
 const filterFormSchema = z.object({
@@ -146,7 +143,6 @@ type EditApplicationFormData = ApplicationFormData
 // --- MODALS SECTION ---
 // ============================================================================
 
-// --- Type Definitions for Modals ---
 export type ModalType =
     | 'notification'
     | 'active'
@@ -169,7 +165,6 @@ interface JobApplicationModalsProps {
     onLinkSubmit: (id: string, link: string) => void
 }
 
-// --- Helper Data for Modal Demos ---
 const dummyUsers = [
     { value: 'user1', label: 'Alice Johnson' },
     { value: 'user2', label: 'Bob Williams' },
@@ -180,8 +175,6 @@ const priorityOptions = [
     { value: 'medium', label: 'Medium' },
     { value: 'high', label: 'High' },
 ]
-
-// --- Individual Dialog Components ---
 
 const SendEmailDialog: React.FC<{
     application: JobApplicationItemInternal
@@ -797,22 +790,20 @@ const ActionColumn = ({
 
 interface JobApplicationExportItem {
     id: string
-    status: string // User-friendly status
+    status: string 
     name: string
     email: string
     mobileNo: string
     departmentName: string
     jobTitle: string
     workExperience: string
-    applicationDateFormatted: string // Formatted date
+    applicationDateFormatted: string 
     resumeUrl: string
     jobApplicationLink: string
     notes: string
     jobId: string
-    // coverLetter?: string; // Optional, add if needed
 }
 
-// Headers for the CSV file
 const CSV_HEADERS_JOB_APPLICATIONS = [
     'ID',
     'Status',
@@ -829,7 +820,6 @@ const CSV_HEADERS_JOB_APPLICATIONS = [
     'Job ID',
 ]
 
-// Keys from JobApplicationExportItem, in the order they should appear in the CSV
 const CSV_KEYS_JOB_APPLICATIONS_EXPORT: (keyof JobApplicationExportItem)[] = [
     'id',
     'status',
@@ -847,7 +837,7 @@ const CSV_KEYS_JOB_APPLICATIONS_EXPORT: (keyof JobApplicationExportItem)[] = [
 ]
 
 const ApplicationTable = (props: any) => <DataTable {...props} />
-// const ApplicationSearch = React.forwardRef<HTMLInputElement, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
+
 type ItemSearchProps = {
     onInputChange: (value: string) => void
     ref?: Ref<HTMLInputElement>
@@ -864,47 +854,86 @@ const ApplicationSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
     ),
 )
 ApplicationSearch.displayName = 'ApplicationSearch'
-const ApplicationTableTools = ({
-    onSearchChange,
-    onFilterOpen,
-    onClearFilters,
-    onExport,
-}: {
-    onSearchChange: (query: string) => void
-    onFilterOpen: () => void
-    onClearFilters: () => void
-    onExport: () => void
-}) => (
-    <div className="flex flex-col md:flex-row items-center gap-2 w-full">
-        <div className="flex-grow w-full md:w-auto">
-            <ApplicationSearch
-                onInputChange={onSearchChange}
-            />
+
+const ApplicationTableTools = ({ onSearchChange, onFilterOpen, onClearFilters, onExport, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+  onSearchChange: (query: string) => void;
+  onFilterOpen: () => void;
+  onClearFilters: () => void;
+  onExport: () => void;
+  columns: ColumnDef<JobApplicationItemInternal>[];
+  filteredColumns: ColumnDef<JobApplicationItemInternal>[];
+  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<JobApplicationItemInternal>[]>>;
+  activeFilterCount: number;
+}) => {
+    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+    const toggleColumn = (checked: boolean, colId: string) => {
+        if (checked) {
+            const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+            if (originalColumn) {
+                setFilteredColumns(prev => {
+                    const newCols = [...prev, originalColumn];
+                    newCols.sort((a, b) => {
+                        const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                        const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                        return indexA - indexB;
+                    });
+                    return newCols;
+                });
+            }
+        } else {
+            setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+        }
+    };
+
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+            <div className="flex-grow">
+                <ApplicationSearch onInputChange={onSearchChange} />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="flex flex-col p-2">
+                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.map((col) => {
+                            const id = col.id || col.accessorKey as string;
+                            return col.header && (
+                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                                        {col.header as string}
+                                    </Checkbox>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Dropdown>
+                <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} />
+                <Button icon={<TbFilter />} onClick={onFilterOpen} className="w-full sm:w-auto">
+                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+                </Button>
+                <Button icon={<TbDownload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+            </div>
         </div>
-        <div className="flex items-center gap-2 mt-2 md:mt-0">
-            <Tooltip title="Clear Filters">
-                <Button
-                    icon={<TbReload />}
-                    onClick={onClearFilters}
-                ></Button>
-            </Tooltip>
-            <Button
-                icon={<TbFilter />}
-                onClick={onFilterOpen}
-                className="w-full sm:w-auto"
-            >
-                Filter
-            </Button>
-            <Button
-                icon={<TbDownload />}
-                onClick={onExport}
-                className="w-full sm:w-auto"
-            >
-                Export
-            </Button>
+    );
+};
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: FilterFormData;
+  onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
+  onClearAll: () => void;
+}) => {
+    const { filterStatus, filterDepartment } = filterData;
+    if (!filterStatus?.length && !filterDepartment?.length) return null;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+            {filterDepartment?.map(item => <Tag key={`dept-${item.value}`} prefix>Dept: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterDepartment', item.value)} /></Tag>)}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
         </div>
-    </div>
-)
+    );
+};
+
 
 const ApplicationSelected = ({
     selectedApplications,
@@ -961,7 +990,6 @@ const ApplicationSelected = ({
     )
 }
 
-// --- MODIFIED: ApplicationDetailDialog ---
 const ApplicationDetailDialog = ({
     isOpen,
     onClose,
@@ -1072,7 +1100,7 @@ const ApplicationDetailDialog = ({
                         {application.notes || 'N/A'}
                     </p>
                 </div>
-                {application.coverLetter && ( // Display if coverLetter is part of JobApplicationItemInternal and populated
+                {application.coverLetter && (
                     <div className={detailItemClass}>
                         <p className={labelClass}>Cover Letter:</p>
                         <p
@@ -1092,7 +1120,6 @@ const ApplicationDetailDialog = ({
         </Dialog>
     )
 }
-// --- END MODIFIED: ApplicationDetailDialog ---
 
 const JobApplicationListing = () => {
     const navigate = useNavigate()
@@ -1100,7 +1127,7 @@ const JobApplicationListing = () => {
 
     const {
         jobApplicationsData = [],
-        departmentsData = { data: [] } as { data: DepartmentItem[] }, // Ensure departmentsData.data exists
+        departmentsData = { data: [] } as { data: DepartmentItem[] },
         status: masterLoadingStatus = 'idle',
     } = useSelector(masterSelector, shallowEqual)
 
@@ -1135,7 +1162,6 @@ const JobApplicationListing = () => {
         filterDepartment: [],
     })
 
-    // --- ADDED: Modal State Management ---
     const [modalState, setModalState] = useState<ModalState>({
         isOpen: false,
         type: null,
@@ -1147,7 +1173,6 @@ const JobApplicationListing = () => {
     ) => setModalState({ isOpen: true, type, data: applicationData })
     const handleCloseModal = () =>
         setModalState({ isOpen: false, type: null, data: null })
-    // --- END: Modal State Management ---
 
     const editFormMethods = useForm<EditApplicationFormData>({
         resolver: zodResolver(editApplicationFormSchema),
@@ -1169,7 +1194,6 @@ const JobApplicationListing = () => {
         )
             ? jobApplicationsData.data
             : []
-        // Ensure departmentsData.data is an array before mapping
         const depts: DepartmentItem[] = Array.isArray(departmentsData?.data)
             ? departmentsData.data
             : []
@@ -1200,7 +1224,7 @@ const JobApplicationListing = () => {
                 notes: apiItem.note || '',
                 jobId: apiItem.job_id || '',
                 avatar: apiItem.avatar || undefined,
-                coverLetter: apiItem.cover_letter || '', // Assuming cover_letter might come from API
+                coverLetter: apiItem.cover_letter || '',
             }),
         )
     }, [jobApplicationsData?.data, departmentsData?.data])
@@ -1215,9 +1239,6 @@ const JobApplicationListing = () => {
             const selectedStatuses = filterCriteria.filterStatus.map(
                 (opt) => opt.value as ApplicationStatus,
             )
-            console.log('selectedStatuses', selectedStatuses)
-            console.log('processedDataResult', processedDataResult)
-
             processedDataResult = processedDataResult.filter((app) =>
                 selectedStatuses.includes(app.status),
             )
@@ -1288,6 +1309,10 @@ const JobApplicationListing = () => {
         )
         return { pageData: dataForPage, total: currentTotal }
     }, [processedAndSortedData, tableData.pageIndex, tableData.pageSize])
+    
+    const activeFilterCount = useMemo(() => {
+        return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
+    }, [filterCriteria]);
 
     const handleSetTableData = useCallback(
         (data: Partial<TableQueries>) =>
@@ -1363,7 +1388,7 @@ const JobApplicationListing = () => {
         setDeleteConfirmOpen(false)
         try {
             // await dispatch(deleteJobApplicationAction({ id: itemToDelete.id })).unwrap();
-            dispatch(getJobApplicationsAction()) // Refetch
+            dispatch(getJobApplicationsAction()) 
             toast.push(
                 <Notification
                     title="Deleted"
@@ -1391,7 +1416,7 @@ const JobApplicationListing = () => {
         const idsToDelete = selectedApplications.map((app) => String(app.id))
         try {
             // await dispatch(deleteAllJobApplicationsAction({ ids: idsToDelete })).unwrap();
-            dispatch(getJobApplicationsAction({})) // Refetch
+            dispatch(getJobApplicationsAction({}))
             toast.push(
                 <Notification
                     title="Deleted"
@@ -1410,7 +1435,6 @@ const JobApplicationListing = () => {
         }
     }, [dispatch, selectedApplications])
 
-    // --- ADDED: handleDownloadResume ---
     const handleDownloadResume = useCallback(
         (item: JobApplicationItemInternal) => {
             if (item.resumeUrl) {
@@ -1436,13 +1460,13 @@ const JobApplicationListing = () => {
             setIsSubmittingDrawer(true)
             try {
                 // await dispatch(updateJobApplicationLinkAction({ id: applicationId, link })).unwrap();
-                dispatch(getJobApplicationsAction({})) // Refetch
+                dispatch(getJobApplicationsAction({}))
                 toast.push(
                     <Notification title="Link Added" type="success">
                         Job link updated.
                     </Notification>,
                 )
-                handleCloseModal() // Close the modal on success
+                handleCloseModal() 
             } catch (error: any) {
                 toast.push(
                     <Notification title="Update Failed" type="danger">
@@ -1458,12 +1482,10 @@ const JobApplicationListing = () => {
 
     const openEditDrawer = useCallback(
         (item: JobApplicationItemInternal) => {
-            console.log(item, 'item in openEditDrawer ')
-
             navigate(`/hr-employees/job-applications/add`, { state: item })
         },
-        [editFormMethods],
-    ) // Add departmentOptionsForFilter if used directly here
+        [navigate],
+    ) 
 
     const closeEditDrawer = useCallback(() => {
         setIsEditDrawerOpen(false)
@@ -1481,13 +1503,7 @@ const JobApplicationListing = () => {
                     ...data,
                     id: editingApplication.id,
                 }
-                // TODO: Transform data.department back to departmentId if API expects ID
-                // For example, if data.department is a string (name), find its ID
-                // const dept = departmentsData?.data.find(d => d.name === data.department);
-                // payload.departmentId = dept ? dept.id : null;
-
-                // await dispatch(editJobApplicationAction(payload)).unwrap();
-                dispatch(getJobApplicationsAction({})) // Refetch
+                dispatch(getJobApplicationsAction({})) 
                 toast.push(
                     <Notification
                         title="Updated"
@@ -1506,20 +1522,20 @@ const JobApplicationListing = () => {
             }
         },
         [dispatch, editingApplication, closeEditDrawer],
-    ) // Add departmentsData if used for mapping
+    ) 
 
     const openFilterDrawer = useCallback(() => {
         filterFormMethods.reset(filterCriteria)
         setIsFilterDrawerOpen(true)
     }, [filterFormMethods, filterCriteria])
+
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), [])
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false)
     const [isSubmittingExportReason, setIsSubmittingExportReason] =
         useState(false)
+
     const onApplyFiltersSubmit = useCallback(
         (data: FilterFormData) => {
-            console.log('data.filterStatus', data.filterStatus)
-
             setFilterCriteria({
                 filterStatus: data.filterStatus || [],
                 filterDepartment: data.filterDepartment || [],
@@ -1535,7 +1551,30 @@ const JobApplicationListing = () => {
         setFilterCriteria(defaults)
         handleSetTableData({ pageIndex: 1, query: '' })
         dispatch(getJobApplicationsAction())
-    }, [filterFormMethods, handleSetTableData, dispatch]) // Added dispatch to dependencies
+    }, [filterFormMethods, handleSetTableData, dispatch])
+
+    const handleCardClick = useCallback((status?: ApplicationStatus) => {
+        onClearFilters();
+        if (status) {
+            const statusOption = appStatusOptionsConst.find(s => s.value === status);
+            if (statusOption) {
+                setFilterCriteria({ filterStatus: [statusOption] });
+            }
+        }
+    }, [onClearFilters]);
+
+    const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string) => {
+        setFilterCriteria(prev => {
+            const newCriteria = { ...prev };
+            const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
+            if (currentFilterArray) {
+                (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove);
+            }
+            return newCriteria;
+        });
+        handleSetTableData({ pageIndex: 1 });
+    };
+
     const exportReasonSchema = z.object({
         reason: z
             .string()
@@ -1566,7 +1605,7 @@ const JobApplicationListing = () => {
     ) => {
         setIsSubmittingExportReason(true)
         const moduleName = 'JobApplications'
-        const timestamp = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+        const timestamp = new Date().toISOString().split('T')[0] 
         const fileName = `JobApplications_export_${timestamp}.csv`
         try {
             await dispatch(
@@ -1771,8 +1810,6 @@ const JobApplicationListing = () => {
                     )
                 },
             },
-            // cell: props => props.row.original.applicationDate ? dayjs(props.row.original.applicationDate).format("MMM D, YYYY h:mm A") : "-" },
-
             {
                 header: 'Action',
                 id: 'action',
@@ -1782,11 +1819,11 @@ const JobApplicationListing = () => {
                     <ActionColumn
                         item={props.row.original}
                         onView={() => handleViewDetails(props.row.original)}
-                        onEdit={() => openEditDrawer(props.row.original)} // --- MODIFIED: onEdit now opens drawer ---
+                        onEdit={() => openEditDrawer(props.row.original)} 
                         onDelete={() => handleDeleteClick(props.row.original)}
                         onDownloadResume={() =>
                             handleDownloadResume(props.row.original)
-                        } // --- ADDED: onDownloadResume ---
+                        } 
                         onOpenModal={handleOpenModal}
                     />
                 ),
@@ -1800,10 +1837,10 @@ const JobApplicationListing = () => {
             handleDownloadResume,
             handleOpenModal,
         ],
-    ) // Added openEditDrawer & handleDownloadResume
-
+    )
+    
+    const [filteredColumns, setFilteredColumns] = useState<ColumnDef<JobApplicationItemInternal>[]>(columns);
     const departmentOptionsForFilter = useMemo(() => {
-        // Ensure departmentsData.data is an array before mapping
         const depts: DepartmentItem[] = Array.isArray(departmentsData?.data)
             ? departmentsData.data
             : []
@@ -1812,10 +1849,11 @@ const JobApplicationListing = () => {
             .map((name) => ({ value: name, label: name }))
     }, [departmentsData?.data])
 
+    const cardClass = "rounded-md transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+
     return (
         <Container className="h-auto">
             <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                {/* Header and Action Buttons */}
                 <div className="lg:flex items-center justify-between mb-4">
                     <h5 className="mb-4 lg:mb-0">Job Applications</h5>
                     <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -1850,129 +1888,33 @@ const JobApplicationListing = () => {
                         </Button>
                     </div>
                 </div>
-
-                {/* Stats Cards */}
+                {/* Stats Cards - Corrected border classes and added tooltips */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 mb-4 gap-2">
-                    <Card
-                        bodyClass="flex gap-2 p-2"
-                        className="rounded-md border border-blue-200"
-                    >
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                            <TbMail size={24} />
-                        </div>
-                        <div>
-                            <h6 className="text-blue-500">
-                                {jobApplicationsData?.counts?.total || 0}
-                            </h6>
-                            <span className="font-semibold text-xs">Total</span>
-                        </div>
-                    </Card>
-                    <Card
-                        bodyClass="flex gap-2 p-2"
-                        className="rounded-md border border-emerald-200"
-                    >
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
-                            <TbMailSpark size={24} />
-                        </div>
-                        <div>
-                            <h6 className="text-emerald-500">
-                                {jobApplicationsData?.counts?.new || 0}
-                            </h6>
-                            <span className="font-semibold text-xs">New</span>
-                        </div>
-                    </Card>
-                    <Card
-                        bodyClass="flex gap-2 p-2"
-                        className="rounded-md border border-pink-200"
-                    >
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                            <TbMailUp size={24} />
-                        </div>
-                        <div>
-                            <h6 className="text-pink-500">
-                                {jobApplicationsData?.counts?.today || 0}
-                            </h6>
-                            <span className="font-semibold text-xs">Today</span>
-                        </div>
-                    </Card>
-                    <Card
-                        bodyClass="flex gap-2 p-2"
-                        className="rounded-md border border-orange-200"
-                    >
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                            <TbMailSearch size={24} />
-                        </div>
-                        <div>
-                            <h6 className="text-orange-500">
-                                {jobApplicationsData?.counts?.in_review || 0}
-                            </h6>
-                            <span className="font-semibold text-xs">
-                                In Review
-                            </span>
-                        </div>
-                    </Card>
-                    <Card
-                        bodyClass="flex gap-2 p-2"
-                        className="rounded-md border border-violet-200"
-                    >
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                            <TbMailCheck size={24} />
-                        </div>
-                        <div>
-                            <h6 className="text-violet-500">
-                                {jobApplicationsData?.counts?.shortlisted || 0}
-                            </h6>
-                            <span className="font-semibold text-xs">
-                                Shortlisted
-                            </span>
-                        </div>
-                    </Card>
-                    <Card
-                        bodyClass="flex gap-2 p-2"
-                        className="rounded-md border border-green-300"
-                    >
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                            <TbMailHeart size={24} />
-                        </div>
-                        <div>
-                            <h6 className="text-green-500">
-                                {jobApplicationsData?.counts?.hired || 0}
-                            </h6>
-                            <span className="font-semibold text-xs">Hired</span>
-                        </div>
-                    </Card>
-                    <Card
-                        bodyClass="flex gap-2 p-2"
-                        className="rounded-md border border-red-200"
-                    >
-                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                            <TbMailX size={24} />
-                        </div>
-                        <div>
-                            <h6 className="text-red-500">
-                                {jobApplicationsData?.counts?.rejected || 0}
-                            </h6>
-                            <span className="font-semibold text-xs">
-                                Rejected
-                            </span>
-                        </div>
-                    </Card>
+                   <Tooltip title="Click to show all applications"><div onClick={() => handleCardClick()} className={cardClass}><Card bodyClass="flex gap-2 p-2" className="rounded-md border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMail size={24} /></div><div><h6 className="text-blue-500">{jobApplicationsData?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+                    <Tooltip title="Click to show 'New' applications"><div onClick={() => handleCardClick('New')} className={cardClass}><Card bodyClass="flex gap-2 p-2" className="rounded-md border-emerald-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbMailSpark size={24} /></div><div><h6 className="text-emerald-500">{jobApplicationsData?.counts?.new || 0}</h6><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
+                    <Tooltip title="Applications received today"><Card bodyClass="flex gap-2 p-2" className="rounded-md border-pink-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbMailUp size={24} /></div><div><h6 className="text-pink-500">{jobApplicationsData?.counts?.today || 0}</h6><span className="font-semibold text-xs">Today</span></div></Card></Tooltip>
+                    <Tooltip title="Click to show 'In Review' applications"><div onClick={() => handleCardClick('In Review')} className={cardClass}><Card bodyClass="flex gap-2 p-2" className="rounded-md border-orange-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbMailSearch size={24} /></div><div><h6 className="text-orange-500">{jobApplicationsData?.counts?.in_review || 0}</h6><span className="font-semibold text-xs">In Review</span></div></Card></div></Tooltip>
+                    <Tooltip title="Click to show 'Shortlisted' applications"><div onClick={() => handleCardClick('Shortlisted')} className={cardClass}><Card bodyClass="flex gap-2 p-2" className="rounded-md border-violet-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbMailCheck size={24} /></div><div><h6 className="text-violet-500">{jobApplicationsData?.counts?.shortlisted || 0}</h6><span className="font-semibold text-xs">Shortlisted</span></div></Card></div></Tooltip>
+                    <Tooltip title="Click to show 'Hired' applications"><div onClick={() => handleCardClick('Hired')} className={cardClass}><Card bodyClass="flex gap-2 p-2" className="rounded-md border-green-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMailHeart size={24} /></div><div><h6 className="text-green-500">{jobApplicationsData?.counts?.hired || 0}</h6><span className="font-semibold text-xs">Hired</span></div></Card></div></Tooltip>
+                    <Tooltip title="Click to show 'Rejected' applications"><div onClick={() => handleCardClick('Rejected')} className={cardClass}><Card bodyClass="flex gap-2 p-2" className="rounded-md border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMailX size={24} /></div><div><h6 className="text-red-500">{jobApplicationsData?.counts?.rejected || 0}</h6><span className="font-semibold text-xs">Rejected</span></div></Card></div></Tooltip>
                 </div>
-
-                {/* Table Tools (Search, Filter, Export) */}
+               
                 <div className="mb-4">
                     <ApplicationTableTools
                         onSearchChange={handleSearchChange}
                         onFilterOpen={openFilterDrawer}
                         onClearFilters={onClearFilters}
                         onExport={handleOpenExportReasonModal}
+                        columns={columns}
+                        filteredColumns={filteredColumns}
+                        setFilteredColumns={setFilteredColumns}
+                        activeFilterCount={activeFilterCount}
                     />
                 </div>
-
-                {/* Data Table */}
+                <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
                 <div className="flex-grow overflow-auto">
                     <ApplicationTable
-                        columns={columns}
+                        columns={filteredColumns}
                         noData={pageData.length === 0}
                         data={pageData}
                         loading={masterLoadingStatus === 'loading'}
@@ -1990,14 +1932,12 @@ const JobApplicationListing = () => {
                 </div>
             </AdaptiveCard>
 
-            {/* Selected Footer & Dialogs */}
             <ApplicationSelected
                 selectedApplications={selectedApplications}
                 onDeleteSelected={handleDeleteSelected}
                 isDeleting={isDeleting}
             />
 
-            {/* --- ADDED: MODAL RENDER --- */}
             <JobApplicationModals
                 modalState={modalState}
                 onClose={handleCloseModal}
@@ -2044,7 +1984,7 @@ const JobApplicationListing = () => {
                 }}
             >
                 <Form
-                    id="exportDomainsReasonForm" // Keep id for form attribute if used, or remove if not.
+                    id="exportDomainsReasonForm"
                     onSubmit={(e) => {
                         e.preventDefault()
                         exportReasonFormMethods.handleSubmit(
@@ -2078,7 +2018,6 @@ const JobApplicationListing = () => {
                     </FormItem>
                 </Form>
             </ConfirmDialog>
-            {/* Edit Application Drawer */}
             <Drawer
                 title="Edit Job Application"
                 isOpen={isEditDrawerOpen}
@@ -2169,10 +2108,10 @@ const JobApplicationListing = () => {
                                             departmentOptionsForFilter.find(
                                                 (o) => o.value === field.value,
                                             ) || null
-                                        } // Ensure value is object or null
+                                        } 
                                         onChange={(opt) =>
                                             field.onChange(opt?.value)
-                                        } // Pass only the value string
+                                        } 
                                     />
                                 )}
                             />
