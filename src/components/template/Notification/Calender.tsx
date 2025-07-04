@@ -37,6 +37,7 @@ import {
 import { useAppDispatch } from '@/reduxtool/store'
 import withHeaderItem from '@/utils/hoc/withHeaderItem'
 import useResponsive from '@/utils/hooks/useResponsive'
+import { TbPlus } from 'react-icons/tb'
 
 // --- Types ---
 type ScheduleEvent = {
@@ -507,12 +508,7 @@ const CompactAllSchedulesModal = ({
                     </ScrollBar>
                 </div>
             </div>
-            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
-                <Button variant="solid" icon={<HiPlus />} onClick={onAddNew}>
-                    Add New
-                </Button>
-                <Button onClick={onClose}>Close</Button>
-            </div>
+            
         </Dialog>
     )
 }
@@ -755,14 +751,16 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
                 </ScrollBar>
 
                 <Dropdown.Item variant="footer" className="!p-3 !border-t-0">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-[100%]">
                         <Button block onClick={handleOpenCompactModal}>
                             View All
                         </Button>
+                        
+                        
                         <Button
                             block
                             variant="solid"
-                            icon={<HiPlus />}
+                            // icon={<TbPlus className="text-lg" />}
                             onClick={handleOpenAddModal}
                         >
                             Add New
