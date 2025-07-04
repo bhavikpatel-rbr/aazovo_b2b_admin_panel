@@ -79,7 +79,7 @@ export const loginUserByEmailAction = createAsyncThunk<
         )
         return response?.data
       }
-      console.log("response", response)
+      // console.log("response", response)
       dispatch(
         showMessage({
           ...defaultMessageObj,
@@ -88,7 +88,7 @@ export const loginUserByEmailAction = createAsyncThunk<
         })
       )
 
-      if (loginAttempt >= 3) {
+      if (loginAttempt > 4) {
         window.location.reload() // Refresh page after 3 failed attempts
       }
 
