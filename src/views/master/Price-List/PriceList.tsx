@@ -1864,7 +1864,6 @@ const PriceList = () => {
       />
     );
   };
-
   return (
     <>
       <Container className="h-auto">
@@ -2205,6 +2204,7 @@ const PriceList = () => {
               <br />
               <span className="font-semibold">Created At:</span>{" "}
               <span>
+                {/* {formatCustomDateTime(editingPriceListItem.created_at)} */}
                 {editingPriceListItem.created_at
                   ? `${new Date(
                       editingPriceListItem.created_at
