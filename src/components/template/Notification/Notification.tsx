@@ -93,9 +93,16 @@ const _Notification = ({ className }: { className?: string }) => {
     const dispatch = useAppDispatch()
     const notificationDropdownRef = useRef<DropdownRef>(null)
 
-    const notifications = useSelector(masterSelector).getNotification?.data as
+    const allnotification = useSelector(masterSelector).getNotification?.data as
         | Notification[]
         | undefined
+
+    let notifications = [];
+    for (let i = 0; i < 10; i++) {
+        if (allnotification[i]) {
+            notifications.push(allnotification[i])
+        }
+    }
 
     // ✅ FIX #1: Make the useMemo hook robust by checking if `notifications` is an array.
     const { hasUnread, noResult } = useMemo(() => {
