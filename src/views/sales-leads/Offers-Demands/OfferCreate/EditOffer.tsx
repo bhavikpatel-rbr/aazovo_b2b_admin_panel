@@ -1,220 +1,256 @@
-// src/views/your-path/EditOffer.tsx
-
-import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { useNavigate, useParams, NavLink } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm, useFieldArray } from "react-hook-form";
+import { useNavigate, useParams, NavLink } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
+import { Button, Input, Radio, Select as UiSelect } from "@/components/ui";
 import Card from "@/components/ui/Card";
-import { Input, Select as UiSelect, Button, Radio } from "@/components/ui";
+import Container from "@/components/shared/Container";
 import { Form, FormItem } from "@/components/ui/Form";
 import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
 import Spinner from "@/components/ui/Spinner";
-import Container from "@/components/shared/Container";
+import toast from "@/components/ui/toast";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
-import { TbAlertTriangle, TbBrandWhatsapp, TbCopy, TbMail } from "react-icons/tb";
+import { TbFileText, TbPlus, TbTrash } from "react-icons/tb";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
-import { useSelector } from 'react-redux';
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  getOfferById,
   editOfferAction,
-  getUsersAction,
   getAllProductAction,
   getMembersAction,
+  getOfferById,
+  getProductsAction,
+  getProductSpecificationsAction,
+  getUsersAction,
 } from "@/reduxtool/master/middleware";
-import { masterSelector } from '@/reduxtool/master/masterSlice';
+import { useAppDispatch } from "@/reduxtool/store";
+import { useSelector } from "react-redux";
 
-// --- Type Definitions ---
-export type ApiUserObject = {
-  id: number;
-  name: string;
-};
+// --- SCHEMA (Identical to CreateOffer for consistency) ---
+const priceListItemSchema = z.object({
+  color: z.string(),
+  qty: z.number().optional(),
+  price: z.number().optional(),
+});
 
-export type ApiFetchedOffer = {
-  id: number;
-  generate_id: string;
-  name: string;
-  product_ids: number[] | null;
-  seller_section: number[] | null;
-  buyer_section: number[] | null;
-  groupA: string | null;
-  groupB: string | null;
-  assign_user: ApiUserObject | null;
-  created_by: ApiUserObject;
-  created_at: string;
-  updated_at: string;
-};
+const productDataSchema = z.object({
+  product_id: z.number({ required_error: "Product is required." }).nullable(),
+  seller_ids: z.array(z.number()).min(1, "At least one seller is required."),
+  buyer_ids: z.array(z.number()).min(1, "At least one buyer is required."),
+  status: z.enum(["active", "non-active"]).default("active"),
+  spec_id: z.number().nullable().default(null),
+  items: z.array(priceListItemSchema).default([]),
+});
 
 const offerFormSchema = z.object({
   name: z.string().min(1, "Offer Name is required."),
-  assignedUserId: z.number().min(1, "Assigned User is required.").nullable(),
-  productIds: z.array(z.number()).min(1, "At least one product is required."),
-  sellers: z.array(z.number()).min(1, "At least one seller is required."),
-  groupA_notes: z.string().optional().nullable(),
-  buyers: z.array(z.number()).min(1, "At least one buyer is required."),
-  groupB_notes: z.string().optional().nullable(),
-
-  priceListProduct: z.number().nullable(),
-  productStatus: z.enum(["active", "non-active"]).default("active"),
-  productSpec: z.string().optional().nullable(),
+  assign_user: z.number({ required_error: "Assigned User is required."}).nullable(),
+  product_data: z.array(productDataSchema).min(1, "Add at least one product group."),
+  groupA: z.string().optional().nullable(),
+  groupB: z.string().optional().nullable(),
 });
 
-type OfferEditFormData = z.infer<typeof offerFormSchema>;
+type OfferFormData = z.infer<typeof offerFormSchema>;
 type OptionType = { value: number | string; label: string };
-
-const staticPriceListData = [
-  { id: 1, color: "Red", qty: 15, price: 120.5 },
-  { id: 2, color: "Blue", qty: 25, price: 115.0 },
-  { id: 3, color: "Green", qty: 10, price: 125.75 },
-  { id: 4, color: "Black", qty: 50, price: 110.0 },
-];
 
 const EditOffer = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { id: offerIdFromParams } = useParams<{ id: string }>();
+  const { id: offerId } = useParams<{ id: string }>();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // --- MODIFICATION: State for editable price list table ---
-  const [priceListData, setPriceListData] = useState(staticPriceListData);
 
-  const {
-    currentOffer,
-    currentOfferStatus = 'idle',
-    usersData = [],
-    productsMasterData = [],
-    memberData = [],
-    status: masterLoadingStatus = 'idle',
-  } = useSelector(masterSelector);
-
-  const { control, handleSubmit, reset, getValues, formState: { errors, isDirty } } = useForm<OfferEditFormData>({
-    resolver: zodResolver(offerFormSchema),
-    defaultValues: {
-      name: "",
-      assignedUserId: null,
-      productIds: [],
-      sellers: [],
-      groupA_notes: "",
-      buyers: [],
-      groupB_notes: "",
-      priceListProduct: null,
-      productStatus: "active",
-      productSpec: null,
-    }
-  });
-
-  const userOptions = useMemo(() => {
-    if (!Array.isArray(usersData)) return [];
-    return usersData.map((u: ApiUserObject) => ({ value: u.id, label: u.name }));
-  }, [usersData]);
-
-  const productOptions = useMemo(() => {
-    if (!Array.isArray(productsMasterData)) return [];
-    return productsMasterData.map((p: any) => ({ value: p.id, label: p.name }));
-  }, [productsMasterData]);
-
-  const memberOptions = useMemo(() => {
-    if (!Array.isArray(memberData)) return [];
-    return memberData.map((m: any) => ({ value: m.id, label: m.name }));
-  }, [memberData]);
-
-  const statusOptions: OptionType[] = [
-    { value: "active", label: "Active" },
-    { value: "non-active", label: "Non-Active" },
-  ];
-
-  const specOptions: OptionType[] = [
-    { value: "spec-a", label: "Specification A" },
-    { value: "spec-b", label: "Specification B" },
-    { value: "spec-c", label: "Specification C" },
-  ];
-
-  // --- MODIFICATION: Handler for updating price list state ---
-  const handlePriceListChange = (index: number, field: 'qty' | 'price', value: string) => {
-    const updatedList = [...priceListData];
-    const numericValue = parseFloat(value) || 0; // Ensure value is a number
-    updatedList[index] = { ...updatedList[index], [field]: numericValue };
-    setPriceListData(updatedList);
-  };
-
-  // --- MODIFICATION: Totals calculation now depends on the editable state ---
-  const totals = useMemo(() => {
-    const totalQty = priceListData.reduce((sum, item) => sum + Number(item.qty), 0);
-    const totalPrice = priceListData.reduce((sum, item) => sum + Number(item.qty) * Number(item.price), 0);
-    return { totalQty, totalPrice };
-  }, [priceListData]);
-
-
-  // --- Fetch Initial Data ---
+  // --- Fetch all master data and the specific offer data ---
   useEffect(() => {
+    // Fetch master data
     dispatch(getUsersAction());
     dispatch(getAllProductAction());
     dispatch(getMembersAction());
-    if (offerIdFromParams) {
-      dispatch(getOfferById(offerIdFromParams));
+    dispatch(getProductsAction());
+    dispatch(getProductSpecificationsAction());
+
+    // Fetch the specific offer to edit
+    if (offerId) {
+      dispatch(getOfferById(offerId));
     } else {
-      toast.push(<Notification title="Error" type="danger">Offer ID is missing.</Notification>);
+      toast.push(<Notification title="Error" type="danger">Offer ID is missing from the URL.</Notification>);
       navigate("/sales-leads/offers-demands");
     }
-  }, [dispatch, offerIdFromParams, navigate]);
+  }, [dispatch, offerId, navigate]);
 
-  // --- Populate Form with Fetched Offer Data ---
+  const {
+    currentOffer,
+    currentOfferStatus,
+    usersData = [],
+    productsMasterData = [],
+    memberData = [],
+    ProductsData = [],
+    ProductSpecificationsData = [],
+    status: masterLoadingStatus = "idle",
+  } = useSelector(masterSelector);
+
+  // --- Memoized options for select dropdowns ---
+  const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: u.name })) : [], [usersData]);
+  const productOptions: OptionType[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
+  const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label: m.name })) : [], [memberData]);
+  const statusOptions: OptionType[] = [{ value: "active", label: "Active" }, { value: "non-active", label: "Non-Active" }];
+  const productSpecOptions: OptionType[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((spec: any) => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors, isDirty },
+  } = useForm<OfferFormData>({
+    resolver: zodResolver(offerFormSchema),
+    // Default values are set, but will be overwritten by the useEffect below
+    defaultValues: {
+      name: "",
+      assign_user: null,
+      product_data: [],
+      groupA: "",
+      groupB: "",
+    },
+  });
+
+  // --- Populate form once the offer data is loaded ---
   useEffect(() => {
     if (currentOfferStatus === 'succeeded' && currentOffer) {
       reset({
         name: currentOffer.name || "",
-        assignedUserId: currentOffer.assign_user?.id || null,
-        productIds: currentOffer.product_ids || [],
-        sellers: currentOffer.seller_section || [],
-        buyers: currentOffer.buyer_section || [],
-        groupA_notes: currentOffer.groupA || "",
-        groupB_notes: currentOffer.groupB || "",
+        assign_user: currentOffer.assign_user?.id || null,
+        groupA: currentOffer.groupA || "",
+        groupB: currentOffer.groupB || "",
+        // IMPORTANT: Assumes API returns `product_data` in the correct nested format.
+        // If not, a transformation function would be needed here.
+        product_data: currentOffer.product_data && currentOffer.product_data.length > 0
+          ? currentOffer.product_data
+          : [{ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] }],
       });
-      // Here you might also setPriceListData if price list data comes from the API
     } else if (currentOfferStatus === 'failed') {
       toast.push(<Notification title="Load Error" type="danger">Failed to load offer details.</Notification>);
     }
   }, [currentOffer, currentOfferStatus, reset]);
+  
+  const { fields, append, remove } = useFieldArray({ control, name: "product_data" });
+  
+  const watchedProductGroups = watch("product_data");
 
-  const onFormSubmit = useCallback(
-    async (formData: OfferEditFormData) => {
-      if (!currentOffer?.id) {
-        toast.push(<Notification title="Error" type="danger">Cannot submit: Offer ID is missing.</Notification>);
-        return;
-      }
-      setIsSubmitting(true);
+  // --- Logic to populate a group's table when its product changes (same as create) ---
+  const handleProductChange = (groupIndex: number, productId: number | null) => {
+    setValue(`product_data.${groupIndex}.product_id`, productId);
+    
+    if (!productId) {
+      setValue(`product_data.${groupIndex}.items`, []);
+      return;
+    }
 
-      const apiPayload = {
-        id: currentOffer.id,
-        name: formData.name,
-        assign_user: formData.assignedUserId,
-        product_ids: formData.productIds,
-        seller_section: formData.sellers,
-        buyer_section: formData.buyers,
-        groupA: formData.groupA_notes,
-        groupB: formData.groupB_notes,
-      };
+    const productDetails = ProductsData.find((p: any) => parseInt(p.id) === productId);
+    const colors = productDetails?.color?.split(',') || [];
+    
+    const newItems = colors
+      .map((c: string) => c.trim())
+      .filter(Boolean)
+      .map((color: string) => ({ color }));
 
-      try {
-        await dispatch(editOfferAction(apiPayload)).unwrap();
-        toast.push(<Notification title="Offer Updated" type="success">Offer "{formData.name}" updated.</Notification>);
-        navigate("/sales-leads/offers-demands");
-      } catch (error: any) {
-        const errorMessage = error?.message || "Could not update offer.";
-        toast.push(<Notification title="Update Failed" type="danger">{errorMessage}</Notification>);
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [dispatch, navigate, currentOffer]
-  );
+    setValue(`product_data.${groupIndex}.items`, newItems, { shouldValidate: true });
+  };
+
+  // --- Totals calculation (same as create) ---
+  const totals = useMemo(() => {
+    let totalQty = 0;
+    let totalPrice = 0;
+    watchedProductGroups.forEach(group => {
+      group.items.forEach(item => {
+        totalQty += item.qty || 0;
+        totalPrice += (item.qty || 0) * (item.price || 0);
+      });
+    });
+    return { totalQty, totalPrice };
+  }, [watchedProductGroups]);
+
+
+  // --- Note generation (same as create) ---
+  const handleGenerateAndCopyNotes = () => {
+    const relevantGroups = watchedProductGroups.filter(
+        g => g.product_id && g.items.some(i => i.qty && i.qty > 0)
+    );
+
+    if (relevantGroups.length === 0) {
+      toast.push(<Notification title="No Data" type="warning">Enter a quantity for at least one item.</Notification>);
+      return;
+    }
+
+    let messageA = "";
+    let messageB = "";
+
+    relevantGroups.forEach(group => {
+        const productName = productOptions.find(p => p.value === group.product_id)?.label || "Unknown Product";
+        const selectedSpec = productSpecOptions.find(s => s.value === group.spec_id);
+
+        messageA += `Product: ${productName}\n`;
+        messageB += `Product: ${productName}\n`;
+        
+        if (selectedSpec) {
+          messageA += `Specification: ${selectedSpec.label}\n`;
+          messageB += `Specification: ${selectedSpec.label}\n`;
+        }
+        messageA += `Status: ${group.status.toUpperCase()}\n\n`;
+        messageB += `Status: ${group.status.toUpperCase()}\n\n`;
+        
+        group.items.forEach(item => {
+            if (item.qty && item.qty > 0) {
+                const price = item.price || 0;
+                messageA += `  - Color: ${item.color}, Qty: ${item.qty}, Price: $${price.toFixed(2)}\n`;
+                messageB += `  - Color: ${item.color}, Qty: ${item.qty}\n`;
+            }
+        });
+        messageA += "--------------------------------\n\n";
+        messageB += "--------------------------------\n\n";
+    });
+
+    messageA += `\nGrand Total Qty: ${totals.totalQty}\n`;
+    messageA += `Grand Total Price: $${totals.totalPrice.toFixed(2)}`;
+    
+    messageB += `\nTotal Qty: ${totals.totalQty}`;
+
+    setValue("groupA", messageA, { shouldDirty: true });
+    setValue("groupB", messageB, { shouldDirty: true });
+    toast.push(<Notification title="Success" type="info">Notes generated and copied below.</Notification>);
+  };
+
+  // --- Form Submission Handler for Editing ---
+  const onFormSubmit = useCallback(async (data: OfferFormData) => {
+    if (!offerId) return;
+
+    setIsSubmitting(true);
+    const apiPayload = {
+      id: offerId,
+      name: data.name,
+      groupA: data.groupA,
+      groupB: data.groupB,
+      assign_user: data.assign_user,
+      product_data: data.product_data.filter(p => p.product_id), // Clean out empty groups
+    };
+
+    try {
+      await dispatch(editOfferAction(apiPayload)).unwrap();
+      toast.push(<Notification title="Offer Updated" type="success">Offer "{data.name}" has been successfully updated.</Notification>);
+      navigate("/sales-leads/offers-demands");
+    } catch (error: any) {
+      const errorMessage = error?.message || "Could not update offer. Please try again.";
+      toast.push(<Notification title="Update Failed" type="danger">{errorMessage}</Notification>);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [dispatch, navigate, offerId]);
 
   const handleCancel = () => {
     navigate("/sales-leads/offers-demands");
@@ -222,6 +258,7 @@ const EditOffer = () => {
 
   const isLoading = currentOfferStatus === 'loading' || masterLoadingStatus === 'loading';
 
+  // --- Loading and Not Found States ---
   if (isLoading && !currentOffer) {
     return (
       <Container className="flex justify-center items-center h-full">
@@ -235,9 +272,9 @@ const EditOffer = () => {
     return (
       <Container className="text-center p-8">
         <h4 className="text-lg font-semibold mb-2">Offer Not Found</h4>
-        <p>The offer with ID "{offerIdFromParams}" could not be found.</p>
+        <p>The offer with ID "{offerId}" could not be found.</p>
         <Button className="mt-4" variant="solid" onClick={() => navigate("/sales-leads/offers-demands")}>
-          Back to Offers & Demands
+          Back to List
         </Button>
       </Container>
     );
@@ -250,200 +287,130 @@ const EditOffer = () => {
           <h6 className='font-semibold hover:text-primary-600 dark:hover:text-primary-400'>Offers & Demands</h6>
         </NavLink>
         <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
-        <h6 className='font-semibold text-primary'>Edit Offer (ID: {currentOffer?.generate_id || offerIdFromParams})</h6>
+        <h6 className='font-semibold text-primary'>Edit Offer (ID: {currentOffer?.generate_id || offerId})</h6>
       </div>
 
-      <Form id="editOfferForm" onSubmit={handleSubmit(onFormSubmit)}>
-        <Card>
-          <div className="flex justify-between items-center mb-6">
-            <h4>Edit Offer Details</h4>
-            <Button type="button" variant="solid" onClick={() => toast.push(<Notification title="Info" type="info">Price List feature coming soon!</Notification>)}>
-              View Price List
-            </Button>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <FormItem label="Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
-              <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Offer Name" />} />
-            </FormItem>
-            <FormItem label="Assign User" invalid={!!errors.assignedUserId} errorMessage={errors.assignedUserId?.message}>
-              <Controller name="assignedUserId" control={control} render={({ field }) => (
-                <UiSelect placeholder="Select Employee" options={userOptions}
-                  value={userOptions.find((opt: OptionType) => opt.value === field.value)}
-                  onChange={(option: OptionType | null) => field.onChange(option ? option.value : null)}
-                  isClearable />
-              )} />
-            </FormItem>
-
-            <FormItem label="Products" invalid={!!errors.productIds} errorMessage={errors.productIds?.message} className="md:col-span-2">
-              <Controller name="productIds" control={control} render={({ field }) => (
-                <UiSelect isMulti placeholder="Select Products" options={productOptions}
-                  value={productOptions.filter((opt) => field.value?.includes(opt.value as number))}
-                  onChange={(options: readonly OptionType[]) => field.onChange(options ? options.map(opt => opt.value) : [])}
-                  isLoading={isLoading} />
-              )} />
-            </FormItem>
-          </div>
-
-          {/* --- MODIFICATION START: Reordered Layout --- */}
-          {/* --- Seller and Buyer Selection --- */}
-          <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <Card>
-              <h5>Seller Section</h5>
-              <div className="mt-4">
-                <FormItem label="Sellers" invalid={!!errors.sellers} errorMessage={errors.sellers?.message}>
-                  <Controller name="sellers" control={control} render={({ field }) => (
-                    <UiSelect isMulti placeholder="Select Sellers" options={memberOptions}
-                      value={memberOptions.filter((opt) => field.value?.includes(opt.value as number))}
-                      onChange={(options: readonly OptionType[]) => field.onChange(options ? options.map(opt => opt.value) : [])}
-                      isLoading={isLoading} />
-                  )} />
-                </FormItem>
+      <Form id="editOfferForm" onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+        <Card className="mb-2">
+            <h4 className="mb-6">Edit Offer Details</h4>
+            <div className="grid md:grid-cols-2 gap-4">
+              <FormItem label="Offer Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
+                <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Q4 Gadget Offer" />} />
+              </FormItem>
+              <FormItem label="Assign To User" invalid={!!errors.assign_user} errorMessage={errors.assign_user?.message}>
+                <Controller name="assign_user" control={control} render={({ field }) => <UiSelect placeholder="Select Employee" options={userOptions} value={userOptions.find(opt => opt.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} isClearable />} />
+              </FormItem>
+            </div>
+        </Card>
+        
+        {fields.map((field, index) => (
+          <Card key={field.id} className="mb-2">
+              <div className="flex justify-end mb-2">
+                <Button size="sm" type="button" icon={<TbPlus />} onClick={() => append({ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] })}>
+                    Add Product Group
+                </Button>
               </div>
-            </Card>
-            <Card>
-              <h5>Buyer Section</h5>
-              <div className="mt-4">
-                <FormItem label="Buyers" invalid={!!errors.buyers} errorMessage={errors.buyers?.message}>
-                  <Controller name="buyers" control={control} render={({ field }) => (
-                    <UiSelect isMulti placeholder="Select Buyers" options={memberOptions}
-                      value={memberOptions.filter((opt) => field.value?.includes(opt.value as number))}
-                      onChange={(options: readonly OptionType[]) => field.onChange(options ? options.map(opt => opt.value) : [])}
-                      isLoading={isLoading} />
-                  )} />
-                </FormItem>
+              <div className="flex justify-between items-center mb-4">
+                  <h5 className="mb-0">Product Group #{index + 1}</h5>
+                  {fields.length > 1 && (
+                    <Button shape="circle" size="sm" type="button" color="red-600" icon={<TbTrash />} onClick={() => remove(index)} />
+                  )}
               </div>
-            </Card>
-          </div>
+              
+              <div className="p-4 border rounded-md dark:border-gray-600 grid lg:grid-cols-3 gap-4 items-start mb-6">
+                  <div>
+                      <FormItem label="Product" invalid={!!errors.product_data?.[index]?.product_id} errorMessage={errors.product_data?.[index]?.product_id?.message}>
+                          <Controller name={`product_data.${index}.product_id`} control={control} render={({ field: { value }}) => 
+                              <UiSelect placeholder="Select Product..." options={productOptions} value={productOptions.find(opt => opt.value === value)} onChange={(option) => handleProductChange(index, option ? option.value as number : null)} isLoading={isLoading} />
+                          } />
+                      </FormItem>
+                  </div>
+                  <div>
+                      <FormItem label="Sellers" invalid={!!errors.product_data?.[index]?.seller_ids} errorMessage={errors.product_data?.[index]?.seller_ids?.message}>
+                          <Controller name={`product_data.${index}.seller_ids`} control={control} render={({ field: { onChange, value }}) => 
+                              <UiSelect isMulti placeholder="Select Sellers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />
+                          } />
+                      </FormItem>
+                  </div>
+                  <div>
+                      <FormItem label="Buyers" invalid={!!errors.product_data?.[index]?.buyer_ids} errorMessage={errors.product_data?.[index]?.buyer_ids?.message}>
+                          <Controller name={`product_data.${index}.buyer_ids`} control={control} render={({ field: { onChange, value }}) => 
+                              <UiSelect isMulti placeholder="Select Buyers..." options={memberOptions} value={memberOptions.filter(opt => value?.includes(opt.value as number))} onChange={(options) => onChange(options ? options.map(opt => opt.value) : [])} isLoading={isLoading} />
+                          } />
+                      </FormItem>
+                  </div>
+              </div>
 
-          {/* --- Price List Table View (Moved) --- */}
-          <Card className="mt-4">
-            {/* <h5 className="mb-4">Price List Details</h5> */}
-
-            <div className="grid lg:grid-cols-3 gap-4 mb-4">
-              <FormItem label="Add Product">
-                <Controller name="priceListProduct" control={control} render={({ field }) => (
-                  <UiSelect placeholder="Select a Product" options={productOptions}
-                    value={productOptions.find((o) => o.value === field.value)}
-                    onChange={(option: OptionType | null) => field.onChange(option ? option.value : null)}
-                  />
-                )}
-                />
-              </FormItem>
-
-              <FormItem label="Status">
-                <Controller name="productStatus" control={control} render={({ field }) => (
-                  <Radio.Group value={field.value} onChange={field.onChange} className="flex items-center gap-x-6 h-full">
-                    {statusOptions.map((option) => (
-                      <Radio key={option.value} value={option.value}>
-                        {option.label}
-                      </Radio>
-                    ))}
-                  </Radio.Group>
-                )}
-                />
-              </FormItem>
-
-              <FormItem label="Product Spec Options">
-                <Controller name="productSpec" control={control} render={({ field }) => (
-                  <UiSelect placeholder="Select a Spec" options={specOptions}
-                    value={specOptions.find((o) => o.value === field.value)}
-                    onChange={(option: OptionType | null) => field.onChange(option ? option.value : null)}
-                  />
-                )}
-                />
-              </FormItem>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr No</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {priceListData.map((item, index) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 whitespace-nowrap">{index + 1}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{item.color}</td>
-                      {/* --- MODIFICATION: Qty as Input --- */}
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <Input
-                          type="number"
-                          size="sm"
-                          value={item.qty}
-                          onChange={(e) => handlePriceListChange(index, 'qty', e.target.value)}
-                        />
-                      </td>
-                      {/* --- MODIFICATION: Price as Input --- */}
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <Input
-                          type="number"
-                          size="sm"
-                          step="0.01"
-                          value={item.price}
-                          onChange={(e) => handlePriceListChange(index, 'price', e.target.value)}
-                          prefix="$"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-end items-center gap-4 mt-4">
-              <Input readOnly value={totals.totalQty} prefix="Total Qty:" className="w-48" />
-              <Input readOnly value={`$${totals.totalPrice.toFixed(2)}`} prefix="Total Price:" className="w-56" />
-            </div>
+              {watchedProductGroups[index]?.product_id && (
+                  <>
+                      <div className="grid lg:grid-cols-2 gap-4 mb-4">
+                          <FormItem label="Status">
+                              <Controller name={`product_data.${index}.status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={option.value} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
+                          </FormItem>
+                          <FormItem label="Product Spec Options">
+                              <Controller name={`product_data.${index}.spec_id`} control={control} render={({ field }) => <UiSelect placeholder="Select a Spec" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} />} />
+                          </FormItem>
+                      </div>
+                      <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                              <thead className="bg-gray-50 dark:bg-gray-700">
+                                  <tr>
+                                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
+                                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Qty</th>
+                                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Price</th>
+                                  </tr>
+                              </thead>
+                              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                  {watchedProductGroups[index].items.map((item, itemIndex) => (
+                                  <tr key={`${field.id}-item-${itemIndex}`}>
+                                      <td className="px-4 py-3 whitespace-nowrap font-semibold">{item.color}</td>
+                                      <td className="px-2 py-1 whitespace-nowrap">
+                                        <Controller name={`product_data.${index}.items.${itemIndex}.qty`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0" />} />
+                                      </td>
+                                      <td className="px-2 py-1 whitespace-nowrap">
+                                        <Controller name={`product_data.${index}.items.${itemIndex}.price`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" step="0.01" prefix="$" placeholder="0.00" />} />
+                                      </td>
+                                  </tr>
+                                  ))}
+                              </tbody>
+                          </table>
+                      </div>
+                  </>
+              )}
           </Card>
+        ))}
 
-          {/* --- Group Notes --- */}
-          <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <Card>
-              <h5>Group A Notes</h5>
-              <div className="mt-4">
-                <FormItem invalid={!!errors.groupA_notes} errorMessage={errors.groupA_notes?.message}>
-                  <Controller name="groupA_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Notes for Seller Section" rows={3} />} />
-                </FormItem>
-                <div className="text-right mt-1">
-                  <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues("groupA_notes") || ""); toast.push(<Notification title="Copied" type="info">Group A notes copied to clipboard.</Notification>); }} />
-                  <Button type="button" shape="circle" icon={<TbMail />} onClick={() => toast.push(<Notification title="Action" type="info">Send Email action triggered.</Notification>)} />
-                  <Button type="button" shape="circle" icon={<TbBrandWhatsapp />} onClick={() => toast.push(<Notification title="Action" type="info">Send WhatsApp action triggered.</Notification>)} />
-                </div>
+        <Card className="mb-2">
+          <div className="flex justify-between items-center gap-4">
+              <Button type="button" variant="outline" icon={<TbFileText />} onClick={handleGenerateAndCopyNotes}>
+                  Generate & Copy Notes
+              </Button>
+              <div className="flex items-center gap-4">
+                  <Input readOnly value={totals.totalQty} prefix="Total Qty:" className="w-48" />
+                  <Input readOnly value={`$${totals.totalPrice.toFixed(2)}`} prefix="Total Price:" className="w-56" />
               </div>
-            </Card>
-            <Card>
-              <h5>Group B Notes</h5>
-              <div className="mt-4">
-                <FormItem invalid={!!errors.groupB_notes} errorMessage={errors.groupB_notes?.message}>
-                  <Controller name="groupB_notes" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} textArea placeholder="Notes for Buyer Section" rows={3} />} />
-                </FormItem>
-                <div className="text-right mt-1">
-                  <Button type="button" icon={<TbCopy />} onClick={() => { navigator.clipboard.writeText(getValues("groupB_notes") || ""); toast.push(<Notification title="Copied" type="info">Group B notes copied to clipboard.</Notification>); }} />
-                  <Button type="button" shape="circle" icon={<TbMail />} onClick={() => toast.push(<Notification title="Action" type="info">Send Email action triggered.</Notification>)} />
-                  <Button type="button" shape="circle" icon={<TbBrandWhatsapp />} onClick={() => toast.push(<Notification title="Action" type="info">Send WhatsApp action triggered.</Notification>)} />
-                </div>
-              </div>
-            </Card>
           </div>
-          <div className="p-4 mb-4 rounded-md bg-yellow-100 dark:bg-yellow-500/20 border-l-4 border-yellow-400 dark:border-yellow-500 text-yellow-800 dark:text-yellow-200 flex items-center gap-3">
-            <TbAlertTriangle className="h-5 w-5" />
-            <div>
-              <span className="font-semibold">Note:</span> The UI for the product table data  is not saving to the backend.
-            </div>
-          </div>
-          {/* --- MODIFICATION END --- */}
         </Card>
 
-        <Card bodyClass="flex justify-end gap-2" className='mt-4'>
+        <div className="grid md:grid-cols-2 gap-6 mb-4">
+          <Card>
+            <h5 className="mb-4">Group A Notes</h5>
+            <FormItem invalid={!!errors.groupA} errorMessage={errors.groupA?.message}>
+              <Controller name="groupA" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate & Copy Notes' to populate..." rows={12} />} />
+            </FormItem>
+          </Card>
+          <Card>
+            <h5 className="mb-4">Group B Notes</h5>
+            <FormItem invalid={!!errors.groupB} errorMessage={errors.groupB?.message}>
+              <Controller name="groupB" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate & Copy Notes' to populate..." rows={12} />} />
+            </FormItem>
+          </Card>
+        </div>
+
+        <Card bodyClass="flex justify-end gap-2">
           <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
-          <Button type="submit" form="editOfferForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || !isDirty || isLoading}>
-            {isSubmitting ? "Saving..." : "Save Changes"}
+          <Button type="submit" form="editOfferForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || isLoading || !isDirty}>
+              {isSubmitting ? "Saving..." : 'Save Changes'}
           </Button>
         </Card>
       </Form>

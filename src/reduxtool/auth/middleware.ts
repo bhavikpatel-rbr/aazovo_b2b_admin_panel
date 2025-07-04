@@ -74,17 +74,17 @@ export const loginUserByEmailAction = createAsyncThunk<
           showMessage({
             ...defaultMessageObj,
             type: "success",
-            messageText: "Login successful! Welcome.",
+            messageText: response?.data?.message,
           })
         )
         return response?.data
       }
-
+      console.log("response", response)
       dispatch(
         showMessage({
           ...defaultMessageObj,
           type: "error",
-          messageText: response?.data?.error || "Login failed. Please check your credentials.",
+          messageText: response?.message,
         })
       )
 
