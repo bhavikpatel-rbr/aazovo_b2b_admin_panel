@@ -187,7 +187,83 @@ interface MemberModalsProps { modalState: MemberModalState; onClose: () => void;
 
 const dummyUsers = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" }];
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }];
-const eventTypeOptions = [{ value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }];
+const eventTypeOptions = [
+  // Customer Engagement & Sales
+  { value: 'Meeting', label: 'Meeting' },
+  { value: 'Demo', label: 'Product Demo' },
+  { value: 'IntroCall', label: 'Introductory Call' },
+  { value: 'FollowUpCall', label: 'Follow-up Call' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'CheckIn', label: 'Customer Check-in' },
+  { value: 'LogEmail', label: 'Log an Email' },
+
+  // Project & Task Management
+  { value: 'Milestone', label: 'Project Milestone' },
+  { value: 'Task', label: 'Task' },
+  { value: 'FollowUp', label: 'General Follow-up' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+  // Customer Onboarding & Support
+  { value: 'OnboardingSession', label: 'Onboarding Session' },
+  { value: 'Training', label: 'Training Session' },
+  { value: 'SupportCall', label: 'Support Call' },
+
+  // General & Administrative
+  { value: 'Reminder', label: 'Reminder' },
+  { value: 'Note', label: 'Add a Note' },
+  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+  { value: 'StrategySession', label: 'Strategy Session' },
+  { value: 'TeamMeeting', label: 'Team Meeting' },
+  { value: 'PerformanceReview', label: 'Performance Review' },
+  { value: 'Lunch', label: 'Lunch / Break' },
+  { value: 'Appointment', label: 'Personal Appointment' },
+  { value: 'Other', label: 'Other' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+  { value: 'InternalSync', label: 'Internal Team Sync' },
+  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+  { value: 'ProjectSignOff', label: 'Project Sign-off' },
+  { value: 'PrepareReport', label: 'Prepare Report' },
+  { value: 'PresentFindings', label: 'Present Findings' },
+  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+  { value: 'BugReplication', label: 'Bug Replication Session' },
+  { value: 'IssueEscalation', label: 'Escalate Issue' },
+  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+  { value: 'FeatureRequest', label: 'Log Feature Request' },
+  { value: 'IntegrationSupport', label: 'Integration Support Call' },
+  { value: 'DataMigration', label: 'Data Migration/Import Task' },
+  { value: 'ColdCall', label: 'Cold Call' },
+  { value: 'DiscoveryCall', label: 'Discovery Call' },
+  { value: 'QualificationCall', label: 'Qualification Call' },
+  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+  { value: 'ContractSent', label: 'Contract Sent' },
+  { value: 'NegotiationCall', label: 'Negotiation Call' },
+  { value: 'TrialSetup', label: 'Product Trial Setup' },
+  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+  { value: 'WelcomeCall', label: 'Welcome Call' },
+  { value: 'ImplementationSession', label: 'Implementation Session' },
+  { value: 'UserTraining', label: 'User Training Session' },
+  { value: 'AdminTraining', label: 'Admin Training Session' },
+  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'HealthCheck', label: 'Customer Health Check' },
+  { value: 'FeedbackSession', label: 'Feedback Session' },
+  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+  { value: 'InvoiceDue', label: 'Invoice Due' },
+  { value: 'SendInvoice', label: 'Send Invoice' },
+  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+  { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
 const dummyAlerts = [{ id: 1, severity: "danger", message: "KYC verification failed. Please re-submit documents.", time: "2 days ago", }, { id: 2, severity: "warning", message: "Membership renewal is due in 7 days.", time: "5 days ago", }];
 const dummyTimeline = [{ id: 1, icon: <TbMail />, title: "Email Sent", desc: "Sent welcome email and onboarding guide.", time: "2023-11-01", }, { id: 2, icon: <TbCalendar />, title: "Onboarding Call Scheduled", desc: "Scheduled a call to discuss platform features.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Member Joined", desc: "Initial registration completed.", time: "2023-10-27", }];
 const dummyDocs = [{ id: "doc1", name: "ID_Proof_Passport.pdf", type: "pdf", size: "1.8 MB", }, { id: "doc2", name: "Company_Registration.zip", type: "zip", size: "5.2 MB", }];

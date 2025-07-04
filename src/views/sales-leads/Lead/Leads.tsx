@@ -179,15 +179,91 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
 };
 
 // --- Dummy/Static Data ---
-const dummyProducts = [ { id: 1, name: "iPhone 15 Pro" }, { id: 2, name: "Galaxy S24 Ultra" }, ];
-const dummySalesPersons = [ { id: "SP001", name: "Alice Wonder" }, { id: "SP002", name: "Bob Builder" }, ];
-const dummyUsers = [ { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" }, ];
-const priorityOptions = [ { value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, ];
-const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
-const dummyAlerts = [ { id: 1, severity: "danger", message: "Follow-up for Lead #LD-1023 is overdue.", time: "3 days ago", }, { id: 2, severity: "warning", message: "Lead has been in 'New' status for 7 days.", time: "1 week ago", }, ];
-const dummyDocs = [ { id: "doc1", name: "Product_Quote_LD-1023.pdf", type: "pdf", size: "1.2 MB", }, { id: "doc2", name: "Lead_Requirements.zip", type: "zip", size: "8.4 MB" }, ];
-const dummyFeedback = [ { id: "f1", type: "Question", subject: "Inquiry about bulk pricing", status: "Open" }, { id: "f2", type: "Comment", subject: "Positive interaction with sales", status: "Closed" }, ];
-const dummyOpportunities = [ { id: 'OPP-001', name: 'Bulk Order for Product X', stage: 'Negotiation', value: 50000, closeDate: '2024-08-30' }, { id: 'OPP-002', name: 'Annual Service Contract', stage: 'Proposal Sent', value: 12000, closeDate: '2024-09-15' }, ];
+const dummyProducts = [{ id: 1, name: "iPhone 15 Pro" }, { id: 2, name: "Galaxy S24 Ultra" },];
+const dummySalesPersons = [{ id: "SP001", name: "Alice Wonder" }, { id: "SP002", name: "Bob Builder" },];
+const dummyUsers = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },];
+const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
+const eventTypeOptions = [
+  // Customer Engagement & Sales
+  { value: 'Meeting', label: 'Meeting' },
+  { value: 'Demo', label: 'Product Demo' },
+  { value: 'IntroCall', label: 'Introductory Call' },
+  { value: 'FollowUpCall', label: 'Follow-up Call' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'CheckIn', label: 'Customer Check-in' },
+  { value: 'LogEmail', label: 'Log an Email' },
+
+  // Project & Task Management
+  { value: 'Milestone', label: 'Project Milestone' },
+  { value: 'Task', label: 'Task' },
+  { value: 'FollowUp', label: 'General Follow-up' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+  // Customer Onboarding & Support
+  { value: 'OnboardingSession', label: 'Onboarding Session' },
+  { value: 'Training', label: 'Training Session' },
+  { value: 'SupportCall', label: 'Support Call' },
+
+  // General & Administrative
+  { value: 'Reminder', label: 'Reminder' },
+  { value: 'Note', label: 'Add a Note' },
+  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+  { value: 'StrategySession', label: 'Strategy Session' },
+  { value: 'TeamMeeting', label: 'Team Meeting' },
+  { value: 'PerformanceReview', label: 'Performance Review' },
+  { value: 'Lunch', label: 'Lunch / Break' },
+  { value: 'Appointment', label: 'Personal Appointment' },
+  { value: 'Other', label: 'Other' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+  { value: 'InternalSync', label: 'Internal Team Sync' },
+  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+  { value: 'ProjectSignOff', label: 'Project Sign-off' },
+  { value: 'PrepareReport', label: 'Prepare Report' },
+  { value: 'PresentFindings', label: 'Present Findings' },
+  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+  { value: 'BugReplication', label: 'Bug Replication Session' },
+  { value: 'IssueEscalation', label: 'Escalate Issue' },
+  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+  { value: 'FeatureRequest', label: 'Log Feature Request' },
+  { value: 'IntegrationSupport', label: 'Integration Support Call' },
+  { value: 'DataMigration', label: 'Data Migration/Import Task' },
+  { value: 'ColdCall', label: 'Cold Call' },
+  { value: 'DiscoveryCall', label: 'Discovery Call' },
+  { value: 'QualificationCall', label: 'Qualification Call' },
+  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+  { value: 'ContractSent', label: 'Contract Sent' },
+  { value: 'NegotiationCall', label: 'Negotiation Call' },
+  { value: 'TrialSetup', label: 'Product Trial Setup' },
+  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+  { value: 'WelcomeCall', label: 'Welcome Call' },
+  { value: 'ImplementationSession', label: 'Implementation Session' },
+  { value: 'UserTraining', label: 'User Training Session' },
+  { value: 'AdminTraining', label: 'Admin Training Session' },
+  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'HealthCheck', label: 'Customer Health Check' },
+  { value: 'FeedbackSession', label: 'Feedback Session' },
+  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+  { value: 'InvoiceDue', label: 'Invoice Due' },
+  { value: 'SendInvoice', label: 'Send Invoice' },
+  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+  { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
+const dummyAlerts = [{ id: 1, severity: "danger", message: "Follow-up for Lead #LD-1023 is overdue.", time: "3 days ago", }, { id: 2, severity: "warning", message: "Lead has been in 'New' status for 7 days.", time: "1 week ago", },];
+const dummyDocs = [{ id: "doc1", name: "Product_Quote_LD-1023.pdf", type: "pdf", size: "1.2 MB", }, { id: "doc2", name: "Lead_Requirements.zip", type: "zip", size: "8.4 MB" },];
+const dummyFeedback = [{ id: "f1", type: "Question", subject: "Inquiry about bulk pricing", status: "Open" }, { id: "f2", type: "Comment", subject: "Positive interaction with sales", status: "Closed" },];
+const dummyOpportunities = [{ id: 'OPP-001', name: 'Bulk Order for Product X', stage: 'Negotiation', value: 50000, closeDate: '2024-08-30' }, { id: 'OPP-002', name: 'Annual Service Contract', stage: 'Proposal Sent', value: 12000, closeDate: '2024-09-15' },];
 const dummyDeal = { id: 'DEAL-789', value: 75000, pipeline: 'Sales Pipeline', stage: 'Won', closeDate: '2024-07-20' };
 
 
@@ -198,15 +274,15 @@ function exportLeadsToCsv(filename: string, rows: LeadListItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
   const separator = ",";
   const csvContent = CSV_LEAD_HEADERS.join(separator) + "\n" + rows.map((row) => {
-        return CSV_LEAD_KEYS.map((k) => {
-          let cell = row[k];
-          if (cell === null || cell === undefined) cell = "";
-          else if (cell instanceof Date) cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-          return cell;
-        }).join(separator);
-      }).join("\n");
+    return CSV_LEAD_KEYS.map((k) => {
+      let cell = row[k];
+      if (cell === null || cell === undefined) cell = "";
+      else if (cell instanceof Date) cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
+      else cell = String(cell).replace(/"/g, '""');
+      if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+      return cell;
+    }).join(separator);
+  }).join("\n");
   const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;", });
   const link = document.createElement("a");
   if (link.download !== undefined) {
@@ -219,7 +295,7 @@ function exportLeadsToCsv(filename: string, rows: LeadListItem[]) {
 
 // --- Internal Flattened Type for component use ---
 type LeadListItem = {
-    id: string | number; lead_number: string; lead_status: LeadStatus; enquiry_type: EnquiryType; productId?: number; productName: string; customerId: string | number; customerName: string; lead_intent: LeadIntent; qty?: number | null; target_price?: number | null; assigned_sales_person_id?: string | number | null; salesPersonName?: string; createdAt: Date; updatedAt?: Date; source_supplier_id?: string | number | null; sourceSupplierName?: string; rawApiData: any; buyer: any; supplier: any; member_email?: string; member_phone?: string;
+  id: string | number; lead_number: string; lead_status: LeadStatus; enquiry_type: EnquiryType; productId?: number; productName: string; customerId: string | number; customerName: string; lead_intent: LeadIntent; qty?: number | null; target_price?: number | null; assigned_sales_person_id?: string | number | null; salesPersonName?: string; createdAt: Date; updatedAt?: Date; source_supplier_id?: string | number | null; sourceSupplierName?: string; rawApiData: any; buyer: any; supplier: any; member_email?: string; member_phone?: string;
 };
 
 export type SelectOption = { value: any; label: string };
@@ -370,29 +446,29 @@ const SendWhatsAppDialog: React.FC<{ lead: LeadListItem; onClose: () => void; }>
   );
 };
 const AddNotificationDialog: React.FC<{ lead: LeadListItem; onClose: () => void; getAllUserDataOptions: SelectOption[]; }> = ({ lead, onClose, getAllUserDataOptions }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
-    type NotificationFormData = z.infer<typeof notificationSchema>;
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Update on Lead: ${lead.lead_number}`, send_users: [], message: `This is a notification regarding lead ID ${lead.lead_number} for the product "${lead.productName}".` }, mode: 'onChange' });
-    const onSend = async (formData: NotificationFormData) => {
-      setIsLoading(true);
-      const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(lead.id), module_name: 'Lead', };
-      try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); } 
-      catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } 
-      finally { setIsLoading(false); }
-    };
-    return (
-      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-        <h5 className="mb-4">Add Notification for {lead.lead_number}</h5>
-        <Form onSubmit={handleSubmit(onSend)}>
-          <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-          <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} /> )}/></FormItem>
-          <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
-          <div className="text-right mt-6"><Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
-        </Form>
-      </Dialog>
-    );
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
+  type NotificationFormData = z.infer<typeof notificationSchema>;
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Update on Lead: ${lead.lead_number}`, send_users: [], message: `This is a notification regarding lead ID ${lead.lead_number} for the product "${lead.productName}".` }, mode: 'onChange' });
+  const onSend = async (formData: NotificationFormData) => {
+    setIsLoading(true);
+    const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(lead.id), module_name: 'Lead', };
+    try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); }
+    catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); }
+    finally { setIsLoading(false); }
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for {lead.lead_number}</h5>
+      <Form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
+        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
+        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
+      </Form>
+    </Dialog>
+  );
 };
 const AssignTaskDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = ({ lead, onClose, }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -407,10 +483,10 @@ const AssignTaskDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = 
       <form onSubmit={handleSubmit(onAssignTask)}>
         <FormItem label="Task Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => (<UiSelect placeholder="Select User" options={dummyUsers} {...field} />)}/></FormItem>
+          <FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => (<UiSelect placeholder="Select User" options={dummyUsers} {...field} />)} /></FormItem>
           <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={priorityOptions} {...field} />)} /></FormItem>
         </div>
-        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />)}/></FormItem>
+        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />)} /></FormItem>
         <FormItem label="Description"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
         <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Assign Task</Button></div>
       </form>
@@ -428,7 +504,7 @@ const AddScheduleDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> =
       await dispatch(addScheduleAction(payload)).unwrap();
       toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for lead ${lead.lead_number}.`} />);
       onClose();
-    } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || "An unknown error occurred."} />); } 
+    } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || "An unknown error occurred."} />); }
     finally { setIsLoading(false); }
   };
   return (
@@ -437,10 +513,10 @@ const AddScheduleDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> =
       <Form onSubmit={handleSubmit(onAddEvent)}>
         <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find((o) => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)}/></FormItem>
-          <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange}/>)}/></FormItem>
+          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find((o) => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
+          <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
         </div>
-        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange}/>)}/></FormItem>
+        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
         <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
         <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div>
       </Form>
@@ -457,11 +533,11 @@ const ViewAlertDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> = (
           dummyAlerts.map((alert) => (
             <div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`}>
               <div className="flex justify-between items-start">
-                <div className="flex items-start gap-2"><TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20}/><p className="text-sm">{alert.message}</p></div>
+                <div className="flex items-start gap-2"><TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} /><p className="text-sm">{alert.message}</p></div>
                 <span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span>
               </div>
             </div>))
-        ) : ( <p>No active alerts.</p> )}
+        ) : (<p>No active alerts.</p>)}
       </div>
       <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
     </Dialog>
@@ -542,7 +618,7 @@ const LeadActionColumn = ({ onViewDetail, onEdit, onDelete, onAssign, onChangeSt
     </div>
   );
 };
-const LeadSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void; placeholder?: string }> (({ onInputChange, ...rest }, ref) => (<DebouceInput ref={ref} {...rest} suffix={<TbSearch className="text-lg" />} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)} />));
+const LeadSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void; placeholder?: string }>(({ onInputChange, ...rest }, ref) => (<DebouceInput ref={ref} {...rest} suffix={<TbSearch className="text-lg" />} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)} />));
 LeadSearch.displayName = "LeadSearch";
 
 const LeadTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
@@ -574,23 +650,23 @@ const LeadTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
       setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
     }
   };
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <LeadSearch onInputChange={onSearchChange} placeholder="Quick Search..." />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
-                    </div>
-                </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
-            </div>
-        </div>
-    )
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <LeadSearch onInputChange={onSearchChange} placeholder="Quick Search..." />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
+          </div>
+        </Dropdown>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+      </div>
+    </div>
+  )
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
@@ -598,18 +674,18 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
   onClearAll: () => void;
 }) => {
-    const hasFilters = Object.values(filterData).some(v => Array.isArray(v) && v.length > 0);
-    if (!hasFilters) return null;
+  const hasFilters = Object.values(filterData).some(v => Array.isArray(v) && v.length > 0);
+  if (!hasFilters) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterData.filterStatuses?.map(item => <Tag key={`status-${item}`} prefix>Status: {item} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', item)} /></Tag>)}
-            {filterData.filterEnquiryTypes?.map(item => <Tag key={`enquiry-${item}`} prefix>Enquiry: {item} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterEnquiryTypes', item)} /></Tag>)}
-            {filterData.filterIntents?.map(item => <Tag key={`intent-${item}`} prefix>Intent: {item} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterIntents', item)} /></Tag>)}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterData.filterStatuses?.map(item => <Tag key={`status-${item}`} prefix>Status: {item} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatuses', item)} /></Tag>)}
+      {filterData.filterEnquiryTypes?.map(item => <Tag key={`enquiry-${item}`} prefix>Enquiry: {item} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterEnquiryTypes', item)} /></Tag>)}
+      {filterData.filterIntents?.map(item => <Tag key={`intent-${item}`} prefix>Intent: {item} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterIntents', item)} /></Tag>)}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 const LeadTable = (props: any) => <DataTable {...props} />;
@@ -654,20 +730,20 @@ const LeadsListing = () => {
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "createdAt" }, query: "", });
   const [selectedItems, setSelectedItems] = useState<LeadListItem[]>([]);
-  
+
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const assignFormMethods = useForm<{ salesPersonId: string | number | null }>({ defaultValues: { salesPersonId: null } });
   const statusFormMethods = useForm<{ newStatus: LeadStatus }>({ defaultValues: { newStatus: "New" } });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" } });
   const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((user: any) => ({ value: user.id, label: user.name })) : [], [getAllUserData]);
-  
+
   useEffect(() => { dispatch(getLeadAction()); dispatch(getAllUsersAction()); }, [dispatch]);
 
   const mappedLeads: LeadListItem[] = useMemo(() => {
     if (!Array.isArray(LeadsData?.data?.data)) return [];
     return LeadsData?.data?.data.map((apiLead: any): LeadListItem => ({
-        id: apiLead.id, lead_number: apiLead.lead_number || `LD-${apiLead.id}`, lead_status: apiLead.lead_status || "New", enquiry_type: apiLead.enquiry_type || "Other", productId: apiLead.product?.id, productName: apiLead.product?.name ?? "N/A", customerId: String(apiLead.customer?.id ?? (apiLead.member_id || "N/A")), customerName: apiLead.customer?.name ?? "N/A", lead_intent: apiLead.lead_intent || "Buy", qty: apiLead.qty, target_price: apiLead.target_price, assigned_sales_person_id: apiLead.assigned_sales_person_id, salesPersonName: apiLead.sales_person_name, createdAt: new Date(apiLead.created_at), updatedAt: apiLead.updated_at ? new Date(apiLead.updated_at) : undefined, source_supplier_id: apiLead.source_supplier_id, sourceSupplierName: apiLead.source_supplier?.name, rawApiData: apiLead, buyer: apiLead.buyer, supplier: apiLead.supplier, member_email: apiLead.customer?.email, member_phone: apiLead.customer?.mobile_no
-      })
+      id: apiLead.id, lead_number: apiLead.lead_number || `LD-${apiLead.id}`, lead_status: apiLead.lead_status || "New", enquiry_type: apiLead.enquiry_type || "Other", productId: apiLead.product?.id, productName: apiLead.product?.name ?? "N/A", customerId: String(apiLead.customer?.id ?? (apiLead.member_id || "N/A")), customerName: apiLead.customer?.name ?? "N/A", lead_intent: apiLead.lead_intent || "Buy", qty: apiLead.qty, target_price: apiLead.target_price, assigned_sales_person_id: apiLead.assigned_sales_person_id, salesPersonName: apiLead.sales_person_name, createdAt: new Date(apiLead.created_at), updatedAt: apiLead.updated_at ? new Date(apiLead.updated_at) : undefined, source_supplier_id: apiLead.source_supplier_id, sourceSupplierName: apiLead.source_supplier?.name, rawApiData: apiLead, buyer: apiLead.buyer, supplier: apiLead.supplier, member_email: apiLead.customer?.email, member_phone: apiLead.customer?.mobile_no
+    })
     );
   }, [LeadsData?.data?.data]);
 
@@ -771,7 +847,7 @@ const LeadsListing = () => {
       toast.push(<Notification title="Export Reason Submitted" type="success" />);
       exportLeadsToCsv(fileName, allFilteredAndSortedData);
       toast.push(<Notification title="Data Exported" type="success">Leads data exported.</Notification>); setIsExportReasonModalOpen(false);
-    } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."}/>); }
+    } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />); }
     finally { setIsSubmittingExportReason(false); }
   };
 
@@ -793,29 +869,29 @@ const LeadsListing = () => {
   const handleCardClick = (status: LeadStatus) => { onClearFilters(); setFilterCriteria({ filterStatuses: [status] }); };
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: string) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        const currentValues = prev[key] as string[] | undefined;
-        if (currentValues) {
-            const newValues = currentValues.filter(item => item !== value);
-            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
-        }
-        return newFilters;
+      const newFilters = { ...prev };
+      const currentValues = prev[key] as string[] | undefined;
+      if (currentValues) {
+        const newValues = currentValues.filter(item => item !== value);
+        (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+      }
+      return newFilters;
     });
     handleSetTableData({ pageIndex: 1 });
   }, [handleSetTableData]);
 
   const columns: ColumnDef<LeadListItem>[] = useMemo(
     () => [
-      { header: "Lead", accessorKey: "lead_number", size: 130, cell: (props) => ( <div className="flex flex-col gap-0.5 text-xs"><span>{props.getValue() as string}</span><div><Tag className={`${enquiryTypeColor[props.row.original.enquiry_type] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiry_type}</Tag></div></div> ), },
+      { header: "Lead", accessorKey: "lead_number", size: 130, cell: (props) => (<div className="flex flex-col gap-0.5 text-xs"><span>{props.getValue() as string}</span><div><Tag className={`${enquiryTypeColor[props.row.original.enquiry_type] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiry_type}</Tag></div></div>), },
       { header: "Product", accessorKey: "productName", size: 200, cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || "-", },
       { header: "Status", accessorKey: "lead_status", size: 120, cell: (props: CellContext<LeadListItem, any>) => (<Tag className={`${leadStatusColor[props.row.original.lead_status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.lead_status}</Tag>), },
-      { header: "Member", accessorKey: "customerName", size: 180, cell: (props: CellContext<LeadListItem, any>) => { const { buyer, supplier } = props.row.original; const buyerInfo = buyer ? (<><b>Buyer: {buyer.id}</b><span>{buyer.name}</span></>) : (<span>Buyer: N/A</span>); return ( <div className="flex flex-col gap-1 text-xs">{buyerInfo}</div> ); }, },
+      { header: "Member", accessorKey: "customerName", size: 180, cell: (props: CellContext<LeadListItem, any>) => { const { buyer, supplier } = props.row.original; const buyerInfo = buyer ? (<><b>Buyer: {buyer.id}</b><span>{buyer.name}</span></>) : (<span>Buyer: N/A</span>); return (<div className="flex flex-col gap-1 text-xs">{buyerInfo}</div>); }, },
       { header: "Details", size: 220, cell: (props: CellContext<LeadListItem, any>) => { const formattedDate = props.row.original.createdAt ? `${new Date(props.row.original.createdAt).getDate()} ${new Date(props.row.original.createdAt).toLocaleString("en-US", { month: "short", })} ${new Date(props.row.original.createdAt).getFullYear()}, ${new Date(props.row.original.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, })}` : "N/A"; return (<div className="flex flex-col gap-0.5 text-xs"><div><Tag>{props.row.original.lead_intent || "Buy"}</Tag><span>Qty: {props.row.original.qty ?? "-"}</span></div><span>Target Price: {props.row.original.target_price ?? "-"}</span><span>Sales Person : {props.row.original.salesPersonName || "Unassigned"}</span><b>{formattedDate}</b></div>); }, },
       { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props: CellContext<LeadListItem, any>) => (<LeadActionColumn onViewDetail={() => openViewDialog(props.row.original)} onEdit={() => handleOpenEditLeadPage(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onAssign={() => openAssignDrawer(props.row.original)} onChangeStatus={() => openChangeStatusDrawer(props.row.original)} onOpenModal={(type) => handleOpenModal(type, props.row.original)} />), },
     ],
     [openViewDialog, handleOpenEditLeadPage, handleDeleteClick, openAssignDrawer, openChangeStatusDrawer, handleOpenModal]
   );
-  
+
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<LeadListItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
@@ -833,7 +909,7 @@ const LeadsListing = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-8 mb-4 gap-2 ">
             <Tooltip title="Click to show all leads"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbTrophy size={20} /></div><div className="flex flex-col"><b className="text-blue-500">{LeadsData?.counts?.total ?? 0}</b><span className="font-semibold text-[10px]">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show leads from today"><div onClick={() => {}}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendar size={20} /></div><div className="flex flex-col"><b className="text-violet-500">{LeadsData?.counts?.today ?? 0}</b><span className="font-semibold text-[10px]">Today</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show leads from today"><div onClick={() => { }}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendar size={20} /></div><div className="flex flex-col"><b className="text-violet-500">{LeadsData?.counts?.today ?? 0}</b><span className="font-semibold text-[10px]">Today</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show active leads"><div onClick={() => handleCardClick('New')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div><div className="flex flex-col"><b className="text-green-500">{LeadsData?.counts?.active ?? 0}</b><span className="font-semibold text-[10px]">Active</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show 'Deal Done' leads"><div onClick={() => handleCardClick('Won')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbFlag size={20} /></div><div className="flex flex-col"><b className="text-green-500">{LeadsData?.counts?.deal_done ?? 0}</b><span className="font-semibold text-[10px]">Deal Done</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show 'Cancelled' leads"><div onClick={() => handleCardClick('Lost')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbFlagX size={20} /></div><div className="flex flex-col"><b className="text-red-500">{LeadsData?.counts?.cancelled ?? 0}</b><span className="font-semibold text-[10px]">Cancelled</span></div></Card></div></Tooltip>
@@ -842,16 +918,16 @@ const LeadsListing = () => {
             <Tooltip title="Click to show Manual leads"><div onClick={() => handleCardClick('Manual Lead')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbPennant size={20} /></div><div className="flex flex-col"><b className="text-orange-500">{LeadsData?.counts?.manual_lead ?? 0}</b><span className="font-semibold text-[10px]">Manual Lead</span></div></Card></div></Tooltip>
           </div>
           <div className="mb-4">
-              <LeadTableTools
-                  onClearFilters={onClearFilters}
-                  onSearchChange={handleSearchChange}
-                  onFilter={openFilterDrawer}
-                  onExport={handleOpenExportModal}
-                  columns={columns}
-                  filteredColumns={filteredColumns}
-                  setFilteredColumns={setFilteredColumns}
-                  activeFilterCount={activeFilterCount}
-              />
+            <LeadTableTools
+              onClearFilters={onClearFilters}
+              onSearchChange={handleSearchChange}
+              onFilter={openFilterDrawer}
+              onExport={handleOpenExportModal}
+              columns={columns}
+              filteredColumns={filteredColumns}
+              setFilteredColumns={setFilteredColumns}
+              activeFilterCount={activeFilterCount}
+            />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="flex-grow overflow-auto">
@@ -871,44 +947,44 @@ const LeadsListing = () => {
         {leadToView ? (
           <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
             {(Object.keys(leadToView.rawApiData) as Array<keyof any>).map((key) => {
-                const label = String(key).replace(/_/g, " ").replace(/([A-Z])/g, " $1").trim().replace(/\b\w/g, (l) => l.toUpperCase());
-                const value: any = leadToView.rawApiData[key]; let displayValue: React.ReactNode;
-                const nameDisplayKeys = ["buyer", "supplier", "product", "customer", "created_by_user", "updated_by_user"];
-                if ((key === "created_at" || key === "updated_at") && value) { displayValue = dayjs(value).format("DD MMM, YYYY h:mm A"); }
-                else if (nameDisplayKeys.includes(String(key))) { if (value && typeof value === "object" && "name" in value && value.name !== null && value.name !== undefined) { displayValue = String(value.name); } else { displayValue = <span className="text-gray-400">-</span>; } }
-                else if (typeof value === "object" && value !== null && !(value instanceof Date)) { return null; }
-                else { displayValue = value === null || value === undefined || value === "" ? (<span className="text-gray-400">-</span>) : (String(value)); }
-                return (<div key={key as string} className="flex py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0"><span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span><div className="w-2/3 text-gray-900 dark:text-gray-100 break-words">{displayValue}</div></div>);
-              })}
+              const label = String(key).replace(/_/g, " ").replace(/([A-Z])/g, " $1").trim().replace(/\b\w/g, (l) => l.toUpperCase());
+              const value: any = leadToView.rawApiData[key]; let displayValue: React.ReactNode;
+              const nameDisplayKeys = ["buyer", "supplier", "product", "customer", "created_by_user", "updated_by_user"];
+              if ((key === "created_at" || key === "updated_at") && value) { displayValue = dayjs(value).format("DD MMM, YYYY h:mm A"); }
+              else if (nameDisplayKeys.includes(String(key))) { if (value && typeof value === "object" && "name" in value && value.name !== null && value.name !== undefined) { displayValue = String(value.name); } else { displayValue = <span className="text-gray-400">-</span>; } }
+              else if (typeof value === "object" && value !== null && !(value instanceof Date)) { return null; }
+              else { displayValue = value === null || value === undefined || value === "" ? (<span className="text-gray-400">-</span>) : (String(value)); }
+              return (<div key={key as string} className="flex py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0"><span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span><div className="w-2/3 text-gray-900 dark:text-gray-100 break-words">{displayValue}</div></div>);
+            })}
           </div>
         ) : (<div className="p-10 text-center"><TbInfoCircle size={32} className="mx-auto mb-2 text-gray-400" /><p>No lead data to display.</p></div>)}
         <div className="text-right mt-6"><Button variant="solid" onClick={closeViewDialog}>Close</Button></div>
       </Dialog>
-      <Drawer title="Assign Lead" isOpen={isAssignDrawerOpen} onClose={closeAssignDrawer} width={400} footer={ <div className="text-right p-4 border-t"><Button size="sm" className="mr-2" onClick={closeAssignDrawer}>Cancel</Button><Button size="sm" variant="solid" form="assignLeadForm" type="submit" loading={isSubmittingDrawer}>Assign</Button></div> }>
+      <Drawer title="Assign Lead" isOpen={isAssignDrawerOpen} onClose={closeAssignDrawer} width={400} footer={<div className="text-right p-4 border-t"><Button size="sm" className="mr-2" onClick={closeAssignDrawer}>Cancel</Button><Button size="sm" variant="solid" form="assignLeadForm" type="submit" loading={isSubmittingDrawer}>Assign</Button></div>}>
         <Form id="assignLeadForm" onSubmit={assignFormMethods.handleSubmit(onAssignSubmit)} className="p-4"><p className="mb-4">Assign lead <strong>{editingLeadForDrawer?.lead_number}</strong>.</p>
-          <FormItem label="Sales Person" error={assignFormMethods.formState.errors.salesPersonId?.message}><Controller name="salesPersonId" control={assignFormMethods.control} render={({ field }) => (<UiSelect options={dummySalesPersons.map((sp) => ({ value: sp.id, label: sp.name }))} value={dummySalesPersons.find((sp) => sp.id === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} placeholder="Select Sales Person"/>)}/></FormItem>
+          <FormItem label="Sales Person" error={assignFormMethods.formState.errors.salesPersonId?.message}><Controller name="salesPersonId" control={assignFormMethods.control} render={({ field }) => (<UiSelect options={dummySalesPersons.map((sp) => ({ value: sp.id, label: sp.name }))} value={dummySalesPersons.find((sp) => sp.id === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} placeholder="Select Sales Person" />)} /></FormItem>
         </Form>
       </Drawer>
       <Drawer title="Change Lead Status" isOpen={isChangeStatusDrawerOpen} onClose={closeChangeStatusDrawer} width={400} footer={<div className="text-right p-4 border-t"><Button size="sm" className="mr-2" onClick={closeChangeStatusDrawer}>Cancel</Button><Button size="sm" variant="solid" form="changeStatusForm" type="submit" loading={isSubmittingDrawer}>Update</Button></div>}>
         <Form id="changeStatusForm" onSubmit={statusFormMethods.handleSubmit(onChangeStatusSubmit)} className="p-4"><p className="mb-4">Change status for <strong>{editingLeadForDrawer?.lead_number}</strong>.</p>
-          <FormItem label="New Status" error={statusFormMethods.formState.errors.newStatus?.message}><Controller name="newStatus" control={statusFormMethods.control} render={({ field }) => (<UiSelect options={leadStatusOptionsConst} value={leadStatusOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value as LeadStatus)} placeholder="Select New Status"/>)} /></FormItem>
+          <FormItem label="New Status" error={statusFormMethods.formState.errors.newStatus?.message}><Controller name="newStatus" control={statusFormMethods.control} render={({ field }) => (<UiSelect options={leadStatusOptionsConst} value={leadStatusOptionsConst.find((opt) => opt.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value as LeadStatus)} placeholder="Select New Status" />)} /></FormItem>
         </Form>
       </Drawer>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Apply</Button></div>}>
         <Form id="filterLeadForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4 h-full">
-          <FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={leadStatusOptionsConst} value={leadStatusOptionsConst.filter((o) => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])}/>)}/></FormItem>
-          <FormItem label="Enquiry Type"><Controller name="filterEnquiryTypes" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={enquiryTypeOptionsConst} value={enquiryTypeOptionsConst.filter((o) => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])}/>)}/></FormItem>
-          <FormItem label="Intent"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={leadIntentOptionsConst} value={leadIntentOptionsConst.filter((o) => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])}/>)}/></FormItem>
-          <FormItem label="Product (Sourced)"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={dummyProducts.map((p) => ({ value: p.id, label: p.name }))} value={dummyProducts.filter((o) => field.value?.includes(o.value)).map((p) => ({ value: p.id, label: p.name }))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])}/>)}/></FormItem>
-          <FormItem label="Sales Person"><Controller name="filterSalesPersonIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={dummySalesPersons.map((p) => ({ value: p.id, label: p.name }))} value={dummySalesPersons.filter((o) => field.value?.includes(String(o.value))).map((p) => ({ value: p.id, label: p.name }))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])}/>)}/></FormItem>
-          <FormItem label="Date Range"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange}/>)}/></FormItem>
+          <FormItem label="Status"><Controller name="filterStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={leadStatusOptionsConst} value={leadStatusOptionsConst.filter((o) => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />)} /></FormItem>
+          <FormItem label="Enquiry Type"><Controller name="filterEnquiryTypes" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={enquiryTypeOptionsConst} value={enquiryTypeOptionsConst.filter((o) => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />)} /></FormItem>
+          <FormItem label="Intent"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={leadIntentOptionsConst} value={leadIntentOptionsConst.filter((o) => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />)} /></FormItem>
+          <FormItem label="Product (Sourced)"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={dummyProducts.map((p) => ({ value: p.id, label: p.name }))} value={dummyProducts.filter((o) => field.value?.includes(o.value)).map((p) => ({ value: p.id, label: p.name }))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />)} /></FormItem>
+          <FormItem label="Sales Person"><Controller name="filterSalesPersonIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti options={dummySalesPersons.map((p) => ({ value: p.id, label: p.name }))} value={dummySalesPersons.filter((o) => field.value?.includes(String(o.value))).map((p) => ({ value: p.id, label: p.name }))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />)} /></FormItem>
+          <FormItem label="Date Range"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as any} onChange={field.onChange} />)} /></FormItem>
         </Form>
       </Drawer>
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Lead" onClose={() => setSingleDeleteConfirmOpen(false)} onConfirm={onConfirmSingleDelete} loading={isProcessingDelete} onCancel={() => setSingleDeleteConfirmOpen(false)}><p>Are you sure you want to delete lead <strong>{itemToDelete?.lead_number}</strong>? This action cannot be undone.</p></ConfirmDialog>
       <LeadModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Exporting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason, }}>
         <Form id="exportLeadsReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
-          <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="e.g., Weekly sales report..." rows={3}/>)}/></FormItem>
+          <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="e.g., Weekly sales report..." rows={3} />)} /></FormItem>
         </Form>
       </ConfirmDialog>
     </>

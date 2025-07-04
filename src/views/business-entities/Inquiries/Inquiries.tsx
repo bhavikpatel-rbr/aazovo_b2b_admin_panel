@@ -117,209 +117,285 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 // --- Type Definitions for Modals ---
 export type InquiryModalType = 'notification' | 'schedule';
 export interface InquiryModalState {
-    isOpen: boolean;
-    type: InquiryModalType | null;
-    data: InquiryItem | null;
+  isOpen: boolean;
+  type: InquiryModalType | null;
+  data: InquiryItem | null;
 }
 export type SelectOption = { value: any; label: string };
 
 // --- Notification Dialog ---
 const AddInquiryNotificationDialog: React.FC<{
-    inquiry: InquiryItem;
-    onClose: () => void;
-    getAllUserDataOptions: SelectOption[];
+  inquiry: InquiryItem;
+  onClose: () => void;
+  getAllUserDataOptions: SelectOption[];
 }> = ({ inquiry, onClose, getAllUserDataOptions }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
 
-    const notificationSchema = z.object({
-        notification_title: z.string().min(3, 'Title must be at least 3 characters long.'),
-        send_users: z.array(z.number()).min(1, 'Please select at least one user.'),
-        message: z.string().min(10, 'Message must be at least 10 characters long.'),
-    });
-    type NotificationFormData = z.infer<typeof notificationSchema>;
+  const notificationSchema = z.object({
+    notification_title: z.string().min(3, 'Title must be at least 3 characters long.'),
+    send_users: z.array(z.number()).min(1, 'Please select at least one user.'),
+    message: z.string().min(10, 'Message must be at least 10 characters long.'),
+  });
+  type NotificationFormData = z.infer<typeof notificationSchema>;
 
-    const {
-        control,
-        handleSubmit,
-        formState: { errors, isValid },
-    } = useForm<NotificationFormData>({
-        resolver: zodResolver(notificationSchema),
-        defaultValues: {
-            notification_title: `Regarding Inquiry: ${inquiry.inquiry_id}`,
-            send_users: [],
-            message: `This is a notification for inquiry "${inquiry.inquiry_id}" from ${inquiry.company_name}. Please review the details.`,
-        },
-        mode: 'onChange',
-    });
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<NotificationFormData>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+      notification_title: `Regarding Inquiry: ${inquiry.inquiry_id}`,
+      send_users: [],
+      message: `This is a notification for inquiry "${inquiry.inquiry_id}" from ${inquiry.company_name}. Please review the details.`,
+    },
+    mode: 'onChange',
+  });
 
-    const onSend = async (formData: NotificationFormData) => {
-        setIsLoading(true);
-        const payload = {
-            send_users: formData.send_users,
-            notification_title: formData.notification_title,
-            message: formData.message,
-            module_id: String(inquiry.id),
-            module_name: 'Inquiry',
-        };
-        try {
-            await dispatch(addNotificationAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
-            onClose();
-        } catch (error: any) {
-            toast.push(
-                <Notification
-                    type="danger"
-                    title="Failed to Send Notification"
-                    children={error?.message || 'An unknown error occurred.'}
-                />
-            );
-        } finally {
-            setIsLoading(false);
-        }
+  const onSend = async (formData: NotificationFormData) => {
+    setIsLoading(true);
+    const payload = {
+      send_users: formData.send_users,
+      notification_title: formData.notification_title,
+      message: formData.message,
+      module_id: String(inquiry.id),
+      module_name: 'Inquiry',
     };
+    try {
+      await dispatch(addNotificationAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title="Failed to Send Notification"
+          children={error?.message || 'An unknown error occurred.'}
+        />
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Notify User about: {inquiry.inquiry_id}</h5>
-            <UiForm onSubmit={handleSubmit(onSend)}>
-                <UiFormItem
-                    label="Title"
-                    invalid={!!errors.notification_title}
-                    errorMessage={errors.notification_title?.message}
-                >
-                    <Controller
-                        name="notification_title"
-                        control={control}
-                        render={({ field }) => <Input {...field} />}
-                    />
-                </UiFormItem>
-                <UiFormItem
-                    label="Send To"
-                    invalid={!!errors.send_users}
-                    errorMessage={errors.send_users?.message}
-                >
-                    <Controller
-                        name="send_users"
-                        control={control}
-                        render={({ field }) => (
-                            <UiSelect
-                                isMulti
-                                placeholder="Select User(s)"
-                                options={getAllUserDataOptions}
-                                value={getAllUserDataOptions.filter((o) =>
-                                    field.value?.includes(o.value)
-                                )}
-                                onChange={(options) =>
-                                    field.onChange(options?.map((o) => o.value) || [])
-                                }
-                            />
-                        )}
-                    />
-                </UiFormItem>
-                <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
-                    <Controller
-                        name="message"
-                        control={control}
-                        render={({ field }) => <Input textArea {...field} rows={4} />}
-                    />
-                </UiFormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
-                        Cancel
-                    </Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
-                        Send Notification
-                    </Button>
-                </div>
-            </UiForm>
-        </Dialog>
-    );
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Notify User about: {inquiry.inquiry_id}</h5>
+      <UiForm onSubmit={handleSubmit(onSend)}>
+        <UiFormItem
+          label="Title"
+          invalid={!!errors.notification_title}
+          errorMessage={errors.notification_title?.message}
+        >
+          <Controller
+            name="notification_title"
+            control={control}
+            render={({ field }) => <Input {...field} />}
+          />
+        </UiFormItem>
+        <UiFormItem
+          label="Send To"
+          invalid={!!errors.send_users}
+          errorMessage={errors.send_users?.message}
+        >
+          <Controller
+            name="send_users"
+            control={control}
+            render={({ field }) => (
+              <UiSelect
+                isMulti
+                placeholder="Select User(s)"
+                options={getAllUserDataOptions}
+                value={getAllUserDataOptions.filter((o) =>
+                  field.value?.includes(o.value)
+                )}
+                onChange={(options) =>
+                  field.onChange(options?.map((o) => o.value) || [])
+                }
+              />
+            )}
+          />
+        </UiFormItem>
+        <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}>
+          <Controller
+            name="message"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>
+            Send Notification
+          </Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
 };
 
 // --- Schedule Dialog (ADDED) ---
 const AddInquiryScheduleDialog: React.FC<{ inquiry: InquiryItem; onClose: () => void }> = ({ inquiry, onClose }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const eventTypeOptions = [
+    // Customer Engagement & Sales
+    { value: 'Meeting', label: 'Meeting' },
+    { value: 'Demo', label: 'Product Demo' },
+    { value: 'IntroCall', label: 'Introductory Call' },
+    { value: 'FollowUpCall', label: 'Follow-up Call' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'CheckIn', label: 'Customer Check-in' },
+    { value: 'LogEmail', label: 'Log an Email' },
 
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
-      resolver: zodResolver(scheduleSchema),
-      defaultValues: { event_title: `Follow-up on Inquiry ${inquiry.inquiry_id}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding inquiry from ${inquiry.company_name} about "${inquiry.inquiry_subject}".`},
-      mode: 'onChange',
-    });
-  
-    const onAddEvent = async (data: ScheduleFormData) => {
-      setIsLoading(true);
-      const payload = {
-        module_id: Number(inquiry.id),
-        module_name: 'Inquiry',
-        event_title: data.event_title,
-        event_type: data.event_type,
-        date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
-        ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
-        notes: data.notes || '',
-      };
-  
-      try {
-        await dispatch(addScheduleAction(payload)).unwrap();
-        toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for inquiry ${inquiry.inquiry_id}.`} />);
-        onClose();
-      } catch (error: any) {
-        toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
-      } finally {
-        setIsLoading(false);
-      }
+    // Project & Task Management
+    { value: 'Milestone', label: 'Project Milestone' },
+    { value: 'Task', label: 'Task' },
+    { value: 'FollowUp', label: 'General Follow-up' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+    // Customer Onboarding & Support
+    { value: 'OnboardingSession', label: 'Onboarding Session' },
+    { value: 'Training', label: 'Training Session' },
+    { value: 'SupportCall', label: 'Support Call' },
+
+    // General & Administrative
+    { value: 'Reminder', label: 'Reminder' },
+    { value: 'Note', label: 'Add a Note' },
+    { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+    { value: 'StrategySession', label: 'Strategy Session' },
+    { value: 'TeamMeeting', label: 'Team Meeting' },
+    { value: 'PerformanceReview', label: 'Performance Review' },
+    { value: 'Lunch', label: 'Lunch / Break' },
+    { value: 'Appointment', label: 'Personal Appointment' },
+    { value: 'Other', label: 'Other' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+    { value: 'InternalSync', label: 'Internal Team Sync' },
+    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+    { value: 'ProjectSignOff', label: 'Project Sign-off' },
+    { value: 'PrepareReport', label: 'Prepare Report' },
+    { value: 'PresentFindings', label: 'Present Findings' },
+    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+    { value: 'BugReplication', label: 'Bug Replication Session' },
+    { value: 'IssueEscalation', label: 'Escalate Issue' },
+    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+    { value: 'FeatureRequest', label: 'Log Feature Request' },
+    { value: 'IntegrationSupport', label: 'Integration Support Call' },
+    { value: 'DataMigration', label: 'Data Migration/Import Task' },
+    { value: 'ColdCall', label: 'Cold Call' },
+    { value: 'DiscoveryCall', label: 'Discovery Call' },
+    { value: 'QualificationCall', label: 'Qualification Call' },
+    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+    { value: 'ContractSent', label: 'Contract Sent' },
+    { value: 'NegotiationCall', label: 'Negotiation Call' },
+    { value: 'TrialSetup', label: 'Product Trial Setup' },
+    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+    { value: 'WelcomeCall', label: 'Welcome Call' },
+    { value: 'ImplementationSession', label: 'Implementation Session' },
+    { value: 'UserTraining', label: 'User Training Session' },
+    { value: 'AdminTraining', label: 'Admin Training Session' },
+    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'HealthCheck', label: 'Customer Health Check' },
+    { value: 'FeedbackSession', label: 'Feedback Session' },
+    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+    { value: 'InvoiceDue', label: 'Invoice Due' },
+    { value: 'SendInvoice', label: 'Send Invoice' },
+    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+    { value: 'SendQuote', label: 'Send Quote/Estimate' },
+  ]
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: { event_title: `Follow-up on Inquiry ${inquiry.inquiry_id}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding inquiry from ${inquiry.company_name} about "${inquiry.inquiry_subject}".` },
+    mode: 'onChange',
+  });
+
+  const onAddEvent = async (data: ScheduleFormData) => {
+    setIsLoading(true);
+    const payload = {
+      module_id: Number(inquiry.id),
+      module_name: 'Inquiry',
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+      notes: data.notes || '',
     };
-    
-    return (
-      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-        <h5 className="mb-4">Add Schedule for Inquiry: {inquiry.inquiry_id}</h5>
-        <UiForm onSubmit={handleSubmit(onAddEvent)}>
-          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
-            <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+
+    try {
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for inquiry ${inquiry.inquiry_id}.`} />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for Inquiry: {inquiry.inquiry_id}</h5>
+      <UiForm onSubmit={handleSubmit(onAddEvent)}>
+        <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+        </UiFormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
           </UiFormItem>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
-              <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} />
-            </UiFormItem>
-            <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
-              <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-            </UiFormItem>
-          </div>
-          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
-            <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+          <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
           </UiFormItem>
-          <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-            <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
-          </UiFormItem>
-          <div className="text-right mt-6">
-            <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
-          </div>
-        </UiForm>
-      </Dialog>
-    );
+        </div>
+        <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+        </UiFormItem>
+        <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
 };
 
 
 // --- Modals Wrapper Component ---
 const InquiriesModals: React.FC<{
-    modalState: InquiryModalState;
-    onClose: () => void;
-    getAllUserDataOptions: SelectOption[];
+  modalState: InquiryModalState;
+  onClose: () => void;
+  getAllUserDataOptions: SelectOption[];
 }> = ({ modalState, onClose, getAllUserDataOptions }) => {
-    const { type, data: inquiry, isOpen } = modalState;
-    if (!isOpen || !inquiry) return null;
+  const { type, data: inquiry, isOpen } = modalState;
+  if (!isOpen || !inquiry) return null;
 
-    switch (type) {
-        case 'notification':
-            return <AddInquiryNotificationDialog inquiry={inquiry} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-        case 'schedule':
-            return <AddInquiryScheduleDialog inquiry={inquiry} onClose={onClose} />;
-        default:
-            return null;
-    }
+  switch (type) {
+    case 'notification':
+      return <AddInquiryNotificationDialog inquiry={inquiry} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+    case 'schedule':
+      return <AddInquiryScheduleDialog inquiry={inquiry} onClose={onClose} />;
+    default:
+      return null;
+  }
 };
 
 
@@ -500,21 +576,21 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [dispatch]);
 
   useEffect(() => {
-    setIsLoading(masterLoadingStatus === "loading"); 
+    setIsLoading(masterLoadingStatus === "loading");
 
-    if (masterLoadingStatus === "succeeded" || masterLoadingStatus === "idle") { 
-        const rawInquiries = inquiryList1?.data?.data;
-        const inquiryDataFromApi = Array.isArray(rawInquiries) ? rawInquiries : (Array.isArray(inquiryList1) ? inquiryList1 : []);
-        setInquiryList(processApiDataToInquiryItems(inquiryDataFromApi as ApiInquiryItem[]));
+    if (masterLoadingStatus === "succeeded" || masterLoadingStatus === "idle") {
+      const rawInquiries = inquiryList1?.data?.data;
+      const inquiryDataFromApi = Array.isArray(rawInquiries) ? rawInquiries : (Array.isArray(inquiryList1) ? inquiryList1 : []);
+      setInquiryList(processApiDataToInquiryItems(inquiryDataFromApi as ApiInquiryItem[]));
 
-        const deptsFromApi = Array.isArray(departmentsData?.data) ? departmentsData.data : [];
-        setDepartments(deptsFromApi as Department[]);
+      const deptsFromApi = Array.isArray(departmentsData?.data) ? departmentsData.data : [];
+      setDepartments(deptsFromApi as Department[]);
     } else if (masterLoadingStatus === "failed") {
-        setInquiryList([]);
-        setDepartments([]);
-        toast.push(<Notification type="danger" title="Error">Failed to load data.</Notification>);
+      setInquiryList([]);
+      setDepartments([]);
+      toast.push(<Notification type="danger" title="Error">Failed to load data.</Notification>);
     }
-}, [inquiryList1, departmentsData, masterLoadingStatus]);
+  }, [inquiryList1, departmentsData, masterLoadingStatus]);
 
 
   return (
@@ -548,53 +624,53 @@ const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOp
 export type CsvHeader = { label: string; key: string; };
 
 function exportToCsv<T extends Record<string, any>>(filename: string, rows: T[], headers: CsvHeader[]): boolean {
-    if (!rows || !rows.length) {
-        toast.push(<Notification title="No Data" type="info" duration={3000}>Nothing to export.</Notification>);
-        return false;
-    }
-    if (!headers || !headers.length) {
-        toast.push(<Notification title="Configuration Error" type="danger" duration={3000}>CSV Headers are not defined. Cannot export.</Notification>);
-        return false;
-    }
+  if (!rows || !rows.length) {
+    toast.push(<Notification title="No Data" type="info" duration={3000}>Nothing to export.</Notification>);
+    return false;
+  }
+  if (!headers || !headers.length) {
+    toast.push(<Notification title="Configuration Error" type="danger" duration={3000}>CSV Headers are not defined. Cannot export.</Notification>);
+    return false;
+  }
 
-    const separator = ',';
-    const headerRow = headers.map(header => `"${String(header.label).replace(/"/g, '""')}"`).join(separator);
+  const separator = ',';
+  const headerRow = headers.map(header => `"${String(header.label).replace(/"/g, '""')}"`).join(separator);
 
-    const dataRows = rows.map(row => {
-        return headers.map(header => {
-            let cellValue = row[header.key];
-            if (cellValue === null || cellValue === undefined) {
-                cellValue = '';
-            } else if (Array.isArray(cellValue)) {
-                cellValue = cellValue.map(item => String(item).replace(/"/g, '""')).join('; ');
-            } else {
-                cellValue = String(cellValue).replace(/"/g, '""');
-            }
-            if (String(cellValue).search(/("|,|\n)/g) >= 0) {
-                cellValue = `"${cellValue}"`;
-            }
-            return cellValue;
-        }).join(separator);
-    }).join('\n');
+  const dataRows = rows.map(row => {
+    return headers.map(header => {
+      let cellValue = row[header.key];
+      if (cellValue === null || cellValue === undefined) {
+        cellValue = '';
+      } else if (Array.isArray(cellValue)) {
+        cellValue = cellValue.map(item => String(item).replace(/"/g, '""')).join('; ');
+      } else {
+        cellValue = String(cellValue).replace(/"/g, '""');
+      }
+      if (String(cellValue).search(/("|,|\n)/g) >= 0) {
+        cellValue = `"${cellValue}"`;
+      }
+      return cellValue;
+    }).join(separator);
+  }).join('\n');
 
-    const csvContent = '\ufeff' + headerRow + '\n' + dataRows;
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+  const csvContent = '\ufeff' + headerRow + '\n' + dataRows;
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
 
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        return true;
-    } else {
-        toast.push(<Notification title="Export Failed" type="danger" duration={3000}>Your browser does not support this feature.</Notification>);
-        return false;
-    }
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  } else {
+    toast.push(<Notification title="Export Failed" type="danger" duration={3000}>Your browser does not support this feature.</Notification>);
+    return false;
+  }
 }
 
 // --- InquiryViewModal Component ---
@@ -630,29 +706,29 @@ const InquiryViewModal: React.FC<InquiryViewModalProps> = ({ isOpen, onClose, in
               <div>
                 <div className="flex items-center gap-2 mb-1"><strong>Priority:</strong> <Tag className={`${priorityColors[inquiry.inquiry_priority] || priorityColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{inquiry.inquiry_priority}</Tag></div>
                 <div className="flex items-center gap-2 mb-1"><strong>Current Status:</strong> <Tag className={`${inquiryCurrentStatusColors[inquiry.inquiry_status] || inquiryCurrentStatusColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{inquiry.inquiry_status}</Tag></div>
-                 <p><strong>Assigned To:</strong> {inquiry.assigned_to}</p>
-                 {inquiry.department && <p><strong>Department:</strong> {inquiry.department}</p>}
+                <p><strong>Assigned To:</strong> {inquiry.assigned_to}</p>
+                {inquiry.department && <p><strong>Department:</strong> {inquiry.department}</p>}
               </div>
               <div>
-                 <p><strong>Feedback Status:</strong> {inquiry.feedback_status}</p>
+                <p><strong>Feedback Status:</strong> {inquiry.feedback_status}</p>
               </div>
             </div>
           </div>
-           <div className="md:col-span-2 mt-2">
-             <h6 className="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">Description</h6>
-             <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md whitespace-pre-wrap max-h-40 overflow-y-auto">{inquiry.inquiry_description}</div>
-           </div>
-           {inquiry.inquiry_resolution && inquiry.inquiry_resolution !== "N/A" && (
-             <div className="md:col-span-2 mt-2">
-               <h6 className="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">Resolution</h6>
-               <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md whitespace-pre-wrap max-h-40 overflow-y-auto">{inquiry.inquiry_resolution}</div>
-             </div>
-           )}
+          <div className="md:col-span-2 mt-2">
+            <h6 className="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">Description</h6>
+            <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md whitespace-pre-wrap max-h-40 overflow-y-auto">{inquiry.inquiry_description}</div>
+          </div>
+          {inquiry.inquiry_resolution && inquiry.inquiry_resolution !== "N/A" && (
+            <div className="md:col-span-2 mt-2">
+              <h6 className="text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">Resolution</h6>
+              <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-2 rounded-md whitespace-pre-wrap max-h-40 overflow-y-auto">{inquiry.inquiry_resolution}</div>
+            </div>
+          )}
           <div className="md:col-span-2">
             <h6 className="text-sm font-semibold mb-2 mt-3 text-gray-700 dark:text-gray-200">Timeline</h6>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-sm">
-                <FormattedDateDisplay dateString={inquiry.inquiry_date} label="Inquired" />
-                <FormattedDateDisplay dateString={inquiry.response_date} label="Responded" />
+              <FormattedDateDisplay dateString={inquiry.inquiry_date} label="Inquired" />
+              <FormattedDateDisplay dateString={inquiry.response_date} label="Responded" />
             </div>
           </div>
           {inquiry.inquiry_attachments && inquiry.inquiry_attachments.length > 0 && (
@@ -676,28 +752,28 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof InquiryFilterFormData, value: any) => void;
   onClearAll: () => void;
 }) => {
-    const filters = [
-        ...(filterData.filterRecordStatus || []).map(f => ({ key: 'filterRecordStatus', label: `Status: ${f.label}`, value: f })),
-        ...(filterData.filterInquiryType || []).map(f => ({ key: 'filterInquiryType', label: `Type: ${f.label}`, value: f })),
-        ...(filterData.filterInquiryPriority || []).map(f => ({ key: 'filterInquiryPriority', label: `Priority: ${f.label}`, value: f })),
-        ...(filterData.filterInquiryCurrentStatus || []).map(f => ({ key: 'filterInquiryCurrentStatus', label: `Current Status: ${f.label}`, value: f })),
-        ...(filterData.filterAssignedTo || []).map(f => ({ key: 'filterAssignedTo', label: `Assigned: ${f.label}`, value: f })),
-        ...(filterData.filterDepartment || []).map(f => ({ key: 'filterDepartment', label: `Dept: ${f.label}`, value: f })),
-    ];
+  const filters = [
+    ...(filterData.filterRecordStatus || []).map(f => ({ key: 'filterRecordStatus', label: `Status: ${f.label}`, value: f })),
+    ...(filterData.filterInquiryType || []).map(f => ({ key: 'filterInquiryType', label: `Type: ${f.label}`, value: f })),
+    ...(filterData.filterInquiryPriority || []).map(f => ({ key: 'filterInquiryPriority', label: `Priority: ${f.label}`, value: f })),
+    ...(filterData.filterInquiryCurrentStatus || []).map(f => ({ key: 'filterInquiryCurrentStatus', label: `Current Status: ${f.label}`, value: f })),
+    ...(filterData.filterAssignedTo || []).map(f => ({ key: 'filterAssignedTo', label: `Assigned: ${f.label}`, value: f })),
+    ...(filterData.filterDepartment || []).map(f => ({ key: 'filterDepartment', label: `Dept: ${f.label}`, value: f })),
+  ];
 
-    if (filters.length === 0) return null;
+  if (filters.length === 0) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filters.map(filter => (
-                <Tag key={`${filter.key}-${filter.value.value}`} prefix>
-                    {filter.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as any, filter.value)} />
-                </Tag>
-            ))}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filters.map(filter => (
+        <Tag key={`${filter.key}-${filter.value.value}`} prefix>
+          {filter.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as any, filter.value)} />
+        </Tag>
+      ))}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 // --- InquiryListTable Component ---
@@ -715,10 +791,10 @@ const InquiryListTable = () => {
   const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = useState(false);
   const [inquiryToView, setInquiryToView] = useState<InquiryItem | null>(null);
   const [modalState, setModalState] = useState<InquiryModalState>({ isOpen: false, type: null, data: null });
-  
+
   const filterFormMethods = useForm<InquiryFilterFormData>({ resolver: zodResolver(inquiryFilterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: '' }, mode: 'onChange' });
-  
+
   const handleOpenModal = useCallback((type: InquiryModalType, itemData: InquiryItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
@@ -727,7 +803,7 @@ const InquiryListTable = () => {
   const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); };
   const closeFilterDrawer = () => setFilterDrawerOpen(false);
   const onApplyFiltersSubmit = (data: InquiryFilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); };
-  
+
   const onClearFilters = () => {
     const defaultFilters: InquiryFilterFormData = { filterRecordStatus: [], filterInquiryType: [], filterInquiryPriority: [], filterInquiryCurrentStatus: [], filterAssignedTo: [], filterDepartment: [], filterFeedbackStatus: [], filterInquiryDate: [null, null], filterResponseDate: [null, null], filterResolutionDate: [null, null], filterFollowUpDate: [null, null] };
     filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: "" }); dispatch(getInquiriesAction());
@@ -746,12 +822,12 @@ const InquiryListTable = () => {
 
   const handleRemoveFilter = (key: keyof InquiryFilterFormData, value: any) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        const currentValues = prev[key] as SelectOption[] | undefined;
-        if (currentValues) {
-            (newFilters[key] as SelectOption[]) = currentValues.filter(item => item.value !== value.value);
-        }
-        return newFilters;
+      const newFilters = { ...prev };
+      const currentValues = prev[key] as SelectOption[] | undefined;
+      if (currentValues) {
+        (newFilters[key] as SelectOption[]) = currentValues.filter(item => item.value !== value.value);
+      }
+      return newFilters;
     });
   };
 
@@ -808,17 +884,17 @@ const InquiryListTable = () => {
   const handleViewDetails = (id: string) => {
     const inquiry = allFilteredAndSortedData.find(item => item.id === id);
     if (inquiry) {
-       navigate(`/business-entities/inquiry-view/${id}`);
+      navigate(`/business-entities/inquiry-view/${id}`);
     } else {
       toast.push(<Notification type="danger" title="Error">Inquiry details not found.</Notification>);
     }
   };
 
   const navigate = useNavigate();
-  const handleEditInquiry = (id: string) => { 
+  const handleEditInquiry = (id: string) => {
     navigate("/business-entities/create-inquiry", { state: id });
   };
-  
+
   const columns: ColumnDef<InquiryItem>[] = useMemo(() => [
     { header: "Inquiry Overview", accessorKey: "inquiry_id", id: 'overview', enableSorting: true, size: 280, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{d.inquiry_id}</span><span className="text-xs text-gray-700 dark:text-gray-300">{d.company_name || "Company Name"}</span><Tooltip title={d.inquiry_subject}><span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{d.inquiry_subject}</span></Tooltip><div className="flex items-center gap-2 mt-1"><Tag className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">{d.inquiry_type || "Inquiry Type"}</Tag><Tag className={`${recordStatusColor[d.status]} capitalize text-[10px] px-1.5 py-0.5`}>{d.status}</Tag></div></div>); } },
     { header: "Contact Person", accessorKey: "contact_person_name", id: 'contact', enableSorting: true, size: 240, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-gray-800 dark:text-gray-100">{d.contact_person_name}</span><a href={`mailto:${d.contact_person_email}`} className="text-blue-600 hover:underline dark:text-blue-400">{d.contact_person_email}</a><span className="text-gray-600 dark:text-gray-300">{d.contact_person_phone}</span></div>); } },
@@ -831,19 +907,19 @@ const InquiryListTable = () => {
 
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
-        setFilteredColumns(currentCols => {
-            const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-            if (!originalColumn) return currentCols;
-            const newCols = [...currentCols, originalColumn];
-            newCols.sort((a, b) => {
-                const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                return indexA - indexB;
-            });
-            return newCols;
+      setFilteredColumns(currentCols => {
+        const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+        if (!originalColumn) return currentCols;
+        const newCols = [...currentCols, originalColumn];
+        newCols.sort((a, b) => {
+          const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+          const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+          return indexA - indexB;
         });
+        return newCols;
+      });
     } else {
-        setFilteredColumns(currentCols => currentCols.filter(c => (c.id || c.accessorKey) !== colId));
+      setFilteredColumns(currentCols => currentCols.filter(c => (c.id || c.accessorKey) !== colId));
     }
   };
 
@@ -857,15 +933,15 @@ const InquiryListTable = () => {
   const handleSearchInputChange = useCallback((val: string) => handleSetTableData({ query: val, pageIndex: 1 }), [handleSetTableData]);
   const handleRowSelect = useCallback((checked: boolean, row: InquiryItem) => { setSelectedInquiries((prev) => checked ? (prev.find((i) => i.id === row.id) ? prev : [...prev, row]) : prev.filter((item) => item.id !== row.id)); }, [setSelectedInquiries]);
   const handleAllRowSelect = useCallback((checked: boolean, rows: Row<InquiryItem>[]) => { const currentIds = new Set(rows.map((r) => r.original.id)); if (checked) { setSelectedInquiries((prev) => { const newItems = rows.map((r) => r.original).filter((item) => !prev.find((pi) => pi.id === item.id)); return [...prev, ...newItems]; }); } else { setSelectedInquiries((prev) => prev.filter((item) => !currentIds.has(item.id))); } }, [setSelectedInquiries]);
-  
+
   const csvHeaders: CsvHeader[] = useMemo(() => [
-      { label: "Inquiry ID", key: "inquiry_id" }, { label: "Company Name", key: "company_name" }, { label: "Contact Name", key: "contact_person_name" }, { label: "Email", key: "contact_person_email" }, { label: "Phone", key: "contact_person_phone" }, { label: "Inquiry Type", key: "inquiry_type" }, { label: "Subject", key: "inquiry_subject" }, { label: "Priority", key: "inquiry_priority" }, { label: "Status", key: "inquiry_status" }, { label: "Assigned To", key: "assigned_to" }, { label: "Department", key: "department" }, { label: "Inquiry Date", key: "inquiry_date" },
+    { label: "Inquiry ID", key: "inquiry_id" }, { label: "Company Name", key: "company_name" }, { label: "Contact Name", key: "contact_person_name" }, { label: "Email", key: "contact_person_email" }, { label: "Phone", key: "contact_person_phone" }, { label: "Inquiry Type", key: "inquiry_type" }, { label: "Subject", key: "inquiry_subject" }, { label: "Priority", key: "inquiry_priority" }, { label: "Status", key: "inquiry_status" }, { label: "Assigned To", key: "assigned_to" }, { label: "Department", key: "department" }, { label: "Inquiry Date", key: "inquiry_date" },
   ], []);
 
   const handleExport = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
-        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
-        return;
+      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+      return;
     }
     exportReasonFormMethods.reset({ reason: '' });
     setIsExportReasonModalOpen(true);
@@ -873,18 +949,18 @@ const InquiryListTable = () => {
 
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
-    const moduleName = 'Inquiries'; 
+    const moduleName = 'Inquiries';
     const timestamp = dayjs().format('YYYY-MM-DD');
     const fileName = `inquiries_export_${timestamp}.csv`;
     try {
-        await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap();
-        toast.push(<Notification title="Export Reason Submitted" type="success" />);
-        const exportSuccessful = exportToCsv(fileName, allFilteredAndSortedData, csvHeaders);
-        if (exportSuccessful) { setIsExportReasonModalOpen(false); }
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      const exportSuccessful = exportToCsv(fileName, allFilteredAndSortedData, csvHeaders);
+      if (exportSuccessful) { setIsExportReasonModalOpen(false); }
     } catch (error: any) {
-        toast.push(<Notification title="Operation Failed" type="danger">{error.message || 'Could not submit reason or export data.'}</Notification>);
+      toast.push(<Notification title="Operation Failed" type="danger">{error.message || 'Could not submit reason or export data.'}</Notification>);
     } finally {
-        setIsSubmittingExportReason(false);
+      setIsSubmittingExportReason(false);
     }
   };
 
@@ -907,7 +983,7 @@ const InquiryListTable = () => {
     if (filterCriteria.filterDepartment?.length) count++;
     return count;
   }, [filterCriteria]);
-  
+
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex items-center gap-2 p-2";
   const counts = useMemo(() => {
@@ -925,14 +1001,14 @@ const InquiryListTable = () => {
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
-          <Tooltip title="Click to show all inquiries"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div><h6 className="text-blue-500">{counts.total}</h6><span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
-          <Tooltip title="Click to show 'New' inquiries"><div onClick={() => handleCardClick('status', 'New')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-sky-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-sky-100 text-sky-500"><TbPlus size={20} /></div><div><h6 className="text-sky-500">{counts.newCount}</h6><span className="font-semibold text-[11px]">New</span></div></Card></div></Tooltip>
-          <Tooltip title="Click to show 'In Progress' inquiries"><div onClick={() => handleCardClick('status', 'In Progress')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbProgress size={20} /></div><div><h6 className="text-amber-500">{counts.inProgressCount}</h6><span className="font-semibold text-[11px]">In Progress</span></div></Card></div></Tooltip>
-          <Tooltip title="Click to show 'Resolved' inquiries"><div onClick={() => handleCardClick('status', 'Resolved')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={20} /></div><div><h6 className="text-emerald-500">{counts.resolvedCount}</h6><span className="font-semibold text-[11px]">Resolved</span></div></Card></div></Tooltip>
-          <Tooltip title="Click to show 'Closed' inquiries"><div onClick={() => handleCardClick('status', 'Closed')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-gray-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-gray-100 text-gray-500"><TbCircleX size={20} /></div><div><h6 className="text-gray-500">{counts.closedCount}</h6><span className="font-semibold text-[11px]">Closed</span></div></Card></div></Tooltip>
-          <Tooltip title="Click to show 'High' priority inquiries"><div onClick={() => handleCardClick('priority', 'High')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUrgent size={20} /></div><div><h6 className="text-red-500">{counts.highPriority}</h6><span className="font-semibold text-[11px]">High Priority</span></div></Card></div></Tooltip>
-          <Tooltip title="Click to show 'Medium' priority inquiries"><div onClick={() => handleCardClick('priority', 'Medium')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbAlarm size={20} /></div><div><h6 className="text-yellow-500">{counts.mediumPriority}</h6><span className="font-semibold text-[11px]">Medium Priority</span></div></Card></div></Tooltip>
-          <Tooltip title="Click to show 'Low' priority inquiries"><div onClick={() => handleCardClick('priority', 'Low')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbArrowDown size={20} /></div><div><h6 className="text-blue-500">{counts.lowPriority}</h6><span className="font-semibold text-[11px]">Low Priority</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show all inquiries"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div><h6 className="text-blue-500">{counts.total}</h6><span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show 'New' inquiries"><div onClick={() => handleCardClick('status', 'New')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-sky-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-sky-100 text-sky-500"><TbPlus size={20} /></div><div><h6 className="text-sky-500">{counts.newCount}</h6><span className="font-semibold text-[11px]">New</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show 'In Progress' inquiries"><div onClick={() => handleCardClick('status', 'In Progress')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbProgress size={20} /></div><div><h6 className="text-amber-500">{counts.inProgressCount}</h6><span className="font-semibold text-[11px]">In Progress</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show 'Resolved' inquiries"><div onClick={() => handleCardClick('status', 'Resolved')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={20} /></div><div><h6 className="text-emerald-500">{counts.resolvedCount}</h6><span className="font-semibold text-[11px]">Resolved</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show 'Closed' inquiries"><div onClick={() => handleCardClick('status', 'Closed')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-gray-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-gray-100 text-gray-500"><TbCircleX size={20} /></div><div><h6 className="text-gray-500">{counts.closedCount}</h6><span className="font-semibold text-[11px]">Closed</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show 'High' priority inquiries"><div onClick={() => handleCardClick('priority', 'High')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUrgent size={20} /></div><div><h6 className="text-red-500">{counts.highPriority}</h6><span className="font-semibold text-[11px]">High Priority</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show 'Medium' priority inquiries"><div onClick={() => handleCardClick('priority', 'Medium')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbAlarm size={20} /></div><div><h6 className="text-yellow-500">{counts.mediumPriority}</h6><span className="font-semibold text-[11px]">Medium Priority</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show 'Low' priority inquiries"><div onClick={() => handleCardClick('priority', 'Low')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-10 w-10 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbArrowDown size={20} /></div><div><h6 className="text-blue-500">{counts.lowPriority}</h6><span className="font-semibold text-[11px]">Low Priority</span></div></Card></div></Tooltip>
       </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => handleSearchInputChange(e.target.value)} />
@@ -1051,30 +1127,30 @@ const InquiryListSelected = () => {
 };
 
 // --- Main Inquiries Page Component ---
-const Inquiries = () =>{
+const Inquiries = () => {
   const navigate = useNavigate();
   return (
-  <InquiryListProvider>
-    <>
-      <Container>
-        <AdaptiveCard>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-              <h5>Inquiries</h5>
-              <div className="flex flex-col md:flex-row gap-3">
-                <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => {
+    <InquiryListProvider>
+      <>
+        <Container>
+          <AdaptiveCard>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <h5>Inquiries</h5>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => {
                     navigate("/business-entities/create-inquiry");
-                }}>Add New</Button>
+                  }}>Add New</Button>
+                </div>
               </div>
+              <InquiryListTable />
             </div>
-            <InquiryListTable />
-          </div>
-        </AdaptiveCard>
-      </Container>
-      <InquiryListSelected />
-    </>
-  </InquiryListProvider>
-);
+          </AdaptiveCard>
+        </Container>
+        <InquiryListSelected />
+      </>
+    </InquiryListProvider>
+  );
 }
 
 export default Inquiries;

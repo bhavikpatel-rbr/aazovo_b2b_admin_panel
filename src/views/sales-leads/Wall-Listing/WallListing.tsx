@@ -251,7 +251,7 @@ const productApiStatusColor: Record<string, string> = {
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-100",
 };
 
-export const dummyCartoonTypes = [ { id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" } ];
+export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, name: "Inner Carton" }];
 
 // ============================================================================
 // --- MODALS SECTION ---
@@ -260,10 +260,86 @@ export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "ac
 export interface WallModalState { isOpen: boolean; type: WallModalType | null; data: WallItem | null; }
 interface WallModalsProps { modalState: WallModalState; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }
 
-const dummyUsers = [ { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" }, ];
-const priorityOptions = [ { value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, ];
-const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
-const dummyAlerts = [ { id: 1, severity: "warning", message: "Listing will expire in 3 days.", time: "4 days ago", }, { id: 2, severity: "info", message: "New inquiry received from John Doe.", time: "2 hours ago", }, ];
+const dummyUsers = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },];
+const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
+const eventTypeOptions = [
+  // Customer Engagement & Sales
+  { value: 'Meeting', label: 'Meeting' },
+  { value: 'Demo', label: 'Product Demo' },
+  { value: 'IntroCall', label: 'Introductory Call' },
+  { value: 'FollowUpCall', label: 'Follow-up Call' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'CheckIn', label: 'Customer Check-in' },
+  { value: 'LogEmail', label: 'Log an Email' },
+
+  // Project & Task Management
+  { value: 'Milestone', label: 'Project Milestone' },
+  { value: 'Task', label: 'Task' },
+  { value: 'FollowUp', label: 'General Follow-up' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+  // Customer Onboarding & Support
+  { value: 'OnboardingSession', label: 'Onboarding Session' },
+  { value: 'Training', label: 'Training Session' },
+  { value: 'SupportCall', label: 'Support Call' },
+
+  // General & Administrative
+  { value: 'Reminder', label: 'Reminder' },
+  { value: 'Note', label: 'Add a Note' },
+  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+  { value: 'StrategySession', label: 'Strategy Session' },
+  { value: 'TeamMeeting', label: 'Team Meeting' },
+  { value: 'PerformanceReview', label: 'Performance Review' },
+  { value: 'Lunch', label: 'Lunch / Break' },
+  { value: 'Appointment', label: 'Personal Appointment' },
+  { value: 'Other', label: 'Other' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+  { value: 'InternalSync', label: 'Internal Team Sync' },
+  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+  { value: 'ProjectSignOff', label: 'Project Sign-off' },
+  { value: 'PrepareReport', label: 'Prepare Report' },
+  { value: 'PresentFindings', label: 'Present Findings' },
+  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+  { value: 'BugReplication', label: 'Bug Replication Session' },
+  { value: 'IssueEscalation', label: 'Escalate Issue' },
+  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+  { value: 'FeatureRequest', label: 'Log Feature Request' },
+  { value: 'IntegrationSupport', label: 'Integration Support Call' },
+  { value: 'DataMigration', label: 'Data Migration/Import Task' },
+  { value: 'ColdCall', label: 'Cold Call' },
+  { value: 'DiscoveryCall', label: 'Discovery Call' },
+  { value: 'QualificationCall', label: 'Qualification Call' },
+  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+  { value: 'ContractSent', label: 'Contract Sent' },
+  { value: 'NegotiationCall', label: 'Negotiation Call' },
+  { value: 'TrialSetup', label: 'Product Trial Setup' },
+  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+  { value: 'WelcomeCall', label: 'Welcome Call' },
+  { value: 'ImplementationSession', label: 'Implementation Session' },
+  { value: 'UserTraining', label: 'User Training Session' },
+  { value: 'AdminTraining', label: 'Admin Training Session' },
+  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'HealthCheck', label: 'Customer Health Check' },
+  { value: 'FeedbackSession', label: 'Feedback Session' },
+  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+  { value: 'InvoiceDue', label: 'Invoice Due' },
+  { value: 'SendInvoice', label: 'Send Invoice' },
+  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+  { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
+const dummyAlerts = [{ id: 1, severity: "warning", message: "Listing will expire in 3 days.", time: "4 days ago", }, { id: 2, severity: "info", message: "New inquiry received from John Doe.", time: "2 hours ago", },];
 
 const SendEmailDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -277,8 +353,8 @@ const SendEmailDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = 
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Send Email to {wallItem.member_name}</h5>
       <form onSubmit={handleSubmit(onSendEmail)}>
-        <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => ( <Input {...field} placeholder={`Regarding: ${wallItem.product_name}`} /> )}/></FormItem>
-        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => ( <RichTextEditor value={field.value} onChange={field.onChange} /> )}/></FormItem>
+        <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => (<Input {...field} placeholder={`Regarding: ${wallItem.product_name}`} />)} /></FormItem>
+        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} /></FormItem>
         <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send</Button></div>
       </form>
     </Dialog>
@@ -314,9 +390,9 @@ const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void;
     setIsLoading(true);
     const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(wallItem.id), module_name: 'WallListing', };
     try {
-        await dispatch(addNotificationAction(payload)).unwrap();
-        toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
-        onClose();
+      await dispatch(addNotificationAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+      onClose();
     } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); }
   };
   return (
@@ -324,7 +400,7 @@ const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void;
       <h5 className="mb-4">Add Notification for "{wallItem.product_name}"</h5>
       <Form onSubmit={handleSubmit(onSend)}>
         <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} /> )}/></FormItem>
+        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
         <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
         <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div>
       </Form>
@@ -343,12 +419,12 @@ const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> =
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
       <form onSubmit={handleSubmit(onAssignTask)}>
-        <FormItem label="Task Title"><Controller name="title" control={control} render={({ field }) => ( <Input {...field} placeholder="e.g., Follow up on listing" /> )}/></FormItem>
+        <FormItem label="Task Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Follow up on listing" />)} /></FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => ( <Select placeholder="Select User" options={dummyUsers} {...field} /> )}/></FormItem>
-          <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => ( <Select placeholder="Select Priority" options={priorityOptions} {...field} /> )}/></FormItem>
+          <FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => (<Select placeholder="Select User" options={dummyUsers} {...field} />)} /></FormItem>
+          <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} {...field} />)} /></FormItem>
         </div>
-        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => ( <DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} /> )}/></FormItem>
+        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />)} /></FormItem>
         <FormItem label="Description"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
         <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Assign Task</Button></div>
       </form>
@@ -374,10 +450,10 @@ const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> 
       <Form onSubmit={handleSubmit(onAddEvent)}>
         <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => ( <UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )}/></FormItem>
-          <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)}/></FormItem>
+          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
+          <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
         </div>
-        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)}/></FormItem>
+        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
         <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
         <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div>
       </Form>
@@ -390,9 +466,9 @@ const ViewAlertDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = 
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
       <h5 className="mb-4">Alerts for "{wallItem.product_name}"</h5>
       <div className="mt-4 flex flex-col gap-3">
-        {dummyAlerts.length > 0 ? ( dummyAlerts.map((alert) => ( <div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`}>
-              <div className="flex justify-between items-start"><div className="flex items-start gap-2"><TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20}/><p className="text-sm">{alert.message}</p></div><span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span></div>
-            </div> )) ) : ( <p>No active alerts for this item.</p> )}
+        {dummyAlerts.length > 0 ? (dummyAlerts.map((alert) => (<div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`}>
+          <div className="flex justify-between items-start"><div className="flex items-start gap-2"><TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} /><p className="text-sm">{alert.message}</p></div><span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span></div>
+        </div>))) : (<p>No active alerts for this item.</p>)}
       </div>
       <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
     </Dialog>
@@ -405,7 +481,7 @@ const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Share Link for "{wallItem.product_name}"</h5>
       <p className="mb-2 text-sm">Use the link below to share this listing:</p>
-      <div className="flex items-center gap-2"><Input readOnly value={linkToShare} /><Tooltip title="Copy Link"><Button shape="circle" icon={<TbCopy />} onClick={handleCopy} disabled={!wallItem.listing_url}/></Tooltip></div>
+      <div className="flex items-center gap-2"><Input readOnly value={linkToShare} /><Tooltip title="Copy Link"><Button shape="circle" icon={<TbCopy />} onClick={handleCopy} disabled={!wallItem.listing_url} /></Tooltip></div>
       <div className="text-right mt-6"><Button onClick={onClose}>Close</Button></div>
     </Dialog>
   );
@@ -438,28 +514,28 @@ const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUser
       case "calendar": return <AddScheduleDialog wallItem={wallItem} onClose={onClose} />;
       case "alert": return <ViewAlertDialog wallItem={wallItem} onClose={onClose} />;
       case "share": return <ShareWallLinkDialog wallItem={wallItem} onClose={onClose} />;
-      default: return ( <GenericActionDialog type={type} wallItem={wallItem} onClose={onClose} /> );
+      default: return (<GenericActionDialog type={type} wallItem={wallItem} onClose={onClose} />);
     }
   };
   return <>{renderModalContent()}</>;
 };
 
 // --- CSV Export ---
-const CSV_WALL_HEADERS = [ "ID", "Product Name", "Company Name", "Member Name", "Category", "Subcategory", "Product Status", "Quantity", "Price", "Intent", "Created Date", "Record Status", ];
-const CSV_WALL_KEYS: (keyof WallItem)[] = [ "id", "product_name", "company_name", "member_name", "product_category", "product_subcategory", "product_status", "quantity", "price", "want_to", "created_date", "recordStatus", ];
+const CSV_WALL_HEADERS = ["ID", "Product Name", "Company Name", "Member Name", "Category", "Subcategory", "Product Status", "Quantity", "Price", "Intent", "Created Date", "Record Status",];
+const CSV_WALL_KEYS: (keyof WallItem)[] = ["id", "product_name", "company_name", "member_name", "product_category", "product_subcategory", "product_status", "quantity", "price", "want_to", "created_date", "recordStatus",];
 function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
   const separator = ",";
   const csvContent = CSV_WALL_HEADERS.join(separator) + "\n" + rows.map((row) => {
-        return CSV_WALL_KEYS.map((k) => {
-          let cell = row[k] as any;
-          if (cell === null || cell === undefined) cell = "";
-          else if (k === "created_date" && cell instanceof Date) cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-          return cell;
-        }).join(separator);
-      }).join("\n");
+    return CSV_WALL_KEYS.map((k) => {
+      let cell = row[k] as any;
+      if (cell === null || cell === undefined) cell = "";
+      else if (k === "created_date" && cell instanceof Date) cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
+      else cell = String(cell).replace(/"/g, '""');
+      if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+      return cell;
+    }).join(separator);
+  }).join("\n");
   const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;", });
   const link = document.createElement("a");
   if (link.download !== undefined) {
@@ -492,7 +568,7 @@ const StyledActionColumn = ({ onEdit, onViewDetail, onOpenModal, rowData }: { on
   </div>
 );
 interface WallSearchProps { onInputChange: (value: string) => void; }
-const WallSearch = React.forwardRef<HTMLInputElement, WallSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch />} onChange={(e) => onInputChange(e.target.value)}/>));
+const WallSearch = React.forwardRef<HTMLInputElement, WallSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch />} onChange={(e) => onInputChange(e.target.value)} />));
 WallSearch.displayName = "WallSearch";
 
 const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
@@ -521,24 +597,24 @@ const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
       setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
     }
   };
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <WallSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
-                    </div>
-                </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-                <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-            </div>
-        </div>
-    )
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <WallSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
+          </div>
+        </Dropdown>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
+        <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+      </div>
+    </div>
+  )
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
@@ -546,25 +622,25 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof FilterFormData, value: any) => void;
   onClearAll: () => void;
 }) => {
-    const { filterRecordStatuses, filterIntents, quickFilters } = filterData;
-    const hasFilters = filterRecordStatuses?.length || filterIntents?.length || quickFilters;
-    if (!hasFilters) return null;
+  const { filterRecordStatuses, filterIntents, quickFilters } = filterData;
+  const hasFilters = filterRecordStatuses?.length || filterIntents?.length || quickFilters;
+  if (!hasFilters) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterRecordStatuses?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterRecordStatuses', item)} /></Tag>)}
-            {filterIntents?.map(item => <Tag key={`intent-${item.value}`} prefix>Intent: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterIntents', item)} /></Tag>)}
-            {quickFilters && <Tag prefix className="capitalize">{quickFilters.type}: {quickFilters.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('quickFilters', quickFilters)} /></Tag>}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterRecordStatuses?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterRecordStatuses', item)} /></Tag>)}
+      {filterIntents?.map(item => <Tag key={`intent-${item.value}`} prefix>Intent: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterIntents', item)} /></Tag>)}
+      {quickFilters && <Tag prefix className="capitalize">{quickFilters.type}: {quickFilters.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('quickFilters', quickFilters)} /></Tag>}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 interface WallTableProps {
   columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: WallItem[];
   onPaginationChange: (page: number) => void; onSelectChange: (size: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void;
 }
-const WallTable = (props: WallTableProps) => ( <DataTable selectable columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} /> );
+const WallTable = (props: WallTableProps) => (<DataTable selectable columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
 interface WallSelectedFooterProps { selectedItems: WallItem[]; deleteConfirmOpen: boolean; setDeleteConfirmOpen: (open: boolean) => void; onConfirmDelete: () => void; isDeleting: boolean; }
 const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirmOpen, onConfirmDelete, isDeleting }: WallSelectedFooterProps) => {
   if (selectedItems.length === 0) return null;
@@ -581,17 +657,17 @@ const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirm
 };
 
 const BookmarkButton = React.memo(({ is_bookmarked }: { is_bookmarked: boolean }) => (
-    <Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}>
-        <button
-            onClick={(e) => e.stopPropagation()}
-            className="p-0 m-0 bg-transparent border-none cursor-pointer"
-        >
-            <TbBookmark
-                size={14}
-                className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}
-            />
-        </button>
-    </Tooltip>
+  <Tooltip title={is_bookmarked ? "Bookmarked" : "Not Bookmarked"}>
+    <button
+      onClick={(e) => e.stopPropagation()}
+      className="p-0 m-0 bg-transparent border-none cursor-pointer"
+    >
+      <TbBookmark
+        size={14}
+        className={is_bookmarked ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}
+      />
+    </button>
+  </Tooltip>
 ));
 BookmarkButton.displayName = 'BookmarkButton';
 
@@ -631,8 +707,8 @@ const WallListing = () => {
       params.end_date = filterCriteria.dateRange[1] ? dayjs(filterCriteria.dateRange[1]).format("YYYY-MM-DD") : undefined;
     }
     if (filterCriteria.quickFilters) {
-        if(filterCriteria.quickFilters.type === 'intent') params.want_to = filterCriteria.quickFilters.value;
-        if(filterCriteria.quickFilters.type === 'status') params.status = filterCriteria.quickFilters.value;
+      if (filterCriteria.quickFilters.type === 'intent') params.want_to = filterCriteria.quickFilters.value;
+      if (filterCriteria.quickFilters.type === 'status') params.status = filterCriteria.quickFilters.value;
     }
     Object.keys(params).forEach((key) => { if (params[key] === undefined || params[key] === null) { delete params[key]; } });
     return params;
@@ -666,30 +742,30 @@ const WallListing = () => {
       setSelectedItems([]); dispatch(getWallListingAction(apiParams));
     } catch (error: any) { toast.push(<Notification title="Error" type="danger">{error.message || "Bulk delete failed."}</Notification>); }
   }, [dispatch, selectedItems, apiParams]);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(prev => ({...prev, ...data, quickFilters: null})); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(prev => ({ ...prev, ...data, quickFilters: null })); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
   const onClearFilters = useCallback(() => { const defaults = filterFormSchema.parse({}); filterFormMethods.reset(defaults); setFilterCriteria(defaults); handleSetTableData({ query: "", pageIndex: 1 }); }, [filterFormMethods, handleSetTableData]);
-  
+
   const handleCardClick = (type: string, value: string) => {
     onClearFilters();
-    if(type === 'status') {
-        const statusOption = recordStatusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-        if(statusOption) setFilterCriteria({ filterRecordStatuses: [statusOption] });
+    if (type === 'status') {
+      const statusOption = recordStatusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
+      if (statusOption) setFilterCriteria({ filterRecordStatuses: [statusOption] });
     } else if (type === 'intent') {
-        const intentOption = intentOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-        if(intentOption) setFilterCriteria({ filterIntents: [intentOption] });
+      const intentOption = intentOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
+      if (intentOption) setFilterCriteria({ filterIntents: [intentOption] });
     }
   };
   const handleRemoveFilter = (key: keyof FilterFormData, value: any) => {
-      setFilterCriteria(prev => {
-          const newFilters = { ...prev };
-          const currentValues = prev[key] as { value: any }[] | undefined;
-          if (Array.isArray(currentValues)) {
-              (newFilters as any)[key] = currentValues.filter(item => item.value !== value.value);
-          } else {
-             (newFilters as any)[key] = null; // for quickFilters
-          }
-          return newFilters;
-      });
+    setFilterCriteria(prev => {
+      const newFilters = { ...prev };
+      const currentValues = prev[key] as { value: any }[] | undefined;
+      if (Array.isArray(currentValues)) {
+        (newFilters as any)[key] = currentValues.filter(item => item.value !== value.value);
+      } else {
+        (newFilters as any)[key] = null; // for quickFilters
+      }
+      return newFilters;
+    });
   };
 
   const handleOpenExportReasonModal = useCallback(() => {
@@ -701,14 +777,14 @@ const WallListing = () => {
     const moduleName = "WallListing"; const timestamp = dayjs().format("YYYY-MM-DD"); const fileName = `wall_listing_export_${timestamp}.csv`;
     try {
       await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap();
-      toast.push(<Notification title="Reason Submitted" type="info" duration={2000} message="Now fetching data for export..."/>);
+      toast.push(<Notification title="Reason Submitted" type="info" duration={2000} message="Now fetching data for export..." />);
       const exportParams = { ...apiParams, per_page: 0, page: 1 };
       const exportDataResponse = await dispatch(getWallListingAction(exportParams)).unwrap();
       if (!exportDataResponse?.status) { throw new Error(exportDataResponse?.message || "Failed to fetch data for export."); }
       const allFilteredData = (exportDataResponse?.data?.data || []).map(mapApiToWallItem);
       const success = exportWallItemsToCsv(fileName, allFilteredData);
       if (success) { setIsExportReasonModalOpen(false); }
-    } catch (error: any) { toast.push(<Notification title="Failed to Export" type="danger" message={error.message || "An unknown error occurred"}/>); } finally { setIsSubmittingExportReason(false); }
+    } catch (error: any) { toast.push(<Notification title="Failed to Export" type="danger" message={error.message || "An unknown error occurred"} />); } finally { setIsSubmittingExportReason(false); }
   }, [apiParams, dispatch, mapApiToWallItem]);
 
   const handlePaginationChange = (page: number) => handleSetTableData({ pageIndex: page });
@@ -730,10 +806,12 @@ const WallListing = () => {
   // --- Columns Definition ---
   const columns: ColumnDef<WallItem>[] = useMemo(
     () => [
-      { header: "Overview", accessorKey: "product_name", size: 280, cell: ({ row }) => { const { product_images, product_name, id, want_to } = row?.original || {}; const intent = want_to as WallIntent;
+      {
+        header: "Overview", accessorKey: "product_name", size: 280, cell: ({ row }) => {
+          const { product_images, product_name, id, want_to } = row?.original || {}; const intent = want_to as WallIntent;
           return (
             <div className="flex flex-col">
-              <div className="flex items-center gap-2"><Avatar size={33} shape="circle" src={product_images?.[0]} icon={!product_images?.[0] && (<TbPhoto className="text-gray-400" />)}/>
+              <div className="flex items-center gap-2"><Avatar size={33} shape="circle" src={product_images?.[0]} icon={!product_images?.[0] && (<TbPhoto className="text-gray-400" />)} />
                 <div className="font-semibold leading-normal text-xs text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">{product_name}</div>
               </div>
               <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {id || "N/A"}</span>
@@ -742,7 +820,9 @@ const WallListing = () => {
           );
         },
       },
-      { header: "Company & Member", accessorKey: "company_name", size: 260, cell: ({ row }) => { const { name, id, member_email, member_phone } = row.original?.member || {};
+      {
+        header: "Company & Member", accessorKey: "company_name", size: 260, cell: ({ row }) => {
+          const { name, id, member_email, member_phone } = row.original?.member || {};
           return (
             <div className="flex flex-col gap-0.5 text-xs">
               <div className="mt-1 pt-1 dark:border-gray-700 w-full">
@@ -755,7 +835,9 @@ const WallListing = () => {
           );
         },
       },
-      { header: "Details", accessorKey: "product_category", size: 280, cell: ({ row }) => { const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition, } = row?.original || {};
+      {
+        header: "Details", accessorKey: "product_category", size: 280, cell: ({ row }) => {
+          const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition, } = row?.original || {};
           const currentProductApiStatus = product_status?.toLowerCase() || "default";
           const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
           return (
@@ -769,7 +851,9 @@ const WallListing = () => {
           );
         },
       },
-      { header: "Engagement", accessorKey: "price", size: 220, cell: ({ row }) => { const { price, quantity, inquiry_count, share_count, is_bookmarked, created_date, } = row.original;
+      {
+        header: "Engagement", accessorKey: "price", size: 220, cell: ({ row }) => {
+          const { price, quantity, inquiry_count, share_count, is_bookmarked, created_date, } = row.original;
           return (
             <div className="flex flex-col gap-1 text-xs">
               <div className="flex items-center"><TbCurrencyDollar className="text-base text-emerald-500 dark:text-emerald-400" /><span className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">{price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2, }) ?? "N/A"}</span><TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span></div>
@@ -783,24 +867,29 @@ const WallListing = () => {
           );
         },
       },
-      { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 180, cell: (props) => { const { updated_at, updated_by_name, updated_by_role } = props.row.original || {};
+      {
+        header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 180, cell: (props) => {
+          const { updated_at, updated_by_name, updated_by_role } = props.row.original || {};
           const formattedDate = updated_at ? dayjs(updated_at).format("MMM D, YYYY h:mm A") : "N/A";
-          return ( <div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div> );
+          return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
         },
       },
-      { header: "Workflow Status", accessorKey: "recordStatus", enableSorting: true, size: 180, cell: ({ row }) => { const { recordStatus } = row.original;
-          return ( <div className="flex flex-col gap-1 text-xs">{recordStatus && (<div><Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>{recordStatus}</Tag></div>)}</div> );
+      {
+        header: "Workflow Status", accessorKey: "recordStatus", enableSorting: true, size: 180, cell: ({ row }) => {
+          const { recordStatus } = row.original;
+          return (<div className="flex flex-col gap-1 text-xs">{recordStatus && (<div><Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>{recordStatus}</Tag></div>)}</div>);
         },
       },
-      { header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<WallItem, any>) => ( <StyledActionColumn onViewDetail={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original}/>),
+      {
+        header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<WallItem, any>) => (<StyledActionColumn onViewDetail={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original} />),
       },
     ],
     [openViewDrawer, openEditDrawer, handleOpenModal]
   );
-  
+
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<WallItem>[]>(columns);
   // useEffect(() => { setFilteredColumns(columns) }, [columns]);
-  
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filterCriteria.filterRecordStatuses?.length) count++;
@@ -844,17 +933,17 @@ const WallListing = () => {
         </AdaptiveCard>
       </Container>
       <WallSelectedFooter selectedItems={selectedItems} deleteConfirmOpen={deleteSelectedConfirmOpen} setDeleteConfirmOpen={setDeleteSelectedConfirmOpen} onConfirmDelete={onConfirmDeleteSelectedItems} isDeleting={masterLoadingStatus === "loading"} />
-      <WallModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={useMemo(() => getAllUserData?.map((user: any) => ({value: user?.id, label: user?.name})), [getAllUserData])} />
+      <WallModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={useMemo(() => getAllUserData?.map((user: any) => ({ value: user?.id, label: user?.name })), [getAllUserData])} />
       <Drawer title="View Wall Item Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={700}>
         {editingItem && (
           <div className="p-4 space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
               {Object.entries(editingItem).filter(([key]) => !["product_images", "product_name", "id"].includes(key)).map(([key, value]) => (
-                  <div key={key} className="border-b border-gray-200 dark:border-gray-700 pb-2">
-                    <strong className="capitalize text-gray-700 dark:text-gray-200">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}:</strong>{" "}
-                    <span className="text-gray-600 dark:text-gray-400">{value instanceof Date ? dayjs(value).format("MMM D, YYYY h:mm A") : value !== null && value !== "" ? String(value) : "N/A"}</span>
-                  </div>
-                ))}
+                <div key={key} className="border-b border-gray-200 dark:border-gray-700 pb-2">
+                  <strong className="capitalize text-gray-700 dark:text-gray-200">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}:</strong>{" "}
+                  <span className="text-gray-600 dark:text-gray-400">{value instanceof Date ? dayjs(value).format("MMM D, YYYY h:mm A") : value !== null && value !== "" ? String(value) : "N/A"}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -870,19 +959,19 @@ const WallListing = () => {
         <Form id="filterWallForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col h-full">
           <div className="overflow-y-auto p-1 flex-grow">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Status..." options={recordStatusOptions} {...field}/> )}/></FormItem>
-              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p: any) => ({ value: p.id, label: p.company_name }))} {...field}/> )}/></FormItem>
-              <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field}/> )}/></FormItem>
-              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select products..." options={AllProductsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field}/> )}/></FormItem>
-              <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Categories..." options={AllCategorysData.map((p: any) => ({ value: p.id, label: p.name }))} {...field}/> )}/></FormItem>
-              <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Sub Categories..." options={subCategoriesForSelectedCategoryData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field}/> )}/></FormItem>
-              <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field}/> )}/></FormItem>
-              <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s }))} {...field}/> )}/></FormItem>
-              <FormItem label="Created Date Range" className="col-span-2"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => ( <DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range"/> )}/></FormItem>
-              <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" }]} {...field}/> )}/></FormItem>
-              <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field}/> )}/></FormItem>
-              <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field}/> )}/></FormItem>
-              <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p: any) => ({ value: p.id, label: p.name }))} {...field}/> )}/></FormItem>
+              <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
+              <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p: any) => ({ value: p.id, label: p.company_name }))} {...field} />)} /></FormItem>
+              <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
+              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={AllCategorysData.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Sub Categories..." options={subCategoriesForSelectedCategoryData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s }))} {...field} />)} /></FormItem>
+              <FormItem label="Created Date Range" className="col-span-2"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
+              <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" }]} {...field} />)} /></FormItem>
+              <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
             </div>
           </div>
         </Form>
@@ -890,14 +979,14 @@ const WallListing = () => {
       <Dialog isOpen={importDialogOpen} onClose={() => setImportDialogOpen(false)} onRequestClose={() => setImportDialogOpen(false)} title="Import Wall Items">
         <div className="p-4">
           <p>Upload a CSV file to import Wall Items. (This is a dummy import)</p>
-          <FormItem label="CSV File"><Input type="file" accept=".csv" onChange={handleImportFileSelect}/></FormItem>
+          <FormItem label="CSV File"><Input type="file" accept=".csv" onChange={handleImportFileSelect} /></FormItem>
           <div className="text-right mt-4"><Button size="sm" onClick={() => setImportDialogOpen(false)}>Cancel</Button></div>
         </div>
       </Dialog>
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
         <Form id="exportReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2">
           <FormItem label="Please provide a reason for exporting this data:" isRequired invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
-            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => ( <Input textArea {...field} placeholder="Enter reason..." rows={3}/> )}/>
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
           </FormItem>
         </Form>
       </ConfirmDialog>

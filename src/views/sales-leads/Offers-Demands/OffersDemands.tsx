@@ -131,7 +131,7 @@ const filterFormSchema = z.object({
   createdDateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
   updatedDateRange: z.array(z.date().nullable()).length(2).nullable().optional(),
   itemType: z.enum(["Offer", "Demand"]).nullable().optional(),
-  creatorIds: z.array(z.string()).optional().default([]), 
+  creatorIds: z.array(z.string()).optional().default([]),
   assigneeIds: z.array(z.string()).optional().default([]),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
@@ -219,9 +219,85 @@ export type OfferDemandModalType = | "email" | "whatsapp" | "notification" | "ta
 export interface OfferDemandModalState { isOpen: boolean; type: OfferDemandModalType | null; data: OfferDemandItem | null; }
 interface OfferDemandModalsProps { modalState: OfferDemandModalState; onClose: () => void; getAllUserDataOptions: SelectOption[] }
 
-const dummyUsersForModals = [ { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" }, ];
+const dummyUsersForModals = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },];
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
-const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
+const eventTypeOptions = [
+  // Customer Engagement & Sales
+  { value: 'Meeting', label: 'Meeting' },
+  { value: 'Demo', label: 'Product Demo' },
+  { value: 'IntroCall', label: 'Introductory Call' },
+  { value: 'FollowUpCall', label: 'Follow-up Call' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'CheckIn', label: 'Customer Check-in' },
+  { value: 'LogEmail', label: 'Log an Email' },
+
+  // Project & Task Management
+  { value: 'Milestone', label: 'Project Milestone' },
+  { value: 'Task', label: 'Task' },
+  { value: 'FollowUp', label: 'General Follow-up' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+  // Customer Onboarding & Support
+  { value: 'OnboardingSession', label: 'Onboarding Session' },
+  { value: 'Training', label: 'Training Session' },
+  { value: 'SupportCall', label: 'Support Call' },
+
+  // General & Administrative
+  { value: 'Reminder', label: 'Reminder' },
+  { value: 'Note', label: 'Add a Note' },
+  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+  { value: 'StrategySession', label: 'Strategy Session' },
+  { value: 'TeamMeeting', label: 'Team Meeting' },
+  { value: 'PerformanceReview', label: 'Performance Review' },
+  { value: 'Lunch', label: 'Lunch / Break' },
+  { value: 'Appointment', label: 'Personal Appointment' },
+  { value: 'Other', label: 'Other' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+  { value: 'InternalSync', label: 'Internal Team Sync' },
+  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+  { value: 'ProjectSignOff', label: 'Project Sign-off' },
+  { value: 'PrepareReport', label: 'Prepare Report' },
+  { value: 'PresentFindings', label: 'Present Findings' },
+  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+  { value: 'BugReplication', label: 'Bug Replication Session' },
+  { value: 'IssueEscalation', label: 'Escalate Issue' },
+  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+  { value: 'FeatureRequest', label: 'Log Feature Request' },
+  { value: 'IntegrationSupport', label: 'Integration Support Call' },
+  { value: 'DataMigration', label: 'Data Migration/Import Task' },
+  { value: 'ColdCall', label: 'Cold Call' },
+  { value: 'DiscoveryCall', label: 'Discovery Call' },
+  { value: 'QualificationCall', label: 'Qualification Call' },
+  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+  { value: 'ContractSent', label: 'Contract Sent' },
+  { value: 'NegotiationCall', label: 'Negotiation Call' },
+  { value: 'TrialSetup', label: 'Product Trial Setup' },
+  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+  { value: 'WelcomeCall', label: 'Welcome Call' },
+  { value: 'ImplementationSession', label: 'Implementation Session' },
+  { value: 'UserTraining', label: 'User Training Session' },
+  { value: 'AdminTraining', label: 'Admin Training Session' },
+  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'HealthCheck', label: 'Customer Health Check' },
+  { value: 'FeedbackSession', label: 'Feedback Session' },
+  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+  { value: 'InvoiceDue', label: 'Invoice Due' },
+  { value: 'SendInvoice', label: 'Send Invoice' },
+  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+  { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
 const dummyAlerts = [{ id: 1, severity: "danger", message: "Offer #OD123 has low engagement.", time: "2 days ago", }, { id: 2, severity: "warning", message: "Demand #DD456 is approaching its expiration date.", time: "5 days ago", },];
 const dummyTimeline = [{ id: 1, icon: <TbMail />, title: "Initial Offer Created", desc: "Offer was created and sent.", time: "2023-11-01", }, { id: 2, icon: <TbCalendar />, title: "Follow-up Call Scheduled", desc: "Scheduled a call.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Item Assigned", desc: "Assigned to team.", time: "2023-10-27", },];
 const dummyDocs = [{ id: "doc1", name: "Offer_Details.pdf", type: "pdf", size: "1.2 MB", }, { id: "doc2", name: "Images.zip", type: "zip", size: "8.5 MB", },];
@@ -296,29 +372,29 @@ const SendWhatsAppDialog: React.FC<{ item: OfferDemandItem; onClose: () => void;
   );
 };
 const AddNotificationDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; getAllUserDataOptions: SelectOption[] }> = ({ item, onClose, getAllUserDataOptions }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
-    type NotificationFormData = z.infer<typeof notificationSchema>;
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Regarding ${item.type}: ${item.name}`, send_users: [], message: `This is a notification for the ${item.type.toLowerCase()}: "${item.name}".` }, mode: 'onChange' });
-    const onSend = async (formData: NotificationFormData) => {
-      setIsLoading(true);
-      const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(item.id), module_name: 'OfferDemand', };
-      try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); } 
-      catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); }
-      finally { setIsLoading(false); }
-    };
-    return (
-      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-        <h5 className="mb-4">Add Notification for {item.name}</h5>
-        <Form onSubmit={handleSubmit(onSend)}>
-          <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-          <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => ( <Select isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} /> )}/></FormItem>
-          <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
-          <div className="text-right mt-6"><Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
-        </Form>
-      </Dialog>
-    );
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
+  type NotificationFormData = z.infer<typeof notificationSchema>;
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Regarding ${item.type}: ${item.name}`, send_users: [], message: `This is a notification for the ${item.type.toLowerCase()}: "${item.name}".` }, mode: 'onChange' });
+  const onSend = async (formData: NotificationFormData) => {
+    setIsLoading(true);
+    const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(item.id), module_name: 'OfferDemand', };
+    try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); }
+    catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); }
+    finally { setIsLoading(false); }
+  };
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Notification for {item.name}</h5>
+      <Form onSubmit={handleSubmit(onSend)}>
+        <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
+        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
+        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
+      </Form>
+    </Dialog>
+  );
 };
 const AssignTaskDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -602,58 +678,58 @@ const ItemSearch = React.memo(React.forwardRef<HTMLInputElement, { onInputChange
 ItemSearch.displayName = "ItemSearch";
 
 const ItemTableTools = React.memo(({ onSearchChange, onExport, searchQuery, onOpenFilter, onClearFilters, activeFilterCount, columns, filteredColumns, setFilteredColumns }: { onSearchChange: (query: string) => void; onExport: () => void; searchQuery: string; onOpenFilter: () => void; onClearFilters: () => void; activeFilterCount: number; columns: ColumnDef<OfferDemandItem>[]; filteredColumns: ColumnDef<OfferDemandItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<OfferDemandItem>[]>>; }) => {
-    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-    const toggleColumn = (checked: boolean, colId: string) => {
-      if (checked) {
-        const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-        if (originalColumn) {
-          setFilteredColumns(prev => {
-            const newCols = [...prev, originalColumn];
-            newCols.sort((a, b) => {
-              const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-              const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-              return indexA - indexB;
-            });
-            return newCols;
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
           });
-        }
-      } else {
-        setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+          return newCols;
+        });
       }
-    };
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
 
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <ItemSearch onInputChange={onSearchChange} initialValue={searchQuery} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
-                    </div>
-                </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-                <Button icon={<TbFilter />} onClick={onOpenFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
-            </div>
-        </div>
-    )
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <ItemSearch onInputChange={onSearchChange} initialValue={searchQuery} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
+          </div>
+        </Dropdown>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+        <Button icon={<TbFilter />} onClick={onOpenFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+      </div>
+    </div>
+  )
 });
 ItemTableTools.displayName = "ItemTableTools";
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: FilterFormData, onRemoveFilter: (key: keyof FilterFormData, value: any) => void; onClearAll: () => void; }) => {
-  
-  
+
+
   const hasFilters = Object.values(filterData).some(val => val && (!Array.isArray(val) || val.length > 0));
-    if (!hasFilters) return null;
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterData.quickFilters.value && <Tag prefix>Type: {filterData.quickFilters.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('quickFilters', filterData.quickFilters.value)} /></Tag>}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  if (!hasFilters) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterData.quickFilters.value && <Tag prefix>Type: {filterData.quickFilters.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('quickFilters', filterData.quickFilters.value)} /></Tag>}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 const ItemSelected = React.memo(({ selectedItems, onDeleteSelected, activeTab, isDeleting, }: { selectedItems: OfferDemandItem[]; onDeleteSelected: () => void; activeTab: string; isDeleting: boolean; }) => {
@@ -708,7 +784,7 @@ const OffersDemands = () => {
     if (currentTab === TABS.ALL) return allTableConfig;
     if (currentTab === TABS.OFFER) return offerTableConfig;
     if (currentTab === TABS.DEMAND) return demandTableConfig;
-    return allTableConfig; 
+    return allTableConfig;
   }, [currentTab, allTableConfig, offerTableConfig, demandTableConfig]);
 
   const setCurrentTableConfig = useMemo(() => {
@@ -751,7 +827,7 @@ const OffersDemands = () => {
 
   const fetchData = useCallback(() => {
     const params = prepareApiParams(currentTableConfig, filterCriteria);
-    dispatch(getAllUsersAction()) 
+    dispatch(getAllUsersAction())
     const shouldFetchOffers = currentTab === TABS.OFFER || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Offer"));
     const shouldFetchDemands = currentTab === TABS.DEMAND || (currentTab === TABS.ALL && (!filterCriteria.itemType || filterCriteria.itemType === "Demand"));
     if (shouldFetchOffers) { dispatch(getOffersAction(params)); }
@@ -877,17 +953,19 @@ const OffersDemands = () => {
   }, [dispatch, filterCriteria, currentTableConfig, currentTab, fetchData, prepareApiParams]);
 
 
-  
+
   const columns: ColumnDef<OfferDemandItem>[] = useMemo(() => [
-    { header: "ID", accessorKey: "id", enableSorting: true, size: 70, cell: (props: CellContext<OfferDemandItem, any>) =>(<span className="font-mono text-xs">{props.row.original.originalApiItem.id}</span>), },
+    { header: "ID", accessorKey: "id", enableSorting: true, size: 70, cell: (props: CellContext<OfferDemandItem, any>) => (<span className="font-mono text-xs">{props.row.original.originalApiItem.id}</span>), },
     { header: "Name", accessorKey: "name", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => (<div><div className="font-semibold">{props.row.original.name}</div>{(props.row.original.numberOfBuyers !== undefined || props.row.original.numberOfSellers !== undefined) && (<><div className="text-xs text-gray-600 dark:text-gray-300">Buyers: {props.row.original.numberOfBuyers ?? "N/A"}</div><div className="text-xs text-gray-600 dark:text-gray-300">Sellers: {props.row.original.numberOfSellers ?? "N/A"}</div></>)}</div>), },
     {
-      header: "Section Details", id: "sectionDetails", size: 220, cell: ({ row }: CellContext<OfferDemandItem, any>) => { const { groups } = row.original;
+      header: "Section Details", id: "sectionDetails", size: 220, cell: ({ row }: CellContext<OfferDemandItem, any>) => {
+        const { groups } = row.original;
         if (!groups || groups.length === 0) { return <span className="text-xs text-gray-500">No group details</span>; }
         return (
           <div className="space-y-1">
-            {groups.map((group, index) => { const isSpecialGroup = group.groupName === 'Group A' || group.groupName === 'Group B';
-              if (isSpecialGroup && group.items?.[0]) { const fullText = group.items[0]; return ( <div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><Tooltip title={fullText}><p className="line-clamp-2 pl-2 text-gray-600 dark:text-gray-400">{fullText}</p></Tooltip></div> ); }
+            {groups.map((group, index) => {
+              const isSpecialGroup = group.groupName === 'Group A' || group.groupName === 'Group B';
+              if (isSpecialGroup && group.items?.[0]) { const fullText = group.items[0]; return (<div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><Tooltip title={fullText}><p className="line-clamp-2 pl-2 text-gray-600 dark:text-gray-400">{fullText}</p></Tooltip></div>); }
               return (<div key={index} className="text-xs"><b className="text-gray-700 dark:text-gray-200">{group.groupName}: </b><div className="pl-2 flex flex-col gap-0.5 text-gray-600 dark:text-gray-400">{group.items.slice(0, 3).map((item, itemIdx) => (<span key={itemIdx}>{item}</span>))}{group.items.length > 3 && (<span className="italic">...and {group.items.length - 3} more</span>)}</div></div>);
             })}
           </div>
@@ -901,7 +979,7 @@ const OffersDemands = () => {
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<OfferDemandItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
-  
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filterCriteria.itemType) count++;
@@ -912,7 +990,7 @@ const OffersDemands = () => {
     if (filterCriteria.quickFilters) count++;
     return count;
   }, [filterCriteria]);
-  
+
   const isLoadingO = offersStatus === 'loading' || offersStatus === 'idle'; const isLoadingD = demandsStatus === 'loading' || demandsStatus === 'idle';
   let isOverallLoading = false;
   if (currentTab === TABS.OFFER) isOverallLoading = isLoadingO; else if (currentTab === TABS.DEMAND) isOverallLoading = isLoadingD; else isOverallLoading = isLoadingO || isLoadingD;
@@ -940,9 +1018,9 @@ const OffersDemands = () => {
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
             <div className="flex flex-col md:flex-row gap-2">
-                <Button icon={<TbRefresh />} onClick={() => fetchData()} title="Refresh Data">Refresh</Button>
-                <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/sales-leads/offers/create")} block>Add Offer</Button>
-                <Button icon={<TbPlus />} variant="solid" onClick={() => navigate("/sales-leads/demands/create")} block>Add Demand</Button>
+              <Button icon={<TbRefresh />} onClick={() => fetchData()} title="Refresh Data">Refresh</Button>
+              <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/sales-leads/offers/create")} block>Add Offer</Button>
+              <Button icon={<TbPlus />} variant="solid" onClick={() => navigate("/sales-leads/demands/create")} block>Add Demand</Button>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
@@ -953,7 +1031,7 @@ const OffersDemands = () => {
             <Tooltip title="Click to show offers created today"><div onClick={() => handleCardClick('item', 'Today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-teal-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div><div><h6 className="text-teal-500">{offerDemandCounts?.today_offers ?? 0}</h6><span className="font-semibold text-xs">Today Offers</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show demands created today"><div onClick={() => handleCardClick('item', 'Today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-rose-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div><div><h6 className="text-rose-500">{offerDemandCounts?.today_demands ?? 0}</h6><span className="font-semibold text-xs">Today Demands</span></div></Card></div></Tooltip>
           </div>
-          <div className="mb-4 border-b border-gray-200 dark:border-gray-700"><nav className="-mb-px flex space-x-8" aria-label="Tabs">{[TABS.ALL, TABS.OFFER, TABS.DEMAND].map((tabKey) =>(<button key={tabKey} onClick={() => handleTabChange(tabKey)} className={classNames("whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize", currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>{tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}</button>))}</nav></div>
+          <div className="mb-4 border-b border-gray-200 dark:border-gray-700"><nav className="-mb-px flex space-x-8" aria-label="Tabs">{[TABS.ALL, TABS.OFFER, TABS.DEMAND].map((tabKey) => (<button key={tabKey} onClick={() => handleTabChange(tabKey)} className={classNames("whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize", currentTab === tabKey ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600")}>{tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}</button>))}</nav></div>
           <div className="mb-4"><ItemTableTools onSearchChange={handleSearchChange} onExport={handleOpenExportReasonModal} searchQuery={currentTableConfig.query} onOpenFilter={openFilterDrawer} onClearFilters={onClearFilters} activeFilterCount={activeFilterCount} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} /></div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="flex-grow overflow-auto">

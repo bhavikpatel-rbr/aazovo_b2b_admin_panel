@@ -271,67 +271,143 @@ export type ModalType = 'email' | 'whatsapp' | 'schedule';
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: PartnerItem | null; }
 
 const AddPartnerScheduleDialog: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const eventTypeOptions = [ { value: "Meeting", label: "Meeting" }, { value: "Call", label: "Follow-up Call" }, { value: "Deadline", label: "Project Deadline" }, { value: "Reminder", label: "Reminder" }, ];
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const eventTypeOptions = [
+    // Customer Engagement & Sales
+    { value: 'Meeting', label: 'Meeting' },
+    { value: 'Demo', label: 'Product Demo' },
+    { value: 'IntroCall', label: 'Introductory Call' },
+    { value: 'FollowUpCall', label: 'Follow-up Call' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'CheckIn', label: 'Customer Check-in' },
+    { value: 'LogEmail', label: 'Log an Email' },
 
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
-      resolver: zodResolver(scheduleSchema),
-      defaultValues: { event_title: `Meeting with ${partner.partner_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding partner ${partner.partner_name} (${partner.partner_code}).`},
-      mode: 'onChange',
-    });
-  
-    const onAddEvent = async (data: ScheduleFormData) => {
-      setIsLoading(true);
-      const payload = {
-        module_id: Number(partner.id),
-        module_name: 'Partner',
-        event_title: data.event_title,
-        event_type: data.event_type,
-        date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
-        ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
-        notes: data.notes || '',
-      };
-  
-      try {
-        await dispatch(addScheduleAction(payload)).unwrap();
-        toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${partner.partner_name}.`} />);
-        onClose();
-      } catch (error: any) {
-        toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
-      } finally {
-        setIsLoading(false);
-      }
+    // Project & Task Management
+    { value: 'Milestone', label: 'Project Milestone' },
+    { value: 'Task', label: 'Task' },
+    { value: 'FollowUp', label: 'General Follow-up' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+    // Customer Onboarding & Support
+    { value: 'OnboardingSession', label: 'Onboarding Session' },
+    { value: 'Training', label: 'Training Session' },
+    { value: 'SupportCall', label: 'Support Call' },
+
+    // General & Administrative
+    { value: 'Reminder', label: 'Reminder' },
+    { value: 'Note', label: 'Add a Note' },
+    { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+    { value: 'StrategySession', label: 'Strategy Session' },
+    { value: 'TeamMeeting', label: 'Team Meeting' },
+    { value: 'PerformanceReview', label: 'Performance Review' },
+    { value: 'Lunch', label: 'Lunch / Break' },
+    { value: 'Appointment', label: 'Personal Appointment' },
+    { value: 'Other', label: 'Other' },
+    { value: 'ProjectKickoff', label: 'Project Kick-off' },
+    { value: 'InternalSync', label: 'Internal Team Sync' },
+    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+    { value: 'ProjectSignOff', label: 'Project Sign-off' },
+    { value: 'PrepareReport', label: 'Prepare Report' },
+    { value: 'PresentFindings', label: 'Present Findings' },
+    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+    { value: 'BugReplication', label: 'Bug Replication Session' },
+    { value: 'IssueEscalation', label: 'Escalate Issue' },
+    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+    { value: 'FeatureRequest', label: 'Log Feature Request' },
+    { value: 'IntegrationSupport', label: 'Integration Support Call' },
+    { value: 'DataMigration', label: 'Data Migration/Import Task' },
+    { value: 'ColdCall', label: 'Cold Call' },
+    { value: 'DiscoveryCall', label: 'Discovery Call' },
+    { value: 'QualificationCall', label: 'Qualification Call' },
+    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+    { value: 'ContractSent', label: 'Contract Sent' },
+    { value: 'NegotiationCall', label: 'Negotiation Call' },
+    { value: 'TrialSetup', label: 'Product Trial Setup' },
+    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+    { value: 'WelcomeCall', label: 'Welcome Call' },
+    { value: 'ImplementationSession', label: 'Implementation Session' },
+    { value: 'UserTraining', label: 'User Training Session' },
+    { value: 'AdminTraining', label: 'Admin Training Session' },
+    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+    { value: 'HealthCheck', label: 'Customer Health Check' },
+    { value: 'FeedbackSession', label: 'Feedback Session' },
+    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+    { value: 'InvoiceDue', label: 'Invoice Due' },
+    { value: 'SendInvoice', label: 'Send Invoice' },
+    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+    { value: 'SendQuote', label: 'Send Quote/Estimate' },
+  ]
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: { event_title: `Meeting with ${partner.partner_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding partner ${partner.partner_name} (${partner.partner_code}).` },
+    mode: 'onChange',
+  });
+
+  const onAddEvent = async (data: ScheduleFormData) => {
+    setIsLoading(true);
+    const payload = {
+      module_id: Number(partner.id),
+      module_name: 'Partner',
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
+      notes: data.notes || '',
     };
-    
-    return (
-      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-        <h5 className="mb-4">Add Schedule for {partner.partner_name}</h5>
-        <UiForm onSubmit={handleSubmit(onAddEvent)}>
-          <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
-            <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+
+    try {
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${partner.partner_name}.`} />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Schedule for {partner.partner_name}</h5>
+      <UiForm onSubmit={handleSubmit(onAddEvent)}>
+        <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
+        </UiFormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
           </UiFormItem>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
-              <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} />
-            </UiFormItem>
-            <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
-              <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-            </UiFormItem>
-          </div>
-          <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
-            <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+          <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
           </UiFormItem>
-          <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-            <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
-          </UiFormItem>
-          <div className="text-right mt-6">
-            <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
-          </div>
-        </UiForm>
-      </Dialog>
-    );
+        </div>
+        <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
+        </UiFormItem>
+        <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
 };
 
 const PartnerModals: React.FC<{ modalState: ModalState; onClose: () => void; }> = ({ modalState, onClose }) => {
@@ -368,68 +444,68 @@ const PartnerListActionTools = () => {
   );
 };
 
-const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: { 
-    rowData: PartnerItem; 
-    onEdit: (id: string) => void;
-    onOpenModal: (type: ModalType, data: PartnerItem) => void;
+const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
+  rowData: PartnerItem;
+  onEdit: (id: string) => void;
+  onOpenModal: (type: ModalType, data: PartnerItem) => void;
 }) => {
-    const navigate = useNavigate();
-    return (
-      <div className="flex items-center justify-center gap-1">
-        <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
-        <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
-        <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-          <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
-          <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2">
-            <TbCalendarEvent size={18} />
-            <span className="text-xs">Add Schedule</span>
-          </Dropdown.Item>
-        </Dropdown>
-      </div>
-    );
+  const navigate = useNavigate();
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
+      <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
+      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+        <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2">
+          <TbCalendarEvent size={18} />
+          <span className="text-xs">Add Schedule</span>
+        </Dropdown.Item>
+      </Dropdown>
+    </div>
+  );
 };
 
 // --- ActiveFiltersDisplay Component ---
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
-    filterData: PartnerFilterFormData;
-    onRemoveFilter: (key: keyof PartnerFilterFormData, value: string) => void;
-    onClearAll: () => void;
-  }) => {
-    const filterKeyToLabelMap: Record<string, string> = {
-      filterStatus: 'Status', filterOwnershipType: 'Type', filterContinent: 'Continent',
-      filterCountry: 'Country', filterState: 'State', filterCity: 'City',
-      filterKycVerified: 'KYC',
-    };
-    const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
-      if (!value || (Array.isArray(value) && value.length === 0)) return [];
-      if (key === 'filterCreatedDate') {
-        const dateArray = value as [Date | null, Date | null];
-        if (dateArray[0] && dateArray[1]) {
-          return [{ key, value: 'date-range', label: `Date: ${dateArray[0].toLocaleDateString()} - ${dateArray[1].toLocaleDateString()}` }];
-        }
-        return [];
-      }
-      if (Array.isArray(value)) {
-        return value.filter(item => item !== null && item !== undefined).map((item: { value: string; label: string }) => ({
-          key, value: item.value, label: `${filterKeyToLabelMap[key] || 'Filter'}: ${item.label}`,
-        }));
+  filterData: PartnerFilterFormData;
+  onRemoveFilter: (key: keyof PartnerFilterFormData, value: string) => void;
+  onClearAll: () => void;
+}) => {
+  const filterKeyToLabelMap: Record<string, string> = {
+    filterStatus: 'Status', filterOwnershipType: 'Type', filterContinent: 'Continent',
+    filterCountry: 'Country', filterState: 'State', filterCity: 'City',
+    filterKycVerified: 'KYC',
+  };
+  const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
+    if (!value || (Array.isArray(value) && value.length === 0)) return [];
+    if (key === 'filterCreatedDate') {
+      const dateArray = value as [Date | null, Date | null];
+      if (dateArray[0] && dateArray[1]) {
+        return [{ key, value: 'date-range', label: `Date: ${dateArray[0].toLocaleDateString()} - ${dateArray[1].toLocaleDateString()}` }];
       }
       return [];
-    });
-    if (activeFiltersList.length === 0) return null;
-    return (
-      <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-        <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-        {activeFiltersList.map(filter => (
-          <Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
-            {filter.label}
-            <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof PartnerFilterFormData, filter.value)} />
-          </Tag>
-        ))}
-        <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-      </div>
-    );
+    }
+    if (Array.isArray(value)) {
+      return value.filter(item => item !== null && item !== undefined).map((item: { value: string; label: string }) => ({
+        key, value: item.value, label: `${filterKeyToLabelMap[key] || 'Filter'}: ${item.label}`,
+      }));
+    }
+    return [];
+  });
+  if (activeFiltersList.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {activeFiltersList.map(filter => (
+        <Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
+          {filter.label}
+          <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof PartnerFilterFormData, filter.value)} />
+        </Tag>
+      ))}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 const PartnerListTable = () => {
@@ -443,7 +519,7 @@ const PartnerListTable = () => {
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
-  
+
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), mode: 'onChange' });
   const filterFormMethods = useForm<PartnerFilterFormData>({ resolver: zodResolver(partnerFilterFormSchema) });
 
@@ -469,17 +545,17 @@ const PartnerListTable = () => {
 
   const handleRemoveFilter = (key: keyof PartnerFilterFormData, valueToRemove: string) => {
     setFilterCriteria(prev => {
-        const newCriteria = { ...prev };
-        if (key === 'filterCreatedDate') {
-          (newCriteria as any)[key] = [null, null];
-        } else {
-          const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
-          if (currentFilterArray) {
-            const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove);
-            (newCriteria as any)[key] = newFilterArray;
-          }
+      const newCriteria = { ...prev };
+      if (key === 'filterCreatedDate') {
+        (newCriteria as any)[key] = [null, null];
+      } else {
+        const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
+        if (currentFilterArray) {
+          const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove);
+          (newCriteria as any)[key] = newFilterArray;
         }
-        return newCriteria;
+      }
+      return newCriteria;
     });
     handleSetTableData({ pageIndex: 1 });
   };
@@ -493,10 +569,10 @@ const PartnerListTable = () => {
   const handleCardClick = (filterType: string, value: string) => {
     onClearFilters();
     if (filterType === 'status') {
-        const statusOption = statusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-        if (statusOption) {
-            setFilterCriteria(prev => ({ ...prev, filterStatus: [statusOption] }));
-        }
+      const statusOption = statusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
+      if (statusOption) {
+        setFilterCriteria(prev => ({ ...prev, filterStatus: [statusOption] }));
+      }
     }
     handleSetTableData({ pageIndex: 1, query: "" });
   };
@@ -512,18 +588,18 @@ const PartnerListTable = () => {
     if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) { const selected = filterCriteria.filterKycVerified.map(k => k.value === "Yes"); filteredData = filteredData.filter(p => selected.includes(p.kyc_verified)); }
     if (filterCriteria.filterCreatedDate?.[0] && filterCriteria.filterCreatedDate?.[1]) { const [start, end] = filterCriteria.filterCreatedDate; end.setHours(23, 59, 59, 999); filteredData = filteredData.filter(p => { const date = new Date(p.created_at); return date >= start && date <= end; }); }
     if (tableData.query) { filteredData = filteredData.filter(i => Object.values(i).some(v => String(v).toLowerCase().includes(tableData.query.toLowerCase()))); }
-  
-  
-   let count = 0;
 
-     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) count++;
+
+    let count = 0;
+
+    if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) count++;
     if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) count++;
     if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) count++;
     if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) count++;
     if (filterCriteria.filterState && filterCriteria.filterState.length > 0) count++;
     if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) count++;
     if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) count++;
-   
+
 
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { filteredData.sort((a, b) => { const av = a[key as keyof PartnerItem] ?? ""; const bv = b[key as keyof PartnerItem] ?? ""; if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); return 0; }); }
@@ -538,13 +614,13 @@ const PartnerListTable = () => {
   const handleRowSelect = useCallback((c: boolean, r: PartnerItem) => setSelectedPartners(p => c ? [...p, r] : p.filter(i => i.id !== r.id)), [setSelectedPartners]);
   const handleAllRowSelect = useCallback((c: boolean, r: Row<PartnerItem>[]) => {
     const originalRows = r.map(i => i.original);
-    if(c){
-        setSelectedPartners(prev => [...prev, ...originalRows.filter(o => !prev.some(p => p.id === o.id))]);
+    if (c) {
+      setSelectedPartners(prev => [...prev, ...originalRows.filter(o => !prev.some(p => p.id === o.id))]);
     } else {
-        const currentIds = new Set(originalRows.map(o => o.id));
-        setSelectedPartners(prev => prev.filter(p => !currentIds.has(p.id)));
+      const currentIds = new Set(originalRows.map(o => o.id));
+      setSelectedPartners(prev => prev.filter(p => !currentIds.has(p.id)));
     }
-}, [setSelectedPartners]);
+  }, [setSelectedPartners]);
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData.length) {
@@ -558,16 +634,16 @@ const PartnerListTable = () => {
     setIsSubmittingExportReason(true);
     const fileName = `partners_export_${new Date().toISOString().split('T')[0]}.csv`;
     try {
-        await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Partner', file_name: fileName })).unwrap();
-        toast.push(<Notification title="Export Reason Submitted" type="success" />);
-        const success = exportToCsv(fileName, allFilteredAndSortedData);
-        if (success) {
-            setIsExportReasonModalOpen(false);
-        }
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Partner', file_name: fileName })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      const success = exportToCsv(fileName, allFilteredAndSortedData);
+      if (success) {
+        setIsExportReasonModalOpen(false);
+      }
     } catch (error: any) {
-        toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
+      toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
     } finally {
-        setIsSubmittingExportReason(false);
+      setIsSubmittingExportReason(false);
     }
   };
 
@@ -577,7 +653,8 @@ const PartnerListTable = () => {
   const closeImageViewer = () => setImageViewerOpen(false);
 
   const columns: ColumnDef<PartnerItem>[] = useMemo(() => [
-    { header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => (
+    {
+      header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => (
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <Avatar src={row.original.partner_logo ? `https://aazovo.codefriend.in/${row.original.partner_logo}` : ''} size="md" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.original.partner_logo || null)} icon={<TbUserCircle />} />
@@ -591,7 +668,8 @@ const PartnerListTable = () => {
         </div>
       ),
     },
-    { header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }) => (
+    {
+      header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }) => (
         <div className="text-xs flex flex-col gap-0.5">
           {row.original.owner_name && <span><b>Owner:</b> {row.original.owner_name}</span>}
           {row.original.primary_contact_number && <span>{row.original.primary_contact_number_code} {row.original.primary_contact_number}</span>}
@@ -600,7 +678,8 @@ const PartnerListTable = () => {
         </div>
       )
     },
-    { header: "Legal IDs & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => (
+    {
+      header: "Legal IDs & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => (
         <div className="flex flex-col gap-1 text-[10px]">
           {row.original.gst_number && <div><b>GST:</b> <span className="break-all">{row.original.gst_number}</span></div>}
           {row.original.pan_number && <div><b>PAN:</b> <span className="break-all">{row.original.pan_number}</span></div>}
@@ -608,7 +687,8 @@ const PartnerListTable = () => {
         </div>
       )
     },
-    { header: "Profile & Scores", size: 190, accessorKey: 'profile_completion', id: 'profile', cell: ({ row }) => (
+    {
+      header: "Profile & Scores", size: 190, accessorKey: 'profile_completion', id: 'profile', cell: ({ row }) => (
         <div className="flex flex-col gap-1.5 text-xs">
           <span><b>Teams:</b> {row.original.teams_count || 0}</span>
           <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${row.original.kyc_verified ? 'Yes' : 'No'}`}>{row.original.kyc_verified ? <MdCheckCircle className="text-green-500 text-lg" /> : <MdCancel className="text-red-500 text-lg" />}</Tooltip></div>
@@ -624,20 +704,20 @@ const PartnerListTable = () => {
   const [filteredColumns, setFilteredColumns] = useState(columns);
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
-        const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-        if (originalColumn) {
-            setFilteredColumns(prev => {
-                const newCols = [...prev, originalColumn];
-                newCols.sort((a, b) => {
-                    const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                    const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                    return indexA - indexB;
-                });
-                return newCols;
-            });
-        }
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
+      }
     } else {
-        setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
     }
   };
 

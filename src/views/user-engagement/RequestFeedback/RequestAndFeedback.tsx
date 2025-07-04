@@ -150,7 +150,83 @@ interface RequestFeedbackModalsProps { modalState: RequestFeedbackModalState; on
 
 const dummyUsers = [{ value: "user1", label: "Support Team" }, { value: "user2", label: "Product Manager" }, { value: "user3", label: "Admin User" },];
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
-const eventTypeOptions = [{ value: 'Meeting', label: 'Review Meeting' }, { value: 'Call', label: 'Follow-up Call' }, { value: 'Deadline', label: 'Resolution Deadline' }, { value: 'Reminder', label: 'Reminder' }];
+const eventTypeOptions = [
+  // Customer Engagement & Sales
+  { value: 'Meeting', label: 'Meeting' },
+  { value: 'Demo', label: 'Product Demo' },
+  { value: 'IntroCall', label: 'Introductory Call' },
+  { value: 'FollowUpCall', label: 'Follow-up Call' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'CheckIn', label: 'Customer Check-in' },
+  { value: 'LogEmail', label: 'Log an Email' },
+
+  // Project & Task Management
+  { value: 'Milestone', label: 'Project Milestone' },
+  { value: 'Task', label: 'Task' },
+  { value: 'FollowUp', label: 'General Follow-up' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+
+  // Customer Onboarding & Support
+  { value: 'OnboardingSession', label: 'Onboarding Session' },
+  { value: 'Training', label: 'Training Session' },
+  { value: 'SupportCall', label: 'Support Call' },
+
+  // General & Administrative
+  { value: 'Reminder', label: 'Reminder' },
+  { value: 'Note', label: 'Add a Note' },
+  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
+  { value: 'StrategySession', label: 'Strategy Session' },
+  { value: 'TeamMeeting', label: 'Team Meeting' },
+  { value: 'PerformanceReview', label: 'Performance Review' },
+  { value: 'Lunch', label: 'Lunch / Break' },
+  { value: 'Appointment', label: 'Personal Appointment' },
+  { value: 'Other', label: 'Other' },
+  { value: 'ProjectKickoff', label: 'Project Kick-off' },
+  { value: 'InternalSync', label: 'Internal Team Sync' },
+  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
+  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
+  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
+  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
+  { value: 'ProjectSignOff', label: 'Project Sign-off' },
+  { value: 'PrepareReport', label: 'Prepare Report' },
+  { value: 'PresentFindings', label: 'Present Findings' },
+  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
+  { value: 'BugReplication', label: 'Bug Replication Session' },
+  { value: 'IssueEscalation', label: 'Escalate Issue' },
+  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
+  { value: 'FeatureRequest', label: 'Log Feature Request' },
+  { value: 'IntegrationSupport', label: 'Integration Support Call' },
+  { value: 'DataMigration', label: 'Data Migration/Import Task' },
+  { value: 'ColdCall', label: 'Cold Call' },
+  { value: 'DiscoveryCall', label: 'Discovery Call' },
+  { value: 'QualificationCall', label: 'Qualification Call' },
+  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
+  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
+  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
+  { value: 'ContractSent', label: 'Contract Sent' },
+  { value: 'NegotiationCall', label: 'Negotiation Call' },
+  { value: 'TrialSetup', label: 'Product Trial Setup' },
+  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
+  { value: 'WelcomeCall', label: 'Welcome Call' },
+  { value: 'ImplementationSession', label: 'Implementation Session' },
+  { value: 'UserTraining', label: 'User Training Session' },
+  { value: 'AdminTraining', label: 'Admin Training Session' },
+  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
+  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
+  { value: 'HealthCheck', label: 'Customer Health Check' },
+  { value: 'FeedbackSession', label: 'Feedback Session' },
+  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
+  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
+  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
+  { value: 'InvoiceDue', label: 'Invoice Due' },
+  { value: 'SendInvoice', label: 'Send Invoice' },
+  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
+  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
+  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
+  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
+  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
+  { value: 'SendQuote', label: 'Send Quote/Estimate' },
+]
 const dummyAlerts = [{ id: 1, severity: "danger", message: "Complaint has been Unread for more than 48 hours.", time: "1 day ago", }, { id: 2, severity: "warning", message: "Request is 'In Progress' for over 5 days.", time: "3 days ago", },];
 const dummyTimeline = [{ id: 1, icon: <TbUser />, title: "Status changed to 'In Progress'", desc: "Assigned to the support team for investigation.", time: "2023-11-01", }, { id: 2, icon: <TbMail />, title: "Acknowledgement Email Sent", desc: "Sent an automated email to the user.", time: "2023-10-31", }, { id: 3, icon: <TbMessageDots />, title: "Feedback Submitted", desc: "Initial submission by the user.", time: "2023-10-31", },];
 
@@ -223,54 +299,54 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<RequestFeedbackItem>[]>>;
   activeFilterCount: number;
 }) => {
-    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-    const toggleColumn = (checked: boolean, colId: string) => {
-        if (checked) {
-            const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-            if (originalColumn) {
-                setFilteredColumns(prev => {
-                    const newCols = [...prev, originalColumn];
-                    newCols.sort((a, b) => {
-                        const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                        const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                        return indexA - indexB;
-                    });
-                    return newCols;
-                });
-            }
-        } else {
-            setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
-        }
-    };
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <ItemSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2">
-                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => {
-                            const id = col.id || col.accessorKey as string;
-                            return col.header && (
-                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
-                                        {col.header as string}
-                                    </Checkbox>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Dropdown>
-                <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
-                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
-                </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-            </div>
-        </div>
-    );
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
+      }
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <ItemSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2">
+            <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => {
+              const id = col.id || col.accessorKey as string;
+              return col.header && (
+                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                  <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                    {col.header as string}
+                  </Checkbox>
+                </div>
+              );
+            })}
+          </div>
+        </Dropdown>
+        <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+          Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+        </Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+      </div>
+    </div>
+  );
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
@@ -278,18 +354,18 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
   onClearAll: () => void;
 }) => {
-    const { filterType, filterStatus, filterRating } = filterData;
-    if (!filterType?.length && !filterStatus?.length && !filterRating?.length) return null;
+  const { filterType, filterStatus, filterRating } = filterData;
+  if (!filterType?.length && !filterStatus?.length && !filterRating?.length) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterType?.map(item => <Tag key={`type-${item.value}`} prefix>Type: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterType', item.value)} /></Tag>)}
-            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
-            {filterRating?.map(item => <Tag key={`rating-${item.value}`} prefix>Rating: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterRating', item.value)} /></Tag>)}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterType?.map(item => <Tag key={`type-${item.value}`} prefix>Type: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterType', item.value)} /></Tag>)}
+      {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+      {filterRating?.map(item => <Tag key={`rating-${item.value}`} prefix>Rating: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterRating', item.value)} /></Tag>)}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 
@@ -341,33 +417,33 @@ const RequestAndFeedbackListing = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
   const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); }, [filterFormMethods]);
-  
+
   const handleCardClick = useCallback((status?: RequestFeedbackFormStatus | 'all') => {
-      onClearFilters();
-      if (status && status !== 'all') {
-          const statusOption = STATUS_OPTIONS_FORM.find(opt => opt.value === status);
-          if (statusOption) {
-            setFilterCriteria({ filterStatus: [statusOption] });
-          }
+    onClearFilters();
+    if (status && status !== 'all') {
+      const statusOption = STATUS_OPTIONS_FORM.find(opt => opt.value === status);
+      if (statusOption) {
+        setFilterCriteria({ filterStatus: [statusOption] });
       }
+    }
   }, [onClearFilters]);
 
   const handleRemoveFilter = (key: keyof FilterFormData, value: string) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
-        if (currentValues) {
-            const newValues = currentValues.filter(item => item.value !== value);
-            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
-        }
-        return newFilters;
+      const newFilters = { ...prev };
+      const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+      if (currentValues) {
+        const newValues = currentValues.filter(item => item.value !== value);
+        (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+      }
+      return newFilters;
     });
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   };
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => { let processedData: RequestFeedbackItem[] = cloneDeep(Array.isArray(requestFeedbacksData?.data) ? requestFeedbacksData?.data : []); if (filterCriteria.filterType?.length) { const v = filterCriteria.filterType.map((o) => o.value); processedData = processedData.filter((item) => v.includes(item.type)); } if (filterCriteria.filterStatus?.length) { const v = filterCriteria.filterStatus.map((o) => o.value); processedData = processedData.filter((item) => v.includes(item.status)); } if (filterCriteria.filterRating?.length) { const v = filterCriteria.filterRating.map((o) => o.value); processedData = processedData.filter((item) => v.includes(String(item.rating || ""))); } if (tableData.query) { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter((item) => String(item.id).toLowerCase().includes(q) || item.name.toLowerCase().includes(q) || item.email.toLowerCase().includes(q) || item.mobile_no.toLowerCase().includes(q) || (item.company_name && item.company_name.toLowerCase().includes(q)) || (item.subject && item.subject.toLowerCase().includes(q)) || item.feedback_details.toLowerCase().includes(q)); } const { order, key } = tableData.sort as OnSortParam; if (order && key && typeof key === "string") { processedData.sort((a, b) => { const aVal = a[key as keyof RequestFeedbackItem]; const bVal = b[key as keyof RequestFeedbackItem]; if (key === "created_at" || key === "updated_at") { return order === "asc" ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime(); } const aStr = String(aVal ?? "").toLowerCase(); const bStr = String(bVal ?? "").toLowerCase(); return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr); }); } const dataToExport = [...processedData]; const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize; return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: dataToExport, }; }, [requestFeedbacksData?.data, tableData, filterCriteria]);
   const activeFilterCount = useMemo(() => { return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length; }, [filterCriteria]);
-  
+
   const handleOpenExportReasonModal = useCallback(() => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); }, [allFilteredAndSortedData, exportReasonFormMethods]);
   const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "Request & Feedback"; const timestamp = new Date().toISOString().split("T")[0]; const fileName = `request_feedbacks_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName, })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportRequestFeedbacksToCsv(fileName, allFilteredAndSortedData); toast.push(<Notification title="Data Exported" type="success">Request & Feedback data exported.</Notification>); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" message={(error as Error).message || "Could not complete export."} />); } finally { setIsSubmittingExportReason(false); } }, [dispatch, allFilteredAndSortedData, exportReasonFormMethods]);
   const handlePaginationChange = useCallback((page: number) => setTableData((prev) => ({ ...prev, pageIndex: page })), []);
@@ -385,7 +461,7 @@ const RequestAndFeedbackListing = () => {
     { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 120, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "long" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A"; return (<div className="text-xs"><span>{updated_by_user?.name || "N/A"}{updated_by_user?.roles?.[0]?.display_name && (<><br /><b>{updated_by_user?.roles[0]?.display_name}</b></>)}</span><br /><span>{formattedDate}</span></div>); }, },
     { header: "Actions", id: "actions", meta: { headerClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => (<ItemActionColumn rowData={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />), },
   ], [openEditDrawer, openViewDialog, handleDeleteClick, handleOpenModal]);
-  
+
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<RequestFeedbackItem>[]>(columns);
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (<div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><FormItem label={<div>Name<span className="text-red-500"> *</span></div>} invalid={!!errors.name} errorMessage={errors.name?.message}><Controller name="name" control={control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle />} placeholder="Full Name" />)} /></FormItem><FormItem label={<div>Email<span className="text-red-500"> *</span></div>} invalid={!!errors.email} errorMessage={errors.email?.message}><Controller name="email" control={control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail />} placeholder="example@domain.com" />)} /></FormItem><FormItem label={<div>Mobile No.<span className="text-red-500"> *</span></div>} invalid={!!errors.mobile_no} errorMessage={errors.mobile_no?.message}><Controller name="mobile_no" control={control} render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone />} placeholder="+XX XXXXXXXXXX" />)} /></FormItem><FormItem label="Company Name" invalid={!!errors.company_name} errorMessage={errors.company_name?.message}><Controller name="company_name" control={control} render={({ field }) => (<Input {...field} prefix={<TbBuilding />} placeholder="Your Company" />)} /></FormItem><FormItem label={<div>Type<span className="text-red-500"> *</span></div>} invalid={!!errors.type} errorMessage={errors.type?.message}><Controller name="type" control={control} render={({ field }) => (<Select placeholder="Select Type" options={TYPE_OPTIONS} value={TYPE_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbMessageDots />} />)} /></FormItem><FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!errors.status} errorMessage={errors.status?.message}><Controller name="status" control={control} render={({ field }) => (<Select placeholder="Select Status" options={STATUS_OPTIONS_FORM} value={STATUS_OPTIONS_FORM.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbToggleRight />} />)} /></FormItem><FormItem label="Subject" className="md:col-span-2" invalid={!!errors.subject} errorMessage={errors.subject?.message}><Controller name="subject" control={control} render={({ field }) => (<Input {...field} prefix={<TbClipboardText />} placeholder="Brief subject of your message" />)} /></FormItem><FormItem label="Rating" className="md:col-span-2" invalid={!!errors.rating} errorMessage={errors.rating?.message}><Controller name="rating" control={control} render={({ field }) => (<Select placeholder="Select Rating (Optional)" options={RATING_OPTIONS} value={RATING_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbStar />} />)} /></FormItem><FormItem label={<div>Feedback / Request Details<span className="text-red-500"> *</span></div>} className="md:col-span-2" invalid={!!errors.feedback_details} errorMessage={errors.feedback_details?.message}><Controller name="feedback_details" control={control} render={({ field }) => (<Input textArea {...field} rows={5} placeholder="Describe your feedback or request in detail..." />)} /></FormItem><FormItem label="Attachment (Optional)" className="md:col-span-2" invalid={!!errors.attachment} errorMessage={errors.attachment?.message as string}><Controller name="attachment" control={control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); if (file) setRemoveExistingAttachment(false); }} prefix={<TbPaperclip />} />)} />{editingItem?.attachment && !selectedFile && (<div className="mt-2 text-sm text-gray-500 flex items-center justify-between"><span className="truncate max-w-[calc(100%-100px)]">Current: <a href={itemPathUtil(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" title={editingItem.attachment.split("/").pop()}>{editingItem.attachment.split("/").pop()}</a></span>{!removeExistingAttachment && (<Button size="xs" variant="plain" className="text-red-500 hover:text-red-700 whitespace-nowrap" onClick={() => { setRemoveExistingAttachment(true); }}>Remove</Button>)}{removeExistingAttachment && (<span className="text-red-500 text-xs whitespace-nowrap">Marked for removal</span>)}</div>)}{selectedFile && (<div className="mt-1 text-xs text-gray-500">New file selected: {selectedFile.name}</div>)}</FormItem></div>);
@@ -400,11 +476,11 @@ const RequestAndFeedbackListing = () => {
       <Tooltip title="Average resolution time"><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-300 dark:border-violet-700/60 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbFileTime size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{requestFeedbacksData?.counts?.avg_time || 0}</h6><span className="font-semibold text-xs">Avg Time</span></div></Card></Tooltip>
       <Tooltip title="Average customer rating"><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200 dark:border-orange-700/60 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbStars size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-200">{requestFeedbacksData?.counts?.avg_rating || 0}</h6><span className="font-semibold text-xs">Avg Rating </span></div></Card></Tooltip>
     </div>
-    <div className="mb-4">
-      <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
-    </div>
-    <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-    <div className="mt-4"><RequestFeedbacksTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div></AdaptiveCard></Container>
+      <div className="mb-4">
+        <ItemTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchInputChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+      </div>
+      <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
+      <div className="mt-4"><RequestFeedbacksTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div></AdaptiveCard></Container>
     <RequestFeedbacksSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
     <Drawer title={editingItem ? "Edit Entry" : "Add New Entry"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="requestFeedbackForm" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>{isSubmitting ? editingItem ? "Saving..." : "Adding..." : editingItem ? "Save Changes" : "Submit Entry"}</Button></div>}>
       <Form id="requestFeedbackForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4"> {renderDrawerForm(formMethods)} {editingItem && (<div className=""><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="mt-3 mb-3 font-semibold text-primary-600 dark:text-primary-400">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{editingItem.created_at ? new Date(editingItem.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, }) : "N/A"}</span><br /><span className="font-semibold">Updated At:</span> <span>{editingItem.updated_at ? new Date(editingItem.updated_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, }) : "N/A"}</span></div></div></div>)}</Form>
