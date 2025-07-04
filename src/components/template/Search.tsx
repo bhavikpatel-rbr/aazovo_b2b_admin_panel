@@ -330,7 +330,7 @@ const _Search = ({ className }: { className?: string }) => {
     const dispatch = useAppDispatch()
 
     const [searchDialogOpen, setSearchDialogOpen] = useState(false)
-    const [isLoading, setIsLoading] = useState(true)
+    const [isLoading, setIsLoading] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     
     // Get pinned tabs from Redux store
@@ -349,9 +349,9 @@ const _Search = ({ className }: { className?: string }) => {
     // --- Data Fetching ---
     useEffect(() => {
         if (searchDialogOpen) {
-            setIsLoading(true)
+            // setIsLoading(true)
             dispatch(getPinnedTabAction()).finally(() => {
-                setIsLoading(false)
+                // setIsLoading(false)
             })
             // Focus input after a short delay
             const timeout = setTimeout(() => inputRef.current?.focus(), 100)
