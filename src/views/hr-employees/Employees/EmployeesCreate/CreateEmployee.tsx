@@ -49,7 +49,17 @@ type FormSectionKey = keyof Omit<EmployeeFormSchema, 'id'>;
 
 
 // --- 2. ZOD SCHEMA ---
+// --- CHANGE [1]: Updated the Zod schema to include all required fields from other sections.
+// This is crucial for the `isValid` flag to work correctly across the entire form.
+const requiredSelectSchema = z.object({ label: z.string(), value: z.string() }, { required_error: "This field is required." }).nullable();
+const optionalSelectSchema = z.object({ label: z.string(), value: z.string() }).nullable().optional();
+const requiredFileSchema = z.union([
+    z.instanceof(File, { message: "File is required." }), // For new file uploads
+    z.string().min(1, "File is required."),              // For existing file URLs in edit mode
+]).nullable();
+
 const employeeFormValidationSchema = z.object({
+    id: z.string().optional(), // Keep track of edit mode
     registration: z.object({
         fullName: z.string().min(1, 'Full Name is required'),
         dateOfJoining: z.date({ required_error: "Date of joining is required." }),
@@ -60,16 +70,28 @@ const employeeFormValidationSchema = z.object({
         password: z.string().optional(),
     }),
     personalInformation: z.object({
-        status: z.object({ label: z.string(), value: z.string() }, { required_error: "Status is required." }),
+        status: requiredSelectSchema,
         dateOfBirth: z.date({ required_error: "Date of birth is required." }).nullable(),
-        age: z.union([z.string(), z.number()]).nullable(),
-        gender: z.object({ label: z.string(), value: z.string() }).nullable(),
-        nationalityId: z.object({ label: z.string(), value: z.string() }, { required_error: "Nationality is required." }).nullable(),
-        bloodGroup: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-        permanentAddress: z.string().nullable(),
+        age: z.union([z.string(), z.number()]).optional().nullable(),
+        gender: optionalSelectSchema,
+        nationalityId: requiredSelectSchema,
+        bloodGroup: optionalSelectSchema,
+        permanentAddress: z.string().optional().nullable(),
         localAddress: z.string().optional().nullable(),
-        maritalStatus: z.object({ label: z.string(), value: z.string() }).nullable(),
+        maritalStatus: optionalSelectSchema,
     }),
+    documentSubmission: z.object({
+        // Add validation for fields you marked as required in the UI
+        identity_proof: requiredFileSchema.refine(val => val !== null, "Identity proof is required."),
+        address_proof: requiredFileSchema.refine(val => val !== null, "Address proof is required."),
+    }).passthrough(), // Use passthrough to allow other (optional) document fields
+
+    roleResponsibility: z.object({
+        // Add validation for required roles/responsibilities
+        roleId: requiredSelectSchema.refine(val => val !== null, "Role is required."),
+        departmentId: z.array(z.object({ label: z.string(), value: z.string() })).min(1, "At least one department is required."),
+        designationId: requiredSelectSchema.refine(val => val !== null, "Designation is required."),
+    }).passthrough(), // Use passthrough to allow other optional fields in this section
 
 }).passthrough().refine(data => {
     // Conditionally require password only if it's NOT in edit mode (i.e., no ID)
@@ -84,6 +106,7 @@ const employeeFormValidationSchema = z.object({
 
 
 // --- 3. FORM SECTION & NAVIGATOR COMPONENTS ---
+// (No changes needed in these components: Navigator, RegistrationSection, PersonalInformationSection, etc.)
 const Navigator = ({ activeSection, onNavigate }: { activeSection: FormSectionKey, onNavigate: (key: FormSectionKey) => void }) => {
     const sections: { key: FormSectionKey; label: string }[] = [
         { key: 'registration', label: 'Registration' }, { key: 'personalInformation', label: 'Personal Info' }, { key: 'documentSubmission', label: 'Documents' },
@@ -146,13 +169,13 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
     const maritalStatusOptions = [{ value: 'single', label: 'Single' }, { value: 'married', label: 'Married' }];
     return (
         <Card id="personalInformation"><h4 className="mb-6">Personal Information</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FormItem label="Status" invalid={!!errors.personalInformation?.status} errorMessage={errors.personalInformation?.status?.message}><Controller name="personalInformation.status" control={control} defaultValue={{ value: 'Active', label: 'Active' }} render={({ field }) => <Select placeholder="Select Status" options={statusOptions} {...field} />} /></FormItem>
+            <FormItem label="Status" invalid={!!errors.personalInformation?.status} errorMessage={(errors.personalInformation?.status as any)?.message}><Controller name="personalInformation.status" control={control} defaultValue={{ value: 'Active', label: 'Active' }} render={({ field }) => <Select placeholder="Select Status" options={statusOptions} {...field} />} /></FormItem>
             <FormItem label="Date of Birth" invalid={!!errors.personalInformation?.dateOfBirth} errorMessage={errors.personalInformation?.dateOfBirth?.message}><Controller name="personalInformation.dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select Date" value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Age" invalid={!!errors.personalInformation?.age} errorMessage={errors.personalInformation?.age?.message}><Controller name="personalInformation.age" control={control} render={({ field }) => <Input type="number" placeholder="Enter Age" {...field} onChange={e => field.onChange(parseInt(e.target.value) || '')} />} /></FormItem>
-            <FormItem label="Gender" invalid={!!errors.personalInformation?.gender} errorMessage={errors.personalInformation?.gender?.message}><Controller name="personalInformation.gender" control={control} render={({ field }) => <Select placeholder="Select Gender" options={genderOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Marital Status" invalid={!!errors.personalInformation?.maritalStatus} errorMessage={errors.personalInformation?.maritalStatus?.message}><Controller name="personalInformation.maritalStatus" control={control} render={({ field }) => <Select placeholder="Select Marital Status" options={maritalStatusOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Nationality" invalid={!!errors.personalInformation?.nationalityId} errorMessage={errors.personalInformation?.nationalityId?.message}><Controller name="personalInformation.nationalityId" control={control} render={({ field }) => <Select placeholder="Select Nationality" options={nationalityOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Blood Group" invalid={!!errors.personalInformation?.bloodGroup} errorMessage={errors.personalInformation?.bloodGroup?.message}><Controller name="personalInformation.bloodGroup" control={control} render={({ field }) => <Select placeholder="Select Blood Group" options={bloodGroupOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label="Gender" invalid={!!errors.personalInformation?.gender} errorMessage={(errors.personalInformation?.gender as any)?.message}><Controller name="personalInformation.gender" control={control} render={({ field }) => <Select placeholder="Select Gender" options={genderOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label="Marital Status" invalid={!!errors.personalInformation?.maritalStatus} errorMessage={(errors.personalInformation?.maritalStatus as any)?.message}><Controller name="personalInformation.maritalStatus" control={control} render={({ field }) => <Select placeholder="Select Marital Status" options={maritalStatusOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label="Nationality" invalid={!!errors.personalInformation?.nationalityId} errorMessage={(errors.personalInformation?.nationalityId as any)?.message}><Controller name="personalInformation.nationalityId" control={control} render={({ field }) => <Select placeholder="Select Nationality" options={nationalityOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label="Blood Group" invalid={!!errors.personalInformation?.bloodGroup} errorMessage={(errors.personalInformation?.bloodGroup as any)?.message}><Controller name="personalInformation.bloodGroup" control={control} render={({ field }) => <Select placeholder="Select Blood Group" options={bloodGroupOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Permanent Address" invalid={!!errors.personalInformation?.permanentAddress} errorMessage={errors.personalInformation?.permanentAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.permanentAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Permanent Address" {...field} />} /></FormItem>
             <FormItem label="Local Address" invalid={!!errors.personalInformation?.localAddress} errorMessage={errors.personalInformation?.localAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.localAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Local Address" {...field} />} /></FormItem>
         </div></Card>
@@ -220,9 +243,9 @@ const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) =>
     const reportingHeadOptions = useMemo(() => toOptions(memberData), [memberData]);
     return (
         <Card id="roleResponsibility"><h4 className="mb-6">Role & Responsibility</h4><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-            <FormItem label="Role" invalid={!!errors.roleResponsibility?.roleId}><Controller name="roleResponsibility.roleId" control={control} render={({ field }) => <Select placeholder="Select Role" options={roleOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Department" invalid={!!errors.roleResponsibility?.departmentId}><Controller name="roleResponsibility.departmentId" control={control} render={({ field }) => <Select isMulti placeholder="Select Departments" options={departmentOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Designation" invalid={!!errors.roleResponsibility?.designationId}><Controller name="roleResponsibility.designationId" control={control} render={({ field }) => <Select placeholder="Select Designation" options={designationOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label={<>Role <span className="text-red-500">*</span></>} invalid={!!errors.roleResponsibility?.roleId} errorMessage={(errors.roleResponsibility?.roleId as any)?.message}><Controller name="roleResponsibility.roleId" control={control} render={({ field }) => <Select placeholder="Select Role" options={roleOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label={<>Department <span className="text-red-500">*</span></>} invalid={!!errors.roleResponsibility?.departmentId} errorMessage={errors.roleResponsibility?.departmentId?.message}><Controller name="roleResponsibility.departmentId" control={control} render={({ field }) => <Select isMulti placeholder="Select Departments" options={departmentOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label={<>Designation <span className="text-red-500">*</span></>} invalid={!!errors.roleResponsibility?.designationId} errorMessage={(errors.roleResponsibility?.designationId as any)?.message}><Controller name="roleResponsibility.designationId" control={control} render={({ field }) => <Select placeholder="Select Designation" options={designationOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Country (Responsibility)" invalid={!!errors.roleResponsibility?.countryId}><Controller name="roleResponsibility.countryId" control={control} render={({ field }) => <Select isMulti placeholder="Select Countries" options={countryOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Category (Focus Area)" invalid={!!errors.roleResponsibility?.categoryId}><Controller name="roleResponsibility.categoryId" control={control} render={({ field }) => <Select isMulti placeholder="Select Categories" options={categoryOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Brand (Responsibility)" invalid={!!errors.roleResponsibility?.brandId}><Controller name="roleResponsibility.brandId" control={control} render={({ field }) => <Select isMulti placeholder="Select Brands" options={brandOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
@@ -306,9 +329,17 @@ interface EmployeeFormProps { onFormSubmit: (data: FormData, id?: string) => voi
 const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, isSubmitting = false, onDiscard }: EmployeeFormProps) => {
     const [activeSection, setActiveSection] = useState<FormSectionKey>('registration');
     const activeSectionIndex = sectionKeys.indexOf(activeSection);
-    const { handleSubmit, reset, control, formState: { errors } } = useForm<EmployeeFormSchema>({
+    
+    // --- CHANGE [2]: Get `isValid` from formState and set validation `mode` to 'onChange'
+    const { 
+        handleSubmit, 
+        reset, 
+        control, 
+        formState: { errors, isValid } 
+    } = useForm<EmployeeFormSchema>({
         defaultValues: defaultValues || {},
-        resolver: zodResolver(employeeFormValidationSchema)
+        resolver: zodResolver(employeeFormValidationSchema),
+        mode: 'onChange', // This makes `isValid` update as the user types
     });
 
     const internalFormSubmit = (values: EmployeeFormSchema) => {
@@ -426,7 +457,10 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
                         <div className="flex items-center gap-2">
                             <Button type="button" onClick={handlePrevious} disabled={isSubmitting || activeSectionIndex === 0}>Previous</Button>
                             <Button type="button" onClick={handleNext} disabled={isSubmitting || activeSectionIndex === sectionKeys.length - 1}>Next</Button>
-                            <Button variant="solid" type="submit" loading={isSubmitting} disabled={isSubmitting}>{isEdit ? "Update" : "Create"}</Button>
+                            {/* --- CHANGE [3]: Updated the disabled prop on the submit button. --- */}
+                            <Button variant="solid" type="submit" loading={isSubmitting} disabled={isSubmitting || !isValid}>
+                                {isEdit ? "Update" : "Create"}
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -437,6 +471,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
 
 
 // --- 5. PAGE-LEVEL COMPONENT ---
+// (No changes needed in this component)
 const EmployeeFormPage = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
@@ -498,7 +533,7 @@ const EmployeeFormPage = () => {
                 },
                 personalInformation: {
                     status: { value: apiData.status || 'Active', label: apiData.status || 'Active' },
-                    dateOfBirth: apiData.date_of_birth ? new Date(apiData.date_of_birth) : null,
+                    dateOfBirth: apiData.date_of_birth ? new Date(api-data.date_of_birth) : null,
                     age: apiData.age || '',
                     gender: { value: apiData.gender || '', label: apiData.gender || '' },
                     nationalityId: findOption(countryOptions, apiData.nationality_id),
