@@ -234,10 +234,7 @@ const Notification = () => {
     const dispatch = useAppDispatch()
 
     // 1. Get the entire notification state object from Redux
-    const getAllNotification = useSelector(masterSelector)?.getAllNotification?.data
-
-    console.log(getAllNotification, "getAllNotification");
-
+    const getAllNotification = useSelector(masterSelector)?.getAllNotification?.data?.data
 
     // Local state is only for UI controls
     const [showMentionedOnly, setShowMentionedOnly] = useState(false)
@@ -250,7 +247,7 @@ const Notification = () => {
 
     // 3. Transform API data into the format the UI needs using useMemo for efficiency
     const activities: Activities = useMemo(() => {
-        const apiData = (getAllNotification?.data as ApiNotification[]) || []
+        const apiData = (getAllNotification as ApiNotification[]) || []
 
         if (isEmpty(apiData)) {
             return []
