@@ -3049,15 +3049,15 @@ export const blockUserAsync = async (payload: any) => {
 }
 
 export const getPinnedTabsAsync = async () => {
-    try {
-        const response = await axiosInstance.post(`${config.apiURL}/get-all-pinned`);
-        console.log(response.data.data)
-        return response.data.data;
-    } catch (err) {
-        // The isAxiosError function is likely a custom helper you have.
-        // If not, you can handle the error directly.
-        return isAxiosError(err);
-    }
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/get-all-pinned`);
+    console.log(response.data.data)
+    return response.data.data;
+  } catch (err) {
+    // The isAxiosError function is likely a custom helper you have.
+    // If not, you can handle the error directly.
+    return isAxiosError(err);
+  }
 };
 
 /**
@@ -3066,14 +3066,14 @@ export const getPinnedTabsAsync = async () => {
  * @returns {Promise} Axios response promise.
  */
 export const addPinnedTabAsync = async (pinData: { module_name: string, is_pinned: boolean }) => {
-    try {
-        // The endpoint '/pinned-tabs/add' is an example. 
-        // Your API might just use POST on '/pinned-tabs'.
-        const response = await axiosInstance.post(`${config.apiURL}/mark-as-pinned`, pinData);
-        return response.data;
-    } catch (err) {
-        return isAxiosError(err);
-    }
+  try {
+    // The endpoint '/pinned-tabs/add' is an example. 
+    // Your API might just use POST on '/pinned-tabs'.
+    const response = await axiosInstance.post(`${config.apiURL}/mark-as-pinned`, pinData);
+    return response.data;
+  } catch (err) {
+    return isAxiosError(err);
+  }
 };
 
 /**
@@ -3082,14 +3082,14 @@ export const addPinnedTabAsync = async (pinData: { module_name: string, is_pinne
  * @returns {Promise} Axios response promise.
  */
 export const removePinnedTabAsync = async (pinData: { module_name: string }) => {
-    try {
-        // The endpoint '/pinned-tabs/remove' is an example. 
-        // Your API might use a DELETE method or a POST with the module name.
-        const response = await axiosInstance.post(`${config.apiURL}/remove-pinned`, pinData);
-        return response.data;
-    } catch (err) {
-        return isAxiosError(err);
-    }
+  try {
+    // The endpoint '/pinned-tabs/remove' is an example. 
+    // Your API might use a DELETE method or a POST with the module name.
+    const response = await axiosInstance.post(`${config.apiURL}/remove-pinned`, pinData);
+    return response.data;
+  } catch (err) {
+    return isAxiosError(err);
+  }
 };
 
 
@@ -3097,6 +3097,37 @@ export const getAllDocumentsAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/all-documents`)
     return response.data.data;
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getAllActionActionAsync = async () => {
+  try {
+    const getUserIDFromLocalStorage = JSON.parse(localStorage.getItem("@secure:UserData"))?.id;
+    const response = await axiosInstance.get(`${config.apiURL}/actives`, { "user_id": getUserIDFromLocalStorage })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const addAllActionActionAsync = async (data) => {
+  try {
+    const getUserIDFromLocalStorage = JSON.parse(localStorage.getItem("@secure:UserData"))?.id;
+    const response = await axiosInstance.post(`${config.apiURL}/actives`, { ...data, "user_id": getUserIDFromLocalStorage })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const deleteAllActionActionAsync = async (data) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/actives/${data.id}` )
+    return response?.data
   } catch (err) {
     return isAxiosError(err)
   }
