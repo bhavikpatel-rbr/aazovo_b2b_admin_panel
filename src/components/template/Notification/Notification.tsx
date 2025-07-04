@@ -80,9 +80,9 @@ const NotificationItem = ({
                 </span>
             </div>
         </div>
-        {!notification.readed && (
+        {/* {!notification.readed && (
             <Badge className="absolute top-4 ltr:right-4 rtl:left-4 mt-1.5" />
-        )}
+        )} */}
     </div>
 )
 

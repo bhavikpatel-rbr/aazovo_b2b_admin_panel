@@ -11,13 +11,7 @@ const NotificationToggle = ({
 }) => {
     return (
         <div className={classNames('text-2xl', className)}>
-            {dot ? (
-                <Badge badgeStyle={{ top: '3px', right: '6px' }}>
-                    <PiBellDuotone />
-                </Badge>
-            ) : (
-                <PiBellDuotone />
-            )}
+            <PiBellDuotone />
         </div>
     )
 }
