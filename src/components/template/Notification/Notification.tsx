@@ -66,7 +66,7 @@ const NotificationAvatar = ({ type }: { type: ProcessedNotification['type'] }) =
                     size="md"
                     icon={<PiWarningLight className={classNames(iconClass, '!stroke-2')} />}
                     shape="circle"
-                    className="text-red-600 bg-red-100 dark:text-red-100 dark:bg-red-500/20"
+                    className="bg-transparent text-red-600 bg-red-100 dark:text-red-100 dark:bg-red-500/20"
                 />
             )
         case 'inquiry':
@@ -75,7 +75,7 @@ const NotificationAvatar = ({ type }: { type: ProcessedNotification['type'] }) =
                     size="md"
                     icon={<PiEnvelopeLight className={iconClass} />}
                     shape="circle"
-                    className="text-blue-600 bg-blue-100 dark:text-blue-100 dark:bg-blue-500/20"
+                    className="bg-transparent text-blue-600 bg-blue-100 dark:text-blue-100 dark:bg-blue-500/20"
                 />
             )
         case 'message':
@@ -84,8 +84,8 @@ const NotificationAvatar = ({ type }: { type: ProcessedNotification['type'] }) =
                     size="md"
                     icon={<PiEnvelopeLight className={iconClass} />}
                     shape="circle"
-                    className="text-emerald-600 bg-emerald-100 dark:text-emerald-100 dark:bg-emerald-500/20"
-                />
+                    className="bg-transparent text-emerald-600 bg-emerald-100 dark:text-emerald-100 dark:bg-emerald-500/20"
+                /> 
             )
         default:
             return <Avatar size="md" shape="circle" icon={<PiEnvelopeLight className={iconClass} />} />
