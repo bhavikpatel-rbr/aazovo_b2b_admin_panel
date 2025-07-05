@@ -456,7 +456,6 @@ const CompactAllSchedulesModal = ({
             isOpen={isOpen}
             onClose={onClose}
             onRequestClose={onClose}
-            width="lg"
             contentClassName="flex flex-col" // Make dialog content a flex container
         >
             <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -716,12 +715,13 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
 
     return (
         <>
-            <Dropdown
+           <Dropdown
                 ref={dropdownRef}
                 renderTitle={<ScheduleToggle className={className} />}
-                menuClass="!p-0 min-w-[340px] md:min-w-[420px] bg-gray-50 dark:bg-gray-800"
-                placement={larger.md ? 'bottom-end' : 'bottom'}
+                menuClass="min-w-[320px] md:min-w-[380px] bg-gray-50 dark:bg-gray-800"
+                placement={larger.md ? 'bottom-end' : 'bottom-center'}
             >
+                {/* Header */}
                 <Dropdown.Item variant="header" className="!px-4 !py-3">
                     <DynamicHeader
                         title={headerTitle}
@@ -729,6 +729,7 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
                     />
                 </Dropdown.Item>
 
+                {/* Date Filter */}
                 <div className="px-4 py-3 border-y border-gray-200 dark:border-gray-600">
                     <DatePicker
                         value={selectedDate}
@@ -738,36 +739,27 @@ const _ScheduleDropdown = ({ className }: { className?: string }) => {
                     />
                 </div>
 
-                <ScrollBar
-                    className={classNames(
-                        'overflow-y-auto',
-                        scheduleContentHeight
-                    )}
-                >
+                {/* Scrollable Content */}
+                <ScrollBar className={classNames('overflow-y-auto', scheduleContentHeight)}>
                     <TimelineView
                         loading={loading}
                         events={eventsForSelectedDate}
                     />
                 </ScrollBar>
 
-                <Dropdown.Item variant="footer" className="!p-3 !border-t-0">
-                    <div className="flex gap-2 w-[100%]">
+                {/* Footer with Buttons */}
+                <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex gap-2 w-full">
                         <Button block onClick={handleOpenCompactModal}>
                             View All
                         </Button>
-                        
-                        
-                        <Button
-                            block
-                            variant="solid"
-                            // icon={<TbPlus className="text-lg" />}
-                            onClick={handleOpenAddModal}
-                        >
+                        <Button block variant="solid" onClick={handleOpenAddModal}>
                             Add New
                         </Button>
                     </div>
-                </Dropdown.Item>
+                </div>
             </Dropdown>
+
 
             <AddScheduleModal
                 isOpen={isAddModalOpen}

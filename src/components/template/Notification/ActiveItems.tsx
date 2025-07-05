@@ -203,7 +203,7 @@ const ViewAllActivityModal = ({ isOpen, onClose, groupedData, loading, available
     const sortedDates = Object.keys(filteredAndSortedData).sort((a, b) => dayjs(b).diff(dayjs(a)))
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width="lg" contentClassName="flex flex-col">
+        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} contentClassName="flex flex-col">
             <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <MdOutlineGridView className="text-xl" /> <h5 className="font-semibold text-lg">All Activities</h5>
             </div>
@@ -361,26 +361,44 @@ const _ActiveItems = ({ className }: { className?: string }) => {
 
     return (
         <>
-            <Dropdown ref={dropdownRef} renderTitle={<ActivityToggle className={className} />} menuClass="!p-0 min-w-[340px] md:min-w-[420px] bg-gray-50 dark:bg-gray-800" placement={larger.md ? 'bottom-end' : 'bottom'}>
-                <Dropdown.Item variant="header" className="!px-4 !py-3">
-                    <DynamicHeader title="Recent Activity" onRefresh={handleRefresh} />
-                </Dropdown.Item>
-                <ScrollBar className={classNames('overflow-y-auto', activityContentHeight)}>
-                    {loading && <div className="flex items-center justify-center h-full"><Spinner size={40} /></div>}
-                    {!loading && recentActivities.length === 0 && <EmptyState />}
-                    {!loading && recentActivities.length > 0 && (
-                        <div className="py-5">
-                            {recentActivities.map((activity, index) => <TimelineActivityItem key={activity.id} activity={activity} isLast={index === recentActivities.length - 1} onDelete={handleDeleteRequest} />)}
-                        </div>
-                    )}
-                </ScrollBar>
-                <Dropdown.Item variant="footer" className="!p-3 !border-t-0">
-                    <div className="flex gap-2 w-full">
-                        <Button block onClick={handleOpenViewAllModal}>View All</Button>
-                        {/* <Button block variant="solid" onClick={handleOpenAddModal}>Add New</Button> */}
-                    </div>
-                </Dropdown.Item>
-            </Dropdown>
+<Dropdown
+    ref={dropdownRef}
+    renderTitle={<ActivityToggle className={className} />}
+    menuClass="min-w-[320px] md:min-w-[380px] bg-gray-50 dark:bg-gray-800"
+    placement={larger.md ? 'bottom-end' : 'bottom-center'}
+>
+    <Dropdown.Item variant="header" className="!px-4 !py-3">
+        <DynamicHeader title="Recent Activity" onRefresh={handleRefresh} />
+    </Dropdown.Item>
+
+    <ScrollBar className={classNames('overflow-y-auto', activityContentHeight)}>
+        {loading && (
+            <div className="flex items-center justify-center h-full">
+                <Spinner size={40} />
+            </div>
+        )}
+        {!loading && recentActivities.length === 0 && <EmptyState />}
+        {!loading && recentActivities.length > 0 && (
+            <div className="py-5">
+                {recentActivities.map((activity, index) => (
+                    <TimelineActivityItem
+                        key={activity.id}
+                        activity={activity}
+                        isLast={index === recentActivities.length - 1}
+                        onDelete={handleDeleteRequest}
+                    />
+                ))}
+            </div>
+        )}
+    </ScrollBar>
+
+    <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+        <Button block variant="solid" onClick={handleOpenViewAllModal}>
+            View All
+        </Button>
+    </div>
+</Dropdown>
+
             
             {/* --- NEW: Add and View Modals are now passed the data change handler --- */}
             <AddActivityModal isOpen={isAddModalOpen} onClose={() => setAddModalOpen(false)} onActivityAdded={onDataChange} allModules={allModules} />

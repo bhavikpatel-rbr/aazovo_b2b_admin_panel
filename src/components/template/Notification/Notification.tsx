@@ -162,11 +162,6 @@ const RenderContent = ({
         return (
             <div className={classNames('flex items-center justify-center', NOTIFICATION_DROPDOWN_HEIGHT)}>
                 <div className="text-center">
-                    <img
-                        className="mx-auto mb-4 w-36"
-                        src="/img/others/no-notification.png"
-                        alt="No notifications"
-                    />
                     <h6 className="font-semibold">No Notifications</h6>
                     <p className="mt-1 text-xs">There are no new updates in this category.</p>
                 </div>
@@ -305,7 +300,7 @@ const _Notification = ({ className }: { className?: string }) => {
             
             <div className="p-3 border-t border-gray-200 dark:border-gray-700">
                 <Button block variant="solid" onClick={handleViewAllActivity}>
-                    View All Notifications
+                    View All
                 </Button>
             </div>
         </Dropdown>
