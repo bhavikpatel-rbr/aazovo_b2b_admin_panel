@@ -25,6 +25,8 @@ import { BsCake } from 'react-icons/bs'
 import { IoMdShare } from 'react-icons/io'
 import { HiOutlineMinusCircle, HiOutlinePlusCircle } from 'react-icons/hi'
 import { Link, useNavigate } from 'react-router-dom'
+import Opportunities from '@/views/sales-Leads/Opportunities'
+import Leads from '@/views/sales-Leads/Lead'
 
 type StatisticCardProps = {
     title: string
@@ -1934,7 +1936,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             value={
                                 <NumericFormat
                                     displayType="text"
-                                    value="68"
+                                    value="12"
+                                    prefix={''}
                                     thousandSeparator={true}
                                 />
                             }
@@ -1947,7 +1950,25 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             activeBgColor="bg-green-200"
                             iconBg="bg-green-400"
                         />
-                        <StatisticCard
+                        {/* <StatisticCard
+                            title="Leads"
+                            value={
+                                <NumericFormat
+                                    displayType="text"
+                                    value="68"
+                                    thousandSeparator={true}
+                                />
+                            }
+                            iconClass="bg-emerald-200"
+                            icon={<TbShoppingBagCheck className='h-5' />}
+                            label="Leads"
+                            active={selectedCategory === 'Leads'}
+                            onClick={() => setSelectedCategory('Leads')}
+                            colorClass="bg-green-100"
+                            activeBgColor="bg-green-200"
+                            iconBg="bg-green-400"
+                        /> */}
+                        {/* <StatisticCard
                             title="Accounts"
                             value={
                                 <NumericFormat
@@ -1965,8 +1986,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             colorClass="bg-blue-100"
                             activeBgColor="bg-blue-200"
                             iconBg="bg-blue-400"
-                        />
-                        <StatisticCard
+                        /> */}
+                        {/* <StatisticCard
                             title="Tasks"
                             value={
                                 <NumericFormat
@@ -1985,8 +2006,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             colorClass="bg-pink-100"
                             activeBgColor="bg-pink-200"
                             iconBg="bg-pink-400"
-                        />
-                        <StatisticCard
+                        /> */}
+                        {/* <StatisticCard
                             title="Web Analytics"
                             value={
                                 <NumericFormat
@@ -2027,7 +2048,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             colorClass="bg-orange-100"
                             activeBgColor="bg-orange-200"
                             iconBg="bg-orange-400"
-                        />
+                        /> */}
                     </div>
                     <Card bodyClass='px-4 py-3'>
                         <div className="flex items-center justify-between">
@@ -2128,7 +2149,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         <h6 className='mb-6'>Opportunity Leaderboard</h6>
                                         <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Match Score</h6>
-                                            <Select
+                                            {/* <Select
                                                 className="min-w-[140px]"
                                                 size="sm"
                                                 defaultValue={{ label: "All", value: "All" }}
@@ -2138,16 +2159,17 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "25% - 49%", value: "25-49" },
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
-                                            />
+                                            /> */}
                                         </div>
                                     </div>
-                                    <DataTable1
+                                    {/* <DataTable1
                                         columns={opportunitiesColumns}
                                         data={opportunitiesData}
                                         onExpandedChange={() => setExpanded}
                                         getRowCanExpand={() => true}
                                         renderSubComponent={({ row }) => <ExpandedOpportunityDetails row={row} />}
-                                    />
+                                    /> */}
+                                    <Opportunities isDashboard={true} />
 
                                     {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
                                     {/* Note :- Trust  = ( Company Activity, response rate and verification */}
@@ -2237,7 +2259,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         <h6 className='mb-6'>Leads Leaderboard</h6>
                                         <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Conversion Rate</h6>
-                                            <Select
+                                            {/* <Select
                                                 className="min-w-[140px]"
                                                 size="sm"
                                                 defaultValue={{ label: "All", value: "All" }}
@@ -2247,14 +2269,15 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "25% - 49%", value: "25-49" },
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
-                                            />
+                                            /> */}
                                         </div>
                                     </div>
-                                    <DataTable
+                                    {/* <DataTable
                                         columns={memberColumns}
                                         data={memberData}
                                     // loading={isLoading}
-                                    />
+                                    /> */}
+                                    <Leads isDashboard={true} />
 
                                     {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
                                     {/* Note :- Trust  = ( Company Activity, response rate and verification */}
