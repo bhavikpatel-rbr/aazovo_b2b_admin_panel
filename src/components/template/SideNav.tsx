@@ -65,7 +65,7 @@ const SideNav = ({
             style={sideNavCollapse ? sideNavCollapseStyle : sideNavStyle}
             className={classNames(
                 'side-nav',
-                'flex flex-col pt-2', // Ensure flex column layout for header/content
+                'flex flex-col pt-2 pb-4', // Ensure flex column layout for header/content
                 // Apply background and styles conditionally based on the `background` prop
                 background && backgroundClasses,
                 background && borderClasses,
@@ -140,6 +140,14 @@ const SideNav = ({
                     />
                 </ScrollBar>
             </div>
+            {/* Fixed Logout Button at Bottom */}
+                <div className="absolute bottom-4 w-full px-4">
+                    <button
+                        // onClick={handleLogout}
+                        className="w-full py-2 bg-blue-600 hover:bg-blue-800 text-white rounded-md transition">
+                        Logout
+                    </button>
+                </div>
         </div>
     )
 }

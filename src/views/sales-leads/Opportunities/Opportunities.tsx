@@ -1832,6 +1832,7 @@ const OpportunityTableTools = ({
   onFilter,
   columnToggler,
   activeFilterCount,
+  isDashboard
 }: {
   onSearchChange: (query: string) => void;
   onExport: () => void;
@@ -1839,12 +1840,13 @@ const OpportunityTableTools = ({
   onFilter: () => void;
   columnToggler: ReactNode;
   activeFilterCount: number;
+  isDashboard?: boolean;
 }) => (
   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full">
     <div className="flex-grow w-full sm:w-auto">
       <OpportunitySearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex items-center gap-2">
+    {!isDashboard && <div className="flex items-center gap-2">
       {columnToggler}
       <Tooltip title="Clear Filters & Reload">
         <Button icon={<TbReload />} onClick={onClearFilters}></Button>
@@ -1863,7 +1865,7 @@ const OpportunityTableTools = ({
       <Button icon={<TbCloudUpload />} onClick={onExport}>
         <span className="hidden sm:inline">Export</span>
       </Button>
-    </div>
+    </div>}
   </div>
 );
 
@@ -2393,7 +2395,7 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
 // ============================================================================
 // --- MAIN COMPONENT ---
 // ============================================================================
-const Opportunities = () => {
+const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const {
@@ -2402,6 +2404,7 @@ const Opportunities = () => {
     getAllUserData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
+
 
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
   const [tableQueries, setTableQueries] = useState<
@@ -2487,14 +2490,14 @@ const Opportunities = () => {
         }, 1500);
       }
     } else {
-      if (!rawOpportunities.length) {
-        dispatch(getOpportunitiesAction());
-      }
-      if (!getAllUserData.length) {
-        dispatch(getAllUsersAction());
-      }
+      // if (!rawOpportunities.length) {
+      dispatch(getOpportunitiesAction());
+      // }
+      // if (!getAllUserData.length) {
+      dispatch(getAllUsersAction());
+      // }
     }
-  }, [dispatch, currentTab, autoSpbStatus, rawOpportunities, getAllUserData]);
+  }, [dispatch]);
 
   useEffect(() => {
     if (Array.isArray(rawOpportunities)) {
@@ -2952,384 +2955,397 @@ const Opportunities = () => {
   };
 
   const getColumnsForStandardView = useCallback(
-    (): ColumnDef<OpportunityItem>[] => [
-      {
-        header: "Product",
-        accessorKey: "product_name",
-        size: 320,
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="flex items-start gap-3">
-              <Avatar
-                size={60}
-                shape="square"
-                src={item.product_image_url}
-                className="bg-gray-100 dark:bg-gray-700"
-              />
-              <div className="flex flex-col gap-0.5">
-                <Tooltip title={item.product_name}>
-                  <span className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate block max-w-[220px]">
-                    {item.product_name}
-                  </span>
-                </Tooltip>
-                <Link
-                  to={`/sales-leads/opportunities/detail/${item.id}`}
-                  className="text-xs text-primary-600 hover:underline dark:text-primary-400"
-                >
-                  {item.opportunity_id}
-                </Link>
-                <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {item.buy_listing_id && (
-                    <Tooltip title={`Go to Wall Listing ${item.buy_listing_id}`}>
-                      <Link
-                        to={`/wall-listings/view/${item.buy_listing_id}`}
-                        className="hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Buy ID: {item.buy_listing_id}
-                      </Link>
-                    </Tooltip>
-                  )}
-                  {item.sell_listing_id && (
-                    <Tooltip
-                      title={`Go to Wall Listing ${item.sell_listing_id}`}
-                    >
-                      <Link
-                        to={`/wall-listings/view/${item.sell_listing_id}`}
-                        className="hover:underline ml-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Sell ID: {item.sell_listing_id}
-                      </Link>
-                    </Tooltip>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 mt-1">
-                  <InfoLine
-                    icon={<TbChecklist size={13} />}
-                    label="Qty"
-                    text={item.quantity ?? "N/A"}
-                  />
-                  <Tag
-                    className={classNames(
-                      "capitalize text-[10px] px-1.5 py-0.5",
-                      item.want_to === "Buy"
-                        ? "bg-purple-100 text-purple-700"
-                        : "bg-teal-100 text-teal-700"
-                    )}
-                  >
-                    {item.want_to}
-                  </Tag>
-                </div>
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        header: "Company & Member",
-        accessorKey: "company_name",
-        size: 280,
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="text-xs space-y-2">
-              <div className="flex items-center gap-2">
-                <TbBuilding
-                  size={14}
-                  className="text-gray-400 dark:text-gray-500 flex-shrink-0"
+    (isDashboard: boolean): ColumnDef<OpportunityItem>[] => {
+      const allColumns: ColumnDef<OpportunityItem>[] = [
+        {
+          header: "Product",
+          accessorKey: "product_name",
+          size: 320,
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <div className="flex items-start gap-3">
+                <Avatar
+                  size={60}
+                  shape="square"
+                  src={item.product_image_url}
+                  className="bg-gray-100 dark:bg-gray-700"
                 />
-                <span className="font-semibold text-gray-800 dark:text-gray-100">
-                  {item.company_name} ({item.company_code})
-                </span>
-                <Tooltip
-                  title={item.company_verified ? "Verified" : "Not Verified"}
-                >
-                  {item.company_verified ? (
-                    <BsCheckCircleFill className="text-emerald-500" />
-                  ) : (
-                    <BsXCircleFill className="text-red-500" />
-                  )}
-                </Tooltip>
+                <div className="flex flex-col gap-0.5">
+                  <Tooltip title={item.product_name}>
+                    <span className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate block max-w-[220px]">
+                      {item.product_name}
+                    </span>
+                  </Tooltip>
+                  <Link
+                    to={`/sales-leads/opportunities/detail/${item.id}`}
+                    className="text-xs text-primary-600 hover:underline dark:text-primary-400"
+                  >
+                    {item.opportunity_id}
+                  </Link>
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {item.buy_listing_id && (
+                      <Tooltip title={`Go to Wall Listing ${item.buy_listing_id}`}>
+                        <Link
+                          to={`/wall-listings/view/${item.buy_listing_id}`}
+                          className="hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Buy ID: {item.buy_listing_id}
+                        </Link>
+                      </Tooltip>
+                    )}
+                    {item.sell_listing_id && (
+                      <Tooltip
+                        title={`Go to Wall Listing ${item.sell_listing_id}`}
+                      >
+                        <Link
+                          to={`/wall-listings/view/${item.sell_listing_id}`}
+                          className="hover:underline ml-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Sell ID: {item.sell_listing_id}
+                        </Link>
+                      </Tooltip>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <InfoLine
+                      icon={<TbChecklist size={13} />}
+                      label="Qty"
+                      text={item.quantity ?? "N/A"}
+                    />
+                    <Tag
+                      className={classNames(
+                        "capitalize text-[10px] px-1.5 py-0.5",
+                        item.want_to === "Buy"
+                          ? "bg-purple-100 text-purple-700"
+                          : "bg-teal-100 text-teal-700"
+                      )}
+                    >
+                      {item.want_to}
+                    </Tag>
+                  </div>
+                </div>
               </div>
-              <div className="pl-6 border-l ml-1.5 dark:border-gray-600 space-y-1.5">
+            );
+          },
+        },
+        {
+          header: "Company & Member",
+          accessorKey: "company_name",
+          size: 280,
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <div className="text-xs space-y-2">
                 <div className="flex items-center gap-2">
-                  <TbUserCheck
+                  <TbBuilding
                     size={14}
                     className="text-gray-400 dark:text-gray-500 flex-shrink-0"
                   />
-                  <span className="font-medium text-gray-700 dark:text-gray-200">
-                    {item.member_name} ({item.member_code})
+                  <span className="font-semibold text-gray-800 dark:text-gray-100">
+                    {item.company_name} ({item.company_code})
                   </span>
                   <Tooltip
-                    title={item.member_verified ? "Verified" : "Not Verified"}
+                    title={item.company_verified ? "Verified" : "Not Verified"}
                   >
-                    {item.member_verified ? (
+                    {item.company_verified ? (
                       <BsCheckCircleFill className="text-emerald-500" />
                     ) : (
                       <BsXCircleFill className="text-red-500" />
                     )}
                   </Tooltip>
                 </div>
-                <InfoLine
-                  icon={
-                    <img
-                      src={item.member_country_flag}
-                      alt={item.member_country}
-                      className="w-4 h-auto"
+                <div className="pl-6 border-l ml-1.5 dark:border-gray-600 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <TbUserCheck
+                      size={14}
+                      className="text-gray-400 dark:text-gray-500 flex-shrink-0"
                     />
-                  }
-                  text={item.member_country}
-                />
-                <InfoLine
-                  icon={<TbBriefcase size={13} />}
-                  text={item.member_business_type}
-                />
-                <InfoLine
-                  icon={<TbPhone size={13} />}
-                  text={item.member_phone}
-                />
-                <InfoLine
-                  icon={<TbMail size={13} />}
-                  text={
-                    <a
-                      href={`mailto:${item.member_email}`}
-                      className="text-blue-500 hover:underline"
+                    <span className="font-medium text-gray-700 dark:text-gray-200">
+                      {item.member_name} ({item.member_code})
+                    </span>
+                    <Tooltip
+                      title={item.member_verified ? "Verified" : "Not Verified"}
                     >
-                      {item.member_email}
-                    </a>
-                  }
-                />
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        header: "Specifications",
-        accessorKey: "product_specs",
-        size: 150,
-        cell: ({ row: { original: item } }) => (
-          <Tooltip title={item.product_specs || "No specs provided"}>
-            <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-4">
-              {item.product_specs || "N/A"}
-            </p>
-          </Tooltip>
-        ),
-      },
-      {
-        header: "Match Info",
-        accessorKey: "match_score",
-        size: 180,
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Tooltip title={`Click to filter by "${item.status}"`}>
-                  <Tag
-                    onClick={() => handleCardClick(item.status)}
-                    className={`${recordStatusTagColor[item.status] ||
-                      recordStatusTagColor.default
-                      } capitalize cursor-pointer`}
-                  >
-                    {item.status.replace("_", " ")}
-                  </Tag>
-                </Tooltip>
-                <Tag
-                  className={`${opportunityStatusTagColor[item.opportunity_status] ||
-                    opportunityStatusTagColor.default
-                    } capitalize`}
-                >
-                  {item.opportunity_status}
-                </Tag>
-              </div>
-              <div>
-                <div className="flex justify-between mb-1 text-xs">
-                  <span>Match Score</span>
-                  <span className="font-bold">{item.match_score}%</span>
+                      {item.member_verified ? (
+                        <BsCheckCircleFill className="text-emerald-500" />
+                      ) : (
+                        <BsXCircleFill className="text-red-500" />
+                      )}
+                    </Tooltip>
+                  </div>
+                  <InfoLine
+                    icon={
+                      <img
+                        src={item.member_country_flag}
+                        alt={item.member_country}
+                        className="w-4 h-auto"
+                      />
+                    }
+                    text={item.member_country}
+                  />
+                  <InfoLine
+                    icon={<TbBriefcase size={13} />}
+                    text={item.member_business_type}
+                  />
+                  <InfoLine
+                    icon={<TbPhone size={13} />}
+                    text={item.member_phone}
+                  />
+                  <InfoLine
+                    icon={<TbMail size={13} />}
+                    text={
+                      <a
+                        href={`mailto:${item.member_email}`}
+                        className="text-blue-500 hover:underline"
+                      >
+                        {item.member_email}
+                      </a>
+                    }
+                  />
                 </div>
-                <Progress size="sm" percent={item.match_score} />
               </div>
-            </div>
-          );
+            );
+          },
         },
-      },
-      {
-        header: "Last Updated",
-        accessorKey: "updated_at",
-        size: 180,
-        cell: ({ row: { original: item } }) => (
-          <div className="text-xs space-y-1">
-            <InfoLine
-              icon={<TbUser size={13} />}
-              text={item.updated_by_name}
+        {
+          header: "Specifications",
+          accessorKey: "product_specs",
+          size: 150,
+          cell: ({ row: { original: item } }) => (
+            <Tooltip title={item.product_specs || "No specs provided"}>
+              <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-4">
+                {item.product_specs || "N/A"}
+              </p>
+            </Tooltip>
+          ),
+        },
+        {
+          header: "Match Info",
+          accessorKey: "match_score",
+          size: 180,
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Tooltip title={`Click to filter by "${item.status}"`}>
+                    <Tag
+                      onClick={() => handleCardClick(item.status)}
+                      className={`${recordStatusTagColor[item.status] ||
+                        recordStatusTagColor.default
+                        } capitalize cursor-pointer`}
+                    >
+                      {item.status.replace("_", " ")}
+                    </Tag>
+                  </Tooltip>
+                  <Tag
+                    className={`${opportunityStatusTagColor[item.opportunity_status] ||
+                      opportunityStatusTagColor.default
+                      } capitalize`}
+                  >
+                    {item.opportunity_status}
+                  </Tag>
+                </div>
+                <div>
+                  <div className="flex justify-between mb-1 text-xs">
+                    <span>Match Score</span>
+                    <span className="font-bold">{item.match_score}%</span>
+                  </div>
+                  <Progress size="sm" percent={item.match_score} />
+                </div>
+              </div>
+            );
+          },
+        },
+        {
+          header: "Last Updated",
+          accessorKey: "updated_at",
+          size: 180,
+          cell: ({ row: { original: item } }) => (
+            <div className="text-xs space-y-1">
+              <InfoLine
+                icon={<TbUser size={13} />}
+                text={item.updated_by_name}
+              />
+              <InfoLine text={item.updated_by_role} />
+              <FormattedDate dateString={item.updated_at} />
+            </div>
+          ),
+        },
+        {
+          header: "Actions",
+          id: "action_std",
+          size: 100,
+          cell: (props) => (
+            <MainRowActionColumn
+              item={props.row.original}
+              currentTab={currentTab}
+              onOpenModal={handleOpenModal}
             />
-            <InfoLine text={item.updated_by_role} />
-            <FormattedDate dateString={item.updated_at} />
-          </div>
-        ),
-      },
-      {
-        header: "Actions",
-        id: "action_std",
-        size: 100,
-        cell: (props) => (
-          <MainRowActionColumn
-            item={props.row.original}
-            currentTab={currentTab}
-            onOpenModal={handleOpenModal}
-          />
-        ),
-      },
-    ],
+          ),
+        },
+      ];
+
+      if (isDashboard) {
+        return allColumns.filter(col => col.id !== 'action_std');
+      }
+      return allColumns;
+    },
     [currentTab, handleOpenModal]
   );
 
   const getColumnsForExpandableView = useCallback(
-    (): ColumnDef<OpportunityItem>[] => [
-      {
-        id: "expander",
-        header: () => null,
-        size: 40,
-        cell: ({ row }) => (
-          <Tooltip title={row.getIsExpanded() ? "Collapse" : "Expand Details"}>
-            <Button
-              shape="circle"
-              size="xs"
-              variant="plain"
-              icon={row.getIsExpanded() ? <TbMinus /> : <TbPlus />}
-              onClick={row.getToggleExpandedHandler()}
-            />
-          </Tooltip>
-        ),
-      },
-      {
-        header: "Match/Product",
-        accessorKey: "product_name",
-        size: 280,
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="flex items-start gap-3">
-              <Avatar
-                size={38}
+    (isDashboard: boolean): ColumnDef<OpportunityItem>[] => {
+      const allColumns: ColumnDef<OpportunityItem>[] = [
+        {
+          id: "expander",
+          header: () => null,
+          size: 40,
+          cell: ({ row }) => (
+            <Tooltip title={row.getIsExpanded() ? "Collapse" : "Expand Details"}>
+              <Button
                 shape="circle"
-                className="mt-1 bg-primary-500 text-white text-base flex-shrink-0"
-              >
-                {item.product_name?.substring(0, 2).toUpperCase()}
-              </Avatar>
-              <div className="flex flex-col">
-                <span className="font-semibold text-sm text-primary-600 dark:text-primary-400 mb-0.5 cursor-default">
-                  {item.opportunity_id}
-                </span>
-                <Tooltip title={item.product_name}>
-                  <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[220px]">
-                    {item.product_name}
+                size="xs"
+                variant="plain"
+                icon={row.getIsExpanded() ? <TbMinus /> : <TbPlus />}
+                onClick={row.getToggleExpandedHandler()}
+              />
+            </Tooltip>
+          ),
+        },
+        {
+          header: "Match/Product",
+          accessorKey: "product_name",
+          size: 280,
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <div className="flex items-start gap-3">
+                <Avatar
+                  size={38}
+                  shape="circle"
+                  className="mt-1 bg-primary-500 text-white text-base flex-shrink-0"
+                >
+                  {item.product_name?.substring(0, 2).toUpperCase()}
+                </Avatar>
+                <div className="flex flex-col">
+                  <span className="font-semibold text-sm text-primary-600 dark:text-primary-400 mb-0.5 cursor-default">
+                    {item.opportunity_id}
                   </span>
-                </Tooltip>
+                  <Tooltip title={item.product_name}>
+                    <span className="text-xs text-gray-700 dark:text-gray-200 truncate block max-w-[220px]">
+                      {item.product_name}
+                    </span>
+                  </Tooltip>
+                </div>
               </div>
-            </div>
-          );
+            );
+          },
         },
-      },
-      {
-        header: "Parties",
-        accessorKey: "company_name",
-        size: 280,
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="text-xs">
-              <InfoLine
-                icon={<TbBuilding size={14} />}
-                text={item.company_name}
-                boldText
-              />
-              <InfoLine
-                icon={<TbUser size={14} />}
-                text={item.member_name}
-                className="mt-1"
-              />
-              {item.spb_role && (
-                <Tag
-                  className={classNames(
-                    "mt-1.5 capitalize",
-                    item.spb_role === "Seller"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-purple-100 text-purple-700"
-                  )}
-                >
-                  {item.spb_role}
-                </Tag>
-              )}
-            </div>
-          );
-        },
-      },
-      {
-        header: "Match Info",
-        accessorKey: "match_score",
-        size: 200,
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            <div className="text-xs space-y-1">
-              <InfoLine
-                icon={<TbRadar2 size={13} />}
-                label="Total Qty"
-                text={item.quantity ?? "N/A"}
-              />
-              <InfoLine
-                icon={<TbTargetArrow size={13} />}
-                label="Score"
-                text={`${item.match_score}%`}
-              />
-              <div className="flex items-center gap-1">
-                <InfoLine icon={<TbProgressCheck size={14} />} label="Status" />
-                <Tag
-                  className={`${opportunityStatusTagColor[item.opportunity_status] ||
-                    opportunityStatusTagColor.default
-                    } capitalize`}
-                >
-                  {item.opportunity_status}
-                </Tag>
+        {
+          header: "Parties",
+          accessorKey: "company_name",
+          size: 280,
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <div className="text-xs">
+                <InfoLine
+                  icon={<TbBuilding size={14} />}
+                  text={item.company_name}
+                  boldText
+                />
+                <InfoLine
+                  icon={<TbUser size={14} />}
+                  text={item.member_name}
+                  className="mt-1"
+                />
+                {item.spb_role && (
+                  <Tag
+                    className={classNames(
+                      "mt-1.5 capitalize",
+                      item.spb_role === "Seller"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-purple-100 text-purple-700"
+                    )}
+                  >
+                    {item.spb_role}
+                  </Tag>
+                )}
               </div>
-            </div>
-          );
+            );
+          },
         },
-      },
-      {
-        header: "Timestamps",
-        accessorKey: "created_date",
-        size: 150,
-        cell: ({ row }) => (
-          <FormattedDate dateString={row.original.created_date} />
-        ),
-      },
-      {
-        header: "Actions",
-        id: "action_exp",
-        size: 120,
-        cell: (props) => (
-          <MainRowActionColumn
-            item={props.row.original}
-            currentTab={currentTab}
-            onOpenModal={handleOpenModal}
-          />
-        ),
-      },
-    ],
+        {
+          header: "Match Info",
+          accessorKey: "match_score",
+          size: 200,
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <div className="text-xs space-y-1">
+                <InfoLine
+                  icon={<TbRadar2 size={13} />}
+                  label="Total Qty"
+                  text={item.quantity ?? "N/A"}
+                />
+                <InfoLine
+                  icon={<TbTargetArrow size={13} />}
+                  label="Score"
+                  text={`${item.match_score}%`}
+                />
+                <div className="flex items-center gap-1">
+                  <InfoLine icon={<TbProgressCheck size={14} />} label="Status" />
+                  <Tag
+                    className={`${opportunityStatusTagColor[item.opportunity_status] ||
+                      opportunityStatusTagColor.default
+                      } capitalize`}
+                  >
+                    {item.opportunity_status}
+                  </Tag>
+                </div>
+              </div>
+            );
+          },
+        },
+        {
+          header: "Timestamps",
+          accessorKey: "created_date",
+          size: 150,
+          cell: ({ row }) => (
+            <FormattedDate dateString={row.original.created_date} />
+          ),
+        },
+        {
+          header: "Actions",
+          id: "action_exp",
+          size: 120,
+          cell: (props) => (
+            <MainRowActionColumn
+              item={props.row.original}
+              currentTab={currentTab}
+              onOpenModal={handleOpenModal}
+            />
+          ),
+        },
+      ];
+      if (isDashboard) {
+        return allColumns.filter(col => col.id !== 'action_exp' && col.id !== 'expander');
+      }
+      return allColumns;
+    },
     [currentTab, handleOpenModal]
   );
 
   const columns = useMemo(() => {
     if (currentTab === TABS.AUTO_MATCH) {
-      return getColumnsForExpandableView();
+      return getColumnsForExpandableView(isDashboard || false);
     }
-    return getColumnsForStandardView();
-  }, [currentTab, getColumnsForStandardView, getColumnsForExpandableView]);
+    return getColumnsForStandardView(isDashboard || false);
+  }, [currentTab, getColumnsForStandardView, getColumnsForExpandableView, isDashboard]);
 
   // ***** FIX: CREATE TABLE INSTANCE AT THE TOP LEVEL OF THE MAIN COMPONENT *****
   const table = useReactTable({
@@ -3348,7 +3364,7 @@ const Opportunities = () => {
     getFilteredRowModel: getFilteredRowModel(),
     manualPagination: true,
     manualSorting: true,
-    getRowCanExpand: () => true,
+    getRowCanExpand: () => !isDashboard,
   });
 
   const isLoading =
@@ -3364,11 +3380,11 @@ const Opportunities = () => {
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-          <div className="lg:flex items-center justify-between mb-4">
+          {!isDashboard && <div className="lg:flex items-center justify-between mb-4">
             <h3 className="mb-4 lg:mb-0">Opportunities</h3>
-          </div>
+          </div>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {!isDashboard && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Tooltip title="Click to show all opportunities">
               <div onClick={() => handleCardClick("all")}>
                 <Card
@@ -3453,7 +3469,7 @@ const Opportunities = () => {
                 </Card>
               </div>
             </Tooltip>
-          </div>
+          </div>}
 
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav
@@ -3481,6 +3497,7 @@ const Opportunities = () => {
 
           <div className="mb-4">
             <OpportunityTableTools
+              isDashboard={isDashboard}
               onSearchChange={handleSearchChange}
               onExport={handleOpenExportReasonModal}
               onFilter={() => setIsDrawerOpen(true)}
@@ -3490,15 +3507,15 @@ const Opportunities = () => {
             />
           </div>
 
-          <ActiveFiltersDisplay
+          {!isDashboard && <ActiveFiltersDisplay
             filters={filters}
             onRemoveFilter={handleRemoveFilter}
             onClearAll={handleClearFilters}
           />
-
+          }
           <div className="flex-grow overflow-auto">
             <DataTableComponent
-              selectable
+              selectable={!isDashboard}
               columns={columns}
               data={pageData}
               loading={isLoading}
@@ -3520,7 +3537,7 @@ const Opportunities = () => {
               state={{ expanded, columnVisibility }}
               onExpandedChange={setExpanded}
               onColumnVisibilityChange={setColumnVisibility}
-              getRowCanExpand={() => true}
+              getRowCanExpand={() => !isDashboard}
               renderRowSubComponent={({ row }: { row: Row<OpportunityItem> }) =>
                 currentTab === TABS.AUTO_MATCH ? (
                   <ExpandedAutoSpbDetails
@@ -3538,10 +3555,10 @@ const Opportunities = () => {
             />
           </div>
         </AdaptiveCard>
-        <OpportunitySelectedFooter
+        {!isDashboard && <OpportunitySelectedFooter
           selectedItems={currentSelectedItems}
           onDeleteSelected={handleDeleteSelected}
-        />
+        />}
       </Container>
       <OpportunityFilterDrawer
         isOpen={isDrawerOpen}

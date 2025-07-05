@@ -621,7 +621,7 @@ const LeadActionColumn = ({ onViewDetail, onEdit, onDelete, onAssign, onChangeSt
 const LeadSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void; placeholder?: string }>(({ onInputChange, ...rest }, ref) => (<DebouceInput ref={ref} {...rest} suffix={<TbSearch className="text-lg" />} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)} />));
 LeadSearch.displayName = "LeadSearch";
 
-const LeadTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+const LeadTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDashboard }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
@@ -630,6 +630,7 @@ const LeadTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
   filteredColumns: ColumnDef<LeadListItem>[];
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<LeadListItem>[]>>;
   activeFilterCount: number;
+  isDashboard: boolean;
 }) => {
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
@@ -655,7 +656,7 @@ const LeadTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
       <div className="flex-grow">
         <LeadSearch onInputChange={onSearchChange} placeholder="Quick Search..." />
       </div>
-      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      {!isDashboard && <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
         <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
           <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
             {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
@@ -664,7 +665,7 @@ const LeadTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
         <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
         <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
-      </div>
+      </div>}
     </div>
   )
 };
@@ -708,7 +709,7 @@ const LeadSelectedFooter = ({ selectedItems, onDeleteSelected }: any) => {
 };
 
 // --- Main LeadsListing Component ---
-const LeadsListing = () => {
+const LeadsListing = ({ isDashboard }) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { LeadsData = [], getAllUserData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
@@ -881,15 +882,24 @@ const LeadsListing = () => {
   }, [handleSetTableData]);
 
   const columns: ColumnDef<LeadListItem>[] = useMemo(
-    () => [
-      { header: "Lead", accessorKey: "lead_number", size: 130, cell: (props) => (<div className="flex flex-col gap-0.5 text-xs"><span>{props.getValue() as string}</span><div><Tag className={`${enquiryTypeColor[props.row.original.enquiry_type] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiry_type}</Tag></div></div>), },
-      { header: "Product", accessorKey: "productName", size: 200, cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || "-", },
-      { header: "Status", accessorKey: "lead_status", size: 120, cell: (props: CellContext<LeadListItem, any>) => (<Tag className={`${leadStatusColor[props.row.original.lead_status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.lead_status}</Tag>), },
-      { header: "Member", accessorKey: "customerName", size: 180, cell: (props: CellContext<LeadListItem, any>) => { const { buyer, supplier } = props.row.original; const buyerInfo = buyer ? (<><b>Buyer: {buyer.id}</b><span>{buyer.name}</span></>) : (<span>Buyer: N/A</span>); return (<div className="flex flex-col gap-1 text-xs">{buyerInfo}</div>); }, },
-      { header: "Details", size: 220, cell: (props: CellContext<LeadListItem, any>) => { const formattedDate = props.row.original.createdAt ? `${new Date(props.row.original.createdAt).getDate()} ${new Date(props.row.original.createdAt).toLocaleString("en-US", { month: "short", })} ${new Date(props.row.original.createdAt).getFullYear()}, ${new Date(props.row.original.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, })}` : "N/A"; return (<div className="flex flex-col gap-0.5 text-xs"><div><Tag>{props.row.original.lead_intent || "Buy"}</Tag><span>Qty: {props.row.original.qty ?? "-"}</span></div><span>Target Price: {props.row.original.target_price ?? "-"}</span><span>Sales Person : {props.row.original.salesPersonName || "Unassigned"}</span><b>{formattedDate}</b></div>); }, },
-      { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props: CellContext<LeadListItem, any>) => (<LeadActionColumn onViewDetail={() => openViewDialog(props.row.original)} onEdit={() => handleOpenEditLeadPage(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onAssign={() => openAssignDrawer(props.row.original)} onChangeStatus={() => openChangeStatusDrawer(props.row.original)} onOpenModal={(type) => handleOpenModal(type, props.row.original)} />), },
-    ],
-    [openViewDialog, handleOpenEditLeadPage, handleDeleteClick, openAssignDrawer, openChangeStatusDrawer, handleOpenModal]
+    () => {
+      const baseColumns: ColumnDef<LeadListItem>[] = [
+        { header: "Lead", accessorKey: "lead_number", size: 130, cell: (props) => (<div className="flex flex-col gap-0.5 text-xs"><span>{props.getValue() as string}</span><div><Tag className={`${enquiryTypeColor[props.row.original.enquiry_type] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiry_type}</Tag></div></div>), },
+        { header: "Product", accessorKey: "productName", size: 200, cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || "-", },
+        { header: "Status", accessorKey: "lead_status", size: 120, cell: (props: CellContext<LeadListItem, any>) => (<Tag className={`${leadStatusColor[props.row.original.lead_status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.lead_status}</Tag>), },
+        { header: "Member", accessorKey: "customerName", size: 180, cell: (props: CellContext<LeadListItem, any>) => { const { buyer, supplier } = props.row.original; const buyerInfo = buyer ? (<><b>Buyer: {buyer.id}</b><span>{buyer.name}</span></>) : (<span>Buyer: N/A</span>); return (<div className="flex flex-col gap-1 text-xs">{buyerInfo}</div>); }, },
+        { header: "Details", size: 220, cell: (props: CellContext<LeadListItem, any>) => { const formattedDate = props.row.original.createdAt ? `${new Date(props.row.original.createdAt).getDate()} ${new Date(props.row.original.createdAt).toLocaleString("en-US", { month: "short", })} ${new Date(props.row.original.createdAt).getFullYear()}, ${new Date(props.row.original.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, })}` : "N/A"; return (<div className="flex flex-col gap-0.5 text-xs"><div><Tag>{props.row.original.lead_intent || "Buy"}</Tag><span>Qty: {props.row.original.qty ?? "-"}</span></div><span>Target Price: {props.row.original.target_price ?? "-"}</span><span>Sales Person : {props.row.original.salesPersonName || "Unassigned"}</span><b>{formattedDate}</b></div>); }, },
+      ];
+
+      if (!isDashboard) {
+        baseColumns.push({
+          header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props: CellContext<LeadListItem, any>) => (<LeadActionColumn onViewDetail={() => openViewDialog(props.row.original)} onEdit={() => handleOpenEditLeadPage(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onAssign={() => openAssignDrawer(props.row.original)} onChangeStatus={() => openChangeStatusDrawer(props.row.original)} onOpenModal={(type) => handleOpenModal(type, props.row.original)} />),
+        });
+      }
+
+      return baseColumns;
+    },
+    [isDashboard, openViewDialog, handleOpenEditLeadPage, handleDeleteClick, openAssignDrawer, openChangeStatusDrawer, handleOpenModal]
   );
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<LeadListItem>[]>(columns);
@@ -903,11 +913,11 @@ const LeadsListing = () => {
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+          {!isDashboard && <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Leads Listing</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={handleOpenAddLeadPage}>Add New</Button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-8 mb-4 gap-2 ">
+          </div>}
+          {!isDashboard && <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-8 mb-4 gap-2 ">
             <Tooltip title="Click to show all leads"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbTrophy size={20} /></div><div className="flex flex-col"><b className="text-blue-500">{LeadsData?.counts?.total ?? 0}</b><span className="font-semibold text-[10px]">Total</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show leads from today"><div onClick={() => { }}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendar size={20} /></div><div className="flex flex-col"><b className="text-violet-500">{LeadsData?.counts?.today ?? 0}</b><span className="font-semibold text-[10px]">Today</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show active leads"><div onClick={() => handleCardClick('New')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div><div className="flex flex-col"><b className="text-green-500">{LeadsData?.counts?.active ?? 0}</b><span className="font-semibold text-[10px]">Active</span></div></Card></div></Tooltip>
@@ -916,9 +926,10 @@ const LeadsListing = () => {
             <Tooltip title="Click to show Product leads"><div onClick={() => handleCardClick('Product Info')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div><div className="flex flex-col"><b className="text-violet-500">{LeadsData?.counts?.product_lead ?? 0}</b><span className="font-semibold text-[10px]">Product Lead</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show Wall leads"><div onClick={() => handleCardClick('Wall Listing')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbListDetails size={20} /></div><div className="flex flex-col"><b className="text-pink-500">{LeadsData?.counts?.wall_lead ?? 0}</b><span className="font-semibold text-[10px]">Wall Lead</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show Manual leads"><div onClick={() => handleCardClick('Manual Lead')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbPennant size={20} /></div><div className="flex flex-col"><b className="text-orange-500">{LeadsData?.counts?.manual_lead ?? 0}</b><span className="font-semibold text-[10px]">Manual Lead</span></div></Card></div></Tooltip>
-          </div>
+          </div>}
           <div className="mb-4">
             <LeadTableTools
+              isDashboard={isDashboard}
               onClearFilters={onClearFilters}
               onSearchChange={handleSearchChange}
               onFilter={openFilterDrawer}

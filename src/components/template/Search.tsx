@@ -468,7 +468,7 @@ const _Search = ({ className }: { className?: string }) => {
                             />
                         </div>
                         <Button size="xs" onClick={handleSearchClose}>
-                            Esc
+                            Close
                         </Button>
                     </div>
                     <div className="py-6 px-5">

@@ -271,10 +271,9 @@ function exportToExcel(
   }
   const worksheetData = data.map((item) => ({
     "Product Name": item.product?.name,
+     Qty: item.qty,
     "Sales Price": item.sales_price,
-    "Base Price": item.base_price,
-    Qty: item.qty,
-    "Last Updated": new Date(item.updated_at || "").toLocaleString(),
+    
   }));
   const worksheet = XLSX.utils.json_to_sheet(worksheetData);
   const workbook = XLSX.utils.book_new();

@@ -25,6 +25,10 @@ import { BsCake } from 'react-icons/bs'
 import { IoMdShare } from 'react-icons/io'
 import { HiOutlineMinusCircle, HiOutlinePlusCircle } from 'react-icons/hi'
 import { Link, useNavigate } from 'react-router-dom'
+import Opportunities from '@/views/sales-Leads/Opportunities'
+import Leads from '@/views/sales-Leads/Lead'
+import TaskList from '@/views/task-management/Task-List/TaskList'
+import WallListing from '@/views/sales-Leads/Wall-Listing'
 
 type StatisticCardProps = {
     title: string
@@ -1934,7 +1938,8 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             value={
                                 <NumericFormat
                                     displayType="text"
-                                    value="68"
+                                    value="12"
+                                    prefix={''}
                                     thousandSeparator={true}
                                 />
                             }
@@ -1947,7 +1952,25 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             activeBgColor="bg-green-200"
                             iconBg="bg-green-400"
                         />
-                        <StatisticCard
+                        {/* <StatisticCard
+                            title="Leads"
+                            value={
+                                <NumericFormat
+                                    displayType="text"
+                                    value="68"
+                                    thousandSeparator={true}
+                                />
+                            }
+                            iconClass="bg-emerald-200"
+                            icon={<TbShoppingBagCheck className='h-5' />}
+                            label="Leads"
+                            active={selectedCategory === 'Leads'}
+                            onClick={() => setSelectedCategory('Leads')}
+                            colorClass="bg-green-100"
+                            activeBgColor="bg-green-200"
+                            iconBg="bg-green-400"
+                        /> */}
+                        {/* <StatisticCard
                             title="Accounts"
                             value={
                                 <NumericFormat
@@ -1965,7 +1988,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             colorClass="bg-blue-100"
                             activeBgColor="bg-blue-200"
                             iconBg="bg-blue-400"
-                        />
+                        /> */}
                         <StatisticCard
                             title="Tasks"
                             value={
@@ -1986,7 +2009,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             activeBgColor="bg-pink-200"
                             iconBg="bg-pink-400"
                         />
-                        <StatisticCard
+                        {/* <StatisticCard
                             title="Web Analytics"
                             value={
                                 <NumericFormat
@@ -2027,6 +2050,25 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             colorClass="bg-orange-100"
                             activeBgColor="bg-orange-200"
                             iconBg="bg-orange-400"
+                        /> */}
+                        <StatisticCard
+                            title="Wall Listing"
+                            value={
+                                <NumericFormat
+                                    displayType="text"
+                                    value="12"
+                                    prefix={''}
+                                    thousandSeparator={true}
+                                />
+                            }
+                            iconClass="bg-emerald-200"
+                            icon={<TbShoppingBagCheck className='h-5' />}
+                            label="Wall Listing"
+                            active={selectedCategory === 'WallListing'}
+                            onClick={() => setSelectedCategory('WallListing')}
+                            colorClass="bg-green-100"
+                            activeBgColor="bg-green-200"
+                            iconBg="bg-green-400"
                         />
                     </div>
                     <Card bodyClass='px-4 py-3'>
@@ -2128,7 +2170,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         <h6 className='mb-6'>Opportunity Leaderboard</h6>
                                         <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Match Score</h6>
-                                            <Select
+                                            {/* <Select
                                                 className="min-w-[140px]"
                                                 size="sm"
                                                 defaultValue={{ label: "All", value: "All" }}
@@ -2138,16 +2180,17 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "25% - 49%", value: "25-49" },
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
-                                            />
+                                            /> */}
                                         </div>
                                     </div>
-                                    <DataTable1
+                                    {/* <DataTable1
                                         columns={opportunitiesColumns}
                                         data={opportunitiesData}
                                         onExpandedChange={() => setExpanded}
                                         getRowCanExpand={() => true}
                                         renderSubComponent={({ row }) => <ExpandedOpportunityDetails row={row} />}
-                                    />
+                                    /> */}
+                                    <Opportunities isDashboard={true} />
 
                                     {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
                                     {/* Note :- Trust  = ( Company Activity, response rate and verification */}
@@ -2237,7 +2280,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         <h6 className='mb-6'>Leads Leaderboard</h6>
                                         <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Conversion Rate</h6>
-                                            <Select
+                                            {/* <Select
                                                 className="min-w-[140px]"
                                                 size="sm"
                                                 defaultValue={{ label: "All", value: "All" }}
@@ -2247,14 +2290,15 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "25% - 49%", value: "25-49" },
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
-                                            />
+                                            /> */}
                                         </div>
                                     </div>
-                                    <DataTable
+                                    {/* <DataTable
                                         columns={memberColumns}
                                         data={memberData}
                                     // loading={isLoading}
-                                    />
+                                    /> */}
+                                    <Leads isDashboard={true} />
 
                                     {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
                                     {/* Note :- Trust  = ( Company Activity, response rate and verification */}
@@ -2363,7 +2407,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {/* Tasks  */}
                         {selectedCategory === 'Tasks' && (
                             <div>
-                                {/* <div className='lg:flex gap-2 justify-between mt-4'>
+                                <div className='lg:flex gap-2 justify-between mt-4'>
                                     <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
                                         <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
                                         <div className='flex gap-1 items-center'>
@@ -2446,7 +2490,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         <h6 className='mb-6'>Partners Leaderboard</h6>
                                         <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Trust Score</h6>
-                                            <Select
+                                            {/* <Select
                                                 className="min-w-[140px]"
                                                 size="sm"
                                                 defaultValue={{ label: "All", value: "All" }}
@@ -2456,15 +2500,16 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "25% - 49%", value: "25-49" },
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
-                                            />
+                                            /> */}
                                         </div>
                                     </div>
-                                    <DataTable
+                                    <TaskList isDashboard={true} />
+                                    {/* <DataTable
                                         columns={partnerColumns}
                                         data={wallListingData}
-                                    />
+                                    /> */}
 
-                                </div> */}
+                                </div>
                             </div>
                         )}
                         {/* Tasks */}
@@ -2687,6 +2732,107 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             </div>
                         )}
                         {/* Marketing */}
+
+                        {selectedCategory === 'WallListing' && (
+                            <div>
+                                <div className='lg:flex gap-2 justify-between mt-4'>
+                                    <div className='whitespace-nowrap pr-4 border-r border-r-gray-200'>
+                                        <span className=' font-semibold text-black dark:text-white'>Growth Rate</span>
+                                        <div className='flex gap-1 items-center'>
+                                            <h3>17%</h3>
+                                            <span className='text-green-600 text-lg'><FaArrowUpLong /></span>
+                                        </div>
+                                    </div>
+                                    <div className="lg:pl-4 flex items-center gap-1 w-full">
+                                        <Bar
+                                            field="Total"
+                                            percent={20}
+                                            color='text-[#6610f2]'
+                                            className="bg-[#6610f2] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Active"
+                                            percent={20}
+                                            color='text-[#2ecc71]'
+                                            className="bg-[#2ecc71] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Inactive"
+                                            percent={20}
+                                            color='text-[#e74c3c]'
+                                            className="bg-[#e74c3c] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="On Leave"
+                                            percent={32}
+                                            color='text-[#ffc107]'
+                                            className="bg-[#ffc107] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Unapproved"
+                                            percent={20}
+                                            color='text-[#fd7e14]'
+                                            className="bg-[#fd7e14] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="New Joinee"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Resigned"
+                                            percent={20}
+                                            color='text-[#28a745]'
+                                            className="bg-[#28a745] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Departments"
+                                            percent={28}
+                                            color='text-[#6c757d]'
+                                            className="bg-[#6c757d] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Task"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                        <Bar
+                                            field="Performance"
+                                            percent={20}
+                                            color='text-[#007bff]'
+                                            className="bg-[#007bff] dark:opacity-70"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className='mt-8 block  gap-2'>
+                                    <div className='flex justify-between items-center'>
+                                        <h6 className='mb-6'>Wall Listing Leaderboard</h6>
+                                        <div className='flex gap-2 items-center text-sm'>
+                                            <h6 className='text-sm'>Performance Score</h6>
+                                            {/* <Select
+                                                className="min-w-[140px]"
+                                                size="sm"
+                                                defaultValue={{ label: "All", value: "All" }}
+                                                options={[
+                                                    { label: "75% - 100%", value: "75-100" },
+                                                    { label: "50% - 74%", value: "50-74" },
+                                                    { label: "25% - 49%", value: "25-49" },
+                                                    { label: "0% - 24%", value: "0-24" },
+                                                ]}
+                                            /> */}
+                                        </div>
+                                    </div>
+                                    {/* <DataTable
+                                        columns={teamColumns}
+                                        data={wallListingData}
+                                    /> */}
+                                    <WallListing isDashboard={true}/>
+                                </div>
+                            </div>
+                        )}
 
 
                     </Card>

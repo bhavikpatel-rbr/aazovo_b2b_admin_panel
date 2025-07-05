@@ -104,7 +104,7 @@ const CollapsibleSide = ({ children }: CommonProps) => {
                         }
                         headerEnd={
                             <>
-                                <div
+                                {/* <div
                                     onClick={handlePunchToggle}
                                     className={`text-xs 
                                     cursor-pointer rounded-full py-2 px-3 flex gap-1 items-center transition-colors duration-200
@@ -118,7 +118,7 @@ const CollapsibleSide = ({ children }: CommonProps) => {
                                     <span>
                                         {isPunchedIn ? 'Punch Out' : 'Punch In'}
                                     </span>
-                                </div>
+                                </div> */}
                                 <Notification />
                                 <ActiveItems />
                                 <Calender />
