@@ -38,6 +38,7 @@ import {
     getCountriesAction,
     submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
+import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
 
 // --- FEATURE-SPECIFIC TYPES & SCHEMAS ---
 type Country = { id: number; name: string };
@@ -153,7 +154,46 @@ const Currency = () => {
         { header: "Currency Code", accessorKey: "currency_code", enableSorting: true, size: 150 },
         { header: "Symbol", accessorKey: "currency_symbol", enableSorting: true, size: 80 },
         { header: "Countries", accessorKey: "countries", size: 250, cell: (props) => { const countries = props.row.original.countries || []; return (<div className="flex flex-wrap gap-1">{countries.map(country => <Tag key={country.id} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100">{country.name}</Tag>)}</div>) } },
-        { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+        {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        size: 200,
+        cell: (props) => {
+          const { updated_at, updated_by_user } = props.row.original;
+          const date = updated_at ? new Date(updated_at) : null;
+          const formattedDate = date
+            ? `${date.getDate()} ${date.toLocaleString("en-US", {
+                month: "short",
+              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}`
+            : "N/A";
+          return (
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={updated_by_user?.profile_pic_path}
+                shape="circle"
+                size="sm"
+                icon={<TbUserCircle />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() =>
+                  openImageViewer(updated_by_user?.profile_pic_path)
+                }
+              />
+              <div>
+                <span>{updated_by_user?.name || "N/A"}</span>
+                <div className="text-xs">
+                  <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                </div>
+                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+              </div>
+            </div>
+          );
+        },
+      },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
     ], [countryOptionsForSelect]);
@@ -267,12 +307,67 @@ const Currency = () => {
                     <FormItem label={<div>Countries <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.country_id} errorMessage={formMethods.formState.errors.country_id?.message as string}><Controller name="country_id" control={formMethods.control} render={({ field }) => (<Select isMulti placeholder="Select countries..." options={countryOptionsForSelect} value={countryOptionsForSelect.filter(o => (field.value || []).includes(o.value as number))} onChange={(val) => field.onChange((val || []).map(v => v.value))} />)} /></FormItem>
                     <FormItem label={<div>Status <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : "")} />)} /></FormItem>
                 </Form>
-                {isEditDrawerOpen && editingCurrency && (<div className="absolute bottom-4 right-4 left-4">
-                    <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                        <div><b className="font-semibold text-gray-900 dark:text-gray-100">Latest Update:</b><br /><p className="font-semibold">{editingCurrency.updated_by_user?.name || "N/A"}</p><p>{editingCurrency.updated_by_user?.roles[0]?.display_name || "N/A"}</p></div>
-                        <div className="text-right"><b className="font-semibold text-gray-900 dark:text-gray-100"></b><br /><span className="font-semibold">Created:</span> <span>{editingCurrency.created_at ? new Date(editingCurrency.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated:</span> <span>{editingCurrency.updated_at ? new Date(editingCurrency.updated_at).toLocaleString() : "N/A"}</span></div>
-                    </div>
-                </div>)}
+                {isEditDrawerOpen && editingCurrency && (
+                    <div className="absolute bottom-4 right-4 left-4 grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+            <div>
+              <b className="mt-3 mb-3 font-semibold text-primary">
+                Latest Update:
+              </b>
+              <br />
+              <p className="text-sm font-semibold">
+                {editingCurrency.updated_by_user?.name || "N/A"}
+              </p>
+              <p>
+                {editingCurrency.updated_by_user?.roles[0]?.display_name ||
+                  "N/A"}
+              </p>
+            </div>
+            <div className="text-right">
+              <br />
+              <span className="font-semibold">Created At:</span>{" "}
+              <span>
+                {editingCurrency.created_at
+                  ? `${new Date(
+                      editingCurrency.created_at
+                    ).getDate()} ${new Date(
+                      editingCurrency.created_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      editingCurrency.created_at
+                    ).getFullYear()}, ${new Date(
+                      editingCurrency.created_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+              <br />
+              <span className="font-semibold">Updated At:</span>{" "}
+              <span>
+                {}
+                {editingCurrency.updated_at
+                  ? `${new Date(
+                      editingCurrency.updated_at
+                    ).getDate()} ${new Date(
+                      editingCurrency.updated_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      editingCurrency.updated_at
+                    ).getFullYear()}, ${new Date(
+                      editingCurrency.updated_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+            </div>
+          </div>)}
             </Drawer>
             
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
