@@ -51,7 +51,7 @@ const countryFormSchema = z.object({
     name: z.string().min(1, "Country name is required.").max(100, "Name cannot exceed 100 characters."),
     region: z.string().min(1, 'Continent is required.'),
     iso_code: z.string().min(1, 'ISO code is required.').max(3, "ISO code max 3 characters."),
-    phone_code: z.string().min(1, 'Phone code is required.').max(10, "Phone code max 10 characters."),
+    phone_code: z.string().min(1, 'Phone code is required.').max(5, "Phone code max 5 characters."),
     flag: z.any()
         .refine((value) => !value || (value instanceof File && value.size <= MAX_FILE_SIZE), `Max image size is 5MB.`)
         .refine(
