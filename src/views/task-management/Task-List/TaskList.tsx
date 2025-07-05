@@ -1312,7 +1312,7 @@ const transformApiTaskToTaskItem = (apiTask: any): TaskItem => {
 }
 
 // --- useTaskListingLogic Hook ---
-export const useTaskListingLogic = () => {
+export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } = {}) => {
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
 
@@ -1652,163 +1652,170 @@ export const useTaskListingLogic = () => {
 
 
     const columns: ColumnDef<TaskItem>[] = useMemo(
-        () => [
-            {
-                header: 'Created By',
-                accessorKey: 'createdBy',
-                enableSorting: true,
-                size: 160,
-                cell: (props) => {
-                    const createdBy = props.row.original.createdBy
-                    const initials = createdBy
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .substring(0, 2)
-                        .toUpperCase()
-                    return (
-                        <div className="flex items-center gap-1.5 text-xs">
-                            <Avatar size={32} shape="circle">
-                                {initials || <TbUserCircle />}
-                            </Avatar>
-                            <div className="flex flex-col gap-0.5">
-                                <span className="font-semibold">
-                                    {createdBy}
-                                </span>
-                                <span className="text-gray-500 dark:text-gray-400">
-                                    {(props.row.original._originalData as any)?.created_by_user?.roles?.[0]?.display_name || ''}
-                                </span>
+        () => {
+            const baseColumns: ColumnDef<TaskItem>[] = [
+                {
+                    header: 'Created By',
+                    accessorKey: 'createdBy',
+                    enableSorting: true,
+                    size: 160,
+                    cell: (props) => {
+                        const createdBy = props.row.original.createdBy
+                        const initials = createdBy
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .substring(0, 2)
+                            .toUpperCase()
+                        return (
+                            <div className="flex items-center gap-1.5 text-xs">
+                                <Avatar size={32} shape="circle">
+                                    {initials || <TbUserCircle />}
+                                </Avatar>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="font-semibold">
+                                        {createdBy}
+                                    </span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                        {(props.row.original._originalData as any)?.created_by_user?.roles?.[0]?.display_name || ''}
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                    )
+                        )
+                    },
                 },
-            },
-            {
-                header: 'Task',
-                accessorKey: 'note',
-                enableSorting: true,
-                size: 280,
-                cell: (props) => {
-                    const task = props.row.original
-                    return (
-                        <div className="flex flex-col gap-0.5 text-[12px]">
-                            <Tooltip title={task.note}>
-                                <span className="font-semibold items-center whitespace-nowrap text-ellipsis max-w-[270px] overflow-hidden">
-                                    {task.note}
-                                </span>
-                            </Tooltip>
-                            <span className="text-gray-600 dark:text-gray-300">
-                                Created:{' '}
-                                {task.createdDate.toLocaleDateString()}
-                            </span>
-                            {task.dueDate && (
+                {
+                    header: 'Task',
+                    accessorKey: 'note',
+                    enableSorting: true,
+                    size: 280,
+                    cell: (props) => {
+                        const task = props.row.original
+                        return (
+                            <div className="flex flex-col gap-0.5 text-[12px]">
+                                <Tooltip title={task.note}>
+                                    <span className="font-semibold items-center whitespace-nowrap text-ellipsis max-w-[270px] overflow-hidden">
+                                        {task.note}
+                                    </span>
+                                </Tooltip>
                                 <span className="text-gray-600 dark:text-gray-300">
-                                    Due: {task.dueDate.toLocaleDateString()}
+                                    Created:{' '}
+                                    {task.createdDate.toLocaleDateString()}
                                 </span>
-                            )}
-                        </div>
-                    )
-                },
-            },
-            {
-                header: 'Details',
-                accessorKey: 'category',
-                enableSorting: true,
-                size: 200,
-                cell: (props) => {
-                    const task = props.row.original
-                    return (
-                        <div className="flex flex-col gap-1 text-[12px]">
-                            {task.category && (
-                                <span className="flex items-center gap-1">
-                                    <b className="font-semibold">Category:</b>
-                                    <Tag className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100">
-                                        {task.category}
-                                    </Tag>
-                                </span>
-                            )}
-                            {task.priority && (
-                                <span className="flex items-center gap-1">
-                                    <b className="font-semibold">Priority:</b>
-                                    <Tag className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-100">
-                                        {task.priority}
-                                    </Tag>
-                                </span>
-                            )}
-                        </div>
-                    )
-                },
-            },
-            {
-                header: 'Assigned To',
-                accessorKey: 'assignTo',
-                enableSorting: false,
-                size: 150,
-                cell: (props) => {
-                    const task = props.row.original
-                    return (
-                        <div className="flex flex-col gap-1.5 items-start">
-                            {Array.isArray(task.assignTo) &&
-                                task.assignTo.length > 0 ? (
-                                <Avatar.Group
-                                    chained
-                                    maxCount={3}
-                                    omittedAvatarProps={{
-                                        shape: 'circle',
-                                        size: 28,
-                                    }}
-                                    omittedAvatarTooltip
-                                >
-                                    {task.assignTo.map((assigneeName) => (
-                                        <Tooltip
-                                            key={assigneeName}
-                                            title={assigneeName}
-                                        >
-                                            <Avatar size={28} shape="circle">
-                                                {assigneeName
-                                                    .split(' ')
-                                                    .map((n) => n[0])
-                                                    .join('')
-                                                    .substring(0, 2)
-                                                    .toUpperCase()}
-                                            </Avatar>
-                                        </Tooltip>
-                                    ))}
-                                </Avatar.Group>
-                            ) : (
-                                <span className="text-xs text-gray-500">
-                                    Unassigned
-                                </span>
-                            )}
-                            <Tag
-                                className={classNames(
-                                    `text-white capitalize text-xs px-2 py-0.5`,
-                                    taskStatusColor[task.status] ||
-                                    'bg-gray-400',
+                                {task.dueDate && (
+                                    <span className="text-gray-600 dark:text-gray-300">
+                                        Due: {task.dueDate.toLocaleDateString()}
+                                    </span>
                                 )}
-                            >
-                                {task.status.replace(/_/g, ' ')}
-                            </Tag>
-                        </div>
-                    )
+                            </div>
+                        )
+                    },
                 },
-            },
-            {
-                header: 'Action',
-                id: 'action',
-                meta: { HeaderClass: 'text-center' },
-                cell: (props) => (
-                    <ActionColumn
-                        onEdit={() => handleEdit(props.row.original)}
-                        onView={() => handleOpenViewModal(props.row.original)}
-                        onDelete={() => handleDelete(props.row.original)}
-                        onChangeStatus={() => handleChangeStatus(props.row.original, 'completed')}
-                        onOpenModal={(type) => handleOpenModal(type, props.row.original)}
-                    />
-                ),
-            },
-        ],
-        [handleEdit, handleDelete, handleChangeStatus, handleOpenViewModal, handleOpenModal],
+                {
+                    header: 'Details',
+                    accessorKey: 'category',
+                    enableSorting: true,
+                    size: 200,
+                    cell: (props) => {
+                        const task = props.row.original
+                        return (
+                            <div className="flex flex-col gap-1 text-[12px]">
+                                {task.category && (
+                                    <span className="flex items-center gap-1">
+                                        <b className="font-semibold">Category:</b>
+                                        <Tag className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100">
+                                            {task.category}
+                                        </Tag>
+                                    </span>
+                                )}
+                                {task.priority && (
+                                    <span className="flex items-center gap-1">
+                                        <b className="font-semibold">Priority:</b>
+                                        <Tag className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-100">
+                                            {task.priority}
+                                        </Tag>
+                                    </span>
+                                )}
+                            </div>
+                        )
+                    },
+                },
+                {
+                    header: 'Assigned To',
+                    accessorKey: 'assignTo',
+                    enableSorting: false,
+                    size: 150,
+                    cell: (props) => {
+                        const task = props.row.original
+                        return (
+                            <div className="flex flex-col gap-1.5 items-start">
+                                {Array.isArray(task.assignTo) &&
+                                    task.assignTo.length > 0 ? (
+                                    <Avatar.Group
+                                        chained
+                                        maxCount={3}
+                                        omittedAvatarProps={{
+                                            shape: 'circle',
+                                            size: 28,
+                                        }}
+                                        omittedAvatarTooltip
+                                    >
+                                        {task.assignTo.map((assigneeName) => (
+                                            <Tooltip
+                                                key={assigneeName}
+                                                title={assigneeName}
+                                            >
+                                                <Avatar size={28} shape="circle">
+                                                    {assigneeName
+                                                        .split(' ')
+                                                        .map((n) => n[0])
+                                                        .join('')
+                                                        .substring(0, 2)
+                                                        .toUpperCase()}
+                                                </Avatar>
+                                            </Tooltip>
+                                        ))}
+                                    </Avatar.Group>
+                                ) : (
+                                    <span className="text-xs text-gray-500">
+                                        Unassigned
+                                    </span>
+                                )}
+                                <Tag
+                                    className={classNames(
+                                        `text-white capitalize text-xs px-2 py-0.5`,
+                                        taskStatusColor[task.status] ||
+                                        'bg-gray-400',
+                                    )}
+                                >
+                                    {task.status.replace(/_/g, ' ')}
+                                </Tag>
+                            </div>
+                        )
+                    },
+                },
+            ];
+
+            if (!isDashboard) {
+                baseColumns.push({
+                    header: 'Action',
+                    id: 'action',
+                    meta: { HeaderClass: 'text-center' },
+                    cell: (props) => (
+                        <ActionColumn
+                            onEdit={() => handleEdit(props.row.original)}
+                            onView={() => handleOpenViewModal(props.row.original)}
+                            onDelete={() => handleDelete(props.row.original)}
+                            onChangeStatus={() => handleChangeStatus(props.row.original, 'completed')}
+                            onOpenModal={(type) => handleOpenModal(type, props.row.original)}
+                        />
+                    ),
+                });
+            }
+
+            return baseColumns;
+        },
+        [isDashboard, handleEdit, handleDelete, handleChangeStatus, handleOpenViewModal, handleOpenModal],
     )
 
     useEffect(() => {
@@ -2083,7 +2090,7 @@ const TaskList = ({ isDashboard }) => {
         getAllUserDataOptions,
         handleCardClick,
         handleColumnToggle,
-    } = useTaskListingLogic()
+    } = useTaskListingLogic({ isDashboard })
 
     return (
         <>
