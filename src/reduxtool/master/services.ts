@@ -448,9 +448,7 @@ export const getBrandAsync = async () => {
 
 export const getAllTaskAsync = async () => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/get-all-task`, {
-      "user_id": 53
-    })
+    const response = await axiosInstance.post(`${config.apiURL}/get-all-task`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -3128,6 +3126,24 @@ export const deleteAllActionActionAsync = async (data) => {
   try {
     const response = await axiosInstance.delete(`${config.apiURL}/actives/${data.id}` )
     return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getTasksAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/task`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const deleteTaskAsync = async (RolesData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/roles/role/${RolesData}`)
+    return response
   } catch (err) {
     return isAxiosError(err)
   }
