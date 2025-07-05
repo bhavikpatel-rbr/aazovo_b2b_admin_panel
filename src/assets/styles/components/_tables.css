@@ -1,6 +1,6 @@
 @layer components {
   .table-default {
-    @apply table-auto min-w-full divide-y text-gray-800 divide-gray-200 dark:divide-gray-700;
+    @apply table-auto min-w-full divide-y text-gray-800 divide-gray-200 dark:divide-gray-700 dark:text-gray-100;
 
     > thead {
 
