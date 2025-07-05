@@ -571,11 +571,12 @@ interface WallSearchProps { onInputChange: (value: string) => void; }
 const WallSearch = React.forwardRef<HTMLInputElement, WallSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch />} onChange={(e) => onInputChange(e.target.value)} />));
 WallSearch.displayName = "WallSearch";
 
-const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDashboard }: {
   onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onImport: () => void; onClearFilters: () => void;
   columns: ColumnDef<WallItem>[];
   filteredColumns: ColumnDef<WallItem>[];
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<WallItem>[]>>;
+  isDashboard: boolean;
   activeFilterCount: number;
 }) => {
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
@@ -602,7 +603,7 @@ const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
       <div className="flex-grow">
         <WallSearch onInputChange={onSearchChange} />
       </div>
-      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+      {!isDashboard && <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
         <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
           <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
             {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
@@ -612,7 +613,7 @@ const WallTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
         <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
         <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
         <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-      </div>
+      </div>}
     </div>
   )
 };
@@ -673,7 +674,7 @@ BookmarkButton.displayName = 'BookmarkButton';
 
 
 // --- Main Component ---
-const WallListing = () => {
+const WallListing = ({ isDashboard }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
@@ -909,10 +910,10 @@ const WallListing = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
-            <div className="flex gap-2"><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button><Button variant="solid" icon={<TbPlus />}>Add Multiple</Button></div>
+            {!isDashboard && <h5 className="mb-2 sm:mb-0">Wall Listing</h5>}
+            {!isDashboard && <div className="flex gap-2"><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button><Button variant="solid" icon={<TbPlus />}>Add Multiple</Button></div>}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 mt-4 gap-2 ">
+          {!isDashboard && <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 mt-4 gap-2 ">
             <Tooltip title="Click to show all listings"><div onClick={onClearFilters}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-blue-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div className="flex flex-col"><b className="text-blue-500">{counts.total}</b><span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show listings created today"><div onClick={() => handleCardClick('status', 'today')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-emerald-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCalendar size={20} /></div><div className="flex flex-col"><b className="text-emerald-500">{counts.today}</b><span className="font-semibold text-[11px]">Today</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show 'Buy' listings"><div onClick={() => handleCardClick('intent', 'Buy')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div><div className="flex flex-col"><b className="text-violet-500">{counts.buy}</b><span className="font-semibold text-[11px]">Buy</span></div></Card></div></Tooltip>
@@ -921,8 +922,8 @@ const WallListing = () => {
             <Tooltip title="Click to show non-active listings"><div onClick={() => handleCardClick('status', 'Non-Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.non_active}</b><span className="font-semibold text-[11px]">Non Active</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show pending listings"><div onClick={() => handleCardClick('status', 'Pending')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-orange-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbProgress size={20} /></div><div className="flex flex-col"><b className="text-orange-500">{counts.pending}</b><span className="font-semibold text-[11px]">Pending</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show rejected listings"><div onClick={() => handleCardClick('status', 'Rejected')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.rejected}</b><span className="font-semibold text-[11px]">Rejected</span></div></Card></div></Tooltip>
-          </div>
-          <WallTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={handleImportData} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+          </div>}
+          <WallTableTools isDashboard={isDashboard} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={handleImportData} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4">
             <WallTable

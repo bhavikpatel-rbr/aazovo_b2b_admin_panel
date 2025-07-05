@@ -862,6 +862,7 @@ export const TaskTableTools = ({
     columns,
     visibleColumns,
     onColumnToggle,
+    isDashboard
 }: {
     onSearchChange: (query: string) => void
     filterData: FilterFormSchema
@@ -873,6 +874,7 @@ export const TaskTableTools = ({
     columns: ColumnDef<TaskItem>[]
     visibleColumns: ColumnDef<TaskItem>[]
     onColumnToggle: (checked: boolean, colId: string) => void
+    isDashboard: boolean
 }) => {
     const isColumnVisible = (colId: string) =>
         visibleColumns.some((c) => (c.id || c.accessorKey) === colId)
@@ -882,7 +884,7 @@ export const TaskTableTools = ({
             <div className="flex-grow">
                 <TaskSearch onInputChange={onSearchChange} />
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            {!isDashboard && <div className="flex items-center gap-2 flex-shrink-0">
                 <Dropdown
                     renderTitle={
                         <Button
@@ -933,7 +935,7 @@ export const TaskTableTools = ({
                 <Button icon={<TbCloudUpload />} onClick={onExport}>
                     Export
                 </Button>
-            </div>
+            </div>}
         </div>
     )
 }
@@ -2042,7 +2044,7 @@ const StatusSummaryCards: React.FC<StatusSummaryCardsProps> = ({
 }
 
 // --- Main TaskList Component ---
-const TaskList = () => {
+const TaskList = ({ isDashboard }) => {
     const pageTitle = 'Task List'
     const {
         isLoading,
@@ -2088,17 +2090,18 @@ const TaskList = () => {
             <Container className="h-auto">
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                     <div className="lg:flex items-center justify-between mb-4">
-                        <h5 className="mb-4 lg:mb-0">{pageTitle}</h5>
-                        <TaskListActionTools pageTitle={pageTitle} />
+                        {!isDashboard && <h5 className="mb-4 lg:mb-0">{pageTitle}</h5>}
+                        {!isDashboard && <TaskListActionTools pageTitle={pageTitle} />}
                     </div>
 
-                    <StatusSummaryCards
+                    {!isDashboard && <StatusSummaryCards
                         tasks={tasks}
                         onCardClick={handleCardClick}
-                    />
+                    />}
 
                     <div className="mb-2">
                         <TaskTableTools
+                            isDashboard={isDashboard}
                             onSearchChange={handleSearchChange}
                             filterData={filterData}
                             setFilterData={handleApplyFilter}
