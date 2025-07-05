@@ -1,66 +1,222 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import classNames from 'classnames'
 import withHeaderItem from '@/utils/hoc/withHeaderItem'
-import Dropdown from '@/components/ui/Dropdown'
+import Drawer from '@/components/ui/Drawer'
 import Dialog from '@/components/ui/Dialog'
 import Button from '@/components/ui/Button'
 import ScrollBar from '@/components/ui/ScrollBar'
-import Checkbox from '@/components/ui/Checkbox'
 import Input from '@/components/ui/Input'
-import { FormItem, FormContainer } from '@/components/ui/Form'
-import { BiTask } from 'react-icons/bi'
-import { HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi'
-import type { DropdownRef } from '@/components/ui/Dropdown'
+import Select from '@/components/ui/Select'
+import Badge from '@/components/ui/Badge'
+import Tooltip from '@/components/ui/Tooltip'
+import {
+    BiTask,
+    BiCheckCircle,
+    BiTimeFive,
+    BiHourglass,
+} from 'react-icons/bi'
+import {
+    HiOutlinePlus,
+    HiOutlineTrash,
+    HiOutlineEye,
+    HiOutlineUserCircle,
+    HiOutlineCalendar,
+    HiOutlineDocumentText,
+} from 'react-icons/hi'
+import type { DrawerRef } from '@/components/ui/Drawer'
 
-// Define the structure for a single task
+// --- Type Definitions & Constants ---
+
+type TaskStatus = 'pending' | 'in_progress' | 'completed'
+
 type Task = {
     id: string
     text: string
-    completed: boolean
+    status: TaskStatus
+    assignedBy: string
+    dueDate: Date | null
+    description?: string
 }
 
-// The icon component that will be displayed in the header
-const TaskToggle = ({ className }: { className?: string }) => {
+type StatusOption = {
+    value: TaskStatus
+    label: string
+    color: string
+}
+
+const statusOptions: StatusOption[] = [
+    { value: 'pending', label: 'Pending', color: 'bg-amber-500' },
+    { value: 'in_progress', label: 'In Progress', color: 'bg-blue-500' },
+    { value: 'completed', label: 'Completed', color: 'bg-emerald-500' },
+]
+
+// --- Reusable & Child Components ---
+
+const TaskToggle = ({
+    className,
+    count,
+}: {
+    className?: string
+    count: number
+}) => {
     return (
         <div className={classNames('text-2xl', className)}>
-            <BiTask />
+            <Badge count={count} contentClassName="mt-1.5 me-1">
+                <BiTask />
+            </Badge>
         </div>
     )
 }
 
-// Main component logic
+const TaskViewModal = ({
+    task,
+    isOpen,
+    onClose,
+}: {
+    task: Task | null
+    isOpen: boolean
+    onClose: () => void
+}) => {
+    if (!task) return null
+
+    const statusInfo = statusOptions.find((s) => s.value === task.status)
+
+    return (
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            onRequestClose={onClose}
+            title="Task Details"
+        >
+            <div className="py-2 space-y-4">
+                <div className="flex items-start space-x-4">
+                    <div
+                        className={classNames(
+                            'p-2 rounded-full text-white text-xl',
+                            statusInfo?.color
+                        )}
+                    >
+                        {task.status === 'completed' ? (
+                            <BiCheckCircle />
+                        ) : task.status === 'in_progress' ? (
+                            <BiHourglass />
+                        ) : (
+                            <BiTimeFive />
+                        )}
+                    </div>
+                    <div>
+                        <h5 className="font-semibold">{task.text}</h5>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Task ID: {task.id}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-600 my-3" />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                        <HiOutlineUserCircle className="text-lg" />
+                        <div>
+                            <p className="text-xs text-gray-500">Assigned By</p>
+                            <p className="font-semibold">{task.assignedBy}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <HiOutlineCalendar className="text-lg" />
+                        <div>
+                            <p className="text-xs text-gray-500">Due Date</p>
+                            <p className="font-semibold">
+                                {task.dueDate
+                                    ? task.dueDate.toLocaleDateString()
+                                    : 'Not set'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {task.description && (
+                    <div className="flex items-start gap-2">
+                        <HiOutlineDocumentText className="text-lg mt-1 flex-shrink-0" />
+                        <div>
+                            <p className="text-xs text-gray-500">Description</p>
+                            <p className="text-sm">{task.description}</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+            <div className="text-right mt-6">
+                <Button onClick={onClose}>Close</Button>
+            </div>
+        </Dialog>
+    )
+}
+
+// --- Main Component Logic ---
+
 const _Tasks = ({ className }: { className?: string }) => {
     const [tasks, setTasks] = useState<Task[]>([
-        // Some initial dummy data
-        { id: '1', text: 'Review new design mockups', completed: false },
-        { id: '2', text: 'Prepare for client presentation', completed: false },
-        { id: '3', text: 'Deploy latest updates to staging', completed: true },
+        {
+            id: '1',
+            text: 'Review new design mockups',
+            status: 'in_progress',
+            assignedBy: 'John Doe',
+            dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+            description:
+                'Go over the latest Figma files from the design team. Focus on the new dashboard layout.',
+        },
+        {
+            id: '2',
+            text: 'Prepare for client presentation',
+            status: 'pending',
+            assignedBy: 'Jane Smith',
+            dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+        },
+        {
+            id: '3',
+            text: 'Deploy latest updates to staging',
+            status: 'completed',
+            assignedBy: 'John Doe',
+            dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+            description:
+                'Deployment was successful. Awaiting QA feedback before production release.',
+        },
+        {
+            id: '4',
+            text: 'Fix login page bug',
+            status: 'pending',
+            assignedBy: 'System Admin',
+            dueDate: null,
+            description: 'Users are reporting issues with social login.',
+        },
     ])
-    const [dialogIsOpen, setDialogIsOpen] = useState(false)
+    const [drawerIsOpen, setDrawerIsOpen] = useState(false)
+    const [viewModalIsOpen, setViewModalIsOpen] = useState(false)
+    const [viewingTask, setViewingTask] = useState<Task | null>(null)
     const [newTaskText, setNewTaskText] = useState('')
-    const dropdownRef = useRef<DropdownRef>(null)
+    const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
+    const drawerRef = useRef<DrawerRef>(null)
 
-    const openDialog = () => setDialogIsOpen(true)
-    const closeDialog = () => {
-        setNewTaskText('') // Reset input on close
-        setDialogIsOpen(false)
-    }
+    const onDrawerOpen = () => setDrawerIsOpen(true)
+    const onDrawerClose = () => setDrawerIsOpen(false)
 
     const handleAddTask = () => {
         if (newTaskText.trim() === '') return
         const newTask: Task = {
             id: `task-${Date.now()}`,
             text: newTaskText,
-            completed: false,
+            status: 'pending',
+            assignedBy: 'Current User', // Replace with actual user data
+            dueDate: null,
         }
         setTasks((prevTasks) => [newTask, ...prevTasks])
-        closeDialog()
+        setNewTaskText('')
     }
 
-    const handleToggleTask = (taskId: string) => {
+    const handleChangeStatus = (taskId: string, newStatus: TaskStatus) => {
         setTasks(
             tasks.map((task) =>
-                task.id === taskId ? { ...task, completed: !task.completed } : task
+                task.id === taskId ? { ...task, status: newStatus } : task
             )
         )
     }
@@ -69,101 +225,166 @@ const _Tasks = ({ className }: { className?: string }) => {
         setTasks(tasks.filter((task) => task.id !== taskId))
     }
 
+    const handleViewTask = (task: Task) => {
+        setViewingTask(task)
+        setViewModalIsOpen(true)
+    }
+
+    const closeViewModal = () => {
+        setViewModalIsOpen(false)
+        setViewingTask(null)
+    }
+
+    const taskCounts = useMemo(() => {
+        return tasks.reduce(
+            (acc, task) => {
+                acc[task.status]++
+                acc.total++
+                return acc
+            },
+            { total: 0, pending: 0, in_progress: 0, completed: 0 }
+        )
+    }, [tasks])
+
+    const filteredTasks = useMemo(() => {
+        if (statusFilter === 'all') {
+            return tasks
+        }
+        return tasks.filter((task) => task.status === statusFilter)
+    }, [tasks, statusFilter])
+
+    const filterOptions = [
+        { value: 'all', label: `All (${taskCounts.total})` },
+        ...statusOptions.map((s) => ({
+            value: s.value,
+            label: `${s.label} (${taskCounts[s.value]})`,
+        })),
+    ]
+
     return (
         <>
-            <Dropdown
-                ref={dropdownRef}
-                renderTitle={<TaskToggle className={className} />}
-                menuClass="min-w-[280px] md:min-w-[340px] h-auto min-h-none"
-                placement="bottom-end"
-            >
-                <div className="flex justify-between items-center mb-4">
-                    <h6 className="mb-0">My Tasks</h6>
-                    <Button
-                        size="sm"
-                        shape="circle"
-                        variant="plain"
-                        icon={<HiOutlinePlus className="text-lg" />}
-                        onClick={openDialog}
-                    />
-                </div>
+            <div onClick={onDrawerOpen}>
+                <TaskToggle className={className} count={taskCounts.total} />
+            </div>
 
-                <div className="w-full">
-                    <ScrollBar className="overflow-y-auto max-h-[280px]">
-                        {tasks.length > 0 ? (
-                            <div className="flex flex-col gap-1">
-                                {tasks.map((task) => (
+            <Drawer
+                ref={drawerRef}
+                title="My Tasks"
+                isOpen={drawerIsOpen}
+                onClose={onDrawerClose}
+                width={420}
+            >
+                <div className="flex flex-col h-full">
+                    {/* Filters */}
+                    <div className="p-4 border-b border-gray-200 dark:border-gray-600">
+                        <h6 className="mb-2">Filters</h6>
+                        <Select
+                            size="sm"
+                            options={filterOptions}
+                            value={filterOptions.find(
+                                (f) => f.value === statusFilter
+                            )}
+                            onChange={(option) =>
+                                setStatusFilter(option?.value || 'all')
+                            }
+                        />
+                    </div>
+
+                    {/* Task List */}
+                    <ScrollBar className="flex-grow p-4">
+                        <div className="flex items-center mb-4">
+                            <Input
+                                size="sm"
+                                placeholder="Add a new task..."
+                                value={newTaskText}
+                                onChange={(e) => setNewTaskText(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                            />
+                            <Button
+                                size="sm"
+                                className="ms-2"
+                                icon={<HiOutlinePlus />}
+                                variant="solid"
+                                onClick={handleAddTask}
+                            />
+                        </div>
+                        {filteredTasks.length > 0 ? (
+                            <div className="flex flex-col gap-4">
+                                {filteredTasks.map((task) => (
                                     <div
                                         key={task.id}
-                                        className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/60"
+                                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-600"
                                     >
-                                        <Checkbox
-                                            checked={task.completed}
-                                            onChange={() => handleToggleTask(task.id)}
-                                        >
-                                            <span
-                                                className={classNames(
-                                                    'font-semibold',
-                                                    task.completed &&
-                                                        'line-through text-gray-400 dark:text-gray-500'
-                                                )}
-                                            >
+                                        <div className="flex items-start justify-between">
+                                            <span className="font-semibold w-4/5">
                                                 {task.text}
                                             </span>
-                                        </Checkbox>
-                                        <Button
-                                            size="xs"
-                                            shape="circle"
-                                            variant="plain"
-                                            icon={<HiOutlineTrash />}
-                                            onClick={() => handleDeleteTask(task.id)}
-                                        />
+                                            <div className="flex items-center gap-1.5">
+                                                <Tooltip title="View Details">
+                                                    <Button
+                                                        size="xs"
+                                                        shape="circle"
+                                                        variant="plain"
+                                                        icon={<HiOutlineEye />}
+                                                        onClick={() =>
+                                                            handleViewTask(task)
+                                                        }
+                                                    />
+                                                </Tooltip>
+                                                <Tooltip title="Delete Task">
+                                                    <Button
+                                                        size="xs"
+                                                        shape="circle"
+                                                        variant="plain"
+                                                        icon={<HiOutlineTrash />}
+                                                        onClick={() =>
+                                                            handleDeleteTask(
+                                                                task.id
+                                                            )
+                                                        }
+                                                    />
+                                                </Tooltip>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Assigned by: {task.assignedBy}
+                                        </p>
+                                        <div className="mt-3">
+                                            <Select
+                                                size="sm"
+                                                options={statusOptions}
+                                                value={statusOptions.find(
+                                                    (s) => s.value === task.status
+                                                )}
+                                                onChange={(option) =>
+                                                    handleChangeStatus(
+                                                        task.id,
+                                                        option?.value || 'pending'
+                                                    )
+                                                }
+                                            />
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-6 text-gray-500">
-                                No tasks yet. Add one!
+                            <div className="text-center py-10 text-gray-500">
+                                No tasks match your filter.
                             </div>
                         )}
                     </ScrollBar>
                 </div>
-                <div className="w-full mt-3 border-t border-gray-200 dark:border-gray-600 pt-3">
-                    <Button className="w-full">View All Tasks</Button>
-                </div>
-            </Dropdown>
+            </Drawer>
 
-            {/* "Add New Task" Dialog */}
-            <Dialog isOpen={dialogIsOpen} onClose={closeDialog}>
-                <h5 className="mb-4">Add New Task</h5>
-                <FormContainer>
-                    <FormItem label="Task Description">
-                        <Input
-                            autoFocus
-                            value={newTaskText}
-                            onChange={(e) => setNewTaskText(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                        />
-                    </FormItem>
-                </FormContainer>
-                <div className="text-right mt-6">
-                    <Button
-                        className="mr-2"
-                        variant="plain"
-                        onClick={closeDialog}
-                    >
-                        Cancel
-                    </Button>
-                    <Button variant="solid" onClick={handleAddTask}>
-                        Add Task
-                    </Button>
-                </div>
-            </Dialog>
+            <TaskViewModal
+                task={viewingTask}
+                isOpen={viewModalIsOpen}
+                onClose={closeViewModal}
+            />
         </>
     )
 }
 
-// Wrap the component with the HOC and export it
 const Tasks = withHeaderItem(_Tasks)
 
 export default Tasks
