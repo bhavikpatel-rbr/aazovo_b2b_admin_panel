@@ -1832,6 +1832,7 @@ const OpportunityTableTools = ({
   onFilter,
   columnToggler,
   activeFilterCount,
+  isDashboard
 }: {
   onSearchChange: (query: string) => void;
   onExport: () => void;
@@ -1844,7 +1845,7 @@ const OpportunityTableTools = ({
     <div className="flex-grow w-full sm:w-auto">
       <OpportunitySearch onInputChange={onSearchChange} />
     </div>
-    <div className="flex items-center gap-2">
+    {!isDashboard && <div className="flex items-center gap-2">
       {columnToggler}
       <Tooltip title="Clear Filters & Reload">
         <Button icon={<TbReload />} onClick={onClearFilters}></Button>
@@ -1863,7 +1864,7 @@ const OpportunityTableTools = ({
       <Button icon={<TbCloudUpload />} onClick={onExport}>
         <span className="hidden sm:inline">Export</span>
       </Button>
-    </div>
+    </div>}
   </div>
 );
 
@@ -3480,8 +3481,9 @@ const Opportunities = ({ isDashboard }) => {
             </nav>
           </div>
 
-          {!isDashboard && <div className="mb-4">
+          <div className="mb-4">
             <OpportunityTableTools
+              isDashboard={isDashboard}
               onSearchChange={handleSearchChange}
               onExport={handleOpenExportReasonModal}
               onFilter={() => setIsDrawerOpen(true)}
@@ -3489,7 +3491,7 @@ const Opportunities = ({ isDashboard }) => {
               columnToggler={<ColumnToggler table={table} />}
               activeFilterCount={activeFilterCount}
             />
-          </div>}
+          </div>
 
           {!isDashboard && <ActiveFiltersDisplay
             filters={filters}
