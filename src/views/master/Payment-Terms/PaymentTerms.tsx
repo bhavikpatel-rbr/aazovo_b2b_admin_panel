@@ -38,6 +38,7 @@ import {
     deletePaymentTermAction,
     submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
+import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
 
 // --- FEATURE-SPECIFIC TYPES & SCHEMAS ---
 export type PaymentTermItem = { id: string | number; term_name: string; status: 'Active' | 'Inactive'; created_at?: string; updated_at?: string; updated_by_user?: { name: string; profile_pic_path?: string; roles: { display_name: string }[] }; };
@@ -144,7 +145,46 @@ const PaymentTerms = () => {
 
     const columns: ColumnDef<PaymentTermItem>[] = useMemo(() => [
         { header: "Term Name", accessorKey: "term_name", enableSorting: true, size: 250 },
-        { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+        {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        size: 200,
+        cell: (props) => {
+          const { updated_at, updated_by_user } = props.row.original;
+          const date = updated_at ? new Date(updated_at) : null;
+          const formattedDate = date
+            ? `${date.getDate()} ${date.toLocaleString("en-US", {
+                month: "short",
+              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}`
+            : "N/A";
+          return (
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={updated_by_user?.profile_pic_path}
+                shape="circle"
+                size="sm"
+                icon={<TbUserCircle />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() =>
+                  openImageViewer(updated_by_user?.profile_pic_path)
+                }
+              />
+              <div>
+                <span>{updated_by_user?.name || "N/A"}</span>
+                <div className="text-xs">
+                  <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                </div>
+                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+              </div>
+            </div>
+          );
+        },
+      },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
     ], []);
@@ -250,12 +290,68 @@ const PaymentTerms = () => {
                     <FormItem label={<div>Term Name <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.term_name} errorMessage={formMethods.formState.errors.term_name?.message}><Controller name="term_name" control={formMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter Term Name" />)} /></FormItem>
                     <FormItem label={<div>Status <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : "")} />)} /></FormItem>
                 </Form>
-                {isEditDrawerOpen && editingPaymentTerm && (<div className="absolute bottom-4 right-4 left-4">
-                    <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                        <div><b className="font-semibold text-gray-900 dark:text-gray-100">Latest Update:</b><br /><p className="font-semibold">{editingPaymentTerm.updated_by_user?.name || "N/A"}</p><p>{editingPaymentTerm.updated_by_user?.roles[0]?.display_name || "N/A"}</p></div>
-                        <div className="text-right"><b className="font-semibold text-gray-900 dark:text-gray-100"></b><br /><span className="font-semibold">Created:</span> <span>{editingPaymentTerm.created_at ? new Date(editingPaymentTerm.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated:</span> <span>{editingPaymentTerm.updated_at ? new Date(editingPaymentTerm.updated_at).toLocaleString() : "N/A"}</span></div>
-                    </div>
-                </div>)}
+                {isEditDrawerOpen && editingPaymentTerm && (
+                    <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+            <div>
+              <b className="mt-3 mb-3 font-semibold text-primary">
+                Latest Update:
+              </b>
+              <br />
+              <p className="text-sm font-semibold">
+                {editingPaymentTerm.updated_by_user?.name || "N/A"}
+              </p>
+              <p>
+                {editingPaymentTerm.updated_by_user?.roles[0]?.display_name ||
+                  "N/A"}
+              </p>
+            </div>
+            <div className="text-right">
+              <br />
+              <span className="font-semibold">Created At:</span>{" "}
+              <span>
+                {editingPaymentTerm.created_at
+                  ? `${new Date(
+                      editingPaymentTerm.created_at
+                    ).getDate()} ${new Date(
+                      editingPaymentTerm.created_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      editingPaymentTerm.created_at
+                    ).getFullYear()}, ${new Date(
+                      editingPaymentTerm.created_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+              <br />
+              <span className="font-semibold">Updated At:</span>{" "}
+              <span>
+                {}
+                {editingPaymentTerm.updated_at
+                  ? `${new Date(
+                      editingPaymentTerm.updated_at
+                    ).getDate()} ${new Date(
+                      editingPaymentTerm.updated_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      editingPaymentTerm.updated_at
+                    ).getFullYear()}, ${new Date(
+                      editingPaymentTerm.updated_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+            </div>
+          </div>
+                )}
             </Drawer>
             
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>

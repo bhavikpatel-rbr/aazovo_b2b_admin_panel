@@ -308,7 +308,7 @@ const Currency = () => {
                     <FormItem label={<div>Status <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : "")} />)} /></FormItem>
                 </Form>
                 {isEditDrawerOpen && editingCurrency && (
-                    <div className="absolute bottom-4 right-4 left-4 grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+                    <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
             <div>
               <b className="mt-3 mb-3 font-semibold text-primary">
                 Latest Update:

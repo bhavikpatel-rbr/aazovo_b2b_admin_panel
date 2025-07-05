@@ -1267,7 +1267,7 @@ const Documents = () => {
           </FormItem>
         </Form>
         {editingDocument && (
-          <div className="absolute bottom-4 right-4 left-4 grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+          <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
             <div>
               <b className="mt-3 mb-3 font-semibold text-primary">
                 Latest Update:
