@@ -28,6 +28,7 @@ import type { DrawerRef } from '@/components/ui/Drawer'
 // --- Type Definitions & Constants ---
 
 type TaskStatus = 'pending' | 'in_progress' | 'completed'
+type FilterStatus = TaskStatus | 'all'
 
 type Task = {
     id: string
@@ -78,9 +79,7 @@ const TaskViewModal = ({
     onClose: () => void
 }) => {
     if (!task) return null
-
     const statusInfo = statusOptions.find((s) => s.value === task.status)
-
     return (
         <Dialog
             isOpen={isOpen}
@@ -111,9 +110,7 @@ const TaskViewModal = ({
                         </p>
                     </div>
                 </div>
-
                 <div className="border-t border-gray-200 dark:border-gray-600 my-3" />
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                         <HiOutlineUserCircle className="text-lg" />
@@ -134,7 +131,6 @@ const TaskViewModal = ({
                         </div>
                     </div>
                 </div>
-
                 {task.description && (
                     <div className="flex items-start gap-2">
                         <HiOutlineDocumentText className="text-lg mt-1 flex-shrink-0" />
@@ -149,6 +145,78 @@ const TaskViewModal = ({
                 <Button onClick={onClose}>Close</Button>
             </div>
         </Dialog>
+    )
+}
+
+const TaskSummaryCards = ({
+    counts,
+    activeFilter,
+    onCardClick,
+}: {
+    counts: Record<FilterStatus | 'total', number>
+    activeFilter: FilterStatus
+    onCardClick: (status: FilterStatus) => void
+}) => {
+    const cardData = [
+        {
+            key: 'all',
+            title: 'Total Tasks',
+            count: counts.total,
+            icon: <BiTask />,
+            color: 'text-gray-900 dark:text-gray-100',
+            activeClass: 'border-gray-400 dark:border-gray-200 bg-gray-50 dark:bg-gray-700/60',
+        },
+        {
+            key: 'pending',
+            title: 'Pending',
+            count: counts.pending,
+            icon: <BiTimeFive />,
+            color: 'text-amber-500',
+            activeClass: 'border-amber-500 bg-amber-50 dark:bg-amber-500/10',
+        },
+        {
+            key: 'in_progress',
+            title: 'In Progress',
+            count: counts.in_progress,
+            icon: <BiHourglass />,
+            color: 'text-blue-500',
+            activeClass: 'border-blue-500 bg-blue-50 dark:bg-blue-500/10',
+        },
+        {
+            key: 'completed',
+            title: 'Completed',
+            count: counts.completed,
+            icon: <BiCheckCircle />,
+            color: 'text-emerald-500',
+            activeClass: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10',
+        },
+    ]
+
+    return (
+        <div className="grid grid-cols-2 gap-4">
+            {cardData.map((card) => (
+                <div
+                    key={card.key}
+                    onClick={() => onCardClick(card.key as FilterStatus)}
+                    className={classNames(
+                        'p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all duration-200',
+                        activeFilter === card.key
+                            ? card.activeClass
+                            : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/60'
+                    )}
+                >
+                    <div className={classNames('text-3xl', card.color)}>
+                        {card.icon}
+                    </div>
+                    <div>
+                        <h6 className="font-bold leading-tight">{card.count}</h6>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
+                            {card.title}
+                        </p>
+                    </div>
+                </div>
+            ))}
+        </div>
     )
 }
 
@@ -194,7 +262,7 @@ const _Tasks = ({ className }: { className?: string }) => {
     const [viewModalIsOpen, setViewModalIsOpen] = useState(false)
     const [viewingTask, setViewingTask] = useState<Task | null>(null)
     const [newTaskText, setNewTaskText] = useState('')
-    const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
+    const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
     const drawerRef = useRef<DrawerRef>(null)
 
     const onDrawerOpen = () => setDrawerIsOpen(true)
@@ -242,7 +310,10 @@ const _Tasks = ({ className }: { className?: string }) => {
                 acc.total++
                 return acc
             },
-            { total: 0, pending: 0, in_progress: 0, completed: 0 }
+            { total: 0, pending: 0, in_progress: 0, completed: 0 } as Record<
+                FilterStatus | 'total',
+                number
+            >
         )
     }, [tasks])
 
@@ -252,14 +323,6 @@ const _Tasks = ({ className }: { className?: string }) => {
         }
         return tasks.filter((task) => task.status === statusFilter)
     }, [tasks, statusFilter])
-
-    const filterOptions = [
-        { value: 'all', label: `All (${taskCounts.total})` },
-        ...statusOptions.map((s) => ({
-            value: s.value,
-            label: `${s.label} (${taskCounts[s.value]})`,
-        })),
-    ]
 
     return (
         <>
@@ -272,21 +335,15 @@ const _Tasks = ({ className }: { className?: string }) => {
                 title="My Tasks"
                 isOpen={drawerIsOpen}
                 onClose={onDrawerClose}
-                width={420}
+                width={620}
             >
                 <div className="flex flex-col h-full">
-                    {/* Filters */}
-                    <div className="p-4 border-b border-gray-200 dark:border-gray-600">
-                        <h6 className="mb-2">Filters</h6>
-                        <Select
-                            size="sm"
-                            options={filterOptions}
-                            value={filterOptions.find(
-                                (f) => f.value === statusFilter
-                            )}
-                            onChange={(option) =>
-                                setStatusFilter(option?.value || 'all')
-                            }
+                    {/* Summary and Filters */}
+                    <div className="p-4 border-b border-gray-200 dark:border-gray-600 space-y-4">
+                        <TaskSummaryCards
+                            counts={taskCounts}
+                            activeFilter={statusFilter}
+                            onCardClick={(status) => setStatusFilter(status)}
                         />
                     </div>
 
