@@ -265,7 +265,7 @@ const ProductSpecification = () => {
             <Container className="h-auto">
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
                     <div className="lg:flex items-center justify-between mb-4">
-                        <h3 className="mb-4 lg:mb-0">Product Specifications</h3>
+                        <h3 className="mb-4 lg:mb-0">Product Spec</h3>
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Spec</Button>
                     </div>
                     <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
@@ -296,7 +296,7 @@ const ProductSpecification = () => {
                     <FormItem label={<div>Status <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : "")} />)} /></FormItem>
                     <FormItem label="Notes (Optional)"><Controller name="note_details" control={formMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ''} placeholder="Enter any relevant notes" rows={3} />)} /></FormItem>
                 </Form>
-                {isEditDrawerOpen && editingItem && (<div className="absolute bottom-4 right-4 left-4">
+                {isEditDrawerOpen && editingItem && (<div className="">
                     <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                         <div><b className="font-semibold text-gray-900 dark:text-gray-100">Latest Update:</b><br /><p className="font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles[0]?.display_name || "N/A"}</p></div>
                         <div className="text-right"><b className="font-semibold text-gray-900 dark:text-gray-100"></b><br /><span className="font-semibold">Created:</span> <span>{editingItem.created_at ? new Date(editingItem.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated:</span> <span>{editingItem.updated_at ? new Date(editingItem.updated_at).toLocaleString() : "N/A"}</span></div>

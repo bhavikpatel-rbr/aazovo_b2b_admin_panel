@@ -38,6 +38,7 @@ import {
     deleteCountryAction,
     submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
+import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
 
 // --- FEATURE-SPECIFIC TYPES & SCHEMAS ---
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -216,7 +217,46 @@ const Countries = () => {
         { header: "Continent", accessorKey: "region", enableSorting: true, size: 150 },
         { header: "ISO", accessorKey: "iso_code", enableSorting: true, size: 80 },
         { header: "Phone Code", accessorKey: "phone_code", enableSorting: true, size: 120 },
-        { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+        {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        size: 200,
+        cell: (props) => {
+          const { updated_at, updated_by_user } = props.row.original;
+          const date = updated_at ? new Date(updated_at) : null;
+          const formattedDate = date
+            ? `${date.getDate()} ${date.toLocaleString("en-US", {
+                month: "short",
+              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}`
+            : "N/A";
+          return (
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={updated_by_user?.profile_pic_path}
+                shape="circle"
+                size="sm"
+                icon={<TbUserCircle />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() =>
+                  openImageViewer(updated_by_user?.profile_pic_path)
+                }
+              />
+              <div>
+                <span>{updated_by_user?.name || "N/A"}</span>
+                <div className="text-xs">
+                  <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                </div>
+                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+              </div>
+            </div>
+          );
+        },
+      },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
     ], [openImageViewer, openEditDrawer, handleDeleteClick]);
@@ -459,62 +499,66 @@ const Countries = () => {
                         <FormItem label={<div>Status <span className="text-red-500">*</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value) || null} onChange={(o) => field.onChange(o ? o.value : "")} />)} /></FormItem>
                     </Form>
                     {d.isEdit && editingCountry && (
-                            <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-                                <div>
-                                    <b className="mt-3 mb-3 font-semibold text-primary">
-                                        Latest Update:
-                                    </b>
-                                    <br />
-                                    <p className="text-sm font-semibold">
-                                        {editingCountry.updated_by_user?.name ||
-                                            'N/A'}
-                                    </p>
-                                    <p>
-                                        {editingCountry.updated_by_user
-                                            ?.roles[0]?.display_name || 'N/A'}
-                                    </p>
-                                </div>
-                                <div className='text-right'>
-                                    <br />
-                                    <span className="font-semibold">
-                                        Created At:
-                                    </span>{' '}
-                                    <span>
-                                        {editingCountry.created_at
-                                            ? `${new Date(editingCountry.created_at).getDate()} ${new Date(
-                                                  editingCountry.created_at,
-                                              ).toLocaleString('en-US', {
-                                                  month: 'short',
-                                              })} ${new Date(editingCountry.created_at).getFullYear()}, ${new Date(
-                                                  editingCountry.created_at,
-                                              ).toLocaleTimeString('en-US', {
-                                                  hour: 'numeric',
-                                                  minute: '2-digit',
-                                                  hour12: true,
-                                              })}`
-                                            : 'N/A'}
-                                    </span>
-                                    <br />
-                                    <span className="font-semibold">
-                                        Updated At:
-                                    </span>{' '}
-                                    <span>
-                                        {editingCountry.updated_at
-                                            ? `${new Date(editingCountry.updated_at).getDate()} ${new Date(
-                                                  editingCountry.updated_at,
-                                              ).toLocaleString('en-US', {
-                                                  month: 'short',
-                                              })} ${new Date(editingCountry.updated_at).getFullYear()}, ${new Date(
-                                                  editingCountry.updated_at,
-                                              ).toLocaleTimeString('en-US', {
-                                                  hour: 'numeric',
-                                                  minute: '2-digit',
-                                                  hour12: true,
-                                              })}`
-                                            : 'N/A'}
-                                    </span>
-                                </div>
-                            </div>
+                                 <div className="absolute bottom-4 right-4 left-4 grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+            <div>
+              <b className="mt-3 mb-3 font-semibold text-primary">
+                Latest Update:
+              </b>
+              <br />
+              <p className="text-sm font-semibold">
+                {editingCountry.updated_by_user?.name || "N/A"}
+              </p>
+              <p>
+                {editingCountry.updated_by_user?.roles[0]?.display_name ||
+                  "N/A"}
+              </p>
+            </div>
+            <div className="text-right">
+              <br />
+              <span className="font-semibold">Created At:</span>{" "}
+              <span>
+                {editingCountry.created_at
+                  ? `${new Date(
+                      editingCountry.created_at
+                    ).getDate()} ${new Date(
+                      editingCountry.created_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      editingCountry.created_at
+                    ).getFullYear()}, ${new Date(
+                      editingCountry.created_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+              <br />
+              <span className="font-semibold">Updated At:</span>{" "}
+              <span>
+                {}
+                {editingCountry.updated_at
+                  ? `${new Date(
+                      editingCountry.updated_at
+                    ).getDate()} ${new Date(
+                      editingCountry.updated_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      editingCountry.updated_at
+                    ).getFullYear()}, ${new Date(
+                      editingCountry.updated_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+            </div>
+          </div>
                     )}
                 </Drawer>
             )})}
