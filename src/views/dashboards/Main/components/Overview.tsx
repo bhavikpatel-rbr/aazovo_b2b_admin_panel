@@ -1025,7 +1025,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                             value={
                                 <NumericFormat
                                     displayType="text"
-                                    value={Employees?.data?.data.length || 0}
+                                    value={Employees?.data?.data?.length || 0}
                                     prefix={''}
                                     thousandSeparator={true}
                                 />
