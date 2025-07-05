@@ -25,6 +25,7 @@ import { BsCake } from 'react-icons/bs'
 import { IoMdShare } from 'react-icons/io'
 import { HiOutlineMinusCircle, HiOutlinePlusCircle } from 'react-icons/hi'
 import { Link, useNavigate } from 'react-router-dom'
+import Opportunities from '@/views/sales-Leads/Opportunities'
 
 type StatisticCardProps = {
     title: string
@@ -2128,7 +2129,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                         <h6 className='mb-6'>Opportunity Leaderboard</h6>
                                         <div className='flex gap-2 items-center text-sm'>
                                             <h6 className='text-sm'>Match Score</h6>
-                                            <Select
+                                            {/* <Select
                                                 className="min-w-[140px]"
                                                 size="sm"
                                                 defaultValue={{ label: "All", value: "All" }}
@@ -2138,16 +2139,17 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                                     { label: "25% - 49%", value: "25-49" },
                                                     { label: "0% - 24%", value: "0-24" },
                                                 ]}
-                                            />
+                                            /> */}
                                         </div>
                                     </div>
-                                    <DataTable1
+                                    {/* <DataTable1
                                         columns={opportunitiesColumns}
                                         data={opportunitiesData}
                                         onExpandedChange={() => setExpanded}
                                         getRowCanExpand={() => true}
                                         renderSubComponent={({ row }) => <ExpandedOpportunityDetails row={row} />}
-                                    />
+                                    /> */}
+                                    <Opportunities isDashboard={true} />
 
                                     {/* Note :- Success (%) = ( Success / Total Leads ) * 100 */}
                                     {/* Note :- Trust  = ( Company Activity, response rate and verification */}

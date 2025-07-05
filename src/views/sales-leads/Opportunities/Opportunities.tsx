@@ -2393,7 +2393,7 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
 // ============================================================================
 // --- MAIN COMPONENT ---
 // ============================================================================
-const Opportunities = () => {
+const Opportunities = ({ isDashboard }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const {
@@ -2402,6 +2402,7 @@ const Opportunities = () => {
     getAllUserData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
+
 
   const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
   const [tableQueries, setTableQueries] = useState<
@@ -2487,14 +2488,14 @@ const Opportunities = () => {
         }, 1500);
       }
     } else {
-      if (!rawOpportunities.length) {
-        dispatch(getOpportunitiesAction());
-      }
-      if (!getAllUserData.length) {
-        dispatch(getAllUsersAction());
-      }
+      // if (!rawOpportunities.length) {
+      dispatch(getOpportunitiesAction());
+      // }
+      // if (!getAllUserData.length) {
+      dispatch(getAllUsersAction());
+      // }
     }
-  }, [dispatch, currentTab, autoSpbStatus, rawOpportunities, getAllUserData]);
+  }, [dispatch]);
 
   useEffect(() => {
     if (Array.isArray(rawOpportunities)) {
@@ -3364,11 +3365,11 @@ const Opportunities = () => {
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-          <div className="lg:flex items-center justify-between mb-4">
+          {!isDashboard && <div className="lg:flex items-center justify-between mb-4">
             <h3 className="mb-4 lg:mb-0">Opportunities</h3>
-          </div>
+          </div>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {!isDashboard && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Tooltip title="Click to show all opportunities">
               <div onClick={() => handleCardClick("all")}>
                 <Card
@@ -3453,7 +3454,7 @@ const Opportunities = () => {
                 </Card>
               </div>
             </Tooltip>
-          </div>
+          </div>}
 
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav
@@ -3479,7 +3480,7 @@ const Opportunities = () => {
             </nav>
           </div>
 
-          <div className="mb-4">
+          {!isDashboard && <div className="mb-4">
             <OpportunityTableTools
               onSearchChange={handleSearchChange}
               onExport={handleOpenExportReasonModal}
@@ -3488,14 +3489,14 @@ const Opportunities = () => {
               columnToggler={<ColumnToggler table={table} />}
               activeFilterCount={activeFilterCount}
             />
-          </div>
+          </div>}
 
-          <ActiveFiltersDisplay
+          {!isDashboard && <ActiveFiltersDisplay
             filters={filters}
             onRemoveFilter={handleRemoveFilter}
             onClearAll={handleClearFilters}
           />
-
+          }
           <div className="flex-grow overflow-auto">
             <DataTableComponent
               selectable
