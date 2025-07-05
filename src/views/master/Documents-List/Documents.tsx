@@ -64,6 +64,7 @@ import {
   getDocumentTypeAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
+import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 
 // --- FEATURE-SPECIFIC TYPES & SCHEMAS ---
 export type DocumentItem = {
@@ -574,7 +575,7 @@ const Documents = () => {
                 <div className="text-xs">
                   <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
                 </div>
-                <div className="text-xs text-gray-500">{formattedDate}</div>
+                <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
               </div>
             </div>
           );
@@ -588,9 +589,9 @@ const Documents = () => {
         cell: (props) => (
           <Tag
             className={classNames({
-              "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border border-emerald-300":
+              "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100":
                 props.row.original.status === "Active",
-              "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border border-red-300":
+              "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100":
                 props.row.original.status === "Inactive",
             })}
           >
@@ -1305,6 +1306,7 @@ const Documents = () => {
               <br />
               <span className="font-semibold">Updated At:</span>{" "}
               <span>
+                {}
                 {editingDocument.updated_at
                   ? `${new Date(
                       editingDocument.updated_at
