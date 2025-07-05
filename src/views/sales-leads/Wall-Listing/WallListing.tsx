@@ -640,8 +640,9 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
 interface WallTableProps {
   columns: ColumnDef<WallItem>[]; data: WallItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: WallItem[];
   onPaginationChange: (page: number) => void; onSelectChange: (size: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: WallItem) => void; onAllRowSelect: (checked: boolean, rows: Row<WallItem>[]) => void;
+  selectable?: boolean;
 }
-const WallTable = (props: WallTableProps) => (<DataTable selectable columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
+const WallTable = (props: WallTableProps) => (<DataTable selectable={props.selectable} columns={props.columns} data={props.data} loading={props.loading} pagingData={props.pagingData} checkboxChecked={(row) => props.selectedItems.some((s) => s.id === row.id)} onPaginationChange={props.onPaginationChange} onSelectChange={props.onSelectChange} onSort={props.onSort} onCheckBoxChange={props.onRowSelect} onIndeterminateCheckBoxChange={props.onAllRowSelect} noData={!props.loading && props.data.length === 0} />);
 interface WallSelectedFooterProps { selectedItems: WallItem[]; deleteConfirmOpen: boolean; setDeleteConfirmOpen: (open: boolean) => void; onConfirmDelete: () => void; isDeleting: boolean; }
 const WallSelectedFooter = ({ selectedItems, deleteConfirmOpen, setDeleteConfirmOpen, onConfirmDelete, isDeleting }: WallSelectedFooterProps) => {
   if (selectedItems.length === 0) return null;
@@ -730,7 +731,9 @@ const WallListing = ({ isDashboard }) => {
   const closeViewDrawer = useCallback(() => { setIsViewDrawerOpen(false); setEditingItem(null); }, []);
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const handleOpenModal = (type: WallModalType, wallItem: WallItem) => setModalState({ isOpen: true, type, data: wallItem });
+  const handleOpenModal = useCallback((type: WallModalType, wallItem: WallItem) => {
+    setModalState({ isOpen: true, type, data: wallItem });
+  }, []);
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
   const onConfirmDeleteSelectedItems = useCallback(async () => {
@@ -756,7 +759,7 @@ const WallListing = ({ isDashboard }) => {
       if (intentOption) setFilterCriteria({ filterIntents: [intentOption] });
     }
   };
-  const handleRemoveFilter = (key: keyof FilterFormData, value: any) => {
+  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => {
     setFilterCriteria(prev => {
       const newFilters = { ...prev };
       const currentValues = prev[key] as { value: any }[] | undefined;
@@ -767,7 +770,7 @@ const WallListing = ({ isDashboard }) => {
       }
       return newFilters;
     });
-  };
+  }, []);
 
   const handleOpenExportReasonModal = useCallback(() => {
     if (total === 0) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; }
@@ -806,90 +809,97 @@ const WallListing = ({ isDashboard }) => {
 
   // --- Columns Definition ---
   const columns: ColumnDef<WallItem>[] = useMemo(
-    () => [
-      {
-        header: "Overview", accessorKey: "product_name", size: 280, cell: ({ row }) => {
-          const { product_images, product_name, id, want_to } = row?.original || {}; const intent = want_to as WallIntent;
-          return (
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2"><Avatar size={33} shape="circle" src={product_images?.[0]} icon={!product_images?.[0] && (<TbPhoto className="text-gray-400" />)} />
-                <div className="font-semibold leading-normal text-xs text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">{product_name}</div>
+    () => {
+      const baseColumns: ColumnDef<WallItem>[] = [
+        {
+          header: "Overview", accessorKey: "product_name", size: 280, cell: ({ row }) => {
+            const { product_images, product_name, id, want_to } = row?.original || {}; const intent = want_to as WallIntent;
+            return (
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2"><Avatar size={33} shape="circle" src={product_images?.[0]} icon={!product_images?.[0] && (<TbPhoto className="text-gray-400" />)} />
+                  <div className="font-semibold leading-normal text-xs text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">{product_name}</div>
+                </div>
+                <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {id || "N/A"}</span>
+                <span className="text-xs">{want_to && (<span><b>Want To: </b><Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>{want_to}</Tag></span>)}</span>
               </div>
-              <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {id || "N/A"}</span>
-              <span className="text-xs">{want_to && (<span><b>Want To: </b><Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>{want_to}</Tag></span>)}</span>
-            </div>
-          );
+            );
+          },
         },
-      },
-      {
-        header: "Company & Member", accessorKey: "company_name", size: 260, cell: ({ row }) => {
-          const { name, id, member_email, member_phone } = row.original?.member || {};
-          return (
-            <div className="flex flex-col gap-0.5 text-xs">
-              <div className="mt-1 pt-1 dark:border-gray-700 w-full">
-                {id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}
-                {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
-                {member_email && (<a href={`mailto:${member_email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{member_email}</a>)}
-                {member_phone && (<span className="block text-gray-600 dark:text-gray-300">{member_phone}</span>)}
+        {
+          header: "Company & Member", accessorKey: "company_name", size: 260, cell: ({ row }) => {
+            const { name, id, member_email, member_phone } = row.original?.member || {};
+            return (
+              <div className="flex flex-col gap-0.5 text-xs">
+                <div className="mt-1 pt-1 dark:border-gray-700 w-full">
+                  {id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}
+                  {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
+                  {member_email && (<a href={`mailto:${member_email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{member_email}</a>)}
+                  {member_phone && (<span className="block text-gray-600 dark:text-gray-300">{member_phone}</span>)}
+                </div>
               </div>
-            </div>
-          );
+            );
+          },
         },
-      },
-      {
-        header: "Details", accessorKey: "product_category", size: 280, cell: ({ row }) => {
-          const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition, } = row?.original || {};
-          const currentProductApiStatus = product_status?.toLowerCase() || "default";
-          const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
-          return (
-            <div className="flex flex-col gap-0.5 text-xs">
-              <span><span className="font-semibold text-gray-700 dark:text-gray-300">Category:</span>{" "}{product_category || "N/A"}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
-              {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[250px]"><span className="font-semibold text-gray-700 dark:text-gray-300">Specs:</span>{" "}{product_specs.length > 30 ? product_specs.substring(0, 30) + "..." : product_specs}</span></Tooltip>)}
-              {product_status && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Avail. Status:</span>{" "}<Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)}
-              {cartoonTypeName && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Cartoon:</span>{" "}{cartoonTypeName}</span>)}
-              {deviceCondition && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Condition:</span>{" "}{deviceCondition}</span>)}
-            </div>
-          );
-        },
-      },
-      {
-        header: "Engagement", accessorKey: "price", size: 220, cell: ({ row }) => {
-          const { price, quantity, inquiry_count, share_count, is_bookmarked, created_date, } = row.original;
-          return (
-            <div className="flex flex-col gap-1 text-xs">
-              <div className="flex items-center"><TbCurrencyDollar className="text-base text-emerald-500 dark:text-emerald-400" /><span className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">{price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2, }) ?? "N/A"}</span><TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span></div>
-              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
-                <Tooltip title="Inquiries"><span className="flex items-center gap-0.5"><TbMessageCircle className="text-gray-500 dark:text-gray-400" />{inquiry_count}</span></Tooltip>
-                <Tooltip title="Shares"><span className="flex items-center gap-0.5"><TbShare className="text-gray-500 dark:text-gray-400" />{share_count}</span></Tooltip>
-                <BookmarkButton is_bookmarked={is_bookmarked} />
+        {
+          header: "Details", accessorKey: "product_category", size: 280, cell: ({ row }) => {
+            const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition, } = row?.original || {};
+            const currentProductApiStatus = product_status?.toLowerCase() || "default";
+            const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
+            return (
+              <div className="flex flex-col gap-0.5 text-xs">
+                <span><span className="font-semibold text-gray-700 dark:text-gray-300">Category:</span>{" "}{product_category || "N/A"}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
+                {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[250px]"><span className="font-semibold text-gray-700 dark:text-gray-300">Specs:</span>{" "}{product_specs.length > 30 ? product_specs.substring(0, 30) + "..." : product_specs}</span></Tooltip>)}
+                {product_status && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Avail. Status:</span>{" "}<Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)}
+                {cartoonTypeName && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Cartoon:</span>{" "}{cartoonTypeName}</span>)}
+                {deviceCondition && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Condition:</span>{" "}{deviceCondition}</span>)}
               </div>
-              {created_date && (<span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1"><TbCalendarEvent />{dayjs(created_date).format("MMM D, YYYY")}</span>)}
-            </div>
-          );
+            );
+          },
         },
-      },
-      {
-        header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 180, cell: (props) => {
-          const { updated_at, updated_by_name, updated_by_role } = props.row.original || {};
-          const formattedDate = updated_at ? dayjs(updated_at).format("MMM D, YYYY h:mm A") : "N/A";
-          return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
+        {
+          header: "Engagement", accessorKey: "price", size: 220, cell: ({ row }) => {
+            const { price, quantity, inquiry_count, share_count, is_bookmarked, created_date, } = row.original;
+            return (
+              <div className="flex flex-col gap-1 text-xs">
+                <div className="flex items-center"><TbCurrencyDollar className="text-base text-emerald-500 dark:text-emerald-400" /><span className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">{price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2, }) ?? "N/A"}</span><TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span></div>
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
+                  <Tooltip title="Inquiries"><span className="flex items-center gap-0.5"><TbMessageCircle className="text-gray-500 dark:text-gray-400" />{inquiry_count}</span></Tooltip>
+                  <Tooltip title="Shares"><span className="flex items-center gap-0.5"><TbShare className="text-gray-500 dark:text-gray-400" />{share_count}</span></Tooltip>
+                  <BookmarkButton is_bookmarked={is_bookmarked} />
+                </div>
+                {created_date && (<span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1"><TbCalendarEvent />{dayjs(created_date).format("MMM D, YYYY")}</span>)}
+              </div>
+            );
+          },
         },
-      },
-      {
-        header: "Workflow Status", accessorKey: "recordStatus", enableSorting: true, size: 180, cell: ({ row }) => {
-          const { recordStatus } = row.original;
-          return (<div className="flex flex-col gap-1 text-xs">{recordStatus && (<div><Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>{recordStatus}</Tag></div>)}</div>);
+        {
+          header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 180, cell: (props) => {
+            const { updated_at, updated_by_name, updated_by_role } = props.row.original || {};
+            const formattedDate = updated_at ? dayjs(updated_at).format("MMM D, YYYY h:mm A") : "N/A";
+            return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
+          },
         },
-      },
-      {
-        header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<WallItem, any>) => (<StyledActionColumn onViewDetail={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original} />),
-      },
-    ],
-    [openViewDrawer, openEditDrawer, handleOpenModal]
+        {
+          header: "Workflow Status", accessorKey: "recordStatus", enableSorting: true, size: 180, cell: ({ row }) => {
+            const { recordStatus } = row.original;
+            return (<div className="flex flex-col gap-1 text-xs">{recordStatus && (<div><Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>{recordStatus}</Tag></div>)}</div>);
+          },
+        },
+      ];
+
+      if (!isDashboard) {
+        baseColumns.push({
+          header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<WallItem, any>) => (<StyledActionColumn onViewDetail={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original} />),
+        });
+      }
+
+      return baseColumns;
+    },
+    [isDashboard, openViewDrawer, openEditDrawer, handleOpenModal]
   );
 
-  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<WallItem>[]>(columns);
-  // useEffect(() => { setFilteredColumns(columns) }, [columns]);
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<WallItem>[]>([]);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -909,31 +919,38 @@ const WallListing = ({ isDashboard }) => {
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            {!isDashboard && <h5 className="mb-2 sm:mb-0">Wall Listing</h5>}
-            {!isDashboard && <div className="flex gap-2"><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button><Button variant="solid" icon={<TbPlus />}>Add Multiple</Button></div>}
-          </div>
-          {!isDashboard && <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 mt-4 gap-2 ">
-            <Tooltip title="Click to show all listings"><div onClick={onClearFilters}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-blue-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div className="flex flex-col"><b className="text-blue-500">{counts.total}</b><span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show listings created today"><div onClick={() => handleCardClick('status', 'today')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-emerald-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCalendar size={20} /></div><div className="flex flex-col"><b className="text-emerald-500">{counts.today}</b><span className="font-semibold text-[11px]">Today</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show 'Buy' listings"><div onClick={() => handleCardClick('intent', 'Buy')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div><div className="flex flex-col"><b className="text-violet-500">{counts.buy}</b><span className="font-semibold text-[11px]">Buy</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show 'Sell' listings"><div onClick={() => handleCardClick('intent', 'Sell')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-pink-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbPackageExport size={20} /></div><div className="flex flex-col"><b className="text-pink-500">{counts.sell}</b><span className="font-semibold text-[11px]">Sell</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show active listings"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-green-300")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div><div className="flex flex-col"><b className="text-green-500">{counts.active}</b><span className="font-semibold text-[11px]">Active</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show non-active listings"><div onClick={() => handleCardClick('status', 'Non-Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.non_active}</b><span className="font-semibold text-[11px]">Non Active</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show pending listings"><div onClick={() => handleCardClick('status', 'Pending')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-orange-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbProgress size={20} /></div><div className="flex flex-col"><b className="text-orange-500">{counts.pending}</b><span className="font-semibold text-[11px]">Pending</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show rejected listings"><div onClick={() => handleCardClick('status', 'Rejected')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.rejected}</b><span className="font-semibold text-[11px]">Rejected</span></div></Card></div></Tooltip>
-          </div>}
+          {!isDashboard && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+              <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
+              <div className="flex gap-2"><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button><Button variant="solid" icon={<TbPlus />}>Add Multiple</Button></div>
+            </div>
+          )}
+          {!isDashboard && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 mt-4 gap-2 ">
+              <Tooltip title="Click to show all listings"><div onClick={onClearFilters}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-blue-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div className="flex flex-col"><b className="text-blue-500">{counts.total}</b><span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show listings created today"><div onClick={() => handleCardClick('status', 'today')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-emerald-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCalendar size={20} /></div><div className="flex flex-col"><b className="text-emerald-500">{counts.today}</b><span className="font-semibold text-[11px]">Today</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show 'Buy' listings"><div onClick={() => handleCardClick('intent', 'Buy')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div><div className="flex flex-col"><b className="text-violet-500">{counts.buy}</b><span className="font-semibold text-[11px]">Buy</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show 'Sell' listings"><div onClick={() => handleCardClick('intent', 'Sell')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-pink-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbPackageExport size={20} /></div><div className="flex flex-col"><b className="text-pink-500">{counts.sell}</b><span className="font-semibold text-[11px]">Sell</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show active listings"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-green-300")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div><div className="flex flex-col"><b className="text-green-500">{counts.active}</b><span className="font-semibold text-[11px]">Active</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show non-active listings"><div onClick={() => handleCardClick('status', 'Non-Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.non_active}</b><span className="font-semibold text-[11px]">Non Active</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show pending listings"><div onClick={() => handleCardClick('status', 'Pending')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-orange-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbProgress size={20} /></div><div className="flex flex-col"><b className="text-orange-500">{counts.pending}</b><span className="font-semibold text-[11px]">Pending</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show rejected listings"><div onClick={() => handleCardClick('status', 'Rejected')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.rejected}</b><span className="font-semibold text-[11px]">Rejected</span></div></Card></div></Tooltip>
+            </div>
+          )}
           <WallTableTools isDashboard={isDashboard} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={handleImportData} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
-          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
+          {!isDashboard && <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />}
           <div className="mt-4">
             <WallTable
+              selectable={!isDashboard}
               columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading"}
               pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} onSort={handleSort} />
           </div>
         </AdaptiveCard>
       </Container>
-      <WallSelectedFooter selectedItems={selectedItems} deleteConfirmOpen={deleteSelectedConfirmOpen} setDeleteConfirmOpen={setDeleteSelectedConfirmOpen} onConfirmDelete={onConfirmDeleteSelectedItems} isDeleting={masterLoadingStatus === "loading"} />
+      {!isDashboard && (
+        <WallSelectedFooter selectedItems={selectedItems} deleteConfirmOpen={deleteSelectedConfirmOpen} setDeleteConfirmOpen={setDeleteSelectedConfirmOpen} onConfirmDelete={onConfirmDeleteSelectedItems} isDeleting={masterLoadingStatus === "loading"} />
+      )}
       <WallModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={useMemo(() => getAllUserData?.map((user: any) => ({ value: user?.id, label: user?.name })), [getAllUserData])} />
       <Drawer title="View Wall Item Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={700}>
         {editingItem && (
