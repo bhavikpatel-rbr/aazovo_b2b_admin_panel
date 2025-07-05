@@ -882,15 +882,24 @@ const LeadsListing = ({ isDashboard }) => {
   }, [handleSetTableData]);
 
   const columns: ColumnDef<LeadListItem>[] = useMemo(
-    () => [
-      { header: "Lead", accessorKey: "lead_number", size: 130, cell: (props) => (<div className="flex flex-col gap-0.5 text-xs"><span>{props.getValue() as string}</span><div><Tag className={`${enquiryTypeColor[props.row.original.enquiry_type] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiry_type}</Tag></div></div>), },
-      { header: "Product", accessorKey: "productName", size: 200, cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || "-", },
-      { header: "Status", accessorKey: "lead_status", size: 120, cell: (props: CellContext<LeadListItem, any>) => (<Tag className={`${leadStatusColor[props.row.original.lead_status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.lead_status}</Tag>), },
-      { header: "Member", accessorKey: "customerName", size: 180, cell: (props: CellContext<LeadListItem, any>) => { const { buyer, supplier } = props.row.original; const buyerInfo = buyer ? (<><b>Buyer: {buyer.id}</b><span>{buyer.name}</span></>) : (<span>Buyer: N/A</span>); return (<div className="flex flex-col gap-1 text-xs">{buyerInfo}</div>); }, },
-      { header: "Details", size: 220, cell: (props: CellContext<LeadListItem, any>) => { const formattedDate = props.row.original.createdAt ? `${new Date(props.row.original.createdAt).getDate()} ${new Date(props.row.original.createdAt).toLocaleString("en-US", { month: "short", })} ${new Date(props.row.original.createdAt).getFullYear()}, ${new Date(props.row.original.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, })}` : "N/A"; return (<div className="flex flex-col gap-0.5 text-xs"><div><Tag>{props.row.original.lead_intent || "Buy"}</Tag><span>Qty: {props.row.original.qty ?? "-"}</span></div><span>Target Price: {props.row.original.target_price ?? "-"}</span><span>Sales Person : {props.row.original.salesPersonName || "Unassigned"}</span><b>{formattedDate}</b></div>); }, },
-      { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props: CellContext<LeadListItem, any>) => (<LeadActionColumn onViewDetail={() => openViewDialog(props.row.original)} onEdit={() => handleOpenEditLeadPage(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onAssign={() => openAssignDrawer(props.row.original)} onChangeStatus={() => openChangeStatusDrawer(props.row.original)} onOpenModal={(type) => handleOpenModal(type, props.row.original)} />), },
-    ],
-    [openViewDialog, handleOpenEditLeadPage, handleDeleteClick, openAssignDrawer, openChangeStatusDrawer, handleOpenModal]
+    () => {
+      const baseColumns: ColumnDef<LeadListItem>[] = [
+        { header: "Lead", accessorKey: "lead_number", size: 130, cell: (props) => (<div className="flex flex-col gap-0.5 text-xs"><span>{props.getValue() as string}</span><div><Tag className={`${enquiryTypeColor[props.row.original.enquiry_type] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiry_type}</Tag></div></div>), },
+        { header: "Product", accessorKey: "productName", size: 200, cell: (props: CellContext<LeadListItem, any>) => props.row.original.productName || "-", },
+        { header: "Status", accessorKey: "lead_status", size: 120, cell: (props: CellContext<LeadListItem, any>) => (<Tag className={`${leadStatusColor[props.row.original.lead_status] || leadStatusColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.lead_status}</Tag>), },
+        { header: "Member", accessorKey: "customerName", size: 180, cell: (props: CellContext<LeadListItem, any>) => { const { buyer, supplier } = props.row.original; const buyerInfo = buyer ? (<><b>Buyer: {buyer.id}</b><span>{buyer.name}</span></>) : (<span>Buyer: N/A</span>); return (<div className="flex flex-col gap-1 text-xs">{buyerInfo}</div>); }, },
+        { header: "Details", size: 220, cell: (props: CellContext<LeadListItem, any>) => { const formattedDate = props.row.original.createdAt ? `${new Date(props.row.original.createdAt).getDate()} ${new Date(props.row.original.createdAt).toLocaleString("en-US", { month: "short", })} ${new Date(props.row.original.createdAt).getFullYear()}, ${new Date(props.row.original.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, })}` : "N/A"; return (<div className="flex flex-col gap-0.5 text-xs"><div><Tag>{props.row.original.lead_intent || "Buy"}</Tag><span>Qty: {props.row.original.qty ?? "-"}</span></div><span>Target Price: {props.row.original.target_price ?? "-"}</span><span>Sales Person : {props.row.original.salesPersonName || "Unassigned"}</span><b>{formattedDate}</b></div>); }, },
+      ];
+
+      if (!isDashboard) {
+        baseColumns.push({
+          header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props: CellContext<LeadListItem, any>) => (<LeadActionColumn onViewDetail={() => openViewDialog(props.row.original)} onEdit={() => handleOpenEditLeadPage(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onAssign={() => openAssignDrawer(props.row.original)} onChangeStatus={() => openChangeStatusDrawer(props.row.original)} onOpenModal={(type) => handleOpenModal(type, props.row.original)} />),
+        });
+      }
+
+      return baseColumns;
+    },
+    [isDashboard, openViewDialog, handleOpenEditLeadPage, handleDeleteClick, openAssignDrawer, openChangeStatusDrawer, handleOpenModal]
   );
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<LeadListItem>[]>(columns);
