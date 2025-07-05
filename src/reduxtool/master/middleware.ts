@@ -42,11 +42,15 @@ export const addLeadAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addLeadAsync(data)
       if (response?.data?.status === true) {
         dispatch(getLeadAction())
-
         return response?.data?.data
+      } else {
+        // The API call was successful, but the business logic failed.
+        // Reject with a specific payload containing the server message.
+        // The UI layer can listen for this and show a specific toast/modal.
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add lead.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -60,11 +64,13 @@ export const editLeadAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editLeadAsync(data)
       if (response?.data?.status) {
         dispatch(getLeadAction())
-
         return response?.data
+      } else {
+        // The API call was successful, but the business logic failed.
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit lead.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -130,11 +136,12 @@ export const addUnitAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addUnitAsync(data)
       if (response?.data?.status === true) {
         dispatch(getUnitAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add unit.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -148,11 +155,12 @@ export const editUnitAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editUnitAsync(data)
       if (response?.data?.status === true) {
         dispatch(getUnitAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit unit.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -218,11 +226,12 @@ export const addDocumentTypeAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addDocumentTypeAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentTypeAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add document type.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -237,11 +246,12 @@ export const editDocumentTypeAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editDocumentTypeAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentTypeAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit document type.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -308,11 +318,12 @@ export const addPaymentTermAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addPaymentTermAsync(data)
       if (response?.data?.status === true) {
         dispatch(getPaymentTermAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add payment term.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -327,11 +338,12 @@ export const editPaymentTermAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editPaymentTermAsync(data)
       if (response?.data?.status === true) {
         dispatch(getPaymentTermAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit payment term.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -397,11 +409,12 @@ export const addCurrencyAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addCurrencyAsync(data)
       if (response?.data?.status === true) {
         dispatch(getCurrencyAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add currency.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -416,11 +429,12 @@ export const editCurrencyAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editCurrencyAsync(data)
       if (response?.data?.status === true) {
         dispatch(getCurrencyAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit currency.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -487,11 +501,12 @@ export const addContinentAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addcontinentAsync(data)
       if (response?.data?.status === true) {
         dispatch(getContinentsAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add continent.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -506,11 +521,12 @@ export const editContinentAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editcontinentAsync(data)
       if (response?.data?.status === true) {
         dispatch(getContinentsAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit continent.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -583,9 +599,11 @@ export const addCountryAction = createAsyncThunk<
       if (response?.data?.status === true) {
         dispatch(getCountriesAction());
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add country.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       // This now correctly catches the error thrown from the updated `addcountryAsync`
       return rejectWithValue(error as Error);
@@ -607,9 +625,11 @@ export const editCountryAction = createAsyncThunk<
       if (response?.data?.status === true) {
         dispatch(getCountriesAction());
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit country.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       // This now correctly catches the error thrown from the updated `editcountryAsync`
       return rejectWithValue(error as Error);
@@ -677,11 +697,12 @@ export const addDocumentListAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addDocumentListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentListAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add document.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -696,11 +717,12 @@ export const editDocumentListAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editDocumentListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDocumentListAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit document.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -766,11 +788,12 @@ export const addBlogAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addBlogsAsync(data)
       if (response?.data?.status === true) {
         dispatch(getBlogsAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add blog.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -787,11 +810,12 @@ export const editBlogAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editBlogsAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getBlogsAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit blog.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -859,12 +883,13 @@ export const addProductAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addProductAsync(data) // Uses Brand service
       if (response?.data?.status === true) {
-        dispatch(getBrandAction()) // Dispatches Brand action
-
+        dispatch(getProductsAction()) // Dispatches product action
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add product.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -881,11 +906,12 @@ export const editProductAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editProductListAsync(payload.id, payload.formData); // Uses Brand service
       if (response?.data?.status === true) {
         dispatch(getProductsAction()); // Dispatches Brand action
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit product.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -985,11 +1011,12 @@ export const addBrandAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addBrandAsync(data)
       if (response?.data?.status === true) {
         dispatch(getBrandAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add brand.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1007,11 +1034,12 @@ export const editBrandAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editBrandListAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getBrandAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit brand.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -1106,11 +1134,12 @@ export const addCategoryAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addcategoryAsync(data)
       if (response?.data?.status === true) {
         dispatch(getCategoriesAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add category.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1127,11 +1156,12 @@ export const editCategoryAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editcategoryListAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getCategoriesAction()); // Corrected dispatch
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit category.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -1196,11 +1226,12 @@ export const addWallItemAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addWallItemAsync(data)
       if (response?.data?.status === true) {
         dispatch(getWallItemsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add wall item.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1217,11 +1248,12 @@ export const editWallItemAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editWallAsync(data) // Potentially incorrect service call
       if (response?.data?.status === true) {
         dispatch(getWallItemsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit wall item.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1288,11 +1320,12 @@ export const addPriceListAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addPriceListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getPriceListAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add price list.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1306,11 +1339,12 @@ export const editPriceListAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editPriceListAsync(data)
       if (response?.data?.status === true) {
         dispatch(getPriceListAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit price list.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1376,11 +1410,12 @@ export const addSliderAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addSlidersAsync(data)
       if (response?.data?.status === true) {
         dispatch(getSlidersAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add slider.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1398,11 +1433,12 @@ export const editSliderAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editSlidersListAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getSlidersAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit slider.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -1503,11 +1539,12 @@ export const updateCompanyProfileAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editCompanyProfileListAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getCompanyProfileAction()); // Corrected dispatch
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to update company profile.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -1537,11 +1574,12 @@ export const addTrendingImageAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addTrandingImageAsync(data)
       if (response?.data?.status === true) {
         dispatch(getTrendingImagesAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add trending image.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1555,11 +1593,12 @@ export const editTrendingImageAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editTrandingImageAsync(data)
       if (response?.data?.status === true) {
         dispatch(getTrendingImagesAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit trending image.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1626,11 +1665,12 @@ export const addTrendingCarouselAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addTrandingCarouselAsync(data)
       if (response?.data?.status === true) {
         dispatch(getTrendingCarouselAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add trending carousel.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1646,11 +1686,12 @@ export const editTrendingCarouselAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editTrandingCarouselAsync(data)
       if (response?.data?.status === true) {
         dispatch(getTrendingCarouselAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit trending carousel.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1716,11 +1757,12 @@ export const addProductSpecificationAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addProductSepecificationAsync(data)
       if (response?.data?.status === true) {
         dispatch(getProductSpecificationsAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add product specification.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1737,11 +1779,12 @@ export const editProductSpecificationAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editProductSepecificationAsync(data)
       if (response?.data?.status === true) {
         dispatch(getProductSpecificationsAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit product specification.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1808,11 +1851,12 @@ export const addDesignationAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addDesignationAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDesignationsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add designation.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1826,11 +1870,12 @@ export const editDesignationAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editDesignationAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDesignationsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit designation.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1896,11 +1941,12 @@ export const addDepartmentAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addDepartmentAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDepartmentsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add department.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1914,11 +1960,12 @@ export const editDepartmentAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editDepartmentAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDepartmentsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit department.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -1984,11 +2031,12 @@ export const addNumberSystemAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addNumberSystemsAsync(data)
       if (response?.data?.status === true) {
         dispatch(getNumberSystemsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add number system.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2002,11 +2050,12 @@ export const editNumberSystemAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editNumberSystemsAsync(data)
       if (response?.data?.status === true) {
         dispatch(getNumberSystemsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit number system.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2072,11 +2121,12 @@ export const addDomainAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addDomainsAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDomainsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add domain.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2090,11 +2140,12 @@ export const editDomainAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editDomainsAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDomainsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit domain.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2163,11 +2214,12 @@ export const addJobDepartmentAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addJobDepartmentAsync(data)
       if (response?.data?.status === true) {
         dispatch(getJobDepartmentsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add job department.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2181,11 +2233,12 @@ export const editJobDepartmentAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editJobDepartmentAsync(data)
       if (response?.data?.status === true) {
         dispatch(getJobDepartmentsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit job department.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2251,11 +2304,12 @@ export const addJobPostAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addJobPostsAsync(data)
       if (response?.data?.status === true) {
         dispatch(getJobPostsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add job post.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2269,11 +2323,12 @@ export const editJobPostAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editJobPostsAsync(data)
       if (response?.data?.status === true) {
         dispatch(getJobPostsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit job post.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2340,11 +2395,12 @@ export const addBugReportAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addBugReportAsync(data)
       if (response?.data?.status === true) {
         dispatch(getBugReportsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add bug report.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2361,11 +2417,12 @@ export const editBugReportAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editBugReportAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getBugReportsAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit bug report.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -2430,12 +2487,13 @@ export const addSubscriberAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addSubscriberAsync(data)
       if (response?.data?.status === true) {
-        // dispatch(getBugReportsAction()) // Corrected dispatch
-
+        dispatch(getSubscribersAction())
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add subscriber.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2450,19 +2508,15 @@ export const editSubscriberAction = createAsyncThunk<
   async (payload, { rejectWithValue, dispatch }) => {
 
     try {
-      console.log("formData", payload.formData);
-
       const response: AxiosResponse<any> = await editSubscriberAsync(payload.id, payload.formData);
-
-      console.log("response", response);
-
       if (response?.data?.status === true) {
-        // dispatch(getBugReportsAction());
-
+        dispatch(getSubscribersAction());
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit subscriber.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -2492,11 +2546,12 @@ export const addHomeCategoryAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addHomeCategoryAsync(data)
       if (response?.data?.status === true) {
         dispatch(getHomeCategoryAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add home category.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2510,11 +2565,12 @@ export const editHomeCategoryAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editHomeCategoryAsync(data)
       if (response?.data?.status === true) {
         dispatch(getHomeCategoryAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit home category.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2580,11 +2636,12 @@ export const addRowDataAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addRowDataAsync(data)
       if (response?.data?.status === true) {
         dispatch(getRowDataAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add row data.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2598,11 +2655,12 @@ export const editRowDataAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editRowDataAsync(data)
       if (response?.data?.status === true) {
         dispatch(getRowDataAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit row data.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2668,11 +2726,12 @@ export const addAutoEmailAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addAutoEmailAsync(data)
       if (response?.data?.status === true) {
         dispatch(getAutoEmailsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add auto email.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2690,11 +2749,12 @@ export const editAutoEmailAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editAutoEmailAsync(payload);
       if (response?.data?.status === true) {
         dispatch(getAutoEmailsAction()); // Corrected dispatch
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit auto email.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -2774,11 +2834,12 @@ export const addEmailCampaignAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addEmailCampaignsAsync(data)
       if (response?.data?.status === true) {
         dispatch(getEmailCampaignsAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add email campaign.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2796,11 +2857,12 @@ export const editEmailCampaignAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editEmailCampaignsAsync(payload);
       if (response?.data?.status === true) {
         dispatch(getEmailCampaignsAction())
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit email campaign.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -2880,11 +2942,12 @@ export const addAutoEmailTemplateAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addAutoEmailTemplatesAsync(data)
       if (response?.data?.status === true) {
         dispatch(getAutoEmailTemplatesAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add auto email template.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2902,11 +2965,12 @@ export const editAutoEmailTemplateAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editAutoEmailTemplatesAsync(payload);
       if (response?.data?.status === true) {
         dispatch(getAutoEmailTemplatesAction()); // Corrected dispatch
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit auto email template.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -2971,11 +3035,12 @@ export const addEmailTemplateAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addEmailTemplatesAsync(data)
       if (response?.data?.status === true) {
         dispatch(getEmailTemplatesAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add email template.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -2993,11 +3058,12 @@ export const editEmailTemplateAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editEmailTemplatesAsync(payload);
       if (response?.data?.status === true) {
         dispatch(getEmailTemplatesAction()); // Corrected dispatch
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit email template.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -3061,11 +3127,12 @@ export const addRequestFeedbackAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addRequestFeedbacksAsync(data)
       if (response?.data?.status === true) {
         dispatch(getRequestFeedbacksAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add feedback request.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -3082,11 +3149,12 @@ export const editRequestFeedbackAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editRequestFeedbacksAsync(id, formData);
       if (response?.data?.status === true) {
         dispatch(getRequestFeedbacksAction()); // Corrected dispatch
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit feedback request.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -3217,11 +3285,12 @@ export const updateGlobalSettingAction = createAsyncThunk<
       const response: AxiosResponse<any> = await editGlobalSettingAsync(payload.id, payload.formData);
       if (response?.data?.status === true) {
         dispatch(getGlobalSettingAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to update global settings.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -3354,11 +3423,12 @@ export const addInquiriesAction = createAsyncThunk<any, any>("auth/addInquiries"
       const response: AxiosResponse<any> = await addInquiriesAsync(data)
       if (response?.data?.status === true) {
         dispatch(getInquiriesAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add inquiry.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -3372,11 +3442,12 @@ export const editInquiriesAction = createAsyncThunk<any, any>("auth/editInquirie
       const response: AxiosResponse<any> = await editInquiriesAsync(data)
       if (response?.data?.status === true) {
         dispatch(getInquiriesAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit inquiry.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -3406,11 +3477,12 @@ export const addJobApplicationAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addJobApplicationAsync(data);
       if (response?.data?.status === true) {
         dispatch(getJobApplicationsAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add job application.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -3424,11 +3496,12 @@ export const editJobApplicationAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editJobApplicationAsync(data);
       if (response?.data?.status === true) {
         dispatch(getJobApplicationsAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit job application.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -3526,11 +3599,12 @@ export const addcompanyAction = createAsyncThunk<any, any>("auth/addcompany",
       const response: AxiosResponse<any> = await addCompanyAsync(data)
       if (response?.data?.status === true) {
         dispatch(getCompanyAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add company.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -3544,11 +3618,12 @@ export const editCompanyAction = createAsyncThunk<any, { id: string | number; pa
       const response: AxiosResponse<any> = await editCompanyAsync(id, payload);
       if (response?.data?.status === true) {
         dispatch(getCompanyAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit company.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -3629,11 +3704,12 @@ export const addMemberAction = createAsyncThunk<any, any>("auth/addMember",
       const response: AxiosResponse<any> = await addMemberAsync(data)
       if (response?.data?.status === true) {
         dispatch(getMemberAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add member.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -3646,11 +3722,12 @@ export const editMemberAction = createAsyncThunk<any, any>("auth/editMember",
       const response: AxiosResponse<any> = await editMemberAsync(data)
       if (response?.data?.status === true) {
         dispatch(getMemberAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit member.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -3731,11 +3808,12 @@ export const addpartnerAction = createAsyncThunk<any, any>("auth/addpartner",
       const response: AxiosResponse<any> = await addpartnerAsync(data)
       if (response?.data?.status === true) {
         dispatch(getpartnerAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add partner.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -3748,11 +3826,12 @@ export const editpartnerAction = createAsyncThunk<any, { id: string | number; pa
       const response: AxiosResponse<any> = await editpartnerAsync(id, payload);
       if (response?.data?.status === true) {
         dispatch(getpartnerAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit partner.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -3901,11 +3980,12 @@ export const addFormBuilderAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addFormBuilderAsync(data);
       if (response?.data?.status === true) {
         dispatch(getFormBuilderAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add form.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -3919,11 +3999,12 @@ export const editFormBuilderAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editFormBuilderAsync(data);
       if (response?.data?.status === true) {
         dispatch(getFormBuilderAction());
-
         return response?.data?.data;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit form.'
+        });
       }
-
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -4147,11 +4228,12 @@ export const addOfferAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addOfferAsync(data)
       if (response?.data?.status === true) {
         dispatch(getOffersAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add offer.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4165,11 +4247,12 @@ export const editOfferAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editOfferAsync(data)
       if (response?.data?.status === true) {
         dispatch(getOffersAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit offer.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4183,11 +4266,12 @@ export const addDemandAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addDemandAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDemandsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add demand.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4234,11 +4318,12 @@ export const editDemandAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editDemandAsync(data)
       if (response?.data?.status === true) {
         dispatch(getDemandsAction()) // Corrected dispatch
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit demand.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4471,11 +4556,12 @@ export const addRolesAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addRolesAsync(data)
       if (response?.data?.status === true) {
         dispatch(getRolesAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add role.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4489,11 +4575,12 @@ export const editRolesAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editRolesAsync(data)
       if (response?.data?.status) {
         dispatch(getRolesAction())
-
         return response?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit role.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4575,11 +4662,12 @@ export const addMemberTypeAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await addMemberTypeAsync(data)
       if (response?.data?.status === true) {
         dispatch(getMemberTypeAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add member type.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4594,11 +4682,12 @@ export const editMemberTypeAction = createAsyncThunk<any, any>(
       const response: AxiosResponse<any> = await editMemberTypeAsync(data)
       if (response?.data?.status === true) {
         dispatch(getMemberTypeAction())
-
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit member type.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4609,20 +4698,15 @@ export const addTaskAction = createAsyncThunk<any, any>(
   "auth/addtask",
   async (data, { rejectWithValue, dispatch }) => {
     try {
-
-      console.log("data", data);
-
       const response: AxiosResponse<any> = await addTaskListAsync(data)
-
-      console.log("name", response);
-
-      if (response?.status === 200) {
+      if (response?.status === 200 && response?.data?.status === true) {
         dispatch(getAllTaskAction())
-
         return response?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add task.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4657,12 +4741,13 @@ export const editTaskAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await editTaskListAsync(data)
       if (response?.data?.status === true) {
-        dispatch(getContinentsAction())
-
+        dispatch(getAllTaskAction())
         return response?.data?.data
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit task.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4708,11 +4793,14 @@ export const addEmployeesAction = createAsyncThunk(
   async (payload, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addEmployeeListAsync(payload);
-      if (response) {
+      if (response?.data?.status === true) {
+        dispatch(getEmployeesListingAction());
         return response;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add employee.'
+        });
       }
-
-      return rejectWithValue("No users found");
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -4724,11 +4812,14 @@ export const editEmployeesAction = createAsyncThunk(
   async (payload, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editEmployeeListAsync(payload);
-      if (response) {
+      if (response?.data?.status === true) {
+        dispatch(getEmployeesListingAction());
         return response;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to edit employee.'
+        });
       }
-
-      return rejectWithValue("No users found");
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -4789,12 +4880,14 @@ export const addNotificationAction = createAsyncThunk<any, any>(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addNotificationAsync(data)
-      if (response) {
+      if (response?.data?.status === true) {
         dispatch(getAllNotificationAction());
         return response
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add notification.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4840,12 +4933,14 @@ export const addScheduleAction = createAsyncThunk<any, any>(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addScheduleAsync(data)
-      if (response) {
+      if (response?.data?.status === true) {
         dispatch(getAllScheduleAction());
         return response
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to add schedule.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -4926,13 +5021,14 @@ export const addPinnedAction = createAsyncThunk<any, any>(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addPinnedTabAsync(data);
-      if (response) {
-        // On success, refresh the list of pinned tabs
+      if (response?.data?.status === true) {
         dispatch(getPinnedTabAction());
-        // Return the response data (e.g., a success message or the newly added item)
         return response;
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to pin tab.'
+        });
       }
-      return rejectWithValue(response);
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -4998,11 +5094,14 @@ export const addAllActionAction = createAsyncThunk(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addAllActionActionAsync(data)
-      if (response) {
+      if (response?.data?.status === true) {
+        dispatch(getAllActionAction(null));
         return response
+      } else {
+        return rejectWithValue({
+          message: response?.data?.message || 'Failed to process action.'
+        });
       }
-
-      return rejectWithValue(response)
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
