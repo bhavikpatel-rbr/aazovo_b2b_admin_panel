@@ -387,7 +387,7 @@ const BugReportNotificationDialog = ({ bugReport, onClose, getAllUserDataOptions
   const [isLoading, setIsLoading] = useState(false);
   const notificationSchema = z.object({
     notification_title: z.string().min(3, "Title must be at least 3 characters long."),
-    send_users: z.array(z.number()).min(1, "Please select at least one user."),
+    send_users: z.array(z.string()).min(1, "Please select at least one user."),
     message: z.string().min(10, "Message must be at least 10 characters long."),
   });
   type NotificationFormData = z.infer<typeof notificationSchema>;
@@ -876,7 +876,9 @@ const BugReportListing = () => {
       </Dialog>
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Bug Report" onClose={() => setSingleDeleteConfirmOpen(false)} onConfirm={onConfirmSingleDelete} loading={isDeleting} confirmButtonColor="red-600"><p>Are you sure you want to delete the report by "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p></ConfirmDialog>
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Exporting Bug Reports" onClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}><Form id="exportBugReportsReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2"><FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
-      {isNotificationModalOpen && notificationItem && (<BugReportNotificationDialog bugReport={notificationItem} onClose={closeNotificationModal} getAllUserDataOptions={getAllUserDataOptions} />)}
+      {isNotificationModalOpen && notificationItem && (
+        <BugReportNotificationDialog bugReport={notificationItem} onClose={closeNotificationModal} getAllUserDataOptions={getAllUserDataOptions} />
+        )}
       {isScheduleModalOpen && scheduleItem && (<BugReportScheduleDialog bugReport={scheduleItem} onClose={closeScheduleModal} />)}
       {/* --- MODIFIED: Add the new Assign Task Dialog --- */}
       <AssignTaskDialog
