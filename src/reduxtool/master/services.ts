@@ -2966,7 +2966,7 @@ export const getAllNotificationAsync = async () => {
 
 
 
-export const addNotificationAsync = async (payload) => {
+export const addNotificationAsync = async (payload :any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/setting/notification_message`, { ...payload })
     return response?.data

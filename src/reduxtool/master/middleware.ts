@@ -4880,7 +4880,9 @@ export const addNotificationAction = createAsyncThunk<any, any>(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addNotificationAsync(data)
-      if (response?.data?.status === true) {
+      console.log("response?.data?.status", response?.data?.status);
+
+      if (response?.status === true) {
         dispatch(getAllNotificationAction());
         return response
       } else {
