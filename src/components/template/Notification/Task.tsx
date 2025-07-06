@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import classNames from 'classnames'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,6 +13,7 @@ import {
     deleteTaskAction,
     updateTaskStatusAPI,
     getEmployeesAction,
+    getAllCompany,
 } from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
@@ -482,7 +483,9 @@ const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, task, isDeleting
 const _Tasks = ({ className }: { className?: string }) => {
     const dispatch = useAppDispatch();
     const { AllTaskData = [], Employees = [], status: loadingStatus, isSubmitting, AllCompanyData = [] } = useSelector(masterSelector, shallowEqual);
-
+    useEffect(()=>{
+        dispatch(getAllCompany())
+    },[dispatch])
     const [drawerIsOpen, setDrawerIsOpen] = useState(false);
     const [viewModalIsOpen, setViewModalIsOpen] = useState(false);
     const [addTaskModalIsOpen, setAddTaskModalIsOpen] = useState(false);
