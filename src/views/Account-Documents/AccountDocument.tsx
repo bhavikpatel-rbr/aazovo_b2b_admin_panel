@@ -86,11 +86,13 @@ import {
   addNotificationAction, addScheduleAction,
   editaccountdocAction,
   getaccountdocAction,
+  getAllCompany,
   getAllUsersAction,
   getbyIDaccountdocAction,
   getDocumentTypeAction,
   getEmployeesListingAction,
   getFormBuilderAction,
+  getfromIDcompanymemberAction,
   getMemberAction,
   submitExportReasonAction
 } from "@/reduxtool/master/middleware";
@@ -140,6 +142,7 @@ const addEditDocumentSchema = z.object({
   form_id: z.number({ required_error: "Token Form is required." }),
   employee_id: z.number({ required_error: "Employee is required." }),
   member_id: z.number({ required_error: "Member is required." }),
+  company_id: z.string({ required_error: "Company is required." }),
 });
 type AddEditDocumentFormData = z.infer<typeof addEditDocumentSchema>;
 
@@ -580,7 +583,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
   });
 
 
-  const { DocumentTypeData = [], formsData: tokenForm = [], EmployeesList = [], MemberData = [] } = useSelector(masterSelector);
+  const { DocumentTypeData = [], formsData: tokenForm = [], EmployeesList = [], MemberData = [], AllCompanyData = [], getfromIDcompanymemberData = [] } = useSelector(masterSelector);
 
   const DocumentTypeDataOptions = DocumentTypeData?.map((p: any) => ({
     value: p.id,
@@ -602,7 +605,12 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
     label: p.name,
   }));
 
-  console.log(MemberData, "MemberData", MemberDataOptions);
+  const AllCompanyDataOptions = AllCompanyData?.map((p: any) => ({
+    value: String(p.id),
+    label: p.company_name,
+  }));
+
+  console.log(getfromIDcompanymemberData, "getfromIDcompanymemberData", getfromIDcompanymemberData);
 
 
 
@@ -611,6 +619,8 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
     dispatch(getFormBuilderAction())
     dispatch(getEmployeesListingAction())
     dispatch(getMemberAction())
+    dispatch(getAllCompany())
+    dispatch(getfromIDcompanymemberAction())
   }, [dispatch])
 
   useEffect(() => {
@@ -628,6 +638,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
             form_id: data?.data?.form_id,
             employee_id: data?.data?.employee_id, // Assuming this field exists
             member_id: data?.data?.member_id,
+            company_id: String(data?.data?.company_id),
           };
           reset(formData);
         })
@@ -685,6 +696,14 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
             <Controller control={control} name="company_document" render={({ field }) => (
               <Select {...field} placeholder="Select Company Document" options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" }]}
                 value={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" }].find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </UiFormItem>
+          <UiFormItem label="Company" invalid={!!errors.company_id} errorMessage={errors.company_id?.message}>
+            <Controller control={control} name="company_id" render={({ field }) => (
+              <Select {...field} placeholder="Select Company Document"
+                options={AllCompanyDataOptions}
+                value={AllCompanyDataOptions?.find(o => o.value === field.value)}
                 onChange={(opt: any) => field.onChange(opt?.value)} />
             )} />
           </UiFormItem>

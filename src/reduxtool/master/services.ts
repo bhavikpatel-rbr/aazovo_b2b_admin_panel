@@ -3186,3 +3186,12 @@ export const getbyIDaccountdocActionAsync = async (data: object) => {
     return isAxiosError(err)
   }
 }
+
+export const getfromIDcompanymemberActionAsync = async (id: object) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/company_member/${id}`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
