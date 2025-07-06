@@ -1,5 +1,3 @@
-// src/views/your-path/DesignationListing.tsx
-
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
@@ -141,8 +139,9 @@ const CSV_HEADERS_DES = [
 ];
 type DesignationExportItem = Omit<
   DesignationItem,
-  "created_at" | "updated_at"
+  "created_at" | "updated_at" | 'department'
 > & {
+  department: string;
   created_at_formatted?: string;
   updated_at_formatted?: string;
   updated_by_name?: string;
@@ -189,12 +188,14 @@ function exportDesignationsToCsv(filename: string, rows: DesignationItem[]) {
       .map((row) =>
         CSV_KEYS_DES.map((k) => {
           let cell: any = row[k as keyof DesignationExportItem];
-          if (k === 'department' || k === 'reporting_manager') {
-              cell = cell 
-          }
           if (cell === null || cell === undefined) cell = "";
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
+          else {
+              let strCell = String(cell);
+              if (strCell.includes(separator) || strCell.includes('"') || strCell.includes('\n')) {
+                strCell = `"${strCell.replace(/"/g, '""')}"`;
+              }
+              cell = strCell;
+          }
           return cell;
         }).join(separator)
       )
@@ -234,11 +235,20 @@ const ActionColumn = ({
     <div className="flex items-center justify-center gap-2">
       <Tooltip title="Edit">
         <div
-          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
+          className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`}
           role="button"
           onClick={onEdit}
         >
           <TbPencil />
+        </div>
+      </Tooltip>
+      <Tooltip title="Delete">
+        <div
+          className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+          role="button"
+          onClick={onDelete}
+        >
+          <TbTrash />
         </div>
       </Tooltip>
     </div>
@@ -437,17 +447,23 @@ const DesignationListing = () => {
     query: "",
   });
   const [selectedItems, setSelectedItems] = useState<DesignationItem[]>([]);
+  
+  // --- MODIFIED: Standardized image viewer state and handlers ---
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
   
-  const openImageViewerModal = useCallback((src?: string) => {
+  const openImageViewer = useCallback((src?: string) => {
     if (src) {
         setViewerImageSrc(src);
+        setIsImageViewerOpen(true);
     }
   }, []);
 
-  const closeImageViewerModal = useCallback(() => {
+  const closeImageViewer = useCallback(() => {
+      setIsImageViewerOpen(false);
       setViewerImageSrc(null);
   }, []);
+  // --- END MODIFICATION ---
 
   useEffect(() => {
     dispatch(getDesignationsAction());
@@ -660,10 +676,10 @@ const DesignationListing = () => {
       if(status !== 'all') {
           const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
           if(statusOption) {
-            setFilterCriteria({ filterStatuses: [statusOption] });
+            setFilterCriteria({ ...filterCriteria, filterStatuses: [statusOption] });
           }
       }
-  }, [onClearFilters]);
+  }, [onClearFilters, filterCriteria]);
 
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: string) => {
     setFilterCriteria(prev => {
@@ -706,7 +722,9 @@ const DesignationListing = () => {
         (item) =>
           String(item.id).toLowerCase().includes(query) ||
           item.name.toLowerCase().includes(query) ||
-          item.department.some(d => d.name.toLowerCase().includes(query))
+          item.department.some(d => d.name.toLowerCase().includes(query)) ||
+          (item.reporting_manager?.name.toLowerCase().includes(query)) ||
+          (item.updated_by_user?.name.toLowerCase().includes(query))
       );
     }
     const { order, key } = tableData.sort as OnSortParam;
@@ -717,7 +735,7 @@ const DesignationListing = () => {
         if (key === "created_at" || key === "updated_at") {
           const dateA = aVal ? new Date(aVal).getTime() : 0;
           const dateB = bVal ? new Date(bVal).getTime() : 0;
-          return order === "asc" ? dateA - dateB : dateB - aVal;
+          return order === "asc" ? dateA - dateB : dateB - dateA;
         }
         if (typeof aVal === "number" && typeof bVal === "number")
           return order === "asc" ? aVal - bVal : bVal - aVal;
@@ -767,7 +785,7 @@ const DesignationListing = () => {
       }
       setIsExportReasonModalOpen(false);
     } catch (error: any) {
-      toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
+      toast.push(<Notification title="Operation Failed" type="danger">{error?.message || "Could not complete export."}</Notification>);
     } finally {
       setIsSubmittingExportReason(false);
     }
@@ -829,7 +847,8 @@ const DesignationListing = () => {
                         size="sm" 
                         icon={<TbUserCircle />} 
                         className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                        onClick={() => openImageViewerModal(updated_by_user?.profile_pic_path)}
+                        // --- MODIFIED: Call correct handler ---
+                        onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
                     />
                     <div>
                         <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
@@ -848,7 +867,7 @@ const DesignationListing = () => {
         cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />),
       },
     ],
-    [openEditDrawer, handleDeleteClick, openImageViewerModal]
+    [openEditDrawer, handleDeleteClick, openImageViewer]
   );
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DesignationItem>[]>(columns);
@@ -931,27 +950,29 @@ const DesignationListing = () => {
       </Container>
       <DesignationsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} disabled={tableIsLoading} />
       
-      <Dialog 
-          isOpen={!!viewerImageSrc} 
-          onClose={closeImageViewerModal} 
-          onRequestClose={closeImageViewerModal}
-          bodyOpenClassName="overflow-hidden"
-          contentClassName="p-0 bg-transparent"
+      {/* --- MODIFIED: Replaced frameless dialog with a proper one --- */}
+      <Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        width={600}
+        bodyOpenClassName="overflow-hidden"
       >
-          <div className="relative">
-              <img 
-                  src={viewerImageSrc || ''} 
-                  alt="Profile View" 
-                  className="max-w-[90vw] max-h-[90vh] rounded-lg" 
-              />
-              <button 
-                  onClick={closeImageViewerModal}
-                  className="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-800 hover:bg-gray-200 shadow-lg"
-              >
-                  <TbX size={24} />
-              </button>
+          <div className="flex justify-center items-center p-4">
+              {viewerImageSrc ? (
+                  <img
+                      src={viewerImageSrc}
+                      alt="Profile View"
+                      style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+                  />
+              ) : (
+                  <p>No image to display.</p>
+              )}
           </div>
       </Dialog>
+      {/* --- END MODIFICATION --- */}
       
       <Drawer title="Add Designation" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="designationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Adding..." : "Save"}</Button></div>}>
         <Form id="designationForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-y-6">{renderDrawerForm(formMethods)}</Form>
