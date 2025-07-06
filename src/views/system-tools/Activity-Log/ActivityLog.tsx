@@ -8,6 +8,7 @@ import { z } from "zod";
 import classNames from "classnames";
 
 // UI Components
+
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
@@ -439,7 +440,7 @@ const ActivityLog = () => {
         if (e) return t <= e;
         return true;
       });
-      
+
     }
 
     const allFilteredData = processedData; // Keep a copy before search
@@ -483,7 +484,7 @@ const ActivityLog = () => {
       const start = new Date(now); start.setHours(0, 0, 0, 0);
       const end = new Date(now); end.setHours(23, 59, 59, 999);
       newFilters = { filterDateRange: [start, end] };
-      
+
     }
     setActiveFilters(newFilters);
     handleSetTableData({ pageIndex: 1, query: "" });
@@ -598,7 +599,7 @@ const ActivityLog = () => {
           const { user, userName, is_blocked } = props.row.original;
           return (
             <div className="flex items-center gap-2">
-               <Avatar
+              <Avatar
                 src={user?.profile_pic_path || undefined}
                 shape="circle"
                 size="sm"
@@ -608,7 +609,7 @@ const ActivityLog = () => {
                   openImageViewer(user?.profile_pic_path || undefined)
                 }
               />
-             
+
               <div className="text-xs leading-tight">
                 <b>{user?.name || userName}</b>
                 <p className="text-gray-500">
@@ -635,6 +636,65 @@ const ActivityLog = () => {
   const [filteredColumns, setFilteredColumns] = useState(baseColumns);
   useEffect(() => { setFilteredColumns(baseColumns); }, [baseColumns]);
   const cardClass = "rounded-lg transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg dark:hover:shadow-gray-900/50";
+
+  const formatTimestamp = (dateString: string | null | undefined) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+  };
+
+  const getActionLabel = (actionValue: string) => {
+    return CHANGE_TYPE_OPTIONS.find((o) => o.value === actionValue)?.label || actionValue;
+  };
+
+  const getEntityLabel = (entityValue: string) => {
+    return ENTITY_TYPE_OPTIONS.find((o) => o.value === entityValue)?.label || entityValue;
+  };
+  interface DetailRowProps {
+    label: string;
+    children: React.ReactNode;
+    className?: string;
+  }
+  const DetailRow: React.FC<DetailRowProps> = ({ label, children, className }) => (
+    <div className={`flex py-1 ${className}`}>
+      <span className="font-semibold w-1/3 md:w-1/4 text-gray-500 dark:text-gray-400">{label}:</span>
+      <span className="w-2/3 md:w-3/4 break-words text-gray-800 dark:text-gray-200">
+        {children === null || children === undefined || children === "" ? "-" : children}
+      </span>
+    </div>
+  );
+  interface JsonViewerProps {
+    label: string;
+    data: string | object | null | undefined;
+  }
+  const JsonViewer: React.FC<JsonViewerProps> = ({ label, data }) => {
+    let content: React.ReactNode = "-";
+
+    if (data) {
+      try {
+        const parsedJson = typeof data === 'string' ? JSON.parse(data) : data;
+        if (typeof parsedJson === 'object' && parsedJson !== null) {
+          content = (
+            <pre className="text-xs bg-gray-100 dark:bg-gray-900 p-2 rounded mt-1 whitespace-pre-wrap max-h-60 overflow-auto">
+              {JSON.stringify(parsedJson, null, 2)}
+            </pre>
+          );
+        }
+      } catch {
+        // If it's a string but not JSON, just display it as is.
+        content = String(data);
+      }
+    }
+
+    return (
+      <div className="flex flex-col py-1">
+        <span className="font-semibold text-gray-500 dark:text-gray-400">{label}:</span>
+        {content}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -663,7 +723,40 @@ const ActivityLog = () => {
       {/* --- Dialogs & Drawers --- */}
       <Dialog isOpen={!!viewingItem} onClose={() => setViewingItem(null)} width={700} title={`Log Details (ID: ${viewingItem?.id})`}>
         <div className="mt-4">
-          {viewingItem && (<div className="space-y-3 text-sm">{(Object.keys(viewingItem) as Array<keyof ChangeLogItem>).map((key) => { let label = key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase()); let value: any = viewingItem[key]; if ((key === "timestamp" || key === "updated_at") && value) value = new Date(value).toLocaleString(); else if (key === "user" && value) value = `${(value as User).name} (${(value as User).roles?.[0]?.display_name || "N/A"})`; else if (key === "action") value = CHANGE_TYPE_OPTIONS.find((o) => o.value === value)?.label || value; else if (key === "entity") value = ENTITY_TYPE_OPTIONS.find((o) => o.value === value)?.label || value; else if (key === "details" && value && typeof value === "string") { try { const p = JSON.parse(value); if (typeof p === "object" && p !== null) return (<div key={key} className="flex flex-col"><span className="font-semibold">{label}:</span><pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-60 overflow-auto">{JSON.stringify(p, null, 2) || "-"}</pre></div>); } catch { } } return (<div key={key} className="flex"><span className="font-semibold w-1/3 md:w-1/4">{label}:</span><span className="w-2/3 md:w-3/4 break-words">{value === null || value === undefined || value === "" ? "-" : String(value)}</span></div>); })}</div>)}
+          {viewingItem && (<div className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-lg">
+            <h3 className="text-lg font-bold mb-4 border-b pb-2 text-gray-900 dark:text-white">
+              Log Details
+            </h3>
+            <div className="space-y-2 text-sm">
+              {/* We explicitly render each field for clarity and control */}
+              <DetailRow label="Timestamp">{formatTimestamp(viewingItem.updated_at)}</DetailRow>
+              <DetailRow label="User">
+                {viewingItem.user ? (
+                  <div className="flex items-center gap-2 -my-1">
+  
+                    <span>
+                      {`${viewingItem.user.name} (${viewingItem.user.roles?.[0]?.display_name || 'N/A'})`}
+                    </span>
+                  </div>
+                ) : (
+                  viewingItem.userName || 'System'
+                )}
+              </DetailRow>
+
+              <DetailRow label="Action">{getActionLabel(viewingItem.action)}</DetailRow>
+
+              <DetailRow label="Entity">{getEntityLabel(viewingItem.entity)}</DetailRow>
+
+              <DetailRow label="Description">{viewingItem.description}</DetailRow>
+
+              {/* Use our dedicated JSON viewer for the 'details' field */}
+              <JsonViewer label="Details" data={viewingItem.details} />
+
+            </div>
+
+          
+          </div>)}
+          {/* {viewingItem && (<div className="space-y-3 text-sm">{(Object.keys(viewingItem) as Array<keyof ChangeLogItem>).map((key) => { let label = key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase()); let value: any = viewingItem[key]; if ((key === "timestamp" || key === "updated_at") && value) value = new Date(value).toLocaleString(); else if (key === "user" && value) value = `${(value as User).name} (${(value as User).roles?.[0]?.display_name || "N/A"})`; else if (key === "action") value = CHANGE_TYPE_OPTIONS.find((o) => o.value === value)?.label || value; else if (key === "entity") value = ENTITY_TYPE_OPTIONS.find((o) => o.value === value)?.label || value; else if (key === "details" && value && typeof value === "string") { try { const p = JSON.parse(value); if (typeof p === "object" && p !== null) return (<div key={key} className="flex flex-col"><span className="font-semibold">{label}:</span><pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-60 overflow-auto">{JSON.stringify(p, null, 2) || "-"}</pre></div>); } catch { } } return (<div key={key} className="flex"><span className="font-semibold w-1/3 md:w-1/4">{label}:</span><span className="w-2/3 md:w-3/4 break-words">{value === null || value === undefined || value === "" ? "-" : String(value)}</span></div>); })}</div>)} */}
           <div className="text-right mt-6">
             <Button variant="solid" onClick={() => setViewingItem(null)}>Close</Button>
           </div>
@@ -704,30 +797,30 @@ const ActivityLog = () => {
         </div>
       </Dialog>
 
-         <Dialog
-              isOpen={isImageViewerOpen}
-              onClose={closeImageViewer}
-              onRequestClose={closeImageViewer}
-              shouldCloseOnOverlayClick={true}
-              shouldCloseOnEsc={true}
-              width={600}
-            >
-              <div className="flex justify-center items-center p-4">
-                {imageToView ? (
-                  <img
-                    src={imageToView}
-                    alt="User Profile"
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "80vh",
-                      objectFit: "contain",
-                    }}
-                  />
-                ) : (
-                  <p>No image to display.</p>
-                )}
-              </div>
-            </Dialog>
+      <Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        width={600}
+      >
+        <div className="flex justify-center items-center p-4">
+          {imageToView ? (
+            <img
+              src={imageToView}
+              alt="User Profile"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "80vh",
+                objectFit: "contain",
+              }}
+            />
+          ) : (
+            <p>No image to display.</p>
+          )}
+        </div>
+      </Dialog>
     </>
   );
 };
