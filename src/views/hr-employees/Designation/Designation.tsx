@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
 
 // Icons
 import {
@@ -68,12 +68,11 @@ import classNames from "classnames";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 
 // --- Define Types ---
-// This is the clean, transformed type we will use throughout the component
 export type DesignationItem = {
   id: string | number;
   name: string;
-  department: { id: number; name: string }[]; // Always an array of objects
-  reporting_manager: { id: number; name: string } | null; // Always an object or null
+  department: { id: number; name: string }[];
+  reporting_manager: { id: number; name: string } | null;
   total_employees?: number;
   status?: "Active" | "Inactive";
   created_at?: string;
@@ -191,7 +190,7 @@ function exportDesignationsToCsv(filename: string, rows: DesignationItem[]) {
         CSV_KEYS_DES.map((k) => {
           let cell: any = row[k as keyof DesignationExportItem];
           if (k === 'department' || k === 'reporting_manager') {
-              cell = cell // Already formatted string
+              cell = cell 
           }
           if (cell === null || cell === undefined) cell = "";
           else cell = String(cell).replace(/"/g, '""');
@@ -438,11 +437,16 @@ const DesignationListing = () => {
     query: "",
   });
   const [selectedItems, setSelectedItems] = useState<DesignationItem[]>([]);
+  const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
   
-  const openImageViewer = useCallback((src?: string) => {
+  const openImageViewerModal = useCallback((src?: string) => {
     if (src) {
-        window.open(src, '_blank', 'noopener,noreferrer');
+        setViewerImageSrc(src);
     }
+  }, []);
+
+  const closeImageViewerModal = useCallback(() => {
+      setViewerImageSrc(null);
   }, []);
 
   useEffect(() => {
@@ -466,11 +470,9 @@ const DesignationListing = () => {
     const data = rawDesignationsData?.data;
     if (!Array.isArray(data)) return [];
 
-    // Create a lookup map for departments for efficient searching
     const departmentMap = new Map(departmentOptions.map(opt => [opt.value, opt.label]));
     
     return data.map((item: any): DesignationItem => {
-        // Transform department_id string into an array of department objects
         let departments: { id: number; name: string }[] = [];
         if (typeof item.department_id === 'string') {
             try {
@@ -485,11 +487,9 @@ const DesignationListing = () => {
                 console.error("Failed to parse department_id:", item.department_id, e);
             }
         } else if (Array.isArray(item.department)) {
-             // If data is already in the correct format
              departments = item.department;
         }
 
-        // Transform reporting_manager ID into an object
         const reportingManager = item.reporting_manager_user 
           ? { id: item.reporting_manager_user.id, name: item.reporting_manager_user.name }
           : null;
@@ -501,7 +501,6 @@ const DesignationListing = () => {
         };
     });
   }, [rawDesignationsData?.data, departmentOptions]);
-
 
   const employeeOptions: SelectOption[] = useMemo(
     () =>
@@ -787,7 +786,7 @@ const DesignationListing = () => {
       {
         header: "Department",
         accessorKey: "department",
-        enableSorting: false, // Sorting on an array of objects is complex, disable for now
+        enableSorting: false, 
         cell: (props) => {
           const depts = props.getValue() as DesignationItem['department'];
           if (Array.isArray(depts) && depts.length > 0) {
@@ -802,16 +801,10 @@ const DesignationListing = () => {
       },
       {
         header: "Reporting to",
-        accessorKey: "reporting_manager", // Sort by the object now
+        accessorKey: "reporting_manager",
         enableSorting: true,
         cell: (props) => props.row.original.reporting_manager?.name || "N/A",
       },
-      // {
-      //   header: "Total Employees",
-      //   accessorKey: "total_employees",
-      //   enableSorting: true,
-      //   cell: (props) => props.row.original.total_employees ?? 0,
-      // },
       {
         header: "Status",
         accessorKey: "status",
@@ -836,7 +829,7 @@ const DesignationListing = () => {
                         size="sm" 
                         icon={<TbUserCircle />} 
                         className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                        onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+                        onClick={() => openImageViewerModal(updated_by_user?.profile_pic_path)}
                     />
                     <div>
                         <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
@@ -855,7 +848,7 @@ const DesignationListing = () => {
         cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />),
       },
     ],
-    [openEditDrawer, handleDeleteClick, openImageViewer]
+    [openEditDrawer, handleDeleteClick, openImageViewerModal]
   );
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DesignationItem>[]>(columns);
@@ -937,6 +930,29 @@ const DesignationListing = () => {
         </AdaptiveCard>
       </Container>
       <DesignationsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} disabled={tableIsLoading} />
+      
+      <Dialog 
+          isOpen={!!viewerImageSrc} 
+          onClose={closeImageViewerModal} 
+          onRequestClose={closeImageViewerModal}
+          bodyOpenClassName="overflow-hidden"
+          contentClassName="p-0 bg-transparent"
+      >
+          <div className="relative">
+              <img 
+                  src={viewerImageSrc || ''} 
+                  alt="Profile View" 
+                  className="max-w-[90vw] max-h-[90vh] rounded-lg" 
+              />
+              <button 
+                  onClick={closeImageViewerModal}
+                  className="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-800 hover:bg-gray-200 shadow-lg"
+              >
+                  <TbX size={24} />
+              </button>
+          </div>
+      </Dialog>
+      
       <Drawer title="Add Designation" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="designationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Adding..." : "Save"}</Button></div>}>
         <Form id="designationForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-y-6">{renderDrawerForm(formMethods)}</Form>
       </Drawer>

@@ -1,3 +1,5 @@
+// src/views/your-path/DepartmentListing.tsx
+
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
@@ -16,7 +18,7 @@ import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
 
 // Icons
 import {
@@ -358,7 +360,6 @@ const DepartmentListing = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
@@ -380,12 +381,10 @@ const DepartmentListing = () => {
   const openImageViewerModal = useCallback((src?: string) => {
     if (src) {
         setViewerImageSrc(src);
-        setIsImageViewerOpen(true);
     }
   }, []);
 
   const closeImageViewerModal = useCallback(() => {
-    setIsImageViewerOpen(false);
     setViewerImageSrc(null);
   }, []);
 
@@ -753,27 +752,6 @@ const DepartmentListing = () => {
           );
         },
       },
-      // {
-      //   header: "Total Employee",
-      //   accessorKey: "totalemployee",
-      //   enableSorting: false,
-      //   size: 120,
-      //   cell: (props) => <span>{props.row.original.totalemployee || 0}</span>,
-      // },
-      // {
-      //   header: "Total Job Post",
-      //   accessorKey: "totaljobpost",
-      //   enableSorting: false,
-      //   size: 120,
-      //   cell: (props) => <span>{props.row.original.totaljobpost || 0}</span>,
-      // },
-      // {
-      //   header: "Total Application",
-      //   accessorKey: "totalapplication",
-      //   enableSorting: false,
-      //   size: 130,
-      //   cell: (props) => <span>{props.row.original.totalapplication || 0}</span>,
-      // },
       {
         header: "Updated Info",
         accessorKey: "updated_at",
@@ -831,7 +809,7 @@ const DepartmentListing = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-6 mb-6 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6 gap-6">
             <Tooltip title="Click to show all departments">
                 <div onClick={() => handleCardClick('all')} className="cursor-pointer">
                     <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700 hover:shadow-md">
@@ -880,21 +858,21 @@ const DepartmentListing = () => {
                 <span className="font-semibold text-xs">Total Emp.</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-yellow-200 dark:border-yellow-700 cursor-default">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-yellow-100 dark:bg-yellow-500/20 text-yellow-500 dark:text-yellow-200">
                 <TbBriefcase size={24} />
               </div>
               <div>
-                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.job_posts || 0}</h6>
+                <h6 className="text-yellow-500 dark:text-yellow-200">{departmentsData?.counts?.job_posts || 0}</h6>
                 <span className="font-semibold text-xs">Total JobPost</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border-purple-200 dark:border-purple-700 cursor-default">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-purple-100 dark:bg-purple-500/20 text-purple-500 dark:text-purple-200">
                 <TbFileLike size={24} />
               </div>
               <div>
-                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.applicants || 0}</h6>
+                <h6 className="text-purple-500 dark:text-purple-200">{departmentsData?.counts?.applicants || 0}</h6>
                 <span className="font-semibold text-xs">Total Appl.</span>
               </div>
             </Card>
@@ -931,27 +909,27 @@ const DepartmentListing = () => {
         </AdaptiveCard>
       </Container>
       
-      {/* Image Viewer Modal */}
-      {isImageViewerOpen && (
-          <div 
-              className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-              onClick={closeImageViewerModal}
-          >
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                  <img 
-                      src={viewerImageSrc || ''} 
-                      alt="Profile View" 
-                      className="max-w-[90vw] max-h-[90vh] rounded-lg" 
-                  />
-                  <button 
-                      onClick={closeImageViewerModal}
-                      className="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-800 hover:bg-gray-200 shadow-lg"
-                  >
-                      <TbX size={24} />
-                  </button>
-              </div>
+      <Dialog 
+          isOpen={!!viewerImageSrc} 
+          onClose={closeImageViewerModal} 
+          onRequestClose={closeImageViewerModal}
+          bodyOpenClassName="overflow-hidden"
+          contentClassName="p-0 bg-transparent"
+      >
+          <div className="relative">
+              <img 
+                  src={viewerImageSrc || ''} 
+                  alt="Profile View" 
+                  className="max-w-[90vw] max-h-[90vh] rounded-lg" 
+              />
+              <button 
+                  onClick={closeImageViewerModal}
+                  className="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-800 hover:bg-gray-200 shadow-lg"
+              >
+                  <TbX size={24} />
+              </button>
           </div>
-      )}
+      </Dialog>
 
       {[
         {
