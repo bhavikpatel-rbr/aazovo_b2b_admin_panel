@@ -27,10 +27,10 @@ import {
   DatePicker,
   Dialog,
   Drawer,
-  Form as UiForm,
-  FormItem as UiFormItem,
   Input,
   Select,
+  Form as UiForm,
+  FormItem as UiFormItem,
   Select as UiSelect,
 } from "@/components/ui";
 import Button from "@/components/ui/Button";
@@ -54,7 +54,6 @@ import {
   TbFileAlert,
   TbFileCertificate,
   TbFileCheck,
-  TbFileDislike,
   TbFileExcel,
   TbFilter,
   TbMailShare,
@@ -83,9 +82,17 @@ import {
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  addNotificationAction, addScheduleAction, getaccountdocAction, getAllUsersAction, submitExportReasonAction, addaccountdocAction,
+  addaccountdocAction,
+  addNotificationAction, addScheduleAction,
   editaccountdocAction,
-  getbyIDaccountdocAction
+  getaccountdocAction,
+  getAllUsersAction,
+  getbyIDaccountdocAction,
+  getDocumentTypeAction,
+  getEmployeesListingAction,
+  getFormBuilderAction,
+  getMemberAction,
+  submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -127,11 +134,11 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 // --- [NEW] Zod Schema for Add/Edit Document Form ---
 const addEditDocumentSchema = z.object({
   company_document: z.string({ required_error: "Company Document is required." }).min(1, "Company Document is required."),
-  document_type: z.string({ required_error: "Document Type is required." }).min(1, "Document Type is required."),
+  document_type: z.number({ required_error: "Document Type is required." }).min(1, "Document Type is required."),
   document_number: z.string().min(1, "Document Number is required."),
   invoice_number: z.string().min(1, "Invoice Number is required."),
   form_id: z.number({ required_error: "Token Form is required." }),
-  assigned_to_user_id: z.number({ required_error: "Employee is required." }),
+  employee_id: z.number({ required_error: "Employee is required." }),
   member_id: z.number({ required_error: "Member is required." }),
 });
 type AddEditDocumentFormData = z.infer<typeof addEditDocumentSchema>;
@@ -568,9 +575,43 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
     defaultValues: {
       company_document: undefined, document_type: undefined,
       document_number: '', invoice_number: '',
-      form_id: undefined, assigned_to_user_id: undefined, member_id: undefined,
+      form_id: undefined, employee_id: undefined, member_id: undefined,
     },
   });
+
+
+  const { DocumentTypeData = [], formsData: tokenForm = [], EmployeesList = [], MemberData = [] } = useSelector(masterSelector);
+
+  const DocumentTypeDataOptions = DocumentTypeData?.map((p: any) => ({
+    value: p.id,
+    label: p.name,
+  }));
+
+  const tokenFormDataOptions = tokenForm?.map((p: any) => ({
+    value: p.id,
+    label: p.form_title,
+  }));
+
+  const EmployyDataOptions = EmployeesList.data?.data?.map((p: any) => ({
+    value: p.id,
+    label: p.name,
+  }));
+
+  const MemberDataOptions = MemberData.data?.map((p: any) => ({
+    value: p.id,
+    label: p.name,
+  }));
+
+  console.log(MemberData, "MemberData", MemberDataOptions);
+
+
+
+  useEffect(() => {
+    dispatch(getDocumentTypeAction())
+    dispatch(getFormBuilderAction())
+    dispatch(getEmployeesListingAction())
+    dispatch(getMemberAction())
+  }, [dispatch])
 
   useEffect(() => {
     if (isOpen && editingId) {
@@ -585,7 +626,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
             document_number: data?.data?.document_number,
             invoice_number: data?.data?.invoice_number,
             form_id: data?.data?.form_id,
-            assigned_to_user_id: data?.data?.assigned_to_user_id, // Assuming this field exists
+            employee_id: data?.data?.employee_id, // Assuming this field exists
             member_id: data?.data?.member_id,
           };
           reset(formData);
@@ -605,7 +646,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
         document_number: "",
         invoice_number: "",
         form_id: 0,
-        assigned_to_user_id: 0, // Assuming this field exists
+        employee_id: 0, // Assuming this field exists
         member_id: 0,
       });
     }
@@ -649,9 +690,12 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
           </UiFormItem>
           <UiFormItem label="Document Type" invalid={!!errors.document_type} errorMessage={errors.document_type?.message}>
             <Controller control={control} name="document_type" render={({ field }) => (
-              <Select {...field} placeholder="Select Document Type" options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" }]}
-                value={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" }].find(o => o.value === field.value)}
-                onChange={(opt: any) => field.onChange(opt?.value)} />
+              <Select {...field}
+                placeholder="Select Document Type"
+                options={DocumentTypeDataOptions}
+                value={DocumentTypeDataOptions?.find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
             )} />
           </UiFormItem>
           <div className="md:grid grid-cols-2 gap-3">
@@ -664,23 +708,29 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
           </div>
           <UiFormItem label="Token Form" invalid={!!errors.form_id} errorMessage={errors.form_id?.message}>
             <Controller control={control} name="form_id" render={({ field }) => (
-              <Select {...field} placeholder="Select Form Type" options={formOptions}
-                value={formOptions.find((o: any) => o.value === field.value)}
-                onChange={(opt: any) => field.onChange(opt?.value)} />
+              <Select {...field} placeholder="Select Form Type"
+                options={tokenFormDataOptions}
+                value={tokenFormDataOptions?.find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
             )} />
           </UiFormItem>
-          <UiFormItem label="Employee" invalid={!!errors.assigned_to_user_id} errorMessage={errors.assigned_to_user_id?.message}>
-            <Controller control={control} name="assigned_to_user_id" render={({ field }) => (
-              <Select {...field} placeholder="Select Employee" options={employeeOptions}
-                value={employeeOptions.find((o: any) => o.value === field.value)}
-                onChange={(opt: any) => field.onChange(opt?.value)} />
+          <UiFormItem label="Employee" invalid={!!errors.employee_id} errorMessage={errors.employee_id?.message}>
+            <Controller control={control} name="employee_id" render={({ field }) => (
+              <Select {...field} placeholder="Select Employee"
+                options={EmployyDataOptions}
+                value={EmployyDataOptions?.find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
             )} />
           </UiFormItem>
           <UiFormItem label="Member" invalid={!!errors.member_id} errorMessage={errors.member_id?.message}>
             <Controller control={control} name="member_id" render={({ field }) => (
-              <Select {...field} placeholder="Select Member" options={memberOptions}
-                value={memberOptions.find((o: any) => o.value === field.value)}
-                onChange={(opt: any) => field.onChange(opt?.value)} />
+              <Select {...field} placeholder="Select Member"
+                options={MemberDataOptions}
+                value={MemberDataOptions?.find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
             )} />
           </UiFormItem>
         </UiForm>
