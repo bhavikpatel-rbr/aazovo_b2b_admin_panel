@@ -82,7 +82,11 @@ import {
 
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { addNotificationAction, addScheduleAction, getaccountdocAction, getAllUsersAction, submitExportReasonAction } from "@/reduxtool/master/middleware";
+import {
+  addNotificationAction, addScheduleAction, getaccountdocAction, getAllUsersAction, submitExportReasonAction, addaccountdocAction,
+  editaccountdocAction,
+  getbyIDaccountdocAction
+} from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { shallowEqual, useSelector } from "react-redux";
@@ -101,7 +105,6 @@ type FilterFormData = {
   comp_doc?: SelectOption[];
 };
 
-
 // --- Zod Schema for Schedule Form ---
 const scheduleSchema = z.object({
   event_title: z.string().min(3, "Title must be at least 3 characters."),
@@ -114,120 +117,133 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
-    reason: z
-      .string()
-      .min(10, "Reason for export is required minimum 10 characters.")
-      .max(255, "Reason cannot exceed 255 characters."),
-  });
+  reason: z
+    .string()
+    .min(10, "Reason for export is required minimum 10 characters.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+// --- [NEW] Zod Schema for Add/Edit Document Form ---
+const addEditDocumentSchema = z.object({
+  company_document: z.string({ required_error: "Company Document is required." }).min(1, "Company Document is required."),
+  document_type: z.string({ required_error: "Document Type is required." }).min(1, "Document Type is required."),
+  document_number: z.string().min(1, "Document Number is required."),
+  invoice_number: z.string().min(1, "Invoice Number is required."),
+  form_id: z.number({ required_error: "Token Form is required." }),
+  assigned_to_user_id: z.number({ required_error: "Employee is required." }),
+  member_id: z.number({ required_error: "Member is required." }),
+});
+type AddEditDocumentFormData = z.infer<typeof addEditDocumentSchema>;
+
 
 // --- CSV Exporter Utility ---
 const ACCOUNT_DOC_CSV_HEADERS = [
-    "Lead Number",
-    "Company",
-    "Member",
-    "Status",
-    "Document Form",
-    "Document Number",
-    "Invoice Number",
-    "Assigned To",
-    "Creation Date",
+  "Lead Number",
+  "Company",
+  "Member",
+  "Status",
+  "Document Form",
+  "Document Number",
+  "Invoice Number",
+  "Assigned To",
+  "Creation Date",
 ];
 type AccountDocExportItem = {
-    leadNumber: string;
-    companyName: string;
-    memberName: string;
-    status: string;
-    formType: string;
-    documentNumber: string;
-    invoiceNumber: string;
-    userName: string;
-    createdAtFormatted: string;
+  leadNumber: string;
+  companyName: string;
+  memberName: string;
+  status: string;
+  formType: string;
+  documentNumber: string;
+  invoiceNumber: string;
+  userName: string;
+  createdAtFormatted: string;
 };
 const ACCOUNT_DOC_CSV_KEYS_EXPORT: (keyof AccountDocExportItem)[] = [
-    "leadNumber",
-    "companyName",
-    "memberName",
-    "status",
-    "formType",
-    "documentNumber",
-    "invoiceNumber",
-    "userName",
-    "createdAtFormatted",
+  "leadNumber",
+  "companyName",
+  "memberName",
+  "status",
+  "formType",
+  "documentNumber",
+  "invoiceNumber",
+  "userName",
+  "createdAtFormatted",
 ];
 
 function exportToCsv(filename: string, rows: AccountDocumentListItem[]) {
-    if (!rows || !rows.length) {
-      toast.push(
-        <Notification title="No Data" type="info">
-          Nothing to export.
-        </Notification>
-      );
-      return false;
-    }
-
-    const transformedRows: AccountDocExportItem[] = rows.map((row) => ({
-      leadNumber: row.leadNumber || "N/A",
-      companyName: row.companyName || "N/A",
-      memberName: row.memberName || "N/A",
-      status: row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : "N/A",
-      formType: row.formType || "N/A",
-      documentNumber: row.documentNumber || "N/A",
-      invoiceNumber: row.invoiceNumber || "N/A",
-      userName: row.userName || "N/A",
-      createdAtFormatted: row.createdAt
-        ? dayjs(row.createdAt).format('DD/MM/YYYY HH:mm')
-        : "N/A",
-    }));
-
-    const separator = ",";
-    const csvContent =
-      ACCOUNT_DOC_CSV_HEADERS.join(separator) +
-      "\n" +
-      transformedRows
-        .map((row) => {
-          return ACCOUNT_DOC_CSV_KEYS_EXPORT.map((k) => {
-            let cell: any = row[k as keyof AccountDocExportItem];
-            if (cell === null || cell === undefined) {
-              cell = "";
-            } else {
-              cell = String(cell).replace(/"/g, '""');
-            }
-            if (String(cell).search(/("|,|\n)/g) >= 0) {
-              cell = `"${cell}"`;
-            }
-            return cell;
-          }).join(separator);
-        })
-        .join("\n");
-
-    const blob = new Blob(["\ufeff" + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", filename);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported to {filename}.
-        </Notification>
-      );
-      return true;
-    }
-
+  if (!rows || !rows.length) {
     toast.push(
-      <Notification title="Export Failed" type="danger">
-        Browser does not support this feature.
+      <Notification title="No Data" type="info">
+        Nothing to export.
       </Notification>
     );
     return false;
+  }
+
+  const transformedRows: AccountDocExportItem[] = rows.map((row) => ({
+    leadNumber: row.leadNumber || "N/A",
+    companyName: row.companyName || "N/A",
+    memberName: row.memberName || "N/A",
+    status: row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : "N/A",
+    formType: row.formType || "N/A",
+    documentNumber: row.documentNumber || "N/A",
+    invoiceNumber: row.invoiceNumber || "N/A",
+    userName: row.userName || "N/A",
+    createdAtFormatted: row.createdAt
+      ? dayjs(row.createdAt).format('DD/MM/YYYY HH:mm')
+      : "N/A",
+  }));
+
+  const separator = ",";
+  const csvContent =
+    ACCOUNT_DOC_CSV_HEADERS.join(separator) +
+    "\n" +
+    transformedRows
+      .map((row) => {
+        return ACCOUNT_DOC_CSV_KEYS_EXPORT.map((k) => {
+          let cell: any = row[k as keyof AccountDocExportItem];
+          if (cell === null || cell === undefined) {
+            cell = "";
+          } else {
+            cell = String(cell).replace(/"/g, '""');
+          }
+          if (String(cell).search(/("|,|\n)/g) >= 0) {
+            cell = `"${cell}"`;
+          }
+          return cell;
+        }).join(separator);
+      })
+      .join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(
+      <Notification title="Export Successful" type="success">
+        Data exported to {filename}.
+      </Notification>
+    );
+    return true;
+  }
+
+  toast.push(
+    <Notification title="Export Failed" type="danger">
+      Browser does not support this feature.
+    </Notification>
+  );
+  return false;
 }
 
 const eventTypeOptions = [
@@ -328,12 +344,12 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
 };
 
 // --- Helper Components ---
-const AccountDocumentActionColumn = ({ onDelete, onOpenModal, onView, rowData }: any) => {
+const AccountDocumentActionColumn = ({ onDelete, onOpenModal, onView, onEdit, rowData }: any) => {
   const navigate = useNavigate();
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Fillup Form"><div className="text-xl cursor-pointer" onClick={() => navigate("/fill-up-form")}><TbChecklist /></div></Tooltip>
-      <Tooltip title="Edit"><div className="text-xl"><TbPencil /></div></Tooltip>
+      <Tooltip title="Edit"><div className="text-xl cursor-pointer" onClick={onEdit}><TbPencil /></div></Tooltip>
       <Tooltip title="View"><div className="text-xl cursor-pointer" onClick={onView}><TbEye /></div></Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
         <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
@@ -477,12 +493,11 @@ const ViewDocumentDialog = ({
             <DetailItem label="Company Document" value={company_document} />
             <DetailItem label="Status">
               <Tag
-                className={`${
-                  accountDocumentStatusColor[
-                    (status?.toLowerCase() ??
-                      "pending") as keyof typeof accountDocumentStatusColor
-                  ] || "bg-gray-100"
-                } capitalize px-2 py-1 text-xs`}
+                className={`${accountDocumentStatusColor[
+                  (status?.toLowerCase() ??
+                    "pending") as keyof typeof accountDocumentStatusColor
+                ] || "bg-gray-100"
+                  } capitalize px-2 py-1 text-xs`}
               >
                 {status?.replace(/_/g, " ") || "N/A"}
               </Tag>
@@ -539,6 +554,143 @@ const ViewDocumentDialog = ({
     </Dialog>
   );
 };
+
+// --- [NEW] Add/Edit Document Drawer Component ---
+const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, memberOptions, formOptions }: any) => {
+  const dispatch = useAppDispatch();
+  const title = editingId ? 'Edit Document' : 'Add New Document';
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+
+  const { control, handleSubmit, reset, formState: { errors, isValid } } = useForm<AddEditDocumentFormData>({
+    resolver: zodResolver(addEditDocumentSchema),
+    mode: 'onChange',
+    defaultValues: {
+      company_document: undefined, document_type: undefined,
+      document_number: '', invoice_number: '',
+      form_id: undefined, assigned_to_user_id: undefined, member_id: undefined,
+    },
+  });
+
+  useEffect(() => {
+    if (isOpen && editingId) {
+      setIsLoadingData(true);
+      dispatch(getbyIDaccountdocAction(editingId))
+        .unwrap()
+        .then((data) => {
+          // Map API response to form fields
+          const formData = {
+            company_document: data?.data?.company_document,
+            document_type: data?.data?.document_type,
+            document_number: data?.data?.document_number,
+            invoice_number: data?.data?.invoice_number,
+            form_id: data?.data?.form_id,
+            assigned_to_user_id: data?.data?.assigned_to_user_id, // Assuming this field exists
+            member_id: data?.data?.member_id,
+          };
+          console.log(data, "formData ");
+
+          reset(formData);
+        })
+        .catch((err: any) => {
+          toast.push(<Notification type="danger" title="Fetch Error" children={err?.message || 'Could not fetch document details.'} />);
+          onClose();
+        })
+        .finally(() => {
+          setIsLoadingData(false);
+        });
+    } else if (isOpen && !editingId) {
+      // Reset form for "Add New" mode
+      reset({
+        company_document: "",
+        document_type: "",
+        document_number: "",
+        invoice_number: "",
+        form_id: 0,
+        assigned_to_user_id: 0, // Assuming this field exists
+        member_id: 0,
+      });
+    }
+  }, [isOpen, editingId]);
+
+  const onSave = async (data: AddEditDocumentFormData) => {
+    setIsSubmitting(true);
+    try {
+      if (editingId) {
+        await dispatch(editaccountdocAction({ id: editingId, ...data })).unwrap();
+        toast.push(<Notification type="success" title="Document Updated" />);
+      } else {
+        await dispatch(addaccountdocAction(data)).unwrap();
+        toast.push(<Notification type="success" title="Document Added" />);
+      }
+      dispatch(getaccountdocAction()); // Refresh the main table
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title={editingId ? 'Update Failed' : 'Add Failed'} children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Drawer title={title} width={520} isOpen={isOpen} onClose={onClose} onRequestClose={onClose}
+      footer={
+        <div className="text-right w-full">
+          <Button size="sm" className="mr-2" type="button" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+          <Button size="sm" variant="solid" form="addEditDocumentForm" type="submit" loading={isSubmitting || isLoadingData} disabled={!isValid || isSubmitting || isLoadingData}>Save</Button>
+        </div>
+      }>
+      {isLoadingData ? <div className="p-4 text-center">Loading...</div> : (
+        <UiForm id="addEditDocumentForm" onSubmit={handleSubmit(onSave)}>
+          <UiFormItem label="Company Document" invalid={!!errors.company_document} errorMessage={errors.company_document?.message}>
+            <Controller control={control} name="company_document" render={({ field }) => (
+              <Select {...field} placeholder="Select Company Document" options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" }]}
+                value={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" }].find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </UiFormItem>
+          <UiFormItem label="Document Type" invalid={!!errors.document_type} errorMessage={errors.document_type?.message}>
+            <Controller control={control} name="document_type" render={({ field }) => (
+              <Select {...field} placeholder="Select Document Type" options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" }]}
+                value={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" }].find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </UiFormItem>
+          <div className="md:grid grid-cols-2 gap-3">
+            <UiFormItem label="Document Number" invalid={!!errors.document_number} errorMessage={errors.document_number?.message}>
+              <Controller control={control} name="document_number" render={({ field }) => (<Input type="text" placeholder="Enter Document Number" {...field} />)} />
+            </UiFormItem>
+            <UiFormItem label="Invoice Number" invalid={!!errors.invoice_number} errorMessage={errors.invoice_number?.message}>
+              <Controller control={control} name="invoice_number" render={({ field }) => (<Input type="text" placeholder="Enter Invoice Number" {...field} />)} />
+            </UiFormItem>
+          </div>
+          <UiFormItem label="Token Form" invalid={!!errors.form_id} errorMessage={errors.form_id?.message}>
+            <Controller control={control} name="form_id" render={({ field }) => (
+              <Select {...field} placeholder="Select Form Type" options={formOptions}
+                value={formOptions.find((o: any) => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </UiFormItem>
+          <UiFormItem label="Employee" invalid={!!errors.assigned_to_user_id} errorMessage={errors.assigned_to_user_id?.message}>
+            <Controller control={control} name="assigned_to_user_id" render={({ field }) => (
+              <Select {...field} placeholder="Select Employee" options={employeeOptions}
+                value={employeeOptions.find((o: any) => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </UiFormItem>
+          <UiFormItem label="Member" invalid={!!errors.member_id} errorMessage={errors.member_id?.message}>
+            <Controller control={control} name="member_id" render={({ field }) => (
+              <Select {...field} placeholder="Select Member" options={memberOptions}
+                value={memberOptions.find((o: any) => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </UiFormItem>
+        </UiForm>
+      )}
+    </Drawer>
+  );
+};
+
 
 const AccountDocumentModals = ({ modalState, onClose, getAllUserDataOptions }: any) => {
   const { type, data: document, isOpen } = modalState;
@@ -625,11 +777,12 @@ const AccountDocument = () => {
   const navigate = useNavigate();
   const { getAllUserData = [], getaccountdoc } = useSelector(masterSelector, shallowEqual)
 
-  const [isSubmittingDrawer, setIsSubmittingDrawer] = useState(false);
+  // --- [MODIFIED] State for Add/Edit drawer ---
+  const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState<boolean>(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const filterForm = useForm<FilterFormData>();
-  const addNewDocumentForm = useForm();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
-  const [isAddNewDocumentDrawerOpen, setIsAddNewDocumentDrawerOpen] = useState<boolean>(false);
   const [isProcessingDelete, setIsProcessingDelete] = useState(false);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<AccountDocumentListItem | null>(null);
@@ -652,19 +805,50 @@ const AccountDocument = () => {
   const handleOpenModal = useCallback((type: ModalType, itemData: AccountDocumentListItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
+  // --- [NEW] Handlers for Add/Edit Drawer ---
+  const handleOpenAddDrawer = () => {
+    setEditingId(null);
+    setIsAddEditDrawerOpen(true);
+  };
+
+  const handleOpenEditDrawer = (rowData: AccountDocumentListItem) => {
+    setEditingId(rowData.id);
+    setIsAddEditDrawerOpen(true);
+  };
+
+  const handleDrawerClose = () => {
+    setIsAddEditDrawerOpen(false);
+    setEditingId(null);
+  };
+
+  // --- [NEW] Mock/Placeholder options for the Add/Edit drawer ---
+  // In a real application, these would be fetched from dedicated API endpoints.
+  const memberOptions = useMemo(() => [
+    { label: "Ajay Patel - 703549", value: 703549 },
+    { label: "Krishnan Iyer - 703752", value: 703752 },
+    { label: "Sunita Sharma - 704112", value: 704112 },
+  ], []);
+
+  const formOptions = useMemo(() => [
+    { label: "CRM PI 1.0.2", value: 1 },
+    { label: "Debit Note Form", value: 2 },
+    { label: "Credit Note Form", value: 3 },
+    { label: "CRM PO 1.0.3", value: 4 },
+  ], []);
+
   const handleViewClick = useCallback((item: AccountDocumentListItem) => {
-      const fullItemData = getaccountdoc?.data?.find(
-          (d: any) => String(d.id) === item.id,
+    const fullItemData = getaccountdoc?.data?.find(
+      (d: any) => String(d.id) === item.id,
+    );
+    if (fullItemData) {
+      setModalState({ isOpen: true, type: 'view', data: fullItemData });
+    } else {
+      toast.push(
+        <Notification type="danger" title="Error">
+          Could not find document details.
+        </Notification>
       );
-      if (fullItemData) {
-          setModalState({ isOpen: true, type: 'view', data: fullItemData });
-      } else {
-          toast.push(
-              <Notification type="danger" title="Error">
-                  Could not find document details.
-              </Notification>
-          );
-      }
+    }
   }, [getaccountdoc?.data]);
 
   const filterOptions = useMemo(() => {
@@ -770,7 +954,7 @@ const AccountDocument = () => {
       allFilteredAndSortedData: processedData,
     };
   }, [getaccountdoc, tableData, filterCriteria]);
-  
+
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
       toast.push(
@@ -826,8 +1010,7 @@ const AccountDocument = () => {
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<AccountDocumentListItem>[]) => { const originals = currentRows.map((r) => r.original); if (checked) setSelectedItems((prev) => { const oldIds = new Set(prev.map((i) => i.id)); return [...prev, ...originals.filter((o) => !oldIds.has(o.id))]; }); else { const currentIds = new Set(originals.map((o) => o.id)); setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id))); } }, []);
   const openFilterDrawer = useCallback(() => setIsFilterDrawerOpen(true), []);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const openAddNewDocumentDrawer = useCallback(() => setIsAddNewDocumentDrawerOpen(true), []);
-  const closeAddNewDocumentDrawer = useCallback(() => setIsAddNewDocumentDrawerOpen(false), []);
+
 
   const onApplyFilters = (data: FilterFormData) => {
     const newCriteria = Object.entries(data).reduce((acc, [key, value]) => {
@@ -880,7 +1063,8 @@ const AccountDocument = () => {
     { header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => { const { leadNumber, enquiryType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span>{leadNumber}</span><div><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div></div>); }, },
     { header: "Member / Company", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { const { companyName, memberName, userName, companyDocumentType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><b>{companyName}</b><span>Member: {memberName}</span><span>Assigned To: {userName}</span><div><b>Company Document: </b><span>{companyDocumentType}</span></div></div>); }, },
     { header: "Document Details", size: 220, cell: (props) => { const { documentType, documentNumber, invoiceNumber, formType, createdAt } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type ID: </b><span>{documentType}</span></div><div><b>Doc No: </b><span>{documentNumber}</span></div><div><b>Invoice No: </b><span>{invoiceNumber}</span></div><div><b>Form: </b><span>{formType}</span></div><b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
-    { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} onView={() => handleViewClick(props.row.original)} rowData={props.row.original} />), },
+    // --- [MODIFIED] Actions column now includes onEdit handler ---
+    { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} onEdit={() => handleOpenEditDrawer(props.row.original)} onView={() => handleViewClick(props.row.original)} rowData={props.row.original} />), },
   ], [handleDeleteClick, handleOpenModal, handleViewClick]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<AccountDocumentListItem>[]>(columns);
@@ -913,7 +1097,7 @@ const AccountDocument = () => {
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Account Document</h5><Button variant="solid" icon={<TbPlus />} className="px-5" onClick={() => openAddNewDocumentDrawer()}>Set New Document</Button></div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Account Document</h5><Button variant="solid" icon={<TbPlus />} className="px-5" onClick={handleOpenAddDrawer}>Set New Document</Button></div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
             <Tooltip title="Click to show all documents"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-gray-200 dark:border-gray-600")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-200"><TbBrandGoogleDrive size={24} /></div><div><h6 className="text-gray-700 dark:text-gray-100">{counts.total}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show pending documents"><div onClick={() => handleCardClick('pending')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbFileAlert size={24} /></div><div><h6 className="text-orange-500">{counts.pending}</h6><span className="font-semibold text-xs">Pending</span></div></Card></div></Tooltip>
@@ -968,9 +1152,16 @@ const AccountDocument = () => {
         </UiForm>
       </Drawer>
 
-      <Drawer title="Add New Document" width={520} isOpen={isAddNewDocumentDrawerOpen} onClose={closeAddNewDocumentDrawer} onRequestClose={closeAddNewDocumentDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" type="button">Cancel</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Save</Button></div>}>
-        <UiForm><UiFormItem label={<div>Company Document<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="comp_doc" render={({ field }) => (<Select {...field} placeholder="Select Company Document" options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" },]} />)} /></UiFormItem><UiFormItem label={<div>Document Type<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_type" render={({ field }) => (<Select {...field} placeholder="Select Document Type" options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" },]} />)} /></UiFormItem><div className="md:grid grid-cols-2 gap-3"><UiFormItem label={<div>Document Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_number" render={({ field }) => (<Input type="text" placeholder="Enter Document Number" {...field} />)} /></UiFormItem><UiFormItem label={<div>Invoice Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="invoice_number" render={({ field }) => (<Input type="text" placeholder="Enter Invoice Number" {...field} />)} /></UiFormItem></div><div className="md:grid grid-cols-2 gap-3"><UiFormItem label={<div>Token Form<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="token_form" render={({ field }) => (<Select {...field} placeholder="Select Form Type" options={[{ label: "CRM PI 1.0.2", value: "CRM PI 1.0.2" }, { label: "Debit Note", value: "Debit Note" }, { label: "Credit Note", value: "Credit Note" }, { label: "CRM PO 1.0.3", value: "CRM PO 1.0.3" },]} />)} /></UiFormItem><UiFormItem label={<div>Employee<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="employee" render={({ field }) => (<Select {...field} placeholder="Select Employee" options={[{ label: "Hevin Patel", value: "Hevin Patel" }, { label: "Vinit Chauhan", value: "Vinit Chauhan" },]} />)} /></UiFormItem></div><div className="md:grid grid-cols-2 gap-3 items-center"><UiFormItem label={<div>Member<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="member" render={({ field }) => (<Select {...field} placeholder="Select Member" options={[{ label: "Ajay Patel - 703549", value: "Ajay Patel - 703549", }, { label: "Krishnan Iyer - 703752", value: "Krishnan Iyer - 703752", },]} />)} /></UiFormItem><div className="text-xs mt-4"><b>5039522</b> <br /><span>XYZ Enterprise</span></div></div><span className="text-xs">Member is not associated with any company.</span></UiForm>
-      </Drawer>
+      {/* --- [REPLACED] Old drawer is removed, new AddEditDocumentDrawer is used --- */}
+      <AddEditDocumentDrawer
+        isOpen={isAddEditDrawerOpen}
+        onClose={handleDrawerClose}
+        editingId={editingId}
+        employeeOptions={getAllUserDataOptions}
+        memberOptions={memberOptions}
+        formOptions={formOptions}
+      />
+
       <AccountDocumentModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}

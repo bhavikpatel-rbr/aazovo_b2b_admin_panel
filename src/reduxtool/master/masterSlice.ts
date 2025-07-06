@@ -58,6 +58,7 @@ import {
   getBrandAction,
   getBugReportsAction,
   getBuyerListingsAction,
+  getbyIDaccountdocAction,
   getCategoriesAction,
   getCategoriesData,
   getCompanyAction,
@@ -203,6 +204,7 @@ const INITIAL_STATE: any = {
   allDocuments: [],
   getAllAction: [],
   getaccountdoc: [],
+  accountDocumentById: 0,
 };
 
 const masterSlice = createSlice({
@@ -726,6 +728,10 @@ const masterSlice = createSlice({
     builder.addCase(getaccountdocAction.fulfilled, (state, { payload }) => ({
       ...state,
       getaccountdoc: payload,
+    }));
+     builder.addCase(getbyIDaccountdocAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      accountDocumentById: payload,
     }));
   },
 });
