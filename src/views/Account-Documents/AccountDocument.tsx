@@ -89,11 +89,11 @@ import { shallowEqual, useSelector } from "react-redux";
 
 // --- Define Types ---
 export type SelectOption = { value: any; label: string };
-export type ModalType = 'notification' | 'schedule';
+export type ModalType = 'notification' | 'schedule' | 'view';
 export interface ModalState {
   isOpen: boolean;
   type: ModalType | null;
-  data: AccountDocumentListItem | null;
+  data: any; // Use `any` to accommodate both list item and full detail object
 }
 type FilterFormData = {
   filterStatus?: SelectOption[];
@@ -114,120 +114,120 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
-  reason: z
-    .string()
-    .min(10, "Reason for export is required minimum 10 characters.")
-    .max(255, "Reason cannot exceed 255 characters."),
-});
+    reason: z
+      .string()
+      .min(10, "Reason for export is required minimum 10 characters.")
+      .max(255, "Reason cannot exceed 255 characters."),
+  });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- CSV Exporter Utility ---
 const ACCOUNT_DOC_CSV_HEADERS = [
-  "Lead Number",
-  "Company",
-  "Member",
-  "Status",
-  "Document Form",
-  "Document Number",
-  "Invoice Number",
-  "Assigned To",
-  "Creation Date",
+    "Lead Number",
+    "Company",
+    "Member",
+    "Status",
+    "Document Form",
+    "Document Number",
+    "Invoice Number",
+    "Assigned To",
+    "Creation Date",
 ];
 type AccountDocExportItem = {
-  leadNumber: string;
-  companyName: string;
-  memberName: string;
-  status: string;
-  formType: string;
-  documentNumber: string;
-  invoiceNumber: string;
-  userName: string;
-  createdAtFormatted: string;
+    leadNumber: string;
+    companyName: string;
+    memberName: string;
+    status: string;
+    formType: string;
+    documentNumber: string;
+    invoiceNumber: string;
+    userName: string;
+    createdAtFormatted: string;
 };
 const ACCOUNT_DOC_CSV_KEYS_EXPORT: (keyof AccountDocExportItem)[] = [
-  "leadNumber",
-  "companyName",
-  "memberName",
-  "status",
-  "formType",
-  "documentNumber",
-  "invoiceNumber",
-  "userName",
-  "createdAtFormatted",
+    "leadNumber",
+    "companyName",
+    "memberName",
+    "status",
+    "formType",
+    "documentNumber",
+    "invoiceNumber",
+    "userName",
+    "createdAtFormatted",
 ];
 
 function exportToCsv(filename: string, rows: AccountDocumentListItem[]) {
-  if (!rows || !rows.length) {
+    if (!rows || !rows.length) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
+      return false;
+    }
+
+    const transformedRows: AccountDocExportItem[] = rows.map((row) => ({
+      leadNumber: row.leadNumber || "N/A",
+      companyName: row.companyName || "N/A",
+      memberName: row.memberName || "N/A",
+      status: row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : "N/A",
+      formType: row.formType || "N/A",
+      documentNumber: row.documentNumber || "N/A",
+      invoiceNumber: row.invoiceNumber || "N/A",
+      userName: row.userName || "N/A",
+      createdAtFormatted: row.createdAt
+        ? dayjs(row.createdAt).format('DD/MM/YYYY HH:mm')
+        : "N/A",
+    }));
+
+    const separator = ",";
+    const csvContent =
+      ACCOUNT_DOC_CSV_HEADERS.join(separator) +
+      "\n" +
+      transformedRows
+        .map((row) => {
+          return ACCOUNT_DOC_CSV_KEYS_EXPORT.map((k) => {
+            let cell: any = row[k as keyof AccountDocExportItem];
+            if (cell === null || cell === undefined) {
+              cell = "";
+            } else {
+              cell = String(cell).replace(/"/g, '""');
+            }
+            if (String(cell).search(/("|,|\n)/g) >= 0) {
+              cell = `"${cell}"`;
+            }
+            return cell;
+          }).join(separator);
+        })
+        .join("\n");
+
+    const blob = new Blob(["\ufeff" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.push(
+        <Notification title="Export Successful" type="success">
+          Data exported to {filename}.
+        </Notification>
+      );
+      return true;
+    }
+
     toast.push(
-      <Notification title="No Data" type="info">
-        Nothing to export.
+      <Notification title="Export Failed" type="danger">
+        Browser does not support this feature.
       </Notification>
     );
     return false;
-  }
-
-  const transformedRows: AccountDocExportItem[] = rows.map((row) => ({
-    leadNumber: row.leadNumber || "N/A",
-    companyName: row.companyName || "N/A",
-    memberName: row.memberName || "N/A",
-    status: row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : "N/A",
-    formType: row.formType || "N/A",
-    documentNumber: row.documentNumber || "N/A",
-    invoiceNumber: row.invoiceNumber || "N/A",
-    userName: row.userName || "N/A",
-    createdAtFormatted: row.createdAt
-      ? dayjs(row.createdAt).format('DD/MM/YYYY HH:mm')
-      : "N/A",
-  }));
-
-  const separator = ",";
-  const csvContent =
-    ACCOUNT_DOC_CSV_HEADERS.join(separator) +
-    "\n" +
-    transformedRows
-      .map((row) => {
-        return ACCOUNT_DOC_CSV_KEYS_EXPORT.map((k) => {
-          let cell: any = row[k as keyof AccountDocExportItem];
-          if (cell === null || cell === undefined) {
-            cell = "";
-          } else {
-            cell = String(cell).replace(/"/g, '""');
-          }
-          if (String(cell).search(/("|,|\n)/g) >= 0) {
-            cell = `"${cell}"`;
-          }
-          return cell;
-        }).join(separator);
-      })
-      .join("\n");
-
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const link = document.createElement("a");
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.push(
-      <Notification title="Export Successful" type="success">
-        Data exported to {filename}.
-      </Notification>
-    );
-    return true;
-  }
-
-  toast.push(
-    <Notification title="Export Failed" type="danger">
-      Browser does not support this feature.
-    </Notification>
-  );
-  return false;
 }
 
 const eventTypeOptions = [
@@ -327,14 +327,14 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 
-// --- Helper Components (Abridged for brevity, no changes needed) ---
-const AccountDocumentActionColumn = ({ onDelete, onOpenModal, rowData }: any) => { /* ... no changes ... */
+// --- Helper Components ---
+const AccountDocumentActionColumn = ({ onDelete, onOpenModal, onView, rowData }: any) => {
   const navigate = useNavigate();
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Fillup Form"><div className="text-xl cursor-pointer" onClick={() => navigate("/fill-up-form")}><TbChecklist /></div></Tooltip>
       <Tooltip title="Edit"><div className="text-xl"><TbPencil /></div></Tooltip>
-      <Tooltip title="View"><div className="text-xl"><TbEye /></div></Tooltip>
+      <Tooltip title="View"><div className="text-xl cursor-pointer" onClick={onView}><TbEye /></div></Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
         <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
@@ -348,7 +348,8 @@ const AccountDocumentActionColumn = ({ onDelete, onOpenModal, rowData }: any) =>
     </div>
   );
 };
-const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: any) => { /* ... no changes ... */
+
+const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: any) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
@@ -357,7 +358,8 @@ const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: any
   const onSend = async (formData: NotificationFormData) => { setIsLoading(true); const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(document.id), module_name: 'AccountDocument', }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); } };
   return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Notify about: {document.documentNumber}</h5><UiForm onSubmit={handleSubmit(onSend)}><UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem><UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter((o: any) => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></UiFormItem><UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div></UiForm></Dialog>);
 };
-const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => { /* ... no changes ... */
+
+const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
@@ -408,18 +410,151 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => { /* ... no 
     </Dialog>
   );
 };
-const AccountDocumentModals = ({ modalState, onClose, getAllUserDataOptions }: any) => { /* ... no changes ... */
+
+const DetailItem = ({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value?: React.ReactNode;
+  children?: React.ReactNode;
+}) => {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start mb-3">
+      <span className="font-semibold text-sm text-gray-800 dark:text-gray-100 w-full sm:w-1/3 shrink-0">
+        {label}
+      </span>
+      <div className="text-sm text-gray-600 dark:text-gray-300 mt-1 sm:mt-0 w-full">
+        {children || value || <span className="italic text-gray-400">N/A</span>}
+      </div>
+    </div>
+  );
+};
+
+const ViewDocumentDialog = ({
+  document,
+  onClose,
+}: {
+  document: any;
+  onClose: () => void;
+}) => {
+  if (!document) return null;
+
+  const {
+    status,
+    document_number,
+    invoice_number,
+    company_document,
+    created_at,
+    updated_at,
+    created_by_user,
+    updated_by_user,
+    member,
+    form,
+  } = document;
+
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={800}
+      bodyOpenClassName="overflow-y-hidden"
+    >
+      <div className="flex justify-between items-center mb-4">
+        <h5 className="mb-0">Document Details: {document_number}</h5>
+        <Button size="xs" icon={<TbX />} onClick={onClose} />
+      </div>
+      <div className="max-h-[80vh] overflow-y-auto pr-2 -mr-2">
+        <Card className="mb-4" bodyClass="p-4">
+          <h6 className="font-semibold mb-3 border-b pb-2">
+            Primary Information
+          </h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <DetailItem label="Document Number" value={document_number} />
+            <DetailItem label="Invoice Number" value={invoice_number} />
+            <DetailItem label="Company Document" value={company_document} />
+            <DetailItem label="Status">
+              <Tag
+                className={`${
+                  accountDocumentStatusColor[
+                    (status?.toLowerCase() ??
+                      "pending") as keyof typeof accountDocumentStatusColor
+                  ] || "bg-gray-100"
+                } capitalize px-2 py-1 text-xs`}
+              >
+                {status?.replace(/_/g, " ") || "N/A"}
+              </Tag>
+            </DetailItem>
+          </div>
+        </Card>
+
+        <Card className="mb-4" bodyClass="p-4">
+          <h6 className="font-semibold mb-3 border-b pb-2">Member & Company</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <DetailItem label="Member Name" value={member?.name} />
+            <DetailItem
+              label="Company Name"
+              value={member?.company_actual || member?.company_temp || "N/A"}
+            />
+            <DetailItem label="Member Email" value={member?.email} />
+            <DetailItem
+              label="Member Phone"
+              value={`${member?.number_code || ""} ${member?.number || ""}`.trim()}
+            />
+            <DetailItem label="Interested In" value={member?.interested_in} />
+            <DetailItem label="Business Type" value={member?.business_type} />
+          </div>
+        </Card>
+
+        <Card className="mb-4" bodyClass="p-4">
+          <h6 className="font-semibold mb-3 border-b pb-2">Form Details</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <DetailItem label="Form Name" value={form?.form_name} />
+            <DetailItem label="Form Title" value={form?.form_title} />
+          </div>
+          <DetailItem
+            label="Form Description"
+            value={form?.form_description}
+          />
+        </Card>
+
+        <Card bodyClass="p-4">
+          <h6 className="font-semibold mb-3 border-b pb-2">History</h6>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <DetailItem label="Created By" value={created_by_user?.name} />
+            <DetailItem
+              label="Created At"
+              value={dayjs(created_at).format("DD MMM YYYY, hh:mm A")}
+            />
+            <DetailItem label="Last Updated By" value={updated_by_user?.name} />
+            <DetailItem
+              label="Last Updated At"
+              value={dayjs(updated_at).format("DD MMM YYYY, hh:mm A")}
+            />
+          </div>
+        </Card>
+      </div>
+    </Dialog>
+  );
+};
+
+const AccountDocumentModals = ({ modalState, onClose, getAllUserDataOptions }: any) => {
   const { type, data: document, isOpen } = modalState;
   if (!isOpen || !document) return null;
   switch (type) {
     case 'notification': return <AddNotificationDialog document={document} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
     case 'schedule': return <AddScheduleDialog document={document} onClose={onClose} />;
+    case 'view': return <ViewDocumentDialog document={document} onClose={onClose} />;
     default: return null;
   }
 };
+
 const AccountDocumentSearch = React.forwardRef<any, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
 AccountDocumentSearch.displayName = "AccountDocumentSearch";
-const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: any) => { /* ... no changes ... */
+
+const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: any) => {
   const isColumnVisible = (colId: string) => filteredColumns.some((c: any) => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
@@ -455,6 +590,7 @@ const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClear
     </div>
   )
 };
+
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: any) => {
   const allFilters = [
     ...(filterData.filterStatus || []).map((f: SelectOption) => ({ key: 'filterStatus', label: `Status: ${f.label}`, value: f })),
@@ -476,8 +612,10 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: any) =
     </div>
   );
 };
+
 const AccountDocumentTable = (props: any) => <DataTable {...props} />;
-const AccountDocumentSelectedFooter = ({ selectedItems, onDeleteSelected }: any) => { /* ... no changes ... */
+
+const AccountDocumentSelectedFooter = ({ selectedItems, onDeleteSelected }: any) => {
   const [open, setOpen] = useState(false); if (!selectedItems || selectedItems.length === 0) return null; return (<><StickyFooter className="p-4 border-t" stickyClass="-mx-4 sm:-mx-8"><div className="flex items-center justify-between"><span>{selectedItems.length} selected</span><Button size="sm" color="red-500" onClick={() => setOpen(true)}>Delete Selected</Button></div></StickyFooter><ConfirmDialog isOpen={open} type="danger" onConfirm={() => { onDeleteSelected(); setOpen(false); }} onClose={() => setOpen(false)} title="Delete Selected"><p>Sure?</p></ConfirmDialog></>);
 };
 
@@ -514,7 +652,21 @@ const AccountDocument = () => {
   const handleOpenModal = useCallback((type: ModalType, itemData: AccountDocumentListItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
-  // --- MODIFICATION: Create dynamic filter options from the full dataset ---
+  const handleViewClick = useCallback((item: AccountDocumentListItem) => {
+      const fullItemData = getaccountdoc?.data?.find(
+          (d: any) => String(d.id) === item.id,
+      );
+      if (fullItemData) {
+          setModalState({ isOpen: true, type: 'view', data: fullItemData });
+      } else {
+          toast.push(
+              <Notification type="danger" title="Error">
+                  Could not find document details.
+              </Notification>
+          );
+      }
+  }, [getaccountdoc?.data]);
+
   const filterOptions = useMemo(() => {
     const rawData = getaccountdoc?.data || [];
     const uniqueDocTypes = new Set<string>();
@@ -571,10 +723,11 @@ const AccountDocument = () => {
     }));
 
     let processedData: AccountDocumentListItem[] = cloneDeep(mappedData);
+
     if (tableData.query) {
-      const query = tableData?.query?.toLowerCase()?.trim();
+      const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter((item) =>
-        Object.values(item)?.some((val) => String(val)?.toLowerCase()?.includes(query))
+        Object.values(item).some((val) => String(val).toLowerCase().includes(query))
       );
     }
 
@@ -617,7 +770,7 @@ const AccountDocument = () => {
       allFilteredAndSortedData: processedData,
     };
   }, [getaccountdoc, tableData, filterCriteria]);
-
+  
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
       toast.push(
@@ -637,7 +790,6 @@ const AccountDocument = () => {
     const timestamp = new Date().toISOString().split("T")[0];
     const fileName = `${moduleName}_export_${timestamp}.csv`;
     try {
-      // In a real app, you would dispatch the reason to your backend
       await dispatch(
         submitExportReasonAction({
           reason: data.reason,
@@ -669,7 +821,7 @@ const AccountDocument = () => {
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
   const handlePageSizeChange = useCallback((value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
   const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
-  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query:query?.target?.value, pageIndex: 1 }), [handleSetTableData]);
+  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query.target.value, pageIndex: 1 }), [handleSetTableData]);
   const handleRowSelect = useCallback((checked: boolean, row: AccountDocumentListItem) => setSelectedItems((prev) => checked ? prev.some((i) => i.id === row.id) ? prev : [...prev, row] : prev.filter((i) => i.id !== row.id)), []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<AccountDocumentListItem>[]) => { const originals = currentRows.map((r) => r.original); if (checked) setSelectedItems((prev) => { const oldIds = new Set(prev.map((i) => i.id)); return [...prev, ...originals.filter((o) => !oldIds.has(o.id))]; }); else { const currentIds = new Set(originals.map((o) => o.id)); setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id))); } }, []);
   const openFilterDrawer = useCallback(() => setIsFilterDrawerOpen(true), []);
@@ -728,8 +880,8 @@ const AccountDocument = () => {
     { header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => { const { leadNumber, enquiryType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span>{leadNumber}</span><div><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div></div>); }, },
     { header: "Member / Company", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { const { companyName, memberName, userName, companyDocumentType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><b>{companyName}</b><span>Member: {memberName}</span><span>Assigned To: {userName}</span><div><b>Company Document: </b><span>{companyDocumentType}</span></div></div>); }, },
     { header: "Document Details", size: 220, cell: (props) => { const { documentType, documentNumber, invoiceNumber, formType, createdAt } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type ID: </b><span>{documentType}</span></div><div><b>Doc No: </b><span>{documentNumber}</span></div><div><b>Invoice No: </b><span>{invoiceNumber}</span></div><div><b>Form: </b><span>{formType}</span></div><b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
-    { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original} />), },
-  ], [handleDeleteClick, handleOpenModal]);
+    { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} onView={() => handleViewClick(props.row.original)} rowData={props.row.original} />), },
+  ], [handleDeleteClick, handleOpenModal, handleViewClick]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<AccountDocumentListItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -778,7 +930,6 @@ const AccountDocument = () => {
       <AccountDocumentSelectedFooter selectedItems={selectedItems} />
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete" onClose={() => setSingleDeleteConfirmOpen(false)} loading={isProcessingDelete} onCancel={() => setSingleDeleteConfirmOpen(false)}><p>Delete <strong>{itemToDelete?.documentNumber}</strong>?</p></ConfirmDialog>
 
-      {/* --- MODIFICATION: Updated the filter drawer to use dynamic options --- */}
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
