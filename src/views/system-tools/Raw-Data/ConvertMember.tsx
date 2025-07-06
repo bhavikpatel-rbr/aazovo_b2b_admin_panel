@@ -3,12 +3,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Control,
-    Controller,
-    FieldErrors,
-    useFieldArray,
-    useForm,
-    UseFormReturn,
+  Control,
+  Controller,
+  FieldErrors,
+  useFieldArray,
+  useForm,
+  UseFormReturn,
 } from "react-hook-form";
 import { shallowEqual, useSelector } from "react-redux";
 import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -18,11 +18,11 @@ import { z } from "zod";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import {
-    Card,
-    Form,
-    FormItem,
-    Input,
-    Radio,
+  Card,
+  Form,
+  FormItem,
+  Input,
+  Radio,
 } from "@/components/ui";
 import Button from "@/components/ui/Button";
 import Checkbox from "@/components/ui/Checkbox";
@@ -38,17 +38,17 @@ import { TbTrash } from "react-icons/tb";
 // Redux Actions & Selectors
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-    addMemberAction,
-    editMemberAction,
-    getAllProductsAction,
-    getBrandAction,
-    getCategoriesAction,
-    getCompanyAction,
-    getContinentsAction,
-    getCountriesAction,
-    getEmployeesAction,
-    getMemberByIdAction,
-    getMemberTypeAction,
+  addMemberAction,
+  editMemberAction,
+  getAllProductsAction,
+  getBrandAction,
+  getCategoriesAction,
+  getCompanyAction,
+  getContinentsAction,
+  getCountriesAction,
+  getEmployeesAction,
+  getMemberByIdAction,
+  getMemberTypeAction,
 } from "@/reduxtool/master/middleware";
 
 // Types
@@ -56,110 +56,110 @@ import type { RowDataItem } from '@/views/raw-data/RowDataListing'; // Adjust th
 
 // --- Type Definitions (Member Form) ---
 export interface MemberFormSchema {
-    id?: string | number;
-    rowdata_id?: string | number; // Assuming this is the same as i
-    name?: string;
-    email?: string;
-    password?: string;
-    contact_country_code?: { label: string; value: string };
-    mobile_no?: string;
-    city?: string;
-    state?: string;
-    country_id?: { label: string; value: string };
-    continent_id?: { label: string; value: string };
-    pincode?: string;
-    status?: { label: string; value: string };
-    company_name?: string;
-    company_name_temp?: string;
-    address?: string;
-    whatsapp_number?: string;
-    whatsapp_country_code?: { label: string; value: string };
-    alternate_contact_country_code?: { label: string; value: string };
-    alternate_contact_number?: string;
-    landline_number?: string;
-    fax_number?: string;
-    alternate_email?: string;
-    botim_id?: string;
-    skype_id?: string;
-    we_chat?: string;
-    website?: string;
-    business_type?: { label: string; value: string };
-    product_upload_permission?: boolean;
-    wall_enquiry_permission?: boolean;
-    enquiry_permission?: boolean;
-    trade_inquiry_allowed?: { label: string; value: string };
-    membership_plan_text?: string;
-    upgrade_plan?: { label: string; value: string };
-    favourite_product_id?: Array<{ label: string; value: string }>;
-    business_opportunity?: { label: string; value: string };
-    member_grade?: { label: string; value: string };
-    relationship_manager?: { label: string; value: string };
-    remarks?: string;
-    linkedin_profile?: string;
-    facebook_profile?: string;
-    instagram_handle?: string;
-    is_blacklisted?: boolean;
-    dealing_in_bulk?: "Yes" | "No";
-    interested_in?: { label: string; value: string };
-    member_profiles?: {
-        db_id?: number;
-        member_type?: { label: string; value: string | number };
-        brands?: Array<{ label: string; value: string | number }>;
-        categories?: Array<{ label: string; value: string | number }>;
-        sub_categories?: Array<{ label: string; value: string | number }>;
-    }[];
+  id?: string | number;
+  rowdata_id?: string | number;
+  name?: string;
+  email?: string;
+  password?: string;
+  contact_country_code?: { label: string; value: string };
+  mobile_no?: string;
+  city?: string;
+  state?: string;
+  country_id?: { label: string; value: string };
+  continent_id?: { label: string; value: string };
+  pincode?: string;
+  status?: { label: string; value: string };
+  company_name?: string;
+  company_name_temp?: string;
+  address?: string;
+  whatsapp_number?: string;
+  whatsapp_country_code?: { label: string; value: string };
+  alternate_contact_country_code?: { label: string; value: string };
+  alternate_contact_number?: string;
+  landline_number?: string;
+  fax_number?: string;
+  alternate_email?: string;
+  botim_id?: string;
+  skype_id?: string;
+  we_chat?: string;
+  website?: string;
+  business_type?: { label: string; value: string };
+  product_upload_permission?: boolean;
+  wall_enquiry_permission?: boolean;
+  enquiry_permission?: boolean;
+  trade_inquiry_allowed?: { label: string; value: string };
+  membership_plan_text?: string;
+  upgrade_plan?: { label: string; value: string };
+  favourite_product_id?: Array<{ label: string; value: string }>;
+  business_opportunity?: { label: string; value: string };
+  member_grade?: { label: string; value: string };
+  relationship_manager?: { label: string; value: string };
+  remarks?: string;
+  linkedin_profile?: string;
+  facebook_profile?: string;
+  instagram_handle?: string;
+  is_blacklisted?: boolean;
+  dealing_in_bulk?: "Yes" | "No";
+  interested_in?: { label: string; value: string };
+  member_profiles?: {
+    db_id?: number;
+    member_type?: { label: string; value: string | number };
+    brands?: Array<{ label: string; value: string | number }>;
+    categories?: Array<{ label:string; value: string | number }>;
+    sub_categories?: Array<{ label: string; value: string | number }>;
+  }[];
 }
 export interface FormSectionBaseProps {
-    control: Control<MemberFormSchema>;
-    errors: FieldErrors<MemberFormSchema>;
-    formMethods: UseFormReturn<MemberFormSchema>;
-    isEditMode: boolean;
+  control: Control<MemberFormSchema>;
+  errors: FieldErrors<MemberFormSchema>;
+  formMethods: UseFormReturn<MemberFormSchema>;
+  isEditMode: boolean;
 }
 interface ApiSingleCustomerItem {
-    rowdata_id: any;
-    id: number;
-    name?: string;
-    email?: string;
-    number?: string;
-    number_code?: string;
-    company_temp?: string;
-    company_actual?: string;
-    status?: string;
-    continent?: { id: number; name: string };
-    country?: { id: number; name: string };
-    state?: string;
-    city?: string;
-    pincode?: string;
-    address?: string;
-    whatsApp_no?: string;
-    alternate_contact_number?: string;
-    alternate_contact_number_code?: string;
-    landline_number?: string;
-    fax_number?: string;
-    alternate_email?: string;
-    botim_id?: string;
-    skype_id?: string;
-    wechat_id?: string;
-    linkedIn_profile?: string;
-    facebook_profile?: string;
-    instagram_handle?: string;
-    website?: string;
-    business_opportunity?: string;
-    business_type?: string;
-    favourite_products_list?: { id: number, name: string }[];
-    interested_in?: string;
-    member_grade?: string;
-    relationship_manager?: { id: number, name: string };
-    dealing_in_bulk?: "Yes" | "No";
-    remarks?: string;
-    dynamic_member_profiles?: any[];
-    product_upload_permission?: "0" | "1";
-    wall_enquiry_permission?: "0" | "1";
-    enquiry_permission?: "0" | "1";
-    trade_inquiry_allowed?: "0" | "1";
-    membership_plan_current?: string;
-    upgrade_your_plan?: string;
-    is_blacklisted?: "0" | "1";
+  id: number;
+  rowdata_id?: any;
+  name?: string;
+  email?: string;
+  number?: string;
+  number_code?: string;
+  company_temp?: string;
+  company_actual?: string;
+  status?: string;
+  continent?: { id: number; name: string };
+  country?: { id: number; name: string };
+  state?: string;
+  city?: string;
+  pincode?: string;
+  address?: string;
+  whatsApp_no?: string;
+  alternate_contact_number?: string;
+  alternate_contact_number_code?: string;
+  landline_number?: string;
+  fax_number?: string;
+  alternate_email?: string;
+  botim_id?: string;
+  skype_id?: string;
+  wechat_id?: string;
+  linkedIn_profile?: string;
+  facebook_profile?: string;
+  instagram_handle?: string;
+  website?: string;
+  business_opportunity?: string;
+  business_type?: string;
+  favourite_products_list?: { id: number, name: string }[];
+  interested_in?: string;
+  member_grade?: string;
+  relationship_manager?: { id: number, name: string };
+  dealing_in_bulk?: "Yes" | "No";
+  remarks?: string;
+  dynamic_member_profiles?: any[];
+  product_upload_permission?: "0" | "1";
+  wall_enquiry_permission?: "0" | "1";
+  enquiry_permission?: "0" | "1";
+  trade_inquiry_allowed?: "0" | "1";
+  membership_plan_current?: string;
+  upgrade_your_plan?: string;
+  is_blacklisted?: "0" | "1";
 }
 
 // --- Helper Functions ---
@@ -168,8 +168,8 @@ const transformApiToFormSchema = (formData: ApiSingleCustomerItem): Partial<Memb
     const createCountryCodeOption = (code: string | undefined | null) => code ? { value: code, label: code } : undefined;
 
     return {
-        id: 0,
-        rowdata_id: formData.rowdata_id, // Assuming rowdata_id is the same as id
+        id: formData.id,
+        rowdata_id: formData.rowdata_id,
         name: formData.name || "",
         email: formData.email || "",
         mobile_no: formData.number || "",
@@ -234,7 +234,7 @@ const preparePayloadForApi = (formData: Partial<MemberFormSchema>, isEditMode: b
     const getValue = (field: any) => (typeof field === 'object' && field !== null && 'value' in field ? field.value : field);
 
     const payload: any = {
-        id: 0,
+        id: isEditMode ? formData.id : 0,
         rowdata_id: formData.rowdata_id,
         name: formData.name || "",
         number: formData.mobile_no || "",
@@ -344,7 +344,7 @@ const PersonalDetailsComponent = ({ control, errors }: FormSectionBaseProps) => 
                 <FormItem label={<div>State<span className="text-red-500"> * </span></div>} invalid={!!errors.state} errorMessage={errors.state?.message}>
                     <Controller name="state" control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
                 </FormItem>
-                <FormItem label="City">
+                <FormItem label={ <div>City<span className="text-red-500"> * </span></div>} invalid={!!errors.city} errorMessage={errors.city?.message}>
                     <Controller name="city" control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
                 </FormItem>
                 <FormItem label="Pincode">
@@ -410,7 +410,7 @@ const MembershipPlanComponent = ({ control }: FormSectionBaseProps) => (
         </div>
     </Card>
 );
-const MemberProfileComponent = ({ control }: FormSectionBaseProps) => {
+const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     const { BrandData = [], CategoriesData = [], Employees = [], AllProducts = [], MemberTypeData = [] } = useSelector(masterSelector, shallowEqual);
     const { fields, append, remove } = useFieldArray({ control, name: "member_profiles" });
     const brandOptions = BrandData.map((b: any) => ({ value: String(b.id), label: b.name }));
@@ -442,7 +442,9 @@ const MemberProfileComponent = ({ control }: FormSectionBaseProps) => {
                     <Card key={item.id} className="border rounded-md" bodyClass="relative">
                         <div className="absolute top-2 right-2 z-10"><Button type="button" variant="plain" size="sm" className="text-xs" icon={<TbTrash size={16} />} onClick={() => remove(index)}>Remove</Button></div>
                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
-                            <FormItem label={`Member Type ${index + 1}`}><Controller name={`member_profiles.${index}.member_type`} control={control} render={({ field }) => (<Select {...field} placeholder="Select Member Type" options={memberTypeOptions} isClearable />)} /></FormItem>
+                            <FormItem label={<div>Member Type {index + 1}<span className="text-red-500"> *</span></div>} invalid={!!errors.member_profiles?.[index]?.member_type} errorMessage={(errors.member_profiles?.[index]?.member_type as any)?.message}>
+                                <Controller name={`member_profiles.${index}.member_type`} control={control} render={({ field }) => (<Select {...field} placeholder="Select Member Type" options={memberTypeOptions} isClearable />)} />
+                            </FormItem>
                             <FormItem label="Select Brand(s)"><Controller name={`member_profiles.${index}.brands`} control={control} render={({ field }) => (<Select {...field} isMulti placeholder="Select brands" options={brandOptions} isClearable />)} /></FormItem>
                             <FormItem label="Select Category(s)"><Controller name={`member_profiles.${index}.categories`} control={control} render={({ field }) => (<Select {...field} isMulti placeholder="Select categories" options={categoryOptions} isClearable />)} /></FormItem>
                         </div>
@@ -466,6 +468,10 @@ const createMemberSchema = (isEditMode: boolean) => {
         country_id: z.object({ value: z.string().min(1), label: z.string() }, { required_error: "Country is required." }),
         continent_id: z.object({ value: z.string().min(1), label: z.string() }, { required_error: "Continent is required." }),
         state: z.string().trim().min(1, "State is required."),
+        city: z.string().trim().min(1, "City is required."),
+        member_profiles: z.array(z.object({
+            member_type: z.object({ value: z.union([z.string(), z.number()]).refine(v => v !== '', 'Member Type is required'), label: z.string() }, { required_error: "Member Type is required." })
+        })).min(1, "At least one member profile is required."),
     });
 
     const withPassword = isEditMode
@@ -499,7 +505,7 @@ const NavigatorComponent = ({ activeSection, onNavigate }: { activeSection: stri
 const MemberFormComponent = ({ onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting }: { onFormSubmit: (values: MemberFormSchema, formMethods: UseFormReturn<MemberFormSchema>) => void; defaultValues: Partial<MemberFormSchema>; isEditMode: boolean; onDiscard?: () => void; isSubmitting?: boolean; }) => {
     const [activeSection, setActiveSection] = useState<string>(memberNavigationList[0].link);
     const memberSchema = useMemo(() => createMemberSchema(isEditMode), [isEditMode]);
-    const formMethods = useForm<MemberFormSchema>({ defaultValues, resolver: zodResolver(memberSchema) });
+    const formMethods = useForm<MemberFormSchema>({ defaultValues, resolver: zodResolver(memberSchema), mode: 'onChange' });
     const { handleSubmit, reset, formState: { errors }, control } = formMethods;
 
     useEffect(() => { if (defaultValues) { reset(defaultValues); } }, [defaultValues, reset]);
@@ -594,6 +600,7 @@ const MemberCreate = () => {
         }
 
         return {
+            rowdata_id: data.id, // Capture the raw data ID
             name: data.name,
             email: data.email || '',
             mobile_no: localNumber,
