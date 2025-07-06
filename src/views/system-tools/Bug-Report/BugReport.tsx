@@ -11,7 +11,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { shallowEqual, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
 import { z } from "zod";
 
 dayjs.extend(isBetween);
@@ -88,6 +87,7 @@ import {
   getAllUsersAction,
   getBugReportsAction,
   submitExportReasonAction,
+  addTaskAction, // --- MODIFIED: Import addTaskAction ---
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 
@@ -154,6 +154,22 @@ const scheduleSchema = z.object({
   notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
+// --- MODIFIED: Add Task schema and type ---
+const taskValidationSchema = z.object({
+  task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+  assign_to: z.array(z.string()).min(1, 'At least one assignee is required.'),
+  priority: z.string().min(1, 'Please select a priority.'),
+  due_date: z.date().nullable().optional(),
+  description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskValidationSchema>;
+
+const taskPriorityOptions: SelectOption[] = [
+    { value: 'Low', label: 'Low' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'High', label: 'High' },
+];
 
 const eventTypeOptions: SelectOption[] = [
   // Customer Engagement & Sales
@@ -232,6 +248,7 @@ const eventTypeOptions: SelectOption[] = [
   { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
   { value: 'SendQuote', label: 'Send Quote/Estimate' },
 ]
+
 // --- Helper Functions and Reusable Components ---
 function exportBugReportsToCsv(filename: string, rows: BugReportItem[]) {
   if (!rows || rows.length === 0) {
@@ -273,16 +290,33 @@ const itemPath = (filename: any) => {
   return filename ? `${baseUrl}/storage/attachments/bug_reports/${filename}` : "#";
 };
 
-const ActionColumn = ({ onEdit, onViewDetail, onAddNotification, onAddSchedule }: { onEdit: () => void; onViewDetail: () => void; onAddNotification: () => void; onAddSchedule: () => void; }) => (
+// --- MODIFIED: Added more actions ---
+const ActionColumn = ({ 
+    onEdit, 
+    onViewDetail, 
+    onAddNotification, 
+    onAddSchedule,
+    onSendEmail,
+    onSendWhatsapp,
+    onAssignToTask
+}: { 
+    onEdit: () => void; 
+    onViewDetail: () => void; 
+    onAddNotification: () => void; 
+    onAddSchedule: () => void;
+    onSendEmail: () => void;
+    onSendWhatsapp: () => void;
+    onAssignToTask: () => void;
+}) => (
   <div className="flex items-center justify-center text-center">
     <Tooltip title="View Details"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip>
     <Tooltip title="Edit Report"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip>
     <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-      <Dropdown.Item className="flex items-center gap-2" onClick={onAddNotification}><TbBell size={18} /> <span className="text-xs">Add Notification </span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2"><Link to="/task/task-list/create" className="flex w-full items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Link></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2" onClick={onAddSchedule}><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule </span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onAddNotification}><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onAssignToTask}><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onSendEmail}><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onSendWhatsapp}><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onAddSchedule}><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
     </Dropdown>
   </div>
 );
@@ -441,12 +475,87 @@ const BugReportScheduleDialog: React.FC<{ bugReport: BugReportItem; onClose: () 
   );
 };
 
+// --- MODIFIED: New Dialog component for Assigning Task ---
+const AssignTaskDialog = ({ 
+    isOpen, 
+    onClose, 
+    bugReport, 
+    onSubmit, 
+    employeeOptions,
+    isLoading,
+}: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    bugReport: BugReportItem | null;
+    onSubmit: (data: TaskFormData) => void;
+    employeeOptions: SelectOption[];
+    isLoading: boolean;
+}) => {
+    const { control, handleSubmit, reset, formState: { errors, isValid } } = useForm<TaskFormData>({
+        resolver: zodResolver(taskValidationSchema),
+        mode: 'onChange',
+    });
+
+    useEffect(() => {
+        if (bugReport) {
+            reset({
+                task_title: `Resolve Bug Report from ${bugReport.name} (ID: ${bugReport.id})`,
+                assign_to: [],
+                priority: 'Medium',
+                due_date: null,
+                description: bugReport.report,
+            });
+        }
+    }, [bugReport, reset]);
+
+    const handleDialogClose = () => {
+        reset();
+        onClose();
+    };
+
+    if (!bugReport) return null;
+
+    return (
+        <Dialog isOpen={isOpen} onClose={handleDialogClose} onRequestClose={handleDialogClose}>
+            <h5 className="mb-4">Assign Task for Bug Report</h5>
+            <Form onSubmit={handleSubmit(onSubmit)}>
+                <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
+                    <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
+                </FormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
+                        <Controller name="assign_to" control={control} render={({ field }) => (
+                            <Select isMulti placeholder="Select User(s)" options={employeeOptions} value={employeeOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />
+                        )} />
+                    </FormItem>
+                    <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
+                        <Controller name="priority" control={control} render={({ field }) => (
+                            <Select placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />
+                        )} />
+                    </FormItem>
+                </div>
+                <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
+                    <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} />
+                </FormItem>
+                <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
+                    <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={handleDialogClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
+};
+
+
 // --- Main Component: BugReportListing ---
 const BugReportListing = () => {
   const dispatch = useAppDispatch();
   const { bugReportsData: rawBugReportsData = { data: [], counts: {} }, status: masterLoadingStatus = "idle", getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
 
-  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: b.name })) : [], [getAllUserData]);
 
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -470,6 +579,9 @@ const BugReportListing = () => {
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<BugReportItem>[]>([]);
+  // --- MODIFIED: Add state for task assignment ---
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskTargetItem, setTaskTargetItem] = useState<BugReportItem | null>(null);
 
   useEffect(() => {
     dispatch(getAllUsersAction());
@@ -496,6 +608,48 @@ const BugReportListing = () => {
   const closeNotificationModal = useCallback(() => { setNotificationItem(null); setIsNotificationModalOpen(false); }, []);
   const openScheduleModal = useCallback((item: BugReportItem) => { setScheduleItem(item); setIsScheduleModalOpen(true); }, []);
   const closeScheduleModal = useCallback(() => { setScheduleItem(null); setIsScheduleModalOpen(false); }, []);
+
+  // --- MODIFIED: Add handlers for new actions ---
+  const openAssignToTaskModal = useCallback((item: BugReportItem) => {
+    setTaskTargetItem(item);
+    setIsTaskModalOpen(true);
+  }, []);
+  const closeAssignToTaskModal = useCallback(() => {
+    setTaskTargetItem(null);
+    setIsTaskModalOpen(false);
+  }, []);
+
+  const handleSendEmail = useCallback((item: BugReportItem) => {
+      const subject = `Regarding Bug Report ID: ${item.id}`;
+      const body = `Hello,\n\nThis email is regarding the following bug report:\n\n- ID: ${item.id}\n- Reported By: ${item.name} (${item.email})\n- Reported On: ${dayjs(item.created_at).format("DD MMM YYYY, h:mm A")}\n- Severity: ${item.severity}\n- Status: ${item.status}\n\nReport Details:\n${item.report}\n\nRegards,\nThe Support Team`;
+      window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  }, []);
+
+  const handleSendWhatsapp = useCallback((item: BugReportItem) => {
+      const message = `*Bug Report Details*\n\n*ID:* ${item.id}\n*Reported By:* ${item.name} (${item.email})\n*Reported On:* ${dayjs(item.created_at).format("DD MMM YYYY, h:mm A")}\n*Severity:* ${item.severity}\n*Status:* ${item.status}\n\n*Report:*\n${item.report}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  }, []);
+
+  const handleConfirmAddTask = async (data: TaskFormData) => {
+    if (!taskTargetItem) return;
+    setIsSubmitting(true);
+    try {
+        const payload = {
+            ...data,
+            due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
+            module_id: String(taskTargetItem.id),
+            module_name: 'BugReport',
+        };
+        await dispatch(addTaskAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Task Assigned Successfully!" />);
+        closeAssignToTaskModal();
+    } catch (error: any) {
+        toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
 
   const onSubmitHandler = async (data: BugReportFormData) => {
     setIsSubmitting(true);
@@ -646,8 +800,16 @@ const BugReportListing = () => {
     { header: "Reported On", accessorKey: "created_at", size: 200, enableSorting: true, cell: (props) => (<div className="text-xs">{dayjs(props.getValue<string>()).format("DD MMM YYYY, h:mm A")}</div>) },
     { header: "Severity", accessorKey: "severity", size: 120, cell: (props) => (<span>{props.row.original.severity}</span>) },
     { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => { const statusVal = props.getValue<BugReportStatusApi>(); return (<Tag className={classNames("capitalize whitespace-nowrap min-w-[60px] text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || "N/A"}</Tag>); } },
-    { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewModal(props.row.original)} onAddNotification={() => openNotificationModal(props.row.original)} onAddSchedule={() => openScheduleModal(props.row.original)} />) },
-  ], [openEditDrawer, openViewModal, openNotificationModal, openScheduleModal]);
+    { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => (<ActionColumn 
+        onEdit={() => openEditDrawer(props.row.original)} 
+        onViewDetail={() => openViewModal(props.row.original)} 
+        onAddNotification={() => openNotificationModal(props.row.original)} 
+        onAddSchedule={() => openScheduleModal(props.row.original)}
+        onSendEmail={() => handleSendEmail(props.row.original)}
+        onSendWhatsapp={() => handleSendWhatsapp(props.row.original)}
+        onAssignToTask={() => openAssignToTaskModal(props.row.original)}
+    />) },
+  ], [openEditDrawer, openViewModal, openNotificationModal, openScheduleModal, handleSendEmail, handleSendWhatsapp, openAssignToTaskModal]);
 
   useEffect(() => { setFilteredColumns(baseColumns) }, [baseColumns]);
 
@@ -663,7 +825,7 @@ const BugReportListing = () => {
         <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" value={BUG_REPORT_STATUS_OPTIONS.find((opt) => opt.value === field.value)} options={BUG_REPORT_STATUS_OPTIONS} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
       <FormItem label="Report Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.report} errorMessage={currentFormMethods.formState.errors.report?.message}><Controller name="report" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} rows={6} prefix={<TbFileDescription className="text-lg mt-2.5" />} placeholder="Please describe the bug in detail..." />)} /></FormItem>
-      <FormItem label="Attachment" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.attachment} errorMessage={currentFormMethods.formState.errors.attachment?.message as string}><Controller name="attachment" control={currentFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); }} prefix={<TbPaperclip className="text-lg" />} />)} />{editingItem?.attachment && !selectedFile && (<div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Current:{" "}<a href={itemPath(editingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{editingItem.attachment}</a></div>)}</FormItem>
+      <FormItem label="Attachment" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.attachment} errorMessage={currentFormMethods.formState.errors.attachment?.message as string}><Controller name="attachment" control={currentFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); }} prefix={<TbPaperclip className="text-lg" />} />)} />{editingItem?.attachment && !selectedFile && (<div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Current:{" "}<a href={editingItem.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{editingItem.attachment}</a></div>)}</FormItem>
     </div>
   );
 
@@ -674,7 +836,7 @@ const BugReportListing = () => {
       <div className="flex items-start"><TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Email</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.email}</p></div></div>
       {item.mobile_no && (<div className="flex items-start"><TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Mobile No.</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.mobile_no}</p></div></div>)}
       <div className="flex items-start"><TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Report Description</h6><p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">{item.report}</p></div></div>
-      {item.attachment && (<div className="flex items-start"><TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Attachment</h6><a href={itemPath(item.attachment)} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline break-all text-base">{item.attachment}</a></div></div>)}
+      {item.attachment && (<div className="flex items-start"><TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Attachment</h6><a href={item.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline break-all text-base">{item.attachment}</a></div></div>)}
       {item.created_at && (<div className="flex items-start"><TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reported On</h6><p className="text-gray-800 dark:text-gray-100 text-base">{new Date(item.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p></div></div>)}
     </div>
   );
@@ -716,6 +878,15 @@ const BugReportListing = () => {
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Exporting Bug Reports" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}><Form id="exportBugReportsReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2"><FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
       {isNotificationModalOpen && notificationItem && (<BugReportNotificationDialog bugReport={notificationItem} onClose={closeNotificationModal} getAllUserDataOptions={getAllUserDataOptions} />)}
       {isScheduleModalOpen && scheduleItem && (<BugReportScheduleDialog bugReport={scheduleItem} onClose={closeScheduleModal} />)}
+      {/* --- MODIFIED: Add the new Assign Task Dialog --- */}
+      <AssignTaskDialog
+        isOpen={isTaskModalOpen}
+        onClose={closeAssignToTaskModal}
+        bugReport={taskTargetItem}
+        onSubmit={handleConfirmAddTask}
+        employeeOptions={getAllUserDataOptions}
+        isLoading={isSubmitting}
+      />
     </>
   );
 };
