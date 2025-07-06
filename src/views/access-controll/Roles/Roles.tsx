@@ -1,12 +1,12 @@
 // src/views/your-path/RolesListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import classNames from "classnames";
-import { useForm, Controller, SubmitHandler } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useSelector } from "react-redux";
+import { useSelector, shallowEqual } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 // UI Components
@@ -18,18 +18,15 @@ import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
-import Select from "@/components/ui/Select"; // RHF-compatible Select
-import Radio from '@/components/ui/Radio';
-import { Card, Drawer, Form, FormItem, Input } from "@/components/ui";
+import Select from "@/components/ui/Select";
+import { Card, Drawer, Form, FormItem, Input, Badge, Tag, Dropdown, Checkbox, Avatar, Dialog } from "@/components/ui";
 
 // Icons
 import {
   TbPencil,
   TbEye,
   TbShieldLock,
-  TbChecks,
   TbSearch,
   TbFilter,
   TbPlus,
@@ -38,996 +35,535 @@ import {
   TbLockAccess,
   TbFileDescription,
   TbReload,
-  TbUsersGroup,
-  TbUserCheck,
-  TbUserCancel,
-  TbBuilding,
-  TbHierarchy2,
+  TbX,
+  TbColumns,
+  TbUserCircle
 } from "react-icons/tb";
 
+// Utils
+import { formatCustomDateTime } from '@/utils/formatCustomDateTime';
+
 // Types
-import type { OnSortParam, ColumnDef, Row } from "@/components/shared/DataTable";
+import type { OnSortParam, ColumnDef } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
-// --- Redux Imports (Placeholder) ---
-// In a real app, these would come from your actual Redux setup
-import { useAppDispatch } from "@/reduxtool/store"; // Assuming you have this hook
-import { masterSelector } from "@/reduxtool/master/masterSlice"; // Assuming this selector exists
+// Redux Imports
+import { useAppDispatch } from "@/reduxtool/store";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
     getRolesAction,
     addRolesAction,
     editRolesAction,
-    deleteRolesAction,
-    deleteAllRolessAction,
+    getDepartmentsAction,
+    getDesignationsAction,
     submitExportReasonAction
-} from "@/reduxtool/master/middleware"; // Assuming these actions are created
+} from "@/reduxtool/master/middleware";
 
-// --- Define Item Type ---
+// --- Define Item Types ---
+export type DepartmentItem = { id: string | number; name: string };
+export type DesignationItem = { id: string | number; name: string; department_id: string | number };
+export type SelectOption = { value: string; label: string; };
+
 export type RoleItem = {
-  id: string; // Using name as ID
+  id: string; 
   display_name: string;
   name: string;
   description: string;
-  employee: boolean;
-  designation	: boolean;
-  department: boolean;
-  display_role: boolean;
+  department_id: string | number;
+  designation_id: string | number;
+  department?: DepartmentItem;
+  designation?: DesignationItem;
   created_at: string;
   updated_at: string;
   updated_by_user?: {
       name: string;
+      profile_pic_path?: string;
       roles: { display_name: string }[];
   };
 };
-// --- End Item Type ---
 
-// --- Zod Schema for Add/Edit Role Form ---
+// --- Zod Schemas ---
 const roleFormSchema = z.object({
   display_name: z.string().min(1, "Display Name is required.").max(100),
-  name: z
-    .string()
-    .min(1, "Role Name (system key) is required.")
-    .max(50)
-    .regex(
-      /^[a-z0-9_]+$/,
-      "Role Name can only contain lowercase letters, numbers, and underscores."
-    ),
+  name: z.string().min(1, "System key is required."),
   description: z.string().min(1, "Description is required.").max(500),
-  // employee: z.boolean().default(false),
-  // designation	: z.boolean().default(false),
-  // department: z.boolean().default(false),
-  // display_role: z.boolean().default(false),
+  department_id: z.string().min(1, "Department is required."),
+  designation_id: z.string().min(1, "Designation is required."),
 });
 type RoleFormData = z.infer<typeof roleFormSchema>;
 
-// --- Zod Schema for Filter Form ---
 const roleFilterFormSchema = z.object({
   filterDisplayName: z.string().optional(),
+  department_ids: z.array(z.string()).optional(),
+  designation_ids: z.array(z.string()).optional(),
 });
 type RoleFilterFormData = z.infer<typeof roleFilterFormSchema>;
 
-// --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
-  reason: z
-    .string()
-    .min(10, "Reason for export is required minimum 10 characters.")
-    .max(255, "Reason cannot exceed 255 characters."),
+  reason: z.string().min(10, "Reason must be at least 10 characters.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- Dummy Data (simulating a Redux store response) ---
-// const initialDummyRoles = {
-//     data: [
-//         {
-//           id: "admin",
-//           display_name: "Administrator",
-//           name: "admin",
-//           description: "Full access to all system features and settings.",
-//           created_at: new Date(2022, 0, 1).toISOString(),
-//           updated_at: new Date(2023, 4, 28).toISOString(),
-//           employee: true,
-//           designation	: true,
-//           department: true,
-//           display_role: true,
-//           updated_by_user: { name: "Tushar Joshi", roles: [{ display_name: "System Admin" }] },
-//         },
-//         {
-//           id: "editor",
-//           display_name: "Content Editor",
-//           name: "editor",
-//           description: "Can create, edit, and publish content.",
-//           created_at: new Date(2022, 1, 15).toISOString(),
-//           updated_at: new Date(2023, 3, 1).toISOString(),
-//           employee: false,
-//           designation	: true,
-//           department: false,
-//           display_role: true,
-//           updated_by_user: { name: "Jane Doe", roles: [{ display_name: "Lead Editor" }] },
-//         },
-//         {
-//           id: "support_agent",
-//           display_name: "Support Agent",
-//           name: "support_agent",
-//           description: "Can view and respond to customer support tickets.",
-//           created_at: new Date(2022, 3, 10).toISOString(),
-//           updated_at: new Date(2023, 5, 20).toISOString(),
-//           employee: true,
-//           designation	: false,
-//           department: true,
-//           display_role: false,
-//           updated_by_user: { name: "John Smith", roles: [{ display_name: "Support Lead" }] },
-//         },
-//     ],
-//     counts: {
-//         total: 3,
-//         employeeAccess: 2,
-//         designationAccess: 2,
-//         departmentAccess: 2,
-//         roleAccess: 2,
-//     }
-// };
+// --- Helper Functions ---
+function exportToCsvRoles(filename: string, rows: RoleItem[], visibleColumns: ColumnDef<RoleItem>[]) {
+    if (!rows || !rows.length) {
+        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+        return;
+    }
+    const visibleHeaders = visibleColumns.filter(c => c.header && c.id !== 'action').map(c => c.header as string);
+    const visibleAccessors = visibleColumns.filter(c => c.accessorKey && c.id !== 'action').map(c => c.accessorKey as keyof RoleItem);
 
-// --- ActionColumn Component ---
-const ActionColumn = ({
-  onEdit,
-  onViewDetail,
-}: {
-  onEdit: () => void;
-  onViewDetail: () => void;
-}) => {
-  const navigate = useNavigate();
-  const iconButtonClass =
-    "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
-  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
+    const getRowValue = (row: RoleItem, accessorKey: string) => {
+        if (accessorKey === 'department.name') return row.department?.name || 'N/A';
+        if (accessorKey === 'designation.name') return row.designation?.name || 'N/A';
+        if (accessorKey === 'updated_at') return formatCustomDateTime(row.updated_at);
+        // Add other special formatters here if needed
+        return (row as any)[accessorKey] || 'N/A';
+    };
 
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Permissions">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-          )}
-          role="button"
-          onClick={() => navigate("/access-control/permission")}
-        >
-          <TbShieldLock />
-        </div>
-      </Tooltip>
-      <Tooltip title="Edit">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400"
-          )}
-          role="button"
-          onClick={onEdit}
-        >
-          <TbPencil />
-        </div>
-      </Tooltip>
-      <Tooltip title="View">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-          )}
-          role="button"
-          onClick={onViewDetail}
-        >
-          <TbEye />
-        </div>
-      </Tooltip>
-    </div>
-  );
-};
+    const preparedRows = rows.map(row => {
+        const rowData: (string | number)[] = [];
+        visibleColumns.forEach(col => {
+            if (col.id === 'action' || !col.accessorKey) return;
+            // Special handling for nested accessors or custom cells
+            if (col.accessorKey === 'department.name') rowData.push(row.department?.name || 'N/A');
+            else if (col.accessorKey === 'designation.name') rowData.push(row.designation?.name || 'N/A');
+            else if (col.accessorKey === 'updated_at') rowData.push(
+                `${row.updated_by_user?.name || 'N/A'} (${formatCustomDateTime(row.updated_at)})`
+            );
+            else rowData.push((row as any)[col.accessorKey as string] || 'N/A');
+        });
+        return rowData;
+    });
 
+    const csvContent = [
+        visibleHeaders.join(','),
+        ...preparedRows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
 
-// --- RoleSearch Component ---
-type RoleSearchProps = {
-  onInputChange: (value: string) => void;
-  ref?: Ref<HTMLInputElement>;
-};
-const RoleSearch = React.forwardRef<HTMLInputElement, RoleSearchProps>(
-  ({ onInputChange }, ref) => (
-    <DebouceInput
-      ref={ref}
-      className="w-full"
-      placeholder="Quick Search..."
-      suffix={<TbSearch className="text-lg" />}
-      onChange={(e) => onInputChange(e.target.value)}
-    />
-  )
-);
-RoleSearch.display_name = "RoleSearch";
-
-// --- RoleTableTools Component ---
-const RoleTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-  onClearFilters
-}: {
-  onSearchChange: (query: string) => void;
-  onFilter: () => void;
-  onExport: () => void;
-  onClearFilters: () => void;
-}) => (
-  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-    <div className="flex-grow">
-      <RoleSearch onInputChange={onSearchChange} />
-    </div>
-    <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-      <Button
-        title="Clear Filters"
-        icon={<TbReload />}
-        onClick={onClearFilters}
-      />
-      <Button
-        icon={<TbFilter />}
-        onClick={onFilter}
-        className="w-full sm:w-auto"
-      >
-        Filter
-      </Button>
-      <Button
-        icon={<TbCloudUpload />}
-        onClick={onExport}
-        className="w-full sm:w-auto"
-      >
-        Export
-      </Button>
-    </div>
-  </div>
-);
-
-// --- RoleSelectedFooter Component ---
-type RoleSelectedFooterProps = {
-  selectedItems: RoleItem[];
-  onDeleteSelected: () => void;
-  isDeleting: boolean;
-};
-const RoleSelectedFooter = ({
-  selectedItems,
-  onDeleteSelected,
-  isDeleting,
-}: RoleSelectedFooterProps) => {
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const handleDeleteClick = () => setDeleteConfirmOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmOpen(false);
-  const handleConfirmDelete = () => {
-    onDeleteSelected();
-    setDeleteConfirmOpen(false);
-  };
-
-  if (selectedItems.length === 0) return null;
-  return (
-    <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
-        <div className="flex items-center justify-between w-full px-4 sm:px-8">
-          <span className="flex items-center gap-2">
-            <span className="text-lg text-primary-600 dark:text-primary-400">
-              <TbChecks />
-            </span>
-            <span className="font-semibold flex items-center gap-1 text-sm sm:text-base">
-              <span className="heading-text">{selectedItems.length}</span>
-              <span>Role{selectedItems.length > 1 ? "s" : ""} selected</span>
-            </span>
-          </span>
-          <Button
-            size="sm"
-            variant="plain"
-            className="text-red-600 hover:text-red-500"
-            onClick={handleDeleteClick}
-            loading={isDeleting}
-          >
-            Delete Selected
-          </Button>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmOpen}
-        type="danger"
-        title={`Delete ${selectedItems.length} Role${selectedItems.length > 1 ? "s" : ""
-          }`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-        loading={isDeleting}
-      >
-        <p>
-          Are you sure you want to delete the selected role
-          {selectedItems.length > 1 ? "s" : ""}? This action cannot be undone.
-        </p>
-      </ConfirmDialog>
-    </>
-  );
-};
-
-// --- CSV Exporter Utility ---
-const CSV_HEADERS_ROLE = [
-  "ID", "Display Name", "Role Name (System)", "Description",
-  "Has Employee Access", "Has Designation Access", "Has Department Access", "Has Role Access",
-  "Created At", "Updated By", "Updated Role", "Updated At",
-];
-type RoleExportItem = Omit<RoleItem, "created_at" | "updated_at"> & {
-    created_at_formatted: string;
-    updated_at_formatted: string;
-    updated_by_name: string;
-    updated_by_role: string;
-};
-
-function exportToCsvRoles(filename: string, rows: RoleItem[]) {
-  if (!rows || !rows.length) {
-    toast.push(
-      <Notification title="No Data" type="info">
-        Nothing to export.
-      </Notification>
-    );
-    return false;
-  }
-  const preparedRows: RoleExportItem[] = rows.map((row) => ({
-    ...row,
-    employee: row.employee ? 'Yes' : 'No',
-    designation	: row.designation	 ? 'Yes' : 'No',
-    department: row.department ? 'Yes' : 'No',
-    display_role: row.display_role ? 'Yes' : 'No',
-    updated_by_name: row.updated_by_user?.name || "N/A",
-    updated_by_role: row.updated_by_user?.roles[0]?.display_name || "N/A",
-    created_at_formatted: new Date(row.created_at).toLocaleString(),
-    updated_at_formatted: new Date(row.updated_at).toLocaleString(),
-  }));
-
-  const csvKeysRoleExport: (keyof RoleExportItem)[] = [
-    "id", "display_name", "name", "description",
-    "employee", "designation", "department", "display_role",
-    "created_at_formatted", "updated_by_name", "updated_by_role", "updated_at_formatted"
-  ];
-  const separator = ",";
-  const csvContent =
-    CSV_HEADERS_ROLE.join(separator) +
-    "\n" +
-    preparedRows
-      .map((row) => {
-        return csvKeysRoleExport
-          .map((k) => {
-            let cell = row[k as keyof RoleExportItem];
-            cell = cell === null || cell === undefined ? "" : String(cell);
-            cell = cell.replace(/"/g, '""');
-            if (cell.search(/("|,|\n)/g) >= 0) {
-                cell = `"${cell}"`;
-            }
-            return cell;
-          })
-          .join(separator);
-      })
-      .join("\n");
-  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  if (link.download !== undefined) {
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
     link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    return true;
-  }
-  toast.push(
-    <Notification title="Export Failed" type="danger">
-      Browser does not support this feature.
-    </Notification>
-  );
-  return false;
+    toast.push(<Notification title="Export Successful" type="success" />);
 }
+
+// --- Reusable Components ---
+const ActionColumn = ({ onEdit, onViewDetail, onPermissions }: { onEdit: () => void; onViewDetail: () => void; onPermissions: () => void }) => {
+  const iconButtonClass = "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+  const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <Tooltip title="Permissions"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onPermissions}><TbShieldLock /></div></Tooltip>
+      <Tooltip title="Edit"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400")} role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+      <Tooltip title="View"><div className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400")} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
+    </div>
+  );
+};
+
+const ActiveFiltersDisplay = ({ filters, onRemoveFilter, onClearAll, departmentOptions, designationOptions }: { filters: RoleFilterFormData; onRemoveFilter: (key: keyof RoleFilterFormData, value: string) => void; onClearAll: () => void; departmentOptions: SelectOption[]; designationOptions: SelectOption[]; }) => {
+    const activeDisplayName = filters.filterDisplayName;
+    const activeDepartments = filters.department_ids || [];
+    const activeDesignations = filters.designation_ids || [];
+    const hasActiveFilters = activeDisplayName || activeDepartments.length > 0 || activeDesignations.length > 0;
+    
+    if (!hasActiveFilters) return null;
+
+    const getDeptName = (id: string) => departmentOptions.find(opt => opt.value === id)?.label || id;
+    const getDesigName = (id: string) => designationOptions.find(opt => opt.value === id)?.label || id;
+    
+    return (
+        <div className="flex items-center gap-2 flex-wrap mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm">Active Filters:</span>
+            {activeDisplayName && <Tag prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100">Name: {activeDisplayName}<TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterDisplayName', activeDisplayName)} /></Tag>}
+            {activeDepartments.map(id => <Tag key={`dept-${id}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100">Dept: {getDeptName(id)}<TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('department_ids', id)} /></Tag>)}
+            {activeDesignations.map(id => <Tag key={`desig-${id}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100">Desig: {getDesigName(id)}<TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('designation_ids', id)} /></Tag>)}
+            {hasActiveFilters && <Button size="xs" variant="plain" className="text-red-600 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>}
+        </div>
+    );
+};
+
+const RoleTableTools = ({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, departmentOptions, allDesignationOptions, columns, visibleColumnKeys, setVisibleColumnKeys, searchInputValue }) => {
+    const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+    const { control, handleSubmit, reset } = useForm<RoleFilterFormData>({ defaultValues: { filterDisplayName: '', department_ids: [], designation_ids: [] } });
+
+    useEffect(() => { reset(activeFilters); }, [activeFilters, reset]);
+
+    const onSubmit = (data: RoleFilterFormData) => { onApplyFilters(data); setIsFilterDrawerOpen(false); };
+    const onDrawerClear = () => { onApplyFilters({}); reset({ filterDisplayName: '', department_ids: [], designation_ids: [] }); setIsFilterDrawerOpen(false); };
+    
+    const isColumnVisible = (header: string) => visibleColumnKeys.includes(header);
+    const toggleColumn = (checked: boolean, colHeader: string) => {
+        setVisibleColumnKeys(prevKeys => 
+            checked 
+                ? [...prevKeys, colHeader]
+                : prevKeys.filter(key => key !== colHeader)
+        );
+    };
+
+    return (
+        <div className="md:flex items-center justify-between w-full gap-2">
+            <div className="flex-grow mb-2 md:mb-0"><DebouceInput value={searchInputValue} placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onSearchChange(e.target.value)} /></div>
+            <div className="flex gap-2">
+                <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
+                    <div className="p-2 flex flex-col"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                        {columns.filter(c => c.header).map(col => (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}
+                    </div>
+                </Dropdown>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
+                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <Badge className="ml-2" innerClass="bg-indigo-500 text-white">{activeFilterCount}</Badge>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+            </div>
+            <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterRoleForm">Apply</Button></div>}>
+                <Form id="filterRoleForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+                    <FormItem label="Display Name"><Controller name="filterDisplayName" control={control} render={({ field }) => <Input {...field} placeholder="Search by name..." />} /></FormItem>
+                    <FormItem label="Departments"><Controller name="department_ids" control={control} render={({ field }) => <Select isMulti placeholder="Select departments..." options={departmentOptions} value={departmentOptions.filter(o => field.value?.includes(o.value))} onChange={val => field.onChange(val.map(v => v.value))} />} /></FormItem>
+                    <FormItem label="Designations"><Controller name="designation_ids" control={control} render={({ field }) => <Select isMulti placeholder="Select designations..." options={allDesignationOptions} value={allDesignationOptions.filter(o => field.value?.includes(o.value))} onChange={val => field.onChange(val.map(v => v.value))} />} /></FormItem>
+                </Form>
+            </Drawer>
+        </div>
+    );
+};
 
 // --- Main RolesListing Component ---
 const RolesListing = () => {
   const pageTitle = "System Roles & Permissions";
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
-  // Mock Redux state
-  const {
-      Roles = [], // Use dummy data as default
-      status: masterLoading,
-  } = useSelector(masterSelector); // In a real app, this is where you'd select from the store
+  const { Roles = [], departmentsData = { data: [] }, designationsData = [], status: masterLoading } = useSelector(masterSelector, shallowEqual);
+
+  // --- State Management ---
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleItem | null>(null);
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [isPermissionsDrawerOpen, setIsPermissionsDrawerOpen] = useState(false);
-  const [currentRoleForPermissions, setCurrentRoleForPermissions] = useState<RoleItem | null>(null);
-
+  const [isViewModalOpen, setViewModalOpen] = useState(false);
+  const [viewingRole, setViewingRole] = useState<RoleItem | null>(null);
+  const [isExportReasonModalOpen, setExportReasonModalOpen] = useState(false);
+  const [isImageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageToView, setImageToView] = useState<string | null>(null);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmittingExportReason, setSubmittingExportReason] = useState(false);
+  
+  const [activeFilters, setActiveFilters] = useState<RoleFilterFormData>({});
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "updated_at" }, query: "" });
 
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<RoleItem | null>(null);
+  const tableLoading = masterLoading === "loading";
 
-  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
-  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
-
-  const [filterCriteria, setFilterCriteria] = useState<RoleFilterFormData>({});
-  const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: "desc", key: "created_at" },
-    query: "",
-  });
-  const [selectedItems, setSelectedItems] = useState<RoleItem[]>([]);
-
-  const tableLoading = masterLoading === true || masterLoading === "loading" || isSubmitting || isDeleting;
-
-  // Fetch data on mount
+  // --- Data Fetching ---
   useEffect(() => {
-    dispatch(getRolesAction()); // In a real app, you would dispatch this
+    dispatch(getRolesAction());
+    dispatch(getDepartmentsAction());
+    dispatch(getDesignationsAction());
   }, [dispatch]);
 
-  // Handle Redux errors
-  // useEffect(() => {
-  //   if (error) {
-  //     toast.push(
-  //       <Notification title="Error" type="danger">
-  //         {error.message || "An error occurred"}
-  //       </Notification>
-  //     );
-  //   }
-  // }, [error]);
+  // --- Memoized Select Options ---
+  const departmentOptions: SelectOption[] = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData.data.map(d => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
+  const allDesignationOptions: SelectOption[] = useMemo(() => Array.isArray(designationsData?.data) ? designationsData.data.map(d => ({ value: String(d.id), label: d.name })) : [], [designationsData?.data]);
+  
+  // --- Form Hooks ---
+  const defaultFormValues: RoleFormData = { display_name: "", name: "", description: "", department_id: "", designation_id: "" };
+  const formMethods = useForm<RoleFormData>({ resolver: zodResolver(roleFormSchema), defaultValues: defaultFormValues, mode: "onChange" });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: '' } });
+  
+  const { control, handleSubmit, reset, watch, setValue, formState } = formMethods;
+  const watchedDepartmentId = watch("department_id");
 
-  const defaultFormValues: RoleFormData = {
-    display_name: "", name: "", description: "",
-    employee: false, designation	: false, department: false, display_role: false,
-  };
+  const designationOptionsForForm: SelectOption[] = useMemo(() => {
+    if (!watchedDepartmentId || !Array.isArray(designationsData?.data)) return [];
+    return designationsData?.data
+      .filter(d => String(d.department_id) === String(watchedDepartmentId))
+      .map(d => ({ value: String(d.id), label: d.name }));
+  }, [watchedDepartmentId, designationsData?.data]);
 
-  const addFormMethods = useForm<RoleFormData>({ resolver: zodResolver(roleFormSchema), defaultValues: defaultFormValues, mode: "onChange" });
-  const editFormMethods = useForm<RoleFormData>({ resolver: zodResolver(roleFormSchema), defaultValues: defaultFormValues, mode: "onChange" });
-  const filterFormMethods = useForm<RoleFilterFormData>({ resolver: zodResolver(roleFilterFormSchema), defaultValues: filterCriteria });
-  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), mode: "onChange" });
+  // Auto-generate name/display_name/description effect
+  useEffect(() => {
+    if (isEditDrawerOpen) return; // Don't auto-fill on edit
+    const department = departmentsData?.data?.find(d => String(d.id) === watchedDepartmentId);
+    const designation = designationsData?.data?.find(d => String(d.id) === watch("designation_id"));
+    if (department && designation) {
+      const deptKey = department.name.toLowerCase().replace(/\s+/g, '_');
+      const desigKey = designation.name.toLowerCase().replace(/\s+/g, '_');
+      setValue('name', `${deptKey}_${desigKey}`, { shouldValidate: true });
+      setValue('display_name', `${department.name} - ${designation.name}`, { shouldValidate: true });
+      setValue('description', `Role for the ${designation.name} in the ${department.name} department.`, { shouldValidate: true });
+    }
+  }, [watchedDepartmentId, watch("designation_id"), departmentsData?.data, designationsData?.data, setValue, isEditDrawerOpen]);
 
-
-  // --- CRUD Handlers ---
-  const openAddDrawer = () => {
-    addFormMethods.reset(defaultFormValues);
-    setIsAddDrawerOpen(true);
-  };
+  // --- Modal & Drawer Handlers ---
+  const openAddDrawer = () => { reset(defaultFormValues); setIsAddDrawerOpen(true); };
   const closeAddDrawer = () => setIsAddDrawerOpen(false);
-
   const onAddRoleSubmit = async (data: RoleFormData) => {
     setIsSubmitting(true);
-    // In real app, dispatch an action
     const resultAction = await dispatch(addRolesAction(data));
-    // Simulating API call
-    // await new Promise(res => setTimeout(res, 500));
-    // const resultAction = { meta: { requestId: '123' }, type: 'master/addRole/fulfilled' }; // Mock success
-    
-    if (resultAction) {
-        toast.push(<Notification title="Role Added" type="success">{`Role "${data.display_name}" added.`}</Notification>);
-        closeAddDrawer();
-        dispatch(getRolesAction());
+    if (addRolesAction.fulfilled.match(resultAction)) {
+        toast.push(<Notification title="Role Added" type="success" />);
+        closeAddDrawer(); dispatch(getRolesAction());
     } else {
-        toast.push(<Notification title="Add Failed" type="danger">{"Could not add role."}</Notification>);
+        toast.push(<Notification title="Add Failed" type="danger" children={(resultAction.payload as string) || "Could not add role."} />);
     }
     setIsSubmitting(false);
   };
-
+  
   const openEditDrawer = (role: RoleItem) => {
     setEditingRole(role);
-    editFormMethods.reset({
-      display_name: role.display_name,
-      name: role.name,
-      description: role.description,
-      employee: role.employee,
-      designation	: role.designation	,
-      department: role.department,
-      display_role: role.display_role,
-    });
+    reset({ ...role, department_id: String(role.department_id), designation_id: String(role.designation_id) });
     setIsEditDrawerOpen(true);
   };
-  const closeEditDrawer = () => {
-    setEditingRole(null);
-    setIsEditDrawerOpen(false);
-  };
-
+  const closeEditDrawer = () => { setEditingRole(null); setIsEditDrawerOpen(false); };
   const onEditRoleSubmit = async (data: RoleFormData) => {
     if (!editingRole) return;
     setIsSubmitting(true);
-    // In real app, dispatch an action
-    const resultAction = await dispatch(editRolesAction({ id: editingRole.id, data }));
-    // await new Promise(res => setTimeout(res, 500));
-    // const resultAction = { meta: { requestId: '123' }, type: 'master/editRole/fulfilled' }; // Mock success
-    // console.log(resultAction)
-    if (resultAction) {
-        toast.push(<Notification title="Role Updated" type="success">{`Role "${data.display_name}" updated.`}</Notification>);
-        closeEditDrawer();
-        dispatch(getRolesAction());
+    const resultAction = await dispatch(editRolesAction({ id: editingRole.id, ...data }));
+    if (editRolesAction.fulfilled.match(resultAction)) {
+        toast.push(<Notification title="Role Updated" type="success" />);
+        closeEditDrawer(); dispatch(getRolesAction());
     } else {
-        toast.push(<Notification title="Update Failed" type="danger">{"Could not update role."}</Notification>);
+        toast.push(<Notification title="Update Failed" type="danger" children={(resultAction.payload as string) || "Could not update role."} />);
     }
     setIsSubmitting(false);
   };
+  
+  const openViewModal = (role: RoleItem) => { setViewingRole(role); setViewModalOpen(true); };
+  const closeViewModal = () => { setViewingRole(null); setViewModalOpen(false); };
 
-  const handleDeleteClick = (role: RoleItem) => {
-    setItemToDelete(role);
-    setSingleDeleteConfirmOpen(true);
-  };
+  const openImageViewer = (imageUrl: string | null | undefined) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
+  const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
 
-  const onConfirmSingleDelete = async () => {
-    if (!itemToDelete) return;
-    setIsDeleting(true);
-    setSingleDeleteConfirmOpen(false);
-    // await dispatch(deleteRolesAction({ id: itemToDelete.id }));
-    await new Promise(res => setTimeout(res, 500));
-    toast.push(<Notification title="Role Deleted" type="success">{`Role "${itemToDelete.display_name}" deleted.`}</Notification>);
-    dispatch(getRolesAction());
-    setIsDeleting(false);
-    setItemToDelete(null);
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedItems.length === 0) return;
-    setIsDeleting(true);
-    const idsToDelete = selectedItems.map((item) => item.id).join(",");
-    // await dispatch(deleteAllRolessAction({ ids: idsToDelete }));
-    await new Promise(res => setTimeout(res, 500));
-    toast.push(<Notification title="Deletion Successful" type="success">{`${selectedItems.length} role(s) deleted.`}</Notification>);
-    setSelectedItems([]);
-    dispatch(getRolesAction());
-    setIsDeleting(false);
-  };
-
-  // --- Permissions Drawer ---
-  const handleViewPermissions = (role: RoleItem) => {
-    setCurrentRoleForPermissions(role);
-    setIsPermissionsDrawerOpen(true);
-  };
-  const closePermissionsDrawer = () => setIsPermissionsDrawerOpen(false);
-  const onSavePermissions = async () => {
-    toast.push(<Notification title="Permissions Updated (Simulated)" type="success" />);
-    closePermissionsDrawer();
-  };
-
-  // --- Filter Drawer ---
-  const openFilterDrawer = () => {
-    filterFormMethods.reset(filterCriteria);
-    setIsFilterDrawerOpen(true);
-  };
-  const closeFilterDrawer = () => setIsFilterDrawerOpen(false);
-  const onApplyFiltersSubmit = (data: RoleFilterFormData) => {
-    setFilterCriteria(data);
-    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
-    closeFilterDrawer();
-  };
-  const onClearFilters = () => {
-    setFilterCriteria({});
-    filterFormMethods.reset({});
-    setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
-    dispatch(getRolesAction());
-    setIsFilterDrawerOpen(false);
-  };
-
-  // --- Table Interaction Handlers ---
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
-  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
-  const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
-  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
+  // --- Filtering & Table Interaction Handlers ---
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
   const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
-  const handleRowSelect = useCallback((checked: boolean, row: RoleItem) => { setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id)); }, []);
-  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<RoleItem>[]) => {
-    const originals = currentRows.map((r) => r.original);
-    if (checked) {
-      const newItems = originals.filter(o => !selectedItems.some(s => s.id === o.id));
-      setSelectedItems(prev => [...prev, ...newItems]);
-    } else {
-      const currentIds = new Set(originals.map((o) => o.id));
-      setSelectedItems(prev => prev.filter(i => !currentIds.has(i.id)));
-    }
-  }, [selectedItems]);
+  const handleApplyFilters = useCallback((filters: RoleFilterFormData) => { setActiveFilters(filters); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
+  const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); handleSetTableData({ query: '', pageIndex: 1 }); dispatch(getRolesAction()); }, [dispatch, handleSetTableData]);
+  const handleRemoveFilter = useCallback((key: keyof RoleFilterFormData, value: string) => {
+    setActiveFilters(prev => {
+        const newFilters = { ...prev };
+        if (key === 'filterDisplayName') {
+            newFilters.filterDisplayName = '';
+        } else {
+            const currentValues = prev[key] as string[] | undefined;
+            if (currentValues) {
+                const newValues = currentValues.filter(item => item !== value);
+                (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+            }
+        }
+        return newFilters;
+    });
+    handleSetTableData({ pageIndex: 1 });
+  }, [handleSetTableData]);
 
-  // --- Data Processing ---
+  // --- Table Columns Definition ---
+  const columns: ColumnDef<RoleItem>[] = useMemo(() => [
+      { header: "Display Name", accessorKey: "display_name", enableSorting: true, size: 200 },
+      { header: "Department", accessorKey: "department.name", size: 150 },
+      { header: "Designation", accessorKey: "designation.name", size: 150 },
+      { header: "System Key", accessorKey: "name", size: 180 },
+      { header: "Description", accessorKey: "description", cell: props => <Tooltip title={props.row.original.description}><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">{props.row.original.description}</span></Tooltip> },
+      { 
+        header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220,
+        cell: props => {
+            const { updated_at, updated_by_user } = props.row.original;
+            return <div className="flex items-center gap-2">
+                <Avatar 
+                    src={updated_by_user?.profile_pic_path} 
+                    shape="circle" 
+                    size="sm" 
+                    icon={<TbUserCircle />} 
+                    className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                    onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+                />
+                <div>
+                    <span>{updated_by_user?.name || "N/A"}</span>
+                    <div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ""}</b></div>
+                    <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+                </div>
+            </div>
+        }
+      },
+      { 
+        header: "Actions", id: "action", size: 120,
+        cell: props => <ActionColumn 
+            onEdit={() => openEditDrawer(props.row.original)} 
+            onViewDetail={() => openViewModal(props.row.original)}
+            onPermissions={() => navigate("/access-control/permission")}
+        />
+      },
+  ], [navigate]);
+
+  // --- Column Visibility State ---
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(
+      columns.filter(c => c.header).map(c => c.header as string)
+  );
+  useEffect(() => {
+      setVisibleColumnKeys(columns.filter(c => c.header).map(c => c.header as string));
+  }, [columns]);
+  
+  // --- Derived Filtered Columns (for rendering) ---
+  const filteredColumns = useMemo(() => 
+      columns.filter(c => c.header ? visibleColumnKeys.includes(c.header as string) : true),
+      [columns, visibleColumnKeys]
+  );
+  
+  // --- Export Handlers ---
+  const handleOpenExportReasonModal = () => { 
+    if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; }
+    exportReasonFormMethods.reset(); setExportReasonModalOpen(true); 
+  };
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setSubmittingExportReason(true);
+    const fileName = `roles_export_${new Date().toISOString().split('T')[0]}.csv`;
+    try {
+        await dispatch(submitExportReasonAction({ reason: data.reason, module: "Roles", file_name: fileName })).unwrap();
+        exportToCsvRoles(fileName, allFilteredAndSortedData, filteredColumns);
+        setExportReasonModalOpen(false);
+    } catch (error: any) {
+        toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
+    } finally {
+        setSubmittingExportReason(false);
+    }
+  };
+
+  // --- Data Processing, Hydration, Filtering, Sorting ---
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: RoleItem[] = cloneDeep(Roles || []);
-    if (filterCriteria.filterDisplayName?.trim()) {
-      const q = filterCriteria.filterDisplayName.toLowerCase().trim();
-      processedData = processedData.filter(item => item.name.toLowerCase().includes(q));
+    const safeDepartments = departmentsData?.data || [];
+    const safeDesignations = designationsData?.data || [];
+    
+    processedData = processedData.map(role => ({
+        ...role,
+        department: safeDepartments.find(d => String(d.id) === String(role.department_id)),
+        designation: safeDesignations.find(d => String(d.id) === String(role.designation_id)),
+    }));
+
+    if (tableData.query) { 
+        const q = tableData.query.toLowerCase().trim(); 
+        processedData = processedData.filter(item => 
+            item.display_name.toLowerCase().includes(q) ||
+            item.name.toLowerCase().includes(q) ||
+            item.department?.name.toLowerCase().includes(q) ||
+            item.designation?.name.toLowerCase().includes(q)
+        ); 
     }
-    if (tableData.query?.trim()) {
-      const q = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(q)));
-    }
+    
+    if (activeFilters.filterDisplayName) { processedData = processedData.filter(item => item.display_name.toLowerCase().includes(activeFilters.filterDisplayName!.toLowerCase())); }
+    if (activeFilters.department_ids?.length) { const ids = new Set(activeFilters.department_ids); processedData = processedData.filter(item => ids.has(String(item.department_id))); }
+    if (activeFilters.designation_ids?.length) { const ids = new Set(activeFilters.designation_ids); processedData = processedData.filter(item => ids.has(String(item.designation_id))); }
+    
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
         processedData.sort((a, b) => {
-            const aVal = a[key as keyof RoleItem];
-            const bVal = b[key as keyof RoleItem];
-            if (key === 'created_at' || key === 'updated_at') {
-                return order === 'asc' ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime();
-            }
+            const aVal = (key as string).split('.').reduce((acc, part) => acc && acc[part], a as any);
+            const bVal = (key as string).split('.').reduce((acc, part) => acc && acc[part], b as any);
+            if (key.includes('at')) return order === 'asc' ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime();
             return order === 'asc' ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
         });
     }
+
     const totalCount = processedData.length;
     const startIndex = (tableData.pageIndex - 1) * tableData.pageSize;
-    return {
-      pageData: processedData.slice(startIndex, startIndex + tableData.pageSize),
-      total: totalCount,
-      allFilteredAndSortedData: processedData,
-    };
-  }, [Roles, tableData, filterCriteria]);
+    return { pageData: processedData.slice(startIndex, startIndex + tableData.pageSize), total: totalCount, allFilteredAndSortedData: processedData };
+  }, [Roles, departmentsData, designationsData, tableData, activeFilters]);
 
-  // --- Export Handlers ---
-  const handleOpenExportReasonModal = () => {
-    if (!allFilteredAndSortedData.length) {
-      toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
-      return;
-    }
-    exportReasonFormMethods.reset({ reason: "" });
-    setIsExportReasonModalOpen(true);
-  };
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
-    setIsSubmittingExportReason(true);
-    const fileName = `system_roles_export_${new Date().toISOString().split('T')[0]}.csv`;
-    await dispatch(submitExportReasonAction({ reason: data.reason, module: "Roles", file_name: fileName })).unwrap();
-    // await new Promise(res => setTimeout(res, 500)); // Simulate API
-    toast.push(
-      <Notification title="Export Reason Submitted" type="success" />
-    );
-    exportToCsvRoles(fileName, allFilteredAndSortedData);
-    // Optional:
-    toast.push(
-      <Notification title="Data Exported" type="success">
-        Roles data exported.
-      </Notification>
-    );
-    setIsExportReasonModalOpen(false);
-    setIsSubmittingExportReason(false);
-  };
-
-  const columns: ColumnDef<RoleItem>[] = useMemo(
-    () => [
-      { header: "System Key", accessorKey: "name", enableSorting: true, size: 180 },
-      { header: "Display Name", accessorKey: "display_name", enableSorting: true },
-      {
-        header: "Description",
-        accessorKey: "description",
-        cell: (props) => (
-          <Tooltip title={props.row.original.description} wrapperClass="w-full">
-            <span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">
-              {props.row.original.description}
-            </span>
-          </Tooltip>
-        ),
-      },
-      {
-        header: "Updated Info",
-        accessorKey: "updated_at",
-        enableSorting: true,
-        size: 180,
-        cell: (props) => {
-            const { updated_at, updated_by_user } = props.row.original;
-            const formattedDate = updated_at
-            ? `${new Date(updated_at).getDate()} ${new Date(
-            updated_at
-            ).toLocaleString("en-US", { month: "long" })} ${new Date(
-            updated_at
-            ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
-            "en-US",
-            { hour: "numeric", minute: "2-digit", hour12: true }
-            )}`
-            : "N/A";
-            return (
-                <div className="text-xs">
-                    <span>{updated_by_user?.name || "N/A"}</span><br />
-                    <b>{updated_by_user?.roles[0]?.display_name || "N/A"}</b><br />
-                    <span>{formattedDate}</span>
-                </div>
-            );
-        },
-      },
-      {
-        header: "Actions", id: "action", size: 120,
-        meta: { HeaderClass: "text-center" },
-        cell: (props) => (
-          <ActionColumn
-            onEdit={() => openEditDrawer(props.row.original)}
-            onViewDetail={() => handleViewPermissions(props.row.original)}
-          />
-        ),
-      },
-    ],
-    []
-  );
-
-  const formDrawerConfig = [
-    {
-      type: 'add', title: 'Add New Role', isOpen: isAddDrawerOpen, closeFn: closeAddDrawer,
-      formId: 'addRoleForm', methods: addFormMethods, onSubmit: onAddRoleSubmit,
-      submitText: 'Save', submittingText: 'Saving...',
-    },
-    {
-      type: 'edit', title: 'Edit Role', isOpen: isEditDrawerOpen, closeFn: closeEditDrawer,
-      formId: 'editRoleForm', methods: editFormMethods, onSubmit: onEditRoleSubmit,
-      submitText: 'Save', submittingText: 'Saving...',
-    }
-  ];
-
-  const accessFields: { label: string; name: "employee" | "designation" | "department" | "display_role" }[] = [
-    { label: "Employee", name: "employee" },
-    { label: "Designation", name: "designation" },
-    { label: "Department", name: "department" },
-    { label: "Display Role", name: "display_role" },
-  ];
+  const activeFilterCount = useMemo(() => Object.values(activeFilters).filter(v => Array.isArray(v) ? v.length > 0 : v).length, [activeFilters]);
 
   return (
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">{pageTitle}</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>
-              Add New
-            </Button>
+          <div className="lg:flex items-center justify-between mb-4">
+            <h3 className="mb-4 lg:mb-0">{pageTitle}</h3>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}> Add New Role </Button>
           </div>
-          
-          {/* <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200">
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div>
-                  <div><h6 className="text-blue-500">{Roles?.counts?.total}</h6><span className="font-semibold text-xs">Total Roles</span></div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300">
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserCheck size={24} /></div>
-                  <div><h6 className="text-green-500">{Roles?.counts?.employeeAccess}</h6><span className="font-semibold text-xs">Employee Access</span></div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200">
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbUserCancel size={24} /></div>
-                  <div><h6 className="text-violet-500">{Roles?.counts?.designationAccess}</h6><span className="font-semibold text-xs">Designation Access</span></div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200">
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbBuilding size={24} /></div>
-                  <div><h6 className="text-orange-500">{Roles?.counts?.departmentAccess}</h6><span className="font-semibold text-xs">Department Access</span></div>
-              </Card>
-              <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200">
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbHierarchy2 size={24} /></div>
-                  <div><h6 className="text-red-500">{Roles?.counts?.roleAccess}</h6><span className="font-semibold text-xs">Role Access</span></div>
-              </Card>
-          </div> */}
-
-          <RoleTableTools
-            onClearFilters={onClearFilters}
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal}
-          />
-          <div className="mt-4 flex-grow overflow-auto">
-            <DataTable
-              selectable
-              columns={columns}
-              data={pageData}
-              loading={tableLoading}
-              pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }}
-              checkboxChecked={(row) => selectedItems.some((item) => item.id === row.id)}
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort}
-              onCheckBoxChange={handleRowSelect}
-              onIndeterminateCheckBoxChange={handleAllRowSelect}
-              noData={!tableLoading && pageData.length === 0}
-            />
+          <div className="mb-4">
+            <RoleTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} departmentOptions={departmentOptions} allDesignationOptions={allDesignationOptions} columns={columns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} searchInputValue={tableData.query} />
+          </div>
+          <ActiveFiltersDisplay filters={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFiltersAndReload} departmentOptions={departmentOptions} designationOptions={allDesignationOptions} />
+          <div className="flex-grow overflow-auto">
+            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading || isSubmitting} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onSort={handleSetTableData} noData={!tableLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
-
-      <RoleSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
-
-      {/* --- Add/Edit Drawers --- */}
-      {formDrawerConfig.map((drawer) => (
-        <Drawer
-          key={drawer.formId}
-          title={drawer.title}
-          isOpen={drawer.isOpen}
-          onClose={drawer.closeFn}
-          onRequestClose={drawer.closeFn}
-          width={480}
-          bodyClass="relative"
-          footer={
-            <div className="text-right w-full">
-              <Button size="sm" className="mr-2" onClick={drawer.closeFn} disabled={isSubmitting}>Cancel</Button>
-              <Button size="sm" variant="solid" form={drawer.formId} type="submit" loading={isSubmitting} disabled={!drawer.methods.formState.isValid || isSubmitting}>
-                {isSubmitting ? drawer.submittingText : drawer.submitText}
-              </Button>
-            </div>
-          }
-        >
-        <Form
-          id={drawer.formId}
-          onSubmit={drawer.methods.handleSubmit(drawer.onSubmit as any)}
-          className="flex flex-col gap-4"
-        >
-          {/* Display Name */}
-          <FormItem
-            label={
-              <div>
-                Display Name<span className="text-red-500"> *</span>
-              </div>
-            }
-            invalid={!!drawer.methods.formState.errors.display_name}
-            errorMessage={drawer.methods.formState.errors.display_name?.message as string}
-          >
-            <Controller
-              name="display_name"
-              control={drawer.methods.control}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  prefix={<TbUserShield />}
-                  placeholder="e.g., Content Manager"
-                />
-              )}
-            />
+      
+      <Drawer title={isEditDrawerOpen ? 'Edit Role' : 'Add New Role'} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={isEditDrawerOpen ? closeEditDrawer : closeAddDrawer} width={480} bodyClass="relative" footer={
+          <div className="text-right w-full">
+            <Button size="sm" className="mr-2" onClick={isEditDrawerOpen ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting}>Cancel</Button>
+            <Button size="sm" variant="solid" form="roleForm" type="submit" loading={isSubmitting} disabled={!formState.isValid || isSubmitting}>Save</Button>
+          </div>
+      }>
+        <Form id="roleForm" onSubmit={handleSubmit(isEditDrawerOpen ? onEditRoleSubmit : onAddRoleSubmit)} className="flex flex-col gap-4">
+          <FormItem label="Department *" invalid={!!formState.errors.department_id} errorMessage={formState.errors.department_id?.message}>
+            <Controller name="department_id" control={control} render={({ field }) => <Select placeholder="Select Department" options={departmentOptions} {...field} onChange={val => { field.onChange(val?.value); setValue('designation_id', ''); }} value={departmentOptions.find(o => o.value === field.value)} />} />
           </FormItem>
-
-          {/* Role Name / System Key */}
-          <FormItem
-            label={
-              <div>
-                Role Name / System Key<span className="text-red-500"> *</span>
-              </div>
-            }
-            invalid={!!drawer.methods.formState.errors.name}
-            errorMessage={drawer.methods.formState.errors.name?.message as string}
-          >
-            <Controller
-              name="name"
-              control={drawer.methods.control}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  prefix={<TbLockAccess />}
-                  placeholder="e.g., content_manager"
-                  disabled={drawer.type === "edit"}
-                />
-              )}
-            />
+          <FormItem label="Designation *" invalid={!!formState.errors.designation_id} errorMessage={formState.errors.designation_id?.message}>
+            <Controller name="designation_id" control={control} render={({ field }) => <Select placeholder="Select Designation" options={designationOptionsForForm} {...field} isDisabled={!watchedDepartmentId || designationOptionsForForm.length === 0} value={designationOptionsForForm.find(o => o.value === field.value)} onChange={val => field.onChange(val?.value)} />} />
           </FormItem>
-
-          {/* Description */}
-          <FormItem
-            label={
-              <div>
-                Description<span className="text-red-500"> *</span>
-              </div>
-            }
-            invalid={!!drawer.methods.formState.errors.description}
-            errorMessage={drawer.methods.formState.errors.description?.message as string}
-          >
-            <Controller
-              name="description"
-              control={drawer.methods.control}
-              render={({ field }) => (
-                <Input
-                  textArea
-                  {...field}
-                  prefix={<TbFileDescription />}
-                  placeholder="Briefly describe what this role can do."
-                />
-              )}
-            />
+          <FormItem label="Display Name *" invalid={!!formState.errors.display_name} errorMessage={formState.errors.display_name?.message}>
+            <Controller name="display_name" control={control} render={({ field }) => <Input {...field} prefix={<TbUserShield />} placeholder="e.g., Content Manager" />} />
           </FormItem>
-
-          {/* Access Toggles */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
-            {accessFields.map(({ label, name }) => (
-              <FormItem key={name} label={`${label} Access`} className="col-span-1">
-                <Controller
-                  name={name}
-                  control={drawer.methods.control}
-                  render={({ field }) => (
-                    <Radio.Group value={field.value} onChange={(val) => field.onChange(val)}>
-                      <Radio value={true}>Yes</Radio>
-                      <Radio value={false}>No</Radio>
-                    </Radio.Group>
-                  )}
-                />
-              </FormItem>
-            ))}
-          </div> */}
-
-          {/* Audit Info - Only in edit mode */}
-          {drawer.type === "edit" && editingRole && (
-             <div className="absolute bottom-[3%] w-[90%]">
-              <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded mt-4">
+          <FormItem label="Role Name / System Key" invalid={!!formState.errors.name} errorMessage={formState.errors.name?.message}>
+            <Controller name="name" control={control} render={({ field }) => <Input {...field} prefix={<TbLockAccess />} placeholder="Auto-generated from selections" disabled />} />
+          </FormItem>
+          <FormItem label="Description *" invalid={!!formState.errors.description} errorMessage={formState.errors.description?.message}>
+            <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} prefix={<TbFileDescription />} placeholder="Briefly describe what this role can do." />} />
+          </FormItem>
+        </Form>
+        {isEditDrawerOpen && editingRole && (
+            <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-4">
                 <div>
-                   <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-                  <p className="text-sm font-semibold">
-                    {editingRole.updated_by_user?.name || "N/A"}
-                  </p>
-                  <p className="text-xs">
-                    {editingRole.updated_by_user?.roles?.[0]?.display_name || "N/A"}
-                  </p>
+                    <p className="font-semibold">Last Update By:</p>
+                    <p>{editingRole.updated_by_user?.name || 'N/A'}</p>
+                    <p>{editingRole.updated_by_user?.roles?.[0]?.display_name || 'N/A'}</p>
                 </div>
                 <div className="text-right">
-                  <br />
-                  <span className="font-semibold">Created At:</span>{" "}
-                  <span>
-                    {editingRole.created_at
-                      ? `${new Date(editingRole.created_at).getDate()} ${new Date(editingRole.created_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingRole.created_at).getFullYear()}, ${new Date(editingRole.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
-                      : "N/A"}
-                  </span>
-                  <br />
-                  <span className="font-semibold">Updated At:</span>{" "}
-                  <span>
-                    {editingRole.updated_at
-                      ? `${new Date(editingRole.updated_at).getDate()} ${new Date(editingRole.updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingRole.updated_at).getFullYear()}, ${new Date(editingRole.updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
-                      : "N/A"}
-                  </span>
+                    <p><span className="font-semibold">Created:</span> {formatCustomDateTime(editingRole.created_at)}</p>
+                    <p><span className="font-semibold">Updated:</span> {formatCustomDateTime(editingRole.updated_at)}</p>
                 </div>
-              </div>
             </div>
-          )}
-        </Form>
-        </Drawer>
-      ))}
-
-      {/* --- Filter Drawer --- */}
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={
-        <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button>
-            <Button size="sm" variant="solid" form="filterRoleForm" type="submit">Apply</Button>
-        </div>
-      }>
-        <Form id="filterRoleForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Display Name / Role Name">
-            <Controller name="filterDisplayName" control={filterFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter name to filter..." />)} />
-          </FormItem>
-        </Form>
+        )}
       </Drawer>
 
-      {/* --- Permissions Drawer --- */}
-      <Drawer title={`Permissions for ${currentRoleForPermissions?.display_name || "Role"}`} isOpen={isPermissionsDrawerOpen} onClose={closePermissionsDrawer} onRequestClose={closePermissionsDrawer} width={700} footer={
-        <div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closePermissionsDrawer}>Cancel</Button><Button size="sm" variant="solid" onClick={onSavePermissions}>Save Permissions</Button></div>
-      }>
-        <div className="p-4">
-          <p>Configure permissions for the role: <strong>{currentRoleForPermissions?.display_name}</strong> (<code>{currentRoleForPermissions?.name}</code>)</p>
-          <div className="mt-4 border p-4 rounded-md min-h-[200px] bg-gray-50 dark:bg-gray-700">
-            <p className="text-gray-400 dark:text-gray-500">Permissions management UI would go here.</p>
-          </div>
-        </div>
-      </Drawer>
-
-      {/* --- Single Delete Confirmation --- */}
-      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Role"
-        onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
-        onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
-        onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}
-        onConfirm={onConfirmSingleDelete} loading={isDeleting}>
-        <p>Are you sure you want to delete role "<strong>{itemToDelete?.display_name}</strong>"?</p>
-      </ConfirmDialog>
+      <Dialog isOpen={isViewModalOpen} onClose={closeViewModal} width={600} title="Role Details">
+        {viewingRole && (
+            <div className="p-4 space-y-4">
+                <h4 className="text-lg font-bold">{viewingRole.display_name}</h4>
+                <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                    <div className="font-semibold text-gray-600 dark:text-gray-300">System Key:</div><div className="col-span-2">{viewingRole.name}</div>
+                    <div className="font-semibold text-gray-600 dark:text-gray-300">Department:</div><div className="col-span-2">{viewingRole.department?.name || 'N/A'}</div>
+                    <div className="font-semibold text-gray-600 dark:text-gray-300">Designation:</div><div className="col-span-2">{viewingRole.designation?.name || 'N/A'}</div>
+                    <div className="font-semibold text-gray-600 dark:text-gray-300 col-span-3 border-t pt-2 mt-2">Description:</div><div className="col-span-3 text-gray-800 dark:text-gray-100">{viewingRole.description}</div>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 border-t pt-2 mt-2">
+                    <p><strong>Created:</strong> {formatCustomDateTime(viewingRole.created_at)}</p>
+                    <p><strong>Last Updated:</strong> {formatCustomDateTime(viewingRole.updated_at)} by <strong>{viewingRole.updated_by_user?.name || 'N/A'}</strong></p>
+                </div>
+            </div>
+        )}
+      </Dialog>
       
-      {/* --- Export Reason Modal --- */}
-      <ConfirmDialog
-        isOpen={isExportReasonModalOpen}
-        type="info" title="Reason for Export"
-        onClose={() => setIsExportReasonModalOpen(false)}
-        onRequestClose={() => setIsExportReasonModalOpen(false)}
-        onCancel={() => setIsExportReasonModalOpen(false)}
-        onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)}
-        loading={isSubmittingExportReason}
-        confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}
-        confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
-        <Form id="exportRolesReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
-            <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
-                <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"}>
+        <p className="mb-4">Please provide a reason for exporting this data.</p>
+        <Form id="exportReasonForm" onSubmit={(e) => e.preventDefault()}>
+            <FormItem invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
+                <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => <Input textArea {...field} placeholder="Enter reason..." />} />
             </FormItem>
         </Form>
       </ConfirmDialog>
+
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
+        <div className="flex justify-center items-center p-4">
+            {imageToView ? (
+                <img src={imageToView} alt="User Profile" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />
+            ) : (
+                <p>No image to display.</p>
+            )}
+        </div>
+      </Dialog>
     </>
   );
 };

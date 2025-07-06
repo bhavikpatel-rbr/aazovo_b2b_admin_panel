@@ -2779,7 +2779,7 @@ export const editRolesAsync = async (RolesData: any) => {
       `${config.apiURL}/roles/role/${RolesData?.id}`,
       {
         _method: "PUT",
-        ...RolesData.data, // flatten the data object
+        ...RolesData, // flatten the data object
       }
     );
     return response;
@@ -2966,7 +2966,7 @@ export const getAllNotificationAsync = async () => {
 
 
 
-export const addNotificationAsync = async (payload :any) => {
+export const addNotificationAsync = async (payload: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/setting/notification_message`, { ...payload })
     return response?.data
