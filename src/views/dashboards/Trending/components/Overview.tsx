@@ -317,9 +317,9 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 <div className="mt-8 block  gap-2">
                                     <div className="flex justify-between items-center mb-6">
                                         <h6>Opportunity Leaderboard</h6>
-                                        <div className="flex gap-2 items-center text-sm">
+                                        {/* <div className="flex gap-2 items-center text-sm">
                                             <h6 className="text-sm">Match Score</h6>
-                                        </div>
+                                        </div> */}
                                     </div>
                                     <Opportunities isDashboard={true} />
                                 </div>
@@ -359,9 +359,9 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                     <div className="flex justify-between items-center mb-6">
                                         <h6>Leads Leaderboard</h6>
                                         <div className="flex gap-2 items-center text-sm">
-                                            <h6 className="text-sm">
+                                            {/* <h6 className="text-sm">
                                                 Conversion Rate
-                                            </h6>
+                                            </h6> */}
                                         </div>
                                     </div>
                                     <Leads isDashboard={true} />
@@ -402,9 +402,9 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 <div className="mt-8 block  gap-2">
                                     <div className="flex justify-between items-center mb-6">
                                         <h6>Tasks Leaderboard</h6>
-                                        <div className="flex gap-2 items-center text-sm">
+                                        {/* <div className="flex gap-2 items-center text-sm">
                                             <h6 className="text-sm">Trust Score</h6>
-                                        </div>
+                                        </div> */}
                                     </div>
                                     <TaskList isDashboard={true} />
                                 </div>
@@ -443,11 +443,11 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 <div className="mt-8 block  gap-2">
                                     <div className="flex justify-between items-center mb-6">
                                         <h6>Wall Listing Leaderboard</h6>
-                                        <div className="flex gap-2 items-center text-sm">
+                                        {/* <div className="flex gap-2 items-center text-sm">
                                             <h6 className="text-sm">
                                                 Performance Score
                                             </h6>
-                                        </div>
+                                        </div> */}
                                     </div>
                                     <WallListing isDashboard={true} />
                                 </div>
