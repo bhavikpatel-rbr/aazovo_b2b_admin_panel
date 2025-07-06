@@ -398,16 +398,65 @@ const handleRemoveFilter = useCallback((key: keyof FilterFormData, valueToRemove
       </div>
       {isEditMode && currentSlider && (
         <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-          <div>
-            <b className="font-semibold text-gray-800 dark:text-gray-100">Latest Update:</b><br />
-            <p className="font-semibold">{currentSlider.updated_by_user?.name || "N/A"}</p>
-            <p>{currentSlider.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
+            <div>
+              <b className="mt-3 mb-3 font-semibold text-primary">
+                Latest Update:
+              </b>
+              <br />
+              <p className="text-sm font-semibold">
+                {currentSlider.updated_by_user?.name || "N/A"}
+              </p>
+              <p>
+                {currentSlider.updated_by_user?.roles[0]?.display_name ||
+                  "N/A"}
+              </p>
+            </div>
+            <div className="text-right">
+              <br />
+              <span className="font-semibold">Created At:</span>{" "}
+              <span>
+                {currentSlider.created_at
+                  ? `${new Date(
+                      currentSlider.created_at
+                    ).getDate()} ${new Date(
+                      currentSlider.created_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      currentSlider.created_at
+                    ).getFullYear()}, ${new Date(
+                      currentSlider.created_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+              <br />
+              <span className="font-semibold">Updated At:</span>{" "}
+              <span>
+                {}
+                {currentSlider.updated_at
+                  ? `${new Date(
+                      currentSlider.updated_at
+                    ).getDate()} ${new Date(
+                      currentSlider.updated_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      currentSlider.updated_at
+                    ).getFullYear()}, ${new Date(
+                      currentSlider.updated_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+            </div>
           </div>
-          <div className="text-right">
-            <span className="font-semibold">Created At:</span> <span>{formatCustomDateTime(currentSlider.created_at)}</span><br />
-            <span className="font-semibold">Updated At:</span> <span>{formatCustomDateTime(currentSlider.updated_at)}</span>
-          </div>
-        </div>
       )}
     </>
   );
