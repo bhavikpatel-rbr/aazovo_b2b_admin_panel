@@ -93,7 +93,6 @@ import {
   getEmployeesListingAction,
   getFormBuilderAction,
   getfromIDcompanymemberAction,
-  getMemberAction,
   submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -460,277 +459,273 @@ const DetailItem = ({
 
 // --- [NEW] Helper component for the redesigned view dialog ---
 const InfoItem = ({
-    icon,
-    label,
-    value,
-    children,
-    className,
+  icon,
+  label,
+  value,
+  children,
+  className,
 }: {
-    icon: React.ReactNode
-    label: string
-    value?: React.ReactNode
-    children?: React.ReactNode
-    className?: string
+  icon: React.ReactNode
+  label: string
+  value?: React.ReactNode
+  children?: React.ReactNode
+  className?: string
 }) => {
-    return (
-        <div className={classNames('flex items-start gap-3', className)}>
-            <div className="text-gray-400 mt-1">{icon}</div>
-            <div>
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {label}
-                </p>
-                <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                    {children || value || (
-                        <span className="italic text-gray-400">N/A</span>
-                    )}
-                </div>
-            </div>
+  return (
+    <div className={classNames('flex items-start gap-3', className)}>
+      <div className="text-gray-400 mt-1">{icon}</div>
+      <div>
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          {label}
+        </p>
+        <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
+          {children || value || (
+            <span className="italic text-gray-400">N/A</span>
+          )}
         </div>
-    )
+      </div>
+    </div>
+  )
 }
 
 // --- [IMPROVED UI] ViewDocumentDialog Component ---
 // --- [CORRECTED UI] ViewDocumentDialog Component ---
 const ViewDocumentDialog = ({
-    document,
-    onClose,
+  document,
+  onClose,
 }: {
-    document: any
-    onClose: () => void
+  document: any
+  onClose: () => void
 }) => {
-    if (!document) return null
+  if (!document) return null
 
-    const {
-        status,
-        document_number,
-        invoice_number,
-        company_document,
-        created_at,
-        updated_at,
-        created_by_user,
-        updated_by_user,
-        member,
-        company,
-        form,
-        document: docTypeInfo,
-    } = document
+  const {
+    status,
+    document_number,
+    invoice_number,
+    company_document,
+    created_at,
+    updated_at,
+    created_by_user,
+    updated_by_user,
+    member,
+    company,
+    form,
+    document: docTypeInfo,
+  } = document
 
-    const statusKey = (
-        status?.toLowerCase().replace(/ /g, '_') ?? 'pending'
-    ) as keyof typeof accountDocumentStatusColor
-    const statusColor = accountDocumentStatusColor[statusKey] || 'bg-gray-100'
-    const statusLabel = status?.replace(/_/g, ' ') || 'N/A'
+  const statusKey = (
+    status?.toLowerCase().replace(/ /g, '_') ?? 'pending'
+  ) as keyof typeof accountDocumentStatusColor
+  const statusColor = accountDocumentStatusColor[statusKey] || 'bg-gray-100'
+  const statusLabel = status?.replace(/_/g, ' ') || 'N/A'
 
-    return (
-        <Dialog
-            isOpen={true}
-            onClose={onClose}
-            onRequestClose={onClose}
-            width={900}
-            bodyOpenClassName="overflow-y-hidden"
-        >
-            <div className="flex flex-col h-full">
-                {/* --- Dialog Header --- */}
-                <div className="flex justify-between items-start p-4 border-b dark:border-gray-700">
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h4 className="font-bold text-xl mb-0">
-                                {document_number}
-                            </h4>
-                            <Tag className={classNames(statusColor, 'capitalize')}>
-                                {statusLabel}
-                            </Tag>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            Document details for{' '}
-                            <span className="font-semibold text-gray-700 dark:text-gray-200">
-                                {company?.company_name || member?.name || 'N/A'}
-                            </span>
-                        </p>
-                    </div>
-                    {/* <Button
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={900}
+      bodyOpenClassName="overflow-y-hidden"
+    >
+      <div className="flex flex-col h-full">
+        {/* --- Dialog Header --- */}
+        <div className="flex justify-between items-start p-4 border-b dark:border-gray-700">
+          <div>
+            <div className="flex items-center gap-3">
+              <h4 className="font-bold text-xl mb-0">
+                {document_number}
+              </h4>
+              <Tag className={classNames(statusColor, 'capitalize')}>
+                {statusLabel}
+              </Tag>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Document details for{' '}
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                {company?.company_name || member?.name || 'N/A'}
+              </span>
+            </p>
+          </div>
+          {/* <Button
                         shape="circle"
                         size="sm"
                         icon={<TbX />}
                         onClick={onClose}
                     /> */}
-                </div>
+        </div>
 
-                {/* --- Dialog Body --- */}
-                <div className="p-6 max-h-[75vh] overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Main Content (2/3 width) */}
-                    <div className="lg:col-span-2 flex flex-col gap-6">
-                        <Card bodyClass="p-4">
-                            <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
-                                Document Information
-                            </h6>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <InfoItem
-                                    icon={<TbFileCertificate size={20} />}
-                                    label="Document Type"
-                                    value={docTypeInfo?.name}
-                                />
-                                <InfoItem
-                                    icon={<TbFileCheck size={20} />}
-                                    label="Company Document"
-                                    value={company_document}
-                                />
-                                <InfoItem
-                                    icon={<TbFileExcel size={20} />}
-                                    label="Invoice Number"
-                                    value={invoice_number}
-                                />
-                                {form && (
-                                    <InfoItem
-                                        icon={<TbChecklist size={20} />}
-                                        label="Token Form"
-                                        value={form.form_name}
-                                    />
-                                )}
-                            </div>
-                        </Card>
+        {/* --- Dialog Body --- */}
+        <div className="p-6 max-h-[75vh] overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content (2/3 width) */}
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <Card bodyClass="p-4">
+              <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
+                Document Information
+              </h6>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InfoItem
+                  icon={<TbFileCertificate size={20} />}
+                  label="Document Type"
+                  value={docTypeInfo?.name}
+                />
+                <InfoItem
+                  icon={<TbFileCheck size={20} />}
+                  label="Company Document"
+                  value={company_document}
+                />
+                <InfoItem
+                  icon={<TbFileExcel size={20} />}
+                  label="Invoice Number"
+                  value={invoice_number}
+                />
+                {form && (
+                  <InfoItem
+                    icon={<TbChecklist size={20} />}
+                    label="Token Form"
+                    value={form.form_name}
+                  />
+                )}
+              </div>
+            </Card>
 
-                        {/* Client Details Card */}
-                        {(company || member) && (
-                            <Card bodyClass="p-4">
-                                <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
-                                    Client Information
-                                </h6>
-                                <div className="flex flex-col gap-6">
-                                    {company && (
-                                        <div>
-                                            <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                                                <TbBrandGoogleDrive size={18} />{' '}
-                                                Company Details
-                                            </h6>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                                <DetailItem
-                                                    label="Name"
-                                                    value={company.company_name}
-                                                />
-                                                <DetailItem
-                                                    label="Email"
-                                                    value={
-                                                        company.primary_email_id
-                                                    }
-                                                />
-                                                <DetailItem
-                                                    label="Phone"
-                                                    value={`${
-                                                        company.primary_contact_number_code ||
-                                                        ''
-                                                    } ${
-                                                        company.primary_contact_number ||
-                                                        ''
-                                                    }`.trim()}
-                                                />
-                                                <DetailItem
-                                                    label="GST"
-                                                    value={company.gst_number}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                    {company && member && (
-                                        <div className="border-t dark:border-gray-600 -mx-4 my-2"></div>
-                                    )}
-                                    {member && (
-                                        <div className={company ? 'pt-0' : ''}>
-                                            <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
-                                                <TbUser size={18} /> Member
-                                                Details
-                                            </h6>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                                <DetailItem
-                                                    label="Name"
-                                                    value={member.name}
-                                                />
-                                                <DetailItem
-                                                    label="Email"
-                                                    value={member.email}
-                                                />
-                                                <DetailItem
-                                                    label="Phone"
-                                                    value={`${
-                                                        member.number_code || ''
-                                                    } ${
-                                                        member.number || ''
-                                                    }`.trim()}
-                                                />
-                                                <DetailItem
-                                                    label="Business Type"
-                                                    value={
-                                                        member.business_type
-                                                    }
-                                                />
-                                                <DetailItem
-                                                    label="Interested In"
-                                                    value={
-                                                        member.interested_in
-                                                    }
-                                                />
-                                                {!company && (
-                                                    <DetailItem
-                                                        label="Company Name"
-                                                        value={
-                                                            member?.company_actual ||
-                                                            member?.company_temp
-                                                        }
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </Card>
+            {/* Client Details Card */}
+            {(company || member) && (
+              <Card bodyClass="p-4">
+                <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
+                  Client Information
+                </h6>
+                <div className="flex flex-col gap-6">
+                  {company && (
+                    <div>
+                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                        <TbBrandGoogleDrive size={18} />{' '}
+                        Company Details
+                      </h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <DetailItem
+                          label="Name"
+                          value={company.company_name}
+                        />
+                        <DetailItem
+                          label="Email"
+                          value={
+                            company.primary_email_id
+                          }
+                        />
+                        <DetailItem
+                          label="Phone"
+                          value={`${company.primary_contact_number_code ||
+                            ''
+                            } ${company.primary_contact_number ||
+                            ''
+                            }`.trim()}
+                        />
+                        <DetailItem
+                          label="GST"
+                          value={company.gst_number}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {company && member && (
+                    <div className="border-t dark:border-gray-600 -mx-4 my-2"></div>
+                  )}
+                  {member && (
+                    <div className={company ? 'pt-0' : ''}>
+                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                        <TbUser size={18} /> Member
+                        Details
+                      </h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <DetailItem
+                          label="Name"
+                          value={member.name}
+                        />
+                        <DetailItem
+                          label="Email"
+                          value={member.email}
+                        />
+                        <DetailItem
+                          label="Phone"
+                          value={`${member.number_code || ''
+                            } ${member.number || ''
+                            }`.trim()}
+                        />
+                        <DetailItem
+                          label="Business Type"
+                          value={
+                            member.business_type
+                          }
+                        />
+                        <DetailItem
+                          label="Interested In"
+                          value={
+                            member.interested_in
+                          }
+                        />
+                        {!company && (
+                          <DetailItem
+                            label="Company Name"
+                            value={
+                              member?.company_actual ||
+                              member?.company_temp
+                            }
+                          />
                         )}
+                      </div>
                     </div>
-
-                    {/* Sidebar (1/3 width) */}
-                    <div className="lg:col-span-1 flex flex-col gap-6">
-                        <Card bodyClass="p-4">
-                            <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
-                                Ownership & History
-                            </h6>
-                            <div className="flex flex-col gap-5">
-                                <InfoItem
-                                    icon={<TbUser size={20} />}
-                                    label="Assigned To"
-                                    value={created_by_user?.name}
-                                />
-                                <InfoItem
-                                    icon={<TbUser size={20} />}
-                                    label="Created By"
-                                    value={created_by_user?.name}
-                                />
-                                <InfoItem
-                                    icon={<TbCalendarClock size={20} />}
-                                    label="Created On"
-                                >
-                                    {dayjs(created_at).format(
-                                        'DD MMM YYYY, hh:mm A',
-                                    )}
-                                </InfoItem>
-                                <InfoItem
-                                    icon={<TbPencil size={20} />}
-                                    label="Last Updated By"
-                                    value={updated_by_user?.name}
-                                />
-                                <InfoItem
-                                    icon={<TbCalendarClock size={20} />}
-                                    label="Last Updated On"
-                                >
-                                    {dayjs(updated_at).format(
-                                        'DD MMM YYYY, hh:mm A',
-                                    )}
-                                </InfoItem>
-                            </div>
-                        </Card>
-                    </div>
+                  )}
                 </div>
-            </div>
-        </Dialog>
-    )
+              </Card>
+            )}
+          </div>
+
+          {/* Sidebar (1/3 width) */}
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            <Card bodyClass="p-4">
+              <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
+                Ownership & History
+              </h6>
+              <div className="flex flex-col gap-5">
+                <InfoItem
+                  icon={<TbUser size={20} />}
+                  label="Assigned To"
+                  value={created_by_user?.name}
+                />
+                <InfoItem
+                  icon={<TbUser size={20} />}
+                  label="Created By"
+                  value={created_by_user?.name}
+                />
+                <InfoItem
+                  icon={<TbCalendarClock size={20} />}
+                  label="Created On"
+                >
+                  {dayjs(created_at).format(
+                    'DD MMM YYYY, hh:mm A',
+                  )}
+                </InfoItem>
+                <InfoItem
+                  icon={<TbPencil size={20} />}
+                  label="Last Updated By"
+                  value={updated_by_user?.name}
+                />
+                <InfoItem
+                  icon={<TbCalendarClock size={20} />}
+                  label="Last Updated On"
+                >
+                  {dayjs(updated_at).format(
+                    'DD MMM YYYY, hh:mm A',
+                  )}
+                </InfoItem>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </Dialog>
+  )
 }
 
 
@@ -1123,7 +1118,7 @@ const AccountDocument = () => {
     const mappedData: AccountDocumentListItem[] = rawData.map((item: any) => ({
       id: String(item.id),
       status: (item.status?.toLowerCase() || 'pending') as AccountDocumentStatus,
-      leadNumber: item.lead_id ? `LD-${item.lead_id}` : 'N/A',
+      // leadNumber: item.lead_id ? `LD-${item.lead_id}` : 'N/A',
       enquiryType: item.member?.interested_in?.toLowerCase().includes('sell') ? 'sales' : 'purchase',
       memberName: item.member?.name || 'Unknown Member',
       companyId: item.company_id ? String(item.company_id) : null,
@@ -1292,7 +1287,14 @@ const AccountDocument = () => {
 
   const columns: ColumnDef<AccountDocumentListItem>[] = useMemo(() => [
     { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<AccountDocumentListItem, any>) => (<Tag className={`${accountDocumentStatusColor[props.row.original.status as keyof typeof accountDocumentStatusColor] || 'bg-gray-100'} capitalize px-2 py-1 text-xs`}>{props.row.original.status.replace(/_/g, ' ')}</Tag>), },
-    { header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => { const { leadNumber, enquiryType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span>{leadNumber}</span><div><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div></div>); }, },
+    {
+      header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => {
+        const { leadNumber, enquiryType } = props.row.original || {}; return (<>
+          <div ><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div >
+        </>
+        );
+      },
+    },
     { header: "Member / Company", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { const { companyName, memberName, userName, companyDocumentType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><b>{companyName}</b><span>Member: {memberName}</span><span>Assigned To: {userName}</span><div><b>Company Document: </b><span>{companyDocumentType}</span></div></div>); }, },
     { header: "Document Details", size: 220, cell: (props) => { const { documentType, documentNumber, invoiceNumber, formType, createdAt } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type ID: </b><span>{documentType}</span></div><div><b>Doc No: </b><span>{documentNumber}</span></div><div><b>Invoice No: </b><span>{invoiceNumber}</span></div><div><b>Form: </b><span>{formType}</span></div><b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
     { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} onEdit={() => handleOpenEditDrawer(props.row.original)} onView={() => handleViewClick(props.row.original)} rowData={props.row.original} />), },
