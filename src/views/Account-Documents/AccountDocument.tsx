@@ -184,61 +184,6 @@ const eventTypeOptions = [
   { value: 'SendQuote', label: 'Send Quote/Estimate' },
 ]
 
-
-const dummyAccountDocumentData: AccountDocumentListItem[] = [
-  {
-    id: "ACC-001",
-    status: "approved",
-    leadNumber: "LD-202405-001",
-    enquiryType: "purchase",
-    memberName: "ABC Enterprise",
-    companyId: "5067974",
-    companyName: "ABC Enterprise",
-    userId: "7039521",
-    userName: "Dharmesh Soni",
-    companyDocumentType: "OMC",
-    documentType: "Sales Order",
-    documentNumber: "ND-PO-2526-38",
-    invoiceNumber: "OMC-117/25-26",
-    formType: "CRM PI 1.0.2",
-    createdAt: "2025-05-20T14:30:00Z",
-  },
-  {
-    id: "ACC-002",
-    status: "pending",
-    leadNumber: "LD-202405-002",
-    enquiryType: "sales",
-    memberName: "XYZ Traders",
-    companyId: "5069981",
-    companyName: "XYZ Traders",
-    userId: "7039123",
-    userName: "Kiran Patel",
-    companyDocumentType: "GST",
-    documentType: "Purchase Order",
-    documentNumber: "ND-PO-2632-45",
-    invoiceNumber: "GST-200/25-26",
-    formType: "CRM PI 1.0.3",
-    createdAt: "2025-05-22T10:15:00Z",
-  },
-  {
-    id: "ACC-003",
-    status: "rejected",
-    leadNumber: "LD-202405-003",
-    enquiryType: "service",
-    memberName: "PQR Solutions",
-    companyId: "5071111",
-    companyName: "PQR Solutions",
-    userId: "7039333",
-    userName: "Meena Shah",
-    companyDocumentType: "TRN",
-    documentType: "Service Invoice",
-    documentNumber: "SV-IN-8899",
-    invoiceNumber: "TRN-301/25-26",
-    formType: "CRM SV 1.2.0",
-    createdAt: "2025-05-23T08:00:00Z",
-  },
-];
-
 const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
   approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
   pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
@@ -304,7 +249,7 @@ const AddScheduleDialog: React.FC<{ document: AccountDocumentListItem; onClose: 
   const onAddEvent = async (data: ScheduleFormData) => {
     setIsLoading(true);
     const payload = {
-      module_id: Number(document.id.split('-')[1]), // Assuming ID is like 'ACC-001'
+      module_id: Number(document.id),
       module_name: 'AccountDocument',
       event_title: data.event_title,
       event_type: data.event_type,
@@ -425,7 +370,6 @@ const AccountDocument = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { getAllUserData = [], getaccountdoc } = useSelector(masterSelector, shallowEqual)
-  console.log(getaccountdoc?.data, "getaccountdoc 0000000000");
   
   const [isSubmittingDrawer, setIsSubmittingDrawer] = useState(false);
   const filterForm = useForm();
@@ -447,8 +391,35 @@ const AccountDocument = () => {
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
   const { pageData, total, allFilteredAndSortedData } = useMemo((): { pageData: AccountDocumentListItem[]; total: number; allFilteredAndSortedData: AccountDocumentListItem[]; } => {
-    let processedData: AccountDocumentListItem[] = cloneDeep(dummyAccountDocumentData);
-    if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query))); }
+    const rawData = getaccountdoc?.data || [];
+    
+    // Map API data to the component's expected format
+    const mappedData: AccountDocumentListItem[] = rawData.map((item: any) => ({
+      id: String(item.id),
+      status: (item.status?.toLowerCase() || 'pending') as AccountDocumentStatus,
+      leadNumber: item.lead_id ? `LD-${item.lead_id}` : 'N/A',
+      enquiryType: item.member?.interested_in?.toLowerCase().includes('sell') ? 'sales' : 'purchase',
+      memberName: item.member?.name || 'Unknown Member',
+      companyId: item.company_id ? String(item.company_id) : null,
+      companyName: item.member?.company_actual || item.member?.company_temp || item.member?.name || 'Unknown Company',
+      userId: item.created_by_user?.employee_id || String(item.created_by_user?.id) || null,
+      userName: item.created_by_user?.name || 'System',
+      companyDocumentType: item.company_document || 'N/A',
+      documentType: String(item.document_type), // This is an ID, will display as such
+      documentNumber: item.document_number || 'N/A',
+      invoiceNumber: item.invoice_number || 'N/A',
+      formType: item.form?.form_name || 'N/A',
+      createdAt: item.created_at,
+    }));
+    
+    let processedData: AccountDocumentListItem[] = cloneDeep(mappedData);
+
+    if (tableData.query) {
+      const query = tableData.query.toLowerCase().trim();
+      processedData = processedData.filter((item) =>
+        Object.values(item).some((val) => String(val).toLowerCase().includes(query))
+      );
+    }
 
     if (filterCriteria.filterStatus?.length) {
       const selectedStatuses = new Set(filterCriteria.filterStatus.map((s: SelectOption) => s.value));
@@ -456,12 +427,29 @@ const AccountDocument = () => {
     }
 
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key) { processedData.sort((a, b) => { let aVal = a[key as keyof AccountDocumentListItem] as any; let bVal = b[key as keyof AccountDocumentListItem] as any; if (key === "createdAt" || key === "updatedAt") return order === "asc" ? dayjs(aVal).valueOf() - dayjs(bVal).valueOf() : dayjs(bVal).valueOf() - dayjs(aVal).valueOf(); if (typeof aVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal; return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? "")); }); }
+    if (order && key) {
+      processedData.sort((a, b) => {
+        let aVal = a[key as keyof AccountDocumentListItem] as any;
+        let bVal = b[key as keyof AccountDocumentListItem] as any;
+        if (key === "createdAt" || key === "updatedAt") {
+          return order === "asc" ? dayjs(aVal).valueOf() - dayjs(bVal).valueOf() : dayjs(bVal).valueOf() - dayjs(aVal).valueOf();
+        }
+        if (typeof aVal === "number") {
+          return order === "asc" ? aVal - bVal : bVal - aVal;
+        }
+        return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? ""));
+      });
+    }
     const currentTotal = processedData.length;
     const { pageIndex = 1, pageSize = 10 } = tableData;
     const startIndex = (pageIndex - 1) * pageSize;
-    return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData, };
-  }, [tableData, filterCriteria]);
+
+    return {
+      pageData: processedData.slice(startIndex, startIndex + pageSize),
+      total: currentTotal,
+      allFilteredAndSortedData: processedData,
+    };
+  }, [getaccountdoc, tableData, filterCriteria]);
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const handleDeleteClick = useCallback((item: AccountDocumentListItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
@@ -501,9 +489,9 @@ const AccountDocument = () => {
 
   const columns: ColumnDef<AccountDocumentListItem>[] = useMemo(() => [
     { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<AccountDocumentListItem, any>) => (<Tag className={`${accountDocumentStatusColor[props.row.original.status as keyof typeof accountDocumentStatusColor] || 'bg-gray-100'} capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag>), },
-    { header: "Lead", accessorKey: "leadNumber", size: 130, cell: (props) => { return (<div className="flex flex-col gap-0.5 text-xs"><span>{props.getValue<string>()}</span><div><Tag className={`${enquiryTypeColor[props.row.original.enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{props.row.original.enquiryType}</Tag></div></div>); }, },
-    { header: "Member", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { return (<div className="flex flex-col gap-0.5 text-xs"><b>5067974</b><span>ABC Enterprise</span><b>7039521</b><span>Dharmesh Soni</span><div><b>Company Document:</b><span>OMC</span></div></div>); }, },
-    { header: "Document", size: 220, cell: (props) => { return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type: </b><span>Sales Order</span></div><div><b>Doc No: </b><span>ND-PO-2526-38</span></div><div><b>Invoice No: </b><span>OMC-117/25-26</span></div><div><b>Form Type: </b><span>CRM PI 1.0.2</span></div><b>{dayjs(props.row.original.createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
+    { header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => { const { leadNumber, enquiryType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span>{leadNumber}</span><div><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div></div>); }, },
+    { header: "Member / Company", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { const { companyName, memberName, userName, companyDocumentType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><b>{companyName}</b><span>Member: {memberName}</span><span>Assigned To: {userName}</span><div><b>Company Document: </b><span>{companyDocumentType}</span></div></div>); }, },
+    { header: "Document Details", size: 220, cell: (props) => { const { documentType, documentNumber, invoiceNumber, formType, createdAt } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type ID: </b><span>{documentType}</span></div><div><b>Doc No: </b><span>{documentNumber}</span></div><div><b>Invoice No: </b><span>{invoiceNumber}</span></div><div><b>Form: </b><span>{formType}</span></div><b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
     { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original} />), },
   ], [handleDeleteClick, handleOpenModal]);
 
@@ -517,14 +505,20 @@ const AccountDocument = () => {
   }, [filterCriteria]);
 
   const counts = useMemo(() => {
-    const total = dummyAccountDocumentData.length;
-    const pending = dummyAccountDocumentData.filter(d => d.status === 'pending').length;
-    const approved = dummyAccountDocumentData.filter(d => d.status === 'approved').length;
-    const rejected = dummyAccountDocumentData.filter(d => d.status === 'rejected').length;
-    const uploaded = 0; // Placeholder
-    const not_uploaded = 0; // Placeholder
+    const data = (getaccountdoc?.data || []).map((item: any) => ({
+        status: (item.status?.toLowerCase() || 'pending') as AccountDocumentStatus
+    }));
+
+    const total = data.length;
+    const pending = data.filter(d => d.status === 'pending').length;
+    const approved = data.filter(d => d.status === 'approved').length;
+    const rejected = data.filter(d => d.status === 'rejected').length;
+    const uploaded = data.filter(d => d.status === 'uploaded').length;
+    const not_uploaded = data.filter(d => d.status === 'not_uploaded').length;
+    
     return { total, pending, approved, rejected, uploaded, not_uploaded };
-  }, []);
+  }, [getaccountdoc]);
+
 
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
@@ -548,7 +542,7 @@ const AccountDocument = () => {
         </AdaptiveCard>
       </Container>
       <AccountDocumentSelectedFooter selectedItems={selectedItems} />
-      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete" onClose={() => setSingleDeleteConfirmOpen(false)} loading={isProcessingDelete} onCancel={() => setSingleDeleteConfirmOpen(false)}><p>Delete <strong></strong>?</p></ConfirmDialog>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete" onClose={() => setSingleDeleteConfirmOpen(false)} loading={isProcessingDelete} onCancel={() => setSingleDeleteConfirmOpen(false)}><p>Delete <strong>{itemToDelete?.documentNumber}</strong>?</p></ConfirmDialog>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" type="button">Clear</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Apply</Button></div>}>
         <Form><FormItem label="Status"><Controller control={filterForm.control} name="status" render={({ field }) => (<Select {...field} placeholder="Select Status" isMulti options={[{ label: "Active", value: "Active" }, { label: "Pending", value: "Pending" }, { label: "Completed", value: "Completed" }, { label: "Force Completed", value: "Force Completed" },]} />)} /></FormItem><FormItem label="Document Type"><Controller control={filterForm.control} name="doc_type" render={({ field }) => (<Select {...field} placeholder="Select Document Type" isMulti options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" },]} />)} /></FormItem><FormItem label="Company Document"><Controller control={filterForm.control} name="comp_doc" render={({ field }) => (<Select {...field} placeholder="Select Company Document" isMulti options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" },]} />)} /></FormItem></Form>
       </Drawer>
