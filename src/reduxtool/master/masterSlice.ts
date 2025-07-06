@@ -39,6 +39,7 @@ import {
   editpartnerAction,
   editPaymentTermAction,
   editUnitAction,
+  getaccountdocAction,
   getActivityLogAction,
   getAllActionAction,
   getAllCompany,
@@ -201,6 +202,7 @@ const INITIAL_STATE: any = {
   pinnedTabs: [],
   allDocuments: [],
   getAllAction: [],
+  getaccountdoc: [],
 };
 
 const masterSlice = createSlice({
@@ -717,9 +719,13 @@ const masterSlice = createSlice({
       ...state,
       allDocuments: payload,
     }));
-     builder.addCase(getAllActionAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(getAllActionAction.fulfilled, (state, { payload }) => ({
       ...state,
       getAllAction: payload,
+    }));
+    builder.addCase(getaccountdocAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      getaccountdoc: payload,
     }));
   },
 });

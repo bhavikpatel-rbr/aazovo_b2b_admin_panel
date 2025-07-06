@@ -3124,7 +3124,7 @@ export const addAllActionActionAsync = async (data) => {
 
 export const deleteAllActionActionAsync = async (data) => {
   try {
-    const response = await axiosInstance.delete(`${config.apiURL}/actives/${data.id}` )
+    const response = await axiosInstance.delete(`${config.apiURL}/actives/${data.id}`)
     return response?.data
   } catch (err) {
     return isAxiosError(err)
@@ -3144,6 +3144,15 @@ export const deleteTaskAsync = async (RolesData: any) => {
   try {
     const response = await axiosInstance.delete(`${config.apiURL}/roles/role/${RolesData}`)
     return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getaccountdocActionAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/account_doc`)
+    return response?.data
   } catch (err) {
     return isAxiosError(err)
   }
