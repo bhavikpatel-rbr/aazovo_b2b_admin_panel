@@ -66,6 +66,7 @@ import {
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { Link } from "react-router-dom";
+import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 
 // --- Define Blog Type ---
 export type BlogItem = {
@@ -85,7 +86,7 @@ export type BlogItem = {
   icon_full_path: string | null;
   updated_by_name?: string;
   updated_by_role?: string;
-  updated_by_user?: { name: string; roles: { display_name: string }[] };
+  updated_by_user?: { name: string; roles: { display_name: string }[], profile_pic_path: string | null };
 };
 
 // --- Zod Schema for Add/Edit Blog Form ---
@@ -268,24 +269,37 @@ const BlogsSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: 
 BlogsSearch.displayName = "BlogsSearch";
 
 // --- BlogsTableTools (with Column Chooser) ---
-const BlogsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+const BlogsTableTools = ({
+  onSearchChange,
+  onFilter,
+  onExport,
+  onClearFilters,
+  allColumns,
+  visibleColumnKeys,
+  setVisibleColumnKeys,
+  activeFilterCount,
+}: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
   onClearFilters: () => void;
-  columns: ColumnDef<BlogItem>[];
-  filteredColumns: ColumnDef<BlogItem>[];
-  setFilteredColumns: (cols: ColumnDef<BlogItem>[]) => void;
+  allColumns: ColumnDef<BlogItem>[];
+  visibleColumnKeys: string[];
+  setVisibleColumnKeys: (keys: string[]) => void;
   activeFilterCount: number;
 }) => {
-    const toggleColumn = (checked: boolean, colHeader: string) => {
-        const newCols = checked
-            ? [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a, b) => columns.indexOf(a as any) - columns.indexOf(b as any))
-            : filteredColumns.filter(c => c.header !== colHeader);
-        setFilteredColumns(newCols);
-    };
+  const toggleColumn = (checked: boolean, columnKey: string) => {
+    if (checked) {
+      // Add the key to the list of visible keys
+      setVisibleColumnKeys([...visibleColumnKeys, columnKey]);
+    } else {
+      // Remove the key from the list
+      setVisibleColumnKeys(visibleColumnKeys.filter((key) => key !== columnKey));
+    }
+  };
 
-    const isColumnVisible = (header: string) => filteredColumns.some(c => c.header === header);
+  const isColumnVisible = (columnKey: string) =>
+    visibleColumnKeys.includes(columnKey);
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
@@ -293,23 +307,58 @@ const BlogsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, c
         <BlogsSearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
-            <div className="flex flex-col p-2">
-                <div className="font-semibold mb-1 border-b pb-1">Toggle Columns</div>
-                {columns.filter(c => c.id !== 'select' && c.header).map(col => (
-                    <div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                        <Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)}/>
-                        {col.header}
-                    </div>
-                ))}
+        <Dropdown
+          renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />}
+          placement="bottom-end"
+        >
+          <div className="flex flex-col p-2">
+            <div className="font-semibold mb-1 border-b pb-1">
+              Toggle Columns
             </div>
+            {allColumns
+              .filter((c) => (c.accessorKey || c.id) && c.header)
+              .map((col) => {
+                const key = (col.accessorKey || col.id) as string;
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"
+                  >
+                    <Checkbox
+                      name={key}
+                      checked={isColumnVisible(key)}
+                      onChange={(checked) => toggleColumn(checked, key)}
+                    />
+                    {col.header}
+                  </div>
+                );
+              })}
+          </div>
         </Dropdown>
-        <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters}></Button>
-        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+        <Button
+          title="Clear Filters & Reload"
+          icon={<TbReload />}
+          onClick={onClearFilters}
+        ></Button>
+        <Button
+          icon={<TbFilter />}
+          onClick={onFilter}
+          className="w-full sm:w-auto"
+        >
           Filter
-          {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+          {activeFilterCount > 0 && (
+            <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+              {activeFilterCount}
+            </span>
+          )}
         </Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        <Button
+          icon={<TbCloudUpload />}
+          onClick={onExport}
+          className="w-full sm:w-auto"
+        >
+          Export
+        </Button>
       </div>
     </div>
   );
@@ -524,13 +573,49 @@ const Blogs = () => {
       { header: "Tags", accessorKey: "tags", enableSorting: true, size: 180, cell: (props) => { const tags = props.getValue<string | null>(); if (!tags) return <span>-</span>; return (<div className="flex flex-wrap gap-1 max-w-[170px]">{tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((t) => (<Tag key={t} className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-xs">{t}</Tag>))}</div>); }, },
       { header: "Slug", accessorKey: "slug", enableSorting: true, size: 100 },
       { header: "Status", accessorKey: "status", enableSorting: true, size: 80, cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold border-0", blogStatusColor[status] || blogStatusColor.Draft)}>{status}</Tag>); }, },
-      { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+      {
+              header: "Updated Info",
+              accessorKey: "updated_at",
+              enableSorting: true,
+              size: 200,
+              cell: (props) => {
+                const { updated_at, updated_by_user } = props.row.original;
+                return (
+                  <div className="flex items-center gap-2">
+                    <Avatar
+                      src={updated_by_user?.profile_pic_path}
+                      shape="circle"
+                      size="sm"
+                      icon={<TbUserCircle />}
+                      className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                      onClick={() =>
+                        openImageViewer(updated_by_user?.profile_pic_path)
+                      }
+                    />
+                    <div>
+                      <span>{updated_by_user?.name || "N/A"}</span>
+                      <div className="text-xs">
+                        <b>{updated_by_user?.roles?.[0]?.display_name || ""}</b>
+                      </div>
+                      <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+                    </div>
+                  </div>
+                );
+              },
+            },
       { header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 80, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />), },
     ],
-    [handleDeleteClick, openEditDrawer]
+    []
   );
-  const [filteredColumns, setFilteredColumns] = useState(baseColumns);
-  useEffect(() => { setFilteredColumns(baseColumns); }, []);
+
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(() =>
+    baseColumns.map(c => (c.accessorKey || c.id) as string)
+  );
+  
+  const visibleColumns = useMemo(
+    () => baseColumns.filter(c => visibleColumnKeys.includes((c.accessorKey || c.id) as string)),
+    [baseColumns, visibleColumnKeys]
+  );
 
   // --- Render ---
   return (
@@ -557,17 +642,19 @@ const Blogs = () => {
             onFilter={openFilterDrawer}
             onExport={handleOpenExportReasonModal}
             onClearFilters={onClearFiltersAndReload}
-            columns={baseColumns}
-            filteredColumns={filteredColumns}
-            setFilteredColumns={setFilteredColumns}
+            allColumns={baseColumns}
+            visibleColumnKeys={visibleColumnKeys}
+            setVisibleColumnKeys={setVisibleColumnKeys}
             activeFilterCount={activeFilterCount}
           />
-          <div className="mt-4">
+          <div className="mt-3">
+            
             <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
+          {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching Blog(s).</div>}
           </div>
           <div className="flex-grow overflow-y-auto mt-4">
             <BlogsTable
-              columns={filteredColumns}
+              columns={visibleColumns}
               data={pageData}
               loading={tableLoading}
               pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
@@ -627,7 +714,68 @@ const Blogs = () => {
               {!iconPreview && drawer.type === "edit" && editingBlog?.icon_full_path && !drawer.methods.watch("icon") && (<p className="text-xs text-gray-500 mb-1">Current icon will be removed. Upload a new one if needed.</p>)}
               <Input type="file" accept="image/*" onChange={(e) => handleIconChange(e, drawer.methods)} className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
             </FormItem>
-            {drawer.type === "edit" && editingBlog && (<div className="w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-gray-800 dark:text-gray-100">Latest Update:</b><br /><p className="font-semibold">{editingBlog.updated_by_user?.name || "N/A"}</p><p>{editingBlog.updated_by_user?.roles[0]?.display_name || "N/A"}</p></div><div className="text-right"><span className="font-semibold">Created At:</span>{" "}<span>{editingBlog.created_at ? new Date(editingBlog.created_at).toLocaleString() : "N/A"}</span><br /><span className="font-semibold">Updated At:</span>{" "}<span>{editingBlog.updated_at ? new Date(editingBlog.updated_at).toLocaleString() : "N/A"}</span></div></div></div>)}
+            {drawer.type === "edit" && editingBlog && (
+               <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+            <div>
+              <b className="mt-3 mb-3 font-semibold text-primary">
+                Latest Update:
+              </b>
+              <br />
+              <p className="text-sm font-semibold">
+                {editingBlog.updated_by_user?.name || "N/A"}
+              </p>
+              <p>
+                {editingBlog.updated_by_user?.roles[0]?.display_name ||
+                  "N/A"}
+              </p>
+            </div>
+            <div className="text-right">
+              <br />
+              <span className="font-semibold">Created At:</span>{" "}
+              <span>
+                {editingBlog.created_at
+                  ? `${new Date(
+                      editingBlog.created_at
+                    ).getDate()} ${new Date(
+                      editingBlog.created_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      editingBlog.created_at
+                    ).getFullYear()}, ${new Date(
+                      editingBlog.created_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+              <br />
+              <span className="font-semibold">Updated At:</span>{" "}
+              <span>
+                {}
+                {editingBlog.updated_at
+                  ? `${new Date(
+                      editingBlog.updated_at
+                    ).getDate()} ${new Date(
+                      editingBlog.updated_at
+                    ).toLocaleString("en-US", {
+                      month: "short",
+                    })} ${new Date(
+                      editingBlog.updated_at
+                    ).getFullYear()}, ${new Date(
+                      editingBlog.updated_at
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}`
+                  : "N/A"}
+              </span>
+            </div>
+          </div>
+              )}
           </Form>
         </Drawer>
       ))}
@@ -636,8 +784,23 @@ const Blogs = () => {
           <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select status..." options={blogStatusOptions} value={field.value || []} onChange={(selectedVal) => field.onChange(selectedVal || [])} />)} /></FormItem>
         </Form>
       </Drawer>
-      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Blog" onClose={() => setSingleDeleteConfirmOpen(false)} onConfirm={onConfirmSingleDelete} loading={isDeleting}><p>Are you sure you want to delete the blog "<strong>{blogToDelete?.title}</strong>"? This action cannot be undone.</p></ConfirmDialog>
-      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}><div className="flex justify-center items-center p-4">{imageToView ? (<img src={imageToView} alt="Blog Icon Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }}/>) : (<p>No image to display.</p>)}</div></Dialog>
+      <ConfirmDialog 
+      isOpen={singleDeleteConfirmOpen} 
+      type="danger" title="Delete Blog" 
+      onCancel={() => setSingleDeleteConfirmOpen(false)}
+      onClose={() => setSingleDeleteConfirmOpen(false)} 
+      onConfirm={onConfirmSingleDelete} 
+      loading={isDeleting}>
+        <p>Are you sure you want to delete the blog "<strong>{blogToDelete?.title}
+          </strong>"? This action cannot be undone.</p>
+          </ConfirmDialog>
+      <Dialog 
+      isOpen={isImageViewerOpen} 
+      onClose={closeImageViewer} 
+      onRequestClose={closeImageViewer} 
+      shouldCloseOnOverlayClick={true} 
+      shouldCloseOnEsc={true} width={600}>
+        <div className="flex justify-center items-center p-4">{imageToView ? (<img src={imageToView} alt="Blog Icon Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }}/>) : (<p>No image to display.</p>)}</div></Dialog>
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
         type="info"
