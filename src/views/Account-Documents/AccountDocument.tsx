@@ -74,12 +74,11 @@ import type {
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
-// --- MODIFICATION: Updated AccountDocumentStatus to include new statuses from API ---
 import {
   AccountDocumentListItem,
-  AccountDocumentStatus, // Assumed to be updated to: 'approved' | 'pending' | 'rejected' | ... | 'completed' | 'active' | 'force_completed'
+  AccountDocumentStatus,
   EnquiryType,
-} from "./types"; // Adjust import path as needed
+} from "./types";
 
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -96,6 +95,12 @@ export interface ModalState {
   type: ModalType | null;
   data: AccountDocumentListItem | null;
 }
+type FilterFormData = {
+  filterStatus?: SelectOption[];
+  doc_type?: SelectOption[];
+  comp_doc?: SelectOption[];
+};
+
 
 // --- Zod Schema for Schedule Form ---
 const scheduleSchema = z.object({
@@ -185,19 +190,16 @@ const eventTypeOptions = [
   { value: 'SendQuote', label: 'Send Quote/Estimate' },
 ]
 
-// --- MODIFICATION: Added new statuses from API to color map ---
 const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
   approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
   pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
   rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
   uploaded: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100",
   not_uploaded: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-100",
-  // New statuses from API
-  completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", // Mapped to 'approved' color
+  completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
   active: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100",
   force_completed: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-100",
 };
-
 
 const enquiryTypeColor: Record<EnquiryType | "default", string> = {
   purchase: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200",
@@ -335,16 +337,19 @@ const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClear
     </div>
   )
 };
-const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: any) => { /* ... no changes ... */
-  const filters = [
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: any) => {
+  const allFilters = [
     ...(filterData.filterStatus || []).map((f: SelectOption) => ({ key: 'filterStatus', label: `Status: ${f.label}`, value: f })),
+    ...(filterData.doc_type || []).map((f: SelectOption) => ({ key: 'doc_type', label: `Doc Type: ${f.label}`, value: f })),
+    ...(filterData.comp_doc || []).map((f: SelectOption) => ({ key: 'comp_doc', label: `Company Doc: ${f.label}`, value: f })),
   ];
-  if (filters.length === 0) return null;
+
+  if (allFilters.length === 0) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
       <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-      {filters.map(filter => (
+      {allFilters.map(filter => (
         <Tag key={`${filter.key}-${filter.value.value}`} prefix>
           {filter.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key, filter.value)} />
         </Tag>
@@ -365,7 +370,7 @@ const AccountDocument = () => {
   const { getAllUserData = [], getaccountdoc } = useSelector(masterSelector, shallowEqual)
 
   const [isSubmittingDrawer, setIsSubmittingDrawer] = useState(false);
-  const filterForm = useForm();
+  const filterForm = useForm<FilterFormData>();
   const addNewDocumentForm = useForm();
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
   const [isAddNewDocumentDrawerOpen, setIsAddNewDocumentDrawerOpen] = useState<boolean>(false);
@@ -375,7 +380,7 @@ const AccountDocument = () => {
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "createdAt" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<AccountDocumentListItem[]>([]);
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
-  const [filterCriteria, setFilterCriteria] = useState<any>({});
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
 
   useEffect(() => { dispatch(getAllUsersAction()); dispatch(getaccountdocAction()); }, [dispatch]);
 
@@ -383,10 +388,44 @@ const AccountDocument = () => {
   const handleOpenModal = useCallback((type: ModalType, itemData: AccountDocumentListItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
+  // --- MODIFICATION: Create dynamic filter options from the full dataset ---
+  const filterOptions = useMemo(() => {
+    const rawData = getaccountdoc?.data || [];
+    const uniqueDocTypes = new Set<string>();
+    const uniqueCompanyDocs = new Set<string>();
+
+    rawData.forEach((item: any) => {
+      const formType = item.form?.form_name;
+      const companyDoc = item.company_document;
+
+      if (formType) {
+        uniqueDocTypes.add(formType);
+      }
+      if (companyDoc) {
+        uniqueCompanyDocs.add(companyDoc);
+      }
+    });
+
+    const docTypeOptions = Array.from(uniqueDocTypes)
+      .sort()
+      .map(doc => ({ label: doc, value: doc }));
+
+    const companyDocOptions = Array.from(uniqueCompanyDocs)
+      .sort()
+      .map(doc => ({ label: doc, value: doc }));
+
+    const statusOptions = Object.keys(accountDocumentStatusColor).map(s => ({ label: s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' '), value: s }));
+
+    return {
+      docTypeOptions,
+      companyDocOptions,
+      statusOptions,
+    };
+  }, [getaccountdoc]);
+
   const { pageData, total, allFilteredAndSortedData } = useMemo((): { pageData: AccountDocumentListItem[]; total: number; allFilteredAndSortedData: AccountDocumentListItem[]; } => {
     const rawData = getaccountdoc?.data || [];
 
-    // Map API data to the component's expected format
     const mappedData: AccountDocumentListItem[] = rawData.map((item: any) => ({
       id: String(item.id),
       status: (item.status?.toLowerCase() || 'pending') as AccountDocumentStatus,
@@ -398,7 +437,7 @@ const AccountDocument = () => {
       userId: item.created_by_user?.employee_id || String(item.created_by_user?.id) || null,
       userName: item.created_by_user?.name || 'System',
       companyDocumentType: item.company_document || 'N/A',
-      documentType: String(item.document_type), // This is an ID, will display as such
+      documentType: String(item.document_type),
       documentNumber: item.document_number || 'N/A',
       invoiceNumber: item.invoice_number || 'N/A',
       formType: item.form?.form_name || 'N/A',
@@ -418,6 +457,15 @@ const AccountDocument = () => {
       const selectedStatuses = new Set(filterCriteria.filterStatus.map((s: SelectOption) => s.value));
       processedData = processedData.filter(item => selectedStatuses.has(item.status));
     }
+    if (filterCriteria.comp_doc?.length) {
+      const selectedCompDocs = new Set(filterCriteria.comp_doc.map((s: SelectOption) => s.value));
+      processedData = processedData.filter(item => selectedCompDocs.has(item.companyDocumentType));
+    }
+    if (filterCriteria.doc_type?.length) {
+      const selectedDocTypes = new Set(filterCriteria.doc_type.map((s: SelectOption) => s.value));
+      processedData = processedData.filter(item => selectedDocTypes.has(item.formType));
+    }
+
 
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
@@ -433,6 +481,7 @@ const AccountDocument = () => {
         return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? ""));
       });
     }
+
     const currentTotal = processedData.length;
     const { pageIndex = 1, pageSize = 10 } = tableData;
     const startIndex = (pageIndex - 1) * pageSize;
@@ -457,6 +506,19 @@ const AccountDocument = () => {
   const openAddNewDocumentDrawer = useCallback(() => setIsAddNewDocumentDrawerOpen(true), []);
   const closeAddNewDocumentDrawer = useCallback(() => setIsAddNewDocumentDrawerOpen(false), []);
 
+  const onApplyFilters = (data: FilterFormData) => {
+    const newCriteria = Object.entries(data).reduce((acc, [key, value]) => {
+      if (value && (!Array.isArray(value) || value.length > 0)) {
+        acc[key as keyof FilterFormData] = value;
+      }
+      return acc;
+    }, {} as FilterFormData);
+
+    setFilterCriteria(newCriteria);
+    handleSetTableData({ pageIndex: 1 });
+    closeFilterDrawer();
+  };
+
   const onClearFilters = () => {
     setFilterCriteria({});
     filterForm.reset({});
@@ -464,19 +526,29 @@ const AccountDocument = () => {
   };
 
   const handleCardClick = (status: AccountDocumentStatus) => {
-    onClearFilters();
-    const statusOption = [{ value: status, label: status.charAt(0).toUpperCase() + status.slice(1) }];
-    setFilterCriteria({ filterStatus: statusOption });
+    const statusOption: SelectOption[] = [{ value: status, label: status.charAt(0).toUpperCase() + status.slice(1) }];
+    const newCriteria: FilterFormData = { filterStatus: statusOption };
+    setFilterCriteria(newCriteria);
+    filterForm.reset(newCriteria);
+    handleSetTableData({ pageIndex: 1, query: "" });
   };
 
-  const handleRemoveFilter = (key: string, value: any) => {
-    setFilterCriteria((prev: any) => {
-      const newFilters = { ...prev };
-      const currentValues = prev[key] as SelectOption[] | undefined;
+  const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: SelectOption) => {
+    setFilterCriteria((prev) => {
+      const newCriteria = cloneDeep(prev);
+      const currentValues = newCriteria[key];
+
       if (currentValues) {
-        newFilters[key] = currentValues.filter(item => item.value !== value.value);
+        const updatedValues = currentValues.filter(item => item.value !== valueToRemove.value);
+
+        if (updatedValues.length > 0) {
+          newCriteria[key] = updatedValues;
+        } else {
+          delete newCriteria[key];
+        }
       }
-      return newFilters;
+      filterForm.reset(newCriteria);
+      return newCriteria;
     });
   };
 
@@ -494,10 +566,11 @@ const AccountDocument = () => {
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filterCriteria.filterStatus?.length) count++;
+    if (filterCriteria.doc_type?.length) count++;
+    if (filterCriteria.comp_doc?.length) count++;
     return count;
   }, [filterCriteria]);
 
-  // --- MODIFICATION: Use server-provided counts directly from getaccountdoc.counts ---
   const counts = useMemo(() => {
     const apiCounts = getaccountdoc?.counts || {};
     return {
@@ -510,7 +583,6 @@ const AccountDocument = () => {
     };
   }, [getaccountdoc]);
 
-
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
 
@@ -519,7 +591,6 @@ const AccountDocument = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Account Document</h5><Button variant="solid" icon={<TbPlus />} className="px-5" onClick={() => openAddNewDocumentDrawer()}>Set New Document</Button></div>
-          {/* --- MODIFICATION: Updated cards to reflect new API counts --- */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
             <Tooltip title="Click to show all documents"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-gray-200 dark:border-gray-600")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-200"><TbBrandGoogleDrive size={24} /></div><div><h6 className="text-gray-700 dark:text-gray-100">{counts.total}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show pending documents"><div onClick={() => handleCardClick('pending')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbFileAlert size={24} /></div><div><h6 className="text-orange-500">{counts.pending}</h6><span className="font-semibold text-xs">Pending</span></div></Card></div></Tooltip>
@@ -535,9 +606,46 @@ const AccountDocument = () => {
       </Container>
       <AccountDocumentSelectedFooter selectedItems={selectedItems} />
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete" onClose={() => setSingleDeleteConfirmOpen(false)} loading={isProcessingDelete} onCancel={() => setSingleDeleteConfirmOpen(false)}><p>Delete <strong>{itemToDelete?.documentNumber}</strong>?</p></ConfirmDialog>
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" type="button">Clear</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Apply</Button></div>}>
-        <Form><FormItem label="Status"><Controller control={filterForm.control} name="status" render={({ field }) => (<Select {...field} placeholder="Select Status" isMulti options={[{ label: "Active", value: "active" }, { label: "Pending", value: "pending" }, { label: "Completed", value: "completed" }, { label: "Force Completed", value: "force_completed" },]} />)} /></FormItem><FormItem label="Document Type"><Controller control={filterForm.control} name="doc_type" render={({ field }) => (<Select {...field} placeholder="Select Document Type" isMulti options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" },]} />)} /></FormItem><FormItem label="Company Document"><Controller control={filterForm.control} name="comp_doc" render={({ field }) => (<Select {...field} placeholder="Select Company Document" isMulti options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" },]} />)} /></FormItem></Form>
+
+      {/* --- MODIFICATION: Updated the filter drawer to use dynamic options --- */}
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer}
+        footer={
+          <div className="text-right w-full">
+            <Button size="sm" className="mr-2" type="button" onClick={() => { onClearFilters(); closeFilterDrawer(); }}>Clear All</Button>
+            <Button size="sm" variant="solid" form="filterAccountDocumentForm" type="submit">Apply</Button>
+          </div>
+        }>
+        <Form id="filterAccountDocumentForm" onSubmit={filterForm.handleSubmit(onApplyFilters)}>
+          <FormItem label="Status">
+            <Controller
+              control={filterForm.control}
+              name="filterStatus"
+              render={({ field }) => (
+                <Select {...field} placeholder="Select Status" isMulti options={filterOptions.statusOptions} />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Document Type">
+            <Controller
+              control={filterForm.control}
+              name="doc_type"
+              render={({ field }) => (
+                <Select {...field} placeholder="Select Document Type" isMulti options={filterOptions.docTypeOptions} />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Company Document">
+            <Controller
+              control={filterForm.control}
+              name="comp_doc"
+              render={({ field }) => (
+                <Select {...field} placeholder="Select Company Document" isMulti options={filterOptions.companyDocOptions} />
+              )}
+            />
+          </FormItem>
+        </Form>
       </Drawer>
+
       <Drawer title="Add New Document" width={520} isOpen={isAddNewDocumentDrawerOpen} onClose={closeAddNewDocumentDrawer} onRequestClose={closeAddNewDocumentDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" type="button">Cancel</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Save</Button></div>}>
         <Form><FormItem label={<div>Company Document<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="comp_doc" render={({ field }) => (<Select {...field} placeholder="Select Company Document" options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" },]} />)} /></FormItem><FormItem label={<div>Document Type<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_type" render={({ field }) => (<Select {...field} placeholder="Select Document Type" options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" },]} />)} /></FormItem><div className="md:grid grid-cols-2 gap-3"><FormItem label={<div>Document Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_number" render={({ field }) => (<Input type="text" placeholder="Enter Document Number" {...field} />)} /></FormItem><FormItem label={<div>Invoice Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="invoice_number" render={({ field }) => (<Input type="text" placeholder="Enter Invoice Number" {...field} />)} /></FormItem></div><div className="md:grid grid-cols-2 gap-3"><FormItem label={<div>Token Form<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="token_form" render={({ field }) => (<Select {...field} placeholder="Select Form Type" options={[{ label: "CRM PI 1.0.2", value: "CRM PI 1.0.2" }, { label: "Debit Note", value: "Debit Note" }, { label: "Credit Note", value: "Credit Note" }, { label: "CRM PO 1.0.3", value: "CRM PO 1.0.3" },]} />)} /></FormItem><FormItem label={<div>Employee<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="employee" render={({ field }) => (<Select {...field} placeholder="Select Employee" options={[{ label: "Hevin Patel", value: "Hevin Patel" }, { label: "Vinit Chauhan", value: "Vinit Chauhan" },]} />)} /></FormItem></div><div className="md:grid grid-cols-2 gap-3 items-center"><FormItem label={<div>Member<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="member" render={({ field }) => (<Select {...field} placeholder="Select Member" options={[{ label: "Ajay Patel - 703549", value: "Ajay Patel - 703549", }, { label: "Krishnan Iyer - 703752", value: "Krishnan Iyer - 703752", },]} />)} /></FormItem><div className="text-xs mt-4"><b>5039522</b> <br /><span>XYZ Enterprise</span></div></div><span className="text-xs">Member is not associated with any company.</span></Form>
       </Drawer>
