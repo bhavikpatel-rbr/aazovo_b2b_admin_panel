@@ -34,6 +34,15 @@ export const addLeadAsync = async (leadData: any) => {
   }
 }
 
+export const addupdatePermissionsAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/roles/permission`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const editLeadAsync = async (leadData: any) => {
   console.log(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData });
 

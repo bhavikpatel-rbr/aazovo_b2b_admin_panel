@@ -358,6 +358,10 @@ const RolesListing = () => {
     handleSetTableData({ pageIndex: 1 });
   }, [handleSetTableData]);
 
+  const handlePermissionsClick = (role: RoleItem) => {
+    navigate('/access-control/permission', { state: { role } });
+  };
+
   // --- Table Columns Definition ---
   const columns: ColumnDef<RoleItem>[] = useMemo(() => [
       { header: "Display Name", accessorKey: "display_name", enableSorting: true, size: 200 },
@@ -391,7 +395,7 @@ const RolesListing = () => {
         cell: props => <ActionColumn 
             onEdit={() => openEditDrawer(props.row.original)} 
             onViewDetail={() => openViewModal(props.row.original)}
-            onPermissions={() => navigate("/access-control/permission")}
+            onPermissions={() => handlePermissionsClick(props.row.original)} // <-- UPDATE THIS LINE
         />
       },
   ], [navigate]);

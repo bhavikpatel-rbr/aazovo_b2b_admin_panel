@@ -1,311 +1,245 @@
 // src/views/your-path/PermissionsListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-// import { Link, useNavigate } from 'react-router-dom'; // useNavigate replaced by drawer logic
-import cloneDeep from "lodash/cloneDeep";
-import classNames from "classnames";
-import { useForm, Controller } from "react-hook-form"; // Added
-import { zodResolver } from "@hookform/resolvers/zod"; // Added
-import { z } from "zod"; // Added
-// UI Components
-import AdaptiveCard from "@/components/shared/AdaptiveCard";
-import Container from "@/components/shared/Container";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Checkbox, Button, Notification, toast,  } from "@/components/ui";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
-import Button from "@/components/ui/Button";
-// import Dialog from '@/components/ui/Dialog'; // Not actively used, can remove if not planned
-import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
-import DebouceInput from "@/components/shared/DebouceInput";
-import {
-  Checkbox,
-  Drawer,
-  Form,
-  FormItem,
-  Input,
-  Select as UiSelect,
-} from "@/components/ui"; // Added Drawer, Form, FormItem, UiSelect, Textarea
-
-// Icons
-import {
-  TbPencil,
-  TbTrash,
-  TbChecks,
-  TbSearch,
-  TbFilter,
-  TbPlus,
-  TbCloudUpload,
-  TbEye,
-  TbDotsVertical,
-  TbShare,
-  TbKey,
-  TbShieldLock,
-  TbFileDescription,
-  TbPointerPause, // Additional icons
-} from "react-icons/tb";
-
-// Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-} from "@/components/shared/DataTable";
+import { useAppDispatch } from "@/reduxtool/store";
+import { updatePermissionsAction } from "@/reduxtool/master/middleware"; // Assuming this action exists
+import type { ColumnDef } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import PermissionDataTable from "./PermissionDataTable";
-import { useNavigate } from "react-router-dom";
+import { AdaptiveCard, Container } from "@/components/shared";
 
-// --- Define Item Type ---
-export type PermissionItem = {
-  module : string,
-  view : boolean,
-  add : boolean,
-  edit : boolean,
-  delete : boolean,
-  export : boolean,
+// --- Define Item Types ---
+export type PermissionModule = {
+  module: string;
+  is_view: boolean;
+  is_add: boolean;
+  is_edit: boolean;
+  is_delete: boolean;
 };
-// --- End Item Type ---
 
-// --- Zod Schema for Add/Edit Permission Form ---
-const permissionFormSchema = z.object({
-  id: z
-    .string()
-    .min(1, "Permission ID (system key) is required.")
-    .max(100)
-    .regex(
-      /^[a-z0-9_:-]+$/,
-      "ID can only contain lowercase letters, numbers, underscores, colons, and hyphens."
-    ),
-  name: z.string().min(1, "Display Name is required.").max(150),
-  description: z.string().min(1, "Description is required.").max(500),
-  module: z.string().max(50).optional().nullable(), // Optional module/group
-});
-type PermissionFormData = z.infer<typeof permissionFormSchema>;
-
-// --- Zod Schema for Filter Form ---
-const permissionFilterFormSchema = z.object({
-  filterName: z.string().optional(),
-  filterModule: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-});
-type PermissionFilterFormData = z.infer<typeof permissionFilterFormSchema>;
-
-// --- Constants ---
-const initialDummyPermissions: PermissionItem[] = [
-  {
-    module : "Dashboard",
-    view : true,
-    add : true,
-    edit : true,
-    delete : true,
-    export : true,
-  },
-  {
-    module : "Master",
-    view : true,
-    add : true,
-    edit : true,
-    delete : false,
-    export : true,
-  },
-  {
-    module : "Sales & Leads",
-    view : true,
-    add : true,
-    edit : false,
-    delete : false,
-    export : true,
-  },
-  {
-    module : "Employees",
-    view : true,
-    add : false,
-    edit : false,
-    delete : false,
-    export : true,
-  },
-  {
-    module : "Access Control",
-    view : false,
-    add : false,
-    edit : false,
-    delete : false,
-    export : true,
-  },
+// A comprehensive list of all possible modules in the system.
+const ALL_SYSTEM_MODULES = [
+    "company", "member", "partner", "inquiry", "all_documents", "brands",
+    "category", "products", "wall_listing", "opportunity", "offer_demand",
+    "leads", "account_documents", "subscriber", "request_feedback", "task_list",
+    "task_board", "automation_email", "email_campaign", "auto_email_templates",
+    "email_templates", "employees", "designation", "department", "job_application",
+    "job_post", "roles", "row_data", "form_builder", "bug_report",
+    "activity_log", "company_profile", "number_system", "trending_image",
+    "trending_carousel", "sliders", "blog", "document_list", "price_list",
+    "countries", "continents", "unit", "currency", "product_spec",
+    "payment_terms", "member_type", "document_type", "permission", "export_mapping"
 ];
-// --- End Constants ---
 
-// --- Main PermissionsListing Component ---
 const PermissionsListing = () => {
-  const pageTitle = "System Permissions";
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useAppDispatch();
 
-  const [permissions, setPermissions] = useState<PermissionItem[]>(
-    initialDummyPermissions
-  );
-  const [masterLoadingStatus, setMasterLoadingStatus] = useState<
-    "idle" | "loading"
-  >("idle");
-
-  const navigate = useNavigate()
-
+  const [roleData, setRoleData] = useState<any | null>(null);
+  const [permissions, setPermissions] = useState<PermissionModule[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
-  const [filterCriteria, setFilterCriteria] =
-    useState<PermissionFilterFormData>({});
-  const [tableData, setTableData] = useState<TableQueries>({
+  // State to manage pagination
+  const [tableData, setTableData] = useState<{
+    pageIndex: number;
+    pageSize: number;
+  }>({
     pageIndex: 1,
-    pageSize: 50,
-    sort: { order: "", key: "" },
-    query: "",
+    pageSize: 10,
   });
 
-  // --- Data Processing ---
-  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData: PermissionItem[] = cloneDeep(permissions);
-    if (filterCriteria.filterName && filterCriteria.filterName.trim() !== "") {
-      const q = filterCriteria.filterName.toLowerCase().trim();
-      processedData = processedData.filter(
-        (item) =>
-          item.name.toLowerCase().includes(q) ||
-          item.id.toLowerCase().includes(q)
-      );
-    }
-    if (tableData.query && tableData.query.trim() !== "") {
-      const q = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter(
-        (item) =>
-          item.id.toLowerCase().includes(q) ||
-          item.name.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q) ||
-          (item.module && item.module.toLowerCase().includes(q))
-      );
-    }
-    const { order, key } = tableData.sort as OnSortParam;
-    if (order && key && processedData.length > 0) {
-      processedData.sort((a, b) => {
-        const aVal = a[key as keyof PermissionItem] as any;
-        const bVal = b[key as keyof PermissionItem] as any;
-        const aStr = String(aVal ?? "").toLowerCase();
-        const bStr = String(bVal ?? "").toLowerCase();
-        return order === "asc"
-          ? aStr.localeCompare(bStr)
-          : bStr.localeCompare(aStr);
+  useEffect(() => {
+    const roleFromState = location.state?.role as any;
+
+    if (roleFromState) {
+      setRoleData(roleFromState);
+      const existingPermissions = roleFromState.permission?.permissions || [];
+      const permissionMap = new Map(existingPermissions.map(p => [p.module, p]));
+      const fullPermissionsList = ALL_SYSTEM_MODULES.map(moduleName => {
+        const existing = permissionMap.get(moduleName);
+        if (existing) {
+          return existing;
+        }
+        return {
+          module: moduleName,
+          is_view: false,
+          is_add: false,
+          is_edit: false,
+          is_delete: false,
+          is_export: false,
+        };
       });
+      setPermissions(fullPermissionsList);
+    } else {
+      toast.push(<Notification title="No Role Selected" type="danger">Redirecting back to roles list.</Notification>);
+      navigate('/access-control/roles');
     }
-    const dataToExport = [...processedData];
-    const currentTotal = processedData.length;
-    const pageIndex = tableData.pageIndex as number;
-    const pageSize = tableData.pageSize as number;
+  }, [location.state, navigate]);
+
+  const handlePermissionChange = useCallback((moduleName: string, key: keyof Omit<PermissionModule, 'module'>, value: boolean) => {
+    setPermissions(currentPermissions =>
+      currentPermissions.map(p =>
+        p.module === moduleName ? { ...p, [key]: value } : p
+      )
+    );
+  }, []);
+
+  const handleSelectAllForRow = (moduleName: string, checked: boolean) => {
+      setPermissions(currentPermissions =>
+        currentPermissions.map(p =>
+          p.module === moduleName ? { ...p, is_view: checked, is_add: checked, is_edit: checked, is_delete: checked ,is_export :checked } : p
+        )
+      )
+  }
+
+  const onUpdatePermissions = async () => {
+    if (!roleData) return;
+    setIsSubmitting(true);
+    const payload = { role_id: roleData.id, permissions: permissions };
+console.log("payload",payload);
+
+    // This should be your actual API call
+    const resultAction = await dispatch(updatePermissionsAction(payload));
+
+    if (updatePermissionsAction.fulfilled.match(resultAction)) {
+        toast.push(<Notification title="Permissions Updated" type="success" />);
+        navigate('/access-control/roles');
+    } else {
+        toast.push(<Notification title="Update Failed" type="danger" children={(resultAction.payload as any)?.message || "Could not update permissions."} />);
+    }
+    setIsSubmitting(false);
+  };
+
+  // Handlers for pagination
+  const handlePaginationChange = useCallback((page: number) => {
+    setTableData(prev => ({ ...prev, pageIndex: page }));
+  }, []);
+
+  const handleSelectChange = useCallback((pageSize: number) => {
+    setTableData(prev => ({ ...prev, pageSize, pageIndex: 1 }));
+  }, []);
+
+  // Memoize the paginated data
+  const { pageData, total } = useMemo(() => {
+    const { pageIndex, pageSize } = tableData;
+    const totalRecords = permissions.length;
     const startIndex = (pageIndex - 1) * pageSize;
-    const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
+    const paginatedData = permissions.slice(startIndex, startIndex + pageSize);
     return {
-      pageData: dataForPage,
-      total: currentTotal,
-      allFilteredAndSortedData: dataToExport,
+      pageData: paginatedData,
+      total: totalRecords,
     };
-  }, [permissions, tableData, filterCriteria]);
+  }, [permissions, tableData]);
 
-
-  const columns: ColumnDef<PermissionItem>[] = useMemo(
+  const columns: ColumnDef<PermissionModule>[] = useMemo(
     () => [
       {
         header: "Modules",
         accessorKey: "module",
-        enableSorting: true,
-        size: 250,
+        cell: ({row}) => <span className="font-semibold capitalize">{row.original.module.replace(/_/g, ' ')}</span>,
+      },
+      {
+          header: "All",
+          id: "all",
+          meta: { HeaderClass: "text-center" },
+          cell: ({row}) => {
+              const { is_view, is_add, is_edit, is_delete , is_export } = row.original;
+              const allChecked = is_view && is_add && is_edit && is_delete && is_export;
+              return (
+                  <div className="flex justify-center">
+                    <Checkbox checked={allChecked} onChange={(checked) => handleSelectAllForRow(row.original.module, checked)} />
+                  </div>
+              )
+          }
       },
       { 
-        header: "view", 
-        accessorKey: "view",
+        header: "View", 
+        accessorKey: "is_view",
         meta: { HeaderClass: "text-center" },
-        size: 100,
-        cell: (props) => {
-          console.log("view", props.getValue())
-          return <div className="flex items-center justify-center gap-2">
-            <Checkbox checked={props.getValue()} />
-          </div>
-        }, 
+        cell: ({ row, getValue }) => (
+            <div className="flex justify-center">
+                <Checkbox checked={getValue()} onChange={(checked) => handlePermissionChange(row.original.module, 'is_view', checked)} />
+            </div>
+        ), 
       },
       {
         header: "Add",
-        accessorKey: "add",
+        accessorKey: "is_add",
         meta: { HeaderClass: "text-center" },
-        size: 100,
-        cell: (props) => {
-          return <div className="flex items-center justify-center gap-2">
-            <Checkbox checked={props.getValue()} />
-          </div>
-        },
+        cell: ({ row, getValue }) => (
+            <div className="flex justify-center">
+                <Checkbox checked={getValue()} onChange={(checked) => handlePermissionChange(row.original.module, 'is_add', checked)} />
+            </div>
+        ),
       },
       {
         header: "Edit",
-        accessorKey: "edit",
+        accessorKey: "is_edit",
         meta: { HeaderClass: "text-center" },
-        size: 100,
-        cell: (props) => {
-          return <div className="flex items-center justify-center gap-2">
-            <Checkbox checked={props.getValue()} />
-          </div>
-        },
+        cell: ({ row, getValue }) => (
+            <div className="flex justify-center">
+                <Checkbox checked={getValue()} onChange={(checked) => handlePermissionChange(row.original.module, 'is_edit', checked)} />
+            </div>
+        ),
       },
       {
         header: "Delete",
-        accessorKey: "delete",
+        accessorKey: "is_delete",
         meta: { HeaderClass: "text-center" },
-        size: 100,
-        cell: (props) => {
-          return <div className="flex items-center justify-center gap-2">
-            <Checkbox checked={props.getValue()} />
-          </div>
-        },
+        cell: ({ row, getValue }) => (
+            <div className="flex justify-center">
+                <Checkbox checked={getValue()} onChange={(checked) => handlePermissionChange(row.original.module, 'is_delete', checked)} />
+            </div>
+        ),
       },
-      {
+       {
         header: "Export",
-        accessorKey: "export",
+        accessorKey: "is_export",
         meta: { HeaderClass: "text-center" },
-        size: 100,
-        cell: (props) => {
-          return <div className="flex items-center justify-center gap-2">
-            <Checkbox checked={props.getValue()} />
-          </div>
-        },
+        cell: ({ row, getValue }) => (
+            <div className="flex justify-center">
+                <Checkbox checked={getValue()} onChange={(checked) => handlePermissionChange(row.original.module, 'is_export', checked)} />
+            </div>
+        ),
       },
     ],
-    []
-  ); // openEditDrawer, handleDeleteClick are stable
+    [handlePermissionChange, handleSelectAllForRow]
+  ); 
+
+  const pageTitle = `Permissions for: ${roleData?.display_name || '...'}`;
 
   return (
-    <>
-      <Container className="h-auto">
-        <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">{pageTitle}</h5>
-            {/* <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New
-            </Button> */}
-          </div>
-          
-          <div className="mt-4 flex-grow overflow-auto">
-            <PermissionDataTable
-              columns={columns}
-              data={pageData}
-              loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
-              }
-              noData={!masterLoadingStatus && pageData.length === 0}
-            />
-          </div>
-        </AdaptiveCard>
-        <div className="flex justify-end gap-2 mt-3">
-          <Button type="button" onClick={()=>navigate("/access-control/roles")}>Cancel</Button>
-          <Button type="button" onClick={()=>navigate("/access-control/roles")} variant="solid">Update Permission</Button>
+    <Container className="h-auto">
+      <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+        <h3 className="mb-4">{pageTitle}</h3>
+        <div className="flex-grow overflow-auto">
+          <DataTable
+            columns={columns}
+            data={pageData} // Pass the paginated data
+            loading={isSubmitting}
+            noData={pageData.length === 0}
+            pagingData={{
+              total: total,
+              pageIndex: tableData.pageIndex,
+              pageSize: tableData.pageSize,
+            }}
+            onPaginationChange={handlePaginationChange}
+            onSelectChange={handleSelectChange}
+          />
         </div>
-      </Container>
-     
-    </>
+      </AdaptiveCard>
+      <div className="flex justify-end gap-4 mt-6">
+        <Button onClick={() => navigate("/access-control/roles")} disabled={isSubmitting}>
+            Cancel
+        </Button>
+        <Button variant="solid" onClick={onUpdatePermissions} loading={isSubmitting} disabled={!roleData}>
+            Update Permissions
+        </Button>
+      </div>
+    </Container>
   );
 };
 
