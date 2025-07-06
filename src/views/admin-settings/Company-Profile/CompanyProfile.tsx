@@ -296,7 +296,7 @@ const CompanyProfile = () => {
 
   // --- Render Functions for Form Sections ---
   const renderLogoFields = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
       <FormItem
         label="Company Logo"
         invalid={!!formMethods.formState.errors.company_logo}
@@ -304,12 +304,12 @@ const CompanyProfile = () => {
           formMethods.formState.errors.company_logo?.message as string
         }
       >
-        <div className="flex gap-4 items-end">
+        <div className="flex gap-2 items-end">
           {logoPreviewUrl ? (
             <img
               src={logoPreviewUrl}
               alt="New Logo Preview"
-              className="mt-2 w-20 h-20 object-contain border rounded p-1"
+              className="mt-2 w-50 h-20 object-contain rounded p-1 border border-emerald-500 dark:border-emerald-700"
             />
           ) : (
             // CORRECTED: Use currentProfileUI.company_logo which holds the full URL
@@ -317,7 +317,7 @@ const CompanyProfile = () => {
               <img
                 src={currentProfileUI.company_logo}
                 alt="Current Logo"
-                className="mt-2 w-20 h-20 object-contain border rounded p-1"
+                className="mt-2 w-50 h-20 object-contain border rounded p-1 border-emerald-500 dark:border-emerald-700"
               />
             )
           )}
@@ -349,12 +349,12 @@ const CompanyProfile = () => {
           formMethods.formState.errors.meta_logo?.message as string
         }
       >
-        <div className="flex gap-4 items-end">
+        <div className="flex gap-2 items-end">
           {metaLogoPreviewUrl ? (
             <img
               src={metaLogoPreviewUrl}
               alt="New Meta Logo Preview"
-              className="mt-2 w-20 h-20 object-contain border rounded p-1"
+              className="mt-2 w-50 h-20 object-contain border rounded p-1 border-emerald-500 dark:border-emerald-700"
             />
           ) : (
             // CORRECTED: Use currentProfileUI.meta_logo which holds the full URL
@@ -362,7 +362,7 @@ const CompanyProfile = () => {
               <img
                 src={currentProfileUI.meta_logo}
                 alt="Current Meta Logo"
-                className="mt-2 w-20 h-20 object-contain border rounded p-1"
+                className="mt-2 w-50 h-20 object-contain border rounded p-1 border-emerald-500 dark:border-emerald-700"
               />
             )
           )}
@@ -393,10 +393,10 @@ const CompanyProfile = () => {
   );
 
   const renderCompanyInfoFields = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
       <FormItem
         label="Company Name"
-        className="md:col-span-2"
+        className="md:col-span-4"
         invalid={!!formMethods.formState.errors.company_name}
         errorMessage={formMethods.formState.errors.company_name?.message}
       >
@@ -414,7 +414,7 @@ const CompanyProfile = () => {
       </FormItem>
       <FormItem
         label="Address"
-        className="md:col-span-2"
+        className="md:col-span-4"
         invalid={!!formMethods.formState.errors.address}
         errorMessage={formMethods.formState.errors.address?.message}
       >
@@ -508,7 +508,7 @@ const CompanyProfile = () => {
   );
 
   const renderSocialMediaFields = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
       <FormItem
         label="Facebook"
         invalid={!!formMethods.formState.errors.facebook}
@@ -587,7 +587,6 @@ const CompanyProfile = () => {
       </FormItem>
       <FormItem
         label="Twitter (X)"
-        className="md:col-span-2"
         invalid={!!formMethods.formState.errors.twitter}
         errorMessage={formMethods.formState.errors.twitter?.message}
       >
@@ -641,7 +640,7 @@ const CompanyProfile = () => {
         </Form>
         <StickyFooter
           className="flex items-center justify-end py-4 px-6"
-          stickyClass="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+          stickyClass="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 mt-3 rounded-xl"
         >
           <Button
             size="sm"

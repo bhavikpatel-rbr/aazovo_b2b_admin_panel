@@ -153,7 +153,7 @@ const Currency = () => {
     const columns: ColumnDef<CurrencyItem>[] = useMemo(() => [
         { header: "Currency Code", accessorKey: "currency_code", enableSorting: true, size: 150 },
         { header: "Symbol", accessorKey: "currency_symbol", enableSorting: true, size: 80 },
-        { header: "Countries", accessorKey: "countries", size: 250, cell: (props) => { const countries = props.row.original.countries || []; return (<div className="flex flex-wrap gap-1">{countries.map(country => <Tag key={country.id} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100 text-[11px]">{country.name}</Tag>)}</div>) } },
+        { header: "Countries", accessorKey: "countries", size: 250, cell: (props) => { const countries = props.row.original.countries || []; return (<div className="flex flex-wrap gap-1">{countries.map(country => <Tag key={country.id} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{country.name}</Tag>)}</div>) } },
         {
         header: "Updated Info",
         accessorKey: "updated_at",

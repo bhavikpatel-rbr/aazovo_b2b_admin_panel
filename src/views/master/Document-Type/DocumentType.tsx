@@ -163,7 +163,7 @@ const Documentmaster = () => {
 
     const columns: ColumnDef<DocumentTypeItem>[] = useMemo(() => [
         { header: "Document Type Name", accessorKey: "name", enableSorting: true, size: 200 },
-        { header: "Departments", accessorKey: "departments", size: 250, cell: (props) => { const departments = props.row.original.departments || []; return (<div className="flex flex-wrap gap-1">{departments.map(dept => <Tag key={dept.id} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100 text-[11px]">{dept.name}</Tag>)}</div>) } },
+        { header: "Departments", accessorKey: "departments", size: 250, cell: (props) => { const departments = props.row.original.departments || []; return (<div className="flex flex-wrap gap-1">{departments.map(dept => <Tag key={dept.id} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{dept.name}</Tag>)}</div>) } },
         {
         header: "Updated Info",
         accessorKey: "updated_at",
