@@ -11,7 +11,6 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
-import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Card,
@@ -34,15 +33,12 @@ import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-  TbActivity,
-  TbAlarm,
   TbBell,
   TbBrandWhatsapp,
   TbCalendarEvent,
   TbChecks,
   TbCloudUpload,
   TbColumns,
-  TbDownload,
   TbEye,
   TbFilter,
   TbKey,
@@ -51,18 +47,15 @@ import {
   TbPlus,
   TbReload,
   TbSearch,
-  TbTagStarred,
   TbUser,
   TbUserBolt,
   TbUserCircle,
   TbUserExclamation,
-  TbUsers,
   TbUserScreen,
   TbUserShare,
   TbUserSquareRounded,
+  TbUsers,
   TbUserX,
-  TbClipboardText,
-  TbFileZip,
   TbX,
 } from "react-icons/tb";
 
@@ -77,20 +70,19 @@ import type {
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  addNotificationAction,
   addScheduleAction,
-  deleteEmployeesAction,
   getDepartmentsAction,
   getDesignationsAction,
   getEmployeesListingAction,
   getRolesAction,
   getAllUsersAction,
-  submitExportReasonAction // Ensure this is imported if you use it
+  submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { shallowEqual, useSelector } from "react-redux";
+import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 
 
 // --- Define Item Type ---
@@ -106,6 +98,12 @@ export type EmployeeItem = {
   roles: string[];
   avatar?: string | null;
   createdAt: Date;
+  updated_at?: Date;
+  updated_by_user?: {
+    name: string;
+    profile_pic_path?: string;
+    roles: { display_name: string }[];
+  };
   role: string | null;
   joiningDate?: Date | null;
   bio?: string | null;
@@ -153,7 +151,7 @@ const exportReasonSchema = z.object({
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- CSV Exporter Utility ---
-const EMPLOYEE_CSV_HEADERS = ["ID", "Name", "Email", "Mobile", "Status", "Department", "Designation", "Roles", "Joining Date"];
+const EMPLOYEE_CSV_HEADERS = ["ID", "Name", "Email", "Mobile", "Status", "Department", "Designation", "Roles", "Joining Date", "Updated By", "Updated At"];
 
 function exportEmployeesToCsv(filename: string, rows: EmployeeItem[]) {
   if (!rows || !rows.length) {
@@ -163,7 +161,8 @@ function exportEmployeesToCsv(filename: string, rows: EmployeeItem[]) {
 
   const headerToKeyMap: Record<string, keyof EmployeeItem | string> = {
     "ID": "id", "Name": "name", "Email": "email", "Mobile": "mobile", "Status": "status",
-    "Department": "department", "Designation": "designation", "Roles": "roles", "Joining Date": "joiningDate"
+    "Department": "department", "Designation": "designation", "Roles": "roles", "Joining Date": "joiningDate",
+    "Updated By": "updated_by", "Updated At": "updated_at_formatted"
   };
 
   const transformedRows = rows.map(row => {
@@ -173,6 +172,8 @@ function exportEmployeesToCsv(filename: string, rows: EmployeeItem[]) {
       status: statusText, department: row.department || "N/A", designation: row.designation || "N/A",
       roles: Array.isArray(row.roles) ? row.roles.join(', ') : 'N/A',
       joiningDate: row.joiningDate ? dayjs(row.joiningDate).format("DD-MMM-YYYY") : "N/A",
+      updated_by: row.updated_by_user?.name || "N/A",
+      updated_at_formatted: row.updated_at ? dayjs(row.updated_at).format("DD-MMM-YYYY h:mm A") : "N/A",
     };
   });
   
@@ -363,11 +364,19 @@ const EmployeesListing = () => {
   const [selectedEmployees, setSelectedEmployees] = useState<EmployeeItem[]>([]);
 
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
-  const [itemToDelete, setItemToDelete] = useState<EmployeeItem | null>(null);
-  const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
+
+  const openImageViewerModal = useCallback((src?: string) => {
+    if (src) {
+      setViewerImageSrc(src);
+    }
+  }, []);
+
+  const closeImageViewerModal = useCallback(() => {
+    setViewerImageSrc(null);
+  }, []);
 
   const filterFormMethods = useForm<EmployeeFilterFormData>({ resolver: zodResolver(employeeFilterFormSchema) });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), mode: 'onChange' });
@@ -387,10 +396,13 @@ const EmployeesListing = () => {
       const formattedData = Employees.data.data.map((emp: any) => ({
         ...emp,
         createdAt: new Date(emp.created_at),
+        updated_at: emp.updated_at ? new Date(emp.updated_at) : undefined,
+        updated_by_user: emp.updated_by_user,
         joiningDate: emp.date_of_joining ? new Date(emp.date_of_joining) : null,
-        roles: Array.isArray(emp.roles) ? emp.roles.map((r: any) => r.name) : [],
+        roles: Array.isArray(emp.roles) ? emp.roles.map((r: any) => r.display_name) : [],
         department: emp.department?.name || 'N/A',
-        designation: emp.designation?.name || 'N/A'
+        designation: emp.designation?.name || 'N/A',
+        avatar: emp.profile_pic_path,
       }));
       setEmployees(formattedData);
       setEmployeesCount(Employees?.counts || {});
@@ -439,7 +451,7 @@ const EmployeesListing = () => {
       processedData.sort((a: any, b: any) => {
         let aVal = a[key as keyof EmployeeItem] as any;
         let bVal = b[key as keyof EmployeeItem] as any;
-        if (key === "createdAt" || key === "joiningDate") { aVal = aVal ? new Date(aVal).getTime() : 0; bVal = bVal ? new Date(bVal).getTime() : 0; }
+        if (key === "createdAt" || key === "joiningDate" || key === "updated_at") { aVal = aVal ? new Date(aVal).getTime() : 0; bVal = bVal ? new Date(bVal).getTime() : 0; }
         else if (key === "roles") { aVal = a.roles.join(", "); bVal = b.roles.join(", "); }
         if (typeof aVal === "number" && typeof bVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal;
         return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? ""));
@@ -488,14 +500,14 @@ const EmployeesListing = () => {
 
 
   const columns: ColumnDef<EmployeeItem>[] = useMemo(() => [
-    { header: "Status", accessorKey: "status", cell: (props) => { const { status } = props.row.original || {}; const displayStatus = status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toLowerCase()); return (<Tag className={`${employeeStatusColor[status as keyof typeof employeeStatusColor]} capitalize font-semibold border-0`}>{displayStatus}</Tag>); }, },
-    { header: "Name", accessorKey: "name", cell: (props) => { const { name, email, mobile, avatar } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={28} shape="circle" src={avatar} icon={<TbUserCircle />}>{!avatar ? name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2 rtl:mr-2"><span className="font-semibold">{name}</span><div className="text-xs text-gray-500">{email}</div><div className="text-xs text-gray-500">{mobile}</div></div></div>); }, },
+    { header: "Name", accessorKey: "name", cell: (props) => { const { name, email, mobile, avatar } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={28} shape="circle" src={avatar} icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewerModal(avatar)}>{!avatar ? name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2 rtl:mr-2"><span className="font-semibold">{name}</span><div className="text-xs text-gray-500">{email}</div><div className="text-xs text-gray-500">{mobile}</div></div></div>); }, },
     { header: "Designation", accessorKey: "designation", size: 200, cell: (props: any) => { const data = props.row.original || {}; return (<div className="flex items-center"><div className="ml-2 rtl:mr-2"><span className="font-semibold">{data?.designation ?? ""}</span></div></div>); }, },
     { header: "Department", accessorKey: "department", size: 200, cell: (props: any) => { const { department } = props.row.original || {}; return (<div className="flex items-center"><div className="ml-2 rtl:mr-2"><span className="font-semibold">{department ?? ""}</span></div></div>); }, },
     { header: "Roles", accessorKey: "roles", cell: (props: any) => { const { roles } = props.row.original || {}; return (<div className="flex flex-wrap gap-1 text-xs">{props?.row?.original?.roles?.map((role: any) => (<Tag key={role} className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]">{role || ""}</Tag>))}</div>) }, },
-    { header: "Joined At", accessorKey: "joiningDate", size: 200, cell: (props: any) => props?.row?.original?.date_of_joining ? <span className="text-xs"> {dayjs(props?.row?.original?.date_of_joining).format("D MMM YYYY, h:mm A")}</span> : '-' },
+    { header: "Status", accessorKey: "status", cell: (props) => { const { status } = props.row.original || {}; const displayStatus = status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toLowerCase()); return (<Tag className={`${employeeStatusColor[status as keyof typeof employeeStatusColor]} capitalize font-semibold border-0`}>{displayStatus}</Tag>); }, },
+    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? formatCustomDateTime(new Date(updated_at).toISOString()) : "N/A"; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewerModal(updated_by_user?.profile_pic_path)} /><div><span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); },},
     { header: "Action", id: "action", size: 120, meta: { HeaderClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onView={() => navigate(`/hr-employees/employees/view/${props.row.original.id}`)} onEdit={() => navigate(`/hr-employees/employees/edit/${props.row.original.id}`)} onDelete={() => { }} onChangePassword={() => { }} onOpenModal={handleOpenModal} />) },
-  ], [navigate, handleOpenModal]);
+  ], [navigate, handleOpenModal, openImageViewerModal]);
 
   const [filteredColumns, setFilteredColumns] = useState(columns);
 
@@ -536,6 +548,29 @@ const EmployeesListing = () => {
       </Container>
       <EmployeeSelected selectedEmployees={selectedEmployees} onDeleteSelected={() => { }} />
       <EmployeeModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
+      
+      <Dialog 
+          isOpen={!!viewerImageSrc} 
+          onClose={closeImageViewerModal} 
+          onRequestClose={closeImageViewerModal}
+          bodyOpenClassName="overflow-hidden"
+          contentClassName="p-0 bg-transparent"
+      >
+          <div className="relative">
+              <img 
+                  src={viewerImageSrc || ''} 
+                  alt="Profile View" 
+                  className="max-w-[90vw] max-h-[90vh] rounded-lg" 
+              />
+              <button 
+                  onClick={closeImageViewerModal}
+                  className="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-800 hover:bg-gray-200 shadow-lg"
+              >
+                  <TbX size={24} />
+              </button>
+          </div>
+      </Dialog>
+      
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterEmployeeForm" type="submit">Apply</Button></div>}>
         <Form id="filterEmployeeForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Department"><Controller name="filterDepartments" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Any Department" options={departmentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
