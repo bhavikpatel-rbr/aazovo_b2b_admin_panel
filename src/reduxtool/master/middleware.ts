@@ -5118,8 +5118,10 @@ export const addAllActionAction = createAsyncThunk(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addAllActionActionAsync(data)
-      if (response?.data?.status === true) {
-        dispatch(getAllActionAction(null));
+      console.log("response?.data?.status === true", response?.data?.status === true);
+
+      if (response?.status === true) {
+        dispatch(getAllActionAction());
         return response
       } else {
         return rejectWithValue({
