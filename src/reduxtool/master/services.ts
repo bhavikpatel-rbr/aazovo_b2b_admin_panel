@@ -2966,7 +2966,7 @@ export const getAllNotificationAsync = async () => {
 
 
 
-export const addNotificationAsync = async (payload :any) => {
+export const addNotificationAsync = async (payload: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/setting/notification_message`, { ...payload })
     return response?.data
@@ -3152,6 +3152,35 @@ export const deleteTaskAsync = async (RolesData: any) => {
 export const getaccountdocActionAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/account_doc`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addaccountdocActionAsync = async (data: object) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/account_doc`, { ...data })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const editaccountdocActionAsync = async (data: object) => {  
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/account_doc/${data?.id}`, { ...data })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
+export const getbyIDaccountdocActionAsync = async (data: object) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/account_doc/${data}`)
     return response?.data
   } catch (err) {
     return isAxiosError(err)
