@@ -566,24 +566,30 @@ const ViewDocumentDialog = ({
 };
 
 // --- [NEW] Add/Edit Document Drawer Component ---
-const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, memberOptions, formOptions }: any) => {
+const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   const dispatch = useAppDispatch();
   const title = editingId ? 'Edit Document' : 'Add New Document';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  const { control, handleSubmit, reset, formState: { errors, isValid } } = useForm<AddEditDocumentFormData>({
+  // --- MODIFICATION: Added `setValue` to reset member field ---
+  const { control, handleSubmit, reset, setValue, formState: { errors, isValid } } = useForm<AddEditDocumentFormData>({
     resolver: zodResolver(addEditDocumentSchema),
     mode: 'onChange',
     defaultValues: {
-      company_document: undefined, document_type: undefined,
-      document_number: '', invoice_number: '',
-      form_id: undefined, employee_id: undefined, member_id: undefined,
+      company_document: undefined,
+      document_type: undefined,
+      document_number: '',
+      invoice_number: '',
+      form_id: undefined,
+      employee_id: undefined,
+      member_id: undefined,
+      company_id: undefined,
     },
   });
 
 
-  const { DocumentTypeData = [], formsData: tokenForm = [], EmployeesList = [], MemberData = [], AllCompanyData = [], getfromIDcompanymemberData = [] } = useSelector(masterSelector);
+  const { DocumentTypeData = [], formsData: tokenForm = [], EmployeesList = [], AllCompanyData = [], getfromIDcompanymemberData = [] } = useSelector(masterSelector);
 
   const DocumentTypeDataOptions = DocumentTypeData?.map((p: any) => ({
     value: p.id,
@@ -600,47 +606,52 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
     label: p.name,
   }));
 
-  const MemberDataOptions = MemberData.data?.map((p: any) => ({
-    value: p.id,
-    label: p.name,
-  }));
-
   const AllCompanyDataOptions = AllCompanyData?.map((p: any) => ({
     value: String(p.id),
     label: p.company_name,
   }));
 
-  console.log(getfromIDcompanymemberData, "getfromIDcompanymemberData", getfromIDcompanymemberData);
-
+  // --- MODIFICATION: New memo for member options based on selected company ---
+  const companyMemberOptions = useMemo(() =>
+    getfromIDcompanymemberData?.map((p: any) => ({
+      value: p.id,
+      label: p.name,
+    })) || [],
+    [getfromIDcompanymemberData]);
 
 
   useEffect(() => {
+    // --- MODIFICATION: Removed getMemberAction() and getfromIDcompanymemberAction() from initial load ---
     dispatch(getDocumentTypeAction())
     dispatch(getFormBuilderAction())
     dispatch(getEmployeesListingAction())
-    dispatch(getMemberAction())
     dispatch(getAllCompany())
-    dispatch(getfromIDcompanymemberAction())
   }, [dispatch])
 
+  // --- MODIFICATION: Enhanced useEffect to handle fetching members on edit and clearing them on add ---
   useEffect(() => {
     if (isOpen && editingId) {
       setIsLoadingData(true);
       dispatch(getbyIDaccountdocAction(editingId))
         .unwrap()
         .then((data) => {
-          // Map API response to form fields
+          const companyId = data?.data?.company_id;
           const formData = {
             company_document: data?.data?.company_document,
             document_type: data?.data?.document_type,
             document_number: data?.data?.document_number,
             invoice_number: data?.data?.invoice_number,
             form_id: data?.data?.form_id,
-            employee_id: data?.data?.employee_id, // Assuming this field exists
+            employee_id: data?.data?.employee_id,
             member_id: data?.data?.member_id,
-            company_id: String(data?.data?.company_id),
+            company_id: companyId ? String(companyId) : undefined,
           };
           reset(formData);
+
+          // If a company exists, fetch its members to populate the dropdown
+          if (companyId) {
+            dispatch(getfromIDcompanymemberAction(companyId));
+          }
         })
         .catch((err: any) => {
           toast.push(<Notification type="danger" title="Fetch Error" children={err?.message || 'Could not fetch document details.'} />);
@@ -650,18 +661,20 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
           setIsLoadingData(false);
         });
     } else if (isOpen && !editingId) {
-      // Reset form for "Add New" mode
       reset({
-        company_document: "",
-        document_type: "",
+        company_document: undefined,
+        document_type: undefined,
         document_number: "",
         invoice_number: "",
-        form_id: 0,
-        employee_id: 0, // Assuming this field exists
-        member_id: 0,
+        form_id: undefined,
+        employee_id: undefined,
+        member_id: undefined,
+        company_id: undefined,
       });
+      // Clear any stale member data when opening for a new entry
+      // dispatch(getfromIDcompanymemberAction(''));
     }
-  }, [isOpen, editingId]);
+  }, [isOpen, editingId, dispatch, reset]);
 
   const onSave = async (data: AddEditDocumentFormData) => {
     setIsSubmitting(true);
@@ -699,12 +712,19 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
                 onChange={(opt: any) => field.onChange(opt?.value)} />
             )} />
           </UiFormItem>
+          {/* --- MODIFICATION: Added onChange handler to fetch members and reset member field --- */}
           <UiFormItem label="Company" invalid={!!errors.company_id} errorMessage={errors.company_id?.message}>
             <Controller control={control} name="company_id" render={({ field }) => (
-              <Select {...field} placeholder="Select Company Document"
+              <Select {...field} placeholder="Select Company"
                 options={AllCompanyDataOptions}
                 value={AllCompanyDataOptions?.find(o => o.value === field.value)}
-                onChange={(opt: any) => field.onChange(opt?.value)} />
+                onChange={(opt: any) => {
+                  field.onChange(opt?.value);
+                  if (opt?.value) {
+                    dispatch(getfromIDcompanymemberAction(opt.value));
+                  }
+                  setValue('member_id', 0, { shouldValidate: true });
+                }} />
             )} />
           </UiFormItem>
           <UiFormItem label="Document Type" invalid={!!errors.document_type} errorMessage={errors.document_type?.message}>
@@ -743,11 +763,12 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
               />
             )} />
           </UiFormItem>
+          {/* --- MODIFICATION: Updated Member dropdown to use dynamic options --- */}
           <UiFormItem label="Member" invalid={!!errors.member_id} errorMessage={errors.member_id?.message}>
             <Controller control={control} name="member_id" render={({ field }) => (
               <Select {...field} placeholder="Select Member"
-                options={MemberDataOptions}
-                value={MemberDataOptions?.find(o => o.value === field.value)}
+                options={companyMemberOptions}
+                value={companyMemberOptions?.find(o => o.value === field.value)}
                 onChange={(opt: any) => field.onChange(opt?.value)}
               />
             )} />
@@ -887,21 +908,6 @@ const AccountDocument = () => {
     setIsAddEditDrawerOpen(false);
     setEditingId(null);
   };
-
-  // --- [NEW] Mock/Placeholder options for the Add/Edit drawer ---
-  // In a real application, these would be fetched from dedicated API endpoints.
-  const memberOptions = useMemo(() => [
-    { label: "Ajay Patel - 703549", value: 703549 },
-    { label: "Krishnan Iyer - 703752", value: 703752 },
-    { label: "Sunita Sharma - 704112", value: 704112 },
-  ], []);
-
-  const formOptions = useMemo(() => [
-    { label: "CRM PI 1.0.2", value: 1 },
-    { label: "Debit Note Form", value: 2 },
-    { label: "Credit Note Form", value: 3 },
-    { label: "CRM PO 1.0.3", value: 4 },
-  ], []);
 
   const handleViewClick = useCallback((item: AccountDocumentListItem) => {
     const fullItemData = getaccountdoc?.data?.find(
@@ -1132,10 +1138,10 @@ const AccountDocument = () => {
     { header: "Document Details", size: 220, cell: (props) => { const { documentType, documentNumber, invoiceNumber, formType, createdAt } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type ID: </b><span>{documentType}</span></div><div><b>Doc No: </b><span>{documentNumber}</span></div><div><b>Invoice No: </b><span>{invoiceNumber}</span></div><div><b>Form: </b><span>{formType}</span></div><b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
     // --- [MODIFIED] Actions column now includes onEdit handler ---
     { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} onEdit={() => handleOpenEditDrawer(props.row.original)} onView={() => handleViewClick(props.row.original)} rowData={props.row.original} />), },
-  ], [handleDeleteClick, handleOpenModal, handleViewClick]);
+  ], [handleDeleteClick, handleOpenModal, handleViewClick, handleOpenEditDrawer]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<AccountDocumentListItem>[]>(columns);
-  useEffect(() => { setFilteredColumns(columns) }, [columns]);
+  useEffect(() => { setFilteredColumns(columns) }, []);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -1219,14 +1225,10 @@ const AccountDocument = () => {
         </UiForm>
       </Drawer>
 
-      {/* --- [REPLACED] Old drawer is removed, new AddEditDocumentDrawer is used --- */}
       <AddEditDocumentDrawer
         isOpen={isAddEditDrawerOpen}
         onClose={handleDrawerClose}
         editingId={editingId}
-        employeeOptions={getAllUserDataOptions}
-        memberOptions={memberOptions}
-        formOptions={formOptions}
       />
 
       <AccountDocumentModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
