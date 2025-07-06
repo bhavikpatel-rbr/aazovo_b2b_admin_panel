@@ -52,12 +52,11 @@ import {
 } from "@/reduxtool/master/middleware";
 
 // Types
-import type { RowDataItem } from '@/views/raw-data/RowDataListing'; // Adjust this path if your file structure is different
+import type { RowDataItem } from '@/views/raw-data/RowDataListing'; // Assumed to have an 'id' property
 
 // --- Type Definitions (Member Form) ---
 export interface MemberFormSchema {
   id?: string | number;
-  rowdata_id?: string | number;
   name?: string;
   email?: string;
   password?: string;
@@ -117,7 +116,6 @@ export interface FormSectionBaseProps {
 }
 interface ApiSingleCustomerItem {
   id: number;
-  rowdata_id?: any;
   name?: string;
   email?: string;
   number?: string;
@@ -169,7 +167,6 @@ const transformApiToFormSchema = (formData: ApiSingleCustomerItem): Partial<Memb
 
     return {
         id: formData.id,
-        rowdata_id: formData.rowdata_id,
         name: formData.name || "",
         email: formData.email || "",
         mobile_no: formData.number || "",
@@ -230,12 +227,11 @@ const transformApiToFormSchema = (formData: ApiSingleCustomerItem): Partial<Memb
         is_blacklisted: formData.is_blacklisted === "1",
     };
 };
-const preparePayloadForApi = (formData: Partial<MemberFormSchema>, isEditMode: boolean): any => {
+const preparePayloadForApi = (formData: Partial<MemberFormSchema>, isEditMode: boolean, rowdata_id?: string | number): any => {
     const getValue = (field: any) => (typeof field === 'object' && field !== null && 'value' in field ? field.value : field);
 
     const payload: any = {
-        id: isEditMode ? formData.id : 0,
-        rowdata_id: formData.rowdata_id,
+        id: formData.id,
         name: formData.name || "",
         number: formData.mobile_no || "",
         number_code: getValue(formData.contact_country_code) || null,
@@ -279,6 +275,10 @@ const preparePayloadForApi = (formData: Partial<MemberFormSchema>, isEditMode: b
         is_blacklisted: formData.is_blacklisted ? "1" : "0",
     };
 
+    if (rowdata_id) {
+        payload.rowdata_id = rowdata_id;
+    }
+    
     if (formData.member_profiles) {
         payload.dynamic_member_profiles = formData.member_profiles.map(formProfile => {
             const apiProfile: any = {
@@ -344,7 +344,7 @@ const PersonalDetailsComponent = ({ control, errors }: FormSectionBaseProps) => 
                 <FormItem label={<div>State<span className="text-red-500"> * </span></div>} invalid={!!errors.state} errorMessage={errors.state?.message}>
                     <Controller name="state" control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
                 </FormItem>
-                <FormItem label={ <div>City<span className="text-red-500"> * </span></div>} invalid={!!errors.city} errorMessage={errors.city?.message}>
+                <FormItem label={<div>City<span className="text-red-500"> * </span></div>} invalid={!!errors.city} errorMessage={errors.city?.message}>
                     <Controller name="city" control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
                 </FormItem>
                 <FormItem label="Pincode">
@@ -442,9 +442,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
                     <Card key={item.id} className="border rounded-md" bodyClass="relative">
                         <div className="absolute top-2 right-2 z-10"><Button type="button" variant="plain" size="sm" className="text-xs" icon={<TbTrash size={16} />} onClick={() => remove(index)}>Remove</Button></div>
                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
-                            <FormItem label={<div>Member Type {index + 1}<span className="text-red-500"> *</span></div>} invalid={!!errors.member_profiles?.[index]?.member_type} errorMessage={(errors.member_profiles?.[index]?.member_type as any)?.message}>
-                                <Controller name={`member_profiles.${index}.member_type`} control={control} render={({ field }) => (<Select {...field} placeholder="Select Member Type" options={memberTypeOptions} isClearable />)} />
-                            </FormItem>
+                            <FormItem label={`Member Type ${index + 1}`} invalid={!!errors.member_profiles?.[index]?.member_type} errorMessage={errors.member_profiles?.[index]?.member_type?.message as string}><Controller name={`member_profiles.${index}.member_type`} control={control} render={({ field }) => (<Select {...field} placeholder="Select Member Type" options={memberTypeOptions} isClearable />)} /></FormItem>
                             <FormItem label="Select Brand(s)"><Controller name={`member_profiles.${index}.brands`} control={control} render={({ field }) => (<Select {...field} isMulti placeholder="Select brands" options={brandOptions} isClearable />)} /></FormItem>
                             <FormItem label="Select Category(s)"><Controller name={`member_profiles.${index}.categories`} control={control} render={({ field }) => (<Select {...field} isMulti placeholder="Select categories" options={categoryOptions} isClearable />)} /></FormItem>
                         </div>
@@ -458,7 +456,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
 // --- Dynamic Zod Schema ---
 const createMemberSchema = (isEditMode: boolean) => {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    const passwordErrorMessage = "Min 8 characters, with one uppercase, one lowercase, one digit, and one special character.";
+    const passwordErrorMessage = "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.";
 
     const baseSchema = z.object({
         name: z.string().trim().min(1, "Name is required."),
@@ -469,20 +467,29 @@ const createMemberSchema = (isEditMode: boolean) => {
         continent_id: z.object({ value: z.string().min(1), label: z.string() }, { required_error: "Continent is required." }),
         state: z.string().trim().min(1, "State is required."),
         city: z.string().trim().min(1, "City is required."),
-        member_profiles: z.array(z.object({
-            member_type: z.object({ value: z.union([z.string(), z.number()]).refine(v => v !== '', 'Member Type is required'), label: z.string() }, { required_error: "Member Type is required." })
-        })).min(1, "At least one member profile is required."),
     });
 
     const withPassword = isEditMode
         ? baseSchema.extend({
-            password: z.string().optional().refine((val) => !val || passwordRegex.test(val), { message: passwordErrorMessage }),
+            password: z.string().optional().refine((val) => !val || val === '' || passwordRegex.test(val), { message: passwordErrorMessage }),
         })
         : baseSchema.extend({
             password: z.string().min(1, "Password is required.").regex(passwordRegex, passwordErrorMessage),
         });
 
-    return withPassword.passthrough();
+    return withPassword.extend({
+        member_profiles: z.array(
+            z.object({
+                member_type: z.object(
+                    {
+                        value: z.union([z.string(), z.number()]),
+                        label: z.string(),
+                    },
+                    { required_error: "Member Type is required." }
+                ).nullable().refine(Boolean, { message: "Member Type is required." }),
+            }).passthrough()
+        ).optional(),
+    }).passthrough();
 };
 
 const memberNavigationList = [
@@ -505,7 +512,7 @@ const NavigatorComponent = ({ activeSection, onNavigate }: { activeSection: stri
 const MemberFormComponent = ({ onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting }: { onFormSubmit: (values: MemberFormSchema, formMethods: UseFormReturn<MemberFormSchema>) => void; defaultValues: Partial<MemberFormSchema>; isEditMode: boolean; onDiscard?: () => void; isSubmitting?: boolean; }) => {
     const [activeSection, setActiveSection] = useState<string>(memberNavigationList[0].link);
     const memberSchema = useMemo(() => createMemberSchema(isEditMode), [isEditMode]);
-    const formMethods = useForm<MemberFormSchema>({ defaultValues, resolver: zodResolver(memberSchema), mode: 'onChange' });
+    const formMethods = useForm<MemberFormSchema>({ defaultValues, resolver: zodResolver(memberSchema) });
     const { handleSubmit, reset, formState: { errors }, control } = formMethods;
 
     useEffect(() => { if (defaultValues) { reset(defaultValues); } }, [defaultValues, reset]);
@@ -558,7 +565,7 @@ const MemberCreate = () => {
     const { state } = useLocation();
 
     const isEditMode = !!id;
-    const { rowData } = (state || {}) as { rowData?: RowDataItem };
+    const { rowData } = (state || {}) as { rowData?: RowDataItem & { id: string | number } };
 
     const [initialData, setInitialData] = useState<Partial<MemberFormSchema> | null>(null);
     const [pageLoading, setPageLoading] = useState(true);
@@ -600,7 +607,6 @@ const MemberCreate = () => {
         }
 
         return {
-            rowdata_id: data.id, // Capture the raw data ID
             name: data.name,
             email: data.email || '',
             mobile_no: localNumber,
@@ -659,7 +665,7 @@ const MemberCreate = () => {
 
     const handleFormSubmit = async (formValues: MemberFormSchema, formMethods: UseFormReturn<MemberFormSchema>) => {
         setIsSubmitting(true);
-        const payload = preparePayloadForApi(formValues, isEditMode);
+        const payload = preparePayloadForApi(formValues, isEditMode, !isEditMode && rowData ? rowData.id : undefined);
         try {
             if (isEditMode) {
                 await dispatch(editMemberAction(payload)).unwrap();
