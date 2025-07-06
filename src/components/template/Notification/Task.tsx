@@ -297,7 +297,7 @@ const TaskViewModal = ({ task, isOpen, onClose }: { task: Task | null, isOpen: b
         <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={600}>
             <div className="space-y-6">
                 <div className="pb-4 border-b border-gray-200 dark:border-gray-600">
-                    <Tag className={classNames('text-sm', `bg-${statusInfo.color}-500`)}>{statusInfo.label}</Tag>
+                    <Tag className={classNames('text-sm', `bg-${statusInfo?.color}-500`)}>{statusInfo.label}</Tag>
                     <h4 className="font-bold mt-2">{task.task_title}</h4>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
