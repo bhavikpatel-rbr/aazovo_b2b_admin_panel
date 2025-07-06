@@ -17,7 +17,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
 
 // Icons
 import {
@@ -36,6 +36,7 @@ import {
   TbUsers,
   TbColumns,
   TbX,
+  TbUserCircle, // <-- Added Icon
 } from "react-icons/tb";
 
 // Types
@@ -66,6 +67,12 @@ export type JobDepartmentItem = {
   deleted_at?: string | null;
   created_at?: string;
   updated_at?: string;
+  // --- ADDED: To store user info for the "Updated Info" column ---
+  updated_by_user?: {
+    name: string;
+    profile_pic_path?: string;
+    roles: { display_name: string }[];
+  };
 };
 
 // --- Zod Schema for Add/Edit Form ---
@@ -91,9 +98,27 @@ const filterFormSchema = z.object({
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+// --- Helper Functions ---
+const statusOptions = [
+  { value: 'Active', label: 'Active' },
+  { value: 'Inactive', label: 'Inactive' },
+];
+
+const formatReadableDateTime = (dateString?: string) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  return `${date.getDate()} ${date.toLocaleString("en-US", {
+    month: "short",
+  })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })}`;
+};
+
+
 // --- CSV Exporter Utility ---
-const CSV_HEADERS_JOB_DEPT = ["ID", "Name", "Status"];
-const CSV_KEYS_JOB_DEPT: (keyof JobDepartmentItem)[] = ["id", "name", "status"];
+const CSV_HEADERS_JOB_DEPT = ["ID", "Name", "Status", "Updated By", "Updated At"];
 
 function exportJobDepartmentsToCsv(
   filename: string,
@@ -108,20 +133,32 @@ function exportJobDepartmentsToCsv(
     return false;
   }
   const separator = ",";
+  const preparedRows = rows.map(row => ({
+    id: row.id,
+    name: row.name,
+    status: row.status,
+    updated_by_name: row.updated_by_user?.name || "N/A",
+    updated_at: row.updated_at ? formatReadableDateTime(row.updated_at) : "N/A",
+  }));
+
   const csvContent =
     CSV_HEADERS_JOB_DEPT.join(separator) +
     "\n" +
-    rows
+    preparedRows
       .map((row) =>
-        CSV_KEYS_JOB_DEPT.map((k) => {
-          let cell = row[k];
-          if (cell === null || cell === undefined) cell = "";
-          else cell = String(cell).replace(/"/g, '""');
-          if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`;
-          return cell;
-        }).join(separator)
+        Object.values(row)
+          .map((cell) => {
+            if (cell === null || cell === undefined) return "";
+            let strCell = String(cell);
+            if (strCell.includes(separator) || strCell.includes('"') || strCell.includes('\n')) {
+              strCell = `"${strCell.replace(/"/g, '""')}"`;
+            }
+            return strCell;
+          })
+          .join(separator)
       )
       .join("\n");
+
   const blob = new Blob(["\ufeff" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
@@ -171,7 +208,15 @@ const ActionColumn = ({
           <TbPencil />
         </div>
       </Tooltip>
-      {/* <Tooltip title="Delete Job Department"> ... </Tooltip> */}
+      <Tooltip title="Delete Job Department">
+        <div
+            className={classNames(iconButtonClass, hoverBgClass, "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400")}
+            role="button"
+            onClick={onDelete}
+        >
+            <TbTrash />
+        </div>
+      </Tooltip>
     </div>
   );
 };
@@ -376,6 +421,23 @@ const JobDepartment = () => {
   });
   const [selectedItems, setSelectedItems] = useState<JobDepartmentItem[]>([]);
 
+  // --- ADDED: State and handlers for image viewer ---
+  const [isImageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageToView, setImageToView] = useState<string | null>(null);
+
+  const openImageViewer = useCallback((imageUrl: string | null | undefined) => {
+    if (imageUrl) {
+      setImageToView(imageUrl);
+      setImageViewerOpen(true);
+    }
+  }, []);
+
+  const closeImageViewer = useCallback(() => {
+    setImageViewerOpen(false);
+    setImageToView(null);
+  }, []);
+  // --- END: Image viewer logic ---
+
   useEffect(() => {
     dispatch(getJobDepartmentsAction());
   }, [dispatch]);
@@ -560,14 +622,14 @@ const JobDepartment = () => {
     setFilterCriteria(defaultFilters);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     closeFilterDrawer();
-  }, [filterFormMethods]);
+  }, [filterFormMethods, closeFilterDrawer]);
 
   const handleCardClick = (status?: 'Active' | 'Inactive' | 'all') => {
       onClearFilters();
       if(status && status !== 'all') {
           const statusOption = statusOptions.find(opt => opt.value === status);
           if(statusOption) {
-            setFilterCriteria({ filterStatus: [statusOption] });
+            setFilterCriteria({ ...filterCriteria, filterStatus: [statusOption] });
           }
       }
   };
@@ -621,14 +683,25 @@ const JobDepartment = () => {
       processedData = processedData.filter(
         (item) =>
           (item.name?.toLowerCase() ?? "").includes(query) ||
-          String(item.id).toLowerCase().includes(query)
+          String(item.id).toLowerCase().includes(query) ||
+          // --- MODIFIED: Search by updater's name ---
+          (item.updated_by_user?.name?.toLowerCase() ?? "").includes(query)
       );
     }
+
     const { order, key } = tableData.sort as OnSortParam;
-    if (order && key && ["id", "name", "status"].includes(String(key))) {
+    if (order && key && processedData.length > 0) {
       processedData.sort((a, b) => {
         const aVal = a[key as keyof JobDepartmentItem];
         const bVal = b[key as keyof JobDepartmentItem];
+        
+        // --- MODIFIED: Handle date sorting ---
+        if (key === 'updated_at') {
+          const dateA = aVal ? new Date(aVal as string).getTime() : 0;
+          const dateB = bVal ? new Date(bVal as string).getTime() : 0;
+          return order === 'asc' ? dateA - dateB : dateB - dateA;
+        }
+        
         const aStr = String(aVal ?? "").toLowerCase();
         const bStr = String(bVal ?? "").toLowerCase();
         return order === "asc"
@@ -692,41 +765,41 @@ const JobDepartment = () => {
     (query: string) => handleSetTableData({ query: query, pageIndex: 1 }),
     [handleSetTableData]
   );
-  const handleRowSelect = useCallback(
-    (checked: boolean, row: JobDepartmentItem) => {
-      setSelectedItems((prev) => {
-        if (checked)
-          return prev.some((item) => item.id === row.id)
-            ? prev
-            : [...prev, row];
-        return prev.filter((item) => item.id !== row.id);
-      });
-    },
-    []
-  );
-  const handleAllRowSelect = useCallback(
-    (checked: boolean, currentRows: Row<JobDepartmentItem>[]) => {
-      const cPOR = currentRows.map((r) => r.original);
-      if (checked) {
-        setSelectedItems((pS) => {
-          const pSIds = new Set(pS.map((i) => i.id));
-          const nRTA = cPOR.filter((r) => !pSIds.has(r.id));
-          return [...pS, ...nRTA];
-        });
-      } else {
-        const cPRIds = new Set(cPOR.map((r) => r.id));
-        setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id)));
-      }
-    },
-    []
-  );
-
+  
+  // --- START: MODIFIED/NEW COLUMNS ---
   const columns: ColumnDef<JobDepartmentItem>[] = useMemo(
     () => [
       { header: "Department Name", accessorKey: "name", enableSorting: true },
-      { header: "No. of Jobs", accessorKey: "jobsCount", enableSorting: false, cell: props => <div className="">12</div> },
-      { header: "No. of Posts", accessorKey: "postsCount", enableSorting: false, cell: props => <div className="">18</div> },
-      { header: "No. of Applicants", accessorKey: "applicantsCount", enableSorting: false, cell: props => <div className="">67</div> },
+      {
+        header: "Updated Info",
+        accessorKey: "updated_at",
+        enableSorting: true,
+        size: 250,
+        cell: (props) => {
+          const { updated_at, updated_by_user } = props.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={updated_by_user?.profile_pic_path}
+                shape="circle"
+                size="sm"
+                icon={<TbUserCircle />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+              />
+              <div>
+                <span className="font-semibold">{updated_by_user?.name || "N/A"}</span>
+                <div className="text-xs">
+                  {updated_by_user?.roles?.[0]?.display_name || ""}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatReadableDateTime(updated_at)}
+                </div>
+              </div>
+            </div>
+          );
+        },
+      },
       { header: "Status", accessorKey: "status", enableSorting: true, size: 100,
         cell: (props) => {
           const status = props.row.original.status
@@ -751,8 +824,9 @@ const JobDepartment = () => {
         ),
       },
     ],
-    [openEditDrawer, handleDeleteClick]
+    [openEditDrawer, handleDeleteClick, openImageViewer]
   );
+  // --- END: MODIFIED/NEW COLUMNS ---
   
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<JobDepartmentItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -771,35 +845,35 @@ const JobDepartment = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-4 mb-4 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 mb-4 gap-2">
             <Tooltip title="Click to show all departments"><div onClick={() => handleCardClick('all')} className={cardClass}><Card bodyClass={cardBodyClass} className="border-blue-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
                 <TbBuilding size={24} />
               </div>
               <div>
-                <h6 className="text-blue-500">12</h6>
-                <span className="font-semibold text-xs">Total Departments</span>
+                <h6 className="text-blue-500">{jobDepartmentsData.length}</h6>
+                <span className="font-semibold text-xs">Total</span>
               </div>
             </Card></div></Tooltip>
-            <Tooltip title="Departments with active jobs"><Card bodyClass={cardBodyClass} className="rounded-md border border-violet-200 cursor-default">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+            <Tooltip title="Click to show active departments"><div onClick={() => handleCardClick('Active')} className={cardClass}><Card bodyClass={cardBodyClass} className="border-emerald-200">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
                 <TbBuildingCog size={24} />
               </div>
               <div>
-                <h6 className="text-violet-500">4</h6>
-                <span className="font-semibold text-xs">Departments with jobs</span>
+                <h6 className="text-emerald-500">{jobDepartmentsData.filter(d => d.status === 'Active').length}</h6>
+                <span className="font-semibold text-xs">Active</span>
               </div>
-            </Card></Tooltip>
-            <Tooltip title="Departments with no jobs posted"><Card bodyClass={cardBodyClass} className="rounded-md border border-red-200 cursor-default">
+            </Card></div></Tooltip>
+            <Tooltip title="Click to show inactive departments"><div onClick={() => handleCardClick('Inactive')} className={cardClass}><Card bodyClass={cardBodyClass} className="border-red-200">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
                 <TbBuildingOff size={24} />
               </div>
               <div>
-                <h6 className="text-red-500">8</h6>
-                <span className="font-semibold text-xs">No jobs posted</span>
+                <h6 className="text-red-500">{jobDepartmentsData.filter(d => d.status === 'Inactive').length}</h6>
+                <span className="font-semibold text-xs">Inactive</span>
               </div>
-            </Card></Tooltip>
-            <Tooltip title="Total applicants across all departments"><Card bodyClass={cardBodyClass} className="rounded-md border border-green-200 cursor-default">
+            </Card></div></Tooltip>
+            <Tooltip title="Total applicants across all departments (Static example)"><Card bodyClass={cardBodyClass} className="rounded-md border border-green-200 cursor-default">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
                 <TbUsers size={24} />
               </div>
@@ -827,6 +901,9 @@ const JobDepartment = () => {
             <DataTable
               columns={filteredColumns}
               data={pageData}
+              selectable
+              onRowSelect={handleRowSelect}
+              onAllRowSelect={handleAllRowSelect}
               loading={
                 masterLoadingStatus === "loading" || isSubmitting || isDeleting
               }
@@ -854,6 +931,7 @@ const JobDepartment = () => {
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
         onClose={editingItem ? closeEditDrawer : closeAddDrawer}
         onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer}
+        bodyClass="relative"
         footer={
           <div className="text-right w-full">
             <Button
@@ -921,19 +999,28 @@ const JobDepartment = () => {
           </FormItem>
         </Form>
         {isEditDrawerOpen && editingItem && (
-        <div className="absolute bottom-[14%] w-[88%]">
-          <div className="flex justify-between gap-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
-            <div className="">
-              <b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br />
-              <p className="text-sm font-semibold">Tushar Joshi</p>
-              <p>System Admin</p>
-            </div>
-            <div className="w-[210px]"><br />
-              <span className="font-semibold">Created At:</span> <span>27 May, 2025, 2:00 PM</span><br />
-              <span className="font-semibold">Updated At:</span> <span>27 May, 2025, 2:00 PM</span>
+          // --- MODIFIED: Dynamic "Latest Update" section in Edit Drawer ---
+          <div className="absolute bottom-20 w-[88%]">
+            <div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
+              <div>
+                  <b className="font-semibold text-primary-600 dark:text-primary-400">Latest Update:</b>
+                  <p className="text-sm font-semibold mt-1">
+                      {editingItem.updated_by_user?.name || 'N/A'}
+                  </p>
+                  <p>
+                      {editingItem.updated_by_user?.roles?.[0]?.display_name || 'N/A'}
+                  </p>
+              </div>
+              <div className="text-right">
+                  <br/>
+                  <span className="font-semibold">Created:</span>{' '}
+                  <span>{formatReadableDateTime(editingItem.created_at)}</span>
+                  <br />
+                  <span className="font-semibold">Updated:</span>{' '}
+                  <span>{formatReadableDateTime(editingItem.updated_at)}</span>
+              </div>
             </div>
           </div>
-        </div>
         )}
       </Drawer>
 
@@ -1028,6 +1115,29 @@ const JobDepartment = () => {
           <strong>{itemToDelete?.name}</strong>"? This action cannot be undone.
         </p>
       </ConfirmDialog>
+      
+      {/* --- ADDED: Image Viewer Dialog --- */}
+      <Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        width={600}
+        bodyOpenClassName="overflow-hidden" // Prevents background scroll
+      >
+          <div className="flex justify-center items-center p-4">
+              {imageToView ? (
+                  <img
+                      src={imageToView}
+                      alt="User Profile"
+                      style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+                  />
+              ) : (
+                  <p>No image to display.</p>
+              )}
+          </div>
+      </Dialog>
     </>
   );
 };

@@ -1,5 +1,3 @@
-// src/views/your-path/DepartmentListing.tsx
-
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
@@ -18,6 +16,7 @@ import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
+// --- MODIFIED: Added Dialog import ---
 import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
 
 // Icons
@@ -360,7 +359,23 @@ const DepartmentListing = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+
+  // --- MODIFIED: Renamed state and handlers for clarity and consistency ---
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
+
+  const openImageViewer = useCallback((src?: string) => {
+    if (src) {
+        setViewerImageSrc(src);
+        setIsImageViewerOpen(true);
+    }
+  }, []);
+
+  const closeImageViewer = useCallback(() => {
+    setIsImageViewerOpen(false);
+    setViewerImageSrc(null);
+  }, []);
+  // --- END MODIFICATION ---
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
@@ -537,7 +552,7 @@ const DepartmentListing = () => {
       if(status !== 'all') {
           const statusOption = statusOptions.find(opt => opt.value === status);
           if(statusOption) {
-            setFilterCriteria({ filterStatus: [statusOption] });
+            setFilterCriteria({ ...filterCriteria, filterStatus: [statusOption] });
           }
       }
   };
@@ -596,6 +611,7 @@ const DepartmentListing = () => {
         (item) =>
           (item.name?.trim().toLowerCase() ?? "").includes(query) ||
           (item.status?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.updated_by_user?.name?.toLowerCase() ?? "").includes(query) ||
           String(item.id ?? "")
             .trim()
             .toLowerCase()
@@ -606,7 +622,7 @@ const DepartmentListing = () => {
     if (
       order &&
       key &&
-      ["id", "name", "status", "updated_at"].includes(key) &&
+      ["id", "name", "status", "updated_at"].includes(String(key)) &&
       processedData.length > 0
     ) {
       processedData.sort((a, b) => {
@@ -727,7 +743,6 @@ const DepartmentListing = () => {
   const columns: ColumnDef<DepartmentItem>[] = useMemo(
     () => [
       { header: "Department Name", accessorKey: "name", enableSorting: true, size: 200 },
-      
       {
         header: "Status",
         accessorKey: "status",
@@ -769,7 +784,8 @@ const DepartmentListing = () => {
                       size="sm" 
                       icon={<TbUserCircle />} 
                       className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                      onClick={() => openImageViewerModal(updated_by_user?.profile_pic_path)}
+                      // --- MODIFIED: Use correct handler ---
+                      onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
                   />
                   <div>
                       <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
@@ -792,7 +808,7 @@ const DepartmentListing = () => {
         ),
       },
     ],
-    [openEditDrawer, openImageViewerModal]
+    [openEditDrawer, openImageViewer]
   );
   
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DepartmentItem>[]>(columns);
@@ -809,7 +825,7 @@ const DepartmentListing = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-6 mb-6 gap-6">
             <Tooltip title="Click to show all departments">
                 <div onClick={() => handleCardClick('all')} className="cursor-pointer">
                     <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700 hover:shadow-md">
@@ -830,7 +846,7 @@ const DepartmentListing = () => {
                             <TbUserScan size={24} />
                         </div>
                         <div>
-                            <h6 className="text-emerald-500 dark:text-emerald-200">{departmentsData?.counts?.active_departments || 0}</h6>
+                            <h6 className="text-emerald-500 dark:text-emerald-200">{departmentsData?.counts?.active|| 0}</h6>
                             <span className="font-semibold text-xs">Active</span>
                         </div>
                     </Card>
@@ -843,7 +859,7 @@ const DepartmentListing = () => {
                             <TbInbox size={24} />
                         </div>
                         <div>
-                            <h6 className="text-red-500 dark:text-red-200">{departmentsData?.counts?.inactive_departments || 0}</h6>
+                            <h6 className="text-red-500 dark:text-red-200">{departmentsData?.counts?.inactive || 0}</h6>
                             <span className="font-semibold text-xs">Inactive</span>
                         </div>
                     </Card>
@@ -858,21 +874,21 @@ const DepartmentListing = () => {
                 <span className="font-semibold text-xs">Total Emp.</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-yellow-200 dark:border-yellow-700 cursor-default">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-yellow-100 dark:bg-yellow-500/20 text-yellow-500 dark:text-yellow-200">
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
                 <TbBriefcase size={24} />
               </div>
               <div>
-                <h6 className="text-yellow-500 dark:text-yellow-200">{departmentsData?.counts?.job_posts || 0}</h6>
+                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.job_posts || 0}</h6>
                 <span className="font-semibold text-xs">Total JobPost</span>
               </div>
             </Card>
-            <Card bodyClass="flex gap-2 p-3" className="rounded-md border-purple-200 dark:border-purple-700 cursor-default">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-purple-100 dark:bg-purple-500/20 text-purple-500 dark:text-purple-200">
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
                 <TbFileLike size={24} />
               </div>
               <div>
-                <h6 className="text-purple-500 dark:text-purple-200">{departmentsData?.counts?.applicants || 0}</h6>
+                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.applicants || 0}</h6>
                 <span className="font-semibold text-xs">Total Appl.</span>
               </div>
             </Card>
@@ -909,27 +925,29 @@ const DepartmentListing = () => {
         </AdaptiveCard>
       </Container>
       
-      <Dialog 
-          isOpen={!!viewerImageSrc} 
-          onClose={closeImageViewerModal} 
-          onRequestClose={closeImageViewerModal}
-          bodyOpenClassName="overflow-hidden"
-          contentClassName="p-0 bg-transparent"
+      {/* --- MODIFIED: Replaced custom div with proper Dialog component --- */}
+      <Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        width={600}
+        bodyOpenClassName="overflow-hidden"
       >
-          <div className="relative">
-              <img 
-                  src={viewerImageSrc || ''} 
-                  alt="Profile View" 
-                  className="max-w-[90vw] max-h-[90vh] rounded-lg" 
-              />
-              <button 
-                  onClick={closeImageViewerModal}
-                  className="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-800 hover:bg-gray-200 shadow-lg"
-              >
-                  <TbX size={24} />
-              </button>
+          <div className="flex justify-center items-center p-4">
+              {viewerImageSrc ? (
+                  <img
+                      src={viewerImageSrc}
+                      alt="Profile View"
+                      style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+                  />
+              ) : (
+                  <p>No image to display.</p>
+              )}
           </div>
       </Dialog>
+      {/* --- END MODIFICATION --- */}
 
       {[
         {

@@ -376,7 +376,7 @@ const JobApplicationListing = () => {
         const apiData: JobApplicationApiItem[] = Array.isArray(jobApplicationsData?.data) ? jobApplicationsData.data : [];
         const depts: DepartmentItem[] = Array.isArray(departmentsData?.data) ? departmentsData.data : [];
         const departmentMap = new Map(depts.map((dept) => [String(dept.id), dept.name]));
-        return apiData.map((apiItem): JobApplicationItemInternal => ({ id: String(apiItem.id), status: (apiItem.status || 'new') as ApplicationStatus, name: apiItem.name, email: apiItem.email, mobileNo: apiItem.mobile_no || '', departmentId: apiItem.job_department_id || undefined, departmentName: apiItem.job_department_id ? departmentMap.get(String(apiItem.job_department_id)) || 'Unknown Dept.' : 'N/A', jobTitle: apiItem.job_title || '', workExperience: apiItem.work_experience || '', applicationDate: apiItem.application_date ? new Date(apiItem.application_date) : new Date(), resumeUrl: apiItem.resume_url || '', jobApplicationLink: apiItem.application_link || '', notes: apiItem.note || '', jobId: apiItem.job_id || '', avatar: apiItem.avatar || undefined, coverLetter: apiItem.cover_letter || '' }));
+        return apiData.map((apiItem): JobApplicationItemInternal => ({ id: String(apiItem.id), status: (apiItem.status || 'new') as ApplicationStatus, name: apiItem.name, email: apiItem.email, mobileNo: apiItem.mobile_no || '', departmentId: apiItem.job_department_id || undefined, departmentName: apiItem.job_department_id ? departmentMap.get(String(apiItem.job_department_id)) || 'Unknown Dept.' : 'N/A', jobTitle: apiItem.job_title || '', workExperience: apiItem.work_experience || '', applicationDate: apiItem.application_date ? new Date(apiItem.application_date) : new Date(), resumeUrl: apiItem.resume || '', jobApplicationLink: apiItem.application_link || '', notes: apiItem.note || '', jobId: apiItem.job_id || '', avatar: apiItem.avatar || undefined, coverLetter: apiItem.cover_letter || '' || '', }));
     }, [jobApplicationsData?.data, departmentsData?.data])
 
     const processedAndSortedData = useMemo(() => {
@@ -414,8 +414,20 @@ const JobApplicationListing = () => {
 
     const confirmDelete = useCallback(async () => { /* ... (no changes) ... */ }, []);
     const handleDeleteSelected = useCallback(async () => { /* ... (no changes) ... */ }, []);
-
-    const handleDownloadResume = useCallback((item: JobApplicationItemInternal) => { if (item.resumeUrl) { window.open(item.resumeUrl, '_blank'); toast.push(<Notification title="Resume" type="info">Attempting to open/download resume...</Notification>); } else { toast.push(<Notification title="No Resume" type="warning">No resume URL found for this applicant.</Notification>); } }, []);
+    const handleDownloadResume = useCallback(
+    (item: JobApplicationItemInternal) => {
+        console.log("item",item);
+        
+        // This logic is perfect. It just needs a valid URL to work with.
+        if (item.resumeUrl) { 
+            window.open(item.resumeUrl, '_blank')
+            // toast.push(/*...notification...*/);
+        } else {
+            // toast.push(/*...notification...*/);
+        }
+    },
+    [],
+)
     const handleSubmitJobLink = useCallback(async (applicationId: string, link: string) => { setIsSubmittingDrawer(true); try { dispatch(getJobApplicationsAction({})); toast.push(<Notification title="Link Added" type="success">Job link updated.</Notification>); handleCloseModal(); } catch (error: any) { toast.push(<Notification title="Update Failed" type="danger" children={error.message || 'Could not update.'} />); } finally { setIsSubmittingDrawer(false); } }, [dispatch]);
 
     const openEditDrawer = useCallback((item: JobApplicationItemInternal) => { navigate(`/hr-employees/job-applications/add`, { state: item }); }, [navigate]);
