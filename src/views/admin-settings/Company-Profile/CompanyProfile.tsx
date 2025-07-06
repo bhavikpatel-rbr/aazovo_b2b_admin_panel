@@ -42,16 +42,16 @@ import { useSelector } from "react-redux";
 import { BiChevronRight } from "react-icons/bi";
 import { NavLink } from "react-router-dom";
 
-const LOGO_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "";
+// const LOGO_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "";
 
 // --- Define API and UI Data Types ---
 type ApiCompanyProfileItem = {
   id: number;
-  name: string;
+  company_name: string;
   address: string | null;
   support_email: string;
   mobile: string | null;
-  logo: string | null;
+  company_logo: string | null;
   gst: string | null;
   smtp_host?: string | null; // Keep optional if backend might send them
   smtp_port?: string | null;
@@ -67,7 +67,7 @@ type ApiCompanyProfileItem = {
   twitter: string | null;
   created_at: string;
   updated_at: string;
-  logo_for_meta: string | null;
+  meta_logo: string | null;
   notification_email: string;
   icon_full_path: string;
   meta_icon_full_path: string;
@@ -92,14 +92,14 @@ export type CompanyProfileUIData = Omit<
 
 // --- Zod Schema for Company Profile Form (SMTP fields removed) ---
 const companyProfileSchema = z.object({
-  name: z.string().min(1, "Company Name is required.").max(150),
+  company_name: z.string().min(1, "Company Name is required.").max(150),
   address: z.string().max(500, "Address is too long.").optional().nullable(),
   support_email: z
     .string()
     .email("Invalid Support Email format.")
     .min(1, "Support Email is required."),
   mobile: z.string().max(30, "Mobile number too long").optional().nullable(),
-  logo: z
+  company_logo: z
     .union([z.instanceof(File), z.null()])
     .optional()
     .nullable(),
@@ -134,7 +134,7 @@ const companyProfileSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal("")),
-  logo_for_meta: z
+  meta_logo: z
     .union([z.instanceof(File), z.null()])
     .optional()
     .nullable(),
@@ -230,14 +230,14 @@ const CompanyProfile = () => {
 
         const uiProfile: CompanyProfileUIData = {
           id: apiProfile.id,
-          name: apiProfile.name,
+          company_name: apiProfile.company_name,
           address: apiProfile.address || null,
           support_email: apiProfile.support_email,
           mobile: apiProfile.mobile || null,
-          logo: apiProfile.logo || null,
+          company_logo: apiProfile.company_logo || null,
           logo_full_path:
-            apiProfile.logo && LOGO_BASE_URL
-              ? `${LOGO_BASE_URL}${apiProfile.logo}`
+            apiProfile.company_logo
+              ? `${apiProfile.company_logo}`
               : null,
           gst: apiProfile.gst || null,
           facebook: apiProfile.facebook || null,
@@ -245,30 +245,25 @@ const CompanyProfile = () => {
           linkedin: apiProfile.linkedin || null,
           youtube: apiProfile.youtube || null,
           twitter: apiProfile.twitter || null,
-          logo_for_meta: apiProfile.logo_for_meta || null,
+          meta_logo: apiProfile.meta_logo || null,
           icon_full_path: apiProfile.icon_full_path,
-          // meta_icon_full_path:
-          //   apiProfile.logo_for_meta && LOGO_BASE_URL
-          //     ? `${LOGO_BASE_URL}${apiProfile.logo_for_meta}`
-          //     : null,
-          meta_icon_full_path: apiProfile.meta_icon_full_path,
           notification_email: apiProfile.notification_email,
         };
         setCurrentProfileUI(uiProfile);
 
         const formValuesToReset: CompanyProfileFormData = {
-          name: uiProfile.name || "",
+          company_name: uiProfile.company_name || "",
           address: uiProfile.address || "",
           support_email: uiProfile.support_email || "",
           mobile: uiProfile.mobile || "",
-          logo: null, // logo is a File; can't set it from a string
+          company_logo: null, // company_logo is a File; can't set it from a string
           gst: uiProfile.gst || "",
           facebook: uiProfile.facebook || "",
           instagram: uiProfile.instagram || "",
           linkedin: uiProfile.linkedin || "",
           youtube: uiProfile.youtube || "",
           twitter: uiProfile.twitter || "",
-          logo_for_meta: null,
+          meta_logo: null,
           notification_email: uiProfile.notification_email || "",
         };
 
@@ -280,18 +275,18 @@ const CompanyProfile = () => {
         setIsLoadingInitial(false);
         formMethods.reset({
           // Reset to empty if no profile
-          name: "",
+          company_name: "",
           address: "",
           support_email: "",
           mobile: "",
-          logo: null,
+          company_logo: null,
           gst: "",
           facebook: "",
           instagram: "",
           linkedin: "",
           youtube: "",
           twitter: "",
-          logo_for_meta: null,
+          meta_logo: null,
           notification_email: "",
         });
         setCurrentProfileUI(null);
@@ -349,12 +344,10 @@ const CompanyProfile = () => {
     }
     setIsSubmitting(true);
     const formData = new FormData();
-    formData.append("_method", "PUT");
-
     (Object.keys(data) as Array<keyof CompanyProfileFormData>).forEach(
       (key) => {
         const value = data[key];
-        if (key === "logo" || key === "logo_for_meta") {
+        if (key === "company_logo" || key === "meta_logo") {
           if (value instanceof File) formData.append(key, value);
         } else if (value !== null && value !== undefined) {
           // Send empty strings if they are actual values
@@ -381,11 +374,11 @@ const CompanyProfile = () => {
         </Notification>
       );
 
-      if (data.logo instanceof File && logoPreviewUrl) {
+      if (data.company_logo instanceof File && logoPreviewUrl) {
         URL.revokeObjectURL(logoPreviewUrl); // Clean up old preview if new file was part of submission
         setLogoPreviewUrl(null);
       }
-      if (data.logo_for_meta instanceof File && metaLogoPreviewUrl) {
+      if (data.meta_logo instanceof File && metaLogoPreviewUrl) {
         URL.revokeObjectURL(metaLogoPreviewUrl);
         setMetaLogoPreviewUrl(null);
       }
@@ -460,8 +453,8 @@ const CompanyProfile = () => {
       <FormItem
         label="Company Logo"
         className=""
-        invalid={!!formMethods.formState.errors.logo}
-        errorMessage={formMethods.formState.errors.logo?.message as string}
+        invalid={!!formMethods.formState.errors.company_logo}
+        errorMessage={formMethods.formState.errors.company_logo?.message as string}
       >
         <div className="flex gap-2 items-end">
           {logoPreviewUrl ? (
@@ -480,12 +473,12 @@ const CompanyProfile = () => {
             )
           )}
           <Controller
-            name="logo"
+            name="company_logo"
             control={formMethods.control}
-            render={({ field: { onChange, onBlur, name } }) => (
+            render={({ field: { onChange, onBlur, company_name } }) => (
               <Input
                 type="file"
-                name={name}
+                name={company_name}
                 onBlur={onBlur}
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
@@ -502,9 +495,9 @@ const CompanyProfile = () => {
 
       <FormItem
         label="Meta Logo (Social Share)"
-        invalid={!!formMethods.formState.errors.logo_for_meta}
+        invalid={!!formMethods.formState.errors.meta_logo}
         errorMessage={
-          formMethods.formState.errors.logo_for_meta?.message as string
+          formMethods.formState.errors.meta_logo?.message as string
         }
       >
         <div className="flex gap-2 items-end ">
@@ -524,12 +517,12 @@ const CompanyProfile = () => {
             )
           )}
           <Controller
-            name="logo_for_meta"
+            name="meta_logo"
             control={formMethods.control}
-            render={({ field: { onChange, onBlur, name } }) => (
+            render={({ field: { onChange, onBlur, company_name } }) => (
               <Input
                 type="file"
-                name={name}
+                name={company_name}
                 onBlur={onBlur}
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
@@ -564,11 +557,11 @@ const CompanyProfile = () => {
       <FormItem
         label="Company Name"
         className="md:col-span-2"
-        invalid={!!formMethods.formState.errors.name}
-        errorMessage={formMethods.formState.errors.name?.message}
+        invalid={!!formMethods.formState.errors.company_name}
+        errorMessage={formMethods.formState.errors.company_name?.message}
       >
         <Controller
-          name="name"
+          name="company_name"
           control={formMethods.control}
           render={({ field }) => (
             <Input

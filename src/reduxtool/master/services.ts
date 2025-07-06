@@ -920,7 +920,7 @@ export const getCompanyProfileAsync = async () => {
 export const editCompanyProfileListAsync = async (brandId: number | string, formData: FormData) => {
   try {
     const response = await axiosInstance.post(
-      `${config.apiURL}/setting/company_profile_setting/${brandId}`, // Use brandId in the URL
+      `${config.apiURL}/setting/company_profile_setting`, // Use brandId in the URL
       formData,
       {
         headers: {
