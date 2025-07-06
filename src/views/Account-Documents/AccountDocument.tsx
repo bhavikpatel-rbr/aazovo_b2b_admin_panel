@@ -477,6 +477,7 @@ const ViewDocumentDialog = ({
     created_by_user,
     updated_by_user,
     member,
+    company,
     form,
   } = document;
 
@@ -521,7 +522,7 @@ const ViewDocumentDialog = ({
             <DetailItem label="Member Name" value={member?.name} />
             <DetailItem
               label="Company Name"
-              value={member?.company_actual || member?.company_temp || "N/A"}
+              value={company?.company_name || company?.company_name || "N/A"}
             />
             <DetailItem label="Member Email" value={member?.email} />
             <DetailItem
@@ -539,10 +540,10 @@ const ViewDocumentDialog = ({
             <DetailItem label="Form Name" value={form?.form_name} />
             <DetailItem label="Form Title" value={form?.form_title} />
           </div>
-          <DetailItem
+          {/* <DetailItem
             label="Form Description"
             value={form?.form_description}
-          />
+          /> */}
         </Card>
 
         <Card bodyClass="p-4">
