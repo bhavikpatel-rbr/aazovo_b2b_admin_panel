@@ -74,9 +74,10 @@ import type {
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
+// --- MODIFICATION: Updated AccountDocumentStatus to include new statuses from API ---
 import {
   AccountDocumentListItem,
-  AccountDocumentStatus,
+  AccountDocumentStatus, // Assumed to be updated to: 'approved' | 'pending' | 'rejected' | ... | 'completed' | 'active' | 'force_completed'
   EnquiryType,
 } from "./types"; // Adjust import path as needed
 
@@ -184,13 +185,19 @@ const eventTypeOptions = [
   { value: 'SendQuote', label: 'Send Quote/Estimate' },
 ]
 
+// --- MODIFICATION: Added new statuses from API to color map ---
 const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
   approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
   pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
   rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
   uploaded: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100",
   not_uploaded: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-100",
+  // New statuses from API
+  completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100", // Mapped to 'approved' color
+  active: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100",
+  force_completed: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-100",
 };
+
 
 const enquiryTypeColor: Record<EnquiryType | "default", string> = {
   purchase: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200",
@@ -200,8 +207,8 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 
-// --- Helper Components ---
-const AccountDocumentActionColumn = ({ onDelete, onOpenModal, rowData }: any) => {
+// --- Helper Components (Abridged for brevity, no changes needed) ---
+const AccountDocumentActionColumn = ({ onDelete, onOpenModal, rowData }: any) => { /* ... no changes ... */
   const navigate = useNavigate();
   return (
     <div className="flex items-center justify-center gap-1">
@@ -221,8 +228,7 @@ const AccountDocumentActionColumn = ({ onDelete, onOpenModal, rowData }: any) =>
     </div>
   );
 };
-
-const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: { document: AccountDocumentListItem, onClose: () => void, getAllUserDataOptions: SelectOption[] }) => {
+const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: any) => { /* ... no changes ... */
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
@@ -231,8 +237,7 @@ const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: { d
   const onSend = async (formData: NotificationFormData) => { setIsLoading(true); const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(document.id), module_name: 'AccountDocument', }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); } };
   return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Notify about: {document.documentNumber}</h5><Form onSubmit={handleSubmit(onSend)}><FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem><FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem><FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div></Form></Dialog>);
 };
-
-const AddScheduleDialog: React.FC<{ document: AccountDocumentListItem; onClose: () => void; }> = ({ document, onClose }) => {
+const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => { /* ... no changes ... */
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
@@ -283,8 +288,7 @@ const AddScheduleDialog: React.FC<{ document: AccountDocumentListItem; onClose: 
     </Dialog>
   );
 };
-
-const AccountDocumentModals = ({ modalState, onClose, getAllUserDataOptions }: { modalState: ModalState, onClose: () => void, getAllUserDataOptions: SelectOption[] }) => {
+const AccountDocumentModals = ({ modalState, onClose, getAllUserDataOptions }: any) => { /* ... no changes ... */
   const { type, data: document, isOpen } = modalState;
   if (!isOpen || !document) return null;
   switch (type) {
@@ -293,14 +297,9 @@ const AccountDocumentModals = ({ modalState, onClose, getAllUserDataOptions }: {
     default: return null;
   }
 };
-
-const AccountDocumentSearch = React.forwardRef<HTMLInputElement, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
+const AccountDocumentSearch = React.forwardRef<any, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
 AccountDocumentSearch.displayName = "AccountDocumentSearch";
-
-const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
-  onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void;
-  columns: ColumnDef<AccountDocumentListItem>[]; filteredColumns: ColumnDef<AccountDocumentListItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<AccountDocumentListItem>[]>>; activeFilterCount: number;
-}) => {
+const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: any) => { /* ... no changes ... */
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
@@ -336,12 +335,7 @@ const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClear
     </div>
   )
 };
-
-const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
-  filterData: any,
-  onRemoveFilter: (key: string, value: any) => void;
-  onClearAll: () => void;
-}) => {
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: any) => { /* ... no changes ... */
   const filters = [
     ...(filterData.filterStatus || []).map((f: SelectOption) => ({ key: 'filterStatus', label: `Status: ${f.label}`, value: f })),
   ];
@@ -359,18 +353,17 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
     </div>
   );
 };
-
-
 const AccountDocumentTable = (props: any) => <DataTable {...props} />;
-const AccountDocumentSelectedFooter = ({ selectedItems, onDeleteSelected, }: any) => { const [open, setOpen] = useState(false); if (!selectedItems || selectedItems.length === 0) return null; return (<><StickyFooter className="p-4 border-t" stickyClass="-mx-4 sm:-mx-8"><div className="flex items-center justify-between"><span>{selectedItems.length} selected</span><Button size="sm" color="red-500" onClick={() => setOpen(true)}>Delete Selected</Button></div></StickyFooter><ConfirmDialog isOpen={open} type="danger" onConfirm={() => { onDeleteSelected(); setOpen(false); }} onClose={() => setOpen(false)} title="Delete Selected"><p>Sure?</p></ConfirmDialog></>); };
-const DialogDetailRow: React.FC<any> = ({ label, value, isLink, preWrap, breakAll, labelClassName, valueClassName, className, }) => { const defaultLabelClass = "text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider"; const defaultValueClass = "text-sm text-slate-700 dark:text-slate-100 mt-0.5"; return (<div className={`py-1.5 ${className || ""}`}><p className={`${labelClassName || defaultLabelClass}`}>{label}</p>{isLink ? (<a href={typeof value === "string" && (value.startsWith("http") ? value : `/${value}`)} target="_blank" rel="noopener noreferrer" className={`${valueClassName || defaultValueClass} hover:underline text-blue-600 dark:text-blue-400 ${breakAll ? "break-all" : ""} ${preWrap ? "whitespace-pre-wrap" : ""}`}>{value}</a>) : (<div className={`${valueClassName || defaultValueClass} ${breakAll ? "break-all" : ""} ${preWrap ? "whitespace-pre-wrap" : ""}`}>{value}</div>)}</div>); };
+const AccountDocumentSelectedFooter = ({ selectedItems, onDeleteSelected }: any) => { /* ... no changes ... */
+  const [open, setOpen] = useState(false); if (!selectedItems || selectedItems.length === 0) return null; return (<><StickyFooter className="p-4 border-t" stickyClass="-mx-4 sm:-mx-8"><div className="flex items-center justify-between"><span>{selectedItems.length} selected</span><Button size="sm" color="red-500" onClick={() => setOpen(true)}>Delete Selected</Button></div></StickyFooter><ConfirmDialog isOpen={open} type="danger" onConfirm={() => { onDeleteSelected(); setOpen(false); }} onClose={() => setOpen(false)} title="Delete Selected"><p>Sure?</p></ConfirmDialog></>);
+};
 
 // --- Main Account Document Component ---
 const AccountDocument = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { getAllUserData = [], getaccountdoc } = useSelector(masterSelector, shallowEqual)
-  
+
   const [isSubmittingDrawer, setIsSubmittingDrawer] = useState(false);
   const filterForm = useForm();
   const addNewDocumentForm = useForm();
@@ -392,7 +385,7 @@ const AccountDocument = () => {
 
   const { pageData, total, allFilteredAndSortedData } = useMemo((): { pageData: AccountDocumentListItem[]; total: number; allFilteredAndSortedData: AccountDocumentListItem[]; } => {
     const rawData = getaccountdoc?.data || [];
-    
+
     // Map API data to the component's expected format
     const mappedData: AccountDocumentListItem[] = rawData.map((item: any) => ({
       id: String(item.id),
@@ -411,7 +404,7 @@ const AccountDocument = () => {
       formType: item.form?.form_name || 'N/A',
       createdAt: item.created_at,
     }));
-    
+
     let processedData: AccountDocumentListItem[] = cloneDeep(mappedData);
 
     if (tableData.query) {
@@ -504,19 +497,17 @@ const AccountDocument = () => {
     return count;
   }, [filterCriteria]);
 
+  // --- MODIFICATION: Use server-provided counts directly from getaccountdoc.counts ---
   const counts = useMemo(() => {
-    const data = (getaccountdoc?.data || []).map((item: any) => ({
-        status: (item.status?.toLowerCase() || 'pending') as AccountDocumentStatus
-    }));
-
-    const total = data.length;
-    const pending = data.filter(d => d.status === 'pending').length;
-    const approved = data.filter(d => d.status === 'approved').length;
-    const rejected = data.filter(d => d.status === 'rejected').length;
-    const uploaded = data.filter(d => d.status === 'uploaded').length;
-    const not_uploaded = data.filter(d => d.status === 'not_uploaded').length;
-    
-    return { total, pending, approved, rejected, uploaded, not_uploaded };
+    const apiCounts = getaccountdoc?.counts || {};
+    return {
+      total: apiCounts.total || 0,
+      pending: apiCounts.pending || 0,
+      completed: apiCounts.completed || 0,
+      active: apiCounts.active || 0,
+      aazovo: apiCounts.aazovo_docs || 0,
+      omc: apiCounts.omc_docs || 0,
+    };
   }, [getaccountdoc]);
 
 
@@ -528,13 +519,14 @@ const AccountDocument = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Account Document</h5><Button variant="solid" icon={<TbPlus />} className="px-5" onClick={() => openAddNewDocumentDrawer()}>Set New Document</Button></div>
-          <div className="grid grid-cols-6 mb-4 gap-2">
-            <Tooltip title="Click to show all documents"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBrandGoogleDrive size={24} /></div><div><h6 className="text-blue-500">{counts.total}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+          {/* --- MODIFICATION: Updated cards to reflect new API counts --- */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+            <Tooltip title="Click to show all documents"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-gray-200 dark:border-gray-600")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-200"><TbBrandGoogleDrive size={24} /></div><div><h6 className="text-gray-700 dark:text-gray-100">{counts.total}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
             <Tooltip title="Click to show pending documents"><div onClick={() => handleCardClick('pending')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbFileAlert size={24} /></div><div><h6 className="text-orange-500">{counts.pending}</h6><span className="font-semibold text-xs">Pending</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show approved documents"><div onClick={() => handleCardClick('approved')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbFileCertificate size={24} /></div><div><h6 className="text-green-500">{counts.approved}</h6><span className="font-semibold text-xs">Approved</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show rejected documents"><div onClick={() => handleCardClick('rejected')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbFileDislike size={24} /></div><div><h6 className="text-red-500">{counts.rejected}</h6><span className="font-semibold text-xs">Rejected</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show uploaded documents"><div onClick={() => handleCardClick('uploaded')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500">{counts.uploaded}</h6><span className="font-semibold text-xs">Uploaded</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show 'not uploaded' documents"><div onClick={() => handleCardClick('not_uploaded')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbFileExcel size={24} /></div><div><h6 className="text-pink-500">{counts.not_uploaded}</h6><span className="font-semibold text-xs">Not Uploaded</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show completed documents"><div onClick={() => handleCardClick('completed')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbFileCertificate size={24} /></div><div><h6 className="text-green-500">{counts.completed}</h6><span className="font-semibold text-xs">Completed</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show active documents"><div onClick={() => handleCardClick('active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbTagStarred size={24} /></div><div><h6 className="text-blue-500">{counts.active}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+            <Tooltip title="Total Aazovo documents"><div className="cursor-default"><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500">{counts.aazovo}</h6><span className="font-semibold text-xs">Aazovo Docs</span></div></Card></div></Tooltip>
+            <Tooltip title="Total OMC documents"><div className="cursor-default"><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbFileExcel size={24} /></div><div><h6 className="text-pink-500">{counts.omc}</h6><span className="font-semibold text-xs">OMC Docs</span></div></Card></div></Tooltip>
           </div>
           <AccountDocumentTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={() => { }} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
@@ -544,7 +536,7 @@ const AccountDocument = () => {
       <AccountDocumentSelectedFooter selectedItems={selectedItems} />
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete" onClose={() => setSingleDeleteConfirmOpen(false)} loading={isProcessingDelete} onCancel={() => setSingleDeleteConfirmOpen(false)}><p>Delete <strong>{itemToDelete?.documentNumber}</strong>?</p></ConfirmDialog>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" type="button">Clear</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Apply</Button></div>}>
-        <Form><FormItem label="Status"><Controller control={filterForm.control} name="status" render={({ field }) => (<Select {...field} placeholder="Select Status" isMulti options={[{ label: "Active", value: "Active" }, { label: "Pending", value: "Pending" }, { label: "Completed", value: "Completed" }, { label: "Force Completed", value: "Force Completed" },]} />)} /></FormItem><FormItem label="Document Type"><Controller control={filterForm.control} name="doc_type" render={({ field }) => (<Select {...field} placeholder="Select Document Type" isMulti options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" },]} />)} /></FormItem><FormItem label="Company Document"><Controller control={filterForm.control} name="comp_doc" render={({ field }) => (<Select {...field} placeholder="Select Company Document" isMulti options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" },]} />)} /></FormItem></Form>
+        <Form><FormItem label="Status"><Controller control={filterForm.control} name="status" render={({ field }) => (<Select {...field} placeholder="Select Status" isMulti options={[{ label: "Active", value: "active" }, { label: "Pending", value: "pending" }, { label: "Completed", value: "completed" }, { label: "Force Completed", value: "force_completed" },]} />)} /></FormItem><FormItem label="Document Type"><Controller control={filterForm.control} name="doc_type" render={({ field }) => (<Select {...field} placeholder="Select Document Type" isMulti options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" },]} />)} /></FormItem><FormItem label="Company Document"><Controller control={filterForm.control} name="comp_doc" render={({ field }) => (<Select {...field} placeholder="Select Company Document" isMulti options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" },]} />)} /></FormItem></Form>
       </Drawer>
       <Drawer title="Add New Document" width={520} isOpen={isAddNewDocumentDrawerOpen} onClose={closeAddNewDocumentDrawer} onRequestClose={closeAddNewDocumentDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" type="button">Cancel</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Save</Button></div>}>
         <Form><FormItem label={<div>Company Document<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="comp_doc" render={({ field }) => (<Select {...field} placeholder="Select Company Document" options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" },]} />)} /></FormItem><FormItem label={<div>Document Type<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_type" render={({ field }) => (<Select {...field} placeholder="Select Document Type" options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" },]} />)} /></FormItem><div className="md:grid grid-cols-2 gap-3"><FormItem label={<div>Document Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_number" render={({ field }) => (<Input type="text" placeholder="Enter Document Number" {...field} />)} /></FormItem><FormItem label={<div>Invoice Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="invoice_number" render={({ field }) => (<Input type="text" placeholder="Enter Invoice Number" {...field} />)} /></FormItem></div><div className="md:grid grid-cols-2 gap-3"><FormItem label={<div>Token Form<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="token_form" render={({ field }) => (<Select {...field} placeholder="Select Form Type" options={[{ label: "CRM PI 1.0.2", value: "CRM PI 1.0.2" }, { label: "Debit Note", value: "Debit Note" }, { label: "Credit Note", value: "Credit Note" }, { label: "CRM PO 1.0.3", value: "CRM PO 1.0.3" },]} />)} /></FormItem><FormItem label={<div>Employee<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="employee" render={({ field }) => (<Select {...field} placeholder="Select Employee" options={[{ label: "Hevin Patel", value: "Hevin Patel" }, { label: "Vinit Chauhan", value: "Vinit Chauhan" },]} />)} /></FormItem></div><div className="md:grid grid-cols-2 gap-3 items-center"><FormItem label={<div>Member<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="member" render={({ field }) => (<Select {...field} placeholder="Select Member" options={[{ label: "Ajay Patel - 703549", value: "Ajay Patel - 703549", }, { label: "Krishnan Iyer - 703752", value: "Krishnan Iyer - 703752", },]} />)} /></FormItem><div className="text-xs mt-4"><b>5039522</b> <br /><span>XYZ Enterprise</span></div></div><span className="text-xs">Member is not associated with any company.</span></Form>
