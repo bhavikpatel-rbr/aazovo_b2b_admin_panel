@@ -83,6 +83,7 @@ import {
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { BsThreeDotsVertical } from 'react-icons/bs'
 import classNames from 'classnames'
+import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
 
 // --- Define Types ---
 export type SelectOption = { value: any; label: string };
@@ -497,7 +498,7 @@ const JobPostsListing = () => {
             size: 200, 
             cell: (props) => { 
                 const { updated_at, updated_by_user } = props.row.original; 
-                const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const formattedDate = updated_at ? formatCustomDateTime(updated_at) : 'N/A';
                 return (
                     <div className="flex items-center gap-2">
                         <Avatar 
@@ -562,8 +563,8 @@ const JobPostsListing = () => {
                         <Tooltip title="Click to show all job posts"><div onClick={() => handleCardClick('all')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-blue-200 dark:border-blue-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbBriefcase size={24} /></div><div><h6 className="text-blue-500 dark:text-blue-200">{jobPostsData?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
                         <Tooltip title="Click to show active job posts"><div onClick={() => handleCardClick('Active')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-violet-200 dark:border-violet-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{jobPostsData?.counts?.active || 0}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
                         <Tooltip title="Click to show Inactive/expired posts"><div onClick={() => handleCardClick('Inactive')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-red-200 dark:border-red-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbFileExcel size={24} /></div><div><h6 className="text-red-500 dark:text-red-200">{jobPostsData?.counts?.expired || 0}</h6><span className="font-semibold text-xs">Expired</span></div></Card></div></Tooltip>
-                        <Tooltip title="Total views across all job posts"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-orange-200 dark:border-orange-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbFileSmile size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-200">{jobPostsData?.counts?.views || 0}</h6><span className="font-semibold text-xs">Total Views</span></div></Card></Tooltip>
-                        <Tooltip title="Total applicants for all jobs"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbFileLike size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{jobPostsData?.counts?.applicants || 0}</h6><span className="font-semibold text-xs">Applicants</span></div></Card></Tooltip>
+                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-orange-200 dark:border-orange-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbFileSmile size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-200">{jobPostsData?.counts?.views || 0}</h6><span className="font-semibold text-xs">Total Views</span></div></Card>
+                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbFileLike size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{jobPostsData?.counts?.applicants || 0}</h6><span className="font-semibold text-xs">Applicants</span></div></Card>
                     </div>
                     <div className="mb-4">
                         <ItemTableTools
