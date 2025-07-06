@@ -588,8 +588,6 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
             assigned_to_user_id: data?.data?.assigned_to_user_id, // Assuming this field exists
             member_id: data?.data?.member_id,
           };
-          console.log(data, "formData ");
-
           reset(formData);
         })
         .catch((err: any) => {
