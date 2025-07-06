@@ -13,11 +13,10 @@ import Tooltip from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog"; 
-import StickyFooter from "@/components/shared/StickyFooter";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar } from "@/components/ui";
 
 // Icons
 import {
@@ -33,13 +32,15 @@ import {
   TbUserScan,
   TbColumns,
   TbX,
+  TbUserCircle,
+  TbFileLike,
+  TbBriefcase,
 } from "react-icons/tb";
 
 // Types
 import type {
   OnSortParam,
   ColumnDef,
-  Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
@@ -49,12 +50,13 @@ import {
   getDepartmentsAction,
   addDepartmentAction,
   editDepartmentAction,
-  deleteDepartmentAction, 
-  deleteAllDepartmentsAction, 
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useSelector } from "react-redux";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+
+// Utils
+import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 
 // Type for Select options
 type SelectOption = {
@@ -73,7 +75,11 @@ export type DepartmentItem = {
   created_at?: string;
   updated_at?: string;
   created_by_user?: { name: string; roles: { display_name: string }[] };
-  updated_by_user?: { name: string; roles: { display_name: string }[] };
+  updated_by_user?: {
+    name: string;
+    profile_pic_path?: string;
+    roles: { display_name: string }[];
+  };
 };
 
 // --- Status Options ---
@@ -340,7 +346,7 @@ const DepartmentsTable = ({
   />
 );
 
-const Departments = () => {
+const DepartmentListing = () => {
   const dispatch = useAppDispatch();
   const { departmentsData = { data: [], counts: {} }, status: masterLoadingStatus = "idle" } =
     useSelector(masterSelector);
@@ -350,9 +356,10 @@ const Departments = () => {
   const [editingItem, setEditingItem] = useState<DepartmentItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
@@ -369,6 +376,18 @@ const Departments = () => {
     () => ({ name: "", status: "Active" }),
     []
   );
+
+  const openImageViewerModal = useCallback((src?: string) => {
+    if (src) {
+        setViewerImageSrc(src);
+        setIsImageViewerOpen(true);
+    }
+  }, []);
+
+  const closeImageViewerModal = useCallback(() => {
+    setIsImageViewerOpen(false);
+    setViewerImageSrc(null);
+  }, []);
 
   useEffect(() => {
     dispatch(getDepartmentsAction());
@@ -511,9 +530,8 @@ const Departments = () => {
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
     handleSetTableData({ pageIndex: 1, query: "" });
-    dispatch(getDepartmentsAction());
     setIsFilterDrawerOpen(false);
-  }, [filterFormMethods, dispatch, handleSetTableData]);
+  }, [filterFormMethods, handleSetTableData]);
 
   const handleCardClick = (status: 'Active' | 'Inactive' | 'all') => {
       onClearFilters();
@@ -735,58 +753,52 @@ const Departments = () => {
           );
         },
       },
-      {
-        header: "Total Employee",
-        accessorKey: "totalemployee",
-        enableSorting: false,
-        size: 120,
-        cell: (props) => <span>{props.row.original.totalemployee || 0}</span>,
-      },
-      {
-        header: "Total Job Post",
-        accessorKey: "totaljobpost",
-        enableSorting: false,
-        size: 120,
-        cell: (props) => <span>{props.row.original.totaljobpost || 0}</span>,
-      },
-      {
-        header: "Total Application",
-        accessorKey: "totalapplication",
-        enableSorting: false,
-        size: 130,
-        cell: (props) => <span>{props.row.original.totalapplication || 0}</span>,
-      },
+      // {
+      //   header: "Total Employee",
+      //   accessorKey: "totalemployee",
+      //   enableSorting: false,
+      //   size: 120,
+      //   cell: (props) => <span>{props.row.original.totalemployee || 0}</span>,
+      // },
+      // {
+      //   header: "Total Job Post",
+      //   accessorKey: "totaljobpost",
+      //   enableSorting: false,
+      //   size: 120,
+      //   cell: (props) => <span>{props.row.original.totaljobpost || 0}</span>,
+      // },
+      // {
+      //   header: "Total Application",
+      //   accessorKey: "totalapplication",
+      //   enableSorting: false,
+      //   size: 130,
+      //   cell: (props) => <span>{props.row.original.totalapplication || 0}</span>,
+      // },
       {
         header: "Updated Info",
         accessorKey: "updated_at",
         enableSorting: true,
-        size: 150,
+        size: 220,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const formattedDate = updated_at
-            ? `${new Date(updated_at).getDate()} ${new Date(
-                updated_at
-              ).toLocaleString("en-US", { month: "long" })} ${new Date(
-                updated_at
-              ).getFullYear()}, ${new Date(updated_at).toLocaleTimeString(
-                "en-US",
-                { hour: "numeric", minute: "2-digit", hour12: true }
-              )}`
-            : "N/A";
+          const formattedDate = updated_at ? formatCustomDateTime(updated_at) : "N/A";
+            
           return (
-            <div className="text-xs">
-              <span>
-                {updated_by_user?.name || "N/A"}
-                {updated_by_user?.roles?.[0]?.display_name && (
-                  <>
-                    <br />
-                    <b>{updated_by_user.roles[0].display_name}</b>
-                  </>
-                )}
-              </span>
-              <br />
-              <span>{formattedDate}</span>
-            </div>
+              <div className="flex items-center gap-2">
+                  <Avatar 
+                      src={updated_by_user?.profile_pic_path} 
+                      shape="circle" 
+                      size="sm" 
+                      icon={<TbUserCircle />} 
+                      className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                      onClick={() => openImageViewerModal(updated_by_user?.profile_pic_path)}
+                  />
+                  <div>
+                      <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                      <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+                      <div className="text-xs text-gray-500">{formattedDate}</div>
+                  </div>
+              </div>
           );
         },
       },
@@ -802,7 +814,7 @@ const Departments = () => {
         ),
       },
     ],
-    [openEditDrawer]
+    [openEditDrawer, openImageViewerModal]
   );
   
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DepartmentItem>[]>(columns);
@@ -819,43 +831,73 @@ const Departments = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4 gap-4">
-            <Tooltip title="Click to show all departments"><div onClick={() => handleCardClick('all')} className="cursor-pointer"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200">
-                <TbBuilding size={24} />
-              </div>
-              <div>
-                <h6 className="text-blue-500 dark:text-blue-200">{departmentsData?.counts?.departments || 0}</h6>
-                <span className="font-semibold text-xs">Total Departments</span>
-              </div>
-            </Card></div></Tooltip>
-            <Tooltip title="Total employees across all departments"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-violet-200 dark:border-violet-700 cursor-default">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200">
-                <TbUserScan size={24} />
-              </div>
-              <div>
-                <h6 className="text-violet-500 dark:text-violet-200">{departmentsData?.counts?.employees || 0}</h6>
-                <span className="font-semibold text-xs">Total Employees</span>
-              </div>
-            </Card></Tooltip>
-            <Tooltip title="Total jobs posted across all departments"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-pink-200 dark:border-pink-700 cursor-default">
-              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 dark:bg-pink-500/20 text-pink-500 dark:text-pink-200">
-                <TbInbox size={24} />
-              </div>
-              <div>
-                <h6 className="text-pink-500 dark:text-pink-200">{departmentsData?.counts?.job_posts || 0}</h6>
-                <span className="font-semibold text-xs">Jobs Posted</span>
-              </div>
-            </Card></Tooltip>
-            <Tooltip title="Total applicants for all jobs"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
+          <div className="grid grid-cols-2 lg:grid-cols-6 mb-6 gap-6">
+            <Tooltip title="Click to show all departments">
+                <div onClick={() => handleCardClick('all')} className="cursor-pointer">
+                    <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-blue-200 dark:border-blue-700 hover:shadow-md">
+                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200">
+                            <TbBuilding size={24} />
+                        </div>
+                        <div>
+                            <h6 className="text-blue-500 dark:text-blue-200">{departmentsData?.counts?.departments || 0}</h6>
+                            <span className="font-semibold text-xs">Total</span>
+                        </div>
+                    </Card>
+                </div>
+            </Tooltip>
+            <Tooltip title="Click to show active departments">
+                <div onClick={() => handleCardClick('Active')} className="cursor-pointer">
+                    <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-emerald-200 dark:border-emerald-700 hover:shadow-md">
+                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500 dark:text-emerald-200">
+                            <TbUserScan size={24} />
+                        </div>
+                        <div>
+                            <h6 className="text-emerald-500 dark:text-emerald-200">{departmentsData?.counts?.active_departments || 0}</h6>
+                            <span className="font-semibold text-xs">Active</span>
+                        </div>
+                    </Card>
+                </div>
+            </Tooltip>
+            <Tooltip title="Click to show inactive departments">
+                <div onClick={() => handleCardClick('Inactive')} className="cursor-pointer">
+                    <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-red-200 dark:border-red-700 hover:shadow-md">
+                        <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200">
+                            <TbInbox size={24} />
+                        </div>
+                        <div>
+                            <h6 className="text-red-500 dark:text-red-200">{departmentsData?.counts?.inactive_departments || 0}</h6>
+                            <span className="font-semibold text-xs">Inactive</span>
+                        </div>
+                    </Card>
+                </div>
+            </Tooltip>
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
               <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
                 <TbUsers size={24} />
               </div>
               <div>
-                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.applicants || 0}</h6>
-                <span className="font-semibold text-xs">Total Applicants</span>
+                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.employees || 0}</h6>
+                <span className="font-semibold text-xs">Total Emp.</span>
               </div>
-            </Card></Tooltip>
+            </Card>
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
+                <TbBriefcase size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.job_posts || 0}</h6>
+                <span className="font-semibold text-xs">Total JobPost</span>
+              </div>
+            </Card>
+            <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default">
+              <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
+                <TbFileLike size={24} />
+              </div>
+              <div>
+                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.applicants || 0}</h6>
+                <span className="font-semibold text-xs">Total Appl.</span>
+              </div>
+            </Card>
           </div>
 
           <div className="mb-4">
@@ -888,6 +930,28 @@ const Departments = () => {
           </div>
         </AdaptiveCard>
       </Container>
+      
+      {/* Image Viewer Modal */}
+      {isImageViewerOpen && (
+          <div 
+              className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+              onClick={closeImageViewerModal}
+          >
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <img 
+                      src={viewerImageSrc || ''} 
+                      alt="Profile View" 
+                      className="max-w-[90vw] max-h-[90vh] rounded-lg" 
+                  />
+                  <button 
+                      onClick={closeImageViewerModal}
+                      className="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-800 hover:bg-gray-200 shadow-lg"
+                  >
+                      <TbX size={24} />
+                  </button>
+              </div>
+          </div>
+      )}
 
       {[
         {
@@ -1003,14 +1067,14 @@ const Departments = () => {
                   <span className="font-semibold">Created At:</span>{" "}
                   <span>
                     {editingItem.created_at
-                      ? `${new Date(editingItem.created_at).getDate()} ${new Date(editingItem.created_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(editingItem.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                      ? formatCustomDateTime(editingItem.created_at)
                       : "N/A"}
                   </span>
                   <br />
                   <span className="font-semibold">Updated At:</span>{" "}
                   <span>
                     {editingItem.updated_at
-                      ? `${new Date(editingItem.updated_at).getDate()} ${new Date(editingItem.updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(editingItem.updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`
+                      ? formatCustomDateTime(editingItem.updated_at)
                       : "N/A"}
                   </span>
                 </div>
@@ -1118,4 +1182,4 @@ const Departments = () => {
   );
 };
 
-export default Departments;
+export default DepartmentListing;
