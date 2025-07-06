@@ -458,6 +458,7 @@ const DetailItem = ({
   );
 };
 
+// --- [REVISED] ViewDocumentDialog Component ---
 const ViewDocumentDialog = ({
   document,
   onClose,
@@ -479,7 +480,11 @@ const ViewDocumentDialog = ({
     member,
     company,
     form,
+    document: docTypeInfo, // Renamed to avoid conflict
+    lead_id
   } = document;
+
+  const leadIdDisplay = lead_id ? `LD-${lead_id}` : null;
 
   return (
     <Dialog
@@ -496,19 +501,21 @@ const ViewDocumentDialog = ({
       <div className="max-h-[80vh] overflow-y-auto pr-2 -mr-2">
         <Card className="mb-4" bodyClass="p-4">
           <h6 className="font-semibold mb-3 border-b pb-2">
-            Primary Information
+            Document Information
           </h6>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             <DetailItem label="Document Number" value={document_number} />
             <DetailItem label="Invoice Number" value={invoice_number} />
+            <DetailItem label="Document Type" value={docTypeInfo?.name} />
             <DetailItem label="Company Document" value={company_document} />
+            {/* <DetailItem label="Lead ID" value={leadIdDisplay} /> */}
             <DetailItem label="Status">
               <Tag
-                className={`${accountDocumentStatusColor[
-                  (status?.toLowerCase() ??
-                    "pending") as keyof typeof accountDocumentStatusColor
-                ] || "bg-gray-100"
-                  } capitalize px-2 py-1 text-xs`}
+                className={`${
+                  accountDocumentStatusColor[
+                    (status?.toLowerCase().replace(/ /g, '_') ?? 'pending') as keyof typeof accountDocumentStatusColor
+                  ] || 'bg-gray-100'
+                } capitalize px-2 py-1 text-xs`}
               >
                 {status?.replace(/_/g, " ") || "N/A"}
               </Tag>
@@ -516,39 +523,59 @@ const ViewDocumentDialog = ({
           </div>
         </Card>
 
-        <Card className="mb-4" bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">Member & Company</h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Member Name" value={member?.name} />
-            <DetailItem
-              label="Company Name"
-              value={company?.company_name || company?.company_name || "N/A"}
-            />
-            <DetailItem label="Member Email" value={member?.email} />
-            <DetailItem
-              label="Member Phone"
-              value={`${member?.number_code || ""} ${member?.number || ""}`.trim()}
-            />
-            <DetailItem label="Interested In" value={member?.interested_in} />
-            <DetailItem label="Business Type" value={member?.business_type} />
-          </div>
-        </Card>
+        {/* Conditionally render Company or Member section */}
+        {company && (
+          <Card className="mb-4" bodyClass="p-4">
+            <h6 className="font-semibold mb-3 border-b pb-2">Company Details</h6>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+              <DetailItem label="Company Name" value={company.company_name} />
+              <DetailItem label="Company Email" value={company.primary_email_id} />
+              <DetailItem
+                label="Company Phone"
+                value={`${company.primary_contact_number_code || ''} ${company.primary_contact_number || ''}`.trim()}
+              />
+              <DetailItem label="GST Number" value={company.gst_number} />
+              <DetailItem label="PAN Number" value={company.pan_number} />
+              <DetailItem label="Status" value={company.status} />
+            </div>
+          </Card>
+        )}
+        
+        {member && (
+          <Card className="mb-4" bodyClass="p-4">
+            <h6 className="font-semibold mb-3 border-b pb-2">Member Details</h6>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+              <DetailItem label="Member Name" value={member.name} />
+              <DetailItem
+                label="Company Name"
+                value={company.company_actual || company.company_temp}
+              />
+              <DetailItem label="Member Email" value={member.email} />
+              <DetailItem
+                label="Member Phone"
+                value={`${member.number_code || ""} ${member.number || ""}`.trim()}
+              />
+              <DetailItem label="Interested In" value={member.interested_in} />
+              <DetailItem label="Business Type" value={member.business_type} />
+            </div>
+          </Card>
+        )}
 
-        <Card className="mb-4" bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">Form Details</h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Form Name" value={form?.form_name} />
-            <DetailItem label="Form Title" value={form?.form_title} />
-          </div>
-          {/* <DetailItem
-            label="Form Description"
-            value={form?.form_description}
-          /> */}
-        </Card>
+        {form && (
+          <Card className="mb-4" bodyClass="p-4">
+            <h6 className="font-semibold mb-3 border-b pb-2">Form Details</h6>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+              <DetailItem label="Form Name" value={form.form_name} />
+              <DetailItem label="Form Title" value={form.form_title} />
+            </div>
+            {/* <DetailItem label="Form Description" value={form.form_description} /> */}
+          </Card>
+        )}
 
         <Card bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">History</h6>
+          <h6 className="font-semibold mb-3 border-b pb-2">History & Ownership</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            <DetailItem label="Assigned To" value={created_by_user?.name} />
             <DetailItem label="Created By" value={created_by_user?.name} />
             <DetailItem
               label="Created At"
@@ -565,6 +592,7 @@ const ViewDocumentDialog = ({
     </Dialog>
   );
 };
+
 
 // --- [NEW] Add/Edit Document Drawer Component ---
 const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
@@ -969,7 +997,7 @@ const AccountDocument = () => {
       enquiryType: item.member?.interested_in?.toLowerCase().includes('sell') ? 'sales' : 'purchase',
       memberName: item.member?.name || 'Unknown Member',
       companyId: item.company_id ? String(item.company_id) : null,
-      companyName: item.member?.company_actual || item.member?.company_temp || item.member?.name || 'Unknown Company',
+      companyName: item.company?.company_name || item.member?.company_actual || item.member?.company_temp || item.member?.name || 'Unknown Company',
       userId: item.created_by_user?.employee_id || String(item.created_by_user?.id) || null,
       userName: item.created_by_user?.name || 'System',
       companyDocumentType: item.company_document || 'N/A',
