@@ -3168,9 +3168,7 @@ export const addaccountdocActionAsync = async (data: object) => {
 }
 
 
-export const editaccountdocActionAsync = async (data: object) => {
-  console.log(data, "datadatadatadatadatadatadata");
-  
+export const editaccountdocActionAsync = async (data: object) => {  
   try {
     const response = await axiosInstance.post(`${config.apiURL}/account_doc/${data?.id}`, { ...data })
     return response?.data
