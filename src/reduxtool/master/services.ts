@@ -2779,7 +2779,7 @@ export const editRolesAsync = async (RolesData: any) => {
       `${config.apiURL}/roles/role/${RolesData?.id}`,
       {
         _method: "PUT",
-        ...RolesData.data, // flatten the data object
+        ...RolesData, // flatten the data object
       }
     );
     return response;
