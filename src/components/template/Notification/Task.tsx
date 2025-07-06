@@ -54,6 +54,7 @@ type Priority = 'Low' | 'Medium' | 'High'
 type TaskStatus = 'Pending' | 'in_progress' | 'Completed'
 type FilterStatus = TaskStatus | 'all'
 type EmployeeOption = { value: string; label: string }
+type CompanyOption = { value: string; label: string }
 type GeneralListItem = { id: string | number; name: string }
 
 export type Task = {
@@ -73,11 +74,12 @@ const priorityOptions: { value: Priority; label: string }[] = [
 ]
 
 const taskValidationSchema = z.object({
-    task_title: z.string().min(3, 'Task task_title must be at least 3 characters.'),
-    assign_to: z.array(z.string()).min(1, 'At least one assign_to is required.'),
+    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+    assign_to: z.array(z.string()).min(1, 'At least one assignee is required.'),
     priority: z.string().min(1, 'Please select a priority.'),
     due_date: z.date().nullable().optional(),
     description: z.string().optional(),
+    company_ids: z.array(z.string()).min(1, 'At least one company is required.'),
 })
 
 export type TaskFormData = z.infer<typeof taskValidationSchema>
@@ -107,11 +109,13 @@ const AddTaskModal = ({
     onClose,
     onTaskAdd,
     employeeOptions,
+    companyOptions,
 }: {
     isOpen: boolean
     onClose: () => void
     onTaskAdd: (data: TaskFormData) => Promise<void>
     employeeOptions: EmployeeOption[]
+    companyOptions: CompanyOption[]
 }) => {
     const [isLoading, setIsLoading] = useState(false)
     const {
@@ -127,6 +131,7 @@ const AddTaskModal = ({
             priority: 'Medium',
             due_date: null,
             description: '',
+            company_ids: [],
         },
     })
 
@@ -168,6 +173,33 @@ const AddTaskModal = ({
                                 {...field}
                                 autoFocus
                                 placeholder="e.g., Follow up on KYC"
+                            />
+                        )}
+                    />
+                </FormItem>
+                <FormItem
+                    label="Company"
+                    invalid={!!errors.company_ids}
+                    errorMessage={errors.company_ids?.message}
+                >
+                    <Controller
+                        name="company_ids"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                isMulti
+                                placeholder="Select Company(s)"
+                                options={companyOptions}
+                                value={companyOptions.filter((o) =>
+                                    field.value?.includes(o.value)
+                                )}
+                                onChange={(options) =>
+                                    field.onChange(
+                                        options
+                                            ? options.map((o) => o.value)
+                                            : []
+                                    )
+                                }
                             />
                         )}
                     />
@@ -224,7 +256,7 @@ const AddTaskModal = ({
                     </FormItem>
                 </div>
                 <FormItem
-                    label="Due Date (Optional)"
+                    label="Due Date"
                     invalid={!!errors.due_date}
                     errorMessage={errors.due_date?.message}
                 >
@@ -241,7 +273,7 @@ const AddTaskModal = ({
                     />
                 </FormItem>
                 <FormItem
-                    label="Description (Optional)"
+                    label="Description"
                     invalid={!!errors.description}
                     errorMessage={errors.description?.message}
                 >
@@ -400,7 +432,7 @@ const TaskSummaryCards = ({
         {
             key: 'Completed',
             task_title: 'Completed',
-            count: counts.completed,
+            count: counts.Completed,
             icon: <BiCheckCircle />,
             iconBgClass: 'bg-emerald-100 dark:bg-emerald-500/20',
             iconColorClass: 'text-emerald-600 dark:text-emerald-100',
@@ -534,6 +566,7 @@ const _Tasks = ({ className }: { className?: string }) => {
         Employees = [],
         status: loadingStatus,
         isSubmitting,
+        AllCompanyData = [],
     } = useSelector(masterSelector, shallowEqual)
 
     const [drawerIsOpen, setDrawerIsOpen] = useState(false)
@@ -553,6 +586,17 @@ const _Tasks = ({ className }: { className?: string }) => {
                   }))
                 : [],
         [Employees]
+    )
+
+    const companyOptions: CompanyOption[] = useMemo(
+        () =>
+            Array.isArray(AllCompanyData)
+                ? AllCompanyData.map((company: GeneralListItem) => ({
+                      value: String(company.id),
+                      label: company.company_name,
+                  }))
+                : [],
+        [AllCompanyData]
     )
 
     const onDrawerOpen = () => {
@@ -788,6 +832,7 @@ const _Tasks = ({ className }: { className?: string }) => {
                 onClose={() => setAddTaskModalIsOpen(false)}
                 onTaskAdd={handleConfirmAddTask}
                 employeeOptions={employeeOptions}
+                companyOptions={companyOptions}
             />
             <TaskViewModal
                 task={viewingTask}
