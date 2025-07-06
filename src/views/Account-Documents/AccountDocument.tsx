@@ -93,7 +93,6 @@ import {
   getEmployeesListingAction,
   getFormBuilderAction,
   getfromIDcompanymemberAction,
-  getMemberAction,
   submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -133,7 +132,7 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- [NEW] Zod Schema for Add/Edit Document Form ---
+// --- Zod Schema for Add/Edit Document Form ---
 const addEditDocumentSchema = z.object({
   company_document: z.string({ required_error: "Company Document is required." }).min(1, "Company Document is required."),
   document_type: z.number({ required_error: "Document Type is required." }).min(1, "Document Type is required."),
@@ -458,14 +457,47 @@ const DetailItem = ({
   );
 };
 
+// --- [NEW] Helper component for the redesigned view dialog ---
+const InfoItem = ({
+  icon,
+  label,
+  value,
+  children,
+  className,
+}: {
+  icon: React.ReactNode
+  label: string
+  value?: React.ReactNode
+  children?: React.ReactNode
+  className?: string
+}) => {
+  return (
+    <div className={classNames('flex items-start gap-3', className)}>
+      <div className="text-gray-400 mt-1">{icon}</div>
+      <div>
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          {label}
+        </p>
+        <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
+          {children || value || (
+            <span className="italic text-gray-400">N/A</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- [IMPROVED UI] ViewDocumentDialog Component ---
+// --- [CORRECTED UI] ViewDocumentDialog Component ---
 const ViewDocumentDialog = ({
   document,
   onClose,
 }: {
-  document: any;
-  onClose: () => void;
+  document: any
+  onClose: () => void
 }) => {
-  if (!document) return null;
+  if (!document) return null
 
   const {
     status,
@@ -477,95 +509,227 @@ const ViewDocumentDialog = ({
     created_by_user,
     updated_by_user,
     member,
+    company,
     form,
-  } = document;
+    document: docTypeInfo,
+  } = document
+
+  const statusKey = (
+    status?.toLowerCase().replace(/ /g, '_') ?? 'pending'
+  ) as keyof typeof accountDocumentStatusColor
+  const statusColor = accountDocumentStatusColor[statusKey] || 'bg-gray-100'
+  const statusLabel = status?.replace(/_/g, ' ') || 'N/A'
 
   return (
     <Dialog
       isOpen={true}
       onClose={onClose}
       onRequestClose={onClose}
-      width={800}
+      width={900}
       bodyOpenClassName="overflow-y-hidden"
     >
-      <div className="flex justify-between items-center mb-4">
-        <h5 className="mb-0">Document Details: {document_number}</h5>
-        <Button size="xs" icon={<TbX />} onClick={onClose} />
-      </div>
-      <div className="max-h-[80vh] overflow-y-auto pr-2 -mr-2">
-        <Card className="mb-4" bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">
-            Primary Information
-          </h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Document Number" value={document_number} />
-            <DetailItem label="Invoice Number" value={invoice_number} />
-            <DetailItem label="Company Document" value={company_document} />
-            <DetailItem label="Status">
-              <Tag
-                className={`${accountDocumentStatusColor[
-                  (status?.toLowerCase() ??
-                    "pending") as keyof typeof accountDocumentStatusColor
-                ] || "bg-gray-100"
-                  } capitalize px-2 py-1 text-xs`}
-              >
-                {status?.replace(/_/g, " ") || "N/A"}
+      <div className="flex flex-col h-full">
+        {/* --- Dialog Header --- */}
+        <div className="flex justify-between items-start p-4 border-b dark:border-gray-700">
+          <div>
+            <div className="flex items-center gap-3">
+              <h4 className="font-bold text-xl mb-0">
+                {document_number}
+              </h4>
+              <Tag className={classNames(statusColor, 'capitalize')}>
+                {statusLabel}
               </Tag>
-            </DetailItem>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Document details for{' '}
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                {company?.company_name || member?.name || 'N/A'}
+              </span>
+            </p>
           </div>
-        </Card>
+          {/* <Button
+                        shape="circle"
+                        size="sm"
+                        icon={<TbX />}
+                        onClick={onClose}
+                    /> */}
+        </div>
 
-        <Card className="mb-4" bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">Member & Company</h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Member Name" value={member?.name} />
-            <DetailItem
-              label="Company Name"
-              value={member?.company_actual || member?.company_temp || "N/A"}
-            />
-            <DetailItem label="Member Email" value={member?.email} />
-            <DetailItem
-              label="Member Phone"
-              value={`${member?.number_code || ""} ${member?.number || ""}`.trim()}
-            />
-            <DetailItem label="Interested In" value={member?.interested_in} />
-            <DetailItem label="Business Type" value={member?.business_type} />
-          </div>
-        </Card>
+        {/* --- Dialog Body --- */}
+        <div className="p-6 max-h-[75vh] overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content (2/3 width) */}
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <Card bodyClass="p-4">
+              <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
+                Document Information
+              </h6>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InfoItem
+                  icon={<TbFileCertificate size={20} />}
+                  label="Document Type"
+                  value={docTypeInfo?.name}
+                />
+                <InfoItem
+                  icon={<TbFileCheck size={20} />}
+                  label="Company Document"
+                  value={company_document}
+                />
+                <InfoItem
+                  icon={<TbFileExcel size={20} />}
+                  label="Invoice Number"
+                  value={invoice_number}
+                />
+                {form && (
+                  <InfoItem
+                    icon={<TbChecklist size={20} />}
+                    label="Token Form"
+                    value={form.form_name}
+                  />
+                )}
+              </div>
+            </Card>
 
-        <Card className="mb-4" bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">Form Details</h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Form Name" value={form?.form_name} />
-            <DetailItem label="Form Title" value={form?.form_title} />
+            {/* Client Details Card */}
+            {(company || member) && (
+              <Card bodyClass="p-4">
+                <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
+                  Client Information
+                </h6>
+                <div className="flex flex-col gap-6">
+                  {company && (
+                    <div>
+                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                        <TbBrandGoogleDrive size={18} />{' '}
+                        Company Details
+                      </h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <DetailItem
+                          label="Name"
+                          value={company.company_name}
+                        />
+                        <DetailItem
+                          label="Email"
+                          value={
+                            company.primary_email_id
+                          }
+                        />
+                        <DetailItem
+                          label="Phone"
+                          value={`${company.primary_contact_number_code ||
+                            ''
+                            } ${company.primary_contact_number ||
+                            ''
+                            }`.trim()}
+                        />
+                        <DetailItem
+                          label="GST"
+                          value={company.gst_number}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {company && member && (
+                    <div className="border-t dark:border-gray-600 -mx-4 my-2"></div>
+                  )}
+                  {member && (
+                    <div className={company ? 'pt-0' : ''}>
+                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                        <TbUser size={18} /> Member
+                        Details
+                      </h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <DetailItem
+                          label="Name"
+                          value={member.name}
+                        />
+                        <DetailItem
+                          label="Email"
+                          value={member.email}
+                        />
+                        <DetailItem
+                          label="Phone"
+                          value={`${member.number_code || ''
+                            } ${member.number || ''
+                            }`.trim()}
+                        />
+                        <DetailItem
+                          label="Business Type"
+                          value={
+                            member.business_type
+                          }
+                        />
+                        <DetailItem
+                          label="Interested In"
+                          value={
+                            member.interested_in
+                          }
+                        />
+                        {!company && (
+                          <DetailItem
+                            label="Company Name"
+                            value={
+                              member?.company_actual ||
+                              member?.company_temp
+                            }
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
           </div>
-          <DetailItem
-            label="Form Description"
-            value={form?.form_description}
-          />
-        </Card>
 
-        <Card bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">History</h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Created By" value={created_by_user?.name} />
-            <DetailItem
-              label="Created At"
-              value={dayjs(created_at).format("DD MMM YYYY, hh:mm A")}
-            />
-            <DetailItem label="Last Updated By" value={updated_by_user?.name} />
-            <DetailItem
-              label="Last Updated At"
-              value={dayjs(updated_at).format("DD MMM YYYY, hh:mm A")}
-            />
+          {/* Sidebar (1/3 width) */}
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            <Card bodyClass="p-4">
+              <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
+                Ownership & History
+              </h6>
+              <div className="flex flex-col gap-5">
+                <InfoItem
+                  icon={<TbUser size={20} />}
+                  label="Assigned To"
+                  value={created_by_user?.name}
+                />
+                <InfoItem
+                  icon={<TbUser size={20} />}
+                  label="Created By"
+                  value={created_by_user?.name}
+                />
+                <InfoItem
+                  icon={<TbCalendarClock size={20} />}
+                  label="Created On"
+                >
+                  {dayjs(created_at).format(
+                    'DD MMM YYYY, hh:mm A',
+                  )}
+                </InfoItem>
+                <InfoItem
+                  icon={<TbPencil size={20} />}
+                  label="Last Updated By"
+                  value={updated_by_user?.name}
+                />
+                <InfoItem
+                  icon={<TbCalendarClock size={20} />}
+                  label="Last Updated On"
+                >
+                  {dayjs(updated_at).format(
+                    'DD MMM YYYY, hh:mm A',
+                  )}
+                </InfoItem>
+              </div>
+            </Card>
           </div>
-        </Card>
+        </div>
       </div>
     </Dialog>
-  );
-};
+  )
+}
 
-// --- [NEW] Add/Edit Document Drawer Component ---
+
+// --- Add/Edit Document Drawer Component ---
 const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   const dispatch = useAppDispatch();
   const title = editingId ? 'Edit Document' : 'Add New Document';
@@ -611,7 +775,6 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
     label: p.company_name,
   }));
 
-  // --- MODIFICATION: New memo for member options based on selected company ---
   const companyMemberOptions = useMemo(() =>
     getfromIDcompanymemberData?.map((p: any) => ({
       value: p.id,
@@ -621,14 +784,12 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
 
 
   useEffect(() => {
-    // --- MODIFICATION: Removed getMemberAction() and getfromIDcompanymemberAction() from initial load ---
     dispatch(getDocumentTypeAction())
     dispatch(getFormBuilderAction())
     dispatch(getEmployeesListingAction())
     dispatch(getAllCompany())
   }, [dispatch])
 
-  // --- MODIFICATION: Enhanced useEffect to handle fetching members on edit and clearing them on add ---
   useEffect(() => {
     if (isOpen && editingId) {
       setIsLoadingData(true);
@@ -648,7 +809,6 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
           };
           reset(formData);
 
-          // If a company exists, fetch its members to populate the dropdown
           if (companyId) {
             dispatch(getfromIDcompanymemberAction(companyId));
           }
@@ -671,8 +831,6 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
         member_id: undefined,
         company_id: undefined,
       });
-      // Clear any stale member data when opening for a new entry
-      // dispatch(getfromIDcompanymemberAction(''));
     }
   }, [isOpen, editingId, dispatch, reset]);
 
@@ -712,7 +870,6 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
                 onChange={(opt: any) => field.onChange(opt?.value)} />
             )} />
           </UiFormItem>
-          {/* --- MODIFICATION: Added onChange handler to fetch members and reset member field --- */}
           <UiFormItem label="Company" invalid={!!errors.company_id} errorMessage={errors.company_id?.message}>
             <Controller control={control} name="company_id" render={({ field }) => (
               <Select {...field} placeholder="Select Company"
@@ -763,7 +920,6 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
               />
             )} />
           </UiFormItem>
-          {/* --- MODIFICATION: Updated Member dropdown to use dynamic options --- */}
           <UiFormItem label="Member" invalid={!!errors.member_id} errorMessage={errors.member_id?.message}>
             <Controller control={control} name="member_id" render={({ field }) => (
               <Select {...field} placeholder="Select Member"
@@ -865,7 +1021,6 @@ const AccountDocument = () => {
   const navigate = useNavigate();
   const { getAllUserData = [], getaccountdoc } = useSelector(masterSelector, shallowEqual)
 
-  // --- [MODIFIED] State for Add/Edit drawer ---
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -893,7 +1048,6 @@ const AccountDocument = () => {
   const handleOpenModal = useCallback((type: ModalType, itemData: AccountDocumentListItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
-  // --- [NEW] Handlers for Add/Edit Drawer ---
   const handleOpenAddDrawer = () => {
     setEditingId(null);
     setIsAddEditDrawerOpen(true);
@@ -964,11 +1118,11 @@ const AccountDocument = () => {
     const mappedData: AccountDocumentListItem[] = rawData.map((item: any) => ({
       id: String(item.id),
       status: (item.status?.toLowerCase() || 'pending') as AccountDocumentStatus,
-      leadNumber: item.lead_id ? `LD-${item.lead_id}` : 'N/A',
+      // leadNumber: item.lead_id ? `LD-${item.lead_id}` : 'N/A',
       enquiryType: item.member?.interested_in?.toLowerCase().includes('sell') ? 'sales' : 'purchase',
       memberName: item.member?.name || 'Unknown Member',
       companyId: item.company_id ? String(item.company_id) : null,
-      companyName: item.member?.company_actual || item.member?.company_temp || item.member?.name || 'Unknown Company',
+      companyName: item.company?.company_name || item.member?.company_actual || item.member?.company_temp || item.member?.name || 'Unknown Company',
       userId: item.created_by_user?.employee_id || String(item.created_by_user?.id) || null,
       userName: item.created_by_user?.name || 'System',
       companyDocumentType: item.company_document || 'N/A',
@@ -1133,10 +1287,16 @@ const AccountDocument = () => {
 
   const columns: ColumnDef<AccountDocumentListItem>[] = useMemo(() => [
     { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<AccountDocumentListItem, any>) => (<Tag className={`${accountDocumentStatusColor[props.row.original.status as keyof typeof accountDocumentStatusColor] || 'bg-gray-100'} capitalize px-2 py-1 text-xs`}>{props.row.original.status.replace(/_/g, ' ')}</Tag>), },
-    { header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => { const { leadNumber, enquiryType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span>{leadNumber}</span><div><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div></div>); }, },
+    {
+      header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => {
+        const { leadNumber, enquiryType } = props.row.original || {}; return (<>
+          <div ><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div >
+        </>
+        );
+      },
+    },
     { header: "Member / Company", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { const { companyName, memberName, userName, companyDocumentType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><b>{companyName}</b><span>Member: {memberName}</span><span>Assigned To: {userName}</span><div><b>Company Document: </b><span>{companyDocumentType}</span></div></div>); }, },
     { header: "Document Details", size: 220, cell: (props) => { const { documentType, documentNumber, invoiceNumber, formType, createdAt } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type ID: </b><span>{documentType}</span></div><div><b>Doc No: </b><span>{documentNumber}</span></div><div><b>Invoice No: </b><span>{invoiceNumber}</span></div><div><b>Form: </b><span>{formType}</span></div><b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
-    // --- [MODIFIED] Actions column now includes onEdit handler ---
     { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} onEdit={() => handleOpenEditDrawer(props.row.original)} onView={() => handleViewClick(props.row.original)} rowData={props.row.original} />), },
   ], [handleDeleteClick, handleOpenModal, handleViewClick, handleOpenEditDrawer]);
 
