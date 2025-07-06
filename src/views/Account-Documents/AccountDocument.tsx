@@ -114,120 +114,120 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
-    reason: z
-      .string()
-      .min(10, "Reason for export is required minimum 10 characters.")
-      .max(255, "Reason cannot exceed 255 characters."),
-  });
+  reason: z
+    .string()
+    .min(10, "Reason for export is required minimum 10 characters.")
+    .max(255, "Reason cannot exceed 255 characters."),
+});
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- CSV Exporter Utility ---
 const ACCOUNT_DOC_CSV_HEADERS = [
-    "Lead Number",
-    "Company",
-    "Member",
-    "Status",
-    "Document Form",
-    "Document Number",
-    "Invoice Number",
-    "Assigned To",
-    "Creation Date",
+  "Lead Number",
+  "Company",
+  "Member",
+  "Status",
+  "Document Form",
+  "Document Number",
+  "Invoice Number",
+  "Assigned To",
+  "Creation Date",
 ];
 type AccountDocExportItem = {
-    leadNumber: string;
-    companyName: string;
-    memberName: string;
-    status: string;
-    formType: string;
-    documentNumber: string;
-    invoiceNumber: string;
-    userName: string;
-    createdAtFormatted: string;
+  leadNumber: string;
+  companyName: string;
+  memberName: string;
+  status: string;
+  formType: string;
+  documentNumber: string;
+  invoiceNumber: string;
+  userName: string;
+  createdAtFormatted: string;
 };
 const ACCOUNT_DOC_CSV_KEYS_EXPORT: (keyof AccountDocExportItem)[] = [
-    "leadNumber",
-    "companyName",
-    "memberName",
-    "status",
-    "formType",
-    "documentNumber",
-    "invoiceNumber",
-    "userName",
-    "createdAtFormatted",
+  "leadNumber",
+  "companyName",
+  "memberName",
+  "status",
+  "formType",
+  "documentNumber",
+  "invoiceNumber",
+  "userName",
+  "createdAtFormatted",
 ];
 
 function exportToCsv(filename: string, rows: AccountDocumentListItem[]) {
-    if (!rows || !rows.length) {
-      toast.push(
-        <Notification title="No Data" type="info">
-          Nothing to export.
-        </Notification>
-      );
-      return false;
-    }
-
-    const transformedRows: AccountDocExportItem[] = rows.map((row) => ({
-      leadNumber: row.leadNumber || "N/A",
-      companyName: row.companyName || "N/A",
-      memberName: row.memberName || "N/A",
-      status: row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : "N/A",
-      formType: row.formType || "N/A",
-      documentNumber: row.documentNumber || "N/A",
-      invoiceNumber: row.invoiceNumber || "N/A",
-      userName: row.userName || "N/A",
-      createdAtFormatted: row.createdAt
-        ? dayjs(row.createdAt).format('DD/MM/YYYY HH:mm')
-        : "N/A",
-    }));
-
-    const separator = ",";
-    const csvContent =
-      ACCOUNT_DOC_CSV_HEADERS.join(separator) +
-      "\n" +
-      transformedRows
-        .map((row) => {
-          return ACCOUNT_DOC_CSV_KEYS_EXPORT.map((k) => {
-            let cell: any = row[k as keyof AccountDocExportItem];
-            if (cell === null || cell === undefined) {
-              cell = "";
-            } else {
-              cell = String(cell).replace(/"/g, '""');
-            }
-            if (String(cell).search(/("|,|\n)/g) >= 0) {
-              cell = `"${cell}"`;
-            }
-            return cell;
-          }).join(separator);
-        })
-        .join("\n");
-
-    const blob = new Blob(["\ufeff" + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", filename);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.push(
-        <Notification title="Export Successful" type="success">
-          Data exported to {filename}.
-        </Notification>
-      );
-      return true;
-    }
-
+  if (!rows || !rows.length) {
     toast.push(
-      <Notification title="Export Failed" type="danger">
-        Browser does not support this feature.
+      <Notification title="No Data" type="info">
+        Nothing to export.
       </Notification>
     );
     return false;
+  }
+
+  const transformedRows: AccountDocExportItem[] = rows.map((row) => ({
+    leadNumber: row.leadNumber || "N/A",
+    companyName: row.companyName || "N/A",
+    memberName: row.memberName || "N/A",
+    status: row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : "N/A",
+    formType: row.formType || "N/A",
+    documentNumber: row.documentNumber || "N/A",
+    invoiceNumber: row.invoiceNumber || "N/A",
+    userName: row.userName || "N/A",
+    createdAtFormatted: row.createdAt
+      ? dayjs(row.createdAt).format('DD/MM/YYYY HH:mm')
+      : "N/A",
+  }));
+
+  const separator = ",";
+  const csvContent =
+    ACCOUNT_DOC_CSV_HEADERS.join(separator) +
+    "\n" +
+    transformedRows
+      .map((row) => {
+        return ACCOUNT_DOC_CSV_KEYS_EXPORT.map((k) => {
+          let cell: any = row[k as keyof AccountDocExportItem];
+          if (cell === null || cell === undefined) {
+            cell = "";
+          } else {
+            cell = String(cell).replace(/"/g, '""');
+          }
+          if (String(cell).search(/("|,|\n)/g) >= 0) {
+            cell = `"${cell}"`;
+          }
+          return cell;
+        }).join(separator);
+      })
+      .join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(
+      <Notification title="Export Successful" type="success">
+        Data exported to {filename}.
+      </Notification>
+    );
+    return true;
+  }
+
+  toast.push(
+    <Notification title="Export Failed" type="danger">
+      Browser does not support this feature.
+    </Notification>
+  );
+  return false;
 }
 
 const eventTypeOptions = [
@@ -441,7 +441,7 @@ const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClear
   };
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-      <div className="flex-grow"><AccountDocumentSearch onInputChange={onSearchChange} placeholder="Quick Search..." /></div>
+      <div className="flex-grow"><AccountDocumentSearch onChange={onSearchChange} placeholder="Quick Search..." /></div>
       <div className="flex gap-1">
         <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
           <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
@@ -571,11 +571,10 @@ const AccountDocument = () => {
     }));
 
     let processedData: AccountDocumentListItem[] = cloneDeep(mappedData);
-
     if (tableData.query) {
-      const query = tableData.query.toLowerCase().trim();
+      const query = tableData?.query?.toLowerCase()?.trim();
       processedData = processedData.filter((item) =>
-        Object.values(item).some((val) => String(val).toLowerCase().includes(query))
+        Object.values(item)?.some((val) => String(val)?.toLowerCase()?.includes(query))
       );
     }
 
@@ -618,7 +617,7 @@ const AccountDocument = () => {
       allFilteredAndSortedData: processedData,
     };
   }, [getaccountdoc, tableData, filterCriteria]);
-  
+
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
       toast.push(
@@ -670,7 +669,7 @@ const AccountDocument = () => {
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
   const handlePageSizeChange = useCallback((value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
   const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
-  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
+  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query:query?.target?.value, pageIndex: 1 }), [handleSetTableData]);
   const handleRowSelect = useCallback((checked: boolean, row: AccountDocumentListItem) => setSelectedItems((prev) => checked ? prev.some((i) => i.id === row.id) ? prev : [...prev, row] : prev.filter((i) => i.id !== row.id)), []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<AccountDocumentListItem>[]) => { const originals = currentRows.map((r) => r.original); if (checked) setSelectedItems((prev) => { const oldIds = new Set(prev.map((i) => i.id)); return [...prev, ...originals.filter((o) => !oldIds.has(o.id))]; }); else { const currentIds = new Set(originals.map((o) => o.id)); setSelectedItems((prev) => prev.filter((i) => !currentIds.has(i.id))); } }, []);
   const openFilterDrawer = useCallback(() => setIsFilterDrawerOpen(true), []);
