@@ -27,10 +27,10 @@ import {
   DatePicker,
   Dialog,
   Drawer,
-  Form as UiForm,
-  FormItem as UiFormItem,
   Input,
   Select,
+  Form as UiForm,
+  FormItem as UiFormItem,
   Select as UiSelect,
 } from "@/components/ui";
 import Button from "@/components/ui/Button";
@@ -54,7 +54,6 @@ import {
   TbFileAlert,
   TbFileCertificate,
   TbFileCheck,
-  TbFileDislike,
   TbFileExcel,
   TbFilter,
   TbMailShare,
@@ -83,9 +82,18 @@ import {
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  addNotificationAction, addScheduleAction, getaccountdocAction, getAllUsersAction, submitExportReasonAction, addaccountdocAction,
+  addaccountdocAction,
+  addNotificationAction, addScheduleAction,
   editaccountdocAction,
-  getbyIDaccountdocAction
+  getaccountdocAction,
+  getAllCompany,
+  getAllUsersAction,
+  getbyIDaccountdocAction,
+  getDocumentTypeAction,
+  getEmployeesListingAction,
+  getFormBuilderAction,
+  getfromIDcompanymemberAction,
+  submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -124,15 +132,16 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- [NEW] Zod Schema for Add/Edit Document Form ---
+// --- Zod Schema for Add/Edit Document Form ---
 const addEditDocumentSchema = z.object({
   company_document: z.string({ required_error: "Company Document is required." }).min(1, "Company Document is required."),
-  document_type: z.string({ required_error: "Document Type is required." }).min(1, "Document Type is required."),
+  document_type: z.number({ required_error: "Document Type is required." }).min(1, "Document Type is required."),
   document_number: z.string().min(1, "Document Number is required."),
   invoice_number: z.string().min(1, "Invoice Number is required."),
   form_id: z.number({ required_error: "Token Form is required." }),
-  assigned_to_user_id: z.number({ required_error: "Employee is required." }),
+  employee_id: z.number({ required_error: "Employee is required." }),
   member_id: z.number({ required_error: "Member is required." }),
+  company_id: z.string({ required_error: "Company is required." }),
 });
 type AddEditDocumentFormData = z.infer<typeof addEditDocumentSchema>;
 
@@ -448,14 +457,47 @@ const DetailItem = ({
   );
 };
 
+// --- [NEW] Helper component for the redesigned view dialog ---
+const InfoItem = ({
+  icon,
+  label,
+  value,
+  children,
+  className,
+}: {
+  icon: React.ReactNode
+  label: string
+  value?: React.ReactNode
+  children?: React.ReactNode
+  className?: string
+}) => {
+  return (
+    <div className={classNames('flex items-start gap-3', className)}>
+      <div className="text-gray-400 mt-1">{icon}</div>
+      <div>
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          {label}
+        </p>
+        <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
+          {children || value || (
+            <span className="italic text-gray-400">N/A</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// --- [IMPROVED UI] ViewDocumentDialog Component ---
+// --- [CORRECTED UI] ViewDocumentDialog Component ---
 const ViewDocumentDialog = ({
   document,
   onClose,
 }: {
-  document: any;
-  onClose: () => void;
+  document: any
+  onClose: () => void
 }) => {
-  if (!document) return null;
+  if (!document) return null
 
   const {
     status,
@@ -467,110 +509,286 @@ const ViewDocumentDialog = ({
     created_by_user,
     updated_by_user,
     member,
+    company,
     form,
-  } = document;
+    document: docTypeInfo,
+  } = document
+
+  const statusKey = (
+    status?.toLowerCase().replace(/ /g, '_') ?? 'pending'
+  ) as keyof typeof accountDocumentStatusColor
+  const statusColor = accountDocumentStatusColor[statusKey] || 'bg-gray-100'
+  const statusLabel = status?.replace(/_/g, ' ') || 'N/A'
 
   return (
     <Dialog
       isOpen={true}
       onClose={onClose}
       onRequestClose={onClose}
-      width={800}
+      width={900}
       bodyOpenClassName="overflow-y-hidden"
     >
-      <div className="flex justify-between items-center mb-4">
-        <h5 className="mb-0">Document Details: {document_number}</h5>
-        <Button size="xs" icon={<TbX />} onClick={onClose} />
-      </div>
-      <div className="max-h-[80vh] overflow-y-auto pr-2 -mr-2">
-        <Card className="mb-4" bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">
-            Primary Information
-          </h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Document Number" value={document_number} />
-            <DetailItem label="Invoice Number" value={invoice_number} />
-            <DetailItem label="Company Document" value={company_document} />
-            <DetailItem label="Status">
-              <Tag
-                className={`${accountDocumentStatusColor[
-                  (status?.toLowerCase() ??
-                    "pending") as keyof typeof accountDocumentStatusColor
-                ] || "bg-gray-100"
-                  } capitalize px-2 py-1 text-xs`}
-              >
-                {status?.replace(/_/g, " ") || "N/A"}
+      <div className="flex flex-col h-full">
+        {/* --- Dialog Header --- */}
+        <div className="flex justify-between items-start p-4 border-b dark:border-gray-700">
+          <div>
+            <div className="flex items-center gap-3">
+              <h4 className="font-bold text-xl mb-0">
+                {document_number}
+              </h4>
+              <Tag className={classNames(statusColor, 'capitalize')}>
+                {statusLabel}
               </Tag>
-            </DetailItem>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Document details for{' '}
+              <span className="font-semibold text-gray-700 dark:text-gray-200">
+                {company?.company_name || member?.name || 'N/A'}
+              </span>
+            </p>
           </div>
-        </Card>
+          {/* <Button
+                        shape="circle"
+                        size="sm"
+                        icon={<TbX />}
+                        onClick={onClose}
+                    /> */}
+        </div>
 
-        <Card className="mb-4" bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">Member & Company</h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Member Name" value={member?.name} />
-            <DetailItem
-              label="Company Name"
-              value={member?.company_actual || member?.company_temp || "N/A"}
-            />
-            <DetailItem label="Member Email" value={member?.email} />
-            <DetailItem
-              label="Member Phone"
-              value={`${member?.number_code || ""} ${member?.number || ""}`.trim()}
-            />
-            <DetailItem label="Interested In" value={member?.interested_in} />
-            <DetailItem label="Business Type" value={member?.business_type} />
-          </div>
-        </Card>
+        {/* --- Dialog Body --- */}
+        <div className="p-6 max-h-[75vh] overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content (2/3 width) */}
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <Card bodyClass="p-4">
+              <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
+                Document Information
+              </h6>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InfoItem
+                  icon={<TbFileCertificate size={20} />}
+                  label="Document Type"
+                  value={docTypeInfo?.name}
+                />
+                <InfoItem
+                  icon={<TbFileCheck size={20} />}
+                  label="Company Document"
+                  value={company_document}
+                />
+                <InfoItem
+                  icon={<TbFileExcel size={20} />}
+                  label="Invoice Number"
+                  value={invoice_number}
+                />
+                {form && (
+                  <InfoItem
+                    icon={<TbChecklist size={20} />}
+                    label="Token Form"
+                    value={form.form_name}
+                  />
+                )}
+              </div>
+            </Card>
 
-        <Card className="mb-4" bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">Form Details</h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Form Name" value={form?.form_name} />
-            <DetailItem label="Form Title" value={form?.form_title} />
+            {/* Client Details Card */}
+            {(company || member) && (
+              <Card bodyClass="p-4">
+                <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
+                  Client Information
+                </h6>
+                <div className="flex flex-col gap-6">
+                  {company && (
+                    <div>
+                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                        <TbBrandGoogleDrive size={18} />{' '}
+                        Company Details
+                      </h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <DetailItem
+                          label="Name"
+                          value={company.company_name}
+                        />
+                        <DetailItem
+                          label="Email"
+                          value={
+                            company.primary_email_id
+                          }
+                        />
+                        <DetailItem
+                          label="Phone"
+                          value={`${company.primary_contact_number_code ||
+                            ''
+                            } ${company.primary_contact_number ||
+                            ''
+                            }`.trim()}
+                        />
+                        <DetailItem
+                          label="GST"
+                          value={company.gst_number}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {company && member && (
+                    <div className="border-t dark:border-gray-600 -mx-4 my-2"></div>
+                  )}
+                  {member && (
+                    <div className={company ? 'pt-0' : ''}>
+                      <h6 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
+                        <TbUser size={18} /> Member
+                        Details
+                      </h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <DetailItem
+                          label="Name"
+                          value={member.name}
+                        />
+                        <DetailItem
+                          label="Email"
+                          value={member.email}
+                        />
+                        <DetailItem
+                          label="Phone"
+                          value={`${member.number_code || ''
+                            } ${member.number || ''
+                            }`.trim()}
+                        />
+                        <DetailItem
+                          label="Business Type"
+                          value={
+                            member.business_type
+                          }
+                        />
+                        <DetailItem
+                          label="Interested In"
+                          value={
+                            member.interested_in
+                          }
+                        />
+                        {!company && (
+                          <DetailItem
+                            label="Company Name"
+                            value={
+                              member?.company_actual ||
+                              member?.company_temp
+                            }
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
           </div>
-          <DetailItem
-            label="Form Description"
-            value={form?.form_description}
-          />
-        </Card>
 
-        <Card bodyClass="p-4">
-          <h6 className="font-semibold mb-3 border-b pb-2">History</h6>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-            <DetailItem label="Created By" value={created_by_user?.name} />
-            <DetailItem
-              label="Created At"
-              value={dayjs(created_at).format("DD MMM YYYY, hh:mm A")}
-            />
-            <DetailItem label="Last Updated By" value={updated_by_user?.name} />
-            <DetailItem
-              label="Last Updated At"
-              value={dayjs(updated_at).format("DD MMM YYYY, hh:mm A")}
-            />
+          {/* Sidebar (1/3 width) */}
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            <Card bodyClass="p-4">
+              <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
+                Ownership & History
+              </h6>
+              <div className="flex flex-col gap-5">
+                <InfoItem
+                  icon={<TbUser size={20} />}
+                  label="Assigned To"
+                  value={created_by_user?.name}
+                />
+                <InfoItem
+                  icon={<TbUser size={20} />}
+                  label="Created By"
+                  value={created_by_user?.name}
+                />
+                <InfoItem
+                  icon={<TbCalendarClock size={20} />}
+                  label="Created On"
+                >
+                  {dayjs(created_at).format(
+                    'DD MMM YYYY, hh:mm A',
+                  )}
+                </InfoItem>
+                <InfoItem
+                  icon={<TbPencil size={20} />}
+                  label="Last Updated By"
+                  value={updated_by_user?.name}
+                />
+                <InfoItem
+                  icon={<TbCalendarClock size={20} />}
+                  label="Last Updated On"
+                >
+                  {dayjs(updated_at).format(
+                    'DD MMM YYYY, hh:mm A',
+                  )}
+                </InfoItem>
+              </div>
+            </Card>
           </div>
-        </Card>
+        </div>
       </div>
     </Dialog>
-  );
-};
+  )
+}
 
-// --- [NEW] Add/Edit Document Drawer Component ---
-const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, memberOptions, formOptions }: any) => {
+
+// --- Add/Edit Document Drawer Component ---
+const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   const dispatch = useAppDispatch();
   const title = editingId ? 'Edit Document' : 'Add New Document';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  const { control, handleSubmit, reset, formState: { errors, isValid } } = useForm<AddEditDocumentFormData>({
+  // --- MODIFICATION: Added `setValue` to reset member field ---
+  const { control, handleSubmit, reset, setValue, formState: { errors, isValid } } = useForm<AddEditDocumentFormData>({
     resolver: zodResolver(addEditDocumentSchema),
     mode: 'onChange',
     defaultValues: {
-      company_document: undefined, document_type: undefined,
-      document_number: '', invoice_number: '',
-      form_id: undefined, assigned_to_user_id: undefined, member_id: undefined,
+      company_document: undefined,
+      document_type: undefined,
+      document_number: '',
+      invoice_number: '',
+      form_id: undefined,
+      employee_id: undefined,
+      member_id: undefined,
+      company_id: undefined,
     },
   });
+
+
+  const { DocumentTypeData = [], formsData: tokenForm = [], EmployeesList = [], AllCompanyData = [], getfromIDcompanymemberData = [] } = useSelector(masterSelector);
+
+  const DocumentTypeDataOptions = DocumentTypeData?.map((p: any) => ({
+    value: p.id,
+    label: p.name,
+  }));
+
+  const tokenFormDataOptions = tokenForm?.map((p: any) => ({
+    value: p.id,
+    label: p.form_title,
+  }));
+
+  const EmployyDataOptions = EmployeesList.data?.data?.map((p: any) => ({
+    value: p.id,
+    label: p.name,
+  }));
+
+  const AllCompanyDataOptions = AllCompanyData?.map((p: any) => ({
+    value: String(p.id),
+    label: p.company_name,
+  }));
+
+  const companyMemberOptions = useMemo(() =>
+    getfromIDcompanymemberData?.map((p: any) => ({
+      value: p.id,
+      label: p.name,
+    })) || [],
+    [getfromIDcompanymemberData]);
+
+
+  useEffect(() => {
+    dispatch(getDocumentTypeAction())
+    dispatch(getFormBuilderAction())
+    dispatch(getEmployeesListingAction())
+    dispatch(getAllCompany())
+  }, [dispatch])
 
   useEffect(() => {
     if (isOpen && editingId) {
@@ -578,19 +796,22 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
       dispatch(getbyIDaccountdocAction(editingId))
         .unwrap()
         .then((data) => {
-          // Map API response to form fields
+          const companyId = data?.data?.company_id;
           const formData = {
             company_document: data?.data?.company_document,
             document_type: data?.data?.document_type,
             document_number: data?.data?.document_number,
             invoice_number: data?.data?.invoice_number,
             form_id: data?.data?.form_id,
-            assigned_to_user_id: data?.data?.assigned_to_user_id, // Assuming this field exists
+            employee_id: data?.data?.employee_id,
             member_id: data?.data?.member_id,
+            company_id: companyId ? String(companyId) : undefined,
           };
-          console.log(data, "formData ");
-
           reset(formData);
+
+          if (companyId) {
+            dispatch(getfromIDcompanymemberAction(companyId));
+          }
         })
         .catch((err: any) => {
           toast.push(<Notification type="danger" title="Fetch Error" children={err?.message || 'Could not fetch document details.'} />);
@@ -600,18 +821,18 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
           setIsLoadingData(false);
         });
     } else if (isOpen && !editingId) {
-      // Reset form for "Add New" mode
       reset({
-        company_document: "",
-        document_type: "",
+        company_document: undefined,
+        document_type: undefined,
         document_number: "",
         invoice_number: "",
-        form_id: 0,
-        assigned_to_user_id: 0, // Assuming this field exists
-        member_id: 0,
+        form_id: undefined,
+        employee_id: undefined,
+        member_id: undefined,
+        company_id: undefined,
       });
     }
-  }, [isOpen, editingId]);
+  }, [isOpen, editingId, dispatch, reset]);
 
   const onSave = async (data: AddEditDocumentFormData) => {
     setIsSubmitting(true);
@@ -649,11 +870,28 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
                 onChange={(opt: any) => field.onChange(opt?.value)} />
             )} />
           </UiFormItem>
+          <UiFormItem label="Company" invalid={!!errors.company_id} errorMessage={errors.company_id?.message}>
+            <Controller control={control} name="company_id" render={({ field }) => (
+              <Select {...field} placeholder="Select Company"
+                options={AllCompanyDataOptions}
+                value={AllCompanyDataOptions?.find(o => o.value === field.value)}
+                onChange={(opt: any) => {
+                  field.onChange(opt?.value);
+                  if (opt?.value) {
+                    dispatch(getfromIDcompanymemberAction(opt.value));
+                  }
+                  setValue('member_id', 0, { shouldValidate: true });
+                }} />
+            )} />
+          </UiFormItem>
           <UiFormItem label="Document Type" invalid={!!errors.document_type} errorMessage={errors.document_type?.message}>
             <Controller control={control} name="document_type" render={({ field }) => (
-              <Select {...field} placeholder="Select Document Type" options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" }]}
-                value={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" }].find(o => o.value === field.value)}
-                onChange={(opt: any) => field.onChange(opt?.value)} />
+              <Select {...field}
+                placeholder="Select Document Type"
+                options={DocumentTypeDataOptions}
+                value={DocumentTypeDataOptions?.find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
             )} />
           </UiFormItem>
           <div className="md:grid grid-cols-2 gap-3">
@@ -666,23 +904,29 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
           </div>
           <UiFormItem label="Token Form" invalid={!!errors.form_id} errorMessage={errors.form_id?.message}>
             <Controller control={control} name="form_id" render={({ field }) => (
-              <Select {...field} placeholder="Select Form Type" options={formOptions}
-                value={formOptions.find((o: any) => o.value === field.value)}
-                onChange={(opt: any) => field.onChange(opt?.value)} />
+              <Select {...field} placeholder="Select Form Type"
+                options={tokenFormDataOptions}
+                value={tokenFormDataOptions?.find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
             )} />
           </UiFormItem>
-          <UiFormItem label="Employee" invalid={!!errors.assigned_to_user_id} errorMessage={errors.assigned_to_user_id?.message}>
-            <Controller control={control} name="assigned_to_user_id" render={({ field }) => (
-              <Select {...field} placeholder="Select Employee" options={employeeOptions}
-                value={employeeOptions.find((o: any) => o.value === field.value)}
-                onChange={(opt: any) => field.onChange(opt?.value)} />
+          <UiFormItem label="Employee" invalid={!!errors.employee_id} errorMessage={errors.employee_id?.message}>
+            <Controller control={control} name="employee_id" render={({ field }) => (
+              <Select {...field} placeholder="Select Employee"
+                options={EmployyDataOptions}
+                value={EmployyDataOptions?.find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
             )} />
           </UiFormItem>
           <UiFormItem label="Member" invalid={!!errors.member_id} errorMessage={errors.member_id?.message}>
             <Controller control={control} name="member_id" render={({ field }) => (
-              <Select {...field} placeholder="Select Member" options={memberOptions}
-                value={memberOptions.find((o: any) => o.value === field.value)}
-                onChange={(opt: any) => field.onChange(opt?.value)} />
+              <Select {...field} placeholder="Select Member"
+                options={companyMemberOptions}
+                value={companyMemberOptions?.find(o => o.value === field.value)}
+                onChange={(opt: any) => field.onChange(opt?.value)}
+              />
             )} />
           </UiFormItem>
         </UiForm>
@@ -777,7 +1021,6 @@ const AccountDocument = () => {
   const navigate = useNavigate();
   const { getAllUserData = [], getaccountdoc } = useSelector(masterSelector, shallowEqual)
 
-  // --- [MODIFIED] State for Add/Edit drawer ---
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -805,7 +1048,6 @@ const AccountDocument = () => {
   const handleOpenModal = useCallback((type: ModalType, itemData: AccountDocumentListItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
-  // --- [NEW] Handlers for Add/Edit Drawer ---
   const handleOpenAddDrawer = () => {
     setEditingId(null);
     setIsAddEditDrawerOpen(true);
@@ -820,21 +1062,6 @@ const AccountDocument = () => {
     setIsAddEditDrawerOpen(false);
     setEditingId(null);
   };
-
-  // --- [NEW] Mock/Placeholder options for the Add/Edit drawer ---
-  // In a real application, these would be fetched from dedicated API endpoints.
-  const memberOptions = useMemo(() => [
-    { label: "Ajay Patel - 703549", value: 703549 },
-    { label: "Krishnan Iyer - 703752", value: 703752 },
-    { label: "Sunita Sharma - 704112", value: 704112 },
-  ], []);
-
-  const formOptions = useMemo(() => [
-    { label: "CRM PI 1.0.2", value: 1 },
-    { label: "Debit Note Form", value: 2 },
-    { label: "Credit Note Form", value: 3 },
-    { label: "CRM PO 1.0.3", value: 4 },
-  ], []);
 
   const handleViewClick = useCallback((item: AccountDocumentListItem) => {
     const fullItemData = getaccountdoc?.data?.find(
@@ -891,11 +1118,11 @@ const AccountDocument = () => {
     const mappedData: AccountDocumentListItem[] = rawData.map((item: any) => ({
       id: String(item.id),
       status: (item.status?.toLowerCase() || 'pending') as AccountDocumentStatus,
-      leadNumber: item.lead_id ? `LD-${item.lead_id}` : 'N/A',
+      // leadNumber: item.lead_id ? `LD-${item.lead_id}` : 'N/A',
       enquiryType: item.member?.interested_in?.toLowerCase().includes('sell') ? 'sales' : 'purchase',
       memberName: item.member?.name || 'Unknown Member',
       companyId: item.company_id ? String(item.company_id) : null,
-      companyName: item.member?.company_actual || item.member?.company_temp || item.member?.name || 'Unknown Company',
+      companyName: item.company?.company_name || item.member?.company_actual || item.member?.company_temp || item.member?.name || 'Unknown Company',
       userId: item.created_by_user?.employee_id || String(item.created_by_user?.id) || null,
       userName: item.created_by_user?.name || 'System',
       companyDocumentType: item.company_document || 'N/A',
@@ -1060,15 +1287,21 @@ const AccountDocument = () => {
 
   const columns: ColumnDef<AccountDocumentListItem>[] = useMemo(() => [
     { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<AccountDocumentListItem, any>) => (<Tag className={`${accountDocumentStatusColor[props.row.original.status as keyof typeof accountDocumentStatusColor] || 'bg-gray-100'} capitalize px-2 py-1 text-xs`}>{props.row.original.status.replace(/_/g, ' ')}</Tag>), },
-    { header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => { const { leadNumber, enquiryType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span>{leadNumber}</span><div><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div></div>); }, },
+    {
+      header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => {
+        const { leadNumber, enquiryType } = props.row.original || {}; return (<>
+          <div ><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div >
+        </>
+        );
+      },
+    },
     { header: "Member / Company", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { const { companyName, memberName, userName, companyDocumentType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><b>{companyName}</b><span>Member: {memberName}</span><span>Assigned To: {userName}</span><div><b>Company Document: </b><span>{companyDocumentType}</span></div></div>); }, },
     { header: "Document Details", size: 220, cell: (props) => { const { documentType, documentNumber, invoiceNumber, formType, createdAt } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type ID: </b><span>{documentType}</span></div><div><b>Doc No: </b><span>{documentNumber}</span></div><div><b>Invoice No: </b><span>{invoiceNumber}</span></div><div><b>Form: </b><span>{formType}</span></div><b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
-    // --- [MODIFIED] Actions column now includes onEdit handler ---
     { header: "Actions", id: "actions", size: 160, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<AccountDocumentListItem, any>) => (<AccountDocumentActionColumn onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} onEdit={() => handleOpenEditDrawer(props.row.original)} onView={() => handleViewClick(props.row.original)} rowData={props.row.original} />), },
-  ], [handleDeleteClick, handleOpenModal, handleViewClick]);
+  ], [handleDeleteClick, handleOpenModal, handleViewClick, handleOpenEditDrawer]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<AccountDocumentListItem>[]>(columns);
-  useEffect(() => { setFilteredColumns(columns) }, [columns]);
+  useEffect(() => { setFilteredColumns(columns) }, []);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -1152,14 +1385,10 @@ const AccountDocument = () => {
         </UiForm>
       </Drawer>
 
-      {/* --- [REPLACED] Old drawer is removed, new AddEditDocumentDrawer is used --- */}
       <AddEditDocumentDrawer
         isOpen={isAddEditDrawerOpen}
         onClose={handleDrawerClose}
         editingId={editingId}
-        employeeOptions={getAllUserDataOptions}
-        memberOptions={memberOptions}
-        formOptions={formOptions}
       />
 
       <AccountDocumentModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />

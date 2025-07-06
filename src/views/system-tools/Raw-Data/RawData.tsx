@@ -101,6 +101,7 @@ export type BrandListItem = { id: string | number; name: string };
 export type SelectOption = { value: string; label: string };
 
 export type RowDataItem = {
+  is_member: any;
   id: string | number;
   country_id: string;
   category_id: string;
@@ -190,7 +191,7 @@ const filterFormSchema = z.object({
   filterQuality: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema> & {
-    specialFilter?: 'today' | 'duplicate';
+  specialFilter?: 'today' | 'duplicate';
 };
 
 // --- Zod Schema for Export Reason Form ---
@@ -238,7 +239,18 @@ function exportRowDataToCsvLogic(filename: string, rows: RowDataItem[], countryO
 
 // --- ActionColumn ---
 const ActionColumn = ({ onEdit, onViewDetail, onDelete, onBlacklist, item }: { onEdit: () => void; onViewDetail: () => void; onDelete: () => void; onBlacklist: () => void; item: RowDataItem; }) => {
-  return (<div className="flex items-center justify-center gap-1"><Tooltip title="Edit"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil /></div></Tooltip><Tooltip title="View Details"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip><Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}><Dropdown.Item className="flex items-center gap-2"><TbTrash size={18} onClick={onDelete} /> <span className="text-xs">Delete</span></Dropdown.Item><Dropdown.Item className="flex items-center gap-2"><TbUserShare size={18} /><Link to={`/business-entities/member-create?rowDataId=${item.id}`} state={{ rowData: item }}><span className="text-xs">Convert to Member</span></Link></Dropdown.Item>{item.status !== "Blacklist" && (<Dropdown.Item className="flex items-center gap-2"><TbCancel size={18} onClick={onBlacklist} /> <span className="text-xs">Add As Blacklist</span></Dropdown.Item>)}</Dropdown></div>);
+  return (<div className="flex items-center justify-center gap-1">
+    <Tooltip title="Edit">
+      <div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={onEdit}><TbPencil />
+      </div></Tooltip>
+    <Tooltip title="View Details"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
+
+    <Dropdown renderTitle={
+      <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onDelete}>
+        <TbTrash size={18} /><span className="text-xs">Delete</span></Dropdown.Item>
+      {!item.is_member && <Dropdown.Item className="flex items-center gap-2"><TbUserShare size={18} /><Link to={`/system-tools/member-create`} state={{ rowData: item }}><span className="text-xs">Convert to Member</span></Link></Dropdown.Item>}
+      {item.status !== "Blacklist" && (<Dropdown.Item className="flex items-center gap-2" onClick={onBlacklist}><TbCancel size={18} /> <span className="text-xs">Add As Blacklist</span></Dropdown.Item>)}</Dropdown></div>);
 };
 
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
@@ -256,55 +268,55 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<RowDataItem>[]>>;
   activeFilterCount: number;
 }) => {
-    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-    const toggleColumn = (checked: boolean, colId: string) => {
-        if (checked) {
-            const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-            if (originalColumn) {
-                setFilteredColumns(prev => {
-                    const newCols = [...prev, originalColumn];
-                    newCols.sort((a, b) => {
-                        const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                        const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                        return indexA - indexB;
-                    });
-                    return newCols;
-                });
-            }
-        } else {
-            setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
-        }
-    };
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <ItemSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2">
-                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => {
-                            const id = col.id || col.accessorKey as string;
-                            return col.header && (
-                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
-                                        {col.header as string}
-                                    </Checkbox>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Dropdown>
-                <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
-                    Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
-                </Button>
-                <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-            </div>
-        </div>
-    );
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
+      }
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <ItemSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2">
+            <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => {
+              const id = col.id || col.accessorKey as string;
+              return col.header && (
+                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                  <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                    {col.header as string}
+                  </Checkbox>
+                </div>
+              );
+            })}
+          </div>
+        </Dropdown>
+        <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} />
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+          Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
+        </Button>
+        <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+      </div>
+    </div>
+  );
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
@@ -312,23 +324,23 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
   onClearAll: () => void;
 }) => {
-    const { filterCountry, filterCategory, filterBrand, filterStatus, filterQuality, specialFilter } = filterData;
-    const hasFilters = [filterCountry, filterCategory, filterBrand, filterStatus, filterQuality].some(f => f && f.length > 0) || !!specialFilter;
-    if (!hasFilters) return null;
+  const { filterCountry, filterCategory, filterBrand, filterStatus, filterQuality, specialFilter } = filterData;
+  const hasFilters = [filterCountry, filterCategory, filterBrand, filterStatus, filterQuality].some(f => f && f.length > 0) || !!specialFilter;
+  if (!hasFilters) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {specialFilter === 'today' && <Tag prefix>Filter: Added Today <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('specialFilter', 'today')} /></Tag>}
-            {specialFilter === 'duplicate' && <Tag prefix>Filter: Duplicates <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('specialFilter', 'duplicate')} /></Tag>}
-            {filterCountry?.map(item => <Tag key={`country-${item.value}`} prefix>Country: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCountry', item.value)} /></Tag>)}
-            {filterCategory?.map(item => <Tag key={`cat-${item.value}`} prefix>Category: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategory', item.value)} /></Tag>)}
-            {filterBrand?.map(item => <Tag key={`brand-${item.value}`} prefix>Brand: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterBrand', item.value)} /></Tag>)}
-            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
-            {filterQuality?.map(item => <Tag key={`quality-${item.value}`} prefix>Quality: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterQuality', item.value)} /></Tag>)}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {specialFilter === 'today' && <Tag prefix>Filter: Added Today <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('specialFilter', 'today')} /></Tag>}
+      {specialFilter === 'duplicate' && <Tag prefix>Filter: Duplicates <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('specialFilter', 'duplicate')} /></Tag>}
+      {filterCountry?.map(item => <Tag key={`country-${item.value}`} prefix>Country: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCountry', item.value)} /></Tag>)}
+      {filterCategory?.map(item => <Tag key={`cat-${item.value}`} prefix>Category: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategory', item.value)} /></Tag>)}
+      {filterBrand?.map(item => <Tag key={`brand-${item.value}`} prefix>Brand: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterBrand', item.value)} /></Tag>)}
+      {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+      {filterQuality?.map(item => <Tag key={`quality-${item.value}`} prefix>Quality: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterQuality', item.value)} /></Tag>)}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 
@@ -369,6 +381,12 @@ const RowDataListing = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
 
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+  };
+
   useEffect(() => { dispatch(getRowDataAction()); dispatch(getCountriesAction()); dispatch(getCategoriesAction()); dispatch(getBrandAction()); }, [dispatch]);
 
   useEffect(() => { setCountryOptions(Array.isArray(CountriesData) ? CountriesData.map((c: CountryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [CountriesData]);
@@ -397,7 +415,7 @@ const RowDataListing = () => {
   const onConfirmBlacklist = async () => { if (!itemToBlacklist) return; setIsBlacklisting(true); setBlacklistConfirmOpen(false); const payload: any = { ...itemToBlacklist, status: "Blacklist", country_id: String(itemToBlacklist.country_id), category_id: String(itemToBlacklist.category_id), brand_id: String(itemToBlacklist.brand_id), }; delete payload.country; delete payload.category; delete payload.brand; try { await dispatch(editRowDataAction(payload)).unwrap(); toast.push(<Notification title="Raw Data Blacklisted" type="warning" duration={2000}>{`Entry "${itemToBlacklist.name || itemToBlacklist.mobile_no}" blacklisted.`}</Notification>); dispatch(getRowDataAction()); } catch (e: any) { toast.push(<Notification title="Blacklist Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>); } finally { setIsBlacklisting(false); setItemToBlacklist(null); } };
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  
+
   const onClearFilters = useCallback(() => {
     const defaultFilters = {};
     filterFormMethods.reset(defaultFilters);
@@ -407,11 +425,11 @@ const RowDataListing = () => {
   }, [filterFormMethods]);
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
-      setFilterCriteria(prev => ({ ...data, specialFilter: prev.specialFilter })); // Keep special filter if it exists
-      setTableData((prev) => ({ ...prev, pageIndex: 1 }));
-      closeFilterDrawer();
+    setFilterCriteria(prev => ({ ...data, specialFilter: prev.specialFilter })); // Keep special filter if it exists
+    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+    closeFilterDrawer();
   }, [closeFilterDrawer]);
-  
+
   const handleCardClick = (value?: 'all' | 'today' | 'duplicate' | string) => {
     onClearFilters(); // Clear all existing filters first
     if (value && value !== 'all') {
@@ -439,8 +457,8 @@ const RowDataListing = () => {
       } else {
         const currentValues = prev[key as keyof z.infer<typeof filterFormSchema>] as { value: string; label: string }[] | undefined;
         if (currentValues) {
-            const newValues = currentValues.filter(item => item.value !== value);
-            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+          const newValues = currentValues.filter(item => item.value !== value);
+          (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
         }
       }
       return newFilters;
@@ -454,17 +472,17 @@ const RowDataListing = () => {
 
     // Special filters
     if (filterCriteria.specialFilter === 'today') {
-        const todayStr = new Date().toISOString().split('T')[0];
-        processedData = processedData.filter(item => item.created_at && item.created_at.startsWith(todayStr));
+      const todayStr = new Date().toISOString().split('T')[0];
+      processedData = processedData.filter(item => item.created_at && item.created_at.startsWith(todayStr));
     } else if (filterCriteria.specialFilter === 'duplicate') {
-        const mobileCounts = sourceData.reduce((acc, item) => {
-            if (item.mobile_no) {
-                acc[item.mobile_no] = (acc[item.mobile_no] || 0) + 1;
-            }
-            return acc;
-        }, {} as Record<string, number>);
-        const duplicateMobiles = new Set(Object.keys(mobileCounts).filter(mobile => mobileCounts[mobile] > 1));
-        processedData = processedData.filter(item => item.mobile_no && duplicateMobiles.has(item.mobile_no));
+      const mobileCounts = sourceData.reduce((acc, item) => {
+        if (item.mobile_no) {
+          acc[item.mobile_no] = (acc[item.mobile_no] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      const duplicateMobiles = new Set(Object.keys(mobileCounts).filter(mobile => mobileCounts[mobile] > 1));
+      processedData = processedData.filter(item => item.mobile_no && duplicateMobiles.has(item.mobile_no));
     }
 
     if (filterCriteria.filterCountry?.length) processedData = processedData.filter((item) => filterCriteria.filterCountry!.some((fc) => fc.value === String(item.country_id)));
@@ -472,7 +490,7 @@ const RowDataListing = () => {
     if (filterCriteria.filterBrand?.length) processedData = processedData.filter((item) => filterCriteria.filterBrand!.some((fb) => fb.value === String(item.brand_id)));
     if (filterCriteria.filterStatus?.length) processedData = processedData.filter((item) => filterCriteria.filterStatus!.some((fs) => fs.value === item.status));
     if (filterCriteria.filterQuality?.length) processedData = processedData.filter((item) => filterCriteria.filterQuality!.some((fq) => fq.value === item.quality));
-    
+
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter((item) => String(item.id).toLowerCase().includes(query) || item.mobile_no.toLowerCase().includes(query) || (item.email && item.email.toLowerCase().includes(query)) || item.name.toLowerCase().includes(query) || (item.company_name && item.company_name.toLowerCase().includes(query)) || (item.city && item.city.toLowerCase().includes(query)) || (item.country?.name?.toLowerCase() || String(item.country_id)).includes(query) || (item.category?.name?.toLowerCase() || String(item.category_id)).includes(query) || (item.brand?.name?.toLowerCase() || String(item.brand_id)).includes(query) || (item.updated_by_name?.toLowerCase() ?? "").includes(query));
@@ -504,7 +522,7 @@ const RowDataListing = () => {
   }, [filterCriteria]);
 
   const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "Raw Data Management"; const date = new Date().toISOString().split("T")[0]; const fileName = `raw-data_${date}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName , file_name:fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportRowDataToCsvLogic(fileName, allFilteredAndSortedData, countryOptions, categoryOptions, brandOptions); toast.push(<Notification title="Data Exported" type="success">Row data exported.</Notification>); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />); } finally { setIsSubmittingExportReason(false); } };
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "Raw Data Management"; const date = new Date().toISOString().split("T")[0]; const fileName = `raw-data_${date}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportRowDataToCsvLogic(fileName, allFilteredAndSortedData, countryOptions, categoryOptions, brandOptions); toast.push(<Notification title="Data Exported" type="success">Row data exported.</Notification>); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />); } finally { setIsSubmittingExportReason(false); } };
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
   const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
@@ -523,10 +541,10 @@ const RowDataListing = () => {
     { header: "Brand", accessorKey: "brand_id", enableSorting: true, size: 160, cell: (props) => props.row.original.brand?.name || String(props.getValue()), },
     { header: "Quality", accessorKey: "quality", enableSorting: true, size: 100, cell: (props) => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find((q) => q.value === qVal); return (<Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100", qVal === "B" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100", qVal === "C" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100")}>Grade: {qOpt?.label.split(" ")[1] || qVal}</Tag>); }, },
     { header: "Status", accessorKey: "status", enableSorting: true, size: 110, cell: (props) => { const sVal = props.getValue<string>(); const sOpt = STATUS_OPTIONS_UI.find((s) => s.value === sVal); return (<Tag className={classNames("capitalize", statusColors[sVal])}>{sOpt?.label || sVal}</Tag>); }, },
-    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A"; return (<div className="text-xs"><span>{updated_by_user?.name || "N/A"}{updated_by_user?.roles && (<><br /><b>{updated_by_user?.roles[0]?.display_name}</b></>)}</span><br /><span>{formattedDate}</span></div>); }, },
+    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, cell: (props) => { const { updated_at, name, roles } = props.row.original.updated_by_user; return (<div className="text-xs"><span>{name || "N/A"}{roles && (<><br /><b>{roles[0]?.display_name}</b></>)}</span><br /><span>{formatDate(updated_at)}</span></div>); }, },
     { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn item={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onBlacklist={() => handleBlacklistClick(props.row.original)} />), },
-  ], [openEditDrawer, openViewDialog, handleDeleteClick, handleBlacklistClick, countryOptions, categoryOptions, brandOptions, mobileNoCount]);
-  
+  ], [openEditDrawer, openViewDialog, handleDeleteClick, handleBlacklistClick, countryOptions, categoryOptions, brandOptions, mobileNoCount, formatDate]);
+
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<RowDataItem>[]>(columns);
 
   const renderDrawerForm = () => (<div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2"><FormItem label={<div>Contact Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbUser />} placeholder="Contact Name / Lead Name" />)} /></FormItem><FormItem label={<div>Company Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.company_name} errorMessage={formMethods.formState.errors.company_name?.message}><Controller name="company_name" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbBuilding />} placeholder="ABC Corp" />)} /></FormItem><FormItem label="Country" invalid={!!formMethods.formState.errors.country_id} errorMessage={formMethods.formState.errors.country_id?.message}><Controller name="country_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select country" options={countryOptions} value={countryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbWorld />} />)} /></FormItem><FormItem label="Category" invalid={!!formMethods.formState.errors.category_id} errorMessage={formMethods.formState.errors.category_id?.message}><Controller name="category_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select category" options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory2 />} />)} /></FormItem><FormItem label="Brand" invalid={!!formMethods.formState.errors.brand_id} errorMessage={formMethods.formState.errors.brand_id?.message}><Controller name="brand_id" control={formMethods.control} render={({ field }) => (<Select placeholder="Select brand" options={brandOptions} value={brandOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbBuildingArch />} />)} /></FormItem><FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.mobile_no} errorMessage={formMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbPhone />} placeholder="+XX-XXXXXXXXXX" />)} /></FormItem><FormItem label="Email" invalid={!!formMethods.formState.errors.email} errorMessage={formMethods.formState.errors.email?.message}><Controller name="email" control={formMethods.control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail />} placeholder="name@example.com" />)} /></FormItem><FormItem label="Quality" invalid={!!formMethods.formState.errors.quality} errorMessage={formMethods.formState.errors.quality?.message}><Controller name="quality" control={formMethods.control} render={({ field }) => (<Select placeholder="Select quality" options={QUALITY_LEVELS_UI} value={QUALITY_LEVELS_UI.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem><FormItem label="City" invalid={!!formMethods.formState.errors.city} errorMessage={formMethods.formState.errors.city?.message}><Controller name="city" control={formMethods.control} render={({ field }) => (<Input {...field} prefix={<TbMapPin />} placeholder="City Name" />)} /></FormItem><FormItem label="Status" invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message}><Controller name="status" control={formMethods.control} render={({ field }) => (<Select placeholder="Select status" options={editingItem?.status === "Blacklist" ? STATUS_OPTIONS_UI : STATUS_OPTIONS_UI.filter((s) => s.value !== "Blacklist")} value={STATUS_OPTIONS_UI.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} disabled={editingItem?.status === "Blacklist"} />)} /></FormItem><FormItem label="Remarks" className="md:col-span-2 lg:col-span-2" invalid={!!formMethods.formState.errors.remarks} errorMessage={formMethods.formState.errors.remarks?.message}><Controller name="remarks" control={formMethods.control} render={({ field }) => (<Input textArea {...field} rows={3} placeholder="Add any relevant notes or comments..." />)} /></FormItem></div>);
@@ -585,7 +603,7 @@ const RowDataListing = () => {
             <Tooltip title="Click to filter by Grade C"><div onClick={() => handleCardClick('C')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><span className="text-xl font-bold">C</span></div><div><h6 className="text-yellow-500">{rowData?.counts?.grade_c ?? "..."}</h6><span className="font-semibold text-xs">Grade C</span></div></Card></div></Tooltip>
           </div>
           <div className="mb-4">
-            <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={openImportModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount}/>
+            <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={openImportModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4 flex-grow overflow-auto w-full">
@@ -596,7 +614,7 @@ const RowDataListing = () => {
       <RowDataSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting && selectedItems.length > 0} />
       <Drawer title={editingItem ? "Edit Raw Data" : "Add New Raw Data"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="rowDataForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? editingItem ? "Saving..." : "Adding..." : "Save"}</Button></div>}>
         <Form id="rowDataForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28">{renderDrawerForm()}
-          {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles[0]?.display_name || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{editingItem.created_at ? `${new Date(editingItem.created_at).getDate()} ${new Date(editingItem.created_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.created_at).getFullYear()}, ${new Date(editingItem.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A"}</span><br /><span className="font-semibold">Updated At:</span> <span>{editingItem.updated_at ? `${new Date(editingItem.updated_at).getDate()} ${new Date(editingItem.updated_at).toLocaleString("en-US", { month: "short" })} ${new Date(editingItem.updated_at).getFullYear()}, ${new Date(editingItem.updated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}` : "N/A"}</span></div></div></div>)}
+          {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p><p>{editingItem.updated_by_role || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{formatDate(editingItem.created_at)}</span><br /><span className="font-semibold">Updated At:</span> <span>{formatDate(editingItem.updated_at)}</span></div></div></div>)}
         </Form>
       </Drawer>
       <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={700}>
@@ -610,7 +628,7 @@ const RowDataListing = () => {
             else if (key === "brand_id") value = brandOptions.find((b) => b.value === String(value))?.label || String(value);
             else if (key === "quality") value = QUALITY_LEVELS_UI.find((q) => q.value === value)?.label || String(value);
             else if (key === "status") value = STATUS_OPTIONS_UI.find((s) => s.value === value)?.label || String(value);
-            else if ((key === "created_at" || key === "updated_at") && value) { value = `${new Date(value).getDate()} ${new Date(value).toLocaleString("en-US", { month: "short" })} ${new Date(value).getFullYear()}, ${new Date(value).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`; }
+            else if ((key === "created_at" || key === "updated_at") && value) { value = formatDate(value); }
             value = value === null || value === undefined || value === "" ? (<span className="text-gray-400">-</span>) : (String(value));
             return (<div key={key} className="flex py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0"><span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span><span className="w-2/3 text-gray-900 dark:text-gray-100">{value}</span></div>);
           })}

@@ -34,6 +34,15 @@ export const addLeadAsync = async (leadData: any) => {
   }
 }
 
+export const addupdatePermissionsAsync = async (leadData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/roles/permission`, leadData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const editLeadAsync = async (leadData: any) => {
   console.log(`${config.apiURL}/lead/lead/${leadData?.id}`, { _method: "PUT", ...leadData });
 
@@ -2779,7 +2788,7 @@ export const editRolesAsync = async (RolesData: any) => {
       `${config.apiURL}/roles/role/${RolesData?.id}`,
       {
         _method: "PUT",
-        ...RolesData.data, // flatten the data object
+        ...RolesData, // flatten the data object
       }
     );
     return response;
@@ -2895,7 +2904,7 @@ export const editTaskListAsync = async (formData: FormData) => {
 
 export const getEmployeeListAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/employee`)
+    const response = await axiosInstance.get(`${config.apiURL}/employee`, { "per_page": 5000 })
     return response.data
   } catch (err) {
     return isAxiosError(err)
@@ -3169,8 +3178,6 @@ export const addaccountdocActionAsync = async (data: object) => {
 
 
 export const editaccountdocActionAsync = async (data: object) => {
-  console.log(data, "datadatadatadatadatadatadata");
-  
   try {
     const response = await axiosInstance.post(`${config.apiURL}/account_doc/${data?.id}`, { ...data })
     return response?.data
@@ -3183,6 +3190,15 @@ export const editaccountdocActionAsync = async (data: object) => {
 export const getbyIDaccountdocActionAsync = async (data: object) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/account_doc/${data}`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getfromIDcompanymemberActionAsync = async (id: object) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/company_member/${id}`)
     return response?.data
   } catch (err) {
     return isAxiosError(err)
