@@ -189,7 +189,9 @@ const filterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterQuality: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
-type FilterFormData = z.infer<typeof filterFormSchema>;
+type FilterFormData = z.infer<typeof filterFormSchema> & {
+    specialFilter?: 'today' | 'duplicate';
+};
 
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
@@ -310,13 +312,15 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
   onClearAll: () => void;
 }) => {
-    const { filterCountry, filterCategory, filterBrand, filterStatus, filterQuality } = filterData;
-    const hasFilters = [filterCountry, filterCategory, filterBrand, filterStatus, filterQuality].some(f => f && f.length > 0);
+    const { filterCountry, filterCategory, filterBrand, filterStatus, filterQuality, specialFilter } = filterData;
+    const hasFilters = [filterCountry, filterCategory, filterBrand, filterStatus, filterQuality].some(f => f && f.length > 0) || !!specialFilter;
     if (!hasFilters) return null;
 
     return (
         <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
             <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {specialFilter === 'today' && <Tag prefix>Filter: Added Today <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('specialFilter', 'today')} /></Tag>}
+            {specialFilter === 'duplicate' && <Tag prefix>Filter: Duplicates <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('specialFilter', 'duplicate')} /></Tag>}
             {filterCountry?.map(item => <Tag key={`country-${item.value}`} prefix>Country: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCountry', item.value)} /></Tag>)}
             {filterCategory?.map(item => <Tag key={`cat-${item.value}`} prefix>Category: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategory', item.value)} /></Tag>)}
             {filterBrand?.map(item => <Tag key={`brand-${item.value}`} prefix>Brand: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterBrand', item.value)} /></Tag>)}
@@ -393,28 +397,53 @@ const RowDataListing = () => {
   const onConfirmBlacklist = async () => { if (!itemToBlacklist) return; setIsBlacklisting(true); setBlacklistConfirmOpen(false); const payload: any = { ...itemToBlacklist, status: "Blacklist", country_id: String(itemToBlacklist.country_id), category_id: String(itemToBlacklist.category_id), brand_id: String(itemToBlacklist.brand_id), }; delete payload.country; delete payload.category; delete payload.brand; try { await dispatch(editRowDataAction(payload)).unwrap(); toast.push(<Notification title="Raw Data Blacklisted" type="warning" duration={2000}>{`Entry "${itemToBlacklist.name || itemToBlacklist.mobile_no}" blacklisted.`}</Notification>); dispatch(getRowDataAction()); } catch (e: any) { toast.push(<Notification title="Blacklist Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>); } finally { setIsBlacklisting(false); setItemToBlacklist(null); } };
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
-  const onClearFilters = useCallback(() => { const defaultFilters = {}; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); setIsFilterDrawerOpen(false); }, [filterFormMethods]);
   
-  const handleCardClick = (status?: string | 'all') => {
-      onClearFilters();
-      if (status && status !== 'all') {
-          const statusOption = STATUS_OPTIONS_UI.find(opt => opt.value === status);
-          if (statusOption) {
-            setFilterCriteria({ filterStatus: [statusOption] });
-          }
+  const onClearFilters = useCallback(() => {
+    const defaultFilters = {};
+    filterFormMethods.reset(defaultFilters);
+    setFilterCriteria(defaultFilters);
+    setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
+    setIsFilterDrawerOpen(false);
+  }, [filterFormMethods]);
+
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
+      setFilterCriteria(prev => ({ ...data, specialFilter: prev.specialFilter })); // Keep special filter if it exists
+      setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+      closeFilterDrawer();
+  }, [closeFilterDrawer]);
+  
+  const handleCardClick = (value?: 'all' | 'today' | 'duplicate' | string) => {
+    onClearFilters(); // Clear all existing filters first
+    if (value && value !== 'all') {
+      if (value === 'today' || value === 'duplicate') {
+        setFilterCriteria({ specialFilter: value });
+        return;
       }
+      const qualityOption = QUALITY_LEVELS_UI.find(opt => opt.value === value);
+      if (qualityOption) {
+        setFilterCriteria({ filterQuality: [qualityOption] });
+        return;
+      }
+      const statusOption = STATUS_OPTIONS_UI.find(opt => opt.value === value);
+      if (statusOption) {
+        setFilterCriteria({ filterStatus: [statusOption] });
+      }
+    }
   };
 
   const handleRemoveFilter = (key: keyof FilterFormData, value: string) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+      const newFilters = { ...prev };
+      if (key === 'specialFilter') {
+        delete newFilters.specialFilter;
+      } else {
+        const currentValues = prev[key as keyof z.infer<typeof filterFormSchema>] as { value: string; label: string }[] | undefined;
         if (currentValues) {
             const newValues = currentValues.filter(item => item.value !== value);
             (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
         }
-        return newFilters;
+      }
+      return newFilters;
     });
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   };
@@ -422,11 +451,28 @@ const RowDataListing = () => {
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     const sourceData: RowDataItem[] = Array.isArray(rowData?.data) ? rowData?.data : [];
     let processedData: RowDataItem[] = cloneDeep(sourceData);
+
+    // Special filters
+    if (filterCriteria.specialFilter === 'today') {
+        const todayStr = new Date().toISOString().split('T')[0];
+        processedData = processedData.filter(item => item.created_at && item.created_at.startsWith(todayStr));
+    } else if (filterCriteria.specialFilter === 'duplicate') {
+        const mobileCounts = sourceData.reduce((acc, item) => {
+            if (item.mobile_no) {
+                acc[item.mobile_no] = (acc[item.mobile_no] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<string, number>);
+        const duplicateMobiles = new Set(Object.keys(mobileCounts).filter(mobile => mobileCounts[mobile] > 1));
+        processedData = processedData.filter(item => item.mobile_no && duplicateMobiles.has(item.mobile_no));
+    }
+
     if (filterCriteria.filterCountry?.length) processedData = processedData.filter((item) => filterCriteria.filterCountry!.some((fc) => fc.value === String(item.country_id)));
     if (filterCriteria.filterCategory?.length) processedData = processedData.filter((item) => filterCriteria.filterCategory!.some((fc) => fc.value === String(item.category_id)));
     if (filterCriteria.filterBrand?.length) processedData = processedData.filter((item) => filterCriteria.filterBrand!.some((fb) => fb.value === String(item.brand_id)));
     if (filterCriteria.filterStatus?.length) processedData = processedData.filter((item) => filterCriteria.filterStatus!.some((fs) => fs.value === item.status));
     if (filterCriteria.filterQuality?.length) processedData = processedData.filter((item) => filterCriteria.filterQuality!.some((fq) => fq.value === item.quality));
+    
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
       processedData = processedData.filter((item) => String(item.id).toLowerCase().includes(query) || item.mobile_no.toLowerCase().includes(query) || (item.email && item.email.toLowerCase().includes(query)) || item.name.toLowerCase().includes(query) || (item.company_name && item.company_name.toLowerCase().includes(query)) || (item.city && item.city.toLowerCase().includes(query)) || (item.country?.name?.toLowerCase() || String(item.country_id)).includes(query) || (item.category?.name?.toLowerCase() || String(item.category_id)).includes(query) || (item.brand?.name?.toLowerCase() || String(item.brand_id)).includes(query) || (item.updated_by_name?.toLowerCase() ?? "").includes(query));
@@ -450,7 +496,11 @@ const RowDataListing = () => {
   }, [rowData?.data, tableData, filterCriteria]);
 
   const activeFilterCount = useMemo(() => {
-    return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
+    const normalFilterCount = Object.values(filterCriteria)
+      .filter(value => Array.isArray(value) && value.length > 0)
+      .length;
+    const specialFilterCount = filterCriteria.specialFilter ? 1 : 0;
+    return normalFilterCount + specialFilterCount;
   }, [filterCriteria]);
 
   const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
@@ -528,8 +578,8 @@ const RowDataListing = () => {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
             <Tooltip title="Click to show all data"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbDatabase size={24} /></div><div><h6 className="text-blue-500">{rowData?.counts?.total ?? "..."}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Data added today"><Card bodyClass={cardBodyClass} className="rounded-md border border-violet-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendarWeek size={24} /></div><div><h6 className="text-violet-500">{rowData?.counts?.today ?? "..."}</h6><span className="font-semibold text-xs">Today</span></div></Card></Tooltip>
-            <Tooltip title="Duplicate mobile numbers"><Card bodyClass={cardBodyClass} className="rounded-md border border-pink-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbSquares size={24} /></div><div><h6 className="text-pink-500">{rowData?.counts?.duplicate ?? "..."}</h6><span className="font-semibold text-xs">Duplicate</span></div></Card></Tooltip>
+            <Tooltip title="Click to filter by data added today"><div onClick={() => handleCardClick('today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendarWeek size={24} /></div><div><h6 className="text-violet-500">{rowData?.counts?.today ?? "..."}</h6><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by duplicate mobile numbers"><div onClick={() => handleCardClick('duplicate')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbSquares size={24} /></div><div><h6 className="text-pink-500">{rowData?.counts?.duplicate ?? "..."}</h6><span className="font-semibold text-xs">Duplicate</span></div></Card></div></Tooltip>
             <Tooltip title="Click to filter by Grade A"><div onClick={() => handleCardClick('A')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><span className="text-xl font-bold">A</span></div><div><h6 className="text-green-500">{rowData?.counts?.grade_a ?? "..."}</h6><span className="font-semibold text-xs">Grade A</span></div></Card></div></Tooltip>
             <Tooltip title="Click to filter by Grade B"><div onClick={() => handleCardClick('B')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><span className="text-xl font-bold">B</span></div><div><h6 className="text-orange-500">{rowData?.counts?.grade_b ?? "..."}</h6><span className="font-semibold text-xs">Grade B</span></div></Card></div></Tooltip>
             <Tooltip title="Click to filter by Grade C"><div onClick={() => handleCardClick('C')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><span className="text-xl font-bold">C</span></div><div><h6 className="text-yellow-500">{rowData?.counts?.grade_c ?? "..."}</h6><span className="font-semibold text-xs">Grade C</span></div></Card></div></Tooltip>
