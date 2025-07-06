@@ -1,10 +1,11 @@
 // src/views/your-path/FormBuilder.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import classNames from "classnames";
+import dayjs from "dayjs";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -30,6 +31,7 @@ import {
   Radio,
   Dialog,
   Avatar,
+  DatePicker, // --- MODIFIED: Added DatePicker ---
 } from "@/components/ui";
 import { Controller, useForm } from "react-hook-form";
 
@@ -74,6 +76,8 @@ import {
   getDepartmentsAction,
   getCategoriesAction,
   submitExportReasonAction,
+  addTaskAction, // --- MODIFIED: Added addTaskAction ---
+  getAllUsersAction, // --- MODIFIED: Added getAllUsersAction ---
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
@@ -119,8 +123,8 @@ export type FormBuilderItem = {
   status: string;
   form_title: string | null;
   form_description: string | null;
-  created_by_user: { id: number; name: string; roles: { id: number; display_name: string }[] };
-  updated_by_user: { id: number; name: string; roles: { id: number; display_name: string }[] };
+  created_by_user: { id: number; name: string; roles: { id: number; display_name: string }[]; profile_pic_path?: string };
+  updated_by_user: { id: number; name: string; roles: { id: number; display_name: string }[]; profile_pic_path?: string };
   departments: string[];
   categories: string[];
   department_ids_array?: (string | number)[];
@@ -131,6 +135,7 @@ export type FormBuilderItem = {
 
 export type GeneralCategoryListItem = { id: string | number; name: string };
 export type DepartmentListItem = { id: string | number; name: string };
+export type SelectOption = { value: any; label: string }; // --- MODIFIED: Added SelectOption type ---
 
 const filterFormSchema = z.object({
   filterStatus: z.array(z.string()).optional(),
@@ -145,6 +150,22 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
+// --- MODIFIED: Add Task schema, type, and options ---
+const taskValidationSchema = z.object({
+  task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+  assign_to: z.array(z.string()).min(1, 'At least one assignee is required.'),
+  priority: z.string().min(1, 'Please select a priority.'),
+  due_date: z.date().nullable().optional(),
+  description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskValidationSchema>;
+
+const taskPriorityOptions: SelectOption[] = [
+    { value: 'Low', label: 'Low' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'High', label: 'High' },
+];
+
 const parseStringifiedArray = (str: string): (string | number)[] => {
   try {
     if (!str) return [];
@@ -155,17 +176,51 @@ const parseStringifiedArray = (str: string): (string | number)[] => {
   }
 };
 
-function exportFormsToCsvLogic(filename: string, rowsInput: FormBuilderItem[], allDepartmentsMasterListInput?: DepartmentListItem[], allCategoriesMasterListInput?: GeneralCategoryListItem[]) {
-    // This function remains the same
+function exportFormsToCsvLogic(filename: string, rows: FormBuilderItem[]) {
+    if (!rows || rows.length === 0) {
+        toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
+        return false;
+    }
+    const preparedRows = rows.map(row => ({
+        ID: row.id,
+        FormName: row.form_name,
+        FormTitle: row.form_title || 'N/A',
+        Status: row.status,
+        Type: row.is_external ? 'External' : 'Internal',
+        Departments: Array.isArray(row.departments) ? `"${row.departments.join(', ')}"` : 'N/A',
+        Categories: Array.isArray(row.categories) ? `"${row.categories.join(', ')}"` : 'N/A',
+        QuestionCount: row.questionCount || 0,
+        CreatedBy: row.created_by_user?.name || 'N/A',
+        UpdatedBy: row.updated_by_user?.name || 'N/A',
+        UpdatedAt: new Date(row.updated_at).toLocaleString(),
+    }));
+
+    const csvContent = [
+        Object.keys(preparedRows[0]).join(','),
+        ...preparedRows.map(row => Object.values(row).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
 }
 
-const ActionColumn = ({ item, onEdit, onViewDetail, onClone }: { item: FormBuilderItem; onEdit: (id: number) => void; onViewDetail: (item: FormBuilderItem) => void; onClone: (item: FormBuilderItem) => void; }) => (
+// --- MODIFIED: ActionColumn now accepts onAssignToTask ---
+const ActionColumn = ({ item, onEdit, onViewDetail, onClone, onAssignToTask }: { item: FormBuilderItem; onEdit: (id: number) => void; onViewDetail: (item: FormBuilderItem) => void; onClone: (item: FormBuilderItem) => void; onAssignToTask: () => void; }) => (
     <div className="flex items-center justify-center gap-1">
         <Tooltip title="Edit"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600`} role="button" onClick={() => onEdit(item.id)}><TbPencil /></div></Tooltip>
         <Tooltip title="Preview"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600`} role="button" onClick={() => onViewDetail(item)}><TbEye /></div></Tooltip>
         <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer" />}>
             <Dropdown.Item className="flex items-center gap-2" onClick={() => onClone(item)}><TbCopy size={18} /> <span className="text-xs">Clone Form</span></Dropdown.Item>
-            <Dropdown.Item className="flex items-center gap-2"><Link to="/task/task-list/create" className="flex items-center gap-2 w-full"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Link></Dropdown.Item>
+            <Dropdown.Item className="flex items-center gap-2" onClick={onAssignToTask}><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
         </Dropdown>
     </div>
 );
@@ -196,10 +251,12 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, departme
 
 const FormBuilderTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, searchVal, columns, filteredColumns, setFilteredColumns, activeFilterCount }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; searchVal: string; columns: ColumnDef<FormBuilderItem>[]; filteredColumns: ColumnDef<FormBuilderItem>[]; setFilteredColumns: (cols: ColumnDef<FormBuilderItem>[]) => void; activeFilterCount: number; }) => {
     const toggleColumn = (checked: boolean, colHeader: string) => {
-        const newCols = checked
-            ? [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a, b) => columns.indexOf(a as any) - columns.indexOf(b as any))
-            : filteredColumns.filter(c => c.header !== colHeader);
-        setFilteredColumns(newCols);
+        if (checked) {
+             const newCols = [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a, b) => columns.findIndex(c => c.header === a.header) - columns.findIndex(c => c.header === b.header));
+             setFilteredColumns(newCols);
+        } else {
+             setFilteredColumns(filteredColumns.filter(c => c.header !== colHeader));
+        }
     };
     const isColumnVisible = (header: string) => filteredColumns.some(c => c.header === header);
     return (
@@ -207,7 +264,7 @@ const FormBuilderTableTools = ({ onSearchChange, onFilter, onExport, onClearFilt
             <div className="flex-grow"><FormBuilderSearch onInputChange={onSearchChange} value={searchVal} /></div>
             <div className="flex items-center gap-2">
                 <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.filter(c => c.id !== 'select' && c.header).map(col => (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}</div>
+                    <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.filter(c => c.id !== 'select' && c.header).map(col => (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} >{col.header}</Checkbox></div>))}</div>
                 </Dropdown>
                 <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
                 <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
@@ -217,9 +274,85 @@ const FormBuilderTableTools = ({ onSearchChange, onFilter, onExport, onClearFilt
     );
 };
 
+// --- MODIFIED: New Dialog component for Assigning Task ---
+const AssignTaskDialog = ({ 
+    isOpen, 
+    onClose, 
+    formItem, 
+    onSubmit, 
+    employeeOptions,
+    isLoading,
+}: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    formItem: FormBuilderItem | null;
+    onSubmit: (data: TaskFormData) => void;
+    employeeOptions: SelectOption[];
+    isLoading: boolean;
+}) => {
+    const { control, handleSubmit, reset, formState: { errors, isValid } } = useForm<TaskFormData>({
+        resolver: zodResolver(taskValidationSchema),
+        mode: 'onChange',
+    });
+
+    useEffect(() => {
+        if (formItem) {
+            reset({
+                task_title: `Handle Form: ${formItem.form_name}`,
+                assign_to: [],
+                priority: 'Medium',
+                due_date: null,
+                description: formItem.form_description || `Action required for the form titled "${formItem.form_title || formItem.form_name}".`,
+            });
+        }
+    }, [formItem, reset]);
+
+    const handleDialogClose = () => {
+        reset();
+        onClose();
+    };
+
+    if (!formItem) return null;
+
+    return (
+        <Dialog isOpen={isOpen} onClose={handleDialogClose} onRequestClose={handleDialogClose}>
+            <h5 className="mb-4">Assign Task for Form</h5>
+            <Form onSubmit={handleSubmit(onSubmit)}>
+                <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
+                    <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
+                </FormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
+                        <Controller name="assign_to" control={control} render={({ field }) => (
+                            <Select isMulti placeholder="Select User(s)" options={employeeOptions} value={employeeOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />
+                        )} />
+                    </FormItem>
+                    <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
+                        <Controller name="priority" control={control} render={({ field }) => (
+                            <Select placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />
+                        )} />
+                    </FormItem>
+                </div>
+                <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
+                    <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} />
+                </FormItem>
+                <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
+                    <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={handleDialogClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
+};
+
+
 const FormBuilder = () => {
   const dispatch = useAppDispatch();
-  const { formsData: rawFormsData = [], status: masterLoadingStatus = "idle", CategoriesData = [], departmentsData = { data: [] } } = useSelector(masterSelector, shallowEqual);
+  // --- MODIFIED: Destructure getAllUserData ---
+  const { formsData: rawFormsData = [], status: masterLoadingStatus = "idle", CategoriesData = [], departmentsData = { data: [] }, getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
 
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -229,14 +362,20 @@ const FormBuilder = () => {
   const [filterCriteria, setFilterCriteria] = useState<Partial<FilterFormData>>({});
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "updated_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<FormBuilderItem[]>([]);
-  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<FormBuilderItem>[]>([]);
   const [itemToDelete, setItemToDelete] = useState<FormBuilderItem | null>(null);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+  const [isImageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageToView, setImageToView] = useState<string | null>(null);
+
+  // --- MODIFIED: Add state for task assignment dialog ---
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskTargetItem, setTaskTargetItem] = useState<FormBuilderItem | null>(null);
 
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
-const [isImageViewerOpen, setImageViewerOpen] = useState(false);
-    const [imageToView, setImageToView] = useState<string | null>(null);
+  
+  // --- MODIFIED: Add options for user selection ---
+  const allUserOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: b.name })) : [], [getAllUserData]);
   const categoryFilterOptions = useMemo(() => (CategoriesData || []).map((cat: GeneralCategoryListItem) => ({ value: String(cat.id), label: cat.name })), [CategoriesData]);
   const departmentFilterOptions = useMemo(() => (departmentsData?.data || []).map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData?.data]);
   const statusFilterOptions = useMemo(() => FORM_STATUS_OPTIONS, []);
@@ -245,6 +384,7 @@ const [isImageViewerOpen, setImageViewerOpen] = useState(false);
     dispatch(getFormBuilderAction());
     dispatch(getCategoriesAction());
     dispatch(getDepartmentsAction());
+    dispatch(getAllUsersAction()); // --- MODIFIED: Fetch users on component mount ---
   }, [dispatch]);
 
   const handleEdit = (id: number) => navigate(`/system-tools/formbuilder-edit/${id}`);
@@ -311,9 +451,9 @@ const [isImageViewerOpen, setImageViewerOpen] = useState(false);
         if (key === 'filterStatus' || key === 'filterDepartmentIds' || key === 'filterCategoryIds') {
             const currentValues = prev[key] as any[] || [];
             const newValues = currentValues.filter(item => item !== value);
-            newValues.length > 0 ? (newFilters as any)[key] = newValues : delete newFilters[key];
+            newValues.length > 0 ? (newFilters as any)[key] = newValues : delete (newFilters as any)[key];
         } else {
-            delete newFilters[key];
+            delete (newFilters as any)[key];
         }
         return newFilters;
     });
@@ -324,6 +464,38 @@ const [isImageViewerOpen, setImageViewerOpen] = useState(false);
     setFilterCriteria(status ? { filterStatus: [status] } : {});
     handleSetTableData({ pageIndex: 1, query: "" });
   };
+  
+  // --- MODIFIED: Add handlers for task dialog ---
+  const openAssignToTaskModal = useCallback((item: FormBuilderItem) => {
+    setTaskTargetItem(item);
+    setIsTaskModalOpen(true);
+  }, []);
+
+  const closeAssignToTaskModal = useCallback(() => {
+    setTaskTargetItem(null);
+    setIsTaskModalOpen(false);
+  }, []);
+  
+  const handleConfirmAddTask = async (data: TaskFormData) => {
+    if (!taskTargetItem) return;
+    setIsProcessing(true);
+    try {
+        const payload = {
+            ...data,
+            due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
+            module_id: String(taskTargetItem.id),
+            module_name: 'FormBuilder',
+        };
+        await dispatch(addTaskAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Task Assigned Successfully!" />);
+        closeAssignToTaskModal();
+    } catch (error: any) {
+        toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
 
   const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
     const processedFormsData: FormBuilderItem[] = (rawFormsData || []).map(form => ({
@@ -386,9 +558,9 @@ const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const handleRowSelect = useCallback((checked: boolean, row: FormBuilderItem) => setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((item) => item.id !== row.id)), []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<FormBuilderItem>[]) => { const currentPageIds = new Set(currentRows.map((r) => r.original.id)); if (checked) setSelectedItems((prev) => { const newItems = currentRows.map((r) => r.original).filter((item) => !prev.find((pi) => pi.id === item.id)); return [...prev, ...newItems]; }); else setSelectedItems((prev) => prev.filter((item) => !currentPageIds.has(item.id))); }, []);
   const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData?.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `forms_export_${new Date().toISOString().split("T")[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Form Builder", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportFormsToCsvLogic(fileName, allFilteredAndSortedData, departmentsData?.data, CategoriesData); toast.push(<Notification title="Data Exported" type="success">Forms data exported.</Notification>); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" children={error.message || "Could not complete export."} />); } finally { setIsExportReasonModalOpen(false); setIsSubmittingExportReason(false); } };
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `forms_export_${new Date().toISOString().split("T")[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Form Builder", file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportFormsToCsvLogic(fileName, allFilteredAndSortedData); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" children={error.message || "Could not complete export."} />); } finally { setIsExportReasonModalOpen(false); setIsSubmittingExportReason(false); } };
   const openImageViewer = (imageUrl: string | null | undefined) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
-    const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
+  const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
 
   const baseColumns: ColumnDef<FormBuilderItem>[] = useMemo(() => [
     { header: "Form Name / Title", accessorKey: "form_name", size: 260, enableSorting: true, cell: (props) => (<div onClick={() => openViewDialog(props.row.original)} className="cursor-pointer"><span className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">{props.row.original.form_name || "N/A"}</span><br /><span className="text-xs text-gray-500">{props.row.original.form_title || "-"}</span></div>), },
@@ -397,10 +569,17 @@ const [isImageViewerOpen, setImageViewerOpen] = useState(false);
     { header: "Departments", id: "departments", size: 180, enableSorting: false, cell: (props) => { const item = props.row.original; let displayNames: string[]; if (Array.isArray(item.departments) && item.departments.length > 0) { displayNames = item.departments; } else { const ids = item.department_ids_array || []; displayNames = ids.map(id => (departmentsData?.data || []).find(d => String(d.id) === String(id))?.name || `ID:${id}`); } if (!displayNames.length) return <Tag>N/A</Tag>; return (<div className="flex flex-wrap gap-1">{displayNames.slice(0, 2).map((name) => (<Tag key={name}>{name}</Tag>))}{displayNames.length > 2 && <Tag>+{displayNames.length - 2}</Tag>}</div>); }, },
     { header: "Categories", id: "categories", size: 180, enableSorting: false, cell: (props) => { const item = props.row.original; let displayNames: string[]; if (Array.isArray(item.categories) && item.categories.length > 0) { displayNames = item.categories; } else { const ids = item.category_ids_array || []; displayNames = ids.map(id => (CategoriesData || []).find(c => String(c.id) === String(id))?.name || `ID:${id}`); } if (!displayNames.length) return <Tag>N/A</Tag>; return (<div className="flex flex-wrap gap-1">{displayNames.slice(0, 2).map((name) => (<Tag key={name}>{name}</Tag>))}{displayNames.length > 2 && <Tag>+{displayNames.length - 2}</Tag>}</div>); }, },
     { header: "Que", accessorKey: "questionCount", size: 90, enableSorting: true, meta: { tdClass: "text-center", thClass: "text-center" }, cell: (props) => <span>{props.row.original.questionCount || 0}</span> },
-     { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
-    { header: "Actions", id: "action", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn item={props.row.original} onEdit={handleEdit} onViewDetail={openViewDialog} onClone={handleCloneForm} />) },
-  ], [departmentsData?.data, CategoriesData, handleEdit, handleCloneForm]);
+    { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
+    { header: "Actions", id: "action", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn 
+        item={props.row.original} 
+        onEdit={handleEdit} 
+        onViewDetail={openViewDialog} 
+        onClone={handleCloneForm} 
+        onAssignToTask={() => openAssignToTaskModal(props.row.original)}
+    />) },
+  ], [departmentsData?.data, CategoriesData, handleEdit, openViewDialog, handleCloneForm, openImageViewer, openAssignToTaskModal]);
 
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<FormBuilderItem>[]>(baseColumns);
   useEffect(() => { setFilteredColumns(baseColumns) }, []);
 
   const activeFilterCount = useMemo(() => Object.values(filterCriteria).filter(v => (Array.isArray(v) ? v.length > 0 : !!v)).length, [filterCriteria]);
@@ -429,7 +608,7 @@ const [isImageViewerOpen, setImageViewerOpen] = useState(false);
           {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching form(s).</div>}
           
           <div className="mt-4">
-            <DataTable columns={filteredColumns} data={pageData} noData={!tableLoading && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectable onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+            <DataTable columns={filteredColumns} data={pageData} noData={!tableLoading && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectable checkboxChecked={(row) => selectedItems.some((item) => item.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>
@@ -456,13 +635,23 @@ const [isImageViewerOpen, setImageViewerOpen] = useState(false);
           <FormItem label="Category"><Controller name="filterCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Categories" options={categoryFilterOptions} value={categoryFilterOptions.filter(opt => field.value?.includes(opt.value))} onChange={(val) => field.onChange(val?.map(v => v.value) || [])} prefix={<TbCategory2 className="text-lg" />} />)} /></FormItem>
         </Form>
       </Drawer>
-<Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
-                <div className="flex justify-center items-center p-4">
-                    {imageToView ? (<img src={imageToView} alt="User Profile" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
-                </div>
-            </Dialog>
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
+          <div className="flex justify-center items-center p-4">
+              {imageToView ? (<img src={imageToView} alt="User Profile" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
+          </div>
+      </Dialog>
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Form" onClose={() => setSingleDeleteConfirmOpen(false)} onConfirm={onConfirmSingleDelete} loading={isProcessing} confirmButtonColor="red-600"><p>Are you sure you want to delete the form "<strong>{itemToDelete?.form_name}</strong>"?</p></ConfirmDialog>
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}><Form id="exportFormsReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2"><FormItem label="Reason:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
+    
+      {/* --- MODIFIED: Render the new Assign Task Dialog --- */}
+      <AssignTaskDialog
+        isOpen={isTaskModalOpen}
+        onClose={closeAssignToTaskModal}
+        formItem={taskTargetItem}
+        onSubmit={handleConfirmAddTask}
+        employeeOptions={allUserOptions}
+        isLoading={isProcessing}
+      />
     </>
   );
 };
