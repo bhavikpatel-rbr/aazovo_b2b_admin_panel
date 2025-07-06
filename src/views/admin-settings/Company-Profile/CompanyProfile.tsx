@@ -1,5 +1,3 @@
-// src/views/your-path/CompanyProfile.tsx
-
 import React, { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,8 +10,7 @@ import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import StickyFooter from "@/components/shared/StickyFooter";
-import { Form, FormItem, Input, Card, Avatar } from "@/components/ui"; // Removed UiSelect as SMTP is gone
-import Textarea from "@/views/ui-components/forms/Input/Textarea"; // Ensure this path is correct (e.g., '@/components/ui/Textarea')
+import { Form, FormItem, Input } from "@/components/ui";
 
 // Icons
 import {
@@ -39,10 +36,6 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector } from "react-redux";
-import { BiChevronRight } from "react-icons/bi";
-import { NavLink } from "react-router-dom";
-
-// const LOGO_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "";
 
 // --- Define API and UI Data Types ---
 type ApiCompanyProfileItem = {
@@ -51,9 +44,9 @@ type ApiCompanyProfileItem = {
   address: string | null;
   support_email: string;
   mobile: string | null;
-  company_logo: string | null;
+  company_logo: string | null; // This is the full URL from API
   gst: string | null;
-  smtp_host?: string | null; // Keep optional if backend might send them
+  smtp_host?: string | null;
   smtp_port?: string | null;
   smtp_secure?: string | null;
   smtp_username?: string | null;
@@ -67,12 +60,12 @@ type ApiCompanyProfileItem = {
   twitter: string | null;
   created_at: string;
   updated_at: string;
-  meta_logo: string | null;
+  meta_logo: string | null; // This is the full URL from API
   notification_email: string;
-  icon_full_path: string;
-  meta_icon_full_path: string;
 };
 
+// CORRECTED: This type now correctly reflects the data needed by the UI,
+// omitting unnecessary fields without adding incorrect ones.
 export type CompanyProfileUIData = Omit<
   ApiCompanyProfileItem,
   | "created_at"
@@ -84,13 +77,9 @@ export type CompanyProfileUIData = Omit<
   | "smtp_username"
   | "smtp_name"
   | "smtp_email"
-> & {
-  logo_full_path: string | null;
-  meta_icon_full_path: string | null;
-  icon_full_path: string | null;
-};
+>;
 
-// --- Zod Schema for Company Profile Form (SMTP fields removed) ---
+// --- Zod Schema for Company Profile Form ---
 const companyProfileSchema = z.object({
   company_name: z.string().min(1, "Company Name is required.").max(150),
   address: z.string().max(500, "Address is too long.").optional().nullable(),
@@ -148,9 +137,6 @@ type CompanyProfileFormData = z.infer<typeof companyProfileSchema>;
 // --- Main CompanyProfile Component ---
 const CompanyProfile = () => {
   const dispatch = useAppDispatch();
-  // CRITICAL: Check what 'masterSelector' returns.
-  // 'rawProfileArrayFromState' is the key used in previous examples. If your slice returns the profile object directly, adjust accordingly.
-  // e.g., const { companyProfile: actualProfileData, status: masterLoadingStatus } = useSelector(masterSelector);
   const {
     rawProfileArrayFromState,
     status: masterLoadingStatus = "succeeded",
@@ -174,60 +160,26 @@ const CompanyProfile = () => {
   });
 
   useEffect(() => {
-    console.log("[CompanyProfile] Dispatching getCompanyProfileAction");
     dispatch(getCompanyProfileAction());
   }, [dispatch]);
 
   useEffect(() => {
-    console.log(
-      "[CompanyProfile] Form reset useEffect triggered. Profile Status:",
-      masterLoadingStatus,
-      "Redux Data (actualProfileData):",
-      actualProfileData
-    );
-
     let effectiveApiProfile: ApiCompanyProfileItem | null = null;
 
     if (masterLoadingStatus === "succeeded") {
-      if (actualProfileData) {
-        if (Array.isArray(actualProfileData) && actualProfileData.length > 0) {
-          effectiveApiProfile = actualProfileData[0] as ApiCompanyProfileItem;
-          console.log(
-            "[CompanyProfile] Extracted API Profile from ARRAY:",
-            effectiveApiProfile
-          );
-        } else if (
-          typeof actualProfileData === "object" &&
-          !Array.isArray(actualProfileData) &&
-          (actualProfileData as ApiCompanyProfileItem).id
-        ) {
-          effectiveApiProfile = actualProfileData as ApiCompanyProfileItem;
-          console.log(
-            "[CompanyProfile] Extracted API Profile from DIRECT OBJECT:",
-            effectiveApiProfile
-          );
-        } else if (
-          Array.isArray(actualProfileData) &&
-          actualProfileData.length === 0
-        ) {
-          console.warn(
-            "[CompanyProfile] Profile fetch succeeded, but data array is empty."
-          );
-        } else {
-          console.warn(
-            "[CompanyProfile] Profile fetch succeeded, but data format is unexpected:",
-            actualProfileData
-          );
-        }
-      } else {
-        console.warn(
-          "[CompanyProfile] Profile fetch succeeded, but actualProfileData is null or undefined."
-        );
+      if (
+        actualProfileData &&
+        Array.isArray(actualProfileData) &&
+        actualProfileData.length > 0
+      ) {
+        effectiveApiProfile = actualProfileData[0] as ApiCompanyProfileItem;
       }
 
       if (effectiveApiProfile) {
         const apiProfile = effectiveApiProfile;
 
+        // CORRECTED: Direct mapping as `CompanyProfileUIData` now matches API structure.
+        // `apiProfile.company_logo` and `apiProfile.meta_logo` are the full URLs.
         const uiProfile: CompanyProfileUIData = {
           id: apiProfile.id,
           company_name: apiProfile.company_name,
@@ -235,10 +187,6 @@ const CompanyProfile = () => {
           support_email: apiProfile.support_email,
           mobile: apiProfile.mobile || null,
           company_logo: apiProfile.company_logo || null,
-          logo_full_path:
-            apiProfile.company_logo
-              ? `${apiProfile.company_logo}`
-              : null,
           gst: apiProfile.gst || null,
           facebook: apiProfile.facebook || null,
           instagram: apiProfile.instagram || null,
@@ -246,7 +194,6 @@ const CompanyProfile = () => {
           youtube: apiProfile.youtube || null,
           twitter: apiProfile.twitter || null,
           meta_logo: apiProfile.meta_logo || null,
-          icon_full_path: apiProfile.icon_full_path,
           notification_email: apiProfile.notification_email,
         };
         setCurrentProfileUI(uiProfile);
@@ -256,7 +203,7 @@ const CompanyProfile = () => {
           address: uiProfile.address || "",
           support_email: uiProfile.support_email || "",
           mobile: uiProfile.mobile || "",
-          company_logo: null, // company_logo is a File; can't set it from a string
+          company_logo: null,
           gst: uiProfile.gst || "",
           facebook: uiProfile.facebook || "",
           instagram: uiProfile.instagram || "",
@@ -268,53 +215,13 @@ const CompanyProfile = () => {
         };
 
         formMethods.reset(formValuesToReset);
-
         setIsLoadingInitial(false);
       } else {
-        // masterLoadingStatus === 'succeeded' but no effectiveApiProfile found
         setIsLoadingInitial(false);
-        formMethods.reset({
-          // Reset to empty if no profile
-          company_name: "",
-          address: "",
-          support_email: "",
-          mobile: "",
-          company_logo: null,
-          gst: "",
-          facebook: "",
-          instagram: "",
-          linkedin: "",
-          youtube: "",
-          twitter: "",
-          meta_logo: null,
-          notification_email: "",
-        });
         setCurrentProfileUI(null);
-        if (
-          masterLoadingStatus === "idle" &&
-          actualProfileData !== undefined
-        ) {
-          toast.push(
-            <Notification title="Info" type="info">
-              No company profile data found.
-            </Notification>
-          );
-        }
       }
     } else if (masterLoadingStatus === "loading") {
       setIsLoadingInitial(true);
-      console.log("[CompanyProfile] Profile status is LOADING.");
-    } else if (
-      masterLoadingStatus !== "idle" &&
-      !actualProfileData &&
-      masterLoadingStatus !== "idle"
-    ) {
-      setIsLoadingInitial(false);
-      console.warn(
-        "[CompanyProfile] Profile status is ",
-        masterLoadingStatus,
-        " but no data from selector."
-      );
     }
   }, [actualProfileData, masterLoadingStatus, formMethods, dispatch]);
 
@@ -342,18 +249,9 @@ const CompanyProfile = () => {
         if (key === "company_logo" || key === "meta_logo") {
           if (value instanceof File) formData.append(key, value);
         } else if (value !== null && value !== undefined) {
-          // Send empty strings if they are actual values
           formData.append(key, String(value));
         }
-        // If backend expects nulls as empty strings, or explicit nulls, adjust here.
-        // Current logic: send non-null/undefined values. Empty string is sent as empty string.
-        // If a field should be "cleared" to null, ensure form submits empty string and backend handles it.
       }
-    );
-
-    console.log(
-      "[CompanyProfile] Submitting FormData:",
-      Object.fromEntries(formData.entries())
     );
 
     try {
@@ -365,19 +263,8 @@ const CompanyProfile = () => {
           Company profile updated.
         </Notification>
       );
-
-      if (data.company_logo instanceof File && logoPreviewUrl) {
-        URL.revokeObjectURL(logoPreviewUrl); // Clean up old preview if new file was part of submission
-        setLogoPreviewUrl(null);
-      }
-      if (data.meta_logo instanceof File && metaLogoPreviewUrl) {
-        URL.revokeObjectURL(metaLogoPreviewUrl);
-        setMetaLogoPreviewUrl(null);
-      }
-      // Re-fetch is good, formMethods.reset() will be triggered by the useEffect watching Redux state
-      dispatch(getCompanyProfileAction());
+      dispatch(getCompanyProfileAction()); // Re-fetch data
     } catch (error: any) {
-      alert("Error updating profile: " + error);
       const errorMessage =
         error.response?.data?.message || error.message || "Update failed.";
       toast.push(
@@ -390,7 +277,7 @@ const CompanyProfile = () => {
     }
   };
 
-  if (isLoadingInitial && masterLoadingStatus === "loading") {
+  if (isLoadingInitial) {
     return (
       <Container className="h-full flex justify-center items-center">
         <TbLoader className="animate-spin text-4xl text-gray-500" />
@@ -399,65 +286,48 @@ const CompanyProfile = () => {
     );
   }
 
-  if (
-    !currentProfileUI &&
-    !isLoadingInitial &&
-    masterLoadingStatus === "succeeded" &&
-    (actualProfileData === null ||
-      (Array.isArray(actualProfileData) && actualProfileData.length === 0))
-  ) {
+  if (!currentProfileUI) {
     return (
       <Container className="h-full flex justify-center items-center">
-        <p className="text-center">
-          No company profile data found. You may need to create one.
-        </p>
+        <p className="text-center">No company profile data found.</p>
       </Container>
     );
   }
 
-  
-
   // --- Render Functions for Form Sections ---
   const renderLogoFields = () => (
-    // <Card
-    //   className=""
-    //   header={
-    //     <div className="flex items-center gap-2">
-    //       <TbPhoto />
-    //       <span>Logos</span>
-    //     </div>
-    //   }
-    // >
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormItem
         label="Company Logo"
-        className=""
         invalid={!!formMethods.formState.errors.company_logo}
-        errorMessage={formMethods.formState.errors.company_logo?.message as string}
+        errorMessage={
+          formMethods.formState.errors.company_logo?.message as string
+        }
       >
-        <div className="flex gap-2 items-end">
+        <div className="flex gap-4 items-end">
           {logoPreviewUrl ? (
             <img
               src={logoPreviewUrl}
               alt="New Logo Preview"
-              className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
+              className="mt-2 w-20 h-20 object-contain border rounded p-1"
             />
           ) : (
-            currentProfileUI?.icon_full_path && (
+            // CORRECTED: Use currentProfileUI.company_logo which holds the full URL
+            currentProfileUI?.company_logo && (
               <img
-                src={currentProfileUI.icon_full_path}
+                src={currentProfileUI.company_logo}
                 alt="Current Logo"
-                className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
+                className="mt-2 w-20 h-20 object-contain border rounded p-1"
               />
             )
           )}
           <Controller
             name="company_logo"
             control={formMethods.control}
-            render={({ field: { onChange, onBlur, company_name } }) => (
+            render={({ field: { onChange, onBlur, name } }) => (
               <Input
                 type="file"
-                name={company_name}
+                name={name}
                 onBlur={onBlur}
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
@@ -479,29 +349,30 @@ const CompanyProfile = () => {
           formMethods.formState.errors.meta_logo?.message as string
         }
       >
-        <div className="flex gap-2 items-end ">
+        <div className="flex gap-4 items-end">
           {metaLogoPreviewUrl ? (
             <img
               src={metaLogoPreviewUrl}
-              alt="New Logo Preview"
-              className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
+              alt="New Meta Logo Preview"
+              className="mt-2 w-20 h-20 object-contain border rounded p-1"
             />
           ) : (
-            currentProfileUI?.meta_icon_full_path && (
+            // CORRECTED: Use currentProfileUI.meta_logo which holds the full URL
+            currentProfileUI?.meta_logo && (
               <img
-                src={currentProfileUI?.meta_icon_full_path}
+                src={currentProfileUI.meta_logo}
                 alt="Current Meta Logo"
-                className="mt-2 max-h-20 h-auto object-contain border rounded p-1"
+                className="mt-2 w-20 h-20 object-contain border rounded p-1"
               />
             )
           )}
           <Controller
             name="meta_logo"
             control={formMethods.control}
-            render={({ field: { onChange, onBlur, company_name } }) => (
+            render={({ field: { onChange, onBlur, name } }) => (
               <Input
                 type="file"
-                name={company_name}
+                name={name}
                 onBlur={onBlur}
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
@@ -519,20 +390,10 @@ const CompanyProfile = () => {
         </div>
       </FormItem>
     </div>
-    // </Card>
   );
 
   const renderCompanyInfoFields = () => (
-    // <Card
-    //   className="mb-6"
-    //   header={
-    //     <div className="flex items-center gap-2">
-    //       <TbBuildingSkyscraper />
-    //       <span>Company Information</span>
-    //     </div>
-    //   }
-    // >
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormItem
         label="Company Name"
         className="md:col-span-2"
@@ -564,7 +425,6 @@ const CompanyProfile = () => {
             <Input
               {...field}
               value={field.value ?? ""}
-              rows={3}
               placeholder="123 Business Rd..."
               textArea
             />
@@ -645,20 +505,10 @@ const CompanyProfile = () => {
         />
       </FormItem>
     </div>
-    // </Card>
   );
 
   const renderSocialMediaFields = () => (
-    // <Card
-    //   className="mb-6"
-    //   header={
-    //     <div className="flex items-center gap-2">
-    //       <TbLink />
-    //       <span>Social Media Links</span>
-    //     </div>
-    //   }
-    // >
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-0">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormItem
         label="Facebook"
         invalid={!!formMethods.formState.errors.facebook}
@@ -756,7 +606,6 @@ const CompanyProfile = () => {
         />
       </FormItem>
     </div>
-    // </Card>
   );
 
   const isButtonDisabled =
@@ -764,25 +613,7 @@ const CompanyProfile = () => {
       !logoPreviewUrl &&
       !metaLogoPreviewUrl) ||
     !formMethods.formState.isValid ||
-    isSubmitting ||
-    (masterLoadingStatus === "loading" && !isSubmitting);
-
-  // For debugging button state:
-  // useEffect(() => {
-  //     console.log('Button Disabled Check:', {
-  //         isDirty: formMethods.formState.isDirty,
-  //         isDirtyFields: formMethods.formState.dirtyFields, // which fields are dirty
-  //         defaultValues: formMethods.formState.defaultValues,
-  //         currentValues: formMethods.getValues(),
-  //         logoPreviewUrl: !!logoPreviewUrl,
-  //         metaLogoPreviewUrl: !!metaLogoPreviewUrl,
-  //         isValid: formMethods.formState.isValid,
-  //         errors: formMethods.formState.errors,
-  //         isSubmitting,
-  //         masterLoadingStatus,
-  //         calculatedDisabled: isButtonDisabled,
-  //     });
-  // }, [formMethods.formState, logoPreviewUrl, metaLogoPreviewUrl, isSubmitting, masterLoadingStatus, isButtonDisabled, formMethods]);
+    isSubmitting;
 
   return (
     <>
@@ -791,45 +622,40 @@ const CompanyProfile = () => {
           id="companyProfileForm"
           onSubmit={formMethods.handleSubmit(onUpdateProfile)}
         >
-          <AdaptiveCard bodyClass="p-0 md:p-0">
-            <div className="p-4 pt-2 md:p-6 md:pt-2 border-b border-gray-200 dark:border-gray-700">
+          <AdaptiveCard>
+            <div className="p-4 pt-2 md:p-6 md:pt-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold">
                 Company Profile Settings
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Manage company branding, contact, and integration settings.
+                Manage company branding, contact, and social media links.
               </p>
             </div>
 
-            <div
-              className="p-4 md:p-6 space-y-6 "
-             
-            >
+            <div className="p-4 md:p-6 space-y-8">
               {renderLogoFields()}
               {renderCompanyInfoFields()}
               {renderSocialMediaFields()}
             </div>
           </AdaptiveCard>
         </Form>
-          <StickyFooter
-        className="flex items-center justify-end py-4 px-6 bg-white dark:bg-gray-800"
-        stickyClass="border-t border-gray-200 dark:border-gray-700"
-      >
-        <Button
-          size="sm"
-          variant="solid"
-          form="companyProfileForm"
-          type="submit"
-          loading={isSubmitting}
-          icon={<TbDeviceFloppy />}
-          disabled={isButtonDisabled}
+        <StickyFooter
+          className="flex items-center justify-end py-4 px-6"
+          stickyClass="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
         >
-          {isSubmitting ? "Saving..." : "Save"}
-        </Button>
-      </StickyFooter>
+          <Button
+            size="sm"
+            variant="solid"
+            form="companyProfileForm"
+            type="submit"
+            loading={isSubmitting}
+            icon={<TbDeviceFloppy />}
+            disabled={isButtonDisabled}
+          >
+            {isSubmitting ? "Saving..." : "Save Changes"}
+          </Button>
+        </StickyFooter>
       </Container>
-
-    
     </>
   );
 };
