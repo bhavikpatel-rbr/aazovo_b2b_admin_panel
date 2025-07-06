@@ -548,7 +548,7 @@ const ViewDocumentDialog = ({
               <DetailItem label="Member Name" value={member.name} />
               <DetailItem
                 label="Company Name"
-                value={company.company_actual || company.company_temp}
+                value={company.company_name || company.company_name || ""}
               />
               <DetailItem label="Member Email" value={member.email} />
               <DetailItem
