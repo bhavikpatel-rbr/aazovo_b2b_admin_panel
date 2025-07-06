@@ -138,7 +138,7 @@ const addEditDocumentSchema = z.object({
   document_number: z.string().min(1, "Document Number is required."),
   invoice_number: z.string().min(1, "Invoice Number is required."),
   form_id: z.number({ required_error: "Token Form is required." }),
-  assigned_to_user_id: z.number({ required_error: "Employee is required." }),
+  employee_id: z.number({ required_error: "Employee is required." }),
   member_id: z.number({ required_error: "Member is required." }),
 });
 type AddEditDocumentFormData = z.infer<typeof addEditDocumentSchema>;
@@ -575,7 +575,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
     defaultValues: {
       company_document: undefined, document_type: undefined,
       document_number: '', invoice_number: '',
-      form_id: undefined, assigned_to_user_id: undefined, member_id: undefined,
+      form_id: undefined, employee_id: undefined, member_id: undefined,
     },
   });
 
@@ -626,7 +626,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
             document_number: data?.data?.document_number,
             invoice_number: data?.data?.invoice_number,
             form_id: data?.data?.form_id,
-            assigned_to_user_id: data?.data?.assigned_to_user_id, // Assuming this field exists
+            employee_id: data?.data?.employee_id, // Assuming this field exists
             member_id: data?.data?.member_id,
           };
           reset(formData);
@@ -646,7 +646,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
         document_number: "",
         invoice_number: "",
         form_id: 0,
-        assigned_to_user_id: 0, // Assuming this field exists
+        employee_id: 0, // Assuming this field exists
         member_id: 0,
       });
     }
@@ -715,8 +715,8 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId, employeeOptions, me
               />
             )} />
           </UiFormItem>
-          <UiFormItem label="Employee" invalid={!!errors.assigned_to_user_id} errorMessage={errors.assigned_to_user_id?.message}>
-            <Controller control={control} name="assigned_to_user_id" render={({ field }) => (
+          <UiFormItem label="Employee" invalid={!!errors.employee_id} errorMessage={errors.employee_id?.message}>
+            <Controller control={control} name="employee_id" render={({ field }) => (
               <Select {...field} placeholder="Select Employee"
                 options={EmployyDataOptions}
                 value={EmployyDataOptions?.find(o => o.value === field.value)}
