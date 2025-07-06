@@ -16,7 +16,8 @@ import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar } from "@/components/ui";
+// --- MODIFIED: Added Dialog import ---
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
 
 // Icons
 import {
@@ -358,8 +359,23 @@ const DepartmentListing = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+
+  // --- MODIFIED: Renamed state and handlers for clarity and consistency ---
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
+
+  const openImageViewer = useCallback((src?: string) => {
+    if (src) {
+        setViewerImageSrc(src);
+        setIsImageViewerOpen(true);
+    }
+  }, []);
+
+  const closeImageViewer = useCallback(() => {
+    setIsImageViewerOpen(false);
+    setViewerImageSrc(null);
+  }, []);
+  // --- END MODIFICATION ---
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
@@ -376,18 +392,6 @@ const DepartmentListing = () => {
     () => ({ name: "", status: "Active" }),
     []
   );
-
-  const openImageViewerModal = useCallback((src?: string) => {
-    if (src) {
-        setViewerImageSrc(src);
-        setIsImageViewerOpen(true);
-    }
-  }, []);
-
-  const closeImageViewerModal = useCallback(() => {
-    setIsImageViewerOpen(false);
-    setViewerImageSrc(null);
-  }, []);
 
   useEffect(() => {
     dispatch(getDepartmentsAction());
@@ -538,7 +542,7 @@ const DepartmentListing = () => {
       if(status !== 'all') {
           const statusOption = statusOptions.find(opt => opt.value === status);
           if(statusOption) {
-            setFilterCriteria({ filterStatus: [statusOption] });
+            setFilterCriteria({ ...filterCriteria, filterStatus: [statusOption] });
           }
       }
   };
@@ -597,6 +601,7 @@ const DepartmentListing = () => {
         (item) =>
           (item.name?.trim().toLowerCase() ?? "").includes(query) ||
           (item.status?.trim().toLowerCase() ?? "").includes(query) ||
+          (item.updated_by_user?.name?.toLowerCase() ?? "").includes(query) ||
           String(item.id ?? "")
             .trim()
             .toLowerCase()
@@ -607,7 +612,7 @@ const DepartmentListing = () => {
     if (
       order &&
       key &&
-      ["id", "name", "status", "updated_at"].includes(key) &&
+      ["id", "name", "status", "updated_at"].includes(String(key)) &&
       processedData.length > 0
     ) {
       processedData.sort((a, b) => {
@@ -728,7 +733,6 @@ const DepartmentListing = () => {
   const columns: ColumnDef<DepartmentItem>[] = useMemo(
     () => [
       { header: "Department Name", accessorKey: "name", enableSorting: true, size: 200 },
-      
       {
         header: "Status",
         accessorKey: "status",
@@ -753,27 +757,6 @@ const DepartmentListing = () => {
           );
         },
       },
-      // {
-      //   header: "Total Employee",
-      //   accessorKey: "totalemployee",
-      //   enableSorting: false,
-      //   size: 120,
-      //   cell: (props) => <span>{props.row.original.totalemployee || 0}</span>,
-      // },
-      // {
-      //   header: "Total Job Post",
-      //   accessorKey: "totaljobpost",
-      //   enableSorting: false,
-      //   size: 120,
-      //   cell: (props) => <span>{props.row.original.totaljobpost || 0}</span>,
-      // },
-      // {
-      //   header: "Total Application",
-      //   accessorKey: "totalapplication",
-      //   enableSorting: false,
-      //   size: 130,
-      //   cell: (props) => <span>{props.row.original.totalapplication || 0}</span>,
-      // },
       {
         header: "Updated Info",
         accessorKey: "updated_at",
@@ -791,7 +774,8 @@ const DepartmentListing = () => {
                       size="sm" 
                       icon={<TbUserCircle />} 
                       className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                      onClick={() => openImageViewerModal(updated_by_user?.profile_pic_path)}
+                      // --- MODIFIED: Use correct handler ---
+                      onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
                   />
                   <div>
                       <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
@@ -814,7 +798,7 @@ const DepartmentListing = () => {
         ),
       },
     ],
-    [openEditDrawer, openImageViewerModal]
+    [openEditDrawer, openImageViewer]
   );
   
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DepartmentItem>[]>(columns);
@@ -852,7 +836,7 @@ const DepartmentListing = () => {
                             <TbUserScan size={24} />
                         </div>
                         <div>
-                            <h6 className="text-emerald-500 dark:text-emerald-200">{departmentsData?.counts?.active_departments || 0}</h6>
+                            <h6 className="text-emerald-500 dark:text-emerald-200">{departmentsData?.counts?.active|| 0}</h6>
                             <span className="font-semibold text-xs">Active</span>
                         </div>
                     </Card>
@@ -865,7 +849,7 @@ const DepartmentListing = () => {
                             <TbInbox size={24} />
                         </div>
                         <div>
-                            <h6 className="text-red-500 dark:text-red-200">{departmentsData?.counts?.inactive_departments || 0}</h6>
+                            <h6 className="text-red-500 dark:text-red-200">{departmentsData?.counts?.inactive || 0}</h6>
                             <span className="font-semibold text-xs">Inactive</span>
                         </div>
                     </Card>
@@ -931,27 +915,29 @@ const DepartmentListing = () => {
         </AdaptiveCard>
       </Container>
       
-      {/* Image Viewer Modal */}
-      {isImageViewerOpen && (
-          <div 
-              className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-              onClick={closeImageViewerModal}
-          >
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                  <img 
-                      src={viewerImageSrc || ''} 
-                      alt="Profile View" 
-                      className="max-w-[90vw] max-h-[90vh] rounded-lg" 
+      {/* --- MODIFIED: Replaced custom div with proper Dialog component --- */}
+      <Dialog
+        isOpen={isImageViewerOpen}
+        onClose={closeImageViewer}
+        onRequestClose={closeImageViewer}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        width={600}
+        bodyOpenClassName="overflow-hidden"
+      >
+          <div className="flex justify-center items-center p-4">
+              {viewerImageSrc ? (
+                  <img
+                      src={viewerImageSrc}
+                      alt="Profile View"
+                      style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
                   />
-                  <button 
-                      onClick={closeImageViewerModal}
-                      className="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-800 hover:bg-gray-200 shadow-lg"
-                  >
-                      <TbX size={24} />
-                  </button>
-              </div>
+              ) : (
+                  <p>No image to display.</p>
+              )}
           </div>
-      )}
+      </Dialog>
+      {/* --- END MODIFICATION --- */}
 
       {[
         {
