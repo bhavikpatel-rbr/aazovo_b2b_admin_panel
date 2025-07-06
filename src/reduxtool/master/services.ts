@@ -2099,7 +2099,7 @@ export const addJobApplicationAsync = async (applicationData: any) => {
 export const editJobApplicationAsync = async (applicationData: any) => {
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/job_application/${applicationData?.id}`, { _method: "PUT", ...applicationData },{
+    const response = await axiosInstance.post(`${config.apiURL}/other/job_application/${applicationData?.id}`, applicationData.data,{
         headers: {
           'Content-Type': 'multipart/form-data',
         },
