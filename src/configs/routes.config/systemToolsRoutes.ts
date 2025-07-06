@@ -14,6 +14,15 @@ const systemToolsRoutes: Routes = [
         },
     },
     {
+        key: 'systemTools.rawData',
+        path: `${SYSTEM_TOOLS_PREFIX_PATH}/member-create`,
+        component: lazy(() => import('@/views/system-tools/Raw-Data/ConvertMember')),
+        authority: [ADMIN],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
+    {
         key: 'systemTools.formBuilder',
         path: `${SYSTEM_TOOLS_PREFIX_PATH}/form-builder`,
         component: lazy(() => import('@/views/system-tools/Form-Builder')),
