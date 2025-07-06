@@ -733,7 +733,6 @@ const ActivityLog = () => {
               <DetailRow label="User">
                 {viewingItem.user ? (
                   <div className="flex items-center gap-2 -my-1">
-  
                     <span>
                       {`${viewingItem.user.name} (${viewingItem.user.roles?.[0]?.display_name || 'N/A'})`}
                     </span>
@@ -742,15 +741,11 @@ const ActivityLog = () => {
                   viewingItem.userName || 'System'
                 )}
               </DetailRow>
-
               <DetailRow label="Action">{getActionLabel(viewingItem.action)}</DetailRow>
 
               <DetailRow label="Entity">{getEntityLabel(viewingItem.entity)}</DetailRow>
 
               <DetailRow label="Description">{viewingItem.description}</DetailRow>
-
-              {/* Use our dedicated JSON viewer for the 'details' field */}
-              <JsonViewer label="Details" data={viewingItem.details} />
 
             </div>
 
