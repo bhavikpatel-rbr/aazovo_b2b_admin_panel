@@ -304,14 +304,6 @@ const CompanyProfile = () => {
     } else if (masterLoadingStatus === "loading") {
       setIsLoadingInitial(true);
       console.log("[CompanyProfile] Profile status is LOADING.");
-    } else if (masterLoadingStatus === "failed") {
-      setIsLoadingInitial(false);
-      console.error("[CompanyProfile] Failed to load profile.");
-      toast.push(
-        <Notification title="Error" type="danger">
-          Could not load company profile data.
-        </Notification>
-      );
     } else if (
       masterLoadingStatus !== "idle" &&
       !actualProfileData &&
@@ -423,20 +415,7 @@ const CompanyProfile = () => {
     );
   }
 
-  if (
-    !currentProfileUI &&
-    !isLoadingInitial &&
-    masterLoadingStatus !== "idle"
-  ) {
-    // Catch other failure/empty states
-    return (
-      <Container className="h-full flex justify-center items-center">
-        <p className="text-red-500">
-          Company profile data could not be loaded. Please check console.
-        </p>
-      </Container>
-    );
-  }
+  
 
   // --- Render Functions for Form Sections ---
   const renderLogoFields = () => (
