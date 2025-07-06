@@ -16,7 +16,7 @@ import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
-import DebouceInput from '@/components/shared/DebouceInput'
+import DebounceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
 import Dialog from '@/components/ui/Dialog'
 import {
@@ -29,6 +29,7 @@ import {
     Input,
     Tag,
     Checkbox,
+    Avatar,
 } from '@/components/ui'
 
 // Icons
@@ -50,6 +51,7 @@ import {
     TbFileLike,
     TbLink,
     TbUser,
+    TbUserCircle,
     TbMailShare,
     TbBrandWhatsapp,
     TbBell,
@@ -74,16 +76,20 @@ import {
     submitExportReasonAction,
     getDepartmentsAction,
     addScheduleAction,
+    addNotificationAction,
+    addTaskAction,
+    getAllUsersAction,
 } from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { BsThreeDotsVertical } from 'react-icons/bs'
 import classNames from 'classnames'
 
 // --- Define Types ---
+export type SelectOption = { value: any; label: string };
 export type JobDepartmentListItem = { id: string | number; name: string }
 export type JobDepartmentOption = { value: string; label: string }
-export type JobPostStatusApi = 'Active' | 'Disabled' | string
-export type JobPostStatusForm = 'Active' | 'Disabled'
+export type JobPostStatusApi = 'Active' | 'Inactive' | string
+export type JobPostStatusForm = 'Active' | 'Inactive'
 export type JobPlatform = { id?: string | number | null; portal: string; link: string; application_count: number }
 export type JobPostItem = {
     id: string | number
@@ -99,16 +105,16 @@ export type JobPostItem = {
     created_at?: string
     updated_at?: string
     created_by_user?: { name: string; roles: { display_name: string }[] }
-    updated_by_user?: { name: string; roles: { display_name: string }[] }
+    updated_by_user?: { name: string; profile_pic_path?: string; roles: { display_name: string }[] }
 }
 
 // --- Constants for Form Selects ---
-const JOB_POST_STATUS_OPTIONS_FORM: { value: JobPostStatusForm; label: string }[] = [{ value: 'Active', label: 'Active' }, { value: 'Disabled', label: 'Disabled' }]
+const JOB_POST_STATUS_OPTIONS_FORM: { value: JobPostStatusForm; label: string }[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }]
 const jobPostStatusFormValues = JOB_POST_STATUS_OPTIONS_FORM.map((s) => s.value) as [JobPostStatusForm, ...JobPostStatusForm[]]
-const jobStatusColor: Record<JobPostStatusApi, string> = { Active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100', Disabled: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100' }
+const jobStatusColor: Record<JobPostStatusApi, string> = { Active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100', Inactive: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100' }
 const PORTAL_OPTIONS = [{ label: 'Linkedin', value: 'Linkedin' }, { label: 'Naukri', value: 'Naukri' }, { label: 'Internal', value: 'Internal' }, { label: 'Glassdoor', value: 'Glassdoor' }]
 
-// --- Zod Schema for Schedule Form ---
+// --- Zod Schemas ---
 const scheduleSchema = z.object({
     event_title: z.string().min(3, "Title must be at least 3 characters."),
     event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
@@ -118,8 +124,22 @@ const scheduleSchema = z.object({
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
+const notificationSchema = z.object({
+    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+    send_users: z.array(z.string()).min(1, "Please select at least one user."),
+    message: z.string().min(10, "Message must be at least 10 characters long."),
+});
+type NotificationFormData = z.infer<typeof notificationSchema>;
 
-// --- Zod Schemas ---
+const taskSchema = z.object({
+    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+    assign_to: z.array(z.string()).min(1, 'At least one assignee is required.'),
+    priority: z.string().min(1, 'Please select a priority.'),
+    due_date: z.date().nullable().optional(),
+    description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskSchema>;
+
 const jobPlatformSchema = z.object({ id: z.union([z.string(), z.number(), z.null()]).optional(), portal: z.string().min(1, 'Portal selection is required.'), link: z.string().url('Must be a valid URL (e.g., https://...).'), application_count: z.coerce.number({ invalid_type_error: 'Count must be a number.' }).int('Count must be a whole number.').min(0, 'Count must be non-negative.') })
 const jobPostFormSchema = z.object({
     job_title: z.string().min(1, 'Job Title is required.').max(150, 'Title too long (max 150 chars).'),
@@ -146,123 +166,95 @@ function exportJobPostsToCsv(filename: string, rows: JobPostItem[], departmentOp
 // ============================================================================
 // --- MODALS SECTION ---
 // ============================================================================
-export type ModalType = 'email' | 'whatsapp' | 'notification' | 'task' | 'schedule' | 'active' | 'share'
+export type ModalType = 'email' | 'whatsapp' | 'notification' | 'task' | 'schedule' | 'share'
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: JobPostItem | null }
-interface JobPostModalsProps { modalState: ModalState; onClose: () => void }
-const dummyUsers = [{ value: 'user1', label: 'Alice Johnson' }, { value: 'user2', label: 'Bob Williams' }, { value: 'user3', label: 'Charlie Brown' }]
-const priorityOptions = [{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]
-const eventTypeOptions = [
-    // Customer Engagement & Sales
-    { value: 'Meeting', label: 'Meeting' },
-    { value: 'Demo', label: 'Product Demo' },
-    { value: 'IntroCall', label: 'Introductory Call' },
-    { value: 'FollowUpCall', label: 'Follow-up Call' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-    { value: 'CheckIn', label: 'Customer Check-in' },
-    { value: 'LogEmail', label: 'Log an Email' },
-
-    // Project & Task Management
-    { value: 'Milestone', label: 'Project Milestone' },
-    { value: 'Task', label: 'Task' },
-    { value: 'FollowUp', label: 'General Follow-up' },
-    { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-    // Customer Onboarding & Support
-    { value: 'OnboardingSession', label: 'Onboarding Session' },
-    { value: 'Training', label: 'Training Session' },
-    { value: 'SupportCall', label: 'Support Call' },
-
-    // General & Administrative
-    { value: 'Reminder', label: 'Reminder' },
-    { value: 'Note', label: 'Add a Note' },
-    { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
-    { value: 'StrategySession', label: 'Strategy Session' },
-    { value: 'TeamMeeting', label: 'Team Meeting' },
-    { value: 'PerformanceReview', label: 'Performance Review' },
-    { value: 'Lunch', label: 'Lunch / Break' },
-    { value: 'Appointment', label: 'Personal Appointment' },
-    { value: 'Other', label: 'Other' },
-    { value: 'ProjectKickoff', label: 'Project Kick-off' },
-    { value: 'InternalSync', label: 'Internal Team Sync' },
-    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
-    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
-    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
-    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
-    { value: 'ProjectSignOff', label: 'Project Sign-off' },
-    { value: 'PrepareReport', label: 'Prepare Report' },
-    { value: 'PresentFindings', label: 'Present Findings' },
-    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
-    { value: 'BugReplication', label: 'Bug Replication Session' },
-    { value: 'IssueEscalation', label: 'Escalate Issue' },
-    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
-    { value: 'FeatureRequest', label: 'Log Feature Request' },
-    { value: 'IntegrationSupport', label: 'Integration Support Call' },
-    { value: 'DataMigration', label: 'Data Migration/Import Task' },
-    { value: 'ColdCall', label: 'Cold Call' },
-    { value: 'DiscoveryCall', label: 'Discovery Call' },
-    { value: 'QualificationCall', label: 'Qualification Call' },
-    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
-    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
-    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
-    { value: 'ContractSent', label: 'Contract Sent' },
-    { value: 'NegotiationCall', label: 'Negotiation Call' },
-    { value: 'TrialSetup', label: 'Product Trial Setup' },
-    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
-    { value: 'WelcomeCall', label: 'Welcome Call' },
-    { value: 'ImplementationSession', label: 'Implementation Session' },
-    { value: 'UserTraining', label: 'User Training Session' },
-    { value: 'AdminTraining', label: 'Admin Training Session' },
-    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-    { value: 'HealthCheck', label: 'Customer Health Check' },
-    { value: 'FeedbackSession', label: 'Feedback Session' },
-    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
-    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
-    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
-    { value: 'InvoiceDue', label: 'Invoice Due' },
-    { value: 'SendInvoice', label: 'Send Invoice' },
-    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
-    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
-    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
-    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
-    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
-    { value: 'SendQuote', label: 'Send Quote/Estimate' },
-]
+interface JobPostModalsProps { modalState: ModalState; onClose: () => void; userOptions: SelectOption[] }
+const taskPriorityOptions: SelectOption[] = [ { value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' } ];
+const eventTypeOptions: SelectOption[] = [ { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Task', label: 'Task' }, { value: 'Reminder', label: 'Reminder' } ];
 
 // --- Individual Dialog Components ---
-const SendEmailDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => { const [isLoading, setIsLoading] = useState(false); const { control, handleSubmit } = useForm({ defaultValues: { subject: `Regarding Job Post: ${jobPost.job_title}`, message: '' } }); const onSendEmail = (data: { subject: string; message: string }) => { setIsLoading(true); console.log('Sending email for job post', jobPost.id, 'with data:', data); setTimeout(() => { toast.push(<Notification type="success" title="Email Sent Successfully" />); setIsLoading(false); onClose() }, 1000) }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Send Email about "{jobPost.job_title}"</h5><Form onSubmit={handleSubmit(onSendEmail)}><FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => <Input {...field} />} /></FormItem><FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<Input textArea {...field} rows={5} placeholder="Compose your email..." />)} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send</Button></div></Form></Dialog>) }
-const SendWhatsAppDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => { const [isLoading, setIsLoading] = useState(false); const jobLink = typeof jobPost.job_plateforms === 'string' ? '' : jobPost.job_plateforms?.[0]?.link || ''; const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi, check out this job opportunity: ${jobPost.job_title}. Learn more and apply here: ${jobLink}` } }); const onSendMessage = (data: { message: string }) => { setIsLoading(true); const url = `https://wa.me/?text=${encodeURIComponent(data.message)}`; window.open(url, '_blank'); toast.push(<Notification type="success" title="Opening WhatsApp" />); setIsLoading(false); onClose() }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Share "{jobPost.job_title}" on WhatsApp</h5><Form onSubmit={handleSubmit(onSendMessage)}><FormItem label="Message Template"><Controller name="message" control={control} render={({ field }) => (<Input textArea {...field} rows={4} />)} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Open WhatsApp</Button></div></Form></Dialog>) }
-const AddNotificationDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => { const [isLoading, setIsLoading] = useState(false); const { control, handleSubmit } = useForm({ defaultValues: { notificationMessage: '', users: [] } }); const onSubmit = (data: any) => { setIsLoading(true); console.log('Creating notification for', jobPost.job_title, 'with data:', data); setTimeout(() => { toast.push(<Notification type="success" title="Notification Created" />); setIsLoading(false); onClose() }, 1000) }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Add Notification for "{jobPost.job_title}"</h5><Form onSubmit={handleSubmit(onSubmit)}><FormItem label="Notify Users"><Controller name="users" control={control} render={({ field }) => (<Select isMulti options={dummyUsers} {...field} placeholder="Select users..." />)} /></FormItem><FormItem label="Message"><Controller name="notificationMessage" control={control} render={({ field }) => (<Input textArea {...field} placeholder="Enter notification message..." />)} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Create</Button></div></Form></Dialog>) }
-const AssignTaskDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => { const [isLoading, setIsLoading] = useState(false); const { control, handleSubmit } = useForm({ defaultValues: { assignedTo: null, priority: null, dueDate: null, description: '' } }); const onSubmit = (data: any) => { setIsLoading(true); console.log('Assigning task for', jobPost.job_title, 'with data:', data); setTimeout(() => { toast.push(<Notification type="success" title="Task Assigned" />); setIsLoading(false); onClose() }, 1000) }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Assign Task for "{jobPost.job_title}"</h5><Form onSubmit={handleSubmit(onSubmit)}><FormItem label="Assign To"><Controller name="assignedTo" control={control} render={({ field }) => (<Select options={dummyUsers} {...field} placeholder="Select a user..." />)} /></FormItem><FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<Select options={priorityOptions} {...field} placeholder="Set priority..." />)} /></FormItem><FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => <Input type="date" {...field} />} /></FormItem><FormItem label="Description"><Controller name="description" control={control} render={({ field }) => (<Input textArea {...field} placeholder="Task details..." />)} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Assign</Button></div></Form></Dialog>) }
+const SendEmailDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => {
+    const onSendEmail = () => {
+        const subject = `Regarding Job Post: ${jobPost.job_title}`;
+        const body = `Hi,\n\nI wanted to share this job opportunity with you: "${jobPost.job_title}".\n\nDescription: ${jobPost.description}\n\nYou can find more details and apply via the official links.\n\nBest regards.`;
+        window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+        toast.push(<Notification type="success" title="Opening Email Client" />);
+        onClose();
+    };
+    return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Send Email about "{jobPost.job_title}"</h5><p>This will open your default email client with a pre-filled template. Are you sure you want to proceed?</p><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={onSendEmail}>Proceed</Button></div></Dialog>) 
+}
+
+const SendWhatsAppDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => {
+    const onSendMessage = () => {
+        const jobLink = typeof jobPost.job_plateforms === 'string' ? '' : jobPost.job_plateforms?.[0]?.link || '';
+        const message = `Hi, check out this job opportunity: ${jobPost.job_title}. Learn more and apply here: ${jobLink}`;
+        const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+        toast.push(<Notification type="success" title="Opening WhatsApp" />);
+        onClose();
+    };
+    return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Share "{jobPost.job_title}" on WhatsApp</h5><p>This will open WhatsApp in a new tab with a pre-filled message. Continue?</p><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={onSendMessage}>Open WhatsApp</Button></div></Dialog>)
+}
+
+const AddNotificationDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void; userOptions: SelectOption[] }> = ({ jobPost, onClose, userOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: { notification_title: `Regarding Job Post: ${jobPost.job_title}`, send_users: [], message: `Please take a look at the job post: ${jobPost.job_title} (ID: ${jobPost.id})` },
+        mode: "onChange",
+    });
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = { ...formData, module_id: String(jobPost.id), module_name: "JobPost" };
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Send" children={error?.message || "An unknown error occurred."} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Add Notification for "{jobPost.job_title}"</h5><Form onSubmit={handleSubmit(onSend)}><FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem><FormItem label="Notify Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<Select isMulti options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map((o) => o.value))} placeholder="Select users..." />)} /></FormItem><FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => (<Input textArea {...field} placeholder="Enter notification message..." />)} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Create</Button></div></Form></Dialog>)
+}
+
+const AssignTaskDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void; userOptions: SelectOption[] }> = ({ jobPost, onClose, userOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
+        resolver: zodResolver(taskSchema),
+        defaultValues: { task_title: `Follow up on job post: ${jobPost.job_title}`, assign_to: [], priority: 'Medium', due_date: null, description: `Task related to job post ID: ${jobPost.id}. Description: ${jobPost.description}` },
+        mode: "onChange",
+    });
+    const onSubmit = async (data: TaskFormData) => {
+        setIsLoading(true);
+        const payload = { ...data, module_id: String(jobPost.id), module_name: "JobPost", due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined };
+        try {
+            await dispatch(addTaskAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Task Assigned" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Assignment Failed" children={error?.message} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Assign Task for "{jobPost.job_title}"</h5><Form onSubmit={handleSubmit(onSubmit)}><FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></FormItem><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<Select isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></FormItem><FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem></div><FormItem label="Due Date (Optional)"><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></FormItem><FormItem label="Description"><Controller name="description" control={control} render={({ field }) => (<Input textArea {...field} rows={4} />)} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button></div></Form></Dialog>)
+}
 
 const AddScheduleDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void; }> = ({ jobPost, onClose }) => {
     const dispatch = useAppDispatch();
     const [isLoading, setIsLoading] = useState(false);
-
     const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
         resolver: zodResolver(scheduleSchema),
-        defaultValues: {
-            event_title: `Interview for ${jobPost.job_title}`,
-            event_type: undefined,
-            date_time: null as any,
-            remind_from: null,
-            notes: `Schedule regarding job post ID: ${jobPost.id}`,
-        },
+        defaultValues: { event_title: `Interview for ${jobPost.job_title}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Schedule regarding job post ID: ${jobPost.id}` },
         mode: 'onChange',
     });
-
     const onAddEvent = async (data: ScheduleFormData) => {
         setIsLoading(true);
-        const payload = {
-            module_id: Number(jobPost.id),
-            module_name: 'JobPost',
-            event_title: data.event_title,
-            event_type: data.event_type,
-            date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
-            ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }),
-            notes: data.notes || '',
-        };
-
+        const payload = { module_id: Number(jobPost.id), module_name: 'JobPost', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '' };
         try {
             await dispatch(addScheduleAction(payload)).unwrap();
             toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${jobPost.job_title}.`} />);
@@ -273,43 +265,33 @@ const AddScheduleDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void; }
             setIsLoading(false);
         }
     };
-
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Add Schedule for "{jobPost.job_title}"</h5>
-            <Form onSubmit={handleSubmit(onAddEvent)}>
-                <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
-                    <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
-                </FormItem>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
-                        <Controller name="event_type" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
-                    </FormItem>
-                    <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
-                        <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-                    </FormItem>
-                </div>
-                <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
-                    <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
-                </FormItem>
-                <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-                    <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
-                </FormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
-                </div>
-            </Form>
-        </Dialog>
-    );
+    return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Add Schedule for "{jobPost.job_title}"</h5><Form onSubmit={handleSubmit(onAddEvent)}><FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem><FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem></div><FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem><FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div></Form></Dialog>);
 };
 
 const SharePostLinksDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => { let parsedPlatforms: JobPlatform[] = []; if (jobPost.job_plateforms) { if (typeof jobPost.job_plateforms === 'string') { try { parsedPlatforms = JSON.parse(jobPost.job_plateforms) } catch (e) { } } else if (Array.isArray(jobPost.job_plateforms)) { parsedPlatforms = jobPost.job_plateforms } } const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text).then(() => { toast.push(<Notification type="success" title="Link Copied!" />) }, () => { toast.push(<Notification type="danger" title="Failed to copy." />) }) }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Share Links for "{jobPost.job_title}"</h5><div className="flex flex-col gap-3 mt-4">{parsedPlatforms.length > 0 ? (parsedPlatforms.map((platform, index) => (<div key={index} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"><div className="flex flex-col"><span className="font-semibold">{platform.portal}</span><a href={platform.link} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline break-all">{platform.link}</a></div><Button size="sm" onClick={() => copyToClipboard(platform.link)}>Copy</Button></div>))) : (<p>No shareable links available for this job post.</p>)}</div><div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div></Dialog>) }
-const GenericActionDialog: React.FC<{ type: ModalType | null; jobPost: JobPostItem; onClose: () => void }> = ({ type, jobPost, onClose }) => { const [isLoading, setIsLoading] = useState(false); const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : 'Confirm Action'; const handleConfirm = () => { setIsLoading(true); console.log(`Performing action '${type}' for job post ${jobPost.job_title}`); setTimeout(() => { toast.push(<Notification type="success" title="Action Completed" />); setIsLoading(false); onClose() }, 1000) }; return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-2">{title}</h5><p>Are you sure you want to perform this action for <span className="font-semibold">{jobPost.job_title}</span>?</p><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button></div></Dialog>) }
-const JobPostModals: React.FC<JobPostModalsProps> = ({ modalState, onClose }) => { const { type, data: jobPost, isOpen } = modalState; if (!isOpen || !jobPost) return null; const renderModalContent = () => { switch (type) { case 'email': return <SendEmailDialog jobPost={jobPost} onClose={onClose} />; case 'whatsapp': return (<SendWhatsAppDialog jobPost={jobPost} onClose={onClose} />); case 'notification': return (<AddNotificationDialog jobPost={jobPost} onClose={onClose} />); case 'task': return <AssignTaskDialog jobPost={jobPost} onClose={onClose} />; case 'schedule': return (<AddScheduleDialog jobPost={jobPost} onClose={onClose} />); case 'share': return (<SharePostLinksDialog jobPost={jobPost} onClose={onClose} />); case 'active': default: return (<GenericActionDialog type={type} jobPost={jobPost} onClose={onClose} />) } }; return <>{renderModalContent()}</> }
-const ActionColumn = ({ item, onEdit, onDelete, onOpenModal, }: { item: JobPostItem; onEdit: (item: JobPostItem) => void; onDelete: (item: JobPostItem) => void; onOpenModal: (type: ModalType, data: JobPostItem) => void; onChangeStatus?: (item: JobPostItem) => void }) => { const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'; const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700'; return (<div className="flex items-center justify-center gap-1"><Tooltip title="Edit Job Post"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={() => onEdit(item)}><TbPencil /></div></Tooltip><Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-lg" />}><Dropdown.Item onClick={() => onOpenModal('email', item)} className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('whatsapp', item)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('notification', item)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('task', item)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('schedule', item)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('active', item)} className="flex items-center gap-2"><TbFileCheck size={18} /> <span className="text-xs">Add Active</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('share', item)} className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Share Post Links</span></Dropdown.Item></Dropdown></div>) }
+
+const JobPostModals: React.FC<JobPostModalsProps> = ({ modalState, onClose, userOptions }) => {
+    const { type, data: jobPost, isOpen } = modalState;
+    if (!isOpen || !jobPost) return null;
+    switch (type) {
+        case 'email': return <SendEmailDialog jobPost={jobPost} onClose={onClose} />;
+        case 'whatsapp': return <SendWhatsAppDialog jobPost={jobPost} onClose={onClose} />;
+        case 'notification': return <AddNotificationDialog jobPost={jobPost} onClose={onClose} userOptions={userOptions} />;
+        case 'task': return <AssignTaskDialog jobPost={jobPost} onClose={onClose} userOptions={userOptions} />;
+        case 'schedule': return <AddScheduleDialog jobPost={jobPost} onClose={onClose} />;
+        case 'share': return <SharePostLinksDialog jobPost={jobPost} onClose={onClose} />;
+        default: return null;
+    }
+};
+
+const ActionColumn = ({ item, onEdit, onOpenModal }: { item: JobPostItem; onEdit: (item: JobPostItem) => void; onOpenModal: (type: ModalType, data: JobPostItem) => void; }) => {
+    const iconButtonClass = 'text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none';
+    const hoverBgClass = 'hover:bg-gray-100 dark:hover:bg-gray-700';
+    return (<div className="flex items-center justify-center gap-1"><Tooltip title="Edit Job Post"><div className={classNames(iconButtonClass, hoverBgClass, 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400')} role="button" onClick={() => onEdit(item)}><TbPencil /></div></Tooltip><Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-lg" />}><Dropdown.Item onClick={() => onOpenModal('email', item)} className="flex items-center gap-2"><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('whatsapp', item)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('notification', item)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('task', item)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('schedule', item)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item><Dropdown.Item onClick={() => onOpenModal('share', item)} className="flex items-center gap-2"><TbLink size={18} /> <span className="text-xs">Share Post Links</span></Dropdown.Item></Dropdown></div>)
+}
+
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement> }
-const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
+const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 ItemSearch.displayName = 'ItemSearch'
 
 const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
@@ -395,14 +377,18 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, departme
 
 type JobPostsTableProps = { columns: ColumnDef<JobPostItem>[]; data: JobPostItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: JobPostItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: JobPostItem) => void; onAllRowSelect: (checked: boolean, rows: Row<JobPostItem>[]) => void }
 const JobPostsTable = ({ columns, data, loading, pagingData, selectedItems, onPaginationChange, onSelectChange, onSort, onRowSelect, onAllRowSelect }: JobPostsTableProps) => (<DataTable selectable columns={columns} data={data} loading={loading} pagingData={pagingData} checkboxChecked={(row) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={onPaginationChange} onSelectChange={onSelectChange} onSort={onSort} onCheckBoxChange={onRowSelect} onIndeterminateCheckBoxChange={onAllRowSelect} noData={!loading && data.length === 0} />)
+
 type JobPostsSelectedFooterProps = { selectedItems: JobPostItem[]; onDeleteSelected: () => void; isDeleting: boolean }
 const JobPostsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: JobPostsSelectedFooterProps) => { const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); if (selectedItems.length === 0) return null; const handleDeleteClick = () => setDeleteConfirmOpen(true); const handleCancelDelete = () => setDeleteConfirmOpen(false); const handleConfirmDelete = () => { onDeleteSelected(); setDeleteConfirmOpen(false) }; return (<><StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"><div className="flex items-center justify-between w-full px-4 sm:px-8"><span className="flex items-center gap-2"><span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span><span className="font-semibold flex items-center gap-1 text-sm sm:text-base"><span className="heading-text">{selectedItems.length}</span><span>Job Post{selectedItems.length > 1 ? 's' : ''} selected</span></span></span><Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={handleDeleteClick} loading={isDeleting}>Delete Selected</Button></div></StickyFooter><ConfirmDialog isOpen={deleteConfirmOpen} type="danger" title={`Delete ${selectedItems.length} Job Post${selectedItems.length > 1 ? 's' : ''}`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} loading={isDeleting}><p>Are you sure you want to delete the selected job post{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p></ConfirmDialog></>) }
+
 
 const JobPostsListing = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { jobPostsData = { data: [], counts: {} }, departmentsData = { data: [] }, status: masterLoadingStatus = 'idle' } = useSelector(masterSelector, shallowEqual);
-    const departmentOptions = useMemo(() => { if (Array.isArray(departmentsData?.data) && departmentsData?.data.length > 0) { return departmentsData?.data.map((dept: JobDepartmentListItem) => ({ value: String(dept.id), label: dept.name })) } return [] }, [departmentsData?.data]);
+    const { jobPostsData = { data: [], counts: {} }, departmentsData = { data: [] }, getAllUserData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector, shallowEqual);
+    const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData.data.map((dept: JobDepartmentListItem) => ({ value: String(dept.id), label: dept.name })) : [], [departmentsData?.data]);
+    const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: user.name })) : [], [getAllUserData]);
+
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<JobPostItem | null>(null);
@@ -414,12 +400,23 @@ const JobPostsListing = () => {
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
+    const [imageViewerSrc, setImageViewerSrc] = useState<string | null>(null);
+
     const handleOpenModal = (type: ModalType, jobPostData: JobPostItem) => setModalState({ isOpen: true, type, data: jobPostData });
     const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
+
+    const openImageViewer = (src?: string) => {
+        if (src) {
+            setImageViewerSrc(src);
+        }
+    };
+    
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterStatus: [], filterDepartment: [] });
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '' });
     const [selectedItems, setSelectedItems] = useState<JobPostItem[]>([]);
-    useEffect(() => { dispatch(getJobPostsAction()); dispatch(getDepartmentsAction()) }, [dispatch]);
+    
+    useEffect(() => { dispatch(getJobPostsAction()); dispatch(getDepartmentsAction()); dispatch(getAllUsersAction()); }, [dispatch]);
+    
     const defaultFormValues: JobPostFormData = useMemo(() => ({ job_title: '', job_department_id: departmentOptions[0]?.value || '', description: '', location: '', experience: '', vacancies: '1', status: 'Active', job_plateforms: [{ portal: '', link: '', application_count: 0, id: null }] }), [departmentOptions]);
     const formMethods = useForm<JobPostFormData>({ resolver: zodResolver(jobPostFormSchema), defaultValues: defaultFormValues, mode: 'onChange' });
     useEffect(() => { if ((isAddDrawerOpen || isEditDrawerOpen) && departmentOptions.length > 0 && !formMethods.getValues('job_department_id')) { formMethods.setValue('job_department_id', defaultFormValues.job_department_id, { shouldValidate: true }) } }, [departmentOptions, isAddDrawerOpen, isEditDrawerOpen, formMethods, defaultFormValues.job_department_id]);
@@ -473,38 +470,11 @@ const JobPostsListing = () => {
     const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })) }, []);
     const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterDepartment: data.filterDepartment || [] }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer() }, [closeFilterDrawer, handleSetTableData]);
-
     const onClearFilters = useCallback(() => { const defaultFilters = { filterStatus: [], filterDepartment: [] }; filterFormMethods.reset(defaultFilters); setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: '' }); dispatch(getJobPostsAction()); setIsFilterDrawerOpen(false) }, [filterFormMethods, dispatch, handleSetTableData]);
-
-    const handleCardClick = (status?: JobPostStatusForm | 'all') => {
-        onClearFilters();
-        if (status && status !== 'all') {
-            const statusOption = JOB_POST_STATUS_OPTIONS_FORM.find(opt => opt.value === status);
-            if (statusOption) {
-                setFilterCriteria({ filterStatus: [statusOption] });
-            }
-        }
-    };
-
-    const handleRemoveFilter = (key: keyof FilterFormData, value: string) => {
-        setFilterCriteria(prev => {
-            const newFilters = { ...prev };
-            const currentValues = prev[key] as { value: string; label: string }[] | undefined;
-            if (currentValues) {
-                const newValues = currentValues.filter(item => item.value !== value);
-                (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
-            }
-            return newFilters;
-        });
-        setTableData(prev => ({ ...prev, pageIndex: 1 }));
-    };
-
+    const handleCardClick = (status?: JobPostStatusForm | 'all') => { onClearFilters(); if (status && status !== 'all') { const statusOption = JOB_POST_STATUS_OPTIONS_FORM.find(opt => opt.value === status); if (statusOption) { setFilterCriteria({ filterStatus: [statusOption] }); } } };
+    const handleRemoveFilter = (key: keyof FilterFormData, value: string) => { setFilterCriteria(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as { value: string; label: string }[] | undefined; if (currentValues) { const newValues = currentValues.filter(item => item.value !== value); (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined; } return newFilters; }); setTableData(prev => ({ ...prev, pageIndex: 1 })); };
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => { const sourceData: JobPostItem[] = Array.isArray(jobPostsData?.data) ? jobPostsData?.data : []; let processedData: JobPostItem[] = cloneDeep(sourceData); if (filterCriteria.filterStatus?.length) { const statusValues = filterCriteria.filterStatus.map((s) => s.value); processedData = processedData.filter((item) => statusValues.includes(item.status)) } if (filterCriteria.filterDepartment?.length) { const deptValues = filterCriteria.filterDepartment.map((d) => d.value); processedData = processedData.filter((item) => deptValues.includes(String(item.job_department_id))) } if (tableData.query && tableData.query.trim() !== '') { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query))) } const { order, key } = tableData.sort as OnSortParam; if (order && key && processedData.length > 0 && typeof key === 'string') { processedData.sort((a, b) => { const aVal = a[key as keyof JobPostItem]; const bVal = b[key as keyof JobPostItem]; if (key === 'created_at' || key === 'updated_at') { const dateA = aVal ? new Date(aVal as string).getTime() : 0; const dateB = bVal ? new Date(bVal as string).getTime() : 0; return order === 'asc' ? dateA - dateB : dateB - dateA } if (key === 'vacancies') { const numA = parseInt(String(aVal), 10); const numB = parseInt(String(bVal), 10); if (!isNaN(numA) && !isNaN(numB)) { return order === 'asc' ? numA - numB : numB - numA } } const aStr = String(aVal ?? '').toLowerCase(); const bStr = String(bVal ?? '').toLowerCase(); return order === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr) }) } const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize; return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData } }, [jobPostsData?.data, tableData, filterCriteria]);
-
-    const activeFilterCount = useMemo(() => {
-        return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
-    }, [filterCriteria]);
-
+    const activeFilterCount = useMemo(() => { return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length; }, [filterCriteria]);
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return } exportReasonFormMethods.reset({ reason: '' }); setIsExportReasonModalOpen(true) };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = 'JobPosts'; const timestamp = new Date().toISOString().split('T')[0]; const fileName = `job_posts_export_${timestamp}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); const exportSuccess = exportJobPostsToCsv(fileName, allFilteredAndSortedData, departmentOptions); if (exportSuccess) { toast.push(<Notification title="Export Successful" type="success">Data exported to {fileName}.</Notification>) } else if (allFilteredAndSortedData && allFilteredAndSortedData.length > 0) { toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>) } setIsExportReasonModalOpen(false) } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message || 'Could not submit export reason.'}</Notification>) } finally { setIsSubmittingExportReason(false) } };
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
@@ -513,16 +483,42 @@ const JobPostsListing = () => {
     const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
     const handleRowSelect = useCallback((checked: boolean, row: JobPostItem) => { setSelectedItems((prev) => checked ? prev.some((item) => item.id === row.id) ? prev : [...prev, row] : prev.filter((item) => item.id !== row.id)) }, []);
     const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<JobPostItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA] }); else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))) } }, []);
+    
     const columns: ColumnDef<JobPostItem>[] = useMemo(() => [
-        { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 7; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold cursor-help">{displayValue}</span></Tooltip>) } },
+        { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 20; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold cursor-help">{displayValue}</span></Tooltip>) } },
         { header: 'Status', accessorKey: 'status', size: 100, enableSorting: true, cell: (props) => { const statusVal = props.getValue<JobPostStatusApi>(); return (<Tag className={classNames('capitalize whitespace-nowrap min-w-[70px] text-center', jobStatusColor[statusVal] || 'bg-gray-100 text-gray-600')}>{statusVal}</Tag>) } },
         { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { const deptId = String(props.getValue()); const department = departmentOptions.find((opt) => opt.value === deptId); return department ? department.label : deptId } },
         { header: 'Location', accessorKey: 'location', size: 130, enableSorting: true },
-        { header: 'Experience', accessorKey: 'experience', size: 100, enableSorting: true },
         { header: 'Vacancies', accessorKey: 'vacancies', size: 90, enableSorting: true, meta: { cellClass: 'text-center', headerClass: 'text-center' } },
-        { header: 'Updated Info', accessorKey: 'updated_at', size: 150, enableSorting: true, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? `${new Date(updated_at).getDate()} ${new Date(updated_at).toLocaleString('en-US', { month: 'short' })} ${new Date(updated_at).getFullYear()}, ${new Date(updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'N/A'; return (<div className="text-xs"><span>{updated_by_user?.name || 'N/A'}</span>{updated_by_user?.roles?.[0]?.display_name && (<><br /><b>{updated_by_user.roles[0].display_name}</b></>)}<br /><span>{formattedDate}</span></div>) } },
-        { header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100, cell: (props) => (<ActionColumn item={props.row.original} onEdit={openEditDrawer} onDelete={handleDeleteClick} onOpenModal={handleOpenModal} />) },
-    ], [departmentOptions, openEditDrawer, handleDeleteClick, handleOpenModal]);
+        { 
+            header: 'Updated Info', 
+            accessorKey: 'updated_at', 
+            enableSorting: true, 
+            size: 200, 
+            cell: (props) => { 
+                const { updated_at, updated_by_user } = props.row.original; 
+                const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                return (
+                    <div className="flex items-center gap-2">
+                        <Avatar 
+                            src={updated_by_user?.profile_pic_path} 
+                            shape="circle" 
+                            size="sm" 
+                            icon={<TbUserCircle />} 
+                            className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                            onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+                        />
+                        <div>
+                            <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                            <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+                            <div className="text-xs text-gray-500">{formattedDate}</div>
+                        </div>
+                    </div>
+                ); 
+            } 
+        },
+        { header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100, cell: (props) => (<ActionColumn item={props.row.original} onEdit={openEditDrawer} onOpenModal={handleOpenModal} />) },
+    ], [departmentOptions, openEditDrawer, handleOpenModal]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<JobPostItem>[]>(columns);
 
@@ -565,7 +561,7 @@ const JobPostsListing = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-4 gap-4">
                         <Tooltip title="Click to show all job posts"><div onClick={() => handleCardClick('all')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-blue-200 dark:border-blue-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbBriefcase size={24} /></div><div><h6 className="text-blue-500 dark:text-blue-200">{jobPostsData?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
                         <Tooltip title="Click to show active job posts"><div onClick={() => handleCardClick('Active')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-violet-200 dark:border-violet-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{jobPostsData?.counts?.active || 0}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show disabled/expired posts"><div onClick={() => handleCardClick('Disabled')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-red-200 dark:border-red-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbFileExcel size={24} /></div><div><h6 className="text-red-500 dark:text-red-200">{jobPostsData?.counts?.expired || 0}</h6><span className="font-semibold text-xs">Expired</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show Inactive/expired posts"><div onClick={() => handleCardClick('Inactive')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-red-200 dark:border-red-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbFileExcel size={24} /></div><div><h6 className="text-red-500 dark:text-red-200">{jobPostsData?.counts?.expired || 0}</h6><span className="font-semibold text-xs">Expired</span></div></Card></div></Tooltip>
                         <Tooltip title="Total views across all job posts"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-orange-200 dark:border-orange-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbFileSmile size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-200">{jobPostsData?.counts?.views || 0}</h6><span className="font-semibold text-xs">Total Views</span></div></Card></Tooltip>
                         <Tooltip title="Total applicants for all jobs"><Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbFileLike size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{jobPostsData?.counts?.applicants || 0}</h6><span className="font-semibold text-xs">Applicants</span></div></Card></Tooltip>
                     </div>
@@ -585,8 +581,10 @@ const JobPostsListing = () => {
                     <div className="mt-4"><JobPostsTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
                 </AdaptiveCard>
             </Container>
+
             <JobPostsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
-            <JobPostModals modalState={modalState} onClose={handleCloseModal} />
+            <JobPostModals modalState={modalState} onClose={handleCloseModal} userOptions={userOptions} />
+
             <Drawer title={editingItem ? 'Edit Job Post' : 'Add New Job Post'} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="jobPostForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? editingItem ? 'Saving...' : 'Adding...' : editingItem ? 'Save' : 'Save'}</Button></div>}>
                 <Form id="jobPostForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-2 ">{renderDrawerForm(formMethods, editingItem)}</Form>
             </Drawer>
@@ -596,6 +594,11 @@ const JobPostsListing = () => {
                     <FormItem label="Filter by Department"><Controller name="filterDepartment" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder={departmentOptions.length > 0 ? 'Any Department' : 'Loading...'} options={departmentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} disabled={departmentOptions.length === 0 && masterLoadingStatus === 'loading'} />)} /></FormItem>
                 </Form>
             </Drawer>
+
+            <Dialog isOpen={!!imageViewerSrc} onClose={() => setImageViewerSrc(null)} onRequestClose={() => setImageViewerSrc(null)}>
+                <img src={imageViewerSrc || ''} alt="User Profile" className="max-w-full max-h-[80vh] mx-auto" />
+            </Dialog>
+
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? 'Submitting...' : 'Submit & Export'} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
                 <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)() }} className="flex flex-col gap-4 mt-2">
                     <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem>
