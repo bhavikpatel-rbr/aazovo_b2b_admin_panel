@@ -628,7 +628,11 @@ const ActivityLog = () => {
       { header: "Action", accessorKey: "action", size: 120, enableSorting: true, cell: (props) => { const action = props.row.original.action; return (<Tag className={classNames("capitalize whitespace-nowrap font-semibold min-w-[90px] text-center dark:bg-opacity-20", changeTypeColor[action] || changeTypeColor.OTHER)}>{CHANGE_TYPE_OPTIONS.find((o) => o.value === action)?.label || action}</Tag>); }, },
       { header: "Entity", accessorKey: "entity", size: 120, enableSorting: true },
       { header: "Description", accessorKey: "description", size: 400, enableSorting: false },
-      { header: "Actions", id: "actions", size: 100, meta: { cellClass: "text-center" }, cell: (props) => (<ActionColumn onViewDetail={() => openViewDialog(props.row.original)} onBlockOrUnblock={() => openBlockOrUnblockDialog(props.row.original)} isBlocked={props.row.original.is_blocked === 1} />), },
+      { header: "Actions", id: "actions", size: 100, meta: { cellClass: "text-center" }, cell: (props) => (
+      <ActionColumn onViewDetail={() => openViewDialog(props.row.original)} 
+      
+      onBlockOrUnblock={() => openBlockOrUnblockDialog(props.row.original)} 
+      isBlocked={props.row.original.is_blocked === 1} />), },
     ],
     [openViewDialog, openBlockOrUnblockDialog]
   );
@@ -763,6 +767,7 @@ const ActivityLog = () => {
         type={blockItem?.is_blocked === 1 ? 'success' : 'danger'}
         title={`${blockItem?.is_blocked === 1 ? 'Unblock' : 'Block'} User/IP`}
         onClose={() => setBlockConfirmationOpen(false)}
+        onCancel={() => setBlockConfirmationOpen(false)}
         onConfirm={handleConfirmBlock}
         loading={isProcessingBlock}
       >
