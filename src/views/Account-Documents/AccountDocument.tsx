@@ -27,8 +27,8 @@ import {
   DatePicker,
   Dialog,
   Drawer,
-  Form,
-  FormItem,
+  Form as UiForm,
+  FormItem as UiFormItem,
   Input,
   Select,
   Select as UiSelect,
@@ -82,7 +82,7 @@ import {
 
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { addNotificationAction, addScheduleAction, getaccountdocAction, getAllUsersAction } from "@/reduxtool/master/middleware";
+import { addNotificationAction, addScheduleAction, getaccountdocAction, getAllUsersAction, submitExportReasonAction } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { shallowEqual, useSelector } from "react-redux";
@@ -111,6 +111,124 @@ const scheduleSchema = z.object({
   notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
+// --- Zod Schema for Export Reason Form ---
+const exportReasonSchema = z.object({
+    reason: z
+      .string()
+      .min(10, "Reason for export is required minimum 10 characters.")
+      .max(255, "Reason cannot exceed 255 characters."),
+  });
+type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+// --- CSV Exporter Utility ---
+const ACCOUNT_DOC_CSV_HEADERS = [
+    "Lead Number",
+    "Company",
+    "Member",
+    "Status",
+    "Document Form",
+    "Document Number",
+    "Invoice Number",
+    "Assigned To",
+    "Creation Date",
+];
+type AccountDocExportItem = {
+    leadNumber: string;
+    companyName: string;
+    memberName: string;
+    status: string;
+    formType: string;
+    documentNumber: string;
+    invoiceNumber: string;
+    userName: string;
+    createdAtFormatted: string;
+};
+const ACCOUNT_DOC_CSV_KEYS_EXPORT: (keyof AccountDocExportItem)[] = [
+    "leadNumber",
+    "companyName",
+    "memberName",
+    "status",
+    "formType",
+    "documentNumber",
+    "invoiceNumber",
+    "userName",
+    "createdAtFormatted",
+];
+
+function exportToCsv(filename: string, rows: AccountDocumentListItem[]) {
+    if (!rows || !rows.length) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
+      return false;
+    }
+
+    const transformedRows: AccountDocExportItem[] = rows.map((row) => ({
+      leadNumber: row.leadNumber || "N/A",
+      companyName: row.companyName || "N/A",
+      memberName: row.memberName || "N/A",
+      status: row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : "N/A",
+      formType: row.formType || "N/A",
+      documentNumber: row.documentNumber || "N/A",
+      invoiceNumber: row.invoiceNumber || "N/A",
+      userName: row.userName || "N/A",
+      createdAtFormatted: row.createdAt
+        ? dayjs(row.createdAt).format('DD/MM/YYYY HH:mm')
+        : "N/A",
+    }));
+
+    const separator = ",";
+    const csvContent =
+      ACCOUNT_DOC_CSV_HEADERS.join(separator) +
+      "\n" +
+      transformedRows
+        .map((row) => {
+          return ACCOUNT_DOC_CSV_KEYS_EXPORT.map((k) => {
+            let cell: any = row[k as keyof AccountDocExportItem];
+            if (cell === null || cell === undefined) {
+              cell = "";
+            } else {
+              cell = String(cell).replace(/"/g, '""');
+            }
+            if (String(cell).search(/("|,|\n)/g) >= 0) {
+              cell = `"${cell}"`;
+            }
+            return cell;
+          }).join(separator);
+        })
+        .join("\n");
+
+    const blob = new Blob(["\ufeff" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.push(
+        <Notification title="Export Successful" type="success">
+          Data exported to {filename}.
+        </Notification>
+      );
+      return true;
+    }
+
+    toast.push(
+      <Notification title="Export Failed" type="danger">
+        Browser does not support this feature.
+      </Notification>
+    );
+    return false;
+}
 
 const eventTypeOptions = [
   // Customer Engagement & Sales
@@ -237,7 +355,7 @@ const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: any
   type NotificationFormData = z.infer<typeof notificationSchema>;
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Regarding Document: ${document.documentNumber}`, send_users: [], message: `This is a notification for document number "${document.documentNumber}" for company "${document.companyName}".` }, mode: 'onChange' });
   const onSend = async (formData: NotificationFormData) => { setIsLoading(true); const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(document.id), module_name: 'AccountDocument', }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsLoading(false); } };
-  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Notify about: {document.documentNumber}</h5><Form onSubmit={handleSubmit(onSend)}><FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem><FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem><FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div></Form></Dialog>);
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Notify about: {document.documentNumber}</h5><UiForm onSubmit={handleSubmit(onSend)}><UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem><UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter((o: any) => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></UiFormItem><UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div></UiForm></Dialog>);
 };
 const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => { /* ... no changes ... */
   const dispatch = useAppDispatch();
@@ -277,16 +395,16 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => { /* ... no 
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for Document {document.documentNumber}</h5>
-      <Form onSubmit={handleSubmit(onAddEvent)}>
-        <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+      <UiForm onSubmit={handleSubmit(onAddEvent)}>
+        <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
-          <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+          <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></UiFormItem>
+          <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></UiFormItem>
         </div>
-        <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
-        <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+        <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></UiFormItem>
+        <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></UiFormItem>
         <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div>
-      </Form>
+      </UiForm>
     </Dialog>
   );
 };
@@ -302,23 +420,23 @@ const AccountDocumentModals = ({ modalState, onClose, getAllUserDataOptions }: a
 const AccountDocumentSearch = React.forwardRef<any, any>((props, ref) => <DebouceInput {...props} ref={ref} />);
 AccountDocumentSearch.displayName = "AccountDocumentSearch";
 const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: any) => { /* ... no changes ... */
-  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const isColumnVisible = (colId: string) => filteredColumns.some((c: any) => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
-      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      const originalColumn = columns.find((c: any) => (c.id || c.accessorKey) === colId);
       if (originalColumn) {
-        setFilteredColumns(prev => {
+        setFilteredColumns((prev: any) => {
           const newCols = [...prev, originalColumn];
           newCols.sort((a, b) => {
-            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            const indexA = columns.findIndex((c: any) => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex((c: any) => (c.id || c.accessorKey) === (b.id || b.accessorKey));
             return indexA - indexB;
           });
           return newCols;
         });
       }
     } else {
-      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      setFilteredColumns((prev: any) => prev.filter((c: any) => (c.id || c.accessorKey) !== colId));
     }
   };
   return (
@@ -327,7 +445,7 @@ const AccountDocumentTableTools = ({ onSearchChange, onFilter, onExport, onClear
       <div className="flex gap-1">
         <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
           <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-            {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
+            {columns.map((col: any) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}
           </div>
         </Dropdown>
         <Button icon={<TbReload />} onClick={onClearFilters}></Button>
@@ -350,7 +468,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: any) =
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
       <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
       {allFilters.map(filter => (
-        <Tag key={`${filter.key}-${filter.value.value}`} prefix>
+        <Tag key={`${filter.key}-${filter.value.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
           {filter.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key, filter.value)} />
         </Tag>
       ))}
@@ -381,6 +499,14 @@ const AccountDocument = () => {
   const [selectedItems, setSelectedItems] = useState<AccountDocumentListItem[]>([]);
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
+  const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   useEffect(() => { dispatch(getAllUsersAction()); dispatch(getaccountdocAction()); }, [dispatch]);
 
@@ -492,6 +618,52 @@ const AccountDocument = () => {
       allFilteredAndSortedData: processedData,
     };
   }, [getaccountdoc, tableData, filterCriteria]);
+  
+  const handleOpenExportReasonModal = () => {
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
+      toast.push(
+        <Notification title="No Data" type="info">
+          Nothing to export.
+        </Notification>
+      );
+      return;
+    }
+    exportReasonFormMethods.reset({ reason: "" });
+    setIsExportReasonModalOpen(true);
+  };
+
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Account_Documents";
+    const timestamp = new Date().toISOString().split("T")[0];
+    const fileName = `${moduleName}_export_${timestamp}.csv`;
+    try {
+      // In a real app, you would dispatch the reason to your backend
+      await dispatch(
+        submitExportReasonAction({
+          reason: data.reason,
+          module: moduleName,
+          file_name: fileName,
+        })
+      ).unwrap();
+      toast.push(
+        <Notification title="Export Reason Submitted" type="success" />
+      );
+      exportToCsv(fileName, allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          title="Failed to Submit Reason"
+          type="danger"
+          children={error.message || "An error occurred while submitting the reason."}
+        />
+      );
+    } finally {
+      setIsSubmittingExportReason(false);
+    }
+  };
+
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const handleDeleteClick = useCallback((item: AccountDocumentListItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
@@ -553,7 +725,7 @@ const AccountDocument = () => {
   };
 
   const columns: ColumnDef<AccountDocumentListItem>[] = useMemo(() => [
-    { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<AccountDocumentListItem, any>) => (<Tag className={`${accountDocumentStatusColor[props.row.original.status as keyof typeof accountDocumentStatusColor] || 'bg-gray-100'} capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag>), },
+    { header: "Status", accessorKey: "status", size: 120, cell: (props: CellContext<AccountDocumentListItem, any>) => (<Tag className={`${accountDocumentStatusColor[props.row.original.status as keyof typeof accountDocumentStatusColor] || 'bg-gray-100'} capitalize px-2 py-1 text-xs`}>{props.row.original.status.replace(/_/g, ' ')}</Tag>), },
     { header: "Lead / Enquiry", accessorKey: "leadNumber", size: 130, cell: (props) => { const { leadNumber, enquiryType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span>{leadNumber}</span><div><Tag className={`${enquiryTypeColor[enquiryType as keyof typeof enquiryTypeColor] || enquiryTypeColor.default} capitalize px-2 py-1 text-xs`}>{enquiryType}</Tag></div></div>); }, },
     { header: "Member / Company", accessorKey: "memberName", size: 220, cell: (props: CellContext<AccountDocumentListItem, any>) => { const { companyName, memberName, userName, companyDocumentType } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><b>{companyName}</b><span>Member: {memberName}</span><span>Assigned To: {userName}</span><div><b>Company Document: </b><span>{companyDocumentType}</span></div></div>); }, },
     { header: "Document Details", size: 220, cell: (props) => { const { documentType, documentNumber, invoiceNumber, formType, createdAt } = props.row.original; return (<div className="flex flex-col gap-0.5 text-xs"><div><b>Doc Type ID: </b><span>{documentType}</span></div><div><b>Doc No: </b><span>{documentNumber}</span></div><div><b>Invoice No: </b><span>{invoiceNumber}</span></div><div><b>Form: </b><span>{formType}</span></div><b>{dayjs(createdAt).format("DD MMM, YYYY HH:mm")}</b></div>); }, },
@@ -599,7 +771,7 @@ const AccountDocument = () => {
             <Tooltip title="Total Aazovo documents"><div className="cursor-default"><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500">{counts.aazovo}</h6><span className="font-semibold text-xs">Aazovo Docs</span></div></Card></div></Tooltip>
             <Tooltip title="Total OMC documents"><div className="cursor-default"><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbFileExcel size={24} /></div><div><h6 className="text-pink-500">{counts.omc}</h6><span className="font-semibold text-xs">OMC Docs</span></div></Card></div></Tooltip>
           </div>
-          <AccountDocumentTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={() => { }} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+          <AccountDocumentTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4 flex-grow overflow-y-auto"><AccountDocumentTable selectable columns={filteredColumns} data={pageData} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
         </AdaptiveCard>
@@ -615,8 +787,8 @@ const AccountDocument = () => {
             <Button size="sm" variant="solid" form="filterAccountDocumentForm" type="submit">Apply</Button>
           </div>
         }>
-        <Form id="filterAccountDocumentForm" onSubmit={filterForm.handleSubmit(onApplyFilters)}>
-          <FormItem label="Status">
+        <UiForm id="filterAccountDocumentForm" onSubmit={filterForm.handleSubmit(onApplyFilters)}>
+          <UiFormItem label="Status">
             <Controller
               control={filterForm.control}
               name="filterStatus"
@@ -624,8 +796,8 @@ const AccountDocument = () => {
                 <Select {...field} placeholder="Select Status" isMulti options={filterOptions.statusOptions} />
               )}
             />
-          </FormItem>
-          <FormItem label="Document Type">
+          </UiFormItem>
+          <UiFormItem label="Document Type">
             <Controller
               control={filterForm.control}
               name="doc_type"
@@ -633,8 +805,8 @@ const AccountDocument = () => {
                 <Select {...field} placeholder="Select Document Type" isMulti options={filterOptions.docTypeOptions} />
               )}
             />
-          </FormItem>
-          <FormItem label="Company Document">
+          </UiFormItem>
+          <UiFormItem label="Company Document">
             <Controller
               control={filterForm.control}
               name="comp_doc"
@@ -642,14 +814,67 @@ const AccountDocument = () => {
                 <Select {...field} placeholder="Select Company Document" isMulti options={filterOptions.companyDocOptions} />
               )}
             />
-          </FormItem>
-        </Form>
+          </UiFormItem>
+        </UiForm>
       </Drawer>
 
       <Drawer title="Add New Document" width={520} isOpen={isAddNewDocumentDrawerOpen} onClose={closeAddNewDocumentDrawer} onRequestClose={closeAddNewDocumentDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" type="button">Cancel</Button><Button size="sm" variant="solid" form="filterLeadForm" type="submit">Save</Button></div>}>
-        <Form><FormItem label={<div>Company Document<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="comp_doc" render={({ field }) => (<Select {...field} placeholder="Select Company Document" options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" },]} />)} /></FormItem><FormItem label={<div>Document Type<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_type" render={({ field }) => (<Select {...field} placeholder="Select Document Type" options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" },]} />)} /></FormItem><div className="md:grid grid-cols-2 gap-3"><FormItem label={<div>Document Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_number" render={({ field }) => (<Input type="text" placeholder="Enter Document Number" {...field} />)} /></FormItem><FormItem label={<div>Invoice Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="invoice_number" render={({ field }) => (<Input type="text" placeholder="Enter Invoice Number" {...field} />)} /></FormItem></div><div className="md:grid grid-cols-2 gap-3"><FormItem label={<div>Token Form<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="token_form" render={({ field }) => (<Select {...field} placeholder="Select Form Type" options={[{ label: "CRM PI 1.0.2", value: "CRM PI 1.0.2" }, { label: "Debit Note", value: "Debit Note" }, { label: "Credit Note", value: "Credit Note" }, { label: "CRM PO 1.0.3", value: "CRM PO 1.0.3" },]} />)} /></FormItem><FormItem label={<div>Employee<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="employee" render={({ field }) => (<Select {...field} placeholder="Select Employee" options={[{ label: "Hevin Patel", value: "Hevin Patel" }, { label: "Vinit Chauhan", value: "Vinit Chauhan" },]} />)} /></FormItem></div><div className="md:grid grid-cols-2 gap-3 items-center"><FormItem label={<div>Member<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="member" render={({ field }) => (<Select {...field} placeholder="Select Member" options={[{ label: "Ajay Patel - 703549", value: "Ajay Patel - 703549", }, { label: "Krishnan Iyer - 703752", value: "Krishnan Iyer - 703752", },]} />)} /></FormItem><div className="text-xs mt-4"><b>5039522</b> <br /><span>XYZ Enterprise</span></div></div><span className="text-xs">Member is not associated with any company.</span></Form>
+        <UiForm><UiFormItem label={<div>Company Document<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="comp_doc" render={({ field }) => (<Select {...field} placeholder="Select Company Document" options={[{ label: "Aazovo", value: "Aazovo" }, { label: "OMC", value: "OMC" },]} />)} /></UiFormItem><UiFormItem label={<div>Document Type<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_type" render={({ field }) => (<Select {...field} placeholder="Select Document Type" options={[{ label: "Sales Order", value: "Sales Order" }, { label: "Purchase Order", value: "Purchase Order" }, { label: "Credit Note", value: "Credit Note" }, { label: "Debit Note", value: "Debit Note" },]} />)} /></UiFormItem><div className="md:grid grid-cols-2 gap-3"><UiFormItem label={<div>Document Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="doc_number" render={({ field }) => (<Input type="text" placeholder="Enter Document Number" {...field} />)} /></UiFormItem><UiFormItem label={<div>Invoice Number<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="invoice_number" render={({ field }) => (<Input type="text" placeholder="Enter Invoice Number" {...field} />)} /></UiFormItem></div><div className="md:grid grid-cols-2 gap-3"><UiFormItem label={<div>Token Form<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="token_form" render={({ field }) => (<Select {...field} placeholder="Select Form Type" options={[{ label: "CRM PI 1.0.2", value: "CRM PI 1.0.2" }, { label: "Debit Note", value: "Debit Note" }, { label: "Credit Note", value: "Credit Note" }, { label: "CRM PO 1.0.3", value: "CRM PO 1.0.3" },]} />)} /></UiFormItem><UiFormItem label={<div>Employee<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="employee" render={({ field }) => (<Select {...field} placeholder="Select Employee" options={[{ label: "Hevin Patel", value: "Hevin Patel" }, { label: "Vinit Chauhan", value: "Vinit Chauhan" },]} />)} /></UiFormItem></div><div className="md:grid grid-cols-2 gap-3 items-center"><UiFormItem label={<div>Member<span className="text-red-500"> * </span></div>}><Controller control={addNewDocumentForm.control} name="member" render={({ field }) => (<Select {...field} placeholder="Select Member" options={[{ label: "Ajay Patel - 703549", value: "Ajay Patel - 703549", }, { label: "Krishnan Iyer - 703752", value: "Krishnan Iyer - 703752", },]} />)} /></UiFormItem><div className="text-xs mt-4"><b>5039522</b> <br /><span>XYZ Enterprise</span></div></div><span className="text-xs">Member is not associated with any company.</span></UiForm>
       </Drawer>
       <AccountDocumentModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
+      <ConfirmDialog
+        isOpen={isExportReasonModalOpen}
+        type="info"
+        title="Reason for Export"
+        onClose={() => setIsExportReasonModalOpen(false)}
+        onRequestClose={() => setIsExportReasonModalOpen(false)}
+        onCancel={() => setIsExportReasonModalOpen(false)}
+        onConfirm={exportReasonFormMethods.handleSubmit(
+          handleConfirmExportWithReason
+        )}
+        loading={isSubmittingExportReason}
+        confirmText={
+          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
+        }
+        cancelText="Cancel"
+        confirmButtonProps={{
+          disabled:
+            !exportReasonFormMethods.formState.isValid ||
+            isSubmittingExportReason,
+        }}
+      >
+        <UiForm
+          id="exportReasonForm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            exportReasonFormMethods.handleSubmit(
+              handleConfirmExportWithReason
+            )();
+          }}
+          className="flex flex-col gap-4 mt-2"
+        >
+          <UiFormItem
+            label="Please provide a reason for exporting this data:"
+            invalid={!!exportReasonFormMethods.formState.errors.reason}
+            errorMessage={
+              exportReasonFormMethods.formState.errors.reason?.message
+            }
+          >
+            <Controller
+              name="reason"
+              control={exportReasonFormMethods.control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Enter reason..."
+                  rows={3}
+                />
+              )}
+            />
+          </UiFormItem>
+        </UiForm>
+      </ConfirmDialog>
     </>
   );
 };
