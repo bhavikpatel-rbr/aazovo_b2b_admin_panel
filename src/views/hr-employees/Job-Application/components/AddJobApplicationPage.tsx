@@ -27,7 +27,7 @@ import {
     editJobApplicationAction,
     getCountriesAction,
     getDepartmentsAction,
-    getJobApplicationsAction, // You will need to create this action
+    getJobApplicationsAction,
 } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from "@/reduxtool/store";
 
@@ -35,8 +35,6 @@ import { useAppDispatch } from "@/reduxtool/store";
 import type {
     ApplicationFormData
 } from '../types';
-
-// --- Schemas, Types, and Transformation Functions remain the same ---
 
 // --- Schemas & Types ---
 const phoneRegex = new RegExp(/^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/);
@@ -136,18 +134,26 @@ const transformFormStatusToApiStatus = (formStatusValue?: string): string => {
     return option ? option.label : formStatusValue;
 };
 
+// --- CORRECTED DATA TRANSFORMATION LOGIC ---
 const transformApiToFormData = (apiData: any): ApplicationFormData => {
     const safeJsonParse = (jsonString: string | null | object, defaultVal: any[] = []) => {
         if (!jsonString) return defaultVal;
-        if (typeof jsonString === 'object' && jsonString !== null) return jsonString;
+        if (typeof jsonString === 'object' && jsonString !== null) return jsonString; // Already parsed
         try {
             let parsed = JSON.parse(jsonString as string);
-            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+            // Handle double-stringified JSON
+            if (typeof parsed === 'string') {
+                parsed = JSON.parse(parsed);
+            }
             return Array.isArray(parsed) ? parsed : defaultVal;
-        } catch (e) { return defaultVal; }
+        } catch (e) {
+            console.error("Failed to parse JSON string from API:", jsonString, e);
+            return defaultVal;
+        }
     };
+
     const workExperienceType = apiData.work_experience === "experienced" || apiData.work_experience === 1 || apiData.work_experience === "1" ? 'experienced' : 'fresher';
-    const parseDate = (date: any) => date ? dayjs(date).toDate() : null;
+    const parseDate = (date: any) => (date ? dayjs(date).toDate() : null);
 
     return {
         department: apiData.job_department_id ? Number(apiData.job_department_id) : undefined,
@@ -181,9 +187,34 @@ const transformApiToFormData = (apiData: any): ApplicationFormData => {
         notes: apiData.remarks || "",
         emergencyRelation: apiData.emg_relation || "",
         emergencyMobileNo: apiData.emg_mobile_no || "",
-        familyDetails: safeJsonParse(apiData.family_details).map((fd: any) => ({ familyName: fd.name || "", familyRelation: fd.relation || "", familyOccupation: fd.occupation || "", familyDateOfBirth: parseDate(fd.dob) })),
-        educationalDetails: safeJsonParse(apiData.education_details).map((ed: any) => ({ degree: ed.degree || "", university: ed.university || "", percentageGrade: ed.grade || "", educationFromDate: parseDate(ed.from_date), educationToDate: parseDate(ed.to_date), specialization: ed.specialization || "" })),
-        employmentDetails: workExperienceType === 'experienced' ? safeJsonParse(apiData.employee_details).map((emp: any) => ({ organization: emp.company_name || "", designation: emp.designation || "", annualCTC: emp.annual_ctc || "", periodServiceFrom: parseDate(emp.from_date), periodServiceTo: parseDate(emp.to_date) })) : [],
+
+        // FIXED: Mapped keys to match the API response (e.g., familyName instead of name)
+        familyDetails: safeJsonParse(apiData.family_details).map((fd: any) => ({
+            familyName: fd.familyName || "",
+            familyRelation: fd.familyRelation || "",
+            familyOccupation: fd.familyOccupation || "",
+            familyDateOfBirth: parseDate(fd.dob || fd.familyDateOfBirth)
+        })),
+        
+        // FIXED: Mapped percentageGrade and made date parsing more robust
+        educationalDetails: safeJsonParse(apiData.education_details).map((ed: any) => ({
+            degree: ed.degree || "",
+            university: ed.university || "",
+            percentageGrade: ed.percentageGrade || "",
+            educationFromDate: parseDate(ed.from_date || ed.educationFromDate),
+            educationToDate: parseDate(ed.to_date || ed.educationToDate),
+            specialization: ed.specialization || ""
+        })),
+
+        employmentDetails: workExperienceType === 'experienced'
+            ? safeJsonParse(apiData.employee_details).map((emp: any) => ({
+                organization: emp.company_name || "",
+                designation: emp.designation || "",
+                annualCTC: emp.annual_ctc || "",
+                periodServiceFrom: parseDate(emp.from_date),
+                periodServiceTo: parseDate(emp.to_date)
+            }))
+            : [],
     };
 };
 
@@ -214,7 +245,7 @@ const transformFormDataToApiPayload = (formData: ApplicationFormData, applicatio
     append('work_experience', formData.workExperienceType === "experienced" ? "1" : "0");
     append('emg_mobile_no', formData.emergencyMobileNo);
     append('emg_relation', formData.emergencyRelation);
-    
+
     if (formData.workExperienceType === "experienced") {
         append('total_experience', formData.total_experience);
         append('expected_salary', formData.expected_salary);
@@ -222,13 +253,13 @@ const transformFormDataToApiPayload = (formData: ApplicationFormData, applicatio
         append('reference', formData.reference);
         append('reference_specify', formData.reference_specify);
     }
-    
+
     if (formData.resume instanceof File) payload.append('resume', formData.resume);
-    
+
     append('education_details', JSON.stringify(formData.educationalDetails?.map(ed => ({ ...ed, from_date: dayjs(ed.educationFromDate).format("YYYY-MM-DD"), to_date: dayjs(ed.educationToDate).format("YYYY-MM-DD") })) || []));
     append('employee_details', JSON.stringify(formData.workExperienceType === "experienced" ? formData.employmentDetails?.map(emp => ({ ...emp, from_date: dayjs(emp.periodServiceFrom).format("YYYY-MM-DD"), to_date: dayjs(emp.periodServiceTo).format("YYYY-MM-DD") })) || [] : []));
     append('family_details', JSON.stringify(formData.familyDetails?.map(fd => ({ ...fd, dob: fd.familyDateOfBirth ? dayjs(fd.familyDateOfBirth).format("YYYY-MM-DD") : '' })) || []));
-    
+
     append('status', transformFormStatusToApiStatus(formData.status));
     append('remarks', formData.notes);
     append('job_title', formData.jobTitle);
@@ -244,13 +275,13 @@ const AddJobApplicationPage = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const { id: applicationId } = useLocation()?.state || {};
-    
+
     const isEditMode = !!applicationId;
 
     const [isLoadingData, setIsLoadingData] = useState(isEditMode);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
-    
+
     const { jobApplicationsData, departmentsData, CountriesData } = useSelector(masterSelector);
 
     useEffect(() => {
@@ -264,7 +295,7 @@ const AddJobApplicationPage = () => {
         return depts.map((dept) => ({ value: dept.id, label: dept.name }));
     }, [departmentsData?.data]);
 
-    const countryOptions = useMemo(() => CountriesData.map((country: any) => ({ value: country.id, label: country.name })), [CountriesData]);
+    const countryOptions = useMemo(() => CountriesData?.length > 0 ? CountriesData.map((country: any) => ({ value: country.id, label: country.name })) : [], [CountriesData]);
 
     const { control, handleSubmit, reset, formState: { errors, isDirty }, watch, setValue } = useForm<ApplicationFormData>({
         resolver: zodResolver(applicationFormSchema),
@@ -273,11 +304,11 @@ const AddJobApplicationPage = () => {
     });
 
     useEffect(() => {
-        if (isEditMode) {
-            const fetchApplicationData = async () => {
+        if (isEditMode && jobApplicationsData?.data) { // Ensure data is available before processing
+            const fetchApplicationData = () => {
+                setIsLoadingData(true);
                 try {
-                    
-                    const result = jobApplicationsData?.data?.find((val:any)=> val.id == applicationId);
+                    const result = jobApplicationsData.data.find((val: any) => val.id == applicationId);
                     if (result) {
                         const formData = transformApiToFormData(result);
                         reset(formData);
@@ -286,19 +317,21 @@ const AddJobApplicationPage = () => {
                         navigate('/hr-employees/job-applications');
                     }
                 } catch (error) {
-                    toast.push(<Notification title="Error" type="danger">Failed to fetch application data.</Notification>);
+                    console.error("Error processing application data:", error);
+                    toast.push(<Notification title="Error" type="danger">Failed to process application data.</Notification>);
                     navigate('/hr-employees/job-applications');
                 } finally {
                     setIsLoadingData(false);
                 }
             };
             fetchApplicationData();
-        } else {
-            reset({ status: "New", workExperienceType: "fresher", applicationDate: new Date(), educationalDetails: [], employmentDetails: [], familyDetails: [] });
-            setIsLoadingData(false);
+        } else if (!isEditMode) {
+             reset({ status: "New", workExperienceType: "fresher", applicationDate: new Date(), educationalDetails: [], employmentDetails: [], familyDetails: [] });
+             setIsLoadingData(false);
         }
-    }, [isEditMode, applicationId, dispatch, navigate, reset]);
-    
+    }, [isEditMode, applicationId, navigate, reset, jobApplicationsData]);
+
+
     const workExperienceType = watch('workExperienceType');
     const dob = watch('dateOfBirth');
     const resumeValue = watch('resume');
@@ -323,7 +356,7 @@ const AddJobApplicationPage = () => {
     const onSubmitHandler = async (formData: ApplicationFormData) => {
         setIsSubmitting(true);
         const payload = transformFormDataToApiPayload(formData, applicationId);
-        const action = isEditMode ? editJobApplicationAction(payload) : addJobApplicationAction(payload);
+        const action = isEditMode ? editJobApplicationAction({ id: applicationId, data: payload }) : addJobApplicationAction(payload);
 
         try {
             await dispatch(action).unwrap();
@@ -354,11 +387,11 @@ const AddJobApplicationPage = () => {
                         <BiChevronRight size={18} className="text-gray-500" />
                         <h6 className='font-semibold text-primary-600'>{isEditMode ? 'Edit Application' : 'Add New Application'}</h6>
                     </div>
-                    
+
                     <Card id="personalDetails" className="mb-6">
                         <h4 className="mb-6">1. Personal Details</h4>
                         <div className="grid md:grid-cols-3 gap-x-4 gap-y-2">
-                            <FormItem label={<div>Job Department<span className="text-red-500"> * </span></div>} error={errors.department?.message}><Controller name="department" control={control} render={({ field }) =><UiSelect {...field} placeholder="Select Department" invalid={!!errors.department} options={departmentOptions} value={departmentOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
+                            <FormItem label={<div>Job Department<span className="text-red-500"> * </span></div>} error={errors.department?.message}><Controller name="department" control={control} render={({ field }) => <UiSelect {...field} placeholder="Select Department" invalid={!!errors.department} options={departmentOptions} value={departmentOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                             <FormItem label={<div>Applicant Name<span className="text-red-500"> * </span></div>} error={errors.name?.message}><Controller name="name" control={control} render={({ field }) => <Input {...field} invalid={!!errors.name} placeholder="Full name" />} /></FormItem>
                             <FormItem label={<div>Email<span className="text-red-500"> * </span></div>} error={errors.email?.message}><Controller name="email" control={control} render={({ field }) => <Input {...field} invalid={!!errors.email} type="email" placeholder="email@example.com" />} /></FormItem>
                             <FormItem label={<div>Mobile No.<span className="text-red-500"> * </span></div>} error={errors.mobileNo?.message}><Controller name="mobileNo" control={control} render={({ field }) => <Input {...field} invalid={!!errors.mobileNo} placeholder="+1234567890" />} /></FormItem>
@@ -386,8 +419,8 @@ const AddJobApplicationPage = () => {
                             <FormItem label={<div>Application Date<span className="text-red-500"> * </span></div>} error={errors.applicationDate?.message}><Controller name="applicationDate" control={control} render={({ field }) => <DatePicker placeholder="Select date" {...field} invalid={!!errors.applicationDate} value={field.value} onChange={date => field.onChange(date)} />} /></FormItem>
                             <FormItem label={<div>Application Status<span className="text-red-500"> * </span></div>} error={errors.status?.message}><Controller name="status" control={control} render={({ field }) => <UiSelect placeholder="Select status" invalid={!!errors.status} options={applicationStatusOptions} value={applicationStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />} /></FormItem>
                             <FormItem label="Resume" error={errors.resume?.message} className="lg:col-span-1 md:col-span-2">
-                                {isEditMode && typeof resumeValue === 'string' && resumeValue && ( <div className="mb-2"> <a href={resumeValue} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-600 hover:underline"> View Current Resume </a> </div> )}
-                                <Controller name="resume" control={control} render={({ field: { onChange, onBlur, name, ref } }) => ( <Input type="file" name={name} ref={ref} onBlur={onBlur} invalid={!!errors.resume} onChange={(e) => { onChange(e.target.files?.[0] || null); }} accept=".pdf,.doc,.docx,.txt" /> )}/>
+                                {isEditMode && typeof resumeValue === 'string' && resumeValue && (<div className="mb-2"> <a href={resumeValue} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-600 hover:underline"> View Current Resume </a> </div>)}
+                                <Controller name="resume" control={control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} invalid={!!errors.resume} onChange={(e) => { onChange(e.target.files?.[0] || null); }} accept=".pdf,.doc,.docx,.txt" />)} />
                             </FormItem>
                             <FormItem label="Job Application Link" error={errors.jobApplicationLink?.message} className="lg:col-span-2 md:col-span-1"><Controller name="jobApplicationLink" control={control} render={({ field }) => <Input {...field} invalid={!!errors.jobApplicationLink} placeholder="https://job-portal/apply/123 or text" />} /></FormItem>
                             <FormItem label="Cover Letter" error={errors.coverLetter?.message} className="md:col-span-3"><Controller name="coverLetter" control={control} render={({ field }) => <Input {...field} invalid={!!errors.coverLetter} textArea rows={3} placeholder="Enter cover letter content..." />} /></FormItem>
@@ -409,7 +442,7 @@ const AddJobApplicationPage = () => {
                             </div>
                         ))}
                     </Card>
-                    
+
                     <Card id="emergencyContact" className="mb-6">
                         <h4 className="mb-6">3. Emergency Contact Details<span className="text-red-500"> * </span></h4>
                         <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
@@ -435,7 +468,7 @@ const AddJobApplicationPage = () => {
                             </div>
                         ))}
                     </Card>
-                    
+
                     {workExperienceType === 'experienced' && (
                         <Card id="employmentDetails" className="mb-6">
                             <div className="flex justify-between items-center mb-4"><h4 className="mb-0">5. Employment Details<span className="text-red-500"> * </span></h4><Button size="sm" type="button" icon={<TbPlus />} onClick={() => appendEmp({ organization: '', designation: '', annualCTC: '', periodServiceFrom: null, periodServiceTo: null })}>Add Employment</Button></div>
@@ -463,7 +496,7 @@ const AddJobApplicationPage = () => {
                     </div>
                 </form>
             </FormContainer>
-            
+
             <ConfirmDialog isOpen={cancelConfirmOpen} type="warning" title="Discard Changes?" onClose={() => setCancelConfirmOpen(false)} onConfirm={() => { setCancelConfirmOpen(false); reset(); navigate('/hr-employees/job-applications'); }} onCancel={() => setCancelConfirmOpen(false)}>
                 <p>You have unsaved changes. Discard them and leave?</p>
             </ConfirmDialog>
