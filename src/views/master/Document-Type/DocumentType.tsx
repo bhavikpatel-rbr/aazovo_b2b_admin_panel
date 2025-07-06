@@ -163,7 +163,7 @@ const Documentmaster = () => {
 
     const columns: ColumnDef<DocumentTypeItem>[] = useMemo(() => [
         { header: "Document Type Name", accessorKey: "name", enableSorting: true, size: 200 },
-        { header: "Departments", accessorKey: "departments", size: 250, cell: (props) => { const departments = props.row.original.departments || []; return (<div className="flex flex-wrap gap-1">{departments.map(dept => <Tag key={dept.id} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100">{dept.name}</Tag>)}</div>) } },
+        { header: "Departments", accessorKey: "departments", size: 250, cell: (props) => { const departments = props.row.original.departments || []; return (<div className="flex flex-wrap gap-1">{departments.map(dept => <Tag key={dept.id} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100 text-[11px]">{dept.name}</Tag>)}</div>) } },
         {
         header: "Updated Info",
         accessorKey: "updated_at",
@@ -205,7 +205,7 @@ const Documentmaster = () => {
         },
       },
 
-        { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
+        { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
     ], [departmentOptionsForSelect]);
 
