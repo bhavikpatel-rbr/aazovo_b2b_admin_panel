@@ -2084,7 +2084,12 @@ export const getJobApplicationAsync = async () => {
 
 export const addJobApplicationAsync = async (applicationData: any) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/job_application`, applicationData)
+    const response = await axiosInstance.post(`${config.apiURL}/other/job_application`, applicationData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
     return response
   } catch (err) {
     return isAxiosError(err)
