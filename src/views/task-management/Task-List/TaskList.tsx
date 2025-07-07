@@ -51,6 +51,7 @@ import {
     TbPaperclip,
     TbMessageCircle,
     TbColumns,
+    TbTrash // ADDED: Icon for delete action
 } from 'react-icons/tb'
 import { BsThreeDotsVertical } from 'react-icons/bs'
 
@@ -71,7 +72,10 @@ import {
     submitExportReasonAction,
     addNotificationAction,
     addScheduleAction,
-    getAllUsersAction
+    getAllUsersAction,
+    // ADDED: Placeholder actions to mirror RowDataListing.tsx functionality
+    deleteTaskAction,
+    updateTaskStatusAPI,
 } from '@/reduxtool/master/middleware'
 
 // --- Consolidated Type Definitions ---
@@ -553,6 +557,7 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
 
 // --- Reusable Components ---
 
+// CHANGED: ActionColumn component updated to include Delete and Change Status actions
 export const ActionColumn = ({
     onEdit,
     onView,
@@ -602,6 +607,14 @@ export const ActionColumn = ({
                     <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
                 }
             >
+                {/* ADDED: Mark as Completed action */}
+                {onChangeStatus && (
+                    <Dropdown.Item className="flex items-center gap-2" onClick={onChangeStatus}>
+                        <TbChecks size={18} className="text-emerald-500" />
+                        <span className="text-xs">Mark as Completed</span>
+                    </Dropdown.Item>
+                )}
+                
                 <Dropdown.Item className="flex items-center gap-2">
                     <TbMail size={18} />
                     <span className="text-xs">Send Email</span>
@@ -631,6 +644,17 @@ export const ActionColumn = ({
                     <TbActivity size={18} />
                     <span className="text-xs">Add / View Activity</span>
                 </Dropdown.Item>
+
+                {/* ADDED: Delete action with divider for separation */}
+                {onDelete && (
+                    <>
+                        <Dropdown.Item divider />
+                        <Dropdown.Item className="flex items-center gap-2" onClick={onDelete}>
+                            <TbTrash size={18} className="text-red-500" />
+                            <span className="text-xs text-red-500">Delete Task</span>
+                        </Dropdown.Item>
+                    </>
+                )}
             </Dropdown>
 
         </div>
@@ -1001,14 +1025,17 @@ export const ActiveFiltersDisplay = ({
     )
 }
 
+// CHANGED: TaskSelected component now accepts an `isDeleting` prop for loading state
 export const TaskSelected = ({
     selectedTasks,
     setSelectedTasks,
     onDeleteSelected,
+    isDeleting,
 }: {
     selectedTasks: TaskItem[]
     setSelectedTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>
     onDeleteSelected: () => void
+    isDeleting: boolean;
 }) => {
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
     const handleDeleteClick = () => setDeleteConfirmationOpen(true)
@@ -1047,6 +1074,7 @@ export const TaskSelected = ({
                             variant="plain"
                             className="text-red-600 hover:text-red-500"
                             onClick={handleDeleteClick}
+                            loading={isDeleting}
                         >
                             Delete
                         </Button>
@@ -1063,6 +1091,7 @@ export const TaskSelected = ({
                 onCancel={handleCancelDelete}
                 onConfirm={handleConfirmDelete}
                 confirmButtonColor="red-600"
+                loading={isDeleting}
             >
                 <p>
                     Are you sure you want to delete the selected task
@@ -1312,6 +1341,7 @@ const transformApiTaskToTaskItem = (apiTask: any): TaskItem => {
 }
 
 // --- useTaskListingLogic Hook ---
+// CHANGED: This hook is heavily modified to use Redux for CRUD, manage loading states, and handle confirmations.
 export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } = {}) => {
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
@@ -1348,6 +1378,11 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
     const [visibleColumns, setVisibleColumns] = useState<ColumnDef<TaskItem>[]>([])
 
+    // ADDED: State for action handling (delete, update)
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [taskToDelete, setTaskToDelete] = useState<TaskItem | null>(null);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
     const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
 
@@ -1549,42 +1584,82 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         },
         [navigate],
     )
+    
+    // CHANGED: handleDelete now just opens a confirmation dialog
     const handleDelete = useCallback(
         (taskToDelete: TaskItem) => {
-            setTasks((prev) =>
-                prev.filter((task) => task.id !== taskToDelete.id),
-            )
-            setSelectedTasks((prev) =>
-                prev.filter((task) => task.id !== taskToDelete.id),
-            )
+            setTaskToDelete(taskToDelete);
+            setIsDeleteConfirmOpen(true);
+        },
+        [],
+    )
+
+    // ADDED: onConfirmDelete handles the actual deletion after confirmation
+    const onConfirmDelete = useCallback(async () => {
+        if (!taskToDelete) return;
+        setIsDeleting(true);
+        try {
+            await dispatch(deleteTaskAction({ id: taskToDelete.id })).unwrap();
             toast.push(
                 <Notification title="Task Deleted" type="success">
                     Task "{taskToDelete.note}" has been deleted.
                 </Notification>,
-            )
-        },
-        [setTasks, setSelectedTasks],
-    )
+            );
+            dispatch(getAllTaskAction()); // Re-fetch data
+            setSelectedTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
+        } catch (error: any) {
+            toast.push(<Notification title="Delete Failed" type="danger" children={error.message || 'An error occurred.'} />);
+        } finally {
+            setIsDeleting(false);
+            setIsDeleteConfirmOpen(false);
+            setTaskToDelete(null);
+        }
+    }, [dispatch, taskToDelete]);
+
+    // CHANGED: handleChangeStatus now dispatches a Redux action
     const handleChangeStatus = useCallback(
-        (taskToUpdate: TaskItem, newStatus: TaskStatus = 'completed') => {
-            setTasks(prevTasks => prevTasks.map(task =>
-                task.id === taskToUpdate.id ? { ...task, status: newStatus } : task
-            ));
-            toast.push(<Notification title="Status Updated" type="success" children={`Task "${taskToUpdate.note}" marked as ${newStatus.replace(/_/g, " ")}.`} />);
+        async (taskToUpdate: TaskItem, newStatus: TaskStatus = 'completed') => {
+            setIsUpdating(true);
+            try {
+                // Assuming a generic update action that takes an ID and a payload
+                const payload = { ...taskToUpdate, status: newStatus };
+                await dispatch(updateTaskStatusAPI({id: taskToUpdate.id, ...payload})).unwrap();
+                toast.push(
+                    <Notification title="Status Updated" type="success">
+                        Task "{taskToUpdate.note}" marked as {newStatus.replace(/_/g, ' ')}.
+                    </Notification>,
+                );
+                dispatch(getAllTaskAction()); // Re-fetch data
+            } catch (error: any) {
+                 toast.push(<Notification title="Update Failed" type="danger" children={error.message || 'An error occurred.'} />);
+            } finally {
+                setIsUpdating(false);
+            }
         },
-        [setTasks]
+        [dispatch],
     );
-    const handleDeleteSelected = useCallback(() => {
-        setTasks((prev) =>
-            prev.filter((task) => !selectedTasks.find((s) => s.id === task.id)),
-        )
-        setSelectedTasks([])
-        toast.push(
-            <Notification title="Tasks Deleted" type="success">
-                Selected tasks have been deleted.
-            </Notification>,
-        )
-    }, [selectedTasks, setTasks, setSelectedTasks])
+
+    // CHANGED: handleDeleteSelected now dispatches a Redux action
+    const handleDeleteSelected = useCallback(async () => {
+        const idsToDelete = selectedTasks.map((t) => t.id);
+        if (idsToDelete.length === 0) return;
+
+        setIsDeleting(true);
+        try {
+            await dispatch(deleteAllTasksAction({ ids: idsToDelete })).unwrap();
+            toast.push(
+                <Notification title="Tasks Deleted" type="success">
+                    {idsToDelete.length} task(s) have been deleted.
+                </Notification>,
+            );
+            setSelectedTasks([]);
+            dispatch(getAllTaskAction()); // Re-fetch data
+        } catch (error: any) {
+             toast.push(<Notification title="Delete Failed" type="danger" children={error.message || 'An error occurred.'} />);
+        } finally {
+            setIsDeleting(false);
+        }
+    }, [dispatch, selectedTasks]);
 
     const handleOpenExportReasonModal = () => {
         if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -1871,7 +1946,9 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     )
 
     return {
-        isLoading,
+        // Base state and data
+        isLoading: isLoading || isUpdating, // Combine page load with update status
+        isDeleting,
         tasks,
         tableData,
         selectedTasks,
@@ -1883,33 +1960,57 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         allFilteredAndSortedData,
         columns,
         visibleColumns,
+        
+        // Table handlers
         handlePaginationChange,
         handleSelectChange,
         handleSort,
         handleSearchChange,
+        
+        // Filter handlers
         handleApplyFilter,
         handleRemoveFilter,
         handleClearAllFilters,
+        
+        // Row selection handlers
         handleRowSelect,
         handleAllRowSelect,
+
+        // CRUD handlers
         handleDeleteSelected,
+        onConfirmDelete, // ADDED: New handler for single deletion confirmation
+        
+        // Data sources for filters
         uniqueAssignees,
         uniqueStatuses,
+        
+        // Export modal
         isExportReasonModalOpen,
         setIsExportReasonModalOpen,
         isSubmittingExportReason,
         exportReasonFormMethods,
         handleOpenExportReasonModal,
         handleConfirmExportWithReason,
+        
+        // View modal
         isViewModalOpen,
         viewingTask,
         handleOpenViewModal,
         handleCloseViewModal,
+        
+        // Other modals (notification, schedule)
         modalState,
         handleCloseModal,
         getAllUserDataOptions,
+        
+        // Click handlers
         handleCardClick,
         handleColumnToggle,
+
+        // ADDED: state for delete confirmation
+        taskToDelete,
+        isDeleteConfirmOpen,
+        setIsDeleteConfirmOpen
     }
 }
 
@@ -2055,6 +2156,7 @@ const TaskList = ({ isDashboard }) => {
     const pageTitle = 'Task List'
     const {
         isLoading,
+        isDeleting,
         tasks,
         tableData,
         selectedTasks,
@@ -2090,6 +2192,11 @@ const TaskList = ({ isDashboard }) => {
         getAllUserDataOptions,
         handleCardClick,
         handleColumnToggle,
+        // ADDED: Destructure new state and handlers for deletion
+        taskToDelete,
+        isDeleteConfirmOpen,
+        setIsDeleteConfirmOpen,
+        onConfirmDelete,
     } = useTaskListingLogic({ isDashboard })
 
     return (
@@ -2149,6 +2256,7 @@ const TaskList = ({ isDashboard }) => {
                     selectedTasks={selectedTasks}
                     setSelectedTasks={setSelectedTasks}
                     onDeleteSelected={handleDeleteSelected}
+                    isDeleting={isDeleting && selectedTasks.length > 0}
                 />
             </Container>
 
@@ -2222,6 +2330,22 @@ const TaskList = ({ isDashboard }) => {
                 onClose={handleCloseModal}
                 getAllUserDataOptions={getAllUserDataOptions}
             />
+
+            {/* ADDED: Confirmation dialog for single task deletion */}
+            <ConfirmDialog
+                isOpen={isDeleteConfirmOpen}
+                type="danger"
+                title="Delete Task"
+                onClose={() => setIsDeleteConfirmOpen(false)}
+                onRequestClose={() => setIsDeleteConfirmOpen(false)}
+                onCancel={() => setIsDeleteConfirmOpen(false)}
+                onConfirm={onConfirmDelete}
+                loading={isDeleting}
+            >
+                <p>
+                    Are you sure you want to delete the task "{taskToDelete?.note}"? This action cannot be undone.
+                </p>
+            </ConfirmDialog>
         </>
     )
 }

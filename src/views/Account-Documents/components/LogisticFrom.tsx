@@ -1,10 +1,15 @@
 import classNames from 'classnames'
-import { FC, useEffect, useState } from 'react'
+import { FC, useEffect, useRef, useState } from 'react'
 import { Control, Controller, useForm } from 'react-hook-form'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAppDispatch } from '@/reduxtool/store'
 import { useSelector } from 'react-redux'
-import { getFillUpFormAction, submitFillUpFormAction } from '@/reduxtool/master/middleware'
+import { 
+    getFillUpFormAction, 
+    submitFillUpFormAction,
+    getAccountDocByIdAction,
+    getFilledFormAction,
+} from '@/reduxtool/master/middleware'
 
 // UI Components
 import Card from '@/components/ui/Card'
@@ -17,23 +22,17 @@ import toast from '@/components/ui/toast'
 import Notification from '@/components/ui/Notification'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 
-// Mock data for document images, replace with real data if available
-const MOCK_DOCUMENT_IMAGES = [
-    '/img/documents/invoice.avif',
-    '/img/documents/invoice.avif',
-];
-
 // --- Type Definitions for the UI-friendly Form Structure ---
 interface FormField {
   name: string;
   label: string;
   type: 'text' | 'textarea' | 'file' | 'date' | 'checkbox' | 'multi_checkbox';
-  options?: { label: string, name: string }[]; // For multi-checkbox questions
+  options?: { label: string, name: string }[]; 
   required: boolean;
 }
 interface FormSection {
-  id: string; // e.g., 'pi_section'
-  label: string; // e.g., 'PI SECTION'
+  id: string; 
+  label: string; 
   fields: FormField[];
 }
 interface FormStructure {
@@ -47,8 +46,7 @@ const sanitizeForName = (str: string): string => {
     return str.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/_$/, '');
 }
 
-// --- NEW: API Data Transformer ---
-// This function converts the API response into the UI-friendly FormStructure
+// --- API Data Transformer ---
 const transformApiDataToFormStructure = (apiData: any): FormStructure | null => {
     if (!apiData || !apiData.section) {
         return null;
@@ -60,7 +58,6 @@ const transformApiDataToFormStructure = (apiData: any): FormStructure | null => 
         const transformedFields: FormField[] = apiSection.questions.flatMap((question: any) => {
             const baseFieldName = sanitizeForName(question.question);
             
-            // Handle multi-checkbox questions
             if (question.question_type === 'checkbox' && question.question_label) {
                 const labels = question.question_label.split(',');
                 return [{
@@ -75,11 +72,10 @@ const transformApiDataToFormStructure = (apiData: any): FormStructure | null => 
                 }] as FormField;
             }
             
-            // Handle single checkbox or other simple types
             return [{
                 name: `${sectionId}.${baseFieldName}`,
                 label: question.question,
-                type: question.question_type, // 'file', 'textarea', 'text', 'date', 'checkbox'
+                type: question.question_type,
                 required: question.required,
             }] as FormField;
         });
@@ -97,33 +93,81 @@ const transformApiDataToFormStructure = (apiData: any): FormStructure | null => 
     };
 };
 
+// --- Helper: Prepares form default values for react-hook-form ---
+const prepareDefaultValues = (structure: FormStructure, savedData: any): any => {
+    if (!structure || !savedData) return {};
+    
+    const defaultValues: { [key: string]: any } = {};
+
+    structure.sections.forEach(section => {
+        defaultValues[section.id] = {};
+        const sectionData = savedData[section.id];
+        if (!sectionData) return;
+
+        section.fields.forEach(field => {
+            const questionKey = field.name.split('.').pop() as string;
+            const savedValue = sectionData[questionKey];
+
+            if (savedValue !== undefined && savedValue !== null) {
+                if (field.type === 'multi_checkbox' && Array.isArray(savedValue)) {
+                    const checkboxGroup: { [key: string]: boolean } = {};
+                    field.options?.forEach(option => {
+                        const optionKey = sanitizeForName(option.label);
+                        checkboxGroup[optionKey] = savedValue.includes(option.label);
+                    });
+                    defaultValues[section.id][questionKey] = checkboxGroup;
+                } else if (field.type === 'date' && savedValue) {
+                    defaultValues[section.id][questionKey] = new Date(savedValue);
+                } else {
+                    // For files, the saved value is a URL string, not a File object.
+                    // react-hook-form will hold the new File object if changed, or this string if not.
+                    defaultValues[section.id][questionKey] = savedValue;
+                }
+            }
+        });
+    });
+
+    return defaultValues;
+};
+
 
 // --- Reusable Field Components ---
-const MultiCheckboxField: FC<{ control: Control<any>, field: FormField }> = ({ control, field }) => (
-    <FormItem label={field.label} className="md:col-span-2 lg:col-span-3">
-        <div className="flex flex-col gap-2">
-            {field.options?.map(option => (
-                <div key={option.name} className="flex items-center gap-2">
-                    <Controller
-                        name={option.name}
-                        control={control}
-                        render={({ field: controllerField }) => (
-                            <Checkbox {...controllerField} checked={!!controllerField.value} />
-                        )}
-                    />
-                    <label className="font-semibold text-gray-700 dark:text-gray-300">{option.label}</label>
-                </div>
-            ))}
-        </div>
-    </FormItem>
-);
+const MultiCheckboxField: FC<{ control: Control<any>, field: FormField }> = ({ control, field }) => {
+    const columns = 4; // Adjust this number to change the number of columns
 
-// --- Dynamic Field Renderer ---
-const renderField = (field: FormField, control: Control<any>) => {
+    return (
+        <FormItem label={field.label} className="md:col-span-2 lg:col-span-4">
+            <div className={`grid grid-cols-1  sm:grid-cols-${columns} gap-1`}>
+                {field.options?.map(option => (
+                    <div key={option.name} className="flex items-center gap-2">
+                        <Controller
+                            name={option.name}
+                            control={control}
+                            render={({ field: controllerField }) => (
+                                <Checkbox {...controllerField} checked={!!controllerField.value} />
+                            )}
+                        />
+                        <label className="font-semibold text-gray-700 dark:text-gray-300">
+                            {option.label}
+                        </label>
+                    </div>
+                ))}
+            </div>
+        </FormItem>
+    );
+};
+
+
+// --- MODIFIED: Dynamic Field Renderer ---
+const renderField = (
+    field: FormField, 
+    control: Control<any>,
+    handleFileChange: (fieldName: string, file: File | null) => void // New handler for preview
+) => {
     const commonProps = {
         key: field.name,
         label: field.label,
-        invalid: false, // Add error handling from react-hook-form if needed
+        invalid: false,
     };
 
     switch (field.type) {
@@ -142,9 +186,22 @@ const renderField = (field: FormField, control: Control<any>) => {
         case 'file':
             return (
                 <FormItem {...commonProps} className="md:col-span-2 lg:col-span-3">
-                    <Controller name={field.name} control={control} render={({ field: { onChange, ...rest } }) => (
-                        <Input type="file" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />
-                    )} />
+                    <Controller 
+                        name={field.name} 
+                        control={control} 
+                        render={({ field: { onChange, ...rest } }) => (
+                            <Input
+                                  type="file"
+                                  // The `rest` contains value, which can cause issues with uncontrolled file inputs.
+                                  // We only need the onChange handler from the controller.
+                                  onChange={(e) => {
+                                      const file = e.target.files?.[0] || null;
+                                      onChange(file); // Update react-hook-form state
+                                      handleFileChange(field.name, file); // Update visual preview state
+                                  }}
+                              />
+                        )} 
+                    />
                 </FormItem>
             );
         case 'textarea':
@@ -194,77 +251,254 @@ const NavigatorComponent: FC<{ sections: FormSection[]; activeSection: string; o
 
 
 const FillUpForm = () => {
-    const { documentId, formId } = useParams();
+    const { id, formId } = useParams();
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
 
-    // Get the raw API response from the Redux store
-    // const { formResponse = [], loading, error } = useSelector((state) => state.master.getFillUpFormData);
     const {
-        formResponse = [],
-        loading, error
-      } = useSelector(masterSelector);
+        formResponse = null,
+        filledFormData = null,
+        loading: isReduxLoading,
+        error
+    } = useSelector(masterSelector);
 
-    // Local state to hold the UI-friendly transformed form structure
+    const [isLoading, setIsLoading] = useState(true);
     const [formStructure, setFormStructure] = useState<FormStructure | null>(null);
-
     const [activeSection, setActiveSection] = useState<string>('');
+    
+    // --- NEW: State for image previews and drawer ---
+    const [imagePreviews, setImagePreviews] = useState<{ [fieldName: string]: string }>({});
     const [isImageDrawerOpen, setIsImageDrawerOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const previousBlobUrls = useRef<{ [key: string]: string }>({});
 
-    const { handleSubmit, control, formState: { isSubmitting } } = useForm({ defaultValues: {} });
+    const { handleSubmit, control, formState: { isSubmitting }, reset } = useForm({ defaultValues: {} });
 
-    // Effect to fetch form data when formId changes
+    // --- NEW: Effect for cleaning up blob URLs to prevent memory leaks ---
     useEffect(() => {
-        if (formId) {          
-            dispatch(getFillUpFormAction(formId)).unwrap();
-        }
-    }, [formId, dispatch]);
+        // This is the cleanup function that runs when the component unmounts.
+        return () => {
+            // Revoke all current blob URLs
+            Object.values(imagePreviews).forEach(url => {
+                if (url && url.startsWith('blob:')) {
+                    URL.revokeObjectURL(url);
+                }
+            });
+            // Revoke any leftover previous blob URLs
+            Object.values(previousBlobUrls.current).forEach(url => {
+                if (url && url.startsWith('blob:')) {
+                    URL.revokeObjectURL(url);
+                }
+            });
+        };
+    }, []); // Empty dependency array means this runs only on mount and unmount
 
-    // Effect to transform the API data once it's fetched
     useEffect(() => {
-        if (formResponse) {
-            const transformedData = transformApiDataToFormStructure(formResponse);
-            setFormStructure(transformedData);
-            // Set the first section as active by default
-            if (transformedData && transformedData.sections.length > 0) {
-                setActiveSection(transformedData.sections[0].id);
+        // This effect runs *after* imagePreviews state has been updated.
+        // It cleans up the *old* blob URL that was just replaced.
+        const urlsToRevoke = { ...previousBlobUrls.current };
+        previousBlobUrls.current = {}; // Clear the ref for the next update
+
+        Object.values(urlsToRevoke).forEach(url => {
+            if (url && url.startsWith('blob:')) {
+                URL.revokeObjectURL(url);
             }
+        });
+    }, [imagePreviews]); // Trigger this cleanup whenever the previews change
+
+
+    // --- Data fetching and initialization logic ---
+    useEffect(() => {
+        const initializeForm = async () => {
+            if (!id || !formId) {
+                toast.push(<Notification type="danger" title="Missing Information" children="Account or Form ID is missing from the URL." />);
+                setIsLoading(false);
+                return;
+            }
+            try {
+                // Determine if form is already filled to decide which data to fetch
+                const accountDoc = await dispatch(getAccountDocByIdAction(id)).unwrap();
+                if (accountDoc?.is_filled) {
+                    await Promise.all([
+                        dispatch(getFillUpFormAction(formId)),
+                        dispatch(getFilledFormAction(id))
+                    ]);
+                } else {
+                    await dispatch(getFillUpFormAction(formId));
+                }
+            } catch (err: any) {
+                toast.push(<Notification type="danger" title="Error" children={err?.message} />);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        initializeForm();
+    }, [id, formId, dispatch]);
+
+
+    // --- MODIFIED: Effect to process data and populate the form AND previews ---
+    useEffect(() => {
+        if (isLoading || !formResponse) return;
+
+        const uiStructure = transformApiDataToFormStructure(formResponse);
+        if (uiStructure) {
+            setFormStructure(uiStructure);
+            
+            if (uiStructure.sections.length > 0) {
+                setActiveSection(uiStructure.sections[0].id);
+            }
+            
+            const initialPreviews: { [fieldName: string]: string } = {};
+
+            if (filledFormData) {
+                const savedAnswers = filledFormData?.form_data;
+                if (savedAnswers) {
+                    const defaultValues = prepareDefaultValues(uiStructure, savedAnswers);
+                    reset(defaultValues);
+
+                    // --- NEW: Populate image previews from already saved data ---
+                    uiStructure.sections.forEach(section => {
+                        const sectionData = savedAnswers[section.id];
+                        if (!sectionData) return;
+
+                        section.fields.forEach(field => {
+                            if (field.type === 'file') {
+                                const questionKey = field.name.split('.').pop() as string;
+                                const savedUrl = sectionData[questionKey];
+                                if (savedUrl && typeof savedUrl === 'string') {
+                                    initialPreviews[field.name] = savedUrl;
+                                }
+                            }
+                        });
+                    });
+                }
+            }
+            setImagePreviews(initialPreviews);
         }
-    }, [formResponse]);
+    }, [formResponse, filledFormData, isLoading, reset]);
+
+    const fileToBase64 = (file: File): Promise<string> =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
 
     const onFormSubmit = async (values: any) => {
-        const payload = {
-            document_id: documentId,
-            form_id: formId,
-            submitted_data: values,
+        const getProcessedFormData = async (data: any, structure: FormStructure | null) => {
+            if (!structure) return data;
+    
+            const processedData = JSON.parse(JSON.stringify(data));
+    
+            for (const section of structure.sections) {
+                const sectionId = section.id;
+    
+                for (const field of section.fields) {
+                    const questionKey = field.name.split('.').pop() as string;
+    
+                    if (field.type === 'multi_checkbox') {
+                        const checkboxGroupData = processedData[sectionId]?.[questionKey];
+                        if (checkboxGroupData && typeof checkboxGroupData === 'object') {
+                            const selectedLabels = field.options
+                                ?.filter(option => checkboxGroupData[sanitizeForName(option.label)])
+                                .map(option => option.label);
+                            if (processedData[sectionId]) {
+                                processedData[sectionId][questionKey] = selectedLabels || [];
+                            }
+                        }
+                    }
+    
+                    if (field.type === 'file') {
+                        const fileOrUrl: File | string | null = data?.[sectionId]?.[questionKey];
+                        // Only convert to base64 if it's a new File object
+                        if (fileOrUrl instanceof File) {
+                            const base64 = await fileToBase64(fileOrUrl);
+                            processedData[sectionId][questionKey] = base64;
+                        } else {
+                            // Otherwise, it's the existing URL string, so we keep it.
+                            processedData[sectionId][questionKey] = fileOrUrl;
+                        }
+                    }
+                }
+            }
+            return processedData;
         };
-        console.log('Submitting Form Data:', payload);
-        
+
         try {
+            const processedValues = await getProcessedFormData(values, formStructure);
+            const payload = {
+                accountdoc_id: Number(id),
+                form_id: Number(formId),
+                form_data: processedValues,
+            };
+
             await dispatch(submitFillUpFormAction(payload)).unwrap();
             toast.push(<Notification type="success" title="Form Submitted Successfully!" />);
             navigate('/account-document');
+
         } catch (err: any) {
-            toast.push(<Notification type="danger" title="Submission Failed" children={err?.message || 'An unknown error occurred.'} />);
+            toast.push(
+                <Notification type="danger" title="Submission Failed">
+                    {err?.message || 'An unknown error occurred.'}
+                </Notification>
+            );
         }
-    }
-  
+    };
+    
+    // --- NEW: Handler to update image previews on file selection ---
+    const handleFileChange = (fieldName: string, file: File | null) => {
+        setImagePreviews(prev => {
+            const newPreviews = { ...prev };
+            const oldUrl = newPreviews[fieldName];
+
+            // If there was an old blob URL for this field, mark it for revocation
+            if (oldUrl && oldUrl.startsWith('blob:')) {
+                previousBlobUrls.current[fieldName] = oldUrl;
+            }
+
+            if (file) {
+                // Create a new blob URL and update the state
+                newPreviews[fieldName] = URL.createObjectURL(file);
+            } else {
+                // If the file is removed, delete the preview
+                delete newPreviews[fieldName];
+            }
+
+            return newPreviews;
+        });
+    };
+
+    // --- NEW: Handlers for the image viewer drawer ---
     const handleImageClick = (imageUrl: string) => {
         setSelectedImage(imageUrl);
         setIsImageDrawerOpen(true);
     };
-  
     const closeImageDrawer = () => {
         setIsImageDrawerOpen(false);
         setSelectedImage(null);
     };
+    // --- Navigation Logic ---
+    const sectionIds = formStructure?.sections.map(s => s.id) || [];
+    const activeIndex = sectionIds.indexOf(activeSection);
 
-    if (loading) {
+    const handleNext = () => {
+        if (activeIndex < sectionIds.length - 1) {
+            setActiveSection(sectionIds[activeIndex + 1]);
+        }
+    };
+
+    const handlePrevious = () => {
+        if (activeIndex > 0) {
+            setActiveSection(sectionIds[activeIndex - 1]);
+        }
+    };
+
+    if (isLoading) {
         return (
             <div className="flex justify-center items-center h-60">
                 <Spinner size="40px" />
-                <span className="ml-4">Loading Form...</span>
+                <span className="ml-4">Initializing Form...</span>
             </div>
         );
     }
@@ -278,17 +512,32 @@ const FillUpForm = () => {
     return (
         <>
             <div className="flex flex-col md:flex-row gap-6">
-                {/* Left Column: Document Images */}
+                {/* --- MODIFIED: Left Column for Image Previews --- */}
                 <div className="w-full md:w-48 flex-shrink-0">
                     <Card className="sticky top-0">
                         <h5 className="mb-4">Documents</h5>
                         <div className="max-h-[80vh] overflow-y-auto pr-2">
                             <div className="space-y-4">
-                            {MOCK_DOCUMENT_IMAGES.map((img, index) => (
-                                <div key={index} className="cursor-pointer border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-200 rounded-md overflow-hidden" onClick={() => handleImageClick(img)}>
-                                    <img src={img} alt={`Document ${index + 1}`} className="w-full h-auto object-cover" />
-                                </div>
-                            ))}
+                            {Object.keys(imagePreviews).length > 0 ? (
+                                Object.entries(imagePreviews).map(([fieldName, imageUrl]) => (
+                                    
+                                    <div 
+                                        key={fieldName} 
+                                        className="cursor-pointer border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-md overflow-hidden transition-colors" 
+                                        onClick={() => handleImageClick(imageUrl)}
+                                    >
+                                        <img
+                                            src={imageUrl}
+                                            alt={`Preview for ${fieldName}`}
+                                            className="w-full h-auto object-cover"
+                                        />
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                                    No images to preview.
+                                </p>
+                            )}
                             </div>
                         </div>
                     </Card>
@@ -308,7 +557,8 @@ const FillUpForm = () => {
                         {currentSectionData && (
                             <Card id={currentSectionData.id}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 mt-2">
-                                    {currentSectionData.fields.map(field => renderField(field, control))}
+                                    {/* Pass the new handler to the renderer */}
+                                    {currentSectionData.fields.map(field => renderField(field, control, handleFileChange))}
                                 </div>
                             </Card>
                         )}
@@ -317,12 +567,29 @@ const FillUpForm = () => {
             </div>
       
             {/* Footer and Drawer */}
-            <Card className="mt-6 sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-end items-center gap-2">
-                    <Button onClick={() => navigate(-1)} disabled={isSubmitting}>Cancel</Button>
-                    <Button variant="solid" type="submit" onClick={handleSubmit(onFormSubmit)} loading={isSubmitting}>
-                        {isSubmitting ? 'Saving...' : 'Save'}
-                    </Button>
+            <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-center p-4">
+                    <div>
+                        <Button 
+                            type="button" 
+                            customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"}
+                            onClick={() => navigate(-1)} 
+                            disabled={isSubmitting}
+                        >
+                            Discard
+                        </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button type="button" onClick={handlePrevious} disabled={isSubmitting || activeIndex === 0}>
+                            Previous
+                        </Button>
+                        <Button type="button" onClick={handleNext} disabled={isSubmitting || activeIndex === sectionIds.length - 1}>
+                            Next
+                        </Button>
+                        <Button variant="solid" type="button" onClick={handleSubmit(onFormSubmit)} loading={isSubmitting}>
+                            {isSubmitting ? 'Saving...' : 'Submit'}
+                        </Button>
+                    </div>
                 </div>
             </Card>
       

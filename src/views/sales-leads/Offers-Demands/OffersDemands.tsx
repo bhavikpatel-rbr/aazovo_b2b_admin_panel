@@ -23,7 +23,6 @@ import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
-import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
@@ -50,24 +49,19 @@ import Tooltip from "@/components/ui/Tooltip";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
   TbAlarm,
-  TbAlertTriangle,
   TbArrowDownLeft,
   TbArrowUpRight,
   TbBell,
   TbBrandWhatsapp,
-  TbBulb,
-  TbCalendar,
   TbCalendarDown,
   TbCalendarEvent,
   TbCalendarUp,
   TbCancel,
   TbChecks,
   TbCircleCheck,
-  TbClipboardText,
   TbClockHour4,
   TbCloudUpload,
   TbColumns,
-  TbDiscount,
   TbDownload,
   TbEye,
   TbFileText,
@@ -75,7 +69,6 @@ import {
   TbFilter,
   TbListDetails,
   TbMail,
-  TbNotebook,
   TbPencil,
   TbPlus,
   TbRefresh,
@@ -85,8 +78,8 @@ import {
   TbTrash,
   TbUser,
   TbUserCircle,
-  TbUserSearch,
   TbX,
+  TbCheck,
 } from "react-icons/tb";
 
 // Redux
@@ -94,6 +87,8 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addNotificationAction,
   addScheduleAction,
+  addTaskAction,
+  addAllActionAction,
   deleteAllDemandsAction,
   deleteAllOffersAction,
   deleteDemandAction,
@@ -105,6 +100,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
+import { authSelector } from "@/reduxtool/auth/authSlice";
 
 // Types
 import type { TableQueries as CommonTableQueries } from "@/@types/common";
@@ -133,6 +129,7 @@ const filterFormSchema = z.object({
   itemType: z.enum(["Offer", "Demand"]).nullable().optional(),
   creatorIds: z.array(z.string()).optional().default([]),
   assigneeIds: z.array(z.string()).optional().default([]),
+  quickFilters: z.object({ type: z.string(), value: z.string() }).nullable().optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -145,12 +142,34 @@ const scheduleSchema = z.object({
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
+const taskValidationSchema = z.object({
+    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+    assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+    priority: z.string().min(1, 'Please select a priority.'),
+    due_date: z.date().nullable().optional(),
+    description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskValidationSchema>;
+
+const notificationSchema = z.object({
+    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+    send_users: z.array(z.number()).min(1, "Please select at least one user."),
+    message: z.string().min(10, "Message must be at least 10 characters long."),
+});
+type NotificationFormData = z.infer<typeof notificationSchema>;
+
+const activitySchema = z.object({
+    item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+    notes: z.string().optional(),
+});
+type ActivityFormData = z.infer<typeof activitySchema>;
 
 // --- API Item Types ---
 export type ApiUserShape = {
   id: number;
   name: string;
   roles?: Array<{ display_name: string; }>;
+  profile_pic_path?: string | null;
 };
 export type ActualApiOfferShape = {
   id: number;
@@ -160,14 +179,13 @@ export type ActualApiOfferShape = {
   assign_user?: ApiUserShape | null;
   created_at: string;
   updated_at?: string;
+  updated_by_user?: ApiUserShape | null;
   seller_section?: string | string[] | null;
   buyer_section?: string | string[] | null;
   groupA?: string | null;
   groupB?: string | null;
   numberOfBuyers?: number;
   numberOfSellers?: number;
-  updated_by_name?: string;
-  updated_by_role?: string;
   seller_section_data?: Array<{ id: number; name: string }>;
   buyer_section_data?: Array<{ id: number; name: string }>;
   created_by_user?: ApiUserShape;
@@ -181,14 +199,13 @@ export type ActualApiDemandShape = {
   assign_user?: ApiUserShape | null;
   created_at: string;
   updated_at?: string;
+  updated_by_user?: ApiUserShape | null;
   seller_section?: Record<string, { questions: Record<string, { question: string }> }> | null;
   buyer_section?: Record<string, { questions: Record<string, { question: string }> }> | null;
   groupA?: string | null;
   groupB?: string | null;
   numberOfBuyers?: number;
   numberOfSellers?: number;
-  updated_by_name?: string;
-  updated_by_role?: string;
 };
 export type ApiGroupItem = { groupName: string; items: string[]; };
 export type OfferDemandItem = {
@@ -202,10 +219,8 @@ export type OfferDemandItem = {
   numberOfBuyers?: number;
   numberOfSellers?: number;
   groups?: ApiGroupItem[];
-  updated_by_name?: string;
-  updated_by_role?: string;
+  updated_by_user?: ApiUserShape | null;
   originalApiItem: ActualApiOfferShape | ActualApiDemandShape;
-  health_score?: number;
 };
 
 export type SelectOption = { value: any; label: string };
@@ -219,87 +234,10 @@ export type OfferDemandModalType = | "email" | "whatsapp" | "notification" | "ta
 export interface OfferDemandModalState { isOpen: boolean; type: OfferDemandModalType | null; data: OfferDemandItem | null; }
 interface OfferDemandModalsProps { modalState: OfferDemandModalState; onClose: () => void; getAllUserDataOptions: SelectOption[] }
 
-const dummyUsersForModals = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },];
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
-const eventTypeOptions = [
-  // Customer Engagement & Sales
-  { value: 'Meeting', label: 'Meeting' },
-  { value: 'Demo', label: 'Product Demo' },
-  { value: 'IntroCall', label: 'Introductory Call' },
-  { value: 'FollowUpCall', label: 'Follow-up Call' },
-  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-  { value: 'CheckIn', label: 'Customer Check-in' },
-  { value: 'LogEmail', label: 'Log an Email' },
-
-  // Project & Task Management
-  { value: 'Milestone', label: 'Project Milestone' },
-  { value: 'Task', label: 'Task' },
-  { value: 'FollowUp', label: 'General Follow-up' },
-  { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-  // Customer Onboarding & Support
-  { value: 'OnboardingSession', label: 'Onboarding Session' },
-  { value: 'Training', label: 'Training Session' },
-  { value: 'SupportCall', label: 'Support Call' },
-
-  // General & Administrative
-  { value: 'Reminder', label: 'Reminder' },
-  { value: 'Note', label: 'Add a Note' },
-  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
-  { value: 'StrategySession', label: 'Strategy Session' },
-  { value: 'TeamMeeting', label: 'Team Meeting' },
-  { value: 'PerformanceReview', label: 'Performance Review' },
-  { value: 'Lunch', label: 'Lunch / Break' },
-  { value: 'Appointment', label: 'Personal Appointment' },
-  { value: 'Other', label: 'Other' },
-  { value: 'ProjectKickoff', label: 'Project Kick-off' },
-  { value: 'InternalSync', label: 'Internal Team Sync' },
-  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
-  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
-  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
-  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
-  { value: 'ProjectSignOff', label: 'Project Sign-off' },
-  { value: 'PrepareReport', label: 'Prepare Report' },
-  { value: 'PresentFindings', label: 'Present Findings' },
-  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
-  { value: 'BugReplication', label: 'Bug Replication Session' },
-  { value: 'IssueEscalation', label: 'Escalate Issue' },
-  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
-  { value: 'FeatureRequest', label: 'Log Feature Request' },
-  { value: 'IntegrationSupport', label: 'Integration Support Call' },
-  { value: 'DataMigration', label: 'Data Migration/Import Task' },
-  { value: 'ColdCall', label: 'Cold Call' },
-  { value: 'DiscoveryCall', label: 'Discovery Call' },
-  { value: 'QualificationCall', label: 'Qualification Call' },
-  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
-  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
-  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
-  { value: 'ContractSent', label: 'Contract Sent' },
-  { value: 'NegotiationCall', label: 'Negotiation Call' },
-  { value: 'TrialSetup', label: 'Product Trial Setup' },
-  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
-  { value: 'WelcomeCall', label: 'Welcome Call' },
-  { value: 'ImplementationSession', label: 'Implementation Session' },
-  { value: 'UserTraining', label: 'User Training Session' },
-  { value: 'AdminTraining', label: 'Admin Training Session' },
-  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-  { value: 'HealthCheck', label: 'Customer Health Check' },
-  { value: 'FeedbackSession', label: 'Feedback Session' },
-  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
-  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
-  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
-  { value: 'InvoiceDue', label: 'Invoice Due' },
-  { value: 'SendInvoice', label: 'Send Invoice' },
-  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
-  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
-  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
-  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
-  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
-  { value: 'SendQuote', label: 'Send Quote/Estimate' },
-]
+const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'InternalSync', label: 'Internal Team Sync' }, { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' }, { value: 'RequirementsGathering', label: 'Requirements Gathering' }, { value: 'UAT', label: 'User Acceptance Testing (UAT)' }, { value: 'GoLive', label: 'Go-Live / Deployment Date' }, { value: 'ProjectSignOff', label: 'Project Sign-off' }, { value: 'PrepareReport', label: 'Prepare Report' }, { value: 'PresentFindings', label: 'Present Findings' }, { value: 'TroubleshootingCall', label: 'Troubleshooting Call' }, { value: 'BugReplication', label: 'Bug Replication Session' }, { value: 'IssueEscalation', label: 'Escalate Issue' }, { value: 'ProvideUpdate', label: 'Provide Update on Ticket' }, { value: 'FeatureRequest', label: 'Log Feature Request' }, { value: 'IntegrationSupport', label: 'Integration Support Call' }, { value: 'DataMigration', label: 'Data Migration/Import Task' }, { value: 'ColdCall', label: 'Cold Call' }, { value: 'DiscoveryCall', label: 'Discovery Call' }, { value: 'QualificationCall', label: 'Qualification Call' }, { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' }, { value: 'LinkedInMessage', label: 'Log LinkedIn Message' }, { value: 'ProposalReview', label: 'Proposal Review Meeting' }, { value: 'ContractSent', label: 'Contract Sent' }, { value: 'NegotiationCall', label: 'Negotiation Call' }, { value: 'TrialSetup', label: 'Product Trial Setup' }, { value: 'TrialCheckIn', label: 'Trial Check-in Call' }, { value: 'WelcomeCall', label: 'Welcome Call' }, { value: 'ImplementationSession', label: 'Implementation Session' }, { value: 'UserTraining', label: 'User Training Session' }, { value: 'AdminTraining', label: 'Admin Training Session' }, { value: 'MonthlyCheckIn', label: 'Monthly Check-in' }, { value: 'HealthCheck', label: 'Customer Health Check' }, { value: 'FeedbackSession', label: 'Feedback Session' }, { value: 'RenewalDiscussion', label: 'Renewal Discussion' }, { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' }, { value: 'CaseStudyInterview', label: 'Case Study Interview' }, { value: 'InvoiceDue', label: 'Invoice Due' }, { value: 'SendInvoice', label: 'Send Invoice' }, { value: 'PaymentReminder', label: 'Send Payment Reminder' }, { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' }, { value: 'ConfirmPayment', label: 'Confirm Payment Received' }, { value: 'ContractRenewalDue', label: 'Contract Renewal Due' }, { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' }, { value: 'SendQuote', label: 'Send Quote/Estimate' }];
 const dummyAlerts = [{ id: 1, severity: "danger", message: "Offer #OD123 has low engagement.", time: "2 days ago", }, { id: 2, severity: "warning", message: "Demand #DD456 is approaching its expiration date.", time: "5 days ago", },];
-const dummyTimeline = [{ id: 1, icon: <TbMail />, title: "Initial Offer Created", desc: "Offer was created and sent.", time: "2023-11-01", }, { id: 2, icon: <TbCalendar />, title: "Follow-up Call Scheduled", desc: "Scheduled a call.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Item Assigned", desc: "Assigned to team.", time: "2023-10-27", },];
+const dummyTimeline = [{ id: 1, icon: <TbMail />, title: "Initial Offer Created", desc: "Offer was created and sent.", time: "2023-11-01", }, { id: 2, icon: <TbCalendarEvent />, title: "Follow-up Call Scheduled", desc: "Scheduled a call.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Item Assigned", desc: "Assigned to team.", time: "2023-10-27", },];
 const dummyDocs = [{ id: "doc1", name: "Offer_Details.pdf", type: "pdf", size: "1.2 MB", }, { id: "doc2", name: "Images.zip", type: "zip", size: "8.5 MB", },];
 
 const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
@@ -314,7 +252,7 @@ const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
         <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Assigned To</span><span className="text-gray-600 dark:text-gray-400">{item.assignedToInfo?.userName || 'N/A'}</span></div>
         <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Created Date</span><span className="text-gray-600 dark:text-gray-400">{dayjs(item.createdDate).format('D MMM YYYY, h:mm A')}</span></div>
         <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Last Updated</span><span className="text-gray-600 dark:text-gray-400">{item.updated_at ? dayjs(item.updated_at).format('D MMM YYYY, h:mm A') : 'N/A'}</span></div>
-        <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Updated By</span><span className="text-gray-600 dark:text-gray-400">{item.updated_by_name || 'N/A'} {item.updated_by_role && `(${item.updated_by_role})`}</span></div>
+        <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Updated By</span><span className="text-gray-600 dark:text-gray-400">{item.updated_by_user?.name || 'N/A'} {item.updated_by_user?.roles?.[0]?.display_name && `(${item.updated_by_user.roles[0].display_name})`}</span></div>
         <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Number of Buyers</span><span className="text-gray-600 dark:text-gray-400">{item.numberOfBuyers ?? 'N/A'}</span></div>
         <div className="flex justify-between border-b pb-2 dark:border-gray-600"><span className="font-semibold text-gray-700 dark:text-gray-200">Number of Sellers</span><span className="text-gray-600 dark:text-gray-400">{item.numberOfSellers ?? 'N/A'}</span></div>
         {item.groups && item.groups.length > 0 && (
@@ -335,108 +273,44 @@ const ViewDetailsDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
     </Dialog>
   );
 };
-const SendEmailDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { subject: "", message: "" }, });
-  const onSendEmail = (data: { subject: string; message: string }) => {
-    setIsLoading(true); console.log("Email to", item.createdByInfo.email, ":", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Email Sent" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send Email: {item.name}</h5>
-      <p className="mb-4 text-sm">To: {item.createdByInfo.userName} ({item.createdByInfo.email})</p>
-      <form onSubmit={handleSubmit(onSendEmail)}>
-        <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => (<Input {...field} placeholder={`Re: ${item.type} ${item.name}`} />)} /></FormItem>
-        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} /></FormItem>
-        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send</Button></div>
-      </form>
-    </Dialog>
-  );
-};
-const SendWhatsAppDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
-  const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi ${item.createdByInfo.userName}, re: ${item.type} "${item.name}"...` }, });
-  const onSendMessage = (data: { message: string }) => {
-    const phone = "1234567890"; // Placeholder
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(data.message)}`, "_blank");
-    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />); onClose();
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send WhatsApp: {item.name}</h5>
-      <form onSubmit={handleSubmit(onSendMessage)}>
-        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
-        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit">Open WhatsApp</Button></div>
-      </form>
-    </Dialog>
-  );
-};
-const AddNotificationDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; getAllUserDataOptions: SelectOption[] }> = ({ item, onClose, getAllUserDataOptions }) => {
-  const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
-  const notificationSchema = z.object({ notification_title: z.string().min(3, "Title must be at least 3 characters long."), send_users: z.array(z.number()).min(1, "Please select at least one user."), message: z.string().min(10, "Message must be at least 10 characters long."), });
-  type NotificationFormData = z.infer<typeof notificationSchema>;
+const AddNotificationDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; userOptions: SelectOption[]; onSubmit: (data: NotificationFormData) => void; isLoading: boolean }> = ({ item, onClose, userOptions, onSubmit, isLoading }) => {
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Regarding ${item.type}: ${item.name}`, send_users: [], message: `This is a notification for the ${item.type.toLowerCase()}: "${item.name}".` }, mode: 'onChange' });
-  const onSend = async (formData: NotificationFormData) => {
-    setIsLoading(true);
-    const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(item.id), module_name: 'OfferDemand', };
-    try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); onClose(); }
-    catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); }
-    finally { setIsLoading(false); }
-  };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Notification for {item.name}</h5>
-      <Form onSubmit={handleSubmit(onSend)}>
+      <Form onSubmit={handleSubmit(onSubmit)}>
         <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
+        <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
         <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
         <div className="text-right mt-6"><Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
       </Form>
     </Dialog>
   );
 };
-const AssignTaskDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { title: `Follow up: ${item.type} ${item.name}`, assignee: null, dueDate: null, priority: null, description: "", }, });
-  const onAssignTask = (data: any) => {
-    setIsLoading(true); console.log("Assign task for", item.name, ":", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Task Assigned" />); setIsLoading(false); onClose(); }, 1000);
-  };
+const AssignTaskDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; userOptions: SelectOption[]; onSubmit: (data: TaskFormData) => void; isLoading: boolean; }> = ({ item, onClose, userOptions, onSubmit, isLoading }) => {
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({ resolver: zodResolver(taskValidationSchema), defaultValues: { task_title: `Follow up: ${item.type} ${item.name}`, assign_to: [], priority: 'Medium', due_date: null, description: `Follow up regarding ${item.type}: ${item.name} (ID: ${item.id})` }, mode: 'onChange' });
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Assign Task for {item.name}</h5>
-      <form onSubmit={handleSubmit(onAssignTask)}>
-        <FormItem label="Title"><Controller name="title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+      <Form onSubmit={handleSubmit(onSubmit)}>
+        <FormItem label="Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => (<Select placeholder="Select User" options={dummyUsersForModals} {...field} />)} /></FormItem>
-          <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} {...field} />)} /></FormItem>
+          <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<Select isMulti placeholder="Select User" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />)} /></FormItem>
+          <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} value={priorityOptions.find(p => p.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
         </div>
-        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />)} /></FormItem>
-        <FormItem label="Description"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Assign Task</Button></div>
-      </form>
+        <FormItem label="Due Date" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />)} /></FormItem>
+        <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button></div>
+      </Form>
     </Dialog>
   );
 };
-const AddScheduleDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
-  const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), defaultValues: { event_title: `Regarding ${item.type}: ${item.name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Details for ${item.type.toLowerCase()} "${item.name}" (ID: ${item.id}).`, }, mode: 'onChange', });
-  const onAddEvent = async (data: ScheduleFormData) => {
-    setIsLoading(true);
-    const payload = { module_id: Number((item.originalApiItem as any).id), module_name: 'OfferDemand', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '', };
-    try {
-      await dispatch(addScheduleAction(payload)).unwrap();
-      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${item.name}.`} />);
-      onClose();
-    } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />); }
-    finally { setIsLoading(false); }
-  };
+const AddScheduleDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; onSubmit: (data: ScheduleFormData) => void; isLoading: boolean; }> = ({ item, onClose, onSubmit, isLoading }) => {
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), defaultValues: { event_title: `Regarding ${item.type}: ${item.name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Details for ${item.type.toLowerCase()} "${item.name}" (ID: ${item.id}).`, }, mode: 'onChange' });
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {item.name}</h5>
-      <Form onSubmit={handleSubmit(onAddEvent)}>
+      <Form onSubmit={handleSubmit(onSubmit)}>
         <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
@@ -448,6 +322,16 @@ const AddScheduleDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
       </Form>
     </Dialog>
   );
+};
+const AddActivityDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; onSubmit: (data: ActivityFormData) => void; isLoading: boolean; }> = ({ item, onClose, onSubmit, isLoading }) => {
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({ resolver: zodResolver(activitySchema), defaultValues: { item: `Marked ${item.type} as active: ${item.name}`, notes: '' }, mode: 'onChange' });
+  return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-4">Add Activity for {item.name}</h5>
+    <Form onSubmit={handleSubmit(onSubmit)}>
+      <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}><Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with customer" />} /></FormItem>
+      <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} /></FormItem>
+      <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button></div>
+    </Form></Dialog>);
 };
 const ViewAlertDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   const alertColors: Record<string, string> = { danger: "red", warning: "amber", info: "blue" };
@@ -485,20 +369,6 @@ const TrackRecordDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; 
     </Dialog>
   );
 };
-const ViewEngagementDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Engagement for {item.name}</h5>
-      <div className="grid grid-cols-2 gap-4 mt-4 text-center">
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"><p className="text-xs text-gray-500">Last Updated</p><p className="font-bold text-lg">{item.updated_at ? dayjs(item.updated_at).fromNow() : 'N/A'}</p></div>
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"><p className="text-xs text-gray-500">Health Score</p><p className="font-bold text-lg text-green-500">{item.health_score || 85}%</p></div>
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"><p className="text-xs text-gray-500">Views (30d)</p><p className="font-bold text-lg">125</p></div>
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"><p className="text-xs text-gray-500">Interactions</p><p className="font-bold text-lg">18</p></div>
-      </div>
-      <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
-  );
-};
 const DownloadDocumentDialog: React.FC<{ item: OfferDemandItem; onClose: () => void; }> = ({ item, onClose }) => {
   const iconMap: Record<string, React.ReactElement> = { pdf: <TbFileText className="text-red-500" />, zip: <TbFileZip className="text-amber-500" />, };
   return (
@@ -507,7 +377,7 @@ const DownloadDocumentDialog: React.FC<{ item: OfferDemandItem; onClose: () => v
       <div className="flex flex-col gap-3 mt-4">
         {dummyDocs.map((doc) => (
           <div key={doc.id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-            <div className="flex items-center gap-3">{React.cloneElement(iconMap[doc.type] || <TbClipboardText />, { size: 28, })}<div><p className="font-semibold text-sm">{doc.name}</p><p className="text-xs text-gray-400">{doc.size}</p></div></div>
+            <div className="flex items-center gap-3">{React.cloneElement(iconMap[doc.type] || <TbFileText />, { size: 28, })}<div><p className="font-semibold text-sm">{doc.name}</p><p className="text-xs text-gray-400">{doc.size}</p></div></div>
             <Tooltip title="Download"><Button shape="circle" size="sm" icon={<TbDownload />} /></Tooltip>
           </div>))}
       </div>
@@ -515,36 +385,30 @@ const DownloadDocumentDialog: React.FC<{ item: OfferDemandItem; onClose: () => v
     </Dialog>
   );
 };
-const GenericActionDialog: React.FC<{ type: OfferDemandModalType | null; item: OfferDemandItem; onClose: () => void; }> = ({ type, item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : "Confirm Action";
-  const handleConfirm = () => {
-    setIsLoading(true); console.log(`Action '${type}' for ${item.name}`);
-    setTimeout(() => { toast.push(<Notification type="success" title="Action Completed" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-2">{title}</h5><p>Perform this action for <span className="font-semibold">{item.name}</span>?</p>
-      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button></div>
-    </Dialog>
-  );
-};
 const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
+  const dispatch = useAppDispatch();
+  const { user } = useSelector(authSelector);
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const { type, data: item, isOpen } = modalState;
+
   if (!isOpen || !item) return null;
+
+  const handleConfirmNotification = async (formData: NotificationFormData) => { if (!item) return; setIsSubmittingAction(true); const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String((item.originalApiItem as any).id), module_name: 'OfferDemand', }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+  const handleConfirmTask = async (data: TaskFormData) => { if (!item) return; setIsSubmittingAction(true); try { const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String((item.originalApiItem as any).id), module_name: 'OfferDemand', }; await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+  const handleConfirmSchedule = async (data: ScheduleFormData) => { if (!item) return; setIsSubmittingAction(true); const payload = { module_id: Number((item.originalApiItem as any).id), module_name: 'OfferDemand', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '', }; try { await dispatch(addScheduleAction(payload)).unwrap(); toast.push(<Notification type="success" title="Event Scheduled" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+  const handleConfirmActivity = async (data: ActivityFormData) => { if (!item || !user?.id) return; setIsSubmittingAction(true); const payload = { item: data.item, notes: data.notes || '', module_id: String((item.originalApiItem as any).id), module_name: 'OfferDemand', user_id: user.id, }; try { await dispatch(addAllActionAction(payload)).unwrap(); toast.push(<Notification type="success" title="Activity Added" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+
   const renderModalContent = () => {
     switch (type) {
       case "viewDetails": return <ViewDetailsDialog item={item} onClose={onClose} />;
-      case "email": return <SendEmailDialog item={item} onClose={onClose} />;
-      case "whatsapp": return <SendWhatsAppDialog item={item} onClose={onClose} />;
-      case "notification": return <AddNotificationDialog item={item} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-      case "task": return <AssignTaskDialog item={item} onClose={onClose} />;
-      case "calendar": return <AddScheduleDialog item={item} onClose={onClose} />;
+      case "notification": return <AddNotificationDialog item={item} onClose={onClose} userOptions={getAllUserDataOptions} onSubmit={handleConfirmNotification} isLoading={isSubmittingAction} />;
+      case "task": return <AssignTaskDialog item={item} onClose={onClose} userOptions={getAllUserDataOptions} onSubmit={handleConfirmTask} isLoading={isSubmittingAction} />;
+      case "calendar": return <AddScheduleDialog item={item} onClose={onClose} onSubmit={handleConfirmSchedule} isLoading={isSubmittingAction} />;
+      case "active": return <AddActivityDialog item={item} onClose={onClose} onSubmit={handleConfirmActivity} isLoading={isSubmittingAction} />;
       case "alert": return <ViewAlertDialog item={item} onClose={onClose} />;
       case "trackRecord": return <TrackRecordDialog item={item} onClose={onClose} />;
-      case "engagement": return <ViewEngagementDialog item={item} onClose={onClose} />;
       case "document": return <DownloadDocumentDialog item={item} onClose={onClose} />;
-      default: return (<GenericActionDialog type={type} item={item} onClose={onClose} />);
+      default: return null;
     }
   };
   return <>{renderModalContent()}</>;
@@ -554,11 +418,11 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClo
 // --- END MODALS SECTION ---
 // ============================================================================
 
-type OfferDemandExportItem = Omit<OfferDemandItem, | "createdDate" | "updated_at" | "createdByInfo" | "assignedToInfo" | "originalApiItem" | "groups"> &
-{ created_by_name: string; assigned_to_name: string; created_date_formatted: string; updated_date_formatted: string; };
+type OfferDemandExportItem = Omit<OfferDemandItem, | "createdDate" | "updated_at" | "createdByInfo" | "assignedToInfo" | "originalApiItem" | "groups" | "updated_by_user"> &
+{ created_by_name: string; assigned_to_name: string; created_date_formatted: string; updated_date_formatted: string; updated_by_name?: string; updated_by_role?: string; };
 
-const CSV_HEADERS_OFFERS_DEMANDS = ["ID", "Type", "Name", "Number of Buyers", "Number of Sellers", "Created By", "Assigned To", "Created Date", "Last Updated", "Updated By", "Updated Role",];
-const CSV_KEYS_OFFERS_DEMANDS_EXPORT: (keyof OfferDemandExportItem)[] = ["id", "type", "name", "numberOfBuyers", "numberOfSellers", "created_by_name", "assigned_to_name", "created_date_formatted", "updated_date_formatted", "updated_by_name", "updated_by_role",];
+const CSV_HEADERS_OFFERS_DEMANDS = ["ID", "Type", "Name", "Number of Buyers", "Number of Sellers", "Created By", "Assigned To", "Created Date", "Last Updated", "Updated By", "Updated By Role",];
+const CSV_KEYS_OFFERS_DEMANDS_EXPORT: (keyof OfferDemandExportItem)[] = ["id", "type", "name", "numberOfBuyers", "numberOfSellers", "created_by_name", "assigned_to_name", "created_date_formatted", "updated_date_formatted", "updated_by_name", "updated_by_role"];
 
 function exportToCsvOffersDemands(filename: string, rows: OfferDemandItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
@@ -567,7 +431,7 @@ function exportToCsvOffersDemands(filename: string, rows: OfferDemandItem[]) {
     created_by_name: row.createdByInfo.userName, assigned_to_name: row.assignedToInfo?.userName || "N/A",
     created_date_formatted: dayjs(row.createdDate).format('YYYY-MM-DD HH:mm:ss'),
     updated_date_formatted: row.updated_at ? dayjs(row.updated_at).format('YYYY-MM-DD HH:mm:ss') : "N/A",
-    updated_by_name: row.updated_by_name, updated_by_role: row.updated_by_role,
+    updated_by_name: row.updated_by_user?.name, updated_by_role: row.updated_by_user?.roles?.[0]?.display_name,
   }));
   const separator = ",";
   const csvContent = CSV_HEADERS_OFFERS_DEMANDS.join(separator) + "\n" + transformedRows.map((row) => {
@@ -616,7 +480,7 @@ const transformApiOffer = (apiOffer: ActualApiOfferShape): OfferDemandItem => {
     createdDate: new Date(apiOffer.created_at), updated_at: apiOffer.updated_at ? new Date(apiOffer.updated_at) : undefined,
     numberOfBuyers: apiOffer.numberOfBuyers, numberOfSellers: apiOffer.numberOfSellers,
     groups: offerGroups.length > 0 ? offerGroups : undefined,
-    updated_by_name: apiOffer.updated_by_name, updated_by_role: apiOffer.updated_by_role,
+    updated_by_user: apiOffer.updated_by_user,
     originalApiItem: apiOffer,
   };
 };
@@ -634,7 +498,7 @@ const transformApiDemand = (apiDemand: ActualApiDemandShape): OfferDemandItem =>
     createdDate: new Date(apiDemand.created_at), updated_at: apiDemand.updated_at ? new Date(apiDemand.updated_at) : undefined,
     numberOfBuyers: apiDemand.numberOfBuyers, numberOfSellers: apiDemand.numberOfSellers,
     groups: demandGroups.length > 0 ? demandGroups : undefined,
-    updated_by_name: apiDemand.updated_by_name, updated_by_role: apiDemand.updated_by_role,
+    updated_by_user: apiDemand.updated_by_user,
     originalApiItem: apiDemand,
   };
 };
@@ -644,16 +508,13 @@ const ActionColumn = React.memo(({ rowData, onEdit, onView, onDelete, onOpenModa
     <Tooltip title="Edit"><div role="button" onClick={onEdit} className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"><TbPencil /></div></Tooltip>
     <Tooltip title="View Details"><div role="button" onClick={onView} className="text-xl cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-sky-600 dark:text-gray-400 dark:hover:text-sky-400"><TbEye /></div></Tooltip>
     <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-      <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Mark Active</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm size={18} /> <span className="text-xs">View Alert</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("trackRecord", rowData)} className="flex items-center gap-2 text-green-600 hover:text-green-700"><TbCircleCheck size={18} /> <span className="text-xs">Accept</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("trackRecord", rowData)} className="flex items-center gap-2 text-red-600 hover:text-red-700"><TbCancel size={18} /> <span className="text-xs">Reject</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("engagement", rowData)} className="flex items-center gap-2"><TbUserSearch size={18} /> <span className="text-xs">Convert to Lead</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send WhatsApp</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Active Log</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
       <Dropdown.Item onClick={onDelete} className="flex items-center gap-2 text-red-600 hover:text-red-700"><TbTrash size={18} /> <span className="text-xs">Delete</span></Dropdown.Item>
     </Dropdown>
   </div>
@@ -719,14 +580,12 @@ const ItemTableTools = React.memo(({ onSearchChange, onExport, searchQuery, onOp
 ItemTableTools.displayName = "ItemTableTools";
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: FilterFormData, onRemoveFilter: (key: keyof FilterFormData, value: any) => void; onClearAll: () => void; }) => {
-
-
   const hasFilters = Object.values(filterData).some(val => val && (!Array.isArray(val) || val.length > 0));
   if (!hasFilters) return null;
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
       <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-      {filterData.quickFilters.value && <Tag prefix>Type: {filterData.quickFilters.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('quickFilters', filterData.quickFilters.value)} /></Tag>}
+      {filterData.quickFilters?.value && <Tag prefix>Type: {filterData.quickFilters.value} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('quickFilters', filterData.quickFilters.value)} /></Tag>}
       <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
     </div>
   );
@@ -755,6 +614,7 @@ ItemSelected.displayName = "ItemSelected";
 const OffersDemands = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const { user } = useSelector(authSelector);
 
   const { Offers: { counts: offerDemandCounts, data: offersStoreData }, Demands: demandsStoreData, offersStatus, demandsStatus, offersError, demandsError, getAllUserData } = useSelector(masterSelector, shallowEqual);
   const [currentTab, setCurrentTab] = useState<string>(TABS.ALL);
@@ -771,12 +631,58 @@ const OffersDemands = () => {
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
   const [dataForExportLoading, setDataForExportLoading] = useState(false);
   const [modalState, setModalState] = useState<OfferDemandModalState>({ isOpen: false, type: null, data: null });
-  const handleOpenModal = useCallback((type: OfferDemandModalType, itemData: OfferDemandItem) => setModalState({ isOpen: true, type, data: itemData }), []);
-  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
-  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
+  
+  // --- ADDED for Image Viewer ---
+  const [imageView, setImageView] = useState('');
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+
+  const openImageViewer = useCallback((path: string | null | undefined) => {
+    if (path) {
+      setImageView(path);
+      setIsImageViewerOpen(true);
+    } else {
+      toast.push(<Notification title="No Image" type="info">User has no profile picture.</Notification>);
+    }
+  }, []);
+
+  const closeImageViewer = useCallback(() => {
+    setIsImageViewerOpen(false);
+    setImageView('');
+  }, []);
+
+  const formatCustomDateTime = (dateStr: string | Date | null | undefined) => {
+    if (!dateStr) return 'N/A';
+    return dayjs(dateStr).format("D MMM YYYY, h:mm A");
+  };
+
+  const handleOpenModal = useCallback((type: OfferDemandModalType, itemData: OfferDemandItem) => {
+    if (type === 'email') {
+        const subject = `Regarding your ${itemData.type}: ${itemData.name}`;
+        const body = `Dear ${itemData.createdByInfo.userName},\n\n`;
+        window.open(`mailto:${itemData.createdByInfo.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+        toast.push(<Notification type="success" title="Opening Email Client" />);
+        return;
+    }
+    if (type === 'whatsapp') {
+        const phone = "1234567890"; // Placeholder phone number
+        if (!phone) {
+            toast.push(<Notification type="danger" title="Invalid Phone Number" />);
+            return;
+        }
+        const message = `Hi ${itemData.createdByInfo.userName}, regarding your ${itemData.type}: "${itemData.name}"...`;
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(url, "_blank");
+        toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+        return;
+    }
+    setModalState({ isOpen: true, type, data: itemData });
+  }, []);
+
+  const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
   const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((user: any) => ({ value: user.id, label: user.name })) : [], [getAllUserData]);
 
@@ -840,8 +746,8 @@ const OffersDemands = () => {
 
   const { pageData, totalItems } = useMemo(() => {
     let itemsToDisplay: OfferDemandItem[] = []; let currentTotal = 0;
-    const safeOffersItems = Array.isArray(offersStoreData?.data) ? offersStoreData.data : [];
-    const safeDemandsItems = Array.isArray(demandsStoreData?.data) ? demandsStoreData.data : [];
+    const safeOffersItems = Array.isArray(offersStoreData) ? offersStoreData : [];
+    const safeDemandsItems = Array.isArray(demandsStoreData) ? demandsStoreData : [];
     const safeOffersTotal = typeof offersStoreData?.total === 'number' ? offersStoreData.total : 0;
     const safeDemandsTotal = typeof demandsStoreData?.total === 'number' ? demandsStoreData.total : 0;
 
@@ -877,7 +783,7 @@ const OffersDemands = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ ...data, quickFilters: null }); handleSetTableConfig({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableConfig, closeFilterDrawer]);
   const onClearFilters = useCallback(() => { const d = filterFormSchema.parse({}); filterFormMethods.reset(d); setFilterCriteria(d); handleSetTableConfig({ pageIndex: 1, query: "" }); closeFilterDrawer(); }, [filterFormMethods, handleSetTableConfig, closeFilterDrawer]);
-  const handleCardClick = (type: 'item', value: 'Offer' | 'Demand' | 'Today') => { onClearFilters(); setFilterCriteria({ quickFilters: { type, value } }); };
+  const handleCardClick = (type: 'item', value: 'Offer' | 'Demand' | 'Today') => { onClearFilters(); setFilterCriteria({ ...filterCriteria, quickFilters: { type, value } }); };
   const handleRemoveFilter = (key: keyof FilterFormData) => { setFilterCriteria(prev => ({ ...prev, [key]: undefined })); };
 
   const handlePaginationChange = useCallback((page: number) => handleSetTableConfig({ pageIndex: page }), [handleSetTableConfig]);
@@ -892,7 +798,7 @@ const OffersDemands = () => {
     else { setCurrentSelectedItems((prev) => prev.filter(i => !cVIds.has(i.id))); }
   }, [setCurrentSelectedItems]);
 
-  const handleEdit = useCallback((item: OfferDemandItem) => { const baseRoute = item.type === "Offer" ? "offers" : "demands"; const itemId = (item.originalApiItem as ActualApiOfferShape | ActualApiDemandShape).id; navigate(`/sales-leads/${baseRoute}/create`, { state: item }); }, [navigate]);
+  const handleEdit = useCallback((item: OfferDemandItem) => { const baseRoute = item.type === "Offer" ? "offers" : "demands"; navigate(`/sales-leads/${baseRoute}/create`, { state: item }); }, [navigate]);
   const handleView = useCallback((item: OfferDemandItem) => { handleOpenModal("viewDetails", item); }, [handleOpenModal]);
   const handleDeleteClick = useCallback((item: OfferDemandItem) => setItemToDeleteConfirm(item), []);
 
@@ -952,8 +858,6 @@ const OffersDemands = () => {
     finally { setIsSubmittingExportReason(false); setIsExportReasonModalOpen(false); setDataForExportLoading(false); fetchData(); }
   }, [dispatch, filterCriteria, currentTableConfig, currentTab, fetchData, prepareApiParams]);
 
-
-
   const columns: ColumnDef<OfferDemandItem>[] = useMemo(() => [
     { header: "ID", accessorKey: "id", enableSorting: true, size: 70, cell: (props: CellContext<OfferDemandItem, any>) => (<span className="font-mono text-xs">{props.row.original.originalApiItem.id}</span>), },
     { header: "Name", accessorKey: "name", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => (<div><div className="font-semibold">{props.row.original.name}</div>{(props.row.original.numberOfBuyers !== undefined || props.row.original.numberOfSellers !== undefined) && (<><div className="text-xs text-gray-600 dark:text-gray-300">Buyers: {props.row.original.numberOfBuyers ?? "N/A"}</div><div className="text-xs text-gray-600 dark:text-gray-300">Sellers: {props.row.original.numberOfSellers ?? "N/A"}</div></>)}</div>), },
@@ -973,9 +877,36 @@ const OffersDemands = () => {
       },
     },
     { header: "Created By / Assigned", accessorKey: "createdByInfo.userName", id: "createdBy", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => { const item = props.row.original; const fCD = dayjs(item.createdDate).format('D MMM YYYY, h:mm A'); return (<div className="flex flex-col gap-1"><div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span className="font-semibold">{item.createdByInfo.userName}</span></div>{item.assignedToInfo && (<div className="text-xs text-gray-600 dark:text-gray-300"><b>Assigned: </b> {item.assignedToInfo.userName}</div>)}<div className="text-xs text-gray-500 dark:text-gray-400"><span>{fCD}</span></div></div>); }, },
-    { header: "Updated Info", accessorKey: "created_by", id: "updatedInfo", enableSorting: true, size: 120, cell: (props) => { const { updated_at, name, updated_by_role } = props.row.original; const fD = updated_at ? dayjs(updated_at).format('D MMM YYYY, h:mm A') : "N/A"; return (<div className="text-xs"><span>{name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span> <br /><span>{fD}</span></div>); }, },
-    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 120, cell: (props: CellContext<OfferDemandItem, any>) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onView={() => handleView(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />), },
-  ], [handleEdit, handleView, handleDeleteClick, handleOpenModal]);
+    {
+        header: 'Updated Info',
+        accessorKey: 'updated_at',
+        enableSorting: true,
+        size: 220,
+        cell: props => {
+            const { updated_at, updated_by_user } = props.row.original;
+            return (
+                <div className="flex items-center gap-2">
+                <Tooltip title="View Profile Picture">
+                    <Avatar
+                        src={updated_by_user?.profile_pic_path}
+                        shape="circle"
+                        size="sm"
+                        icon={<TbUserCircle />}
+                        className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                        onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+                    />
+                </Tooltip>
+                <div>
+                    <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                    <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+                    <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+                </div>
+                </div>
+            );
+        }
+    },
+    { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 120, cell: (props: CellContext<OfferDemandItem, any>) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onView={() => handleOpenModal("viewDetails", props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />), },
+  ], [handleEdit, handleDeleteClick, handleOpenModal, openImageViewer]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<OfferDemandItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -994,14 +925,6 @@ const OffersDemands = () => {
   const isLoadingO = offersStatus === 'loading' || offersStatus === 'idle'; const isLoadingD = demandsStatus === 'loading' || demandsStatus === 'idle';
   let isOverallLoading = false;
   if (currentTab === TABS.OFFER) isOverallLoading = isLoadingO; else if (currentTab === TABS.DEMAND) isOverallLoading = isLoadingD; else isOverallLoading = isLoadingO || isLoadingD;
-  const allApiUsersForFilterDropdown = useMemo(() => {
-    const users = new Map<string, string>();
-    const safeOItems = Array.isArray(offersStoreData?.data) ? offersStoreData.data : [];
-    const safeDItems = Array.isArray(demandsStoreData?.data) ? demandsStoreData.data : [];
-    safeOItems.forEach((o: ActualApiOfferShape) => { const creator = o.created_by_user || o.created_by; const assignee = o.assign_user_data || o.assign_user; if (creator) users.set(String(creator.id), creator.name); if (assignee) users.set(String(assignee.id), assignee.name); });
-    safeDItems.forEach((d: ActualApiDemandShape) => { if (d.created_by) users.set(String(d.created_by.id), d.created_by.name); if (d.assign_user) users.set(String(d.assign_user.id), d.assign_user.name); });
-    return Array.from(users.entries()).map(([value, label]) => ({ value, label }));
-  }, [offersStoreData, demandsStoreData]);
 
   const itemTypeOptions = [{ value: "Offer" as const, label: "Offer" }, { value: "Demand" as const, label: "Demand" }];
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
@@ -1061,6 +984,9 @@ const OffersDemands = () => {
         </Form>
       </Drawer>
       <OfferDemandModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserDataOptions} />
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} width={600}>
+        <div className="flex justify-center items-center p-4">{imageView ? <img src={imageView} alt="User" className="max-w-full max-h-[80vh]" /> : <p>No image.</p>}</div>
+      </Dialog>
     </>
   );
 };

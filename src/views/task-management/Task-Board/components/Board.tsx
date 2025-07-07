@@ -227,7 +227,7 @@ const BoardCard = React.forwardRef<HTMLDivElement, BoardCardProps>((props, ref) 
         <Card ref={ref} className="hover:shadow-xl transition-shadow duration-200 rounded-lg mb-4 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800" bodyClass="p-4 flex flex-col" {...rest}>
             <div className="flex justify-between items-start mb-2.5">
                 <h6 className="font-semibold text-base text-slate-800 dark:text-slate-100 leading-tight break-words cursor-pointer hover:text-sky-600 dark:hover:text-sky-400" onClick={onViewDetails}>{name}</h6>
-                <Dropdown placement="bottom-end" renderTitle={<EllipsisButton />}><Dropdown.Item eventKey="view" onClick={onViewDetails} className="gap-2"><TbEye />View Details</Dropdown.Item><Dropdown.Item eventKey="edit" onClick={() => onEdit(data)} className="gap-2"><TbPencil />Edit Task</Dropdown.Item></Dropdown>
+                <Dropdown placement="bottom-end" renderTitle={<EllipsisButton />}><Dropdown.Item eventKey="edit" onClick={() => onEdit(data)} className="gap-2"><TbPencil />Edit Task</Dropdown.Item></Dropdown>
             </div>
             {(labels && labels.length > 0 || priority) && (<div className="mb-3 flex flex-wrap gap-1.5 items-center">{priority && <Tag className={taskLabelColors[priority] || taskLabelColors.default}>Priority: {priority}</Tag>}{labels?.map((label) => <Tag key={label} className={`${taskLabelColors[label] || taskLabelColors.default}`}>{label}</Tag>)}</div>)}
             <div className="flex items-center justify-between mt-auto pt-2"><UsersAvatarGroup avatarProps={{ size: 28, className:"ring-1 ring-white dark:ring-slate-800" }} users={members || []} /><div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">{comments && comments.length > 0 && <IconText className="gap-1 items-center" icon={<TbMessageCircle className="text-base" />}>{comments.length}</IconText>}{attachments && attachments.length > 0 && <IconText className="gap-1 items-center" icon={<TbPaperclip className="text-base" />}>{attachments.length}</IconText>}</div></div>
@@ -292,7 +292,7 @@ const ActualTaskListView: React.FC<TaskListViewProps> = ({ tasks, onEdit }) => {
                         <td className="px-6 py-4 whitespace-nowrap">{task.priority ? <Tag className={taskLabelColors[task.priority] || taskLabelColors.default}>{task.priority}</Tag> : <span className="text-xs text-slate-400">-</span>}</td>
                         <td className="px-6 py-4 whitespace-nowrap">{task.members && task.members.length > 0 ? <UsersAvatarGroup avatarProps={{ size: 28, className:"ring-1 ring-white dark:ring-slate-800" }} users={task.members} /> : <span className="text-xs text-slate-400">Unassigned</span>}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{task.dueDate ? dayjs(task.dueDate).format('MMM DD, YYYY') : '-'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><Tooltip title="View Details"><Button shape="circle" size="sm" variant="plain" icon={<TbEye />} onClick={() => handleViewTicket(task.id)} className="text-slate-500 hover:text-sky-600" /></Tooltip><Tooltip title="Edit Task"><Button shape="circle" size="sm" variant="plain" icon={<TbPencil />} onClick={() => onEdit(task)} className="text-slate-500 hover:text-emerald-600" /></Tooltip></td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><Tooltip title="Edit Task"><Button shape="circle" size="sm" variant="plain" icon={<TbPencil />} onClick={() => onEdit(task)} className="text-slate-500 hover:text-emerald-600" /></Tooltip></td>
                     </tr>
                 ))}
             </tbody>
@@ -310,7 +310,7 @@ const Board = (props: BoardProps) => {
     const [currentView, setCurrentView] = useState<'board' | 'list'>('board');
     const [loggedInUserData, setLoggedInUserData] = useState<any>(null);
 
-    const DEFAULT_BOARD_STATUSES = [ "Not Started", "Pending", "In Progress", "On Hold", "Review", "Completed", "Cancelled" ];
+    const DEFAULT_BOARD_STATUSES = [ "Not_Started", "Pending", "In_Progress", "On_Hold", "Review", "Completed", "Cancelled" ];
     const { AllTaskDataByStatues = {}, status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
 
     useEffect(() => { 
