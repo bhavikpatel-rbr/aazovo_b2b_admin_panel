@@ -43,7 +43,7 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
   TbBrandWhatsapp,
-  TbCalendarEvent, // Added Icon
+  TbCalendarEvent,
   TbChecks,
   TbCloudUpload,
   TbColumns,
@@ -73,7 +73,7 @@ import type {
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  addScheduleAction, // Added Action
+  addScheduleAction,
   deleteAllpartnerAction,
   getContinentsAction,
   getCountriesAction,
@@ -81,7 +81,7 @@ import {
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import dayjs from "dayjs"; // Added dayjs
+import dayjs from "dayjs";
 import { useSelector } from "react-redux";
 
 // --- PartnerItem Type (Data Structure) ---
@@ -274,82 +274,8 @@ const AddPartnerScheduleDialog: React.FC<{ partner: PartnerItem; onClose: () => 
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const eventTypeOptions = [
-    // Customer Engagement & Sales
-    { value: 'Meeting', label: 'Meeting' },
-    { value: 'Demo', label: 'Product Demo' },
-    { value: 'IntroCall', label: 'Introductory Call' },
-    { value: 'FollowUpCall', label: 'Follow-up Call' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-    { value: 'CheckIn', label: 'Customer Check-in' },
-    { value: 'LogEmail', label: 'Log an Email' },
-
-    // Project & Task Management
-    { value: 'Milestone', label: 'Project Milestone' },
-    { value: 'Task', label: 'Task' },
-    { value: 'FollowUp', label: 'General Follow-up' },
-    { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-    // Customer Onboarding & Support
-    { value: 'OnboardingSession', label: 'Onboarding Session' },
-    { value: 'Training', label: 'Training Session' },
-    { value: 'SupportCall', label: 'Support Call' },
-
-    // General & Administrative
-    { value: 'Reminder', label: 'Reminder' },
-    { value: 'Note', label: 'Add a Note' },
-    { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
-    { value: 'StrategySession', label: 'Strategy Session' },
-    { value: 'TeamMeeting', label: 'Team Meeting' },
-    { value: 'PerformanceReview', label: 'Performance Review' },
-    { value: 'Lunch', label: 'Lunch / Break' },
-    { value: 'Appointment', label: 'Personal Appointment' },
-    { value: 'Other', label: 'Other' },
-    { value: 'ProjectKickoff', label: 'Project Kick-off' },
-    { value: 'InternalSync', label: 'Internal Team Sync' },
-    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
-    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
-    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
-    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
-    { value: 'ProjectSignOff', label: 'Project Sign-off' },
-    { value: 'PrepareReport', label: 'Prepare Report' },
-    { value: 'PresentFindings', label: 'Present Findings' },
-    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
-    { value: 'BugReplication', label: 'Bug Replication Session' },
-    { value: 'IssueEscalation', label: 'Escalate Issue' },
-    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
-    { value: 'FeatureRequest', label: 'Log Feature Request' },
-    { value: 'IntegrationSupport', label: 'Integration Support Call' },
-    { value: 'DataMigration', label: 'Data Migration/Import Task' },
-    { value: 'ColdCall', label: 'Cold Call' },
-    { value: 'DiscoveryCall', label: 'Discovery Call' },
-    { value: 'QualificationCall', label: 'Qualification Call' },
-    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
-    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
-    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
-    { value: 'ContractSent', label: 'Contract Sent' },
-    { value: 'NegotiationCall', label: 'Negotiation Call' },
-    { value: 'TrialSetup', label: 'Product Trial Setup' },
-    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
-    { value: 'WelcomeCall', label: 'Welcome Call' },
-    { value: 'ImplementationSession', label: 'Implementation Session' },
-    { value: 'UserTraining', label: 'User Training Session' },
-    { value: 'AdminTraining', label: 'Admin Training Session' },
-    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-    { value: 'HealthCheck', label: 'Customer Health Check' },
-    { value: 'FeedbackSession', label: 'Feedback Session' },
-    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
-    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
-    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
-    { value: 'InvoiceDue', label: 'Invoice Due' },
-    { value: 'SendInvoice', label: 'Send Invoice' },
-    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
-    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
-    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
-    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
-    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
-    { value: 'SendQuote', label: 'Send Quote/Estimate' },
-  ]
+    { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' },
+  ];
 
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
@@ -410,20 +336,58 @@ const AddPartnerScheduleDialog: React.FC<{ partner: PartnerItem; onClose: () => 
   );
 };
 
+const SendPartnerEmailAction: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
+    useEffect(() => {
+        if (!partner.primary_email_id) {
+            toast.push(<Notification type="warning" title="Missing Email" children="Primary email is not available for this partner." />);
+            onClose();
+            return;
+        }
+        const subject = `Regarding Your Partnership: ${partner.partner_name}`;
+        const body = `Hello ${partner.owner_name || partner.partner_name},\n\nWe are contacting you regarding your partnership profile (ID: ${partner.partner_code}).\n\nThank you.`;
+        
+        window.open(`mailto:${partner.primary_email_id}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+        onClose();
+    }, [partner, onClose]);
+
+    return null; 
+};
+
+const SendPartnerWhatsAppAction: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
+    useEffect(() => {
+        const phone = partner.primary_contact_number?.replace(/\D/g, '');
+        const countryCode = partner.primary_contact_number_code?.replace(/\D/g, '');
+
+        if (!phone || !countryCode) {
+            toast.push(<Notification type="warning" title="Missing Number" children="Primary contact number is not available for this partner." />);
+            onClose();
+            return;
+        }
+        
+        const fullPhoneNumber = `${countryCode}${phone}`;
+        const message = `Hello ${partner.owner_name || partner.partner_name},\nThis is a message regarding your partnership with us.`;
+        
+        window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+        onClose();
+    }, [partner, onClose]);
+
+    return null; 
+};
+
 const PartnerModals: React.FC<{ modalState: ModalState; onClose: () => void; }> = ({ modalState, onClose }) => {
   const { type, data: partner, isOpen } = modalState;
   if (!isOpen || !partner) return null;
 
   switch (type) {
+    case 'email':
+      return <SendPartnerEmailAction partner={partner} onClose={onClose} />;
+    case 'whatsapp':
+        return <SendPartnerWhatsAppAction partner={partner} onClose={onClose} />;
     case 'schedule':
       return <AddPartnerScheduleDialog partner={partner} onClose={onClose} />;
-    // Other cases for 'email', 'whatsapp' can be added here
     default:
-      return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-          <p>Modal for action: {type}</p>
-        </Dialog>
-      );
+      console.warn(`Unhandled modal type: ${type}`);
+      return null;
   }
 };
 
@@ -455,8 +419,8 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
       <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
       <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal('email', rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal('whatsapp', rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2">
           <TbCalendarEvent size={18} />
           <span className="text-xs">Add Schedule</span>
@@ -514,7 +478,7 @@ const PartnerListTable = () => {
   const { partnerList, setSelectedPartners, partnerCount, ContinentsData, CountriesData } = usePartnerList();
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
-  const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>({ filterCreatedDate: [null, null] });
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);

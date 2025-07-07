@@ -242,82 +242,8 @@ const AddInquiryScheduleDialog: React.FC<{ inquiry: InquiryItem; onClose: () => 
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const eventTypeOptions = [
-    // Customer Engagement & Sales
-    { value: 'Meeting', label: 'Meeting' },
-    { value: 'Demo', label: 'Product Demo' },
-    { value: 'IntroCall', label: 'Introductory Call' },
-    { value: 'FollowUpCall', label: 'Follow-up Call' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-    { value: 'CheckIn', label: 'Customer Check-in' },
-    { value: 'LogEmail', label: 'Log an Email' },
-
-    // Project & Task Management
-    { value: 'Milestone', label: 'Project Milestone' },
-    { value: 'Task', label: 'Task' },
-    { value: 'FollowUp', label: 'General Follow-up' },
-    { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-    // Customer Onboarding & Support
-    { value: 'OnboardingSession', label: 'Onboarding Session' },
-    { value: 'Training', label: 'Training Session' },
-    { value: 'SupportCall', label: 'Support Call' },
-
-    // General & Administrative
-    { value: 'Reminder', label: 'Reminder' },
-    { value: 'Note', label: 'Add a Note' },
-    { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
-    { value: 'StrategySession', label: 'Strategy Session' },
-    { value: 'TeamMeeting', label: 'Team Meeting' },
-    { value: 'PerformanceReview', label: 'Performance Review' },
-    { value: 'Lunch', label: 'Lunch / Break' },
-    { value: 'Appointment', label: 'Personal Appointment' },
-    { value: 'Other', label: 'Other' },
-    { value: 'ProjectKickoff', label: 'Project Kick-off' },
-    { value: 'InternalSync', label: 'Internal Team Sync' },
-    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
-    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
-    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
-    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
-    { value: 'ProjectSignOff', label: 'Project Sign-off' },
-    { value: 'PrepareReport', label: 'Prepare Report' },
-    { value: 'PresentFindings', label: 'Present Findings' },
-    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
-    { value: 'BugReplication', label: 'Bug Replication Session' },
-    { value: 'IssueEscalation', label: 'Escalate Issue' },
-    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
-    { value: 'FeatureRequest', label: 'Log Feature Request' },
-    { value: 'IntegrationSupport', label: 'Integration Support Call' },
-    { value: 'DataMigration', label: 'Data Migration/Import Task' },
-    { value: 'ColdCall', label: 'Cold Call' },
-    { value: 'DiscoveryCall', label: 'Discovery Call' },
-    { value: 'QualificationCall', label: 'Qualification Call' },
-    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
-    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
-    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
-    { value: 'ContractSent', label: 'Contract Sent' },
-    { value: 'NegotiationCall', label: 'Negotiation Call' },
-    { value: 'TrialSetup', label: 'Product Trial Setup' },
-    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
-    { value: 'WelcomeCall', label: 'Welcome Call' },
-    { value: 'ImplementationSession', label: 'Implementation Session' },
-    { value: 'UserTraining', label: 'User Training Session' },
-    { value: 'AdminTraining', label: 'Admin Training Session' },
-    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-    { value: 'HealthCheck', label: 'Customer Health Check' },
-    { value: 'FeedbackSession', label: 'Feedback Session' },
-    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
-    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
-    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
-    { value: 'InvoiceDue', label: 'Invoice Due' },
-    { value: 'SendInvoice', label: 'Send Invoice' },
-    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
-    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
-    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
-    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
-    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
-    { value: 'SendQuote', label: 'Send Quote/Estimate' },
-  ]
+    { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' },
+  ];
 
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
@@ -377,7 +303,6 @@ const AddInquiryScheduleDialog: React.FC<{ inquiry: InquiryItem; onClose: () => 
     </Dialog>
   );
 };
-
 
 // --- Modals Wrapper Component ---
 const InquiriesModals: React.FC<{
@@ -601,7 +526,15 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 // --- InquiryActionColumn Component (DataTable Actions) ---
-const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOpenModal }: { rowData: InquiryItem; onViewDetail: (id: string) => void; onDeleteItem: (item: InquiryItem) => void; onEdit?: (id: string) => void; onShare?: (id: string) => void; onChangeItemStatus?: (id: string, currentStatus: InquiryItem["status"]) => void; onOpenModal: (type: InquiryModalType, data: InquiryItem) => void; }) => {
+const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOpenModal, onSendEmail, onSendWhatsapp }: { 
+    rowData: InquiryItem; 
+    onViewDetail: (id: string) => void; 
+    onDeleteItem: (item: InquiryItem) => void; 
+    onEdit?: (id: string) => void; 
+    onOpenModal: (type: InquiryModalType, data: InquiryItem) => void; 
+    onSendEmail: (data: InquiryItem) => void; 
+    onSendWhatsapp: (data: InquiryItem) => void;
+}) => {
   const handleEdit = () => onEdit && onEdit(rowData.id);
   return (
     <div className="flex items-center justify-center gap-1">
@@ -609,8 +542,8 @@ const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOp
       <Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400" role="button" onClick={() => onViewDetail(rowData.id)}><TbEye /></div></Tooltip>
       <Tooltip title="More">
         <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-          <Dropdown.Item className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+          <Dropdown.Item onClick={() => onSendEmail(rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+          <Dropdown.Item onClick={() => onSendWhatsapp(rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
           <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification', rowData)}><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
           <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
           <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule', rowData)}><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
@@ -798,6 +731,27 @@ const InquiryListTable = () => {
   const handleOpenModal = useCallback((type: InquiryModalType, itemData: InquiryItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
+  const handleSendEmail = (inquiry: InquiryItem) => {
+    if (!inquiry.contact_person_email || inquiry.contact_person_email === 'N/A') {
+      toast.push(<Notification type="warning" title="Missing Email">Contact email is not available.</Notification>);
+      return;
+    }
+    const subject = `Regarding Your Inquiry: ${inquiry.inquiry_id}`;
+    const body = `Hello ${inquiry.contact_person_name},\n\nThis is a follow-up regarding your inquiry about "${inquiry.inquiry_subject}".\n\nThank you.`;
+    window.open(`mailto:${inquiry.contact_person_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  };
+
+  const handleSendWhatsapp = (inquiry: InquiryItem) => {
+    const phone = inquiry.contact_person_phone?.replace(/\D/g, '');
+    if (!phone || phone === 'N/A') {
+      toast.push(<Notification type="warning" title="Missing Phone">Contact number is not available.</Notification>);
+      return;
+    }
+    const message = `Hello ${inquiry.contact_person_name}, we are contacting you about your inquiry: ${inquiry.inquiry_id}.`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
 
   const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); };
@@ -900,8 +854,8 @@ const InquiryListTable = () => {
     { header: "Contact Person", accessorKey: "contact_person_name", id: 'contact', enableSorting: true, size: 240, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-gray-800 dark:text-gray-100">{d.contact_person_name}</span><a href={`mailto:${d.contact_person_email}`} className="text-blue-600 hover:underline dark:text-blue-400">{d.contact_person_email}</a><span className="text-gray-600 dark:text-gray-300">{d.contact_person_phone}</span></div>); } },
     { header: "Inquiry Details", accessorKey: "inquiry_priority", id: 'details', enableSorting: true, size: 280, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-1 text-xs"><div className="flex items-center gap-2"><Tag className={`${priorityColors[d.inquiry_priority] || priorityColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_priority} </Tag><Tag className={`${inquiryCurrentStatusColors[d.inquiry_status] || inquiryCurrentStatusColors["N/A"]} capitalize text-[10px] px-1.5 py-0.5`}>{d.inquiry_status}</Tag></div><span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Assigned:</span> {d.assigned_to}</span>{d.department && (<span className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Dept:</span> {d.department}</span>)}<Tooltip title={d.inquiry_description}><p className="text-gray-600 dark:text-gray-400 line-clamp-2">{d.inquiry_description}</p></Tooltip></div>); } },
     { header: "Timeline", accessorKey: "inquiry_date", id: 'timeline', enableSorting: true, size: 180, cell: ({ row }) => { const d = row.original; return (<div className="flex flex-col gap-0.5"><FormattedDateDisplay dateString={d.inquiry_date} label="Inquired" /><FormattedDateDisplay dateString={d.response_date} label="Responded" /></div>); } },
-    { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props) => (<InquiryActionColumn rowData={props.row.original} onViewDetail={handleViewDetails} onDeleteItem={handleDeleteItemClick} onEdit={handleEditInquiry} onOpenModal={handleOpenModal} />) },
-  ], [navigate, allFilteredAndSortedData, handleOpenModal]);
+    { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props) => (<InquiryActionColumn rowData={props.row.original} onViewDetail={handleViewDetails} onDeleteItem={handleDeleteItemClick} onEdit={handleEditInquiry} onOpenModal={handleOpenModal} onSendEmail={handleSendEmail} onSendWhatsapp={handleSendWhatsapp} />) },
+  ], [navigate, allFilteredAndSortedData, handleOpenModal, handleSendEmail, handleSendWhatsapp, handleViewDetails]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<InquiryItem>[]>(columns);
 
@@ -924,7 +878,7 @@ const InquiryListTable = () => {
   };
 
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-  useEffect(() => { setFilteredColumns(columns) }, [columns]);
+
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
