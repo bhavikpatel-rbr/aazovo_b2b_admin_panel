@@ -130,7 +130,7 @@ const INITIAL_STATE: any = {
   unitData: "",
   LeadsData: "",
   PaymentTermsData: "",
-  DocumentTypeData: "",
+  DocumentTypeData: [],
   CurrencyData: "",
   ContinentsData: "",
   CountriesData: "",
