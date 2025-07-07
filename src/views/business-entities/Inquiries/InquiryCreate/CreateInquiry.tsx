@@ -131,14 +131,14 @@ const transformApiDataToForm = (apiData: any): InquiryFormData => {
   };
 };
 
-type ApiLookupItem = { id: string | number; name: string; [key: string]: any; };
+type ApiLookupItem = { id: string | number; name: string;[key: string]: any; };
 type ExistingAttachment = { name: string; url: string; originalName?: string; /* for removal by original name if needed */ };
 
 const CreateInquiry = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const inquiryIDFromState = location.state ? (location.state as string | number) : undefined;
   const isEditMode = Boolean(inquiryIDFromState);
 
@@ -153,11 +153,27 @@ const CreateInquiry = () => {
   const departmentOptions = useMemo(() => departmentsData?.data?.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) || [], [departmentsData]);
   const salesPersonOptions = useMemo(() => Array.isArray(salesPerson) ? salesPerson.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: sp.name })) : [], [salesPerson]);
 
-  const inquiryTypeOptions = [ { value: "Sales Inquiry", label: "Sales Inquiry" }, { value: "Buy Inquiry", label: "Buy Inquiry" }, { value: "Product Support", label: "Product Support" }, { value: "Service Support", label: "Service Support" }, { value: "Technical Support", label: "Technical Support" }, { value: "Complaint", label: "Complaint" }, { value: "Others", label: "Others" }];
-  const priorityOptions = [ { value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }];
-  const statusOptions = [ { value: "Open", label: "Open" }, { value: "In Progress", label: "In Progress" }, { value: "Resolved", label: "Resolved" }, { value: "On Hold", label: "On Hold" }, { value: "Rejected", label: "Rejected" }, { value: "Closed", label: "Closed" }];
-  const feedbackStatusOptions = [ { value: "Received", label: "Received" }, { value: "Pending", label: "Pending" }, { value: "Positive", label: "Positive" }, { value: "Neutral", label: "Neutral" }, { value: "Negative", label: "Negative" }];
-  const inquiryFromOptions = [ { value: "Website", label: "Website (Inquiry Form)" }, { value: "Call", label: "Call" }, { value: "Email", label: "Email" }, { value: "Whatsapp", label: "Whatsapp" }, { value: "Manual", label: "Manual Entry" }, { value: "Partner", label: "Partner Referral" }, { value: "Others", label: "Others" }];
+  const inquiryTypeOptions = [
+    { value: "New Product Inquiry", label: "New Product Inquiry" },
+    { value: "Services Inquiry", label: "Services Inquiry" },
+    { value: "Price Quotation", label: "Price Quotation" },
+    { value: "General Inquiry", label: "General Inquiry" },
+    { value: "Marketing Inquiry", label: "Marketing Inquiry" },
+    { value: "Membership Inquiry", label: "Membership Inquiry" },
+    { value: "Partnership Inquiry", label: "Partnership Inquiry" },
+    { value: "Others", label: "Others" }];
+  const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }];
+  const statusOptions = [{ value: "Open", label: "Open" }, { value: "In Progress", label: "In Progress" }, { value: "Resolved", label: "Resolved" }, { value: "On Hold", label: "On Hold" }, { value: "Rejected", label: "Rejected" }, { value: "Closed", label: "Closed" }];
+  const feedbackStatusOptions = [{ value: "Received", label: "Received" }, { value: "Pending", label: "Pending" }, { value: "Positive", label: "Positive" }, { value: "Neutral", label: "Neutral" }, { value: "Negative", label: "Negative" }];
+  const inquiryFromOptions = [{ value: "Website", label: "Website (Inquiry Form)" },
+  { value: "Phone", label: "Phone" }, { value: "Email", label: "Email" },
+  { value: "Walk-in", label: "Walk-in" },
+  { value: "Social Media", label: "Social Media" },
+  { value: "Trade Show/Event", label: "Trade Show/Event" },
+  { value: "Partner", label: "Partner/Reseller" },
+  { value: "Whatsapp", label: "Whatsapp" },
+  { value: "Referral", label: "Referral" },
+  { value: "Others", label: "Others" }];
 
   const { control, handleSubmit, formState: { errors, isDirty }, reset, setValue } = useForm<InquiryFormData>({
     defaultValues: formDefaultValues,
@@ -192,11 +208,11 @@ const CreateInquiry = () => {
             // Populate existing attachments from inquiry_attachments (JSON string) and inquiry_attachments_array (URLs)
             let originalFileNames: string[] = [];
             if (apiData.inquiry_attachments && typeof apiData.inquiry_attachments === 'string') {
-                try {
-                    originalFileNames = JSON.parse(apiData.inquiry_attachments);
-                } catch (e) {
-                    console.error("Failed to parse inquiry_attachments JSON string:", e);
-                }
+              try {
+                originalFileNames = JSON.parse(apiData.inquiry_attachments);
+              } catch (e) {
+                console.error("Failed to parse inquiry_attachments JSON string:", e);
+              }
             }
 
             if (apiData.inquiry_attachments_array && Array.isArray(apiData.inquiry_attachments_array)) {
@@ -248,18 +264,18 @@ const CreateInquiry = () => {
     setAttachmentsToRemove(prev => [...prev, attachmentOriginalName]);
     // Mark form as dirty if not already, as attachments state has changed
     if (!isDirty) {
-        setValue("company_name", control._formValues.company_name, {shouldDirty: true}); // Trigger dirty state
+      setValue("company_name", control._formValues.company_name, { shouldDirty: true }); // Trigger dirty state
     }
   };
 
   const handleCancel = () => {
     if (isDirty || attachmentsToRemove.length > 0) { // Also consider if attachments were marked for removal
-        setIsConfirmCancelDialogOpen(true);
+      setIsConfirmCancelDialogOpen(true);
     } else {
-        resetStatesAndNavigate();
+      resetStatesAndNavigate();
     }
   };
-  
+
   const resetStatesAndNavigate = () => {
     reset(formDefaultValues);
     setExistingAttachments([]);
@@ -309,7 +325,7 @@ const CreateInquiry = () => {
         }
       }
     }
-    
+
     // Handle NEW attachments for upload
     if (Array.isArray(data.inquiry_attachments) && data.inquiry_attachments.length > 0) {
       data.inquiry_attachments.forEach((file: any) => {
@@ -321,9 +337,9 @@ const CreateInquiry = () => {
 
     // Handle attachments to REMOVE (send their original names/identifiers)
     if (isEditMode && attachmentsToRemove.length > 0) {
-        attachmentsToRemove.forEach(fileName => {
-            formDataPayload.append('attachments_to_remove[]', fileName);
-        });
+      attachmentsToRemove.forEach(fileName => {
+        formDataPayload.append('attachments_to_remove[]', fileName);
+      });
     }
 
     try {
@@ -372,90 +388,90 @@ const CreateInquiry = () => {
         <AdaptiveCard>
           <h5>{isEditMode ? 'Edit Inquiry Details' : 'New Inquiry Details'}</h5>
           {isLoadingInitialForm && isEditMode ? (
-             <div className="flex justify-center items-center py-10"> <Spinner size="lg" /></div>
+            <div className="flex justify-center items-center py-10"> <Spinner size="lg" /></div>
           ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-6">
-            {/* Row 1: Dates and Types */}
-            <FormItem label={<>Inquiry Date <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_date} errorMessage={errors.inquiry_date?.message as string} >
-              <Controller name="inquiry_date" control={control} render={({ field }) => ( <DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Inquiry Date" /> )} />
-            </FormItem>
-            <FormItem label={<>Status <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_status} errorMessage={errors.inquiry_status?.message} >
-              <Controller name="inquiry_status" control={control} render={({ field }) => ( <Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )} />
-            </FormItem>
-            <FormItem label="Inquiry From" invalid={!!errors.inquiry_from} errorMessage={errors.inquiry_from?.message} >
-              <Controller name="inquiry_from" control={control} render={({ field }) => ( <Select placeholder="Select Inquiry Source" options={inquiryFromOptions} value={inquiryFromOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable /> )} />
-            </FormItem>
-            <FormItem label={<>Inquiry Type <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_type} errorMessage={errors.inquiry_type?.message} >
-              <Controller name="inquiry_type" control={control} render={({ field }) => ( <Select placeholder="Select Inquiry Type" options={inquiryTypeOptions} value={inquiryTypeOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )} />
-            </FormItem>
+            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-6">
+              {/* Row 1: Dates and Types */}
+              <FormItem label={<>Inquiry Date <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_date} errorMessage={errors.inquiry_date?.message as string} >
+                <Controller name="inquiry_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Inquiry Date" />)} />
+              </FormItem>
+              <FormItem label={<>Status <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_status} errorMessage={errors.inquiry_status?.message} >
+                <Controller name="inquiry_status" control={control} render={({ field }) => (<Select placeholder="Select Status" options={statusOptions} value={statusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
+              </FormItem>
+              <FormItem label="Inquiry From" invalid={!!errors.inquiry_from} errorMessage={errors.inquiry_from?.message} >
+                <Controller name="inquiry_from" control={control} render={({ field }) => (<Select placeholder="Select Inquiry Source" options={inquiryFromOptions} value={inquiryFromOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />)} />
+              </FormItem>
+              <FormItem label={<>Inquiry Type <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_type} errorMessage={errors.inquiry_type?.message} >
+                <Controller name="inquiry_type" control={control} render={({ field }) => (<Select placeholder="Select Inquiry Type" options={inquiryTypeOptions} value={inquiryTypeOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
+              </FormItem>
 
-            {/* Row 2: Assignment and Priority */}
-            <FormItem label="Department" invalid={!!errors.department} errorMessage={errors.department?.message as string} >
-              <Controller name="department" control={control} render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select Department(s)"
-                  options={departmentOptions}
-                  isLoading={masterLoadingStatus === "loading" && departmentOptions.length === 0}
-                  value={ Array.isArray(field.value) ? departmentOptions.filter(opt => field.value.includes(opt.value)) : departmentOptions.find(opt => opt.value === field.value) || null }
-                  onChange={(selectedOptions) => field.onChange( Array.isArray(selectedOptions) ? selectedOptions.map(opt => opt.value) : selectedOptions?.value || null )}
-                  isClearable
-                />
-              )} />
-            </FormItem>
-            <FormItem label="Assigned To" invalid={!!errors.assigned_to} errorMessage={errors.assigned_to?.message as string} >
-              <Controller name="assigned_to" control={control} render={({ field }) => ( 
-                <Select 
-                  placeholder="Select Assignee" 
-                  options={salesPersonOptions} 
-                  isLoading={masterLoadingStatus === "loading" && salesPersonOptions.length === 0}
-                  value={salesPersonOptions.find(o => o.value === field.value) || null} 
-                  onChange={opt => field.onChange(opt ? opt.value : null)} 
-                  isClearable
-                /> 
-              )} />
-            </FormItem>
-            <FormItem label={<>Priority <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_priority} errorMessage={errors.inquiry_priority?.message} >
-              <Controller name="inquiry_priority" control={control} render={({ field }) => ( <Select placeholder="Select Priority" options={priorityOptions} value={priorityOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} /> )} />
-            </FormItem>
-            <FormItem label="Response Date" invalid={!!errors.response_date} errorMessage={errors.response_date?.message as string} >
-              <Controller name="response_date" control={control} render={({ field }) => ( <DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Response Date" /> )} />
-            </FormItem>
+              {/* Row 2: Assignment and Priority */}
+              <FormItem label="Department" invalid={!!errors.department} errorMessage={errors.department?.message as string} >
+                <Controller name="department" control={control} render={({ field }) => (
+                  <Select
+                    isMulti
+                    placeholder="Select Department(s)"
+                    options={departmentOptions}
+                    isLoading={masterLoadingStatus === "loading" && departmentOptions.length === 0}
+                    value={Array.isArray(field.value) ? departmentOptions.filter(opt => field.value.includes(opt.value)) : departmentOptions.find(opt => opt.value === field.value) || null}
+                    onChange={(selectedOptions) => field.onChange(Array.isArray(selectedOptions) ? selectedOptions.map(opt => opt.value) : selectedOptions?.value || null)}
+                    isClearable
+                  />
+                )} />
+              </FormItem>
+              <FormItem label="Assigned To" invalid={!!errors.assigned_to} errorMessage={errors.assigned_to?.message as string} >
+                <Controller name="assigned_to" control={control} render={({ field }) => (
+                  <Select
+                    placeholder="Select Assignee"
+                    options={salesPersonOptions}
+                    isLoading={masterLoadingStatus === "loading" && salesPersonOptions.length === 0}
+                    value={salesPersonOptions.find(o => o.value === field.value) || null}
+                    onChange={opt => field.onChange(opt ? opt.value : null)}
+                    isClearable
+                  />
+                )} />
+              </FormItem>
+              <FormItem label={<>Priority <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_priority} errorMessage={errors.inquiry_priority?.message} >
+                <Controller name="inquiry_priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} value={priorityOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
+              </FormItem>
+              <FormItem label="Response Date" invalid={!!errors.response_date} errorMessage={errors.response_date?.message as string} >
+                <Controller name="response_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Response Date" />)} />
+              </FormItem>
 
-            {/* Row 3: Company & Contact Info */}
-            <FormItem label={<>Company Name <span className="text-red-500">*</span></>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message} >
-              <Controller name="company_name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Company Name" />} />
-            </FormItem>
-            <FormItem label={<>Contact Person Name <span className="text-red-500">*</span></>} invalid={!!errors.name} errorMessage={errors.name?.message} >
-              <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Full Name" />} />
-            </FormItem>
-            <FormItem label={<>Contact Person Email <span className="text-red-500">*</span></>} invalid={!!errors.email} errorMessage={errors.email?.message} >
-              <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="Enter Email Address" />} />
-            </FormItem>
-            <FormItem label={<>Contact Person Mobile <span className="text-red-500">*</span></>} invalid={!!errors.mobile_no} errorMessage={errors.mobile_no?.message} >
-              <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} placeholder="Enter Phone Number (e.g. +1...)" />} />
-            </FormItem>
-            
-            {/* Row 4: Inquiry Subject (Full Width) */}
-            <FormItem label={<>Inquiry Subject <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_subject} errorMessage={errors.inquiry_subject?.message} className="lg:col-span-4" >
-              <Controller name="inquiry_subject" control={control} render={({ field }) => <Input {...field} placeholder="Enter Subject of Inquiry" />} />
-            </FormItem>
+              {/* Row 3: Company & Contact Info */}
+              <FormItem label={<>Company Name <span className="text-red-500">*</span></>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message} >
+                <Controller name="company_name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Company Name" />} />
+              </FormItem>
+              <FormItem label={<>Contact Person Name <span className="text-red-500">*</span></>} invalid={!!errors.name} errorMessage={errors.name?.message} >
+                <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Full Name" />} />
+              </FormItem>
+              <FormItem label={<>Contact Person Email <span className="text-red-500">*</span></>} invalid={!!errors.email} errorMessage={errors.email?.message} >
+                <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" placeholder="Enter Email Address" />} />
+              </FormItem>
+              <FormItem label={<>Contact Person Mobile <span className="text-red-500">*</span></>} invalid={!!errors.mobile_no} errorMessage={errors.mobile_no?.message} >
+                <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} placeholder="Enter Phone Number (e.g. +1...)" />} />
+              </FormItem>
 
-            {/* Row 5: Resolution Notes & Attachments */}
-            <FormItem label="Resolution (Notes)" invalid={!!errors.inquiry_resolution} errorMessage={errors.inquiry_resolution?.message} className="md:col-span-2 lg:col-span-3" >
-              <Controller name="inquiry_resolution" control={control} render={({ field }) => <Input textArea rows={3} {...field} value={field.value || ''} placeholder="Enter Resolution Notes" />} />
-            </FormItem>
-            <FormItem label="Attachments" className="lg:col-span-1">
-              {existingAttachments.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Existing Files:</p>
-                  <ul className="mt-1 text-xs text-gray-500 dark:text-gray-400 list-none p-0">
-                    {existingAttachments.map((file, index) => (
-                      <li key={index} className="flex items-center justify-between py-1">
-                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate" title={`View ${file.name}`}>
-                          {file.name}
-                        </a>
-                        <Button
+              {/* Row 4: Inquiry Subject (Full Width) */}
+              <FormItem label={<>Inquiry Subject <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_subject} errorMessage={errors.inquiry_subject?.message} className="lg:col-span-4" >
+                <Controller name="inquiry_subject" control={control} render={({ field }) => <Input {...field} placeholder="Enter Subject of Inquiry" />} />
+              </FormItem>
+
+              {/* Row 5: Resolution Notes & Attachments */}
+              <FormItem label="Resolution (Notes)" invalid={!!errors.inquiry_resolution} errorMessage={errors.inquiry_resolution?.message} className="md:col-span-2 lg:col-span-3" >
+                <Controller name="inquiry_resolution" control={control} render={({ field }) => <Input textArea rows={3} {...field} value={field.value || ''} placeholder="Enter Resolution Notes" />} />
+              </FormItem>
+              <FormItem label="Attachments" className="lg:col-span-1">
+                {existingAttachments.length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Existing Files:</p>
+                    <ul className="mt-1 text-xs text-gray-500 dark:text-gray-400 list-none p-0">
+                      {existingAttachments.map((file, index) => (
+                        <li key={index} className="flex items-center justify-between py-1">
+                          <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate" title={`View ${file.name}`}>
+                            {file.name}
+                          </a>
+                          <Button
                             type="button"
                             shape="circle"
                             size="sm"
@@ -464,75 +480,75 @@ const CreateInquiry = () => {
                             className="text-red-500 hover:text-red-700 ml-2"
                             onClick={() => handleRemoveExistingAttachment(file.originalName || file.name)}
                             title={`Remove ${file.name}`}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <Controller
-                name="inquiry_attachments" // This RHF field is for NEW files
-                control={control}
-                render={({ field: { onChange, value, name, ref } }) => (
-                  <>
-                    <Input 
-                        type="file" 
-                        multiple 
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <Controller
+                  name="inquiry_attachments" // This RHF field is for NEW files
+                  control={control}
+                  render={({ field: { onChange, value, name, ref } }) => (
+                    <>
+                      <Input
+                        type="file"
+                        multiple
                         name={name}
                         ref={ref}
-                        onChange={(e) => { 
-                            const files = e.target.files; 
-                            onChange(files ? Array.from(files) : []); 
-                        }} 
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          onChange(files ? Array.from(files) : []);
+                        }}
                         className={existingAttachments.length > 0 ? "mt-2" : ""}
-                    />
-                    {Array.isArray(value) && value.length > 0 && (
-                      <div className="mt-2">
-                         <p className="text-sm font-medium text-gray-700 dark:text-gray-200">New Files to Upload:</p>
-                        <ul className="mt-1 text-xs text-gray-500 dark:text-gray-400 list-disc list-inside">
-                          {value.map((file: File | {name: string}, fileIndex: number) => (
-                             <li key={fileIndex} className="truncate" title={file.name}>{file.name}</li> 
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </>
-                )}
-              />
-            </FormItem>
+                      />
+                      {Array.isArray(value) && value.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-200">New Files to Upload:</p>
+                          <ul className="mt-1 text-xs text-gray-500 dark:text-gray-400 list-disc list-inside">
+                            {value.map((file: File | { name: string }, fileIndex: number) => (
+                              <li key={fileIndex} className="truncate" title={file.name}>{file.name}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  )}
+                />
+              </FormItem>
 
-            {/* Row 6: Inquiry Description (Full Width) */}
-            <FormItem label="Inquiry Description" invalid={!!errors.inquiry_description} errorMessage={errors.inquiry_description?.message} className="lg:col-span-4" >
-              <Controller name="inquiry_description" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Detailed Description of the Inquiry" />} />
-            </FormItem>
-            
-            <div className="lg:col-span-4 flex justify-end gap-2 mt-4">
+              {/* Row 6: Inquiry Description (Full Width) */}
+              <FormItem label="Inquiry Description" invalid={!!errors.inquiry_description} errorMessage={errors.inquiry_description?.message} className="lg:col-span-4" >
+                <Controller name="inquiry_description" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Detailed Description of the Inquiry" />} />
+              </FormItem>
+
+              <div className="lg:col-span-4 flex justify-end gap-2 mt-4">
                 <Button size="sm" className="mr-2" onClick={handleCancel} disabled={isSubmitting}>
-                    Cancel
+                  Cancel
                 </Button>
                 <Button
-                    size="sm"
-                    variant="solid"
-                    type="submit"
-                    loading={isSubmitting}
-                    disabled={(!isDirty && isEditMode && attachmentsToRemove.length === 0) || (masterLoadingStatus === 'loading' && !initialDataFetched) || isSubmitting}
+                  size="sm"
+                  variant="solid"
+                  type="submit"
+                  loading={isSubmitting}
+                  disabled={(!isDirty && isEditMode && attachmentsToRemove.length === 0) || (masterLoadingStatus === 'loading' && !initialDataFetched) || isSubmitting}
                 >
-                    {isEditMode ? "Update Inquiry" : "Save Inquiry"}
+                  {isEditMode ? "Update Inquiry" : "Save Inquiry"}
                 </Button>
-            </div>
-          </form>
+              </div>
+            </form>
           )}
         </AdaptiveCard>
       </Container>
 
-      <ConfirmDialog 
-        isOpen={isConfirmCancelDialogOpen} 
-        type="warning" 
-        title="Unsaved Changes" 
-        onClose={() => setIsConfirmCancelDialogOpen(false)} 
-        onRequestClose={() => setIsConfirmCancelDialogOpen(false)} 
-        onCancel={() => setIsConfirmCancelDialogOpen(false)} 
-        onConfirm={confirmNavigateAway} 
+      <ConfirmDialog
+        isOpen={isConfirmCancelDialogOpen}
+        type="warning"
+        title="Unsaved Changes"
+        onClose={() => setIsConfirmCancelDialogOpen(false)}
+        onRequestClose={() => setIsConfirmCancelDialogOpen(false)}
+        onCancel={() => setIsConfirmCancelDialogOpen(false)}
+        onConfirm={confirmNavigateAway}
       >
         <p>You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.</p>
       </ConfirmDialog>

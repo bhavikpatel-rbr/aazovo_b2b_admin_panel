@@ -596,11 +596,13 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
     value: value.id,
     label: value.name,
   }));
-  const ownershipTypeOptions = [
+   const ownershipTypeOptions = [
     { value: "Sole Proprietorship", label: "Sole Proprietorship" },
     { value: "Partner", label: "Partner" },
     { value: "LLC", label: "LLC" },
     { value: "Corporate", label: "Corporate" },
+    { value: "Private Limited", label: "Private Limited"},
+    { value: "Public Limited", label: "Public Limited"},
     { value: "Others", label: "Others" },
   ];
 
@@ -611,7 +613,11 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
   const officeTypeOptions = [
     { label: "Head Office", value: "Head Office" },
     { label: "Branch", value: "Branch" },
+    { label: "Regional Office", value: "Regional Office" },
     { label: "Warehouse", value: "Warehouse" },
+    { label: "Pick up location", value: "Pick up location" },
+    { label: "Delivery location", value: "Delivery location" },
+    { label: "Manufacturing unit", value: "Manufacturing unit" },
     { label: "Other", value: "Other" },
   ];
 

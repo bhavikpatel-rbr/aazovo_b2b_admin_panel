@@ -2497,9 +2497,11 @@ export const cloneFormBuilderAsync = async (formData: any) => {
   }
 }
 
-export const getActivityLogAsync = async () => {
+export const getActivityLogAsync = async (data) => {
+  console.log("data", data);
+
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/activity-logs`)
+    const response = await axiosInstance.get(`${config.apiURL}/activity-logs?user_id=${data}`)
     return response
   } catch (err) {
     return isAxiosError(err)

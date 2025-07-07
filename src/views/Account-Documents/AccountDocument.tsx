@@ -45,7 +45,7 @@ import {
   TbBell,
   TbBrandGoogleDrive,
   TbBrandWhatsapp,
-  TbCalendarClock,
+  TbCalendarEvent,
   TbChecklist,
   TbCloudDownload,
   TbCloudUpload,
@@ -56,7 +56,7 @@ import {
   TbFileCheck,
   TbFileExcel,
   TbFilter,
-  TbMailShare,
+  TbMail,
   TbPencil,
   TbPlus,
   TbReload,
@@ -85,6 +85,7 @@ import {
   addaccountdocAction,
   addNotificationAction,
   addScheduleAction,
+  addTaskAction,
   // deleteaccountdocAction, // <-- Ensure this action exists for deletion
   editaccountdocAction,
   getaccountdocAction,
@@ -104,11 +105,11 @@ import { shallowEqual, useSelector } from "react-redux";
 
 // --- Define Types ---
 export type SelectOption = { value: any; label: string };
-export type ModalType = "notification" | "schedule" | "view";
+export type ModalType = 'notification' | 'schedule' | 'view' | 'task' | 'email' | 'whatsapp' | 'verify' | 'download';
 export interface ModalState {
   isOpen: boolean;
   type: ModalType | null;
-  data: any; // Use `any` to accommodate both list item and full detail object
+  data: any; 
 }
 type FilterFormData = {
   filterStatus?: SelectOption[];
@@ -127,6 +128,21 @@ const scheduleSchema = z.object({
   notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
+// --- Zod Schema for Task Form ---
+const taskSchema = z.object({
+    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+    assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+    priority: z.string().min(1, 'Please select a priority.'),
+    due_date: z.date().nullable().optional(),
+    description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskSchema>;
+const taskPriorityOptions: SelectOption[] = [
+    { value: 'Low', label: 'Low' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'High', label: 'High' },
+];
 
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
@@ -266,165 +282,59 @@ function exportToCsv(filename: string, rows: AccountDocumentListItem[]) {
 }
 
 const eventTypeOptions = [
-  // Customer Engagement & Sales
-  { value: "Meeting", label: "Meeting" },
-  { value: "Demo", label: "Product Demo" },
-  { value: "IntroCall", label: "Introductory Call" },
-  { value: "FollowUpCall", label: "Follow-up Call" },
-  { value: "QBR", label: "Quarterly Business Review (QBR)" },
-  { value: "CheckIn", label: "Customer Check-in" },
-  { value: "LogEmail", label: "Log an Email" },
-
-  // Project & Task Management
-  { value: "Milestone", label: "Project Milestone" },
-  { value: "Task", label: "Task" },
-  { value: "FollowUp", label: "General Follow-up" },
-  { value: "ProjectKickoff", label: "Project Kick-off" },
-
-  // Customer Onboarding & Support
-  { value: "OnboardingSession", label: "Onboarding Session" },
-  { value: "Training", label: "Training Session" },
-  { value: "SupportCall", label: "Support Call" },
-
-  // General & Administrative
-  { value: "Reminder", label: "Reminder" },
-  { value: "Note", label: "Add a Note" },
-  { value: "FocusTime", label: "Focus Time (Do Not Disturb)" },
-  { value: "StrategySession", label: "Strategy Session" },
-  { value: "TeamMeeting", label: "Team Meeting" },
-  { value: "PerformanceReview", label: "Performance Review" },
-  { value: "Lunch", label: "Lunch / Break" },
-  { value: "Appointment", label: "Personal Appointment" },
-  { value: "Other", label: "Other" },
+  { value: "Meeting", label: "Meeting" }, { value: "Demo", label: "Product Demo" }, { value: "IntroCall", label: "Introductory Call" }, { value: "FollowUpCall", label: "Follow-up Call" }, { value: "QBR", label: "Quarterly Business Review (QBR)" }, { value: "CheckIn", label: "Customer Check-in" }, { value: "LogEmail", label: "Log an Email" }, { value: "Milestone", label: "Project Milestone" }, { value: "Task", label: "Task" }, { value: "FollowUp", label: "General Follow-up" }, { value: "ProjectKickoff", label: "Project Kick-off" }, { value: "OnboardingSession", label: "Onboarding Session" }, { value: "Training", label: "Training Session" }, { value: "SupportCall", label: "Support Call" }, { value: "Reminder", label: "Reminder" }, { value: "Note", label: "Add a Note" }, { value: "FocusTime", label: "Focus Time (Do Not Disturb)" }, { value: "StrategySession", label: "Strategy Session" }, { value: "TeamMeeting", label: "Team Meeting" }, { value: "PerformanceReview", label: "Performance Review" }, { value: "Lunch", label: "Lunch / Break" }, { value: "Appointment", label: "Personal Appointment" }, { value: "Other", label: "Other" },
 ];
 
 const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
-  approved:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
-  pending:
-    "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
+  approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
   rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
-  uploaded:
-    "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100",
-  not_uploaded:
-    "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-100",
-  completed:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  uploaded: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100",
+  not_uploaded: "bg-pink-100 text-pink-700 dark:bg-pink-500/20 dark:text-pink-100",
+  completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
   active: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-100",
-  force_completed:
-    "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-100",
+  force_completed: "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-100",
 };
 
 const enquiryTypeColor: Record<EnquiryType | "default", string> = {
   purchase: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200",
   sales: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200",
-  service:
-    "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-200",
+  service: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-200",
   other: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
   default: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 
 // --- Helper Components ---
-const AccountDocumentActionColumn = ({
-  onDelete,
-  onOpenModal,
-  onView,
-  onEdit,
-  rowData,
-}: any) => {
-  const navigate = useNavigate();
+const AccountDocumentActionColumn = ({ onOpenModal, onView, onEdit, rowData }: any) => {
+    const navigate = useNavigate();
 
-  const handleFillUpClick = () => {
-    // This console log can be useful for debugging the rowData structure
-    // console.log("Fill-up form clicked for row:", rowData);
-
-    if (rowData.formId && rowData.formId !== "N/A") {
-      // Navigate to the dynamic form page with document and form IDs
-      navigate(`/fill-up-form/${rowData.id}/${rowData.formId}`);
-    } else {
-      // If no formId, inform the user.
-      toast.push(
-        <Notification title="No Form to Fill" type="info">
-          This document does not have an associated form.
-        </Notification>
-      );
-    }
-  };
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Fillup Form">
-        <div className="text-xl cursor-pointer" onClick={handleFillUpClick}>
-          <TbChecklist />
-        </div>
-      </Tooltip>
-      <Tooltip title="Edit">
-        <div className="text-xl cursor-pointer" onClick={onEdit}>
-          <TbPencil />
-        </div>
-      </Tooltip>
-      <Tooltip title="View">
-        <div className="text-xl cursor-pointer" onClick={onView}>
-          <TbEye />
-        </div>
-      </Tooltip>
-      <Dropdown
-        renderTitle={
-          <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+    const handleFillUpClick = () => {
+        if (rowData.formId && rowData.formId !== "N/A") {
+            navigate(`/fill-up-form/${rowData.id}/${rowData.formId}`);
+        } else {
+            toast.push(<Notification title="No Form to Fill" type="info">This document does not have an associated form.</Notification>);
         }
-      >
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
-        </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbMailShare size={18} /> <span className="text-xs">Send Email</span>
-        </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbBrandWhatsapp size={18} />
-          <span className="text-xs">Send Whatsapp</span>
-        </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbTagStarred size={18} />
-          <span className="text-xs">Add to Active </span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          className="flex items-center gap-2"
-          onClick={() => onOpenModal("schedule", rowData)}
-        >
-          <TbCalendarClock size={18} />
-          <span className="text-xs">Add Schedule </span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          className="flex items-center gap-2"
-          onClick={() => onOpenModal("notification", rowData)}
-        >
-          <TbBell size={18} />
-          <span className="text-xs">Add Notification </span>
-        </Dropdown.Item>
-        <Dropdown.Item
-          className="flex items-center gap-2"
-          onClick={onDelete} // Hook up delete action here
-        >
-          <TbX size={18} />
-          <span className="text-xs text-red-500">Delete</span>
-        </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbChecklist size={18} />
-          <span className="text-xs">Verify Document </span>
-        </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbCloudDownload size={18} />
-          <span className="text-xs">Download Document </span>
-        </Dropdown.Item>
-      </Dropdown>
-    </div>
-  );
+    };
+
+    return (
+        <div className="flex items-center justify-center gap-1">
+            <Tooltip title="Fill-up Form"><div className="text-xl cursor-pointer" onClick={handleFillUpClick}><TbChecklist /></div></Tooltip>
+            <Tooltip title="Edit"><div className="text-xl cursor-pointer" onClick={onEdit}><TbPencil /></div></Tooltip>
+            <Tooltip title="View"><div className="text-xl cursor-pointer" onClick={onView}><TbEye /></div></Tooltip>
+            <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+                <Dropdown.Item onClick={() => onOpenModal('task', rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal('email', rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal('whatsapp', rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /><span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /><span className="text-xs">Add Schedule</span></Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal('notification', rowData)} className="flex items-center gap-2"><TbBell size={18} /><span className="text-xs">Add Notification</span></Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal('verify', rowData)} className="flex items-center gap-2"><TbFileCheck size={18} /><span className="text-xs">Verify Document</span></Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal('download', rowData)} className="flex items-center gap-2"><TbCloudDownload size={18} /><span className="text-xs">Download Document</span></Dropdown.Item>
+            </Dropdown>
+        </div>
+    );
 };
 
-const AddNotificationDialog = ({
-  document,
-  onClose,
-  getAllUserDataOptions,
-}: any) => {
+const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: any) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const notificationSchema = z.object({
@@ -459,18 +369,10 @@ const AddNotificationDialog = ({
     };
     try {
       await dispatch(addNotificationAction(payload)).unwrap();
-      toast.push(
-        <Notification type="success" title="Notification Sent Successfully!" />
-      );
+      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
       onClose();
     } catch (error: any) {
-      toast.push(
-        <Notification
-          type="danger"
-          title="Failed to Send Notification"
-          children={error?.message || "An unknown error occurred."}
-        />
-      );
+      toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || "An unknown error occurred."} />);
     } finally {
       setIsLoading(false);
     }
@@ -479,68 +381,21 @@ const AddNotificationDialog = ({
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Notify about: {document.documentNumber}</h5>
       <UiForm onSubmit={handleSubmit(onSend)}>
-        <UiFormItem
-          label="Title"
-          invalid={!!errors.notification_title}
-          errorMessage={errors.notification_title?.message}
-        >
-          <Controller
-            name="notification_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
+        <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message} >
+          <Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} />
         </UiFormItem>
-        <UiFormItem
-          label="Send To"
-          invalid={!!errors.send_users}
-          errorMessage={errors.send_users?.message}
-        >
-          <Controller
-            name="send_users"
-            control={control}
-            render={({ field }) => (
-              <UiSelect
-                isMulti
-                placeholder="Select User(s)"
-                options={getAllUserDataOptions}
-                value={getAllUserDataOptions.filter((o: any) =>
-                  field.value?.includes(o.value)
-                )}
-                onChange={(options: any) =>
-                  field.onChange(options?.map((o: any) => o.value) || [])
-                }
-              />
+        <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message} >
+          <Controller name="send_users" control={control} render={({ field }) => (
+              <UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter((o: any) => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />
             )}
           />
         </UiFormItem>
-        <UiFormItem
-          label="Message"
-          invalid={!!errors.message}
-          errorMessage={errors.message?.message}
-        >
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={4} />}
-          />
+        <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message} >
+          <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
         </UiFormItem>
         <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            type="submit"
-            loading={isLoading}
-            disabled={!isValid || isLoading}
-          >
-            Send Notification
-          </Button>
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading} > Cancel </Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} > Send Notification </Button>
         </div>
       </UiForm>
     </Dialog>
@@ -580,130 +435,154 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
     };
     try {
       await dispatch(addScheduleAction(payload)).unwrap();
-      toast.push(
-        <Notification
-          type="success"
-          title="Event Scheduled"
-          children={`Successfully scheduled event for document ${document.documentNumber}.`}
-        />
-      );
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for document ${document.documentNumber}.`} />);
       onClose();
     } catch (error: any) {
-      toast.push(
-        <Notification
-          type="danger"
-          title="Scheduling Failed"
-          children={error?.message || "An unknown error occurred."}
-        />
-      );
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || "An unknown error occurred."} />);
     } finally {
       setIsLoading(false);
     }
   };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">
-        Add Schedule for Document {document.documentNumber}
-      </h5>
+      <h5 className="mb-4"> Add Schedule for Document {document.documentNumber} </h5>
       <UiForm onSubmit={handleSubmit(onAddEvent)}>
-        <UiFormItem
-          label="Event Title"
-          invalid={!!errors.event_title}
-          errorMessage={errors.event_title?.message}
-        >
-          <Controller
-            name="event_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
+        <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message} >
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
         </UiFormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UiFormItem
-            label="Event Type"
-            invalid={!!errors.event_type}
-            errorMessage={errors.event_type?.message}
-          >
-            <Controller
-              name="event_type"
-              control={control}
-              render={({ field }) => (
-                <UiSelect
-                  placeholder="Select Type"
-                  options={eventTypeOptions}
-                  value={eventTypeOptions.find((o) => o.value === field.value)}
-                  onChange={(opt: any) => field.onChange(opt?.value)}
-                />
-              )}
-            />
+          <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message} >
+            <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find((o) => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
           </UiFormItem>
-          <UiFormItem
-            label="Event Date & Time"
-            invalid={!!errors.date_time}
-            errorMessage={errors.date_time?.message}
-          >
-            <Controller
-              name="date_time"
-              control={control}
-              render={({ field }) => (
-                <DatePicker.DateTimepicker
-                  placeholder="Select date and time"
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
-            />
+          <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message} >
+            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} /> )} />
           </UiFormItem>
         </div>
-        <UiFormItem
-          label="Reminder Date & Time (Optional)"
-          invalid={!!errors.remind_from}
-          errorMessage={errors.remind_from?.message}
-        >
-          <Controller
-            name="remind_from"
-            control={control}
-            render={({ field }) => (
-              <DatePicker.DateTimepicker
-                placeholder="Select date and time"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
+        <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message} >
+          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
         </UiFormItem>
-        <UiFormItem
-          label="Notes"
-          invalid={!!errors.notes}
-          errorMessage={errors.notes?.message}
-        >
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => <Input textArea {...field} />}
-          />
+        <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message} >
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
         </UiFormItem>
         <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            type="submit"
-            loading={isLoading}
-            disabled={!isValid || isLoading}
-          >
-            Save Event
-          </Button>
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} > Save Event </Button>
         </div>
       </UiForm>
     </Dialog>
   );
 };
+
+const AssignTaskDialog: React.FC<{ document: AccountDocumentListItem; onClose: () => void; userOptions: SelectOption[] }> = ({ document, onClose, userOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
+        resolver: zodResolver(taskSchema),
+        defaultValues: {
+            task_title: `Review document ${document.documentNumber}`,
+            assign_to: [],
+            priority: 'Medium',
+            due_date: null,
+            description: `Please review document ${document.documentNumber} for company ${document.companyName}.`,
+        },
+        mode: 'onChange',
+    });
+
+    const onAssignTask = async (data: TaskFormData) => {
+        setIsLoading(true);
+        const payload = {
+            ...data,
+            due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
+            module_id: String(document.id),
+            module_name: 'AccountDocument',
+        };
+        try {
+            await dispatch(addTaskAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Task Assigned!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Assign Task for Document {document.documentNumber}</h5>
+            <UiForm onSubmit={handleSubmit(onAssignTask)}>
+                <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
+                    <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} /></UiFormItem>
+                </div>
+                <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem>
+                <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
+                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button></div>
+            </UiForm>
+        </Dialog>
+    );
+};
+
+const SendEmailAction: React.FC<{ document: AccountDocumentListItem; onClose: () => void }> = ({ document, onClose }) => {
+    useEffect(() => {
+        // Assuming the assigned user has an email. You might need to fetch full user details.
+        const userEmail = "user@example.com"; // Placeholder
+        if (!userEmail) {
+            toast.push(<Notification type="warning" title="Missing Email" children="Recipient email is not available." />);
+            onClose();
+            return;
+        }
+        const subject = `Action Required: Document ${document.documentNumber}`;
+        const body = `Hello,\n\nPlease review the document ${document.documentNumber} for company ${document.companyName}.\n\nThank you.`;
+        
+        window.open(`mailto:${userEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+        onClose();
+    }, [document, onClose]);
+
+    return null;
+};
+
+const SendWhatsAppAction: React.FC<{ document: AccountDocumentListItem; onClose: () => void }> = ({ document, onClose }) => {
+    useEffect(() => {
+        // Assuming the assigned user has a phone number.
+        const phoneNumber = "1234567890"; // Placeholder
+        if (!phoneNumber) {
+            toast.push(<Notification type="warning" title="Missing Number" children="Recipient phone number is not available." />);
+            onClose();
+            return;
+        }
+        const message = `Hello, please review document ${document.documentNumber} for company ${document.companyName}.`;
+        
+        window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+        onClose();
+    }, [document, onClose]);
+
+    return null;
+};
+
+const VerifyDocumentDialog = ({ document, onClose }: { document: AccountDocumentListItem, onClose: () => void }) => {
+    // This is a placeholder for a real verification action
+    const handleVerify = () => {
+        toast.push(<Notification type="success" title="Document Verified" children={`Document ${document.documentNumber} has been marked as verified.`} />);
+        onClose();
+    }
+    return (
+        <ConfirmDialog isOpen={true} type="info" title="Verify Document" onConfirm={handleVerify} onCancel={onClose} onRequestClose={onClose}>
+            <p>Are you sure you want to mark document <strong>{document.documentNumber}</strong> as verified?</p>
+        </ConfirmDialog>
+    );
+}
+
+const DownloadDocumentAction: React.FC<{ document: AccountDocumentListItem; onClose: () => void }> = ({ document, onClose }) => {
+     useEffect(() => {
+        toast.push(<Notification type="info" title="Download Started" children={`Your download for ${document.documentNumber} will begin shortly.`} />);
+        // In a real app, you would initiate a file download here, e.g., from a URL
+        // window.open(document.fileUrl, '_blank');
+        onClose();
+    }, [document, onClose]);
+    return null;
+}
 
 const DetailItem = ({
   label,
@@ -934,7 +813,7 @@ const ViewDocumentDialog = ({
                   value={created_by_user?.name}
                 />
                 <InfoItem
-                  icon={<TbCalendarClock size={20} />}
+                  icon={<TbCalendarEvent size={20} />}
                   label="Created On"
                 >
                   {dayjs(created_at).format("DD MMM YYYY, hh:mm A")}
@@ -945,7 +824,7 @@ const ViewDocumentDialog = ({
                   value={updated_by_user?.name}
                 />
                 <InfoItem
-                  icon={<TbCalendarClock size={20} />}
+                  icon={<TbCalendarEvent size={20} />}
                   label="Last Updated On"
                 >
                   {dayjs(updated_at).format("DD MMM YYYY, hh:mm A")}
@@ -994,7 +873,6 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
     getfromIDcompanymemberData = [],
   } = useSelector(masterSelector);
 
-  // *** FIXED: Correctly access nested data and provide fallbacks ***
   const DocumentTypeDataOptions = useMemo(
     () =>
       DocumentTypeData?.map((p: any) => ({
@@ -1039,8 +917,6 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
       })) || [],
     [getfromIDcompanymemberData]
   );
-
-  // *** REMOVED: Redundant useEffect hook is no longer needed here ***
 
   useEffect(() => {
     if (isOpen && editingId) {
@@ -1342,17 +1218,21 @@ const AccountDocumentModals = ({
   if (!isOpen || !document) return null;
   switch (type) {
     case "notification":
-      return (
-        <AddNotificationDialog
-          document={document}
-          onClose={onClose}
-          getAllUserDataOptions={getAllUserDataOptions}
-        />
-      );
+      return <AddNotificationDialog document={document} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
     case "schedule":
       return <AddScheduleDialog document={document} onClose={onClose} />;
     case "view":
       return <ViewDocumentDialog document={document} onClose={onClose} />;
+    case 'task':
+        return <AssignTaskDialog document={document} onClose={onClose} userOptions={getAllUserDataOptions} />;
+    case 'email':
+        return <SendEmailAction document={document} onClose={onClose} />;
+    case 'whatsapp':
+        return <SendWhatsAppAction document={document} onClose={onClose} />;
+    case 'verify':
+        return <VerifyDocumentDialog document={document} onClose={onClose} />;
+    case 'download':
+        return <DownloadDocumentAction document={document} onClose={onClose} />;
     default:
       return null;
   }
@@ -1372,6 +1252,7 @@ const AccountDocumentTableTools = ({
   filteredColumns,
   setFilteredColumns,
   activeFilterCount,
+  isDashboard
 }: any) => {
   const isColumnVisible = (colId: string) =>
     filteredColumns.some((c: any) => (c.id || c.accessorKey) === colId);
@@ -1409,7 +1290,7 @@ const AccountDocumentTableTools = ({
           placeholder="Quick Search..."
         />
       </div>
-      <div className="flex gap-1">
+      {!isDashboard &&<div className="flex gap-1">
         <Dropdown
           renderTitle={<Button icon={<TbColumns />} />}
           placement="bottom-end"
@@ -1450,7 +1331,7 @@ const AccountDocumentTableTools = ({
         <Button icon={<TbCloudUpload />} onClick={onExport}>
           Export
         </Button>
-      </div>
+      </div> }
     </div>
   );
 };
@@ -1560,7 +1441,7 @@ const AccountDocumentSelectedFooter = ({
 };
 
 // --- Main Account Document Component ---
-const AccountDocument = () => {
+const AccountDocument = ({isDashboard}) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { getAllUserData = [], getaccountdoc } = useSelector(
@@ -1603,7 +1484,6 @@ const AccountDocument = () => {
     mode: "onChange",
   });
 
-  // *** FIXED: All initial data is fetched here on component mount ***
   useEffect(() => {
     dispatch(getaccountdocAction());
     dispatch(getAllUsersAction());
@@ -1855,18 +1735,15 @@ const AccountDocument = () => {
     []
   );
 
-  // *** NEW: Handler for initiating single item deletion ***
   const handleDeleteClick = useCallback((item: AccountDocumentListItem) => {
     setItemToDelete(item);
     setSingleDeleteConfirmOpen(true);
   }, []);
 
-  // *** NEW: Handler for confirming single item deletion ***
   const handleConfirmSingleDelete = async () => {
     if (!itemToDelete) return;
     setIsProcessingDelete(true);
     try {
-      // Assuming 'deleteaccountdocAction' can take an object with an 'id'
       // await dispatch(deleteaccountdocAction({ id: itemToDelete.id })).unwrap();
       toast.push(<Notification type="success" title="Document Deleted" />);
       dispatch(getaccountdocAction()); // Refresh table data
@@ -1885,12 +1762,10 @@ const AccountDocument = () => {
     }
   };
 
-  // *** NEW: Handler for deleting selected items ***
   const handleDeleteSelected = async () => {
     const ids = selectedItems.map((item) => item.id);
     if (ids.length === 0) return;
     try {
-      // Assuming 'deleteaccountdocAction' can take an object with an array of 'ids'
       // await dispatch(deleteaccountdocAction({ ids })).unwrap();
       toast.push(
         <Notification type="success" title="Selected Documents Deleted" />
@@ -2109,30 +1984,40 @@ const AccountDocument = () => {
           );
         },
       },
-      {
-        header: "Actions",
-        id: "actions",
-        size: 160,
-        meta: { HeaderClass: "text-center" },
-        cell: (props: CellContext<AccountDocumentListItem, any>) => (
-          <AccountDocumentActionColumn
-            onDelete={() => handleDeleteClick(props.row.original)}
-            onOpenModal={handleOpenModal}
-            onEdit={() => handleOpenEditDrawer(props.row.original)}
-            onView={() => handleViewClick(props.row.original)}
-            rowData={props.row.original}
-          />
-        ),
-      },
+      ...(!isDashboard
+        ? [
+            {
+              header: "Actions",
+              id: "actions",
+              size: 160,
+              meta: { HeaderClass: "text-center" },
+              cell: (props: CellContext<AccountDocumentListItem, any>) => (
+                <AccountDocumentActionColumn
+                  onDelete={() => handleDeleteClick(props.row.original)}
+                  onOpenModal={handleOpenModal}
+                  onEdit={() => handleOpenEditDrawer(props.row.original)}
+                  onView={() => handleViewClick(props.row.original)}
+                  rowData={props.row.original}
+                />
+              ),
+            },
+          ]
+        : []),
     ],
-    [handleDeleteClick, handleOpenModal, handleViewClick, handleOpenEditDrawer]
+    [
+      isDashboard,
+      handleDeleteClick,
+      handleOpenModal,
+      handleViewClick,
+      handleOpenEditDrawer,
+    ]
   );
 
   const [filteredColumns, setFilteredColumns] =
     useState<ColumnDef<AccountDocumentListItem>[]>(columns);
   useEffect(() => {
     setFilteredColumns(columns);
-  }, []);
+  }, [columns]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -2163,15 +2048,15 @@ const AccountDocument = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">Account Document</h5>
-            <Button
-              variant="solid"
-              icon={<TbPlus />}
-              className="px-5"
-              onClick={handleOpenAddDrawer}
+          {!isDashboard &&  <h5 className="mb-2 sm:mb-0">Account Document</h5>}
+            {!isDashboard &&<Button
+            variant="solid"
+            icon={<TbPlus />}
+            className="px-5"
+            onClick={handleOpenAddDrawer}
             >
               Add New
-            </Button>
+            </Button> }
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
             <Tooltip title="Click to show all documents">
@@ -2277,6 +2162,7 @@ const AccountDocument = () => {
             </Tooltip>
           </div>
           <AccountDocumentTableTools
+          isDashboard={isDashboard}
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleOpenExportReasonModal}

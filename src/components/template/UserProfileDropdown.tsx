@@ -178,6 +178,7 @@ const _UserDropdown = () => {
   const avatarSrc = userData?.profile_pic_path || "/img/avatars/default-user.jpg";
   const avatarProps = { src: avatarSrc };
   const profileUrl = userData?.id ? `/hr-employees/employees/view/${userData.id}` : '/';
+  const activityUrl = userData?.id ? `/system-tools/activity-log` : '/';
 
   // Fetch initial user data
   useEffect(() => {
@@ -307,7 +308,8 @@ console.log("response",response.payload);
         <Dropdown.Item eventKey="Activity Log" className="px-0">
           <Link
             className="flex h-full w-full px-3"
-            to="/concepts/account/activity-log"
+            to={activityUrl} // The URL path remains the same
+            state={{ userId: userData?.id }}   // We pass the ID in the state object
           >
             <span className="flex gap-2 items-center w-full">
               <PiPulseDuotone className="text-xl" />
