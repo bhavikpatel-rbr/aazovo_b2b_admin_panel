@@ -4154,9 +4154,9 @@ export const cloneFormBuilderAction = createAsyncThunk<
 
 export const getActivityLogAction = createAsyncThunk(
   "auth/exportLogAction",
-  async (_, { rejectWithValue, dispatch }) => {
+  async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await getActivityLogAsync();
+      const response: AxiosResponse<any> = await getActivityLogAsync(data);
       if (response?.data?.status === true) {
         return response?.data;
       }

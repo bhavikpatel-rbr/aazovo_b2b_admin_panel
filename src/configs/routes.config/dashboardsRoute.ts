@@ -31,6 +31,16 @@ const dashboardsRoute: Routes = [
             pageContainerType: 'contained',
         },
     },
+    {
+        key: 'dashboard.Trending',
+        path: `${DASHBOARDS_PREFIX_PATH}/Trending`,
+        // H:\aazovo_b2b_admin_panel\src\views\dashboards\DynemicData\DynemicDashboard.tsx
+        component: lazy(() => import('@/views/dashboards/DynemicData/DynemicDashboard')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
+    },
 ]
 
 export default dashboardsRoute
