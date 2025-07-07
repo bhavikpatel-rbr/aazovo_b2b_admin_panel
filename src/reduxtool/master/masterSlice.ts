@@ -78,6 +78,7 @@ import {
   getEmployeesAction,
   getEmployeesListingAction,
   getExportMappingsAction,
+  getFillUpFormAction,
   getFormBuilderAction,
   getfromIDcompanymemberAction,
   getHomeCategoryAction,
@@ -205,6 +206,7 @@ const INITIAL_STATE: any = {
   allDocuments: [],
   getAllAction: [],
   getaccountdoc: [],
+  formResponse: [],
   accountDocumentById: 0,
   getfromIDcompanymemberData: 0,
 };
@@ -738,6 +740,10 @@ const masterSlice = createSlice({
      builder.addCase(getfromIDcompanymemberAction.fulfilled, (state, { payload }) => ({
       ...state,
       getfromIDcompanymemberData: payload,
+    }));
+    builder.addCase(getFillUpFormAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      formResponse: payload,
     }));
   },
 });

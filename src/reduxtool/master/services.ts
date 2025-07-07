@@ -467,9 +467,7 @@ export const getAllTaskAsync = async () => {
 
 export const getAllTaskByStatuesAsync = async () => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/get-all-task-by-status`, {
-      "user_id": 53
-    })
+    const response = await axiosInstance.post(`${config.apiURL}/get-all-task-by-status`,)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -3207,6 +3205,24 @@ export const getbyIDaccountdocActionAsync = async (data: object) => {
 export const getfromIDcompanymemberActionAsync = async (id: object) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/company_member/${id}`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getFillUpFormAsync = async (id: object) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/fill-up-form/${id}`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const submitFillUpFormAsync = async (data: object) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/fill-up-form`, { ...data })
     return response?.data
   } catch (err) {
     return isAxiosError(err)

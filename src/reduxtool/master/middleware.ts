@@ -5252,3 +5252,35 @@ export const getfromIDcompanymemberAction = createAsyncThunk(
     }
   }
 )
+
+export const getFillUpFormAction = createAsyncThunk(
+  "auth/getFillUpFormAction",
+  async (id, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getFillUpFormAsync(id)
+      if (response) {
+        return response?.data
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const submitFillUpFormAction = createAsyncThunk(
+  "auth/submitFillUpFormAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await submitFillUpFormAsync(data)
+      if (response) {
+        return response
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
