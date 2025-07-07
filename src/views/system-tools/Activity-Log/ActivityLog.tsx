@@ -116,14 +116,17 @@ export type ChangeLogItem = {
 };
 
 const changeTypeColor: Record<string, string> = {
-  CREATE: "bg-emerald-100 text-emerald-700",
-  UPDATE: "bg-blue-100 text-blue-700",
-  DELETE: "bg-red-100 text-red-700",
-  LOGIN: "bg-lime-100 text-lime-700",
-  LOGOUT: "bg-gray-100 text-gray-600",
-  SYSTEM: "bg-purple-100 text-purple-700",
-  OTHER: "bg-slate-100 text-slate-600",
-  "Failed Login": "bg-pink-100 text-pink-700", // Added for consistency
+  "Add": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "Update": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "Successful Login": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "Successful Logout": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "Delete": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "System": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "Unblock": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "Block": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "Others": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "Forgot Password Email": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700",
+  "Failed Login": "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700", // Added for consistency
 };
 
 const filterFormSchema = z.object({
@@ -564,37 +567,10 @@ const ActivityLog = () => {
   const baseColumns: ColumnDef<ChangeLogItem>[] = useMemo(
     () => [
       {
-        header: "Timestamp",
-        accessorKey: 'timestamp',
-        size: 180,
-        enableSorting: true,
-        cell: (props) => {
-          const { updated_at } = props.row.original;
-          const formattedDate = updated_at
-            ? `${new Date(updated_at).getDate()} ${new Date(
-              updated_at
-            ).toLocaleString("en-US", {
-              month: "short",
-            })} ${new Date(updated_at).getFullYear()}, ${new Date(
-              updated_at
-            ).toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            })}`
-            : "N/A";
-          return (
-            <div className="text-xs">
-              <span className="text-gray-700">{formattedDate}</span>
-            </div>
-          );
-        },
-      },
-      {
         header: "User",
         accessorKey: "user",
         enableSorting: true,
-        size: 200,
+        size: 180,
         cell: (props) => {
           const { user, userName, is_blocked } = props.row.original;
           return (
@@ -625,9 +601,36 @@ const ActivityLog = () => {
           );
         },
       },
-      { header: "Action", accessorKey: "action", size: 120, enableSorting: true, cell: (props) => { const action = props.row.original.action; return (<Tag className={classNames("capitalize whitespace-nowrap font-semibold min-w-[90px] text-center dark:bg-opacity-20", changeTypeColor[action] || changeTypeColor.OTHER)}>{CHANGE_TYPE_OPTIONS.find((o) => o.value === action)?.label || action}</Tag>); }, },
-      { header: "Entity", accessorKey: "entity", size: 120, enableSorting: true },
+      { header: "Action", accessorKey: "action", size: 120, enableSorting: true, cell: (props) => { const action = props.row.original.action; return (<Tag className={classNames("capitalize bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 border-b border-emerald-300 dark:border-emerald-700", changeTypeColor[action] || changeTypeColor.OTHER)}>{CHANGE_TYPE_OPTIONS.find((o) => o.value === action)?.label || action}</Tag>); }, },
+      { header: "Entity", accessorKey: "entity", size: 180, enableSorting: true },
       { header: "Description", accessorKey: "description", size: 400, enableSorting: false },
+      {
+        header: "Timestamp",
+        accessorKey: 'timestamp',
+        size: 160,
+        enableSorting: true,
+        cell: (props) => {
+          const { updated_at } = props.row.original;
+          const formattedDate = updated_at
+            ? `${new Date(updated_at).getDate()} ${new Date(
+              updated_at
+            ).toLocaleString("en-US", {
+              month: "short",
+            })} ${new Date(updated_at).getFullYear()}, ${new Date(
+              updated_at
+            ).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })}`
+            : "N/A";
+          return (
+            <div className="text-xs">
+              <span className="text-gray-700">{formattedDate}</span>
+            </div>
+          );
+        },
+      },
       { header: "Actions", id: "actions", size: 100, meta: { cellClass: "text-center" }, cell: (props) => (
       <ActionColumn onViewDetail={() => openViewDialog(props.row.original)} 
       
@@ -727,7 +730,7 @@ const ActivityLog = () => {
       {/* --- Dialogs & Drawers --- */}
       <Dialog isOpen={!!viewingItem} onClose={() => setViewingItem(null)} width={700} title={`Log Details (ID: ${viewingItem?.id})`}>
         <div className="mt-4">
-          {viewingItem && (<div className="mt-4 p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-lg">
+          {viewingItem && (<div className="mt-6 p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-lg border-emerald-300">
             <h3 className="text-lg font-bold mb-4 border-b pb-2 text-gray-900 dark:text-white">
               Log Details
             </h3>
@@ -777,11 +780,11 @@ const ActivityLog = () => {
       </ConfirmDialog>
       <Drawer title="Filter Activity Logs" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} width={400} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={() => { filterFormMethods.reset({}); setIsFilterDrawerOpen(false); }}>Cancel</Button><Button size="sm" variant="solid" form="filterLogForm" type="submit">Apply</Button></div>}>
         <Form id="filterLogForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
-          <FormItem label="Action Types" className="mb-0"><Controller name="filterAction" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select actions..." options={dynamicFilterOptions.actions} {...field} />)} /></FormItem>
-          <FormItem label="Entity Types" className="mb-0"><Controller name="filterEntity" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select entities..." options={dynamicFilterOptions.entities} {...field} />)} /></FormItem>
-          <FormItem label="Block Status" className="mb-0"><Controller name="filterBlockStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Filter by block status..." options={BLOCK_STATUS_OPTIONS} {...field} />)} /></FormItem>
-          <FormItem label="User Name" className="mb-0"><Controller name="filterUserName" control={filterFormMethods.control} render={({ field }) => (<Input {...field} value={field.value || ""} placeholder="Enter user name..." />)} /></FormItem>
-          <FormItem label="Date Range" className="mb-0"><Controller name="filterDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | undefined} onChange={(dates) => field.onChange(dates || [null, null])} placeholder="Start - End" inputFormat="YYYY-MM-DD" />)} /></FormItem>
+          <FormItem label="Action Types" className="mb-2"><Controller name="filterAction" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select actions..." options={dynamicFilterOptions.actions} {...field} />)} /></FormItem>
+          <FormItem label="Entity Types" className="mb-2"><Controller name="filterEntity" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select entities..." options={dynamicFilterOptions.entities} {...field} />)} /></FormItem>
+          <FormItem label="Block Status" className="mb-2"><Controller name="filterBlockStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Filter by block status..." options={BLOCK_STATUS_OPTIONS} {...field} />)} /></FormItem>
+          <FormItem label="User Name" className="mb-2"><Controller name="filterUserName" control={filterFormMethods.control} render={({ field }) => (<Input {...field} value={field.value || ""} placeholder="Enter user name..." />)} /></FormItem>
+          <FormItem label="Date Range" className="mb-2"><Controller name="filterDateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | undefined} onChange={(dates) => field.onChange(dates || [null, null])} placeholder="Start - End" inputFormat="YYYY-MM-DD" />)} /></FormItem>
         </Form>
       </Drawer>
       <Dialog isOpen={isExportReasonModalOpen} title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)}>

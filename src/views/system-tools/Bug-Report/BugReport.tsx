@@ -120,12 +120,12 @@ const BUG_REPORT_STATUS_OPTIONS: SelectOption[] = [
 ];
 
 const bugStatusColor: Record<BugReportStatusApi, string> = {
-  New: "bg-pink-100 text-pink-600 dark:bg-pink-500/20 dark:text-pink-100",
-  "Under Review": "bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-100",
-  Resolved: "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100",
-  Unresolved: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
-  Read: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  Unread: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
+  New: "bg-pink-100 text-pink-600 dark:bg-pink-500/20 dark:text-pink-100 border-b border-pink-300 dark:border-pink-700",
+  "Under Review": "bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-100 border-b border-orange-300 dark:border-orange-700",
+  Resolved: "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100 border-b border-green-300 dark:border-green-700",
+  Unresolved: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700",
+  Read: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700",
+  Unread: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100 border-b border-amber-300 dark:border-amber-700",
 };
 
 // --- Zod Schemas ---
@@ -799,7 +799,7 @@ const BugReportListing = () => {
     { header: "Contact", accessorKey: "email", size: 200, cell: (props) => (<div><span>{props.row.original.email}</span> <br /><span className="text-xs text-gray-500">{props.row.original.mobile_no}</span></div>) },
     { header: "Reported On", accessorKey: "created_at", size: 200, enableSorting: true, cell: (props) => (<div className="text-xs">{dayjs(props.getValue<string>()).format("DD MMM YYYY, h:mm A")}</div>) },
     { header: "Severity", accessorKey: "severity", size: 120, cell: (props) => (<span>{props.row.original.severity}</span>) },
-    { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => { const statusVal = props.getValue<BugReportStatusApi>(); return (<Tag className={classNames("capitalize whitespace-nowrap min-w-[60px] text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || "N/A"}</Tag>); } },
+    { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => { const statusVal = props.getValue<BugReportStatusApi>(); return (<Tag className={classNames("capitalize whitespace-nowrap text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || "N/A"}</Tag>); } },
     { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => (<ActionColumn 
         onEdit={() => openEditDrawer(props.row.original)} 
         onViewDetail={() => openViewModal(props.row.original)} 
