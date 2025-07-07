@@ -1044,12 +1044,12 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
     getfromIDcompanymemberData = [],
   } = useSelector(masterSelector);
 
-  const DocumentTypeDataOptions = DocumentTypeData?.map((p: any) => ({
+  const DocumentTypeDataOptions = DocumentTypeData?.data?.map((p: any) => ({
     value: p.id,
     label: p.name,
   }));
 
-  const tokenFormDataOptions = tokenForm?.map((p: any) => ({
+  const tokenFormDataOptions = tokenForm?.data?.map((p: any) => ({
     value: p.id,
     label: p.form_title,
   }));
@@ -1066,7 +1066,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
 
   const companyMemberOptions = useMemo(
     () =>
-      getfromIDcompanymemberData?.map((p: any) => ({
+      getfromIDcompanymemberData?.data?.map((p: any) => ({
         value: p.id,
         label: p.name,
       })) || [],
