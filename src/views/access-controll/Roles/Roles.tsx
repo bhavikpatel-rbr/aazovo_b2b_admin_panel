@@ -156,7 +156,7 @@ function exportToCsvRoles(filename: string, rows: RoleItem[], visibleColumns: Co
 
 // --- Reusable Components ---
 const ActionColumn = ({ onEdit, onViewDetail, onPermissions }: { onEdit: () => void; onViewDetail: () => void; onPermissions: () => void }) => {
-  const iconButtonClass = "text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
+  const iconButtonClass = "text-lg p-1 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none";
   const hoverBgClass = "hover:bg-gray-100 dark:hover:bg-gray-700";
   return (
     <div className="flex items-center justify-center gap-1">
@@ -388,7 +388,7 @@ const RolesListing = () => {
       { header: "Department", accessorKey: "department.name", size: 150 },
       { header: "Designation", accessorKey: "designation.name", size: 150 },
       { header: "System Key", accessorKey: "name", size: 180 },
-      { header: "Description", accessorKey: "description", cell: props => <Tooltip title={props.row.original.description}><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">{props.row.original.description}</span></Tooltip> },
+      // { header: "Description", accessorKey: "description", cell: props => <Tooltip title={props.row.original.description}><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">{props.row.original.description}</span></Tooltip> },
       { 
         header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220,
         cell: props => {
@@ -411,7 +411,8 @@ const RolesListing = () => {
         }
       },
       { 
-        header: "Actions", id: "action", size: 120,
+        header: "Actions", id: "action", size: 130,
+        meta: { HeaderClass: "text-center", cellClass: "text-center" },
         cell: props => <ActionColumn 
             onEdit={() => openEditDrawer(props.row.original)} 
             onViewDetail={() => openViewModal(props.row.original)}
