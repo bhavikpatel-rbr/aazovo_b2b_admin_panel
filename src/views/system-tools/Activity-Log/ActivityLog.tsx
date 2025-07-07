@@ -66,6 +66,7 @@ import {
   blockUserAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { useLocation } from "react-router-dom";
 
 // --- Type Definitions & Constants ---
 const CHANGE_TYPE_OPTIONS = [
@@ -384,6 +385,8 @@ const ItemTableTools = ({
 const ActivityLog = () => {
   const dispatch = useAppDispatch();
   const { activityLogsData, status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+const location = useLocation()
+console.log("location",location?.state?.userId);
 
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [viewingItem, setViewingItem] = useState<ChangeLogItem | null>(null);
@@ -408,7 +411,7 @@ const ActivityLog = () => {
   }, [dispatch, filterFormMethods, handleSetTableData]);
 
   useEffect(() => {
-    dispatch(getActivityLogAction({ params: {} }));
+    dispatch(getActivityLogAction( location?.state?.userId || 0));
   }, [dispatch]);
 
   useEffect(() => {

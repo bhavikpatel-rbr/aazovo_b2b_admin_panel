@@ -948,7 +948,7 @@ const InquiryListTable = () => {
     return { pageData: data.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: data };
   }, [inquiryList, tableData, filterCriteria]);
 
-  const handleViewDetails = (id: string) => {
+  const handleViewDetails = (id: string) => { 
     const inquiry = allFilteredAndSortedData.find(item => item.id === id);
     if (inquiry) {
       navigate(`/business-entities/inquiry-view/${id}`);

@@ -17,6 +17,10 @@ import {
 } from '@/constants/theme.constant'
 import type { Mode } from '@/@types/theme'
 import LogoWithoutName from './LogoWithoutName'
+import { useState } from 'react'
+import { ConfirmDialog } from '../shared'
+import { useAppDispatch } from '@/reduxtool/store'
+import { logoutAction } from '@/reduxtool/auth/middleware'
 
 type SideNavProps = {
     translationSetup?: boolean
@@ -49,9 +53,20 @@ const SideNav = ({
     const sideNavCollapse = useThemeStore(
         (state) => state.layout.sideNavCollapse,
     )
-
+const dispatch = useAppDispatch();
+    const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
     const currentRouteKey = useRouteKeyStore((state) => state.currentRouteKey)
+ const handleSignOutClick = () => {
+    setIsLogoutDialogOpen(true);
+  };
 
+  const onDialogClose = () => {
+    setIsLogoutDialogOpen(false);
+  };
+
+  const onDialogConfirm = () => {
+    dispatch(logoutAction());
+  };
     const userAuthority = useSessionUser((state) => state.user.authority)
 
     // --- Define background and style classes ---
@@ -143,11 +158,25 @@ const SideNav = ({
             {/* Fixed Logout Button at Bottom */}
                 <div className="absolute bottom-4 w-full px-4">
                     <button
-                        // onClick={handleLogout}
+                         onClick={()=> setIsLogoutDialogOpen(true)}
                         className="w-full py-2 bg-blue-600 hover:bg-blue-800 text-white rounded-md transition">
                         Logout
                     </button>
                 </div>
+
+                <ConfirmDialog
+        isOpen={isLogoutDialogOpen}
+        type="danger"
+        title="Confirm Logout"
+        width={477}
+        onClose={onDialogClose}
+        onRequestClose={onDialogClose}
+        onCancel={onDialogClose}
+        onConfirm={onDialogConfirm}
+        confirmText="Logout"
+      >
+        <p>Are you sure you want to log out?</p>
+      </ConfirmDialog>
         </div>
     )
 }

@@ -1,110 +1,116 @@
-import React, { useState, useMemo, useEffect, SyntheticEvent } from "react";
-import { NavLink, useParams, useNavigate } from "react-router-dom";
-import dayjs from "dayjs";
-import classNames from "classnames";
+import React, { useState, useMemo, useEffect, SyntheticEvent } from 'react'
+import { NavLink, useParams, useNavigate } from 'react-router-dom'
+import dayjs from 'dayjs'
+import classNames from 'classnames'
 
 // UI Components
-import Container from "@/components/shared/Container";
-import Card from "@/components/ui/Card";
-import Avatar from "@/components/ui/Avatar";
-import Tag from "@/components/ui/Tag";
-import Button from "@/components/ui/Button";
-import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
-import DebouceInput from "@/components/shared/DebouceInput";
-import Dropdown from "@/components/ui/Dropdown";
+import Container from '@/components/shared/Container'
+import Card from '@/components/ui/Card'
+import Avatar from '@/components/ui/Avatar'
+import Tag from '@/components/ui/Tag'
+import Button from '@/components/ui/Button'
+import DataTable from '@/components/shared/DataTable'
+import Tooltip from '@/components/ui/Tooltip'
+import DebouceInput from '@/components/shared/DebouceInput'
+import Dropdown from '@/components/ui/Dropdown'
 
 // Icons
 import {
-  TbUserCircle,
-  TbMail,
-  TbPhone,
-  TbBuildingSkyscraper,
-  TbBriefcase,
-  TbCalendar,
-  TbPencil,
-  TbTrash,
-  TbKey,
-  TbChevronRight,
-  TbDownload,
-  TbSearch,
-  TbX,
-  TbFilter,
-  TbChevronDown,
-  TbUser,
-  TbUsers,
-  TbHeartHandshake,
-  TbPhoneCall,
-  TbSchool,
-  TbHistory,
-  TbTargetArrow,
-  TbCertificate,
-  TbDeviceLaptop,
-  TbLogout,
-  TbWall,
-  TbCheck,
-  TbFileText,
-  TbCash,
-  TbTag,
-  TbUserShare,
-  TbLayoutOff,
-  TbLinkOff,
-} from "react-icons/tb";
+    TbUserCircle,
+    TbMail,
+    TbPhone,
+    TbBuildingSkyscraper,
+    TbBriefcase,
+    TbCalendar,
+    TbPencil,
+    TbChevronRight,
+    TbDownload,
+    TbSearch,
+    TbX,
+    TbFilter,
+    TbUser,
+    TbUsers,
+    TbPhoneCall,
+    TbSchool,
+    TbHistory,
+    TbTargetArrow,
+    TbCertificate,
+    TbDeviceLaptop,
+    TbLogout,
+    TbCheck,
+    TbFileText,
+    TbUserShare,
+    TbArrowLeft,
+} from 'react-icons/tb'
 
-// Types
-import type { ColumnDef } from "@/components/shared/DataTable";
-import { EmployeeItem, employeeStatusColor } from "../Employees";
-import { BiChevronRight } from "react-icons/bi";
+// Types & Services
+import type { ColumnDef } from '@/components/shared/DataTable'
+import { BiChevronRight } from 'react-icons/bi'
+import { apiGetEmployeeById } from '@/reduxtool/master/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
 
-// --- DUMMY DATA ---
-const DUMMY_EMPLOYEES: EmployeeItem[] = [
-  {
-    id: "EMP001",
-    status: "active",
-    name: "Alice Wonderland",
-    email: "alice.w@company.com",
-    mobile: "+1-555-1001",
-    department: "Engineering",
-    designation: "Software Engineer II",
-    roles: ["Developer", "Code Reviewer"],
-    avatar: "/img/avatars/thumb-1.jpg",
-    role: "Admin",
-    createdAt: new Date(2022, 5, 15),
-    joiningDate: new Date(2022, 5, 15),
-    bio: "Loves coding and tea parties.",
-  },
-  {
-    id: "EMP002",
-    status: "active",
-    name: "Bob The Builder",
-    email: "bob.b@company.com",
-    mobile: "+1-555-1002",
-    department: "Marketing",
-    designation: "Marketing Manager",
-    roles: ["Manager", "Campaign Planner"],
-    avatar: "/img/avatars/thumb-2.jpg",
-    role: "Super Admin",
-    createdAt: new Date(2021, 8, 1),
-    joiningDate: new Date(2021, 8, 1),
-  },
-];
+// Define a more specific type based on your JSON response
+export type Employee = {
+    id: number;
+    name: string;
+    profile_pic_path: string | null;
+    email: string;
+    maritual_status: string | null;
+    employee_id: string | null;
+    date_of_joining: string | null;
+    mobile_number: string;
+    mobile_number_code: string | null;
+    status: 'Active' | 'Inactive' | 'Terminated' | 'On Leave';
+    date_of_birth: string | null;
+    gender: string | null;
+    nationality: { name: string } | null;
+    blood_group: string | null;
+    permanent_address: string | null;
+    local_address: string | null;
+    department: { name: string } | null;
+    designation: { name: string } | null;
+    roles: { display_name: string }[];
+    assets: { id: number; name: string; serial_number: string; issued_on: string; status: string }[];
+    // Document paths
+    identity_proof_path: string | null;
+    address_proof_path: string | null;
+    offer_letter_path: string | null;
+    past_offer_letter_path: string | null;
+    relieving_letter_path: string | null;
+    designation_letter_path: string | null;
+    educational_certificates_path: string[];
+    experience_certificates_path: string[];
+    salary_slips_path: string[];
+    bank_account_proof_path: string | null;
+    pan_card_path: string | null;
+    passport_size_photograph_path: string | null;
+    [key: string]: any; // Allow other fields
+};
+
+export const employeeStatusColor: Record<string, string> = {
+    active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    inactive: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+    terminated: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
+    on_leave: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
+};
+
 
 // --- HELPER & REUSABLE COMPONENTS ---
 
-// MODIFIED: Renamed to EmployeeProfileHeader and removed the Card wrapper
 interface EmployeeProfileHeaderProps {
-  employee: EmployeeItem | null;
+  employee: Employee;
 }
 const EmployeeProfileHeader = ({ employee }: EmployeeProfileHeaderProps) => {
   const navigate = useNavigate();
 
-  if (!employee) {
-    return <p className="text-center">Employee not found.</p>;
-  }
-
   const handleEdit = () => {
     navigate(`/hr-employees/employees/edit/${employee.id}`);
   };
+  
+  // Safely get the status, default to 'inactive' if null or undefined
+  console.log(employee, 'employee.status');
+  
+  const status = employee.status || 'inactive';
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -112,7 +118,7 @@ const EmployeeProfileHeader = ({ employee }: EmployeeProfileHeaderProps) => {
         <Avatar
           size={110}
           shape="circle"
-          src={employee.avatar}
+          src={employee.profile_pic_path || ''}
           icon={<TbUserCircle />}
         />
         <div className="flex flex-col">
@@ -120,18 +126,18 @@ const EmployeeProfileHeader = ({ employee }: EmployeeProfileHeaderProps) => {
           <div className="flex items-center gap-2 mb-1">
             <TbMail className="text-gray-400" /> <p>{employee.email}</p>
           </div>
-          {employee.mobile && (
+          {employee.mobile_number && (
             <div className="flex items-center gap-2">
-              <TbPhone className="text-gray-400" /> <p>{employee.mobile}</p>
+              <TbPhone className="text-gray-400" /> <p>{employee.mobile_number_code} {employee.mobile_number}</p>
             </div>
           )}
           <div className="mt-2">
             <Tag
               className={`${
-                employeeStatusColor[employee.status]
-              } text-white capitalize`}
+                employeeStatusColor[status]
+              } capitalize`}
             >
-              {employee.status.replace(/_/g, " ")}
+              {employee.status || 'N/A'}
             </Tag>
           </div>
         </div>
@@ -140,564 +146,367 @@ const EmployeeProfileHeader = ({ employee }: EmployeeProfileHeaderProps) => {
         <div className="flex items-center gap-2">
           <TbUserShare className="text-gray-400" />
           <span className="font-semibold">Role:</span>
-          <span>{employee.role}</span>
+          <span>{employee.roles?.[0]?.display_name || 'N/A'}</span>
         </div>
         <div className="flex items-center gap-2">
           <TbBuildingSkyscraper className="text-gray-400" />
           <span className="font-semibold">Department:</span>
-          <span>{employee.department}</span>
+          <span>{employee.department?.name || 'N/A'}</span>
         </div>
         <div className="flex items-center gap-2">
           <TbBriefcase className="text-gray-400" />
           <span className="font-semibold">Designation:</span>
-          <span>{employee.designation}</span>
+          <span>{employee.designation?.name || 'N/A'}</span>
         </div>
         <div className="flex items-center gap-2">
           <TbCalendar className="text-gray-400" />
           <span className="font-semibold">Joined:</span>
-          <span>{dayjs(employee.joiningDate).format("D MMM YYYY")}</span>
+          <span>{employee.date_of_joining ? dayjs(employee.date_of_joining).format("D MMM YYYY") : 'N/A'}</span>
         </div>
       </div>
       <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
-        {/* <Button variant="solid" icon={<TbPencil />} onClick={handleEdit}>
-          Edit Profile
-        </Button> */}
-        <Button icon={<TbKey />}>Request Change Password</Button>
-        <Button icon={<TbLinkOff />} color="red-600">
-          Inactive
+         <Button variant="solid" icon={<TbPencil />} onClick={handleEdit}>
+          Edit Employee
         </Button>
+        <Button icon={<TbArrowLeft />} onClick={() => navigate('/hr-employees/employees')}>Back to List</Button>
+   
       </div>
     </div>
   );
 };
 
-// Navigator for Main Tabs
+// ... (EmployeeViewNavigator remains the same)
 const employeeViewNavigationList = [
-  { label: "Employee Details", link: "details" },
-  { label: "Documents", link: "documents" },
-  { label: "Wall Inquiry", link: "inquiry" },
-  { label: "Offer & Demands", link: "offers" },
-  { label: "Employee", link: "team" },
-  { label: "Member", link: "members" },
-];
-type NavigatorComponentProps = {
-  activeSection: string;
-  onNavigate: (sectionKey: string) => void;
-};
-const EmployeeViewNavigator = ({
-  activeSection,
-  onNavigate,
-}: NavigatorComponentProps) => {
-  return (
-    <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
-      {employeeViewNavigationList.map((nav) => (
-        <button
-          type="button"
-          key={nav.link}
-          className={classNames(
-            "cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max",
-            "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none",
-            {
-              "bg-indigo-50 dark:bg-indigo-700/60 text-indigo-600 dark:text-indigo-200 font-semibold":
-                activeSection === nav.link,
-              "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200":
-                activeSection !== nav.link,
-            }
-          )}
-          onClick={() => onNavigate(nav.link)}
-          title={nav.label}
-        >
-          <span className="font-medium text-xs sm:text-sm truncate">
-            {nav.label}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-};
-
-// Reusable Search/Filter Tools for Tables
-interface SubTableToolsProps {
-  searchQuery: string;
-  onSearchChange: (value: string) => void;
-  filterValue?: string;
-  filterOptions?: { value: string; label: string }[];
-  onFilterChange?: (selected: { value: string; label: string } | null) => void;
-  onClearFilters: () => void;
-}
-const SubTableTools = ({
-  searchQuery,
-  onSearchChange,
-  filterValue,
-  filterOptions,
-  onFilterChange,
-  onClearFilters,
-}: SubTableToolsProps) => {
-  const handleDropdownSelect = (eventKey: string, e: SyntheticEvent) => {
-    if (!onFilterChange || !filterOptions) return;
-    if (eventKey === "_all") {
-      onFilterChange(null);
-    } else {
-      const selectedOption = filterOptions.find(
-        (opt) => opt.value === eventKey
-      );
-      if (selectedOption) {
-        onFilterChange(selectedOption);
-      }
-    }
+    { label: "Employee Details", link: "details" },
+    { label: "Documents", link: "documents" },
+    { label: "Wall Inquiry", link: "inquiry" },
+    { label: "Offer & Demands", link: "offers" },
+    { label: "Employee", link: "team" },
+    { label: "Member", link: "members" },
+  ];
+  type NavigatorComponentProps = {
+    activeSection: string;
+    onNavigate: (sectionKey: string) => void;
   };
-  const currentFilterLabel =
-    filterOptions?.find((opt) => opt.value === filterValue)?.label || "Filter";
-  return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-      <DebouceInput
-        placeholder="Quick Search..."
-        suffix={<TbSearch className="text-lg" />}
-        value={searchQuery}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
-      <div className="flex items-center gap-2">
-        {filterOptions && onFilterChange && (
-          <Dropdown
-            renderTitle={
-              <Button
-                size="sm"
-                icon={<TbFilter />}
-                className="w-[100px] justify-between"
-              >
-                <span>{currentFilterLabel}</span>
-              </Button>
-            }
+  const EmployeeViewNavigator = ({
+    activeSection,
+    onNavigate,
+  }: NavigatorComponentProps) => {
+    return (
+      <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
+        {employeeViewNavigationList.map((nav) => (
+          <button
+            type="button"
+            key={nav.link}
+            className={classNames(
+              "cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max",
+              "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none",
+              {
+                "bg-indigo-50 dark:bg-indigo-700/60 text-indigo-600 dark:text-indigo-200 font-semibold":
+                  activeSection === nav.link,
+                "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200":
+                  activeSection !== nav.link,
+              }
+            )}
+            onClick={() => onNavigate(nav.link)}
+            title={nav.label}
           >
-            <Dropdown.Item eventKey="_all" onSelect={handleDropdownSelect}>
-              All
-            </Dropdown.Item>
-            <Dropdown.Item variant="divider" />
-            {filterOptions.map((option) => (
-              <Dropdown.Item
-                key={option.value}
-                eventKey={option.value}
-                onSelect={handleDropdownSelect}
-              >
-                {option.label}
-              </Dropdown.Item>
-            ))}
-          </Dropdown>
-        )}
-        <Tooltip title="Clear Search & Filters">
-          <Button
-            size="sm"
-            icon={<TbX />}
-            onClick={onClearFilters}
-            variant="plain"
-          />
-        </Tooltip>
+            <span className="font-medium text-xs sm:text-sm truncate">
+              {nav.label}
+            </span>
+          </button>
+        ))}
       </div>
-    </div>
-  );
-};
+    );
+  };
+// ... (SubTableTools remains the same)
+interface SubTableToolsProps {
+    searchQuery: string;
+    onSearchChange: (value: string) => void;
+    filterValue?: string;
+    filterOptions?: { value: string; label: string }[];
+    onFilterChange?: (selected: { value: string; label: string } | null) => void;
+    onClearFilters: () => void;
+  }
+  const SubTableTools = ({
+    searchQuery,
+    onSearchChange,
+    filterValue,
+    filterOptions,
+    onFilterChange,
+    onClearFilters,
+  }: SubTableToolsProps) => {
+    const handleDropdownSelect = (eventKey: string, e: SyntheticEvent) => {
+      if (!onFilterChange || !filterOptions) return;
+      if (eventKey === "_all") {
+        onFilterChange(null);
+      } else {
+        const selectedOption = filterOptions.find(
+          (opt) => opt.value === eventKey
+        );
+        if (selectedOption) {
+          onFilterChange(selectedOption);
+        }
+      }
+    };
+    const currentFilterLabel =
+      filterOptions?.find((opt) => opt.value === filterValue)?.label || "Filter";
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <DebouceInput
+          placeholder="Quick Search..."
+          suffix={<TbSearch className="text-lg" />}
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+        <div className="flex items-center gap-2">
+          {filterOptions && onFilterChange && (
+            <Dropdown
+              renderTitle={
+                <Button
+                  size="sm"
+                  icon={<TbFilter />}
+                  className="w-[100px] justify-between"
+                >
+                  <span>{currentFilterLabel}</span>
+                </Button>
+              }
+            >
+              <Dropdown.Item eventKey="_all" onSelect={handleDropdownSelect}>
+                All
+              </Dropdown.Item>
+              <Dropdown.Item variant="divider" />
+              {filterOptions.map((option) => (
+                <Dropdown.Item
+                  key={option.value}
+                  eventKey={option.value}
+                  onSelect={handleDropdownSelect}
+                >
+                  {option.label}
+                </Dropdown.Item>
+              ))}
+            </Dropdown>
+          )}
+          <Tooltip title="Clear Search & Filters">
+            <Button
+              size="sm"
+              icon={<TbX />}
+              onClick={onClearFilters}
+              variant="plain"
+            />
+          </Tooltip>
+        </div>
+      </div>
+    );
+  };
 
 // --- MAIN TABS ---
 
 // --- 1. Employee Details Tab (Complex View) ---
-const DetailSection = ({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) => (
-  <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-600 last:mb-0 last:pb-0 last:border-b-0">
-    <div className="flex items-center gap-2 mb-4">
-      {icon} <h5 className="mb-0">{title}</h5>
+const DetailSection = ({ title, icon, children, noDataMessage }: { title: string; icon: React.ReactNode; children: React.ReactNode; noDataMessage?: string; }) => (
+    <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-600 last:mb-0 last:pb-0 last:border-b-0">
+        <div className="flex items-center gap-2 mb-4">
+            {icon} <h5 className="mb-0">{title}</h5>
+        </div>
+        <div>{noDataMessage ? <p className="text-gray-500">{noDataMessage}</p> : children}</div>
     </div>
-    <div>{children}</div>
-  </div>
 );
-const InfoPair = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | undefined;
-}) => (
-  <div className="grid grid-cols-2 py-1">
-    <span className="font-semibold text-gray-700 dark:text-gray-300">
-      {label}
-    </span>
-    <span>{value || "N/A"}</span>
-  </div>
+const InfoPair = ({ label, value }: { label: string; value: string | number | undefined | null; }) => (
+    <div className="grid grid-cols-2 py-1">
+        <span className="font-semibold text-gray-700 dark:text-gray-300">{label}</span>
+        <span>{value || 'N/A'}</span>
+    </div>
 );
-const RegistrationInfo = () => (
+const RegistrationInfo = ({ employee }: { employee: Employee }) => (
   <DetailSection title="Registration Information" icon={<TbUser size={22} />}>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-      <InfoPair label="Employee ID" value="EMP001" />
-      <InfoPair label="Joining Date" value="15 Jun 2022" />
-      <InfoPair label="Employment Type" value="Permanent" />
-      <InfoPair label="Probation End Date" value="14 Sep 2022" />
+      <InfoPair label="Employee ID" value={employee.employee_id} />
+      <InfoPair label="Joining Date" value={employee.date_of_joining ? dayjs(employee.date_of_joining).format("D MMM YYYY") : 'N/A'} />
+      <InfoPair label="Employment Type" value={"Permanent"} />
+      <InfoPair label="Probation End Date" value={employee.date_of_joining ? dayjs(employee.date_of_joining).add(3, 'month').format("D MMM YYYY") : 'N/A'} />
     </div>
   </DetailSection>
 );
-const PersonalInfo = () => (
+const PersonalInfo = ({ employee }: { employee: Employee }) => (
   <DetailSection title="Personal Information" icon={<TbUserCircle size={22} />}>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-      <InfoPair label="Date of Birth" value="10 Jan 1995" />
-      <InfoPair label="Gender" value="Female" />
-      <InfoPair label="Marital Status" value="Single" />
-      <InfoPair label="Nationality" value="Indian" />
-      <InfoPair label="Blood Group" value="O+" />
+      <InfoPair label="Date of Birth" value={employee.date_of_birth ? dayjs(employee.date_of_birth).format("D MMM YYYY") : 'N/A'} />
+      <InfoPair label="Gender" value={employee.gender} />
+      <InfoPair label="Marital Status" value={employee.maritual_status} />
+      <InfoPair label="Nationality" value={employee.nationality?.name} />
+      <InfoPair label="Blood Group" value={employee.blood_group} />
     </div>
   </DetailSection>
 );
 const EmergencyContact = () => (
-  <DetailSection title="Emergency Contact" icon={<TbPhoneCall size={22} />}>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-      <InfoPair label="Contact Name" value="Mr. Hatter" />
-      <InfoPair label="Relationship" value="Father" />
-      <InfoPair label="Phone Number" value="+1-555-2001" />
-    </div>
-  </DetailSection>
+    <DetailSection title="Emergency Contact" icon={<TbPhoneCall size={22} />} noDataMessage="No emergency contact details available." >
+        {/* This will be hidden due to noDataMessage */}
+    </DetailSection>
 );
 const RoleAndResponsibility = () => (
-  <DetailSection
-    title="Role & Responsibility"
-    icon={<TbTargetArrow size={22} />}
-  >
-    <ul>
-      <li className="list-disc ml-4">
-        Develop and maintain web applications.
-      </li>
-      <li className="list-disc ml-4">Conduct code reviews for peers.</li>
-      <li className="list-disc ml-4">
-        Collaborate with the design team on new features.
-      </li>
-    </ul>
+  <DetailSection title="Role & Responsibility" icon={<TbTargetArrow size={22} />} noDataMessage="No roles and responsibilities defined.">
   </DetailSection>
 );
-const OffBoardingInfo = ({ employee }: { employee: EmployeeItem | null }) => {
-  if (employee?.status == "terminated") {
+const OffBoardingInfo = ({ employee }: { employee: Employee }) => {
+    // Show this section only if the employee status is something other than 'Active'
+    if (employee.status == 'active') {
+        return null;
+    }
     return (
-      <DetailSection title="Off-Boarding" icon={<TbLogout size={22} />}>
-        <div className="text-gray-500">
-          No off-boarding information available for this active employee.
-        </div>
-      </DetailSection>
+        <DetailSection title="Off-Boarding Information" icon={<TbLogout size={22} />}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <InfoPair label="Resignation Date" value={employee.resignation_date} />
+                <InfoPair label="Last Working Day" value={employee.last_working_day} />
+                <div className="col-span-full">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">Resignation Remark</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-400">{employee.resignation_letter_remark || 'N/A'}</p>
+                </div>
+                 <div className="col-span-full">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">Exit Interview Remark</span>
+                    <p className="mt-1 text-gray-600 dark:text-gray-400">{employee.exit_interview_remark || 'N/A'}</p>
+                </div>
+                <div className="col-span-full mt-4">
+                    <h6 className="font-semibold text-gray-700 dark:text-gray-300 mt-4 mb-2">Clearance Status</h6>
+                    <InfoPair label="Full & Final Settlement" value={employee.full_and_final_settlement ? "Completed" : "Pending"} />
+                    <InfoPair label="Assets Returned" value={employee.company_assets_returned ? "Yes" : "No"} />
+                </div>
+            </div>
+        </DetailSection>
     );
-  }
-  return (
-    <DetailSection
-      title="Off-Boarding Information"
-      icon={<TbLogout size={22} />}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-        <InfoPair label="Resignation Date" value="15 Oct 2023" />
-        <InfoPair label="Last Working Day" value="14 Nov 2023" />
-        <InfoPair label="Reason for Leaving" value="Better Opportunity" />
-        <InfoPair label="Exit Interview Date" value="10 Nov 2023" />
-        <div className="col-span-full">
-          <h6 className="font-semibold text-gray-700 dark:text-gray-300 mt-4 mb-2">
-            Clearance Status
-          </h6>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <div className="flex items-center gap-2">
-              <TbCheck className="text-emerald-500" /> <span>IT Department</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <TbCheck className="text-emerald-500" /> <span>Finance</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <TbCheck className="text-emerald-500" /> <span>HR Department</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <TbCheck className="text-emerald-500" /> <span>Manager</span>
-            </div>
-          </div>
-        </div>
-        <div className="col-span-full mt-4">
-          <span className="font-semibold text-gray-700 dark:text-gray-300">
-            Manager's Remark
-          </span>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
-            Eve was a valuable member of the team and we wish her the best in
-            her future endeavors.
-          </p>
-        </div>
-        <div className="col-span-full mt-4">
-          <Button variant="solid" size="sm" icon={<TbFileText />}>
-            Download Full & Final Settlement
-          </Button>
-        </div>
-      </div>
-    </DetailSection>
-  );
 };
-const FamilyDetailsTable = () => {
-  type Record = {
-    name: string;
-    relationship: string;
-    dob: string;
-    contact: string;
-  };
-  const data: Record[] = [
-    {
-      name: "Mr. Hatter",
-      relationship: "Father",
-      dob: "01 Jan 1965",
-      contact: "+1-555-2001",
-    },
-    {
-      name: "Mrs. Hatter",
-      relationship: "Mother",
-      dob: "01 Feb 1968",
-      contact: "+1-555-2002",
-    },
-  ];
-  const columns = useMemo<ColumnDef<Record>[]>(
-    () => [
-      { header: "Name", accessorKey: "name" },
-      { header: "Relationship", accessorKey: "relationship" },
-      { header: "Date of Birth", accessorKey: "dob" },
-      { header: "Contact No.", accessorKey: "contact" },
-    ],
-    []
-  );
-  return (
-    <DetailSection title="Family Details" icon={<TbUsers size={22} />}>
-      <DataTable columns={columns} data={data} />
+const FamilyDetailsTable = () => (
+    <DetailSection title="Family Details" icon={<TbUsers size={22} />} noDataMessage="No family details have been added.">
     </DetailSection>
-  );
-};
-const EducationDetailsTable = () => {
-  type Record = {
-    degree: string;
-    institution: string;
-    year: number;
-    score: string;
-  };
-  const data: Record[] = [
-    {
-      degree: "B.Tech in Computer Science",
-      institution: "Wonderland University",
-      year: 2021,
-      score: "8.5 CGPA",
-    },
-  ];
-  const columns = useMemo<ColumnDef<Record>[]>(
-    () => [
-      { header: "Degree / Certificate", accessorKey: "degree" },
-      { header: "Institution", accessorKey: "institution" },
-      { header: "Year of Completion", accessorKey: "year" },
-      { header: "Score / Grade", accessorKey: "score" },
-    ],
-    []
-  );
-  return (
-    <DetailSection title="Education Details" icon={<TbSchool size={22} />}>
-      <DataTable columns={columns} data={data} />
+);
+const EducationDetailsTable = () => (
+    <DetailSection title="Education Details" icon={<TbSchool size={22} />} noDataMessage="No education details have been added.">
     </DetailSection>
-  );
-};
-const EmploymentHistoryTable = () => {
-  type Record = { company: string; designation: string; period: string };
-  const data: Record[] = [
-    {
-      company: "Cheshire Cat Inc.",
-      designation: "Jr. Software Intern",
-      period: "Jan 2020 - Dec 2020",
-    },
-  ];
-  const columns = useMemo<ColumnDef<Record>[]>(
-    () => [
-      { header: "Company Name", accessorKey: "company" },
-      { header: "Designation", accessorKey: "designation" },
-      { header: "Period", accessorKey: "period" },
-    ],
-    []
-  );
-  return (
-    <DetailSection title="Employment History" icon={<TbHistory size={22} />}>
-      <DataTable columns={columns} data={data} />
+);
+const EmploymentHistoryTable = () => (
+    <DetailSection title="Employment History" icon={<TbHistory size={22} />} noDataMessage="No employment history has been added.">
     </DetailSection>
-  );
-};
-const TrainingTable = () => {
-  type Record = { name: string; date: string; conductedBy: string };
-  const data: Record[] = [
-    {
-      name: "Advanced React Patterns",
-      date: "10 Aug 2023",
-      conductedBy: "The Mad Hatter",
-    },
-  ];
-  const columns = useMemo<ColumnDef<Record>[]>(
-    () => [
-      { header: "Training Name", accessorKey: "name" },
-      { header: "Date", accessorKey: "date" },
-      { header: "Conducted By", accessorKey: "conductedBy" },
-    ],
-    []
-  );
-  return (
+);
+const TrainingTable = ({ employee }: { employee: Employee }) => (
     <DetailSection title="Training" icon={<TbCertificate size={22} />}>
-      <DataTable columns={columns} data={data} />
+        <InfoPair label="General Training Completion" value={employee.training_date_of_completion ? dayjs(employee.training_date_of_completion).format("D MMM YYYY") : 'N/A'}/>
+        <InfoPair label="General Training Remark" value={employee.training_remark}/>
+        <InfoPair label="Specific Training Completion" value={employee.specific_training_date_of_completion ? dayjs(employee.specific_training_date_of_completion).format("D MMM YYYY") : 'N/A'}/>
+        <InfoPair label="Specific Training Remark" value={employee.specific_training_remark}/>
     </DetailSection>
-  );
+);
+
+const AssetsTable = ({ assets }: { assets: Employee['assets'] }) => {
+    type Record = Employee['assets'][0];
+    const columns = useMemo<ColumnDef<Record>[]>(() => [ { header: "Asset Name", accessorKey: "name" }, { header: "Serial No.", accessorKey: "serial_number" }, { header: "Issued On", cell: (props) => dayjs(props.row.original.issued_on).format("D MMM YYYY") }, { header: "Status", accessorKey: "status" }, ], []);
+    return (
+        <DetailSection title="Equipments & Assets Provided" icon={<TbDeviceLaptop size={22} />} noDataMessage={!assets || assets.length === 0 ? "No assets have been assigned." : ""}>
+            {assets && assets.length > 0 && <DataTable columns={columns} data={assets} />}
+        </DetailSection>
+    );
 };
-const AssetsTable = () => {
-  type Record = {
-    name: string;
-    serial: string;
-    issuedOn: string;
-    status: "In Use" | "Returned";
-  };
-  const data: Record[] = [
-    {
-      name: "Dell XPS 15 Laptop",
-      serial: "ASSET-12345",
-      issuedOn: "15 Jun 2022",
-      status: "In Use",
-    },
-    {
-      name: "Logitech Wireless Mouse",
-      serial: "ASSET-12346",
-      issuedOn: "15 Jun 2022",
-      status: "In Use",
-    },
-  ];
-  const columns = useMemo<ColumnDef<Record>[]>(
-    () => [
-      { header: "Asset Name", accessorKey: "name" },
-      { header: "Serial No.", accessorKey: "serial" },
-      { header: "Issued On", accessorKey: "issuedOn" },
-      { header: "Status", accessorKey: "status" },
-    ],
-    []
-  );
-  return (
-    <DetailSection
-      title="Equipments & Assets Provided"
-      icon={<TbDeviceLaptop size={22} />}
-    >
-      <DataTable columns={columns} data={data} />
-    </DetailSection>
-  );
-};
-const EmployeeDetailsTab = ({ employee }: { employee: EmployeeItem | null }) => {
+
+const EmployeeDetailsTab = ({ employee }: { employee: Employee }) => {
   return (
     <div>
-      <RegistrationInfo />
-      <PersonalInfo />
+      <RegistrationInfo employee={employee} />
+      <PersonalInfo employee={employee} />
       <FamilyDetailsTable />
       <EmergencyContact />
       <EducationDetailsTable />
       <EmploymentHistoryTable />
       <RoleAndResponsibility />
-      <TrainingTable />
-      <AssetsTable />
+      <TrainingTable employee={employee} />
+      <AssetsTable assets={employee.assets} />
       <OffBoardingInfo employee={employee} />
     </div>
   );
 };
 
-// --- Other Tab Components (Documents, WallInquiry, etc.) remain unchanged ---
-// They already correctly return their content without a Card wrapper.
 
-const DocumentsTab = () => {
-    type Record = { name: string; type: 'Onboarding' | 'KYC' | 'Review'; uploadedAt: Date; url: string };
-    const data: Record[] = [ { name: 'Offer Letter', type: 'Onboarding', uploadedAt: new Date(2022, 5, 1), url: '/docs/offer.pdf' }, { name: 'Passport Copy', type: 'KYC', uploadedAt: new Date(2022, 5, 2), url: '/docs/passport.pdf' }, { name: 'Performance Appraisal 2023', type: 'Review', uploadedAt: new Date(2023, 6, 1), url: '/docs/appraisal_2023.pdf' } ];
+const DocumentsTab = ({ employee }: { employee: Employee }) => {
+    const documentList = useMemo(() => {
+        if (!employee) return [];
+        const docs = [];
+        const addDoc = (name: string, type: string, url: string | null, date: string) => {
+            if(url) docs.push({name, type, url, uploadedAt: date})
+        }
+        
+        addDoc('Identity Proof', 'KYC', employee.identity_proof_path, employee.updated_at)
+        addDoc('Address Proof', 'KYC', employee.address_proof_path, employee.updated_at)
+        addDoc('Offer Letter', 'Onboarding', employee.offer_letter_path, employee.created_at)
+        addDoc('Relieving Letter', 'Experience', employee.relieving_letter_path, employee.updated_at)
+        
+        employee.educational_certificates_path?.forEach((url, i) => addDoc(`Educational Certificate ${i + 1}`, 'Education', url, employee.updated_at));
+        employee.experience_certificates_path?.forEach((url, i) => addDoc(`Experience Certificate ${i + 1}`, 'Experience', url, employee.updated_at));
+        employee.salary_slips_path?.forEach((url, i) => addDoc(`Salary Slip ${i + 1}`, 'Financial', url, employee.updated_at));
+        
+        return docs;
+    }, [employee]);
+    
+    type Record = typeof documentList[0];
     const [searchQuery, setSearchQuery] = useState('');
     const columns = useMemo<ColumnDef<Record>[]>(() => [ { header: 'Document Name', accessorKey: 'name' }, { header: 'Type', accessorKey: 'type' }, { header: 'Uploaded At', accessorKey: 'uploadedAt', cell: (props) => dayjs(props.getValue() as Date).format('D MMM YYYY') }, { header: 'Action', id: 'action', cell: (props) => <Tooltip title="Download"> <a href={props.row.original.url} target="_blank" rel="noopener noreferrer"> <Button shape="circle" size="sm" icon={<TbDownload />} /> </a> </Tooltip> } ], []);
-    const filteredData = useMemo(() => { if (!searchQuery) return data; const q = searchQuery.toLowerCase(); return data.filter(item => item.name.toLowerCase().includes(q) || item.type.toLowerCase().includes(q)); }, [data, searchQuery]);
+    const filteredData = useMemo(() => { if (!searchQuery) return documentList; const q = searchQuery.toLowerCase(); return documentList.filter(item => item.name.toLowerCase().includes(q) || item.type.toLowerCase().includes(q)); }, [documentList, searchQuery]);
     return (<> <div className="mb-4"> <SubTableTools searchQuery={searchQuery} onSearchChange={(val) => setSearchQuery(val)} onClearFilters={() => setSearchQuery('')} /> </div> <DataTable columns={columns} data={filteredData} /> </>);
 };
-const WallInquiryTab = () => {
-    type Record = { id: string; inquiry: string; postedBy: string; date: Date; status: 'Open' | 'Resolved' | 'Closed' };
-    const data: Record[] = [ { id: 'INQ01', inquiry: 'Inquiry about project deadline for "Project X"', postedBy: 'Bob The Builder', date: new Date(2023, 10, 15), status: 'Resolved' }, { id: 'INQ02', inquiry: 'Question regarding new HR policy on leaves', postedBy: 'Charlie Chaplin', date: new Date(2023, 11, 1), status: 'Open' } ];
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
-    const statusOptions = [ { value: 'Open', label: 'Open' }, { value: 'Resolved', label: 'Resolved' }, { value: 'Closed', label: 'Closed' } ];
-    const columns = useMemo<ColumnDef<Record>[]>(() => [ { header: 'Inquiry ID', accessorKey: 'id' }, { header: 'Inquiry', accessorKey: 'inquiry', size: 400 }, { header: 'Posted By', accessorKey: 'postedBy' }, { header: 'Date', accessorKey: 'date', cell: (props) => dayjs(props.getValue() as Date).format('D MMM YYYY') }, { header: 'Status', accessorKey: 'status', cell: (props) => <Tag>{props.getValue() as string}</Tag> } ], []);
-    const filteredData = useMemo(() => { let filtered = [...data]; if (statusFilter) { filtered = filtered.filter(item => item.status === statusFilter); } if (searchQuery) { const q = searchQuery.toLowerCase(); filtered = filtered.filter(item => item.inquiry.toLowerCase().includes(q) || item.postedBy.toLowerCase().includes(q)); } return filtered; }, [data, searchQuery, statusFilter]);
-    return (<> <div className="mb-4"> <SubTableTools searchQuery={searchQuery} onSearchChange={(val) => setSearchQuery(val)} filterValue={statusFilter} filterOptions={statusOptions} onFilterChange={(sel) => setStatusFilter(sel?.value || '')} onClearFilters={() => { setSearchQuery(''); setStatusFilter(''); }} /> </div> <DataTable columns={columns} data={filteredData} /> </>);
-};
-const OfferDemandsTab = () => {
-    type Record = { id: string; type: 'Offer' | 'Demand'; item: string; value: number; date: Date; status: 'Accepted' | 'Pending' | 'Rejected' };
-    const data: Record[] = [ { id: 'OD01', type: 'Offer', item: 'Laptops (50 units)', value: 2500000, date: new Date(2023, 8, 20), status: 'Accepted' }, { id: 'OD02', type: 'Demand', item: 'Office Chairs (20 units)', value: 80000, date: new Date(2023, 9, 5), status: 'Pending' }, { id: 'OD03', type: 'Offer', item: 'Software License Renewal', value: 150000, date: new Date(2023, 10, 1), status: 'Accepted' } ];
-    const [searchQuery, setSearchQuery] = useState('');
-    const [typeFilter, setTypeFilter] = useState('');
-    const typeOptions = [ { value: 'Offer', label: 'Offer' }, { value: 'Demand', label: 'Demand' } ];
-    const columns = useMemo<ColumnDef<Record>[]>(() => [ { header: 'Type', accessorKey: 'type', cell: (props) => { const type = props.getValue() as string; return <Tag className={type === 'Offer' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}>{type}</Tag>; } }, { header: 'Item Description', accessorKey: 'item', size: 300 }, { header: 'Value (₹)', accessorKey: 'value', cell: (props) => (props.getValue() as number).toLocaleString('en-IN') }, { header: 'Date', accessorKey: 'date', cell: (props) => dayjs(props.getValue() as Date).format('D MMM YYYY') }, { header: 'Status', accessorKey: 'status' } ], []);
-    const filteredData = useMemo(() => { let filtered = [...data]; if (typeFilter) { filtered = filtered.filter(item => item.type === typeFilter); } if (searchQuery) { const q = searchQuery.toLowerCase(); filtered = filtered.filter(item => item.item.toLowerCase().includes(q)); } return filtered; }, [data, searchQuery, typeFilter]);
-    return (<> <div className="mb-4"> <SubTableTools searchQuery={searchQuery} onSearchChange={(val) => setSearchQuery(val)} filterValue={typeFilter} filterOptions={typeOptions} onFilterChange={(sel) => setTypeFilter(sel?.value || '')} onClearFilters={() => { setSearchQuery(''); setTypeFilter(''); }} /> </div> <DataTable columns={columns} data={filteredData} /> </>);
-};
-const EmployeeTeamTab = () => {
-    type Record = { id: string; name: string; designation: string; email: string; status: 'active' | 'on_leave' };
-    const data: Record[] = [ { id: 'EMP003', name: 'Charlie Chaplin', designation: 'Software Engineer I', email: 'charlie.c@company.com', status: 'active' }, { id: 'EMP004', name: 'David Copperfield', designation: 'UI/UX Designer', email: 'david.c@company.com', status: 'on_leave' } ];
-    const [searchQuery, setSearchQuery] = useState('');
-    const columns = useMemo<ColumnDef<Record>[]>(() => [ { header: 'Employee ID', accessorKey: 'id' }, { header: 'Name', accessorKey: 'name' }, { header: 'Designation', accessorKey: 'designation' }, { header: 'Email', accessorKey: 'email' }, { header: 'Status', accessorKey: 'status', cell: (props) => <Tag className={props.row.original.status === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}>{props.getValue() as string}</Tag> } ], []);
-    const filteredData = useMemo(() => { if (!searchQuery) return data; const q = searchQuery.toLowerCase(); return data.filter(item => item.name.toLowerCase().includes(q) || item.designation.toLowerCase().includes(q)); }, [data, searchQuery]);
-    return (<> <div className="mb-4"> <SubTableTools searchQuery={searchQuery} onSearchChange={(val) => setSearchQuery(val)} onClearFilters={() => setSearchQuery('')} /> </div> <DataTable columns={columns} data={filteredData} /> </>);
-};
-const AssociatedMembersTab = () => {
-    type Record = { id: string; name: string; company: string; role: 'Client' | 'Vendor' | 'Partner'; contact: string };
-    const data: Record[] = [ { id: 'MEM01', name: 'The Mad Hatter', company: 'Tea Party Supplies', role: 'Vendor', contact: 'mad.h@teaparty.com' }, { id: 'MEM02', name: 'Queen of Hearts', company: 'Royal Court Inc.', role: 'Client', contact: 'queen@royal.court' } ];
-    const [searchQuery, setSearchQuery] = useState('');
-    const [roleFilter, setRoleFilter] = useState('');
-    const roleOptions = [ { value: 'Client', label: 'Client' }, { value: 'Vendor', label: 'Vendor' }, { value: 'Partner', label: 'Partner' } ];
-    const columns = useMemo<ColumnDef<Record>[]>(() => [ { header: 'Member ID', accessorKey: 'id' }, { header: 'Name', accessorKey: 'name' }, { header: 'Company', accessorKey: 'company' }, { header: 'Role', accessorKey: 'role' }, { header: 'Contact', accessorKey: 'contact' } ], []);
-    const filteredData = useMemo(() => { let filtered = [...data]; if (roleFilter) { filtered = filtered.filter(item => item.role === roleFilter); } if (searchQuery) { const q = searchQuery.toLowerCase(); filtered = filtered.filter(item => item.name.toLowerCase().includes(q) || item.company.toLowerCase().includes(q)); } return filtered; }, [data, searchQuery, roleFilter]);
-    return (<> <div className="mb-4"> <SubTableTools searchQuery={searchQuery} onSearchChange={(val) => setSearchQuery(val)} filterValue={roleFilter} filterOptions={roleOptions} onFilterChange={(sel) => setRoleFilter(sel?.value || '')} onClearFilters={() => { setSearchQuery(''); setRoleFilter(''); }} /> </div> <DataTable columns={columns} data={filteredData} /> </>);
-};
+// Other placeholder tabs
+const WallInquiryTab = () => <p className='text-gray-500'>Wall Inquiry data will be displayed here.</p>;
+const OfferDemandsTab = () => <p className='text-gray-500'>Offer & Demands data will be displayed here.</p>;
+const EmployeeTeamTab = () => <p className='text-gray-500'>Team members reporting to this employee will be displayed here.</p>;
+const AssociatedMembersTab = () => <p className='text-gray-500'>Associated members (clients, vendors) will be displayed here.</p>;
+
 // --- MAIN EMPLOYEE VIEW PAGE ---
 const EmployeeView = () => {
   const { id } = useParams<{ id: string }>();
-  const [employee, setEmployee] = useState<EmployeeItem | null>(null);
+  const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<string>(
-    employeeViewNavigationList[0].link
-  );
+  const [error, setError] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<string>(employeeViewNavigationList[0].link);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
-    setLoading(true);
-    const foundEmployee = DUMMY_EMPLOYEES.find((emp) => emp.id === id);
-    setTimeout(() => {
-      setEmployee(foundEmployee || null);
-      setLoading(false);
-    }, 500);
-  }, [id]);
+    const fetchEmployeeData = async () => {
+        if (!id) {
+            setError("No employee ID provided.");
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await dispatch(apiGetEmployeeById(id)).unwrap();
+            if (response && response.data) {
+                 setEmployee(response.data);
+            } else {
+                setError("Employee not found.");
+                setEmployee(null);
+            }
+        } catch (err: any) {
+            console.error("Failed to fetch employee", err);
+            setError(err.message || "Failed to load employee details. Please try again.");
+            setEmployee(null);
+        } finally {
+            setLoading(false);
+        }
+    }
+    fetchEmployeeData();
+  }, [id, dispatch]);
 
   const renderActiveSection = () => {
+    if (!employee) return null;
     switch (activeSection) {
-      case "details":
-        return <EmployeeDetailsTab employee={employee} />;
-      case "documents":
-        return <DocumentsTab />;
-      case "inquiry":
-        return <WallInquiryTab />;
-      case "offers":
-        return <OfferDemandsTab />;
-      case "team":
-        return <EmployeeTeamTab />;
-      case "members":
-        return <AssociatedMembersTab />;
-      default:
-        return <EmployeeDetailsTab employee={employee} />;
+      case "details": return <EmployeeDetailsTab employee={employee} />;
+      case "documents": return <DocumentsTab employee={employee} />;
+      case "inquiry": return <WallInquiryTab />;
+      case "offers": return <OfferDemandsTab />;
+      case "team": return <EmployeeTeamTab />;
+      case "members": return <AssociatedMembersTab />;
+      default: return <EmployeeDetailsTab employee={employee} />;
     }
   };
 
-  if (loading) {
-    return (
-      <Container className="h-full flex justify-center items-center">
-        <p>Loading employee details...</p>
-      </Container>
-    );
-  }
-
-  return (
-    <Container className="h-full">
-      <div className="flex gap-1 items-end mb-4">
+  const PageTitle = (
+      <div className="flex gap-1 items-center mb-4">
         <NavLink to="/hr-employees/employees">
           <h6 className="font-semibold hover:text-primary-600">
             Employees
@@ -705,25 +514,51 @@ const EmployeeView = () => {
         </NavLink>
         <BiChevronRight size={18} />
         <h6 className="font-semibold text-primary-600">
-          {employee ? employee.name : "View Employee"}
+          {employee?.name || 'View Employee'}
         </h6>
       </div>
-      {/* MODIFIED: The entire page content is now in a single, unified Card */}
+  );
+
+  if (loading) {
+    return (
+        <Container className="h-full">
+            {PageTitle}
+            <div className="flex justify-center items-center h-96">
+                <p>Loading...</p> 
+            </div>
+        </Container>
+    );
+  }
+
+  if (error) {
+     return <Container className="h-full">
+        {PageTitle}
+        <Card className='p-8 text-center'>
+            <p className='text-red-500 font-semibold'>{error}</p>
+        </Card>
+     </Container>;
+  }
+
+  if (!employee) {
+       return <Container className="h-full">
+        {PageTitle}
+        <Card className='p-8 text-center'>
+            <p>Employee could not be found.</p>
+        </Card>
+     </Container>;
+  }
+
+
+  return (
+    <Container className="h-full">
+      {PageTitle}
       <Card bodyClass="p-0">
-        {/* Profile Header Section */}
         <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-          <EmployeeProfileHeader employee={employee} />
+          <EmployeeProfileHeader employee={employee?.data} />
         </div>
-
-        {/* Tab Navigator Section */}
         <div className="px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700">
-          <EmployeeViewNavigator
-            activeSection={activeSection}
-            onNavigate={setActiveSection}
-          />
+          <EmployeeViewNavigator activeSection={activeSection} onNavigate={setActiveSection} />
         </div>
-
-        {/* Tab Content Section */}
         <div className="p-4 sm:p-6">{renderActiveSection()}</div>
       </Card>
     </Container>
