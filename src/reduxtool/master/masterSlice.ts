@@ -43,6 +43,7 @@ import {
   getActivityLogAction,
   getAllActionAction,
   getAllCompany,
+  getAllCountAction,
   getAllDocumentsAction,
   getAllNotificationAction,
   getAllProductAction,
@@ -213,6 +214,7 @@ const INITIAL_STATE: any = {
   startFormData: [],
   accountDocumentById: 0,
   getfromIDcompanymemberData: 0,
+  AllCountData: [],
 };
 
 const masterSlice = createSlice({
@@ -756,6 +758,10 @@ const masterSlice = createSlice({
     builder.addCase(getStartProcessAction.fulfilled, (state, { payload }) => ({
       ...state,
       startFormData: payload,
+    }));
+    builder.addCase(getAllCountAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      AllCountData: payload,
     }));
   },
 });
