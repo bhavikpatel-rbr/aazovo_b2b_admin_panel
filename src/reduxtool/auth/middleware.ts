@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 import { AxiosResponse } from "axios"
 
-import { forgotPasswordAsync, loginWithEmailAsync } from "./services"
+import { forgotPasswordAsync, loginWithEmailAsync, updateUserProfilePictureAsync } from "./services"
 import { defaultMessageObj } from "../lem/types"
 import { showMessage } from "../lem/lemSlice"
 import { logOutAsync } from "../master/services"
@@ -150,13 +150,13 @@ export const updateUserProfilePictureAction = createAsyncThunk<
   async (data, { rejectWithValue }) => {
     try {
       // Call the API service function
-      const response = await forgotPasswordAsync(data)
+      const response = await updateUserProfilePictureAsync(data)
 
       // Check for successful response from the API
-      if (response.data && response.data.status) {
+      if (response.status) {
         // Return the successful response data
         // This will be the payload of the 'fulfilled' action
-        return response.data
+        return response.status
       } else {
         // If API returns a known error (e.g., status: false)
         // Use rejectWithValue to send a specific error message

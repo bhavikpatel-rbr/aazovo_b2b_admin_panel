@@ -18,7 +18,7 @@ import { config } from "@/utils/config";
 
 // Redux & State
 import { useAppDispatch } from "@/reduxtool/store";
-import { logoutAction } from "@/reduxtool/auth/middleware";
+import { logoutAction, updateUserProfilePictureAction } from "@/reduxtool/auth/middleware";
 
 // Icons
 import {
@@ -120,7 +120,7 @@ const ProfileImageUploadModal = ({
             <div className="relative group">
                 <Avatar size={120} shape="circle" src={avatarToShow} />
                 <div 
-                    className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 rounded-full flex items-center justify-center cursor-pointer transition-opacity"
+                    className="absolute inset-0  bg-opacity-0 group-hover:bg-opacity-50 rounded-full flex items-center justify-center cursor-pointer transition-opacity"
                     onClick={handleTriggerFileInput}
                 >
                     <div className="text-center text-white opacity-0 group-hover:opacity-100 p-4">
@@ -202,28 +202,25 @@ const _UserDropdown = () => {
 
   const handleSaveProfileImage = async (file: File) => {
     setIsUploading(true);
+    
+    // Create a FormData object to send the file
+    const formData = new FormData();
+    formData.append('profile_pic', file); // 'profile_pic' is the key your backend expects
+
     try {
-      // Step 1: Call the API service
-      const response = await uploadProfileImage(file);
-      const newImageUrl = response.newImageUrl;
+      // Step 1: Call the real API service
+       await dispatch(updateUserProfilePictureAction(formData));
 
-      // Step 2: Create the updated user data object
-      const updatedUserData = {
-        ...userData,
-        profile_pic_path: newImageUrl,
-      };
-
-      // Step 3: Update state and local storage
-      setuserData(updatedUserData);
-      encryptStorage.setItem("UserData", updatedUserData, !useEncryptApplicationStorage);
-
-      // Step 4: Show success feedback and close modal
+      // Step 2: Extract the new image URL from the API response
+      // **IMPORTANT**: Adjust the path below to match your actual API response structure!
+      // For example, it might be response.data.newImageUrl or response.data.user.profile_pic_path
+      
       toast.push(<Notification title="Avatar Updated" type="success" />);
       handleCloseImageModal();
 
     } catch (error) {
       console.error("Failed to upload image:", error);
-      toast.push(<Notification title="Upload Failed" type="danger" message="Please try again."/>);
+      toast.push(<Notification title="Upload Failed" type="danger" message="Please check the console and try again."/>);
     } finally {
       setIsUploading(false);
     }
@@ -262,7 +259,7 @@ const _UserDropdown = () => {
               onClick={handleOpenImageModal}
             >
               <Avatar size={60} shape="circle" {...avatarProps} />
-              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 rounded-full flex items-center justify-center transition-opacity duration-200">
+              <div className="absolute inset-0 bg-opacity-0 group-hover:bg-opacity-40 rounded-full flex items-center justify-center transition-opacity duration-200">
                 <PiCameraDuotone className="text-white text-xl opacity-0 group-hover:opacity-100" />
               </div>
             </div>
