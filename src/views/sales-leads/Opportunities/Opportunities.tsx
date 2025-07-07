@@ -2481,23 +2481,27 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   useEffect(() => {
     if (currentTab === TABS.AUTO_MATCH) {
-      if (autoSpbStatus === "idle") {
+      // if (autoSpbStatus === "idle") {
         dispatch(getAutoMatchDataAction());
         setAutoSpbStatus("loading");
         setTimeout(() => {
-          setAutoSpbData(autoMatchData);
+          setAutoSpbData(autoMatchData.data);
           setAutoSpbStatus("succeeded");
         }, 1500);
-      }
+      // }
     } else {
+       dispatch(getAutoMatchDataAction());
       // if (!rawOpportunities.length) {
       dispatch(getOpportunitiesAction());
       // }
       // if (!getAllUserData.length) {
       dispatch(getAllUsersAction());
+       
       // }
     }
   }, [dispatch]);
+  console.log(autoMatchData.data, 'autoMatchData');
+  
 
   useEffect(() => {
     if (Array.isArray(rawOpportunities)) {
@@ -2589,7 +2593,11 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     } else {
       setOpportunities([]);
     }
-  }, [rawOpportunities]);
+     setTimeout(() => {
+          setAutoSpbData(autoMatchData ?? []);
+          setAutoSpbStatus("succeeded");
+        }, 1500);
+  }, [rawOpportunities, autoMatchData]);
 
   useEffect(() => {
     const initialTableQuery = {

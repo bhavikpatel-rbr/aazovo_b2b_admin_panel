@@ -514,8 +514,8 @@ const ActionColumn = React.memo(({ rowData, onEdit, onView, onDelete, onOpenModa
       <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add to Calendar</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Active Log</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
-      <Dropdown.Item onClick={onDelete} className="flex items-center gap-2 text-red-600 hover:text-red-700"><TbTrash size={18} /> <span className="text-xs">Delete</span></Dropdown.Item>
+      {/* <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
+      <Dropdown.Item onClick={onDelete} className="flex items-center gap-2 text-red-600 hover:text-red-700"><TbTrash size={18} /> <span className="text-xs">Delete</span></Dropdown.Item> */}
     </Dropdown>
   </div>
 ));
