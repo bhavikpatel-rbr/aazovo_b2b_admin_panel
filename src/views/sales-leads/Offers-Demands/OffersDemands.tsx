@@ -950,7 +950,7 @@ const OffersDemands = () => {
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
             <div className="flex flex-col md:flex-row gap-2">
-              <Button icon={<TbRefresh />} onClick={() => fetchData()} title="Refresh Data">Refresh</Button>
+              {/* <Button icon={<TbRefresh />} onClick={() => fetchData()} title="Refresh Data">Refresh</Button> */}
               <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/sales-leads/offers/create")} block>Add Offer</Button>
               <Button icon={<TbPlus />} variant="solid" onClick={() => navigate("/sales-leads/demands/create")} block>Add Demand</Button>
             </div>
