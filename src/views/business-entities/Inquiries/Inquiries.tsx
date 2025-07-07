@@ -90,6 +90,7 @@ import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
 import { useSelector } from "react-redux";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 
 // --- Export Reason Schema ---
 const exportReasonSchema = z.object({
@@ -546,7 +547,7 @@ const FormattedDateDisplay = ({ dateString, label }: { dateString?: string; labe
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return <div className="text-[10px] text-red-500">{label && <b>{label}: </b>}Invalid Date</div>;
-    return <div className="text-[10px] text-gray-500 dark:text-gray-400">{label && <b>{label}: </b>}{date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }).replace(/ /g, "/")}</div>;
+    return <div className="text-[10px] text-gray-500 dark:text-gray-400">{label && <b>{label}: </b>}{formatCustomDateTime(dateString)}</div>;
   } catch (e) {
     return <div className="text-[10px] text-red-500">{label && <b>{label}: </b>}Error</div>;
   }
