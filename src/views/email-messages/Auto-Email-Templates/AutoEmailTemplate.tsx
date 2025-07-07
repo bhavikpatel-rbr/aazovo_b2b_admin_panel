@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput"; // Corrected
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui"; // ADDED Avatar, Dialog
 
 // Icons
 import {
@@ -45,6 +45,7 @@ import {
   TbBuildingOff, // For Department
   TbColumns,
   TbX,
+  TbUserCircle, // ADDED for Avatar fallback
 } from "react-icons/tb";
 
 // Types
@@ -86,7 +87,7 @@ export type AutoEmailTemplateItem = { // Matches your API listing data
   category?: { id: number; name: string; } | null;
   department?: { id: number; name: string; } | null;
   created_by_user?: { name: string; roles: { display_name: string }[] }; // ADDED
-  updated_by_user?: { name:string; roles: { display_name: string }[] }; // ADDED
+  updated_by_user?: { name: string; roles: { display_name: string }[]; profile_pic_path?: string | null }; // ADDED profile_pic_path
   // For UI display convenience
   categoryNameDisplay?: string;
   departmentNameDisplay?: string;
@@ -132,12 +133,12 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 // --- CSV Exporter ---
 const CSV_HEADERS_AET = ["ID", "Email Type", "Template Key", "Category", "Department", "Status", "Updated By", "Updated Role", "Updated At"];
 
-type AutoEmailTemplateExportItem = Omit<AutoEmailTemplateItem, "created_at" | "updated_at" | "created_by_user" | "updated_by_user" | "category" | "department" > & {
-    categoryNameDisplay?: string;
-    departmentNameDisplay?: string;
-    updated_by_name?: string;
-    updated_by_role?: string;
-    updated_at_formatted?: string;
+type AutoEmailTemplateExportItem = Omit<AutoEmailTemplateItem, "created_at" | "updated_at" | "created_by_user" | "updated_by_user" | "category" | "department"> & {
+  categoryNameDisplay?: string;
+  departmentNameDisplay?: string;
+  updated_by_name?: string;
+  updated_by_role?: string;
+  updated_at_formatted?: string;
 };
 
 const CSV_KEYS_AET: (keyof AutoEmailTemplateExportItem)[] = [
@@ -145,8 +146,8 @@ const CSV_KEYS_AET: (keyof AutoEmailTemplateExportItem)[] = [
 ];
 
 function exportAutoEmailTemplatesToCsv(filename: string, rows: AutoEmailTemplateItem[]) {
-  if (!rows || !rows.length) { 
-      return false; 
+  if (!rows || !rows.length) {
+    return false;
   }
   const preparedRows: AutoEmailTemplateExportItem[] = rows.map((row) => ({
     id: row.id,
@@ -191,15 +192,15 @@ const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () =
           <TbAlignBoxCenterBottom size={18} />
         </div>
       </Tooltip>
-      <Tooltip title="Delete"> 
-      <div 
-        className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`} 
-        role="button" 
-        onClick={onDelete}
-      >
-        <TbTrash />
-      </div>
-    </Tooltip> 
+      <Tooltip title="Delete">
+        <div
+          className={`text-xl cursor-pointer select-none text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400`}
+          role="button"
+          onClick={onDelete}
+        >
+          <TbTrash />
+        </div>
+      </Tooltip>
     </div>);
 };
 type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLInputElement>; };
@@ -216,55 +217,55 @@ const AutoEmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport, onCl
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<AutoEmailTemplateItem>[]>>;
   activeFilterCount: number;
 }) => {
-    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-    const toggleColumn = (checked: boolean, colId: string) => {
-      if (checked) {
-          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-          if (originalColumn) {
-              setFilteredColumns(prev => {
-                  const newCols = [...prev, originalColumn];
-                  newCols.sort((a, b) => {
-                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                      return indexA - indexB;
-                  });
-                  return newCols;
-              });
-          }
-      } else {
-          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
       }
-    };
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
 
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <ItemSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2">
-                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => {
-                            const id = col.id || col.accessorKey as string;
-                            return col.header && (
-                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
-                                        {col.header as string}
-                                    </Checkbox>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Dropdown>
-                <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onClearFilters} /></Tooltip>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
-                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
-                </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-            </div>
-        </div>
-    );
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <ItemSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2">
+            <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => {
+              const id = col.id || col.accessorKey as string;
+              return col.header && (
+                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                  <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                    {col.header as string}
+                  </Checkbox>
+                </div>
+              );
+            })}
+          </div>
+        </Dropdown>
+        <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onClearFilters} /></Tooltip>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+          Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+        </Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+      </div>
+    </div>
+  );
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
@@ -272,21 +273,21 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
   onClearAll: () => void;
 }) => {
-    const { filterEmailTypes, filterTemplateKeys, filterCategoryIds, filterDepartmentIds, filterStatus } = filterData;
-    const hasFilters = filterEmailTypes?.length || filterTemplateKeys?.length || filterCategoryIds?.length || filterDepartmentIds?.length || filterStatus?.length;
-    if (!hasFilters) return null;
+  const { filterEmailTypes, filterTemplateKeys, filterCategoryIds, filterDepartmentIds, filterStatus } = filterData;
+  const hasFilters = filterEmailTypes?.length || filterTemplateKeys?.length || filterCategoryIds?.length || filterDepartmentIds?.length || filterStatus?.length;
+  if (!hasFilters) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterEmailTypes?.map(item => <Tag key={`type-${item.value}`} prefix>Type: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterEmailTypes', item.value)} /></Tag>)}
-            {filterTemplateKeys?.map(item => <Tag key={`key-${item.value}`} prefix>Key: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterTemplateKeys', item.value)} /></Tag>)}
-            {filterCategoryIds?.map(item => <Tag key={`cat-${item.value}`} prefix>Cat: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategoryIds', item.value)} /></Tag>)}
-            {filterDepartmentIds?.map(item => <Tag key={`dept-${item.value}`} prefix>Dept: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterDepartmentIds', item.value)} /></Tag>)}
-            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterEmailTypes?.map(item => <Tag key={`type-${item.value}`} prefix>Type: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterEmailTypes', item.value)} /></Tag>)}
+      {filterTemplateKeys?.map(item => <Tag key={`key-${item.value}`} prefix>Key: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterTemplateKeys', item.value)} /></Tag>)}
+      {filterCategoryIds?.map(item => <Tag key={`cat-${item.value}`} prefix>Cat: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategoryIds', item.value)} /></Tag>)}
+      {filterDepartmentIds?.map(item => <Tag key={`dept-${item.value}`} prefix>Dept: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterDepartmentIds', item.value)} /></Tag>)}
+      {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 type AutoEmailTemplatesTableProps = { columns: ColumnDef<AutoEmailTemplateItem>[]; data: AutoEmailTemplateItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: AutoEmailTemplateItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: AutoEmailTemplateItem) => void; onAllRowSelect: (checked: boolean, rows: Row<AutoEmailTemplateItem>[]) => void; };
@@ -319,6 +320,25 @@ const AutoEmailTemplatesListing = () => {
   // State for export reason modal
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+
+  // State and handlers for image viewer
+  const [imageView, setImageView] = useState('');
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+
+  const openImageViewer = useCallback((path: string | null | undefined) => {
+    if (path) {
+      setImageView(path);
+      setIsImageViewerOpen(true);
+    } else {
+      toast.push(<Notification title="No Image" type="info">User has no profile picture.</Notification>);
+    }
+  }, []);
+
+  const closeImageViewer = useCallback(() => {
+    setIsImageViewerOpen(false);
+    setImageView('');
+  }, []);
+
 
   const categoryOptions = useMemo(() => Array.isArray(CategoriesData) ? CategoriesData.map((c: ApiAETCategory) => ({ value: String(c.id), label: c.name })) : [], [CategoriesData]);
   const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: ApiAETDepartment) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
@@ -402,26 +422,26 @@ const AutoEmailTemplatesListing = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
   const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1 })); dispatch(getAutoEmailTemplatesAction()); setIsFilterDrawerOpen(false); }, [filterFormMethods, dispatch]);
-  
+
   const handleCardClick = useCallback((status: 'Active' | 'Inactive' | 'all') => {
-      onClearFilters();
-      if(status !== 'all') {
-          const statusOption = statusOptions.find(opt => opt.value === status);
-          if(statusOption) {
-            setFilterCriteria({ filterStatus: [statusOption] });
-          }
+    onClearFilters();
+    if (status !== 'all') {
+      const statusOption = statusOptions.find(opt => opt.value === status);
+      if (statusOption) {
+        setFilterCriteria({ filterStatus: [statusOption] });
       }
+    }
   }, [onClearFilters]);
 
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: string) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
-        if (currentValues) {
-            const newValues = currentValues.filter(item => item.value !== value);
-            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
-        }
-        return newFilters;
+      const newFilters = { ...prev };
+      const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+      if (currentValues) {
+        const newValues = currentValues.filter(item => item.value !== value);
+        (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+      }
+      return newFilters;
     });
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   }, []);
@@ -506,41 +526,54 @@ const AutoEmailTemplatesListing = () => {
   const handleRowSelect = useCallback((checked: boolean, row: AutoEmailTemplateItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<AutoEmailTemplateItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))); } }, []);
 
+  const formatCustomDateTime = (dateStr: string | null | undefined) => {
+    if (!dateStr) return 'N/A';
+    return dayjs(dateStr).format("D MMM YYYY, h:mm A");
+  };
+
   const columns: ColumnDef<AutoEmailTemplateItem>[] = useMemo(() => [
     { header: "Email Type", accessorKey: "email_type", size: 250, enableSorting: true },
     { header: "Category", accessorKey: "category_id", size: 180, enableSorting: true, cell: props => props.row.original.category?.name || categoryOptions.find(c => c.value === String(props.getValue()))?.label || String(props.getValue()) },
     { header: "Department", accessorKey: "department_id", size: 180, enableSorting: true, cell: props => props.row.original.department?.name || departmentOptions.find(d => d.value === String(props.getValue()))?.label || (props.getValue() ? String(props.getValue()) : "N/A") },
-    { header: "Status", accessorKey: "status", enableSorting: true, size: 100,
+    {
+      header: "Status", accessorKey: "status", enableSorting: true, size: 100,
       cell: (props) => {
         const status = props.row.original.status;
         return (
           <Tag
-            className={classNames("capitalize font-semibold whitespace-nowrap",{
-                "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500": status === "Active",
-                "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500": status === "Inactive",
-              })}
+            className={classNames("capitalize font-semibold whitespace-nowrap", {
+              "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500": status === "Active",
+              "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500": status === "Inactive",
+            })}
           >{status}</Tag>
         )
       }
     },
     {
-      header: "Updated Info", accessorKey: "updated_at", size: 150, enableSorting: true,
-      cell: (props) => {
+      header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220, cell: (props) => {
         const { updated_at, updated_by_user } = props.row.original;
-        const formattedDate = updated_at ? dayjs(updated_at).format("D MMM YYYY, h:mm A") : "N/A";
         return (
-          <div className="text-xs">
-            <span>
-              {updated_by_user?.name || "N/A"}
-              {updated_by_user?.roles?.[0]?.display_name && (<> <br /> <b>{updated_by_user.roles[0].display_name}</b></>)}
-            </span><br />
-            <span>{formattedDate}</span>
+          <div className="flex items-center gap-2">
+            <Tooltip title="View Profile Picture">
+              <Avatar
+                src={updated_by_user?.profile_pic_path || undefined}
+                shape="circle"
+                size="sm"
+                icon={<TbUserCircle />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} />
+            </Tooltip>
+            <div>
+              <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+              <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+              <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+            </div>
           </div>
         );
-      },
+      }
     },
     { header: "Actions", id: "actions", size: 100, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
-  ], [categoryOptions, departmentOptions, openEditDrawer, handleDeleteClick]);
+  ], [categoryOptions, departmentOptions, openEditDrawer, handleDeleteClick, openImageViewer]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<AutoEmailTemplateItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -564,7 +597,7 @@ const AutoEmailTemplatesListing = () => {
       </FormItem>
     </div>
   );
-  
+
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
 
@@ -583,18 +616,18 @@ const AutoEmailTemplatesListing = () => {
             <Tooltip title="Total times templates were used"><Card bodyClass={cardBodyClass} className="rounded-md border border-green-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMailForward size={24} /></div><div><h6 className="text-green-500">{autoEmailTemplatesData?.counts?.count_used}</h6><span className="font-semibold text-xs">Count Used</span></div></Card></Tooltip>
           </div>
           <div className="mb-4">
-            <AutoEmailTemplatesTableTools 
-                onClearFilters={onClearFilters} 
-                onSearchChange={handleSearchInputChange} 
-                onFilter={openFilterDrawer} 
-                onExport={handleOpenExportReasonModal}
-                columns={columns}
-                filteredColumns={filteredColumns}
-                setFilteredColumns={setFilteredColumns}
-                activeFilterCount={activeFilterCount}
+            <AutoEmailTemplatesTableTools
+              onClearFilters={onClearFilters}
+              onSearchChange={handleSearchInputChange}
+              onFilter={openFilterDrawer}
+              onExport={handleOpenExportReasonModal}
+              columns={columns}
+              filteredColumns={filteredColumns}
+              setFilteredColumns={setFilteredColumns}
+              activeFilterCount={activeFilterCount}
             />
           </div>
-           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4">
             <AutoEmailTemplatesTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
@@ -603,7 +636,7 @@ const AutoEmailTemplatesListing = () => {
       <AutoEmailTemplatesSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
       <Drawer title={editingItem ? "Edit Auto Email Template" : "Add New Auto Email Template"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={480}
         footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button> <Button size="sm" variant="solid" form="autoEmailTemplateForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button> </div>} >
-        <Form id="autoEmailTemplateForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative"> 
+        <Form id="autoEmailTemplateForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative">
           {renderDrawerForm(formMethods)}
         </Form>
         {isEditDrawerOpen && editingItem && (
@@ -631,7 +664,7 @@ const AutoEmailTemplatesListing = () => {
           <FormItem label="Template Key"><Controller name="filterTemplateKeys" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Template Key" options={autoEmailTemplatesData?.data.map(t => ({ value: t.template_key, label: t.template_key })).filter((v, i, a) => a.findIndex(item => item.value === v.value) === i)} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="Category"><Controller name="filterCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Category" options={categoryOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="Department"><Controller name="filterDepartmentIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Department" options={departmentOptions} value={field.value || []} onChange={val => field.onChange(val || [])} />)} /></FormItem>
-          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={statusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])}/>)} /></FormItem>
+          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={statusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
         </Form>
       </Drawer>
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Auto Email Template" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onRequestClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} >
@@ -640,10 +673,13 @@ const AutoEmailTemplatesListing = () => {
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
         <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
           <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
-            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3}/>)} />
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
           </FormItem>
         </Form>
       </ConfirmDialog>
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} width={600}>
+        <div className="flex justify-center items-center p-4">{imageView ? <img src={imageView} alt="User" className="max-w-full max-h-[80vh]" /> : <p>No image.</p>}</div>
+      </Dialog>
     </>
   );
 };
