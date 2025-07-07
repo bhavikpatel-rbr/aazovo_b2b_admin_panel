@@ -116,28 +116,59 @@ export const forgotPasswordAction = createAsyncThunk<
   any,
   { rejectValue: any }
 >(
-    'auth/forgotPassword', // Action type prefix
-    async (data, { rejectWithValue }) => {
-        try {
-            // Call the API service function
-            const response = await forgotPasswordAsync(data)
+  'auth/forgotPassword', // Action type prefix
+  async (data, { rejectWithValue }) => {
+    try {
+      // Call the API service function
+      const response = await forgotPasswordAsync(data)
 
-            // Check for successful response from the API
-            if (response.data && response.data.status) {
-                // Return the successful response data
-                // This will be the payload of the 'fulfilled' action
-                return response.data
-            } else {
-                // If API returns a known error (e.g., status: false)
-                // Use rejectWithValue to send a specific error message
-                return rejectWithValue(response.data.message || 'Invalid request')
-            }
-        } catch (error: any) {
-            // Catch network errors or other exceptions
-            // and send a generic or specific error message
-            return rejectWithValue(
-                error.response?.data?.message || error.message || 'An unknown error occurred'
-            )
-        }
+      // Check for successful response from the API
+      if (response.data && response.data.status) {
+        // Return the successful response data
+        // This will be the payload of the 'fulfilled' action
+        return response.data
+      } else {
+        // If API returns a known error (e.g., status: false)
+        // Use rejectWithValue to send a specific error message
+        return rejectWithValue(response.data.message || 'Invalid request')
+      }
+    } catch (error: any) {
+      // Catch network errors or other exceptions
+      // and send a generic or specific error message
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'An unknown error occurred'
+      )
     }
+  }
 )
+export const updateUserProfilePictureAction = createAsyncThunk<
+  any,
+  any,
+  { rejectValue: any }
+>(
+  'auth/updateUserProfilePictureAction', // Action type prefix
+  async (data, { rejectWithValue }) => {
+    try {
+      // Call the API service function
+      const response = await forgotPasswordAsync(data)
+
+      // Check for successful response from the API
+      if (response.data && response.data.status) {
+        // Return the successful response data
+        // This will be the payload of the 'fulfilled' action
+        return response.data
+      } else {
+        // If API returns a known error (e.g., status: false)
+        // Use rejectWithValue to send a specific error message
+        return rejectWithValue(response.data.message || 'Invalid request')
+      }
+    } catch (error: any) {
+      // Catch network errors or other exceptions
+      // and send a generic or specific error message
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'An unknown error occurred'
+      )
+    }
+  }
+)
+
