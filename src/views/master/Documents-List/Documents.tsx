@@ -589,9 +589,9 @@ const Documents = () => {
         cell: (props) => (
           <Tag
             className={classNames({
-              "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100":
+              "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700":
                 props.row.original.status === "Active",
-              "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100":
+              "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700":
                 props.row.original.status === "Inactive",
             })}
           >

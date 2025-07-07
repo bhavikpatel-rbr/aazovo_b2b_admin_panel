@@ -61,7 +61,8 @@ import {
 
 // --- Define Item Types ---
 export type DepartmentItem = { id: string | number; name: string };
-export type DesignationItem = { id: string | number; name: string; department_id: string | number };
+// Note: Based on API, department_id is a JSON string representing an array of department IDs.
+export type DesignationItem = { id: string | number; name: string; department_id: string; };
 export type SelectOption = { value: string; label: string; };
 
 export type RoleItem = {
@@ -175,7 +176,7 @@ const ActiveFiltersDisplay = ({ filters, onRemoveFilter, onClearAll, departmentO
     if (!hasActiveFilters) return null;
 
     const getDeptName = (id: string) => departmentOptions.find(opt => opt.value === id)?.label || id;
-    const getDesigName = (id: string) => designationOptions.find(opt => opt.value === id)?.label || id;
+    const getDesigName = (id:string) => designationOptions.find(opt => opt.value === id)?.label || id;
     
     return (
         <div className="flex items-center gap-2 flex-wrap mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
@@ -236,7 +237,7 @@ const RolesListing = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const { Roles = [], departmentsData = { data: [] }, designationsData = [], status: masterLoading } = useSelector(masterSelector, shallowEqual);
+  const { Roles = [], departmentsData = { data: [] }, designationsData = { data: [] }, status: masterLoading } = useSelector(masterSelector, shallowEqual);
 
   // --- State Management ---
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -275,11 +276,30 @@ const RolesListing = () => {
   const { control, handleSubmit, reset, watch, setValue, formState } = formMethods;
   const watchedDepartmentId = watch("department_id");
 
+  // *** CORRECTED LOGIC HERE ***
+  // Filter designations based on the selected department.
   const designationOptionsForForm: SelectOption[] = useMemo(() => {
-    if (!watchedDepartmentId || !Array.isArray(designationsData?.data)) return [];
-    return designationsData?.data
-      .filter(d => String(d.department_id) === String(watchedDepartmentId))
+    if (!watchedDepartmentId || !Array.isArray(designationsData?.data)) {
+      return [];
+    }
+
+    return designationsData.data
+      .filter(designation => {
+        if (!designation.department_id) {
+          return false;
+        }
+        try {
+          // Parse the JSON string e.g., "[\"10\"]" into an array ['10']
+          const departmentIds: string[] = JSON.parse(designation.department_id);
+          // Check if the parsed array includes the selected department ID
+          return departmentIds.map(String).includes(String(watchedDepartmentId));
+        } catch (e) {
+          console.error("Failed to parse department_id from designation:", designation, e);
+          return false;
+        }
+      })
       .map(d => ({ value: String(d.id), label: d.name }));
+      
   }, [watchedDepartmentId, designationsData?.data]);
 
   // Auto-generate name/display_name/description effect
@@ -395,7 +415,7 @@ const RolesListing = () => {
         cell: props => <ActionColumn 
             onEdit={() => openEditDrawer(props.row.original)} 
             onViewDetail={() => openViewModal(props.row.original)}
-            onPermissions={() => handlePermissionsClick(props.row.original)} // <-- UPDATE THIS LINE
+            onPermissions={() => handlePermissionsClick(props.row.original)}
         />
       },
   ], [navigate]);
@@ -500,12 +520,33 @@ const RolesListing = () => {
             <Button size="sm" variant="solid" form="roleForm" type="submit" loading={isSubmitting} disabled={!formState.isValid || isSubmitting}>Save</Button>
           </div>
       }>
+        {/* *** CORRECTED FORM ORDER AND LOGIC *** */}
         <Form id="roleForm" onSubmit={handleSubmit(isEditDrawerOpen ? onEditRoleSubmit : onAddRoleSubmit)} className="flex flex-col gap-4">
           <FormItem label="Department *" invalid={!!formState.errors.department_id} errorMessage={formState.errors.department_id?.message}>
-            <Controller name="department_id" control={control} render={({ field }) => <Select placeholder="Select Department" options={departmentOptions} {...field} onChange={val => { field.onChange(val?.value); setValue('designation_id', ''); }} value={departmentOptions.find(o => o.value === field.value)} />} />
+            <Controller name="department_id" control={control} render={({ field }) => 
+              <Select 
+                placeholder="Select Department" 
+                options={departmentOptions} 
+                {...field} 
+                onChange={val => { 
+                  field.onChange(val?.value); 
+                  setValue('designation_id', ''); // Reset designation when department changes
+                }} 
+                value={departmentOptions.find(o => o.value === field.value)}
+              />}
+            />
           </FormItem>
           <FormItem label="Designation *" invalid={!!formState.errors.designation_id} errorMessage={formState.errors.designation_id?.message}>
-            <Controller name="designation_id" control={control} render={({ field }) => <Select placeholder="Select Designation" options={designationOptionsForForm} {...field} isDisabled={!watchedDepartmentId || designationOptionsForForm.length === 0} value={designationOptionsForForm.find(o => o.value === field.value)} onChange={val => field.onChange(val?.value)} />} />
+            <Controller name="designation_id" control={control} render={({ field }) => 
+              <Select 
+                placeholder="Select Designation" 
+                options={designationOptionsForForm} 
+                {...field} 
+                isDisabled={!watchedDepartmentId || designationOptionsForForm.length === 0} 
+                value={designationOptionsForForm.find(o => o.value === field.value)} 
+                onChange={val => field.onChange(val?.value)}
+              />}
+            />
           </FormItem>
           <FormItem label="Display Name *" invalid={!!formState.errors.display_name} errorMessage={formState.errors.display_name?.message}>
             <Controller name="display_name" control={control} render={({ field }) => <Input {...field} prefix={<TbUserShield />} placeholder="e.g., Content Manager" />} />

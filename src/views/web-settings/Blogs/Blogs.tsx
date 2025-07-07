@@ -570,9 +570,8 @@ const Blogs = () => {
       { header: "Icon", accessorKey: "icon_full_path", enableSorting: false, size: 60, meta: { headerClass: "text-center", cellClass: "text-center" }, cell: (props) => { const iconPath = props.row.original.icon_full_path; return (<Avatar size={40} shape="circle" src={iconPath || undefined} icon={!iconPath ? <TbFileText /> : undefined} onClick={() => openImageViewer(iconPath)} className={iconPath ? "cursor-pointer hover:ring-2 hover:ring-indigo-500" : ""}>{!iconPath ? props.row.original.title?.charAt(0).toUpperCase() : null}</Avatar>); }, },
       { header: "Title", accessorKey: "title", enableSorting: true, size: 240, cell: (props) => <span>{props.getValue<string>()}</span>, },
       { header: "Author", accessorKey: "author", enableSorting: true, size: 150, cell: (props) => <span>{props.getValue<string>() || "N/A"}</span>, },
-      { header: "Tags", accessorKey: "tags", enableSorting: true, size: 180, cell: (props) => { const tags = props.getValue<string | null>(); if (!tags) return <span>-</span>; return (<div className="flex flex-wrap gap-1 max-w-[170px]">{tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((t) => (<Tag key={t} className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-xs">{t}</Tag>))}</div>); }, },
-      { header: "Slug", accessorKey: "slug", enableSorting: true, size: 100 },
-      { header: "Status", accessorKey: "status", enableSorting: true, size: 80, cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold border-0", blogStatusColor[status] || blogStatusColor.Draft)}>{status}</Tag>); }, },
+      { header: "Tags", accessorKey: "tags", enableSorting: true, size: 180, cell: (props) => { const tags = props.getValue<string | null>(); if (!tags) return <span>-</span>; return (<div className="flex flex-wrap gap-1 max-w-[170px]">{tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((t) => (<Tag key={t} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{t}</Tag>))}</div>); }, },
+      // { header: "Slug", accessorKey: "slug", enableSorting: true, size: 100 },
       {
               header: "Updated Info",
               accessorKey: "updated_at",
@@ -603,6 +602,7 @@ const Blogs = () => {
                 );
               },
             },
+      { header: "Status", accessorKey: "status", enableSorting: true, size: 80, cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold border-0", blogStatusColor[status] || blogStatusColor.Draft)}>{status}</Tag>); }, },
       { header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 80, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />), },
     ],
     []

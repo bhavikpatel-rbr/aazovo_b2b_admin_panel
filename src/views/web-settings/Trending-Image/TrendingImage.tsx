@@ -70,7 +70,7 @@ function formatCustomDateTime(dateString: string | null | undefined): string {
 const pageNameOptionsConst = [ { value: 'Home Page', label: 'Home Page' }, { value: 'Engineering Page', label: 'Engineering Page' }, { value: 'Plastic Page', label: 'Plastic Page' }, ];
 const pageNameValues = pageNameOptionsConst.map(opt => opt.value) as [string, ...string[]];
 const apiStatusOptions: { value: 'Active' | 'Inactive'; label: string }[] = [ { value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }, ];
-const statusColor: Record<'Active' | 'Inactive', string> = { Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100", Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100" };
+const statusColor: Record<'Active' | 'Inactive', string> = { Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700", Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700" };
 
 export type ProductOption = { value: string; label: string; id?: string | number, name?: string };
 export type TrendingPageImageItem = 
@@ -295,7 +295,7 @@ const addPageNameOptions = useMemo(() => {
         { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 250, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
         { header: 'Trending Products', id: 'trending_products', size: 350, cell: (props) => { const ids = props.row.original.product_ids?.split(',').map(id => id.trim()) || []; if (ids.length === 0) return <span className="text-gray-400">None</span>; const names = ids.map(id => productNameMap.get(id) || `ID:${id}`); const display = names.slice(0, 3).join(', '); const remaining = names.length - 3; return (<Tooltip title={names.join(', ')}><span>{display}{remaining > 0 && ` +${remaining} more`}</span></Tooltip>); }},
         { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div><div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div></div></div>); } },
-        { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={`${statusColor[props.row.original.status]} capitalize font-semibold border-0`}>{props.row.original.status}</Tag>)},
+        { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={`${statusColor[props.row.original.status]} capitalize font-semibold`}>{props.row.original.status}</Tag>)},
         { header: 'Actions', id: 'action', meta: { cellClass: 'text-center' }, size: 80, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
     ], [productNameMap, openImageViewer]);
 
@@ -375,11 +375,12 @@ const addPageNameOptions = useMemo(() => {
                     {editingItem && (
                         <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                             <div>
-                                <b className="font-semibold text-gray-800 dark:text-gray-100">Latest Update:</b><br />
+                                <b className="font-semibold text-primary">Latest Update:</b><br />
                                 <p className="font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
                                 <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                             </div>
                             <div className="text-right">
+                                <br/>
                                 <span className="font-semibold">Created At:</span> <span>{formatCustomDateTime(editingItem.created_at)}</span><br />
                                 <span className="font-semibold">Updated At:</span> <span>{formatCustomDateTime(editingItem.updated_at)}</span>
                             </div>

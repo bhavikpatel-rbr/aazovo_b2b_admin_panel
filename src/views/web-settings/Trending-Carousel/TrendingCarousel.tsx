@@ -343,10 +343,10 @@ const TrendingCarousel = () => {
     const openImageViewer = useCallback((src: string | null) => { if (src) { setImageToView(src); setIsImageViewerOpen(true); } }, []);
     
     const baseColumns: ColumnDef<TrendingCarouselItemData>[] = useMemo(() => [
-        { header: 'Image', accessorKey: 'images_full_path', enableSorting: false, size: 60, cell: (props) => (<Avatar size={40} shape="circle" src={props.row.original.images_full_path || undefined} icon={!props.row.original.images_full_path ? <TbPhoto /> : undefined} onClick={() => openImageViewer(props.row.original.images_full_path)} className={props.row.original.images_full_path ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500' : ''} />)},
-        { header: 'Link', accessorKey: 'links', enableSorting: true, size: 280, cell: (props) => props.row.original.links ? (<a href={props.row.original.links} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate block max-w-[230px]" title={props.row.original.links}>{props.row.original.links}</a>) : (<span className="text-gray-500">No Link</span>)},
-        { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames('capitalize font-semibold', props.row.original.status === 'Active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100')}>{props.row.original.status}</Tag>)},
+        { header: 'Image', accessorKey: 'images_full_path', enableSorting: false, size: 80, cell: (props) => (<Avatar size={40} shape="circle" src={props.row.original.images_full_path || undefined} icon={!props.row.original.images_full_path ? <TbPhoto /> : undefined} onClick={() => openImageViewer(props.row.original.images_full_path)} className={props.row.original.images_full_path ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500' : ''} />)},
+        { header: 'Link', accessorKey: 'links', enableSorting: true, size: 320, cell: (props) => props.row.original.links ? (<a href={props.row.original.links} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate block max-w-[230px]" title={props.row.original.links}>{props.row.original.links}</a>) : (<span className="text-gray-500">No Link</span>)},
         { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div><div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div></div></div>); } },
+        { header: 'Status', accessorKey: 'status', enableSorting: true, size: 80, cell: (props) => (<Tag className={classNames('capitalize font-semibold', props.row.original.status === 'Active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700')}>{props.row.original.status}</Tag>)},
         { header: 'Actions', id: 'action', meta: { cellClass: 'text-center' ,HeaderClass: 'text-center', }, size: 80, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />)},
     ], [openImageViewer]);
 
@@ -393,7 +393,7 @@ const TrendingCarousel = () => {
             {/* Edit Drawer */}
             <Drawer title="Edit Trending Carousel" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editCarouselItemForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</Button></div>}>
                 <Form id="editCarouselItemForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-y-6">
-                    <FormItem label="Current Image">{editingItem?.images_full_path ? <Avatar src={editingItem.images_full_path} className="w-full h-auto border p-1 rounded-md" shape="square" icon={<TbPhoto />} /> : <p>No image.</p>}</FormItem>
+                    <FormItem label="Current Image">{editingItem?.images_full_path ? <Avatar src={editingItem.images_full_path} className="w-full h-45 border p-1 rounded-md" shape="square" icon={<TbPhoto />} /> : <p>No image.</p>}</FormItem>
                     <FormItem label="New Image (Optional)" invalid={!!editFormMethods.formState.errors.imageFile} errorMessage={editFormMethods.formState.errors.imageFile?.message}><Controller name="imageFile" control={editFormMethods.control} render={({ field: { onChange } }) => (<Input type="file" onChange={(e) => { const file = e.target.files?.[0] || null; onChange(file); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(file ? URL.createObjectURL(file) : null); }} accept="image/*" />)} /></FormItem>
                     {imagePreviewUrl && <Avatar src={imagePreviewUrl} className="w-full h-auto border p-1 rounded-md" shape="square" icon={<TbPhoto />} />}
                     <FormItem label="Link" invalid={!!editFormMethods.formState.errors.links} errorMessage={editFormMethods.formState.errors.links?.message}><Controller name="links" control={editFormMethods.control} render={({ field }) => (<Input {...field} value={field.value ?? ''} type="url" placeholder="https://example.com" />)} /></FormItem>
@@ -401,11 +401,12 @@ const TrendingCarousel = () => {
                     {editingItem && (
                         <div className=" grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3">
                             <div>
-                                <b className="font-semibold text-gray-800 dark:text-gray-100">Latest Update:</b><br />
+                                <b className="font-semibold text-primary">Latest Update:</b><br />
                                 <p className="font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p>
                                 <p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p>
                             </div>
                             <div className="text-right">
+                                <br/>
                                 <span className="font-semibold">Created At:</span> <span>{formatCustomDateTime(editingItem.created_at)}</span><br />
                                 <span className="font-semibold">Updated At:</span> <span>{formatCustomDateTime(editingItem.updated_at)}</span>
                             </div>
