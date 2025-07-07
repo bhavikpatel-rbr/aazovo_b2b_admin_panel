@@ -35,17 +35,17 @@ const { useEncryptApplicationStorage } = config;
 // --- MOCK API SERVICE ---
 // In a real app, this would be in a separate file (e.g., src/services/UserService.ts)
 // It simulates uploading a file and getting a new URL back from the server.
-const uploadProfileImage = (file: File): Promise<{ newImageUrl: string }> => {
-  console.log(`Uploading file: ${file.name}`);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Simulate success by returning a new random image URL
-      const newImageUrl = `https://picsum.photos/200?random=${Math.random()}`;
-      console.log(`File uploaded. New URL: ${newImageUrl}`);
-      resolve({ newImageUrl });
-    }, 1500); // 1.5-second delay to simulate network
-  });
-};
+// const uploadProfileImage = (file: File): Promise<{ newImageUrl: string }> => {
+//   console.log(`Uploading file: ${file.name}`);
+//   return new Promise((resolve) => {
+//     setTimeout(() => {
+//       // Simulate success by returning a new random image URL
+//       const newImageUrl = `https://picsum.photos/200?random=${Math.random()}`;
+//       console.log(`File uploaded. New URL: ${newImageUrl}`);
+//       resolve({ newImageUrl });
+//     }, 1500); // 1.5-second delay to simulate network
+//   });
+// };
 
 
 // --- 1. NEW - Profile Image Upload Modal Component ---
@@ -209,12 +209,29 @@ const _UserDropdown = () => {
 
     try {
       // Step 1: Call the real API service
-       await dispatch(updateUserProfilePictureAction(formData));
+       const response = await dispatch(updateUserProfilePictureAction(formData));
+console.log("response",response.payload);
 
       // Step 2: Extract the new image URL from the API response
       // **IMPORTANT**: Adjust the path below to match your actual API response structure!
       // For example, it might be response.data.newImageUrl or response.data.user.profile_pic_path
-      
+      const newImageUrl = response.payload; 
+
+      if (!newImageUrl) {
+          throw new Error("New image URL not found in API response.");
+      }
+
+      // Step 3: Create the updated user data object
+      const updatedUserData = {
+        ...userData,
+        profile_pic_path: response.payload,
+      };
+
+      // Step 4: Update state and local storage
+      setuserData(updatedUserData);
+      encryptStorage.setItem("UserData", updatedUserData, !useEncryptApplicationStorage);
+
+      // Step 5: Show success feedback and close modal
       toast.push(<Notification title="Avatar Updated" type="success" />);
       handleCloseImageModal();
 

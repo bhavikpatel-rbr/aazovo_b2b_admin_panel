@@ -151,12 +151,13 @@ export const updateUserProfilePictureAction = createAsyncThunk<
     try {
       // Call the API service function
       const response = await updateUserProfilePictureAsync(data)
+      console.log("response.profile_pic", response.data.profile_pic);
 
       // Check for successful response from the API
-      if (response.status) {
+      if (response.data.status) {
         // Return the successful response data
         // This will be the payload of the 'fulfilled' action
-        return response.status
+        return response.data.profile_pic
       } else {
         // If API returns a known error (e.g., status: false)
         // Use rejectWithValue to send a specific error message

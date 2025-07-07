@@ -47,6 +47,7 @@ export const updateUserProfilePictureAsync = async (
         },
       }
     )
+    console.log("response.response", response);
 
     // Return the entire response object on success
     return response
