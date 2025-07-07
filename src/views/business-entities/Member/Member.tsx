@@ -101,6 +101,7 @@ import cloneDeep from "lodash/cloneDeep";
 import dayjs from "dayjs";
 import { MdCheckCircle } from "react-icons/md";
 import { useSelector } from "react-redux";
+import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 
 // --- MemberData Type (FormItem) ---
 export type FormItem = {
@@ -522,8 +523,8 @@ const GenericActionDialog: React.FC<{ type: MemberModalType | null; member: Form
 };
 const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = ({ member, onClose }) => {
   const getDisplayValue = (value: any, fallback = "N/A") => value || fallback;
-  const joinDate = member.member_join_date || member.created_at || "N/A";
-  const formattedJoinDate = joinDate !== "N/A" ? new Date(joinDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", }) : "N/A";
+  const joinDate = formatCustomDateTime(member.member_join_date || member.created_at)  || "N/A";
+  const formattedJoinDate = joinDate !== "N/A" ? joinDate : "N/A";
   const renderDetailItem = (label: string, value: React.ReactNode) => (
     <div className="mb-3">
       <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
@@ -1330,7 +1331,7 @@ const FormListTable = ({
           return (
             <div className="flex flex-col text-xs">
               <Tag className={`${statusColor[member_status as keyof typeof statusColor]} inline capitalize`}>{member_status || ""}</Tag>
-              <span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date:{" "}{new Date(created_at).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric", }).replace(/ /g, "/") || "N/A"}</div></span>
+              <span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date:{" "}{formatCustomDateTime(created_at) || "N/A"}</div></span>
             </div>
           );
         },

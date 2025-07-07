@@ -158,7 +158,7 @@ const MultiCheckboxField: FC<{ control: Control<any>, field: FormField }> = ({ c
 };
 
 
-// --- MODIFIED: Dynamic Field Renderer ---
+// --- Dynamic Field Renderer ---
 const renderField = (
     field: FormField, 
     control: Control<any>,
@@ -185,24 +185,22 @@ const renderField = (
 
         case 'file':
             return (
-                <FormItem {...commonProps} className="md:col-span-2 lg:col-span-3">
-                    <Controller 
-                        name={field.name} 
-                        control={control} 
-                        render={({ field: { onChange, ...rest } }) => (
-                            <Input
-                                  type="file"
-                                  // The `rest` contains value, which can cause issues with uncontrolled file inputs.
-                                  // We only need the onChange handler from the controller.
-                                  onChange={(e) => {
-                                      const file = e.target.files?.[0] || null;
-                                      onChange(file); // Update react-hook-form state
-                                      handleFileChange(field.name, file); // Update visual preview state
-                                  }}
-                              />
-                        )} 
-                    />
-                </FormItem>
+              <FormItem {...commonProps} className="col-span-2 md:col-span-1">
+                  <Controller 
+                      name={field.name} 
+                      control={control} 
+                      render={({ field: { onChange, ...rest } }) => (
+                          <Input
+                              type="file"
+                              onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  onChange(file); // Update react-hook-form state
+                                  handleFileChange(field.name, file); // Update visual preview state
+                              }}
+                          />
+                      )} 
+                  />
+              </FormItem>
             );
         case 'textarea':
             return (
@@ -266,7 +264,7 @@ const FillUpForm = () => {
     const [formStructure, setFormStructure] = useState<FormStructure | null>(null);
     const [activeSection, setActiveSection] = useState<string>('');
     
-    // --- NEW: State for image previews and drawer ---
+    // State for image previews and drawer
     const [imagePreviews, setImagePreviews] = useState<{ [fieldName: string]: string }>({});
     const [isImageDrawerOpen, setIsImageDrawerOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -274,37 +272,31 @@ const FillUpForm = () => {
 
     const { handleSubmit, control, formState: { isSubmitting }, reset } = useForm({ defaultValues: {} });
 
-    // --- NEW: Effect for cleaning up blob URLs to prevent memory leaks ---
+    // Effect for cleaning up blob URLs to prevent memory leaks
     useEffect(() => {
-        // This is the cleanup function that runs when the component unmounts.
         return () => {
-            // Revoke all current blob URLs
             Object.values(imagePreviews).forEach(url => {
                 if (url && url.startsWith('blob:')) {
                     URL.revokeObjectURL(url);
                 }
             });
-            // Revoke any leftover previous blob URLs
             Object.values(previousBlobUrls.current).forEach(url => {
                 if (url && url.startsWith('blob:')) {
                     URL.revokeObjectURL(url);
                 }
             });
         };
-    }, []); // Empty dependency array means this runs only on mount and unmount
+    }, []); 
 
     useEffect(() => {
-        // This effect runs *after* imagePreviews state has been updated.
-        // It cleans up the *old* blob URL that was just replaced.
         const urlsToRevoke = { ...previousBlobUrls.current };
-        previousBlobUrls.current = {}; // Clear the ref for the next update
-
+        previousBlobUrls.current = {}; 
         Object.values(urlsToRevoke).forEach(url => {
             if (url && url.startsWith('blob:')) {
                 URL.revokeObjectURL(url);
             }
         });
-    }, [imagePreviews]); // Trigger this cleanup whenever the previews change
+    }, [imagePreviews]); 
 
 
     // --- Data fetching and initialization logic ---
@@ -318,14 +310,10 @@ const FillUpForm = () => {
             try {
                 // Determine if form is already filled to decide which data to fetch
                 const accountDoc = await dispatch(getAccountDocByIdAction(id)).unwrap();
-                // if (accountDoc?.is_filled) {
-                    await Promise.all([
-                        dispatch(getFillUpFormAction(formId)),
-                        dispatch(getFilledFormAction(id))
-                    ]);
-                // } else {
-                    // await dispatch(getFillUpFormAction(formId));
-                // }
+                await Promise.all([
+                    dispatch(getFillUpFormAction(formId)),
+                    dispatch(getFilledFormAction(id))
+                ]);
             } catch (err: any) {
                 toast.push(<Notification type="danger" title="Error" children={err?.message} />);
             } finally {
@@ -336,7 +324,7 @@ const FillUpForm = () => {
     }, [id, formId, dispatch]);
 
 
-    // --- MODIFIED: Effect to process data and populate the form AND previews ---
+    // Effect to process data and populate the form AND previews
     useEffect(() => {
         if (isLoading || !formResponse) return;
 
@@ -356,7 +344,7 @@ const FillUpForm = () => {
                     const defaultValues = prepareDefaultValues(uiStructure, savedAnswers);
                     reset(defaultValues);
 
-                    // --- NEW: Populate image previews from already saved data ---
+                    // Populate image previews from already saved data
                     uiStructure.sections.forEach(section => {
                         const sectionData = savedAnswers[section.id];
                         if (!sectionData) return;
@@ -411,12 +399,10 @@ const FillUpForm = () => {
     
                     if (field.type === 'file') {
                         const fileOrUrl: File | string | null = data?.[sectionId]?.[questionKey];
-                        // Only convert to base64 if it's a new File object
                         if (fileOrUrl instanceof File) {
                             const base64 = await fileToBase64(fileOrUrl);
                             processedData[sectionId][questionKey] = base64;
                         } else {
-                            // Otherwise, it's the existing URL string, so we keep it.
                             processedData[sectionId][questionKey] = fileOrUrl;
                         }
                     }
@@ -446,22 +432,19 @@ const FillUpForm = () => {
         }
     };
     
-    // --- NEW: Handler to update image previews on file selection ---
+    // Handler to update image previews on file selection
     const handleFileChange = (fieldName: string, file: File | null) => {
         setImagePreviews(prev => {
             const newPreviews = { ...prev };
             const oldUrl = newPreviews[fieldName];
 
-            // If there was an old blob URL for this field, mark it for revocation
             if (oldUrl && oldUrl.startsWith('blob:')) {
                 previousBlobUrls.current[fieldName] = oldUrl;
             }
 
             if (file) {
-                // Create a new blob URL and update the state
                 newPreviews[fieldName] = URL.createObjectURL(file);
             } else {
-                // If the file is removed, delete the preview
                 delete newPreviews[fieldName];
             }
 
@@ -469,7 +452,7 @@ const FillUpForm = () => {
         });
     };
 
-    // --- NEW: Handlers for the image viewer drawer ---
+    // Handlers for the image viewer drawer
     const handleImageClick = (imageUrl: string) => {
         setSelectedImage(imageUrl);
         setIsImageDrawerOpen(true);
@@ -478,7 +461,8 @@ const FillUpForm = () => {
         setIsImageDrawerOpen(false);
         setSelectedImage(null);
     };
-    // --- Navigation Logic ---
+
+    // Navigation Logic
     const sectionIds = formStructure?.sections.map(s => s.id) || [];
     const activeIndex = sectionIds.indexOf(activeSection);
 
@@ -511,16 +495,28 @@ const FillUpForm = () => {
 
     return (
         <>
+            {/* Form Title */}
+            <h3 className="mb-4">{formStructure.form_title}</h3>
+            
+            {/* Section Tabs (Full Width) */}
+            <Card className="mb-6" bodyClass="px-4 py-2 md:px-6">
+                <NavigatorComponent
+                    sections={formStructure.sections}
+                    activeSection={activeSection}
+                    onNavigate={setActiveSection}
+                />
+            </Card>
+
+            {/* Main Content Area: Document Previews and Form Fields */}
             <div className="flex flex-col md:flex-row gap-6">
-                {/* --- MODIFIED: Left Column for Image Previews --- */}
-                <div className="w-full md:w-48 flex-shrink-0">
-                    <Card className="sticky top-0">
+                {/* MODIFIED: Left Column for Image Previews (40% width on medium screens) */}
+                <div className="w-full md:w-2/5 flex-shrink-0 pr-3">
+                    <Card className="sticky top-20"> {/* Adjust sticky top if needed */}
                         <h5 className="mb-4">Documents</h5>
-                        <div className="max-h-[80vh] overflow-y-auto pr-2">
+                        <div className="max-h-[70vh] overflow-y-auto pr-2">
                             <div className="space-y-4">
                             {Object.keys(imagePreviews).length > 0 ? (
                                 Object.entries(imagePreviews).map(([fieldName, imageUrl]) => (
-                                    
                                     <div 
                                         key={fieldName} 
                                         className="cursor-pointer border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-md overflow-hidden transition-colors" 
@@ -543,21 +539,12 @@ const FillUpForm = () => {
                     </Card>
                 </div>
 
-                {/* Right Column: Main Form */}
+                {/* Right Column: Main Form (will take remaining width) */}
                 <div className="flex-grow">
-                    <h3 className="mb-4">{formStructure.form_title}</h3>
-                    <Card className="mb-6" bodyClass="px-4 py-2 md:px-6">
-                        <NavigatorComponent
-                            sections={formStructure.sections}
-                            activeSection={activeSection}
-                            onNavigate={setActiveSection}
-                        />
-                    </Card>
                     <form onSubmit={handleSubmit(onFormSubmit)} className="flex flex-col gap-4">
                         {currentSectionData && (
                             <Card id={currentSectionData.id}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 mt-2">
-                                    {/* Pass the new handler to the renderer */}
                                     {currentSectionData.fields.map(field => renderField(field, control, handleFileChange))}
                                 </div>
                             </Card>

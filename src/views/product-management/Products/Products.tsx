@@ -1,217 +1,127 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import classNames from "classnames";
+import cloneDeep from "lodash/cloneDeep";
 import React, {
-  useState,
-  useMemo,
+  ChangeEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
-  ChangeEvent,
+  useState,
 } from "react";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import Avatar from "@/components/ui/Avatar";
-import cloneDeep from "lodash/cloneDeep";
-import classNames from "classnames";
+import dayjs from 'dayjs'; // Import dayjs
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
-import Button from "@/components/ui/Button";
-import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
 import DebouceInput from "@/components/shared/DebouceInput";
+import { RichTextEditor } from "@/components/shared";
+import StickyFooter from "@/components/shared/StickyFooter";
 import {
+  Button,
+  Card,
+  Checkbox,
+  DatePicker,
+  Dialog,
   Drawer,
+  Dropdown,
   Form,
   FormItem,
   Input,
   Select as UiSelect,
   Tag,
-  Dialog,
-  Card,
-  DatePicker,
-  Checkbox,
 } from "@/components/ui";
-import Dropdown from "@/components/ui/Dropdown";
+import Avatar from "@/components/ui/Avatar";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import Notification from "@/components/ui/Notification";
 import Spinner from "@/components/ui/Spinner";
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-  TbPencil,
-  TbTrash,
-  TbChecks,
-  TbSearch,
-  TbFilter,
-  TbPlus,
-  TbBox,
-  TbSwitchHorizontal,
-  TbCloudDownload,
-  TbEye,
-  TbMailForward,
-  TbPhoto,
-  TbFileText,
-  TbSettings,
-  TbClipboardText,
-  TbX,
-  TbInfoCircle,
-  TbDotsVertical,
-  TbMail,
-  TbFileSpreadsheet,
-  TbCloudUpload,
-  TbReload,
-  TbBrandWhatsapp,
-  TbBrandProducthunt,
-  TbCircleCheck,
-  TbCancel,
-  TbRefresh,
-  TbProgress,
-  TbCircleX,
   TbBell,
-  TbUser,
+  TbBox,
+  TbBrandProducthunt,
+  TbBrandWhatsapp,
   TbCalendarEvent,
-  TbTagStarred,
+  TbCancel,
+  TbCheck,
+  TbCircleCheck,
+  TbCircleX,
+  TbClipboardText,
+  TbCloudDownload,
+  TbCloudUpload,
   TbColumns,
+  TbDotsVertical,
+  TbEye,
+  TbFileSpreadsheet,
+  TbFileText,
+  TbFilter,
+  TbInfoCircle,
+  TbMail,
+  TbMailForward,
+  TbPencil,
+  TbPhoto,
+  TbPlus,
+  TbProgress,
+  TbRefresh,
+  TbReload,
+  TbSearch,
+  TbSettings,
+  TbSwitchHorizontal,
+  TbTagStarred,
+  TbTrash,
+  TbUser,
+  TbX,
 } from "react-icons/tb";
 
 // Types
 import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
   CellContext,
+  ColumnDef,
+  OnSortParam,
+  Row,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
-import {
-  getProductsAction,
-  addProductAction,
-  editProductAction,
-  deleteProductAction,
-  deleteAllProductsAction,
-  getDomainsAction,
-  getCategoriesAction,
-  getSubcategoriesByCategoryIdAction,
-  getBrandAction,
-  getUnitAction,
-  getCountriesAction,
-  changeProductStatusAction,
-  submitExportReasonAction,
-  addNotificationAction,
-  getAllUsersAction,
-} from "@/reduxtool/master/middleware";
+import { authSelector } from "@/reduxtool/auth/authSlice";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+import {
+  addProductAction,
+  addNotificationAction,
+  addScheduleAction, // Added
+  addTaskAction, // Added
+  addAllActionAction, // Added
+  changeProductStatusAction,
+  deleteAllProductsAction,
+  deleteProductAction,
+  editProductAction,
+  getAllUsersAction,
+  getBrandAction,
+  getCategoriesAction,
+  getCountriesAction,
+  getDomainsAction,
+  getProductsAction,
+  getSubcategoriesByCategoryIdAction,
+  getUnitAction,
+  submitExportReasonAction,
+} from "@/reduxtool/master/middleware";
+import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
-import { RichTextEditor } from "@/components/shared";
 
 // --- Type Definitions ---
+// ... (existing type definitions are correct)
 type ApiProductItem = {
-  id: number;
-  category_id: string | number | null;
-  sub_category_id: string | number | null;
-  brand_id: string | number | null;
-  sku_code: string | null;
-  name: string;
-  unit_id: string | number | null;
-  country_id: string | number | null;
-  color: string | null;
-  hsn_code: string | null;
-  shelf_life: string | null;
-  packaging_size: string | null;
-  packaging_type: string | null;
-  tax_rate: string | number | null;
-  procurement_lead_time: string | null;
-  slug: string;
-  description: string | null;
-  short_description: string | null;
-  payment_term: string | null;
-  delivery_details: string | null;
-  thumb_image: string | null;
-  icon: string | null;
-  product_images: string | null;
-  status: "Active" | "Inactive" | "Pending" | "Draft" | "Rejected";
-  licence: string | null;
-  currency_id: string | number | null;
-  product_specification: string | null;
-  meta_title: string | null;
-  meta_descr: string | null;
-  meta_keyword: string | null;
-  domain_ids: string | null;
-  created_at: string;
-  updated_at: string;
-  icon_full_path?: string;
-  thumb_image_full_path?: string;
-  product_images_array?: {
-    id?: number;
-    image: string;
-    image_full_path: string;
-  }[];
-  category?: { id: number; name: string } | null;
-  sub_category?: { id: number; name: string } | null;
-  brand?: { id: number; name: string } | null;
-  unit_obj?: { id: number; name: string } | null;
-  country_obj?: { id: number; name: string } | null;
+    id: number; category_id: string | number | null; sub_category_id: string | number | null; brand_id: string | number | null; sku_code: string | null; name: string; unit_id: string | number | null; country_id: string | number | null; color: string | null; hsn_code: string | null; shelf_life: string | null; packaging_size: string | null; packaging_type: string | null; tax_rate: string | number | null; procurement_lead_time: string | null; slug: string; description: string | null; short_description: string | null; payment_term: string | null; delivery_details: string | null; thumb_image: string | null; icon: string | null; product_images: string | null; status: "Active" | "Inactive" | "Pending" | "Draft" | "Rejected"; licence: string | null; currency_id: string | number | null; product_specification: string | null; meta_title: string | null; meta_descr: string | null; meta_keyword: string | null; domain_ids: string | null; created_at: string; updated_at: string; icon_full_path?: string; thumb_image_full_path?: string; product_images_array?: { id?: number; image: string; image_full_path: string; }[]; category?: { id: number; name: string; } | null; sub_category?: { id: number; name: string; } | null; brand?: { id: number; name: string; } | null; unit_obj?: { id: number; name: string; } | null; country_obj?: { id: number; name: string; } | null;
 };
 export type ProductStatus = "active" | "inactive" | "pending" | "draft" | "rejected";
-export type ProductGalleryImageItem = {
-  id?: number;
-  file?: File;
-  previewUrl: string;
-  serverPath?: string;
-  isNew?: boolean;
-  isDeleted?: boolean;
-};
-export type ProductItem = {
-  id: number;
-  name: string;
-  email: string | null;
-  contactNumber: string | null;
-  contactNumberCode: string | null;
-  slug: string;
-  skuCode: string | null;
-  status: ProductStatus;
-  categoryId: number | null;
-  categoryName?: string;
-  subCategoryId: number | null;
-  subCategoryName?: string;
-  brandId: number | null;
-  brandName?: string;
-  unitId: number | null;
-  unitName?: string;
-  countryId: number | null;
-  countryName?: string;
-  domainIds: number[];
-  domainNames?: string[];
-  color: string | null;
-  hsnCode: string | null;
-  shelfLife: string | null;
-  packagingSize: string | null;
-  packagingType: string | null;
-  taxRate: string | number | null;
-  procurementLeadTime: string | null;
-  description: string | null;
-  shortDescription: string | null;
-  paymentTerm: string | null;
-  deliveryDetails: string | null;
-  productSpecification: string | null;
-  icon: string | null;
-  iconFullPath: string | null;
-  thumbImage: string | null;
-  thumbImageFullPath: string | null;
-  productImages: ProductGalleryImageItem[];
-  metaTitle: string | null;
-  metaDescription: string | null;
-  metaKeyword: string | null;
-  createdAt: string;
-  updatedAt: string;
-  subject: string | null;
-  type: string | null;
-};
+export type ProductGalleryImageItem = { id?: number; file?: File; previewUrl: string; serverPath?: string; isNew?: boolean; isDeleted?: boolean; };
+export type ProductItem = { id: number; name: string; email: string | null; contactNumber: string | null; contactNumberCode: string | null; slug: string; skuCode: string | null; status: ProductStatus; categoryId: number | null; categoryName?: string; subCategoryId: number | null; subCategoryName?: string; brandId: number | null; brandName?: string; unitId: number | null; unitName?: string; countryId: number | null; countryName?: string; domainIds: number[]; domainNames?: string[]; color: string | null; hsnCode: string | null; shelfLife: string | null; packagingSize: string | null; packagingType: string | null; taxRate: string | number | null; procurementLeadTime: string | null; description: string | null; shortDescription: string | null; paymentTerm: string | null; deliveryDetails: string | null; productSpecification: string | null; icon: string | null; iconFullPath: string | null; thumbImage: string | null; thumbImageFullPath: string | null; productImages: ProductGalleryImageItem[]; metaTitle: string | null; metaDescription: string | null; metaKeyword: string | null; createdAt: string; updatedAt: string; subject: string | null; type: string | null; };
 type ImportType = "products" | "keywords";
 type ExportType = "products" | "keywords";
 
@@ -219,261 +129,160 @@ type ExportType = "products" | "keywords";
 // --- MODALS SECTION ---
 // ============================================================================
 
-export type ProductsModalType =
-  | "email" | "whatsapp" | "notification" | "task" | "calendar" | "active";
+export type ProductsModalType = "email" | "whatsapp" | "notification" | "task" | "calendar" | "active";
+export interface ProductsModalState { isOpen: boolean; type: ProductsModalType | null; data: ProductItem | null; }
+interface ProductsModalsProps { modalState: ProductsModalState; onClose: () => void; getAllUserDataOptions: { value: any; label: string }[]; }
 
-export interface ProductsModalState {
-  isOpen: boolean; type: ProductsModalType | null; data: ProductItem | null;
-}
-interface ProductsModalsProps {
-  modalState: ProductsModalState;
-  onClose: () => void;
-  getAllUserDataOptions: { value: any; label: string }[];
-}
+// --- MODAL FORM SCHEMAS (NEW) ---
+const scheduleSchema = z.object({
+  event_title: z.string().min(3, "Title must be at least 3 characters."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
+  date_time: z.date({ required_error: "Event date & time is required." }),
+  remind_from: z.date().nullable().optional(),
+  notes: z.string().optional(),
+});
+type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
-const dummyUsers = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },];
+const taskValidationSchema = z.object({
+    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+    assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+    priority: z.string().min(1, 'Please select a priority.'),
+    due_date: z.date().nullable().optional(),
+    description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskValidationSchema>;
+
+const notificationSchema = z.object({
+    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+    send_users: z.array(z.number()).min(1, "Please select at least one user."),
+    message: z.string().min(10, "Message must be at least 10 characters long."),
+});
+type NotificationFormData = z.infer<typeof notificationSchema>;
+
+const activitySchema = z.object({
+    item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+    notes: z.string().optional(),
+});
+type ActivityFormData = z.infer<typeof activitySchema>;
+
+// --- MODAL CONSTANTS ---
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
-const eventTypeOptions = [
-  // Customer Engagement & Sales
-  { value: 'Meeting', label: 'Meeting' },
-  { value: 'Demo', label: 'Product Demo' },
-  { value: 'IntroCall', label: 'Introductory Call' },
-  { value: 'FollowUpCall', label: 'Follow-up Call' },
-  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-  { value: 'CheckIn', label: 'Customer Check-in' },
-  { value: 'LogEmail', label: 'Log an Email' },
+const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'InternalSync', label: 'Internal Team Sync' }, { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' }, { value: 'RequirementsGathering', label: 'Requirements Gathering' }, { value: 'UAT', label: 'User Acceptance Testing (UAT)' }, { value: 'GoLive', label: 'Go-Live / Deployment Date' }, { value: 'ProjectSignOff', label: 'Project Sign-off' }, { value: 'PrepareReport', label: 'Prepare Report' }, { value: 'PresentFindings', label: 'Present Findings' }, { value: 'TroubleshootingCall', label: 'Troubleshooting Call' }, { value: 'BugReplication', label: 'Bug Replication Session' }, { value: 'IssueEscalation', label: 'Escalate Issue' }, { value: 'ProvideUpdate', label: 'Provide Update on Ticket' }, { value: 'FeatureRequest', label: 'Log Feature Request' }, { value: 'IntegrationSupport', label: 'Integration Support Call' }, { value: 'DataMigration', label: 'Data Migration/Import Task' }, { value: 'ColdCall', label: 'Cold Call' }, { value: 'DiscoveryCall', label: 'Discovery Call' }, { value: 'QualificationCall', label: 'Qualification Call' }, { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' }, { value: 'LinkedInMessage', label: 'Log LinkedIn Message' }, { value: 'ProposalReview', label: 'Proposal Review Meeting' }, { value: 'ContractSent', label: 'Contract Sent' }, { value: 'NegotiationCall', label: 'Negotiation Call' }, { value: 'TrialSetup', label: 'Product Trial Setup' }, { value: 'TrialCheckIn', label: 'Trial Check-in Call' }, { value: 'WelcomeCall', label: 'Welcome Call' }, { value: 'ImplementationSession', label: 'Implementation Session' }, { value: 'UserTraining', label: 'User Training Session' }, { value: 'AdminTraining', label: 'Admin Training Session' }, { value: 'MonthlyCheckIn', label: 'Monthly Check-in' }, { value: 'HealthCheck', label: 'Customer Health Check' }, { value: 'FeedbackSession', label: 'Feedback Session' }, { value: 'RenewalDiscussion', label: 'Renewal Discussion' }, { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' }, { value: 'CaseStudyInterview', label: 'Case Study Interview' }, { value: 'InvoiceDue', label: 'Invoice Due' }, { value: 'SendInvoice', label: 'Send Invoice' }, { value: 'PaymentReminder', label: 'Send Payment Reminder' }, { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' }, { value: 'ConfirmPayment', label: 'Confirm Payment Received' }, { value: 'ContractRenewalDue', label: 'Contract Renewal Due' }, { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' }, { value: 'SendQuote', label: 'Send Quote/Estimate' }];
 
-  // Project & Task Management
-  { value: 'Milestone', label: 'Project Milestone' },
-  { value: 'Task', label: 'Task' },
-  { value: 'FollowUp', label: 'General Follow-up' },
-  { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-  // Customer Onboarding & Support
-  { value: 'OnboardingSession', label: 'Onboarding Session' },
-  { value: 'Training', label: 'Training Session' },
-  { value: 'SupportCall', label: 'Support Call' },
-
-  // General & Administrative
-  { value: 'Reminder', label: 'Reminder' },
-  { value: 'Note', label: 'Add a Note' },
-  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
-  { value: 'StrategySession', label: 'Strategy Session' },
-  { value: 'TeamMeeting', label: 'Team Meeting' },
-  { value: 'PerformanceReview', label: 'Performance Review' },
-  { value: 'Lunch', label: 'Lunch / Break' },
-  { value: 'Appointment', label: 'Personal Appointment' },
-  { value: 'Other', label: 'Other' },
-  { value: 'ProjectKickoff', label: 'Project Kick-off' },
-  { value: 'InternalSync', label: 'Internal Team Sync' },
-  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
-  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
-  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
-  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
-  { value: 'ProjectSignOff', label: 'Project Sign-off' },
-  { value: 'PrepareReport', label: 'Prepare Report' },
-  { value: 'PresentFindings', label: 'Present Findings' },
-  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
-  { value: 'BugReplication', label: 'Bug Replication Session' },
-  { value: 'IssueEscalation', label: 'Escalate Issue' },
-  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
-  { value: 'FeatureRequest', label: 'Log Feature Request' },
-  { value: 'IntegrationSupport', label: 'Integration Support Call' },
-  { value: 'DataMigration', label: 'Data Migration/Import Task' },
-  { value: 'ColdCall', label: 'Cold Call' },
-  { value: 'DiscoveryCall', label: 'Discovery Call' },
-  { value: 'QualificationCall', label: 'Qualification Call' },
-  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
-  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
-  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
-  { value: 'ContractSent', label: 'Contract Sent' },
-  { value: 'NegotiationCall', label: 'Negotiation Call' },
-  { value: 'TrialSetup', label: 'Product Trial Setup' },
-  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
-  { value: 'WelcomeCall', label: 'Welcome Call' },
-  { value: 'ImplementationSession', label: 'Implementation Session' },
-  { value: 'UserTraining', label: 'User Training Session' },
-  { value: 'AdminTraining', label: 'Admin Training Session' },
-  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-  { value: 'HealthCheck', label: 'Customer Health Check' },
-  { value: 'FeedbackSession', label: 'Feedback Session' },
-  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
-  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
-  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
-  { value: 'InvoiceDue', label: 'Invoice Due' },
-  { value: 'SendInvoice', label: 'Send Invoice' },
-  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
-  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
-  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
-  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
-  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
-  { value: 'SendQuote', label: 'Send Quote/Estimate' },
-]
-
+// --- MODAL DIALOG COMPONENTS (NEW/REFINED) ---
 const SendEmailDialog: React.FC<{ item: ProductItem; onClose: () => void; }> = ({ item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { subject: `Re: ${item.subject || `Inquiry for Product ID: ${item.id}`}`, message: "", }, });
-  const onSendEmail = (data: { subject: string; message: string }) => {
-    setIsLoading(true);
-    console.log("Simulating email send to", item.email, "with data:", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Email Sent Successfully" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send Email to {item.name}</h5>
-      <form onSubmit={handleSubmit(onSendEmail)}>
-        <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} /></FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading}>Send</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-};
-const SendWhatsAppDialog: React.FC<{ item: ProductItem; onClose: () => void; }> = ({ item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi, I'm interested in your product: ${item.name}.` }, });
-  const onSendMessage = (data: { message: string }) => {
-    setIsLoading(true);
-    const phone = item.contactNumber?.replace(/\D/g, "");
-    if (!phone) { toast.push(<Notification type="danger" title="Invalid Phone Number" />); setIsLoading(false); return; }
-    const fullPhone = `${item.contactNumberCode?.replace("+", "")}${phone}`;
-    const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(data.message)}`;
-    window.open(url, "_blank");
-    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
-    setIsLoading(false); onClose();
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send WhatsApp about {item.name}</h5>
-      <form onSubmit={handleSubmit(onSendMessage)}>
-        <FormItem label="Message Template"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading}>Open WhatsApp</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-};
-const AddNotificationDialog: React.FC<{ item: ProductItem; onClose: () => void; getAllUserDataOptions: { value: any; label: string }[]; }> = ({ item, onClose, getAllUserDataOptions }) => {
-  const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
-  const notificationSchema = z.object({ notification_title: z.string().min(3, 'Title must be at least 3 characters long.'), send_users: z.array(z.number()).min(1, 'Please select at least one user.'), message: z.string().min(10, 'Message must be at least 10 characters long.'), });
-  type NotificationFormData = z.infer<typeof notificationSchema>;
-  const { control, handleSubmit, formState: { errors, isValid }, } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Product Update: ${item.name}`, send_users: [], message: `This is a notification regarding the product "${item.name}". Please review the details.`, }, mode: 'onChange', });
-  const onSend = async (formData: NotificationFormData) => {
-    setIsLoading(true);
-    const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(item.id), module_name: 'Product', };
-    try {
-      await dispatch(addNotificationAction(payload)).unwrap();
-      toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
-      onClose();
-    } catch (error: any) {
-      toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
-    } finally { setIsLoading(false); }
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Notify User about: {item.name}</h5>
-      <Form onSubmit={handleSubmit(onSend)}>
-        <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
-        <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></FormItem>
-        <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
-        <div className="text-right mt-6">
-          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button>
-        </div>
-      </Form>
-    </Dialog>
-  );
-};
-const AssignTaskDialog: React.FC<{ item: ProductItem; onClose: () => void; }> = ({ item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { assignTo: null, taskDescription: "", priority: null, dueDate: null, }, });
-  const onSubmit = (data: any) => {
-    setIsLoading(true);
-    console.log(`Assigning task related to "${item.name}" with data:`, data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Task Assigned" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Assign Task for {item.name}</h5>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FormItem label="Assign To"><Controller name="assignTo" control={control} render={({ field }) => <UiSelect options={dummyUsers} {...field} />} /></FormItem>
-        <FormItem label="Task Description"><Controller name="taskDescription" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
-        <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<UiSelect options={priorityOptions} {...field} />)} /></FormItem>
-        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Pick a date" {...field} />)} /></FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading}>Assign</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-};
-const AddScheduleDialog: React.FC<{ item: ProductItem; onClose: () => void; }> = ({ item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { eventType: null, eventDate: null, description: "", }, });
-  const onSubmit = (data: any) => {
-    setIsLoading(true);
-    console.log(`Adding schedule related to "${item.name}" with data:`, data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Schedule Added" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Schedule for {item.name}</h5>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FormItem label="Event Type"><Controller name="eventType" control={control} render={({ field }) => (<UiSelect options={eventTypeOptions} {...field} />)} /></FormItem>
-        <FormItem label="Event Date & Time"><Controller name="eventDate" control={control} render={({ field }) => (<DatePicker placeholder="Pick a date" {...field} />)} /></FormItem>
-        <FormItem label="Description / Notes"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-          <Button variant="solid" type="submit" loading={isLoading}>Add Schedule</Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-};
-const GenericActionDialog: React.FC<{ type: ProductsModalType | null; item: ProductItem; onClose: () => void; }> = ({ type, item, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : "Confirm Action";
-  const handleConfirm = () => {
-    setIsLoading(true);
-    console.log(`Performing action '${type}' for product ${item.name}`);
-    setTimeout(() => { toast.push(<Notification type="success" title="Action Completed" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-2">{title}</h5>
-      <p>Are you sure you want to perform this action for product <span className="font-semibold">{item.name}</span>?</p>
-      <div className="text-right mt-6">
-        <Button className="mr-2" onClick={onClose}>Cancel</Button>
-        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button>
-      </div>
-    </Dialog>
-  );
-};
-const ProductsModals: React.FC<ProductsModalsProps> = ({ modalState, onClose, getAllUserDataOptions, }) => {
-  const { type, data: item, isOpen } = modalState;
-  if (!isOpen || !item) return null;
-  const renderModalContent = () => {
-    switch (type) {
-      case "email": return <SendEmailDialog item={item} onClose={onClose} />;
-      case "whatsapp": return <SendWhatsAppDialog item={item} onClose={onClose} />;
-      case "notification": return <AddNotificationDialog item={item} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-      case "task": return <AssignTaskDialog item={item} onClose={onClose} />;
-      case "calendar": return <AddScheduleDialog item={item} onClose={onClose} />;
-      case "active": return <GenericActionDialog type={type} item={item} onClose={onClose} />;
-      default: return null;
-    }
-  };
-  return <>{renderModalContent()}</>;
+    const { control, handleSubmit } = useForm({ defaultValues: { subject: `Re: ${item.subject || `Inquiry for Product: ${item.name}`}`, message: "", }, });
+    const onSendEmail = (data: { subject: string; message: string }) => {
+        if (!item.email) { toast.push(<Notification type="warning" title="No Email Address">This product does not have an associated email address.</Notification>); return; }
+        const mailtoLink = `mailto:${item.email}?subject=${encodeURIComponent(data.subject)}&body=${encodeURIComponent(data.message.replace(/<[^>]*>?/gm, ''))}`; // Strip HTML for body
+        window.open(mailtoLink, '_self');
+        toast.push(<Notification type="success" title="Opening Email Client" />);
+        onClose();
+    };
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Send Email about {item.name}</h5>
+        <form onSubmit={handleSubmit(onSendEmail)}>
+            <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+            <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} /></FormItem>
+            <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit">Open Email Client</Button></div>
+        </form>
+        </Dialog>
+    );
 };
 
+const AddNotificationDialog: React.FC<{ item: ProductItem; onClose: () => void; userOptions: { value: any; label: string }[]; onSubmit: (data: NotificationFormData) => void; isLoading: boolean; }> = ({ item, onClose, userOptions, onSubmit, isLoading }) => {
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(notificationSchema), defaultValues: { notification_title: `Regarding Product: ${item.name}`, send_users: [], message: `This is a notification for the product: "${item.name}".` }, mode: 'onChange' });
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Add Notification for {item.name}</h5>
+        <Form onSubmit={handleSubmit(onSubmit)}>
+            <FormItem label="Notification Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+            <FormItem label="Send to Users" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select Users" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
+            <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} /></FormItem>
+            <div className="text-right mt-6"><Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
+        </Form>
+        </Dialog>
+    );
+};
+
+const AssignTaskDialog: React.FC<{ item: ProductItem; onClose: () => void; userOptions: { value: any; label: string }[]; onSubmit: (data: TaskFormData) => void; isLoading: boolean; }> = ({ item, onClose, userOptions, onSubmit, isLoading }) => {
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({ resolver: zodResolver(taskValidationSchema), defaultValues: { task_title: `Follow up on Product: ${item.name}`, assign_to: [], priority: 'Medium', due_date: null, description: `Follow up regarding product: ${item.name} (ID: ${item.id})` }, mode: 'onChange' });
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Assign Task for {item.name}</h5>
+        <Form onSubmit={handleSubmit(onSubmit)}>
+            <FormItem label="Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />)} /></FormItem>
+            <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={priorityOptions} value={priorityOptions.find(p => p.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
+            </div>
+            <FormItem label="Due Date" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />)} /></FormItem>
+            <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+            <div className="text-right mt-6"><Button className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button></div>
+        </Form>
+        </Dialog>
+    );
+};
+
+const AddScheduleDialog: React.FC<{ item: ProductItem; onClose: () => void; onSubmit: (data: ScheduleFormData) => void; isLoading: boolean; }> = ({ item, onClose, onSubmit, isLoading }) => {
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), defaultValues: { event_title: `Regarding Product: ${item.name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Details for product "${item.name}" (ID: ${item.id}).`, }, mode: 'onChange' });
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Add Schedule for {item.name}</h5>
+        <Form onSubmit={handleSubmit(onSubmit)}>
+            <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
+            <FormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+            </div>
+            <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+            <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+            <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div>
+        </Form>
+        </Dialog>
+    );
+};
+
+const AddActivityDialog: React.FC<{ item: ProductItem; onClose: () => void; onSubmit: (data: ActivityFormData) => void; isLoading: boolean; }> = ({ item, onClose, onSubmit, isLoading }) => {
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({ resolver: zodResolver(activitySchema), defaultValues: { item: `Checked product: ${item.name}`, notes: '' }, mode: 'onChange' });
+    return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Add Activity for {item.name}</h5>
+        <Form onSubmit={handleSubmit(onSubmit)}>
+        <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}><Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with supplier" />} /></FormItem>
+        <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} /></FormItem>
+        <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button></div>
+        </Form></Dialog>);
+};
+
+// --- CENTRAL MODAL MANAGER (NEW) ---
+const ProductsModals: React.FC<ProductsModalsProps> = ({ modalState, onClose, getAllUserDataOptions, }) => {
+    const dispatch = useAppDispatch();
+    const { user } = useSelector(authSelector);
+    const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+    const { type, data: item, isOpen } = modalState;
+
+    if (!isOpen || !item) return null;
+
+    const handleConfirmNotification = async (formData: NotificationFormData) => { if (!item) return; setIsSubmittingAction(true); const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(item.id), module_name: 'Product', }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+    const handleConfirmTask = async (data: TaskFormData) => { if (!item) return; setIsSubmittingAction(true); try { const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(item.id), module_name: 'Product', }; await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+    const handleConfirmSchedule = async (data: ScheduleFormData) => { if (!item) return; setIsSubmittingAction(true); const payload = { module_id: item.id, module_name: 'Product', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '', }; try { await dispatch(addScheduleAction(payload)).unwrap(); toast.push(<Notification type="success" title="Event Scheduled" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+    const handleConfirmActivity = async (data: ActivityFormData) => { if (!item || !user?.id) return; setIsSubmittingAction(true); const payload = { item: data.item, notes: data.notes || '', module_id: String(item.id), module_name: 'Product', user_id: user.id, }; try { await dispatch(addAllActionAction(payload)).unwrap(); toast.push(<Notification type="success" title="Activity Added" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+
+    const renderModalContent = () => {
+        switch (type) {
+            case "email": return <SendEmailDialog item={item} onClose={onClose} />;
+            case "notification": return <AddNotificationDialog item={item} onClose={onClose} userOptions={getAllUserDataOptions} onSubmit={handleConfirmNotification} isLoading={isSubmittingAction} />;
+            case "task": return <AssignTaskDialog item={item} onClose={onClose} userOptions={getAllUserDataOptions} onSubmit={handleConfirmTask} isLoading={isSubmittingAction} />;
+            case "calendar": return <AddScheduleDialog item={item} onClose={onClose} onSubmit={handleConfirmSchedule} isLoading={isSubmittingAction} />;
+            case "active": return <AddActivityDialog item={item} onClose={onClose} onSubmit={handleConfirmActivity} isLoading={isSubmittingAction} />;
+            default: return null;
+        }
+    };
+    return <>{renderModalContent()}</>;
+};
+
+// ... (Rest of the file remains the same)
 // --- Form & Filter Schemas ---
 const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required.").max(255),
@@ -714,9 +523,24 @@ const Products = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
+  
+  // --- MODAL STATE MANAGEMENT (NEW) ---
   const [modalState, setModalState] = useState<ProductsModalState>({ isOpen: false, type: null, data: null });
-  const handleOpenModal = useCallback((type: ProductsModalType, itemData: ProductItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
+  const handleOpenModal = useCallback((type: ProductsModalType, itemData: ProductItem) => { 
+    if (type === 'whatsapp') {
+        const phone = itemData.contactNumber?.replace(/\D/g, "");
+        if (!phone) { toast.push(<Notification type="danger" title="Invalid Phone Number" />); return; }
+        const fullPhone = `${itemData.contactNumberCode?.replace("+", "")}${phone}`;
+        const message = `Hi, I'm interested in your product: ${itemData.name}.`;
+        const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
+        window.open(url, "_blank");
+        toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+        return;
+    }
+    setModalState({ isOpen: true, type, data: itemData }); 
+  }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
+  
   const [exportModalType, setExportModalType] = useState<ExportType | null>(null);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
   const [importModalType, setImportModalType] = useState<ImportType | null>(null);
@@ -875,7 +699,6 @@ const Products = () => {
     if (filterCriteria.filterStatuses?.length) count++;
     return count;
   }, [filterCriteria]);
-
 
   const handleListTabChange = useCallback((tabKey: string) => {
     setCurrentListTab(tabKey);
