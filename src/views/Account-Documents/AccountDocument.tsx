@@ -85,6 +85,7 @@ import {
   addaccountdocAction,
   addNotificationAction,
   addScheduleAction,
+  // deleteaccountdocAction, // <-- Ensure this action exists for deletion
   editaccountdocAction,
   getaccountdocAction,
   getAllCompany,
@@ -295,51 +296,6 @@ const eventTypeOptions = [
   { value: "Lunch", label: "Lunch / Break" },
   { value: "Appointment", label: "Personal Appointment" },
   { value: "Other", label: "Other" },
-  { value: "ProjectKickoff", label: "Project Kick-off" },
-  { value: "InternalSync", label: "Internal Team Sync" },
-  { value: "ClientUpdateMeeting", label: "Client Update Meeting" },
-  { value: "RequirementsGathering", label: "Requirements Gathering" },
-  { value: "UAT", label: "User Acceptance Testing (UAT)" },
-  { value: "GoLive", label: "Go-Live / Deployment Date" },
-  { value: "ProjectSignOff", label: "Project Sign-off" },
-  { value: "PrepareReport", label: "Prepare Report" },
-  { value: "PresentFindings", label: "Present Findings" },
-  { value: "TroubleshootingCall", label: "Troubleshooting Call" },
-  { value: "BugReplication", label: "Bug Replication Session" },
-  { value: "IssueEscalation", label: "Escalate Issue" },
-  { value: "ProvideUpdate", label: "Provide Update on Ticket" },
-  { value: "FeatureRequest", label: "Log Feature Request" },
-  { value: "IntegrationSupport", label: "Integration Support Call" },
-  { value: "DataMigration", label: "Data Migration/Import Task" },
-  { value: "ColdCall", label: "Cold Call" },
-  { value: "DiscoveryCall", label: "Discovery Call" },
-  { value: "QualificationCall", label: "Qualification Call" },
-  { value: "SendFollowUpEmail", label: "Send Follow-up Email" },
-  { value: "LinkedInMessage", label: "Log LinkedIn Message" },
-  { value: "ProposalReview", label: "Proposal Review Meeting" },
-  { value: "ContractSent", label: "Contract Sent" },
-  { value: "NegotiationCall", label: "Negotiation Call" },
-  { value: "TrialSetup", label: "Product Trial Setup" },
-  { value: "TrialCheckIn", label: "Trial Check-in Call" },
-  { value: "WelcomeCall", label: "Welcome Call" },
-  { value: "ImplementationSession", label: "Implementation Session" },
-  { value: "UserTraining", label: "User Training Session" },
-  { value: "AdminTraining", label: "Admin Training Session" },
-  { value: "MonthlyCheckIn", label: "Monthly Check-in" },
-  { value: "QBR", label: "Quarterly Business Review (QBR)" },
-  { value: "HealthCheck", label: "Customer Health Check" },
-  { value: "FeedbackSession", label: "Feedback Session" },
-  { value: "RenewalDiscussion", label: "Renewal Discussion" },
-  { value: "UpsellOpportunity", label: "Upsell/Cross-sell Call" },
-  { value: "CaseStudyInterview", label: "Case Study Interview" },
-  { value: "InvoiceDue", label: "Invoice Due" },
-  { value: "SendInvoice", label: "Send Invoice" },
-  { value: "PaymentReminder", label: "Send Payment Reminder" },
-  { value: "ChaseOverduePayment", label: "Chase Overdue Payment" },
-  { value: "ConfirmPayment", label: "Confirm Payment Received" },
-  { value: "ContractRenewalDue", label: "Contract Renewal Due" },
-  { value: "DiscussBilling", label: "Discuss Billing/Invoice" },
-  { value: "SendQuote", label: "Send Quote/Estimate" },
 ];
 
 const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
@@ -379,10 +335,10 @@ const AccountDocumentActionColumn = ({
   const navigate = useNavigate();
 
   const handleFillUpClick = () => {
-    // Check if there is a formId associated with this document
-    console.log(rowData);
-    
-    if (rowData.formId) {
+    // This console log can be useful for debugging the rowData structure
+    // console.log("Fill-up form clicked for row:", rowData);
+
+    if (rowData.formId && rowData.formId !== "N/A") {
       // Navigate to the dynamic form page with document and form IDs
       navigate(`/fill-up-form/${rowData.id}/${rowData.formId}`);
     } else {
@@ -397,10 +353,7 @@ const AccountDocumentActionColumn = ({
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Fillup Form">
-        <div
-          className="text-xl cursor-pointer"
-          onClick={handleFillUpClick}
-        >
+        <div className="text-xl cursor-pointer" onClick={handleFillUpClick}>
           <TbChecklist />
         </div>
       </Tooltip>
@@ -446,6 +399,13 @@ const AccountDocumentActionColumn = ({
         >
           <TbBell size={18} />
           <span className="text-xs">Add Notification </span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          className="flex items-center gap-2"
+          onClick={onDelete} // Hook up delete action here
+        >
+          <TbX size={18} />
+          <span className="text-xs text-red-500">Delete</span>
         </Dropdown.Item>
         <Dropdown.Item className="flex items-center gap-2">
           <TbChecklist size={18} />
@@ -766,7 +726,6 @@ const DetailItem = ({
   );
 };
 
-// --- [NEW] Helper component for the redesigned view dialog ---
 const InfoItem = ({
   icon,
   label,
@@ -797,8 +756,6 @@ const InfoItem = ({
   );
 };
 
-// --- [IMPROVED UI] ViewDocumentDialog Component ---
-// --- [CORRECTED UI] ViewDocumentDialog Component ---
 const ViewDocumentDialog = ({
   document,
   onClose,
@@ -837,7 +794,6 @@ const ViewDocumentDialog = ({
       bodyOpenClassName="overflow-y-hidden"
     >
       <div className="flex flex-col h-full">
-        {/* --- Dialog Header --- */}
         <div className="flex justify-between items-start p-4 border-b dark:border-gray-700">
           <div>
             <div className="flex items-center gap-3">
@@ -853,17 +809,15 @@ const ViewDocumentDialog = ({
               </span>
             </p>
           </div>
-          {/* <Button
-                        shape="circle"
-                        size="sm"
-                        icon={<TbX />}
-                        onClick={onClose}
-                    /> */}
+          <Button
+            shape="circle"
+            size="sm"
+            icon={<TbX />}
+            onClick={onClose}
+          />
         </div>
 
-        {/* --- Dialog Body --- */}
         <div className="p-6 max-h-[75vh] overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content (2/3 width) */}
           <div className="lg:col-span-2 flex flex-col gap-6">
             <Card bodyClass="p-4">
               <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
@@ -895,7 +849,6 @@ const ViewDocumentDialog = ({
               </div>
             </Card>
 
-            {/* Client Details Card */}
             {(company || member) && (
               <Card bodyClass="p-4">
                 <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
@@ -964,7 +917,6 @@ const ViewDocumentDialog = ({
             )}
           </div>
 
-          {/* Sidebar (1/3 width) */}
           <div className="lg:col-span-1 flex flex-col gap-6">
             <Card bodyClass="p-4">
               <h6 className="font-semibold mb-4 border-b dark:border-gray-700 pb-3">
@@ -1007,14 +959,12 @@ const ViewDocumentDialog = ({
   );
 };
 
-// --- Add/Edit Document Drawer Component ---
 const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   const dispatch = useAppDispatch();
   const title = editingId ? "Edit Document" : "Add New Document";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // --- MODIFICATION: Added `setValue` to reset member field ---
   const {
     control,
     handleSubmit,
@@ -1037,32 +987,49 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   });
 
   const {
-    DocumentTypeData = [],
+    DocumentTypeData = {},
     formsData: tokenForm = [],
-    EmployeesList = [],
+    EmployeesList = {},
     AllCompanyData = [],
     getfromIDcompanymemberData = [],
   } = useSelector(masterSelector);
 
-  const DocumentTypeDataOptions = DocumentTypeData.length > 0 && DocumentTypeData?.map((p: any) => ({
-    value: p.id,
-    label: p.name,
-  }));
+  // *** FIXED: Correctly access nested data and provide fallbacks ***
+  const DocumentTypeDataOptions = useMemo(
+    () =>
+      DocumentTypeData?.map((p: any) => ({
+        value: p.id,
+        label: p.name,
+      })) || [],
+    [DocumentTypeData]
+  );
 
-  const tokenFormDataOptions = tokenForm.length > 0 && tokenForm?.map((p: any) => ({
-    value: p.id,
-    label: p.form_title,
-  }));
+  const tokenFormDataOptions = useMemo(
+    () =>
+      tokenForm?.map((p: any) => ({
+        value: p.id,
+        label: p.form_title,
+      })) || [],
+    [tokenForm]
+  );
 
-  const EmployyDataOptions = EmployeesList.length > 0 && EmployeesList.data?.data?.map((p: any) => ({
-    value: p.id,
-    label: p.name,
-  }));
+  const EmployyDataOptions = useMemo(
+    () =>
+      EmployeesList.data?.data?.map((p: any) => ({
+        value: p.id,
+        label: p.name,
+      })) || [],
+    [EmployeesList]
+  );
 
-  const AllCompanyDataOptions = AllCompanyData.length > 0 && AllCompanyData?.map((p: any) => ({
-    value: String(p.id),
-    label: p.company_name,
-  }));
+  const AllCompanyDataOptions = useMemo(
+    () =>
+      AllCompanyData?.map((p: any) => ({
+        value: String(p.id),
+        label: p.company_name,
+      })) || [],
+    [AllCompanyData]
+  );
 
   const companyMemberOptions = useMemo(
     () =>
@@ -1073,12 +1040,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
     [getfromIDcompanymemberData]
   );
 
-  useEffect(() => {
-    dispatch(getDocumentTypeAction());
-    dispatch(getFormBuilderAction());
-    dispatch(getEmployeesListingAction());
-    dispatch(getAllCompany());
-  }, [dispatch]);
+  // *** REMOVED: Redundant useEffect hook is no longer needed here ***
 
   useEffect(() => {
     if (isOpen && editingId) {
@@ -1127,8 +1089,9 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
         member_id: undefined,
         company_id: undefined,
       });
+      setValue("member_id", 0);
     }
-  }, [isOpen, editingId, dispatch, reset]);
+  }, [isOpen, editingId, dispatch, reset, setValue]);
 
   const onSave = async (data: AddEditDocumentFormData) => {
     setIsSubmitting(true);
@@ -1554,13 +1517,28 @@ const AccountDocumentSelectedFooter = ({
   onDeleteSelected,
 }: any) => {
   const [open, setOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    await onDeleteSelected();
+    setIsDeleting(false);
+    setOpen(false);
+  };
+
   if (!selectedItems || selectedItems.length === 0) return null;
+
   return (
     <>
       <StickyFooter className="p-4 border-t" stickyClass="-mx-4 sm:-mx-8">
         <div className="flex items-center justify-between">
           <span>{selectedItems.length} selected</span>
-          <Button size="sm" color="red-500" onClick={() => setOpen(true)}>
+          <Button
+            size="sm"
+            color="red-500"
+            onClick={() => setOpen(true)}
+            loading={isDeleting}
+          >
             Delete Selected
           </Button>
         </div>
@@ -1568,14 +1546,14 @@ const AccountDocumentSelectedFooter = ({
       <ConfirmDialog
         isOpen={open}
         type="danger"
-        onConfirm={() => {
-          onDeleteSelected();
-          setOpen(false);
-        }}
+        onConfirm={handleConfirmDelete}
         onClose={() => setOpen(false)}
-        title="Delete Selected"
+        onRequestClose={() => setOpen(false)}
+        onCancel={() => setOpen(false)}
+        loading={isDeleting}
+        title={`Delete ${selectedItems.length} Selected Item(s)`}
       >
-        <p>Sure?</p>
+        <p>Are you sure you want to delete the selected documents? This action cannot be undone.</p>
       </ConfirmDialog>
     </>
   );
@@ -1625,9 +1603,14 @@ const AccountDocument = () => {
     mode: "onChange",
   });
 
+  // *** FIXED: All initial data is fetched here on component mount ***
   useEffect(() => {
-    dispatch(getAllUsersAction());
     dispatch(getaccountdocAction());
+    dispatch(getAllUsersAction());
+    dispatch(getDocumentTypeAction());
+    dispatch(getFormBuilderAction());
+    dispatch(getEmployeesListingAction());
+    dispatch(getAllCompany());
   }, [dispatch]);
 
   const getAllUserDataOptions = useMemo(
@@ -1871,10 +1854,60 @@ const AccountDocument = () => {
       setTableData((prev) => ({ ...prev, ...data })),
     []
   );
+
+  // *** NEW: Handler for initiating single item deletion ***
   const handleDeleteClick = useCallback((item: AccountDocumentListItem) => {
     setItemToDelete(item);
     setSingleDeleteConfirmOpen(true);
   }, []);
+
+  // *** NEW: Handler for confirming single item deletion ***
+  const handleConfirmSingleDelete = async () => {
+    if (!itemToDelete) return;
+    setIsProcessingDelete(true);
+    try {
+      // Assuming 'deleteaccountdocAction' can take an object with an 'id'
+      // await dispatch(deleteaccountdocAction({ id: itemToDelete.id })).unwrap();
+      toast.push(<Notification type="success" title="Document Deleted" />);
+      dispatch(getaccountdocAction()); // Refresh table data
+      setItemToDelete(null);
+      setSingleDeleteConfirmOpen(false);
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title="Deletion Failed"
+          children={error?.message || "Could not delete the document."}
+        />
+      );
+    } finally {
+      setIsProcessingDelete(false);
+    }
+  };
+
+  // *** NEW: Handler for deleting selected items ***
+  const handleDeleteSelected = async () => {
+    const ids = selectedItems.map((item) => item.id);
+    if (ids.length === 0) return;
+    try {
+      // Assuming 'deleteaccountdocAction' can take an object with an array of 'ids'
+      // await dispatch(deleteaccountdocAction({ ids })).unwrap();
+      toast.push(
+        <Notification type="success" title="Selected Documents Deleted" />
+      );
+      dispatch(getaccountdocAction()); // Refresh table data
+      setSelectedItems([]); // Clear selection
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title="Deletion Failed"
+          children={error?.message || "Could not delete selected documents."}
+        />
+      );
+    }
+  };
+
   const handlePaginationChange = useCallback(
     (page: number) => handleSetTableData({ pageIndex: page }),
     [handleSetTableData]
@@ -2278,17 +2311,24 @@ const AccountDocument = () => {
           </div>
         </AdaptiveCard>
       </Container>
-      <AccountDocumentSelectedFooter selectedItems={selectedItems} />
+      <AccountDocumentSelectedFooter
+        selectedItems={selectedItems}
+        onDeleteSelected={handleDeleteSelected}
+      />
       <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
-        title="Delete"
+        title="Delete Document"
         onClose={() => setSingleDeleteConfirmOpen(false)}
-        loading={isProcessingDelete}
+        onRequestClose={() => setSingleDeleteConfirmOpen(false)}
         onCancel={() => setSingleDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmSingleDelete}
+        loading={isProcessingDelete}
       >
         <p>
-          Delete <strong>{itemToDelete?.documentNumber}</strong>?
+          Are you sure you want to delete the document{" "}
+          <strong>{itemToDelete?.documentNumber}</strong>? This action cannot
+          be undone.
         </p>
       </ConfirmDialog>
 

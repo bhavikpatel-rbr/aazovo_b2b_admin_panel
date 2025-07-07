@@ -120,18 +120,20 @@ const QuestionComponent: React.FC<{ sectionIndex: number; questionIndex: number;
   const { fields: optionFields, append: appendOption, remove: removeOption } = useFieldArray({ control, name: `sections.${sectionIndex}.questions.${questionIndex}.options` });
   const currentQuestionType = watch(`sections.${sectionIndex}.questions.${questionIndex}.question_type`);
   const showOptionsEditor = ["Radio", "Checkbox", "SingleChoiceDropdown", "MultiChoiceDropdown"].includes(currentQuestionType);
+  
   return (
-    <Card className="mt-3" bodyClass="p-3 flex flex-col gap-2 bg-gray-50 dark:bg-gray-700/50">
-      <div className="flex justify-between items-start"><h6 className="text-sm font-semibold">Question {questionIndex + 1}</h6>{!isPreviewMode && (<div className="flex gap-1"><Button type="button" size="xs" icon={<TbCopy />} title="Clone Question" onClick={() => cloneQuestion(watch(`sections.${sectionIndex}.questions.${questionIndex}`))} /><Button type="button" size="xs" icon={<TbTrash />} title="Delete Question" onClick={() => removeQuestion(questionIndex)} /></div>)}</div>
-      <FormItem className="mb-0" label="Question Text" invalid={!!control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_text`).error} errorMessage={control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_text`).error?.message}><Controller control={control} name={`sections.${sectionIndex}.questions.${questionIndex}.question_text`} render={({ field }) => <Input {...field} placeholder="Write Question" disabled={isPreviewMode} />} /></FormItem>
-      <div className="grid md:grid-cols-2 gap-2"><FormItem className="mb-0" label="Answer Type" invalid={!!control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_type`).error} errorMessage={control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_type`).error?.message}><Controller control={control} name={`sections.${sectionIndex}.questions.${questionIndex}.question_type`} render={({ field }) => <Select placeholder="Select Answer Type" options={PAGE_QUESTION_TYPE_OPTIONS} value={PAGE_QUESTION_TYPE_OPTIONS.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isDisabled={isPreviewMode} />} /></FormItem><FormItem label=" " className="flex items-center pt-5 mb-0"><Controller name={`sections.${sectionIndex}.questions.${questionIndex}.is_required`} control={control} render={({ field }) => <Checkbox checked={field.value} onChange={field.onChange} disabled={isPreviewMode}>Required</Checkbox>} /></FormItem></div>
-      {showOptionsEditor && (<Card bodyClass="p-2 bg-gray-100 dark:bg-gray-800 rounded"><h6 className="text-xs font-semibold mb-2">Options:</h6>{optionFields.map((optField, optIndex) => <QuestionOptionItem key={optField.id} nestIndex={[sectionIndex, questionIndex]} optionIndex={optIndex} control={control} removeOption={removeOption} isPreviewMode={isPreviewMode} />)}{!isPreviewMode && <Button type="button" size="sm" icon={<TbPlus />} onClick={() => appendOption({ label: "", value: "" })}>Add Option</Button>}</Card>)}
-      {isPreviewMode && currentQuestionType === "Text" && <Input type="text" placeholder="Preview: Text Input" disabled />}
-      {isPreviewMode && currentQuestionType === "Number" && <Input type="number" placeholder="Preview: Number Input" disabled />}
-      {isPreviewMode && currentQuestionType === "Textarea" && <Input textArea placeholder="Preview: Text Area" disabled />}
-      {isPreviewMode && currentQuestionType === "FileUpload" && <Input type="file" disabled />}
-      {isPreviewMode && currentQuestionType === "Date" && <DatePicker placeholder="Preview: Date Picker" disabled />}
-    </Card>
+      <Card className="mt-3" bodyClass="p-2 flex flex-col gap-2 bg-gray-50 dark:bg-gray-700/50 border-gray-300 border rounded-lg">
+        <div className="flex justify-between items-start"><h6 className="text-sm font-semibold">Question {questionIndex + 1}</h6>{!isPreviewMode && (<div className="flex gap-1"><Button type="button" size="xs" icon={<TbCopy />} title="Clone Question" onClick={() => cloneQuestion(watch(`sections.${sectionIndex}.questions.${questionIndex}`))} /><Button type="button" size="xs" icon={<TbTrash />} title="Delete Question" onClick={() => removeQuestion(questionIndex)} /></div>)}</div>
+        <div className="grid md:grid-cols-3 gap-2">
+        <FormItem className="mb-0" label="Question Text" invalid={!!control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_text`).error} errorMessage={control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_text`).error?.message}><Controller control={control} name={`sections.${sectionIndex}.questions.${questionIndex}.question_text`} render={({ field }) => <Input {...field} placeholder="Write Question" disabled={isPreviewMode} />} /></FormItem>
+        <FormItem className="mb-0" label="Answer Type" invalid={!!control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_type`).error} errorMessage={control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_type`).error?.message}><Controller control={control} name={`sections.${sectionIndex}.questions.${questionIndex}.question_type`} render={({ field }) => <Select placeholder="Select Answer Type" options={PAGE_QUESTION_TYPE_OPTIONS} value={PAGE_QUESTION_TYPE_OPTIONS.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isDisabled={isPreviewMode} />} /></FormItem><FormItem label=" " className="flex items-center pt-5 mb-0"><Controller name={`sections.${sectionIndex}.questions.${questionIndex}.is_required`} control={control} render={({ field }) => <Checkbox checked={field.value} onChange={field.onChange} disabled={isPreviewMode}>Required</Checkbox>} /></FormItem></div>
+        {showOptionsEditor && (<Card bodyClass="p-2 bg-gray-100 dark:bg-gray-800 rounded"><h6 className="text-xs font-semibold mb-2">Options:</h6>{optionFields.map((optField, optIndex) => <QuestionOptionItem key={optField.id} nestIndex={[sectionIndex, questionIndex]} optionIndex={optIndex} control={control} removeOption={removeOption} isPreviewMode={isPreviewMode} />)}{!isPreviewMode && <Button type="button" size="sm" icon={<TbPlus />} onClick={() => appendOption({ label: "", value: "" })}>Add Option</Button>}</Card>)}
+        {isPreviewMode && currentQuestionType === "Text" && <Input type="text" placeholder="Preview: Text Input" disabled />}
+        {isPreviewMode && currentQuestionType === "Number" && <Input type="number" placeholder="Preview: Number Input" disabled />}
+        {isPreviewMode && currentQuestionType === "Textarea" && <Input textArea placeholder="Preview: Text Area" disabled />}
+        {isPreviewMode && currentQuestionType === "FileUpload" && <Input type="file" disabled />}
+        {isPreviewMode && currentQuestionType === "Date" && <DatePicker placeholder="Preview: Date Picker" disabled />}
+      </Card>
   );
 };
 
@@ -141,7 +143,7 @@ const SectionComponent: React.FC<{ sectionIndex: number; control: Control<PageFo
   return (
     <Card className="mt-3" bodyClass="p-3">
       <div className="flex justify-between items-center mb-2"><h6 className="font-semibold">Section {sectionIndex + 1}</h6></div>
-      <div className="space-y-2">
+      <div className="space-y-2 grid grid-cols-2 md:grid-cols-2 gap-2">
         <FormItem label="Section Title" invalid={!!control.getFieldState(`sections.${sectionIndex}.section_title`).error} errorMessage={control.getFieldState(`sections.${sectionIndex}.section_title`).error?.message}><Controller control={control} name={`sections.${sectionIndex}.section_title`} render={({ field }) => <Input {...field} placeholder="Enter Section Title" disabled={isPreviewMode} />} /></FormItem>
         <FormItem label="Section Description (Optional)" invalid={!!control.getFieldState(`sections.${sectionIndex}.section_description`).error} errorMessage={control.getFieldState(`sections.${sectionIndex}.section_description`).error?.message}><Controller control={control} name={`sections.${sectionIndex}.section_description`} render={({ field }) => <Input {...field} placeholder="Enter Section Description" disabled={isPreviewMode} />} /></FormItem>
       </div>
@@ -352,15 +354,13 @@ const FormBuilderManagePage = () => {
                 />
             </FormItem>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2">
             <FormItem label={<div>Departments<span className="text-red-500"> *</span></div>} invalid={!!errors.department_ids} errorMessage={errors.department_ids?.message as string}>
               <Controller control={control} name="department_ids" render={({ field }) => (<Select isMulti placeholder="Select Departments" options={departmentOptionsForSelect} value={departmentOptionsForSelect.filter(opt => field.value?.includes(opt.value))} onChange={opts => field.onChange(opts ? opts.map(o => o.value) : [])} isDisabled={isPreviewMode}/>)} />
             </FormItem>
             <FormItem label={<div>Categories<span className="text-red-500"> *</span></div>} invalid={!!errors.category_ids} errorMessage={errors.category_ids?.message as string}>
               <Controller control={control} name="category_ids" render={({ field }) => (<Select isMulti placeholder="Select Categories" options={categoryOptionsForSelect} value={categoryOptionsForSelect.filter(opt => field.value?.includes(opt.value))} onChange={opts => field.onChange(opts ? opts.map(o => o.value) : [])} isDisabled={isPreviewMode}/>)} />
             </FormItem>
-          </div>
-          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
             <FormItem label={<div>Form Display Title<span className="text-red-500"> *</span></div>} invalid={!!errors.form_title} errorMessage={errors.form_title?.message}>
               <Controller control={control} name="form_title" render={({ field }) => <Input {...field} placeholder="Enter Form Display Title" disabled={isPreviewMode} />} />
             </FormItem>
@@ -371,7 +371,7 @@ const FormBuilderManagePage = () => {
         </Card>
 
         <div className="mt-3">
-          <h6 className="font-semibold mb-1">Form Structure</h6>
+          <h6 className="font-semibold mb-1 pl-2">Form Structure</h6>
           {errors.sections && !Array.isArray(errors.sections) && <p className="text-red-500 text-xs mb-2">{(errors.sections as any).message}</p>}
           {sectionFields.map((sectionField, index) => <SectionComponent key={sectionField.id} sectionIndex={index} control={control} removeSection={removeSection} watch={watch} isPreviewMode={isPreviewMode} />)}
           {!isPreviewMode && (
@@ -383,8 +383,8 @@ const FormBuilderManagePage = () => {
         
         {!isPreviewMode && (
             <StickyFooter
-                className="py-2 px-4 flex items-center justify-end"
-                stickyClass="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
+                className="py-4 px-4 flex items-center justify-end mt-3"
+                stickyClass="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border rounded-lg bg-white dark:bg-gray-800 shadow-lg"
             >
                 <div className="flex items-center gap-2">
                     <Button size="sm" type="button" className="w-24" onClick={() => navigate("/system-tools/form-builder")}>Cancel</Button>

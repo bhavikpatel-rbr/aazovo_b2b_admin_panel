@@ -133,11 +133,12 @@ const prepareDefaultValues = (structure: FormStructure, savedData: any): any => 
 
 // --- Reusable Field Components ---
 const MultiCheckboxField: FC<{ control: Control<any>, field: FormField }> = ({ control, field }) => {
-    const columns = 4; // Adjust this number to change the number of columns
-
     return (
-        <FormItem label={field.label} className="md:col-span-2 lg:col-span-4">
-            <div className={`grid grid-cols-1  sm:grid-cols-${columns} gap-1`}>
+        // The container for the checkbox group will span the full width on medium and large screens.
+        // On a 3-column grid (lg), this means it takes up 3 columns.
+        <FormItem label={field.label} className="md:col-span-2 lg:col-span-3">
+            {/* The options themselves are laid out in a responsive grid, up to 3 columns */}
+            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2`}>
                 {field.options?.map(option => (
                     <div key={option.name} className="flex items-center gap-2">
                         <Controller
@@ -185,6 +186,7 @@ const renderField = (
 
         case 'file':
             return (
+              // This field will span 2 columns on medium screens and up
               <FormItem {...commonProps} className="col-span-2 md:col-span-1">
                   <Controller 
                       name={field.name} 
