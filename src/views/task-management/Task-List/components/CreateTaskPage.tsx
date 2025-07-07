@@ -107,26 +107,20 @@ interface TaskItemFromState {
 type AttachmentFile = { id: string; name: string; size: string; src: string; file?: File, type?: string };
 type Comment = { id: string; name: string; src: string; date: Date; message: string; user_id?: string | number };
 
-const LINK_TO_OPTIONS = [
-  "Company"
-] as const;
-type LinkToOption = typeof LINK_TO_OPTIONS[number];
-
-const MODULE_ID_MAP: Record<LinkToOption, string> = {
-    "Company": "2"
-};
-
-const taskStatusLabelsApi = ["Pending", "On_Hold", "In_Progress", "Completed", "Cancelled"] as const;
+// --- NEW STATUS DEFINITIONS ---
+const taskStatusLabelsApi = ["Not_Started", "Pending", "In_Progress", "On_Hold", "Review", "Completed", "Cancelled"] as const;
 type TaskStatusApi = typeof taskStatusLabelsApi[number];
-const taskStatusLabelsDisplay = ["Pending", "On Hold", "In Progress", "Completed", "Cancelled"] as const;
+const taskStatusLabelsDisplay = ["Not Started", "Pending", "In Progress", "On Hold", "Review", "Completed", "Cancelled"] as const;
 type TaskStatusDisplay = typeof taskStatusLabelsDisplay[number];
+// --- END NEW STATUS DEFINITIONS ---
 
+// --- Zod Schema ---
 const createTaskSchema = z.object({
   task_title: z.string().min(1, "Task title is required.").max(255),
-  linkedToTypes: z.array(z.enum(LINK_TO_OPTIONS)).min(1, "Select at least one item to link to."),
-  selectedLinkEntityId: z.string().optional().nullable(),
+  module_name: z.string().min(1, "Module name is required."),
+  module_id: z.string().min(1, "Module ID is required."),
   assignedToIds: z.array(z.string()).min(1, "Assign to at least one member."),
-  status: z.enum(taskStatusLabelsApi, { required_error: "Status is required." }),
+  status: z.enum(taskStatusLabelsApi, { required_error: "Status is required." }), // Updated validation
   priority: z.enum(["Low", "Medium", "High", "Urgent"], { required_error: "Priority is required." }),
   department_id: z.string().min(1, "Department is required."),
   dueDate: z.date({ required_error: "Due date is required." }),
@@ -138,13 +132,18 @@ type CreateTaskFormData = z.infer<typeof createTaskSchema>;
 
 const { useEncryptApplicationStorage } = config;
 
+// --- UPDATED COLOR MAPPING ---
 const taskLabelColors: Record<string, string> = {
   Low: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
   Medium: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100',
   High: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
   Urgent: 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-100',
-  Pending: 'bg-amber-100 text-amber-600', On_Hold: 'bg-gray-100 text-gray-600',
-  In_Progress: 'bg-sky-100 text-sky-600', Completed: 'bg-emerald-100 text-emerald-600',
+  Not_Started: 'bg-slate-100 text-slate-600',
+  Pending: 'bg-amber-100 text-amber-600',
+  On_Hold: 'bg-zinc-100 text-zinc-600',
+  In_Progress: 'bg-sky-100 text-sky-600',
+  Review: 'bg-indigo-100 text-indigo-600',
+  Completed: 'bg-emerald-100 text-emerald-600',
   Cancelled: 'bg-rose-100 text-rose-600',
 };
 
@@ -153,23 +152,6 @@ const AddMoreMember = () => (
     <HiOutlinePlus />
   </div>
 );
-
-const processLinkableEntities = async ( entityType: LinkToOption, allUsers: FormUser[], allCompanyData: ApiCompany[] ): Promise<{ label: string, value: string }[]> => {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    switch (entityType) {
-        case "Company":
-            return allCompanyData.length > 0
-                ? allCompanyData.map(c => ({ label: c.company_name, value: String(c.id) }))
-                : (toast.push(<Notification title="Info" type="info" duration={2500}>No companies loaded.</Notification>), []);
-        case "Member":
-             return allUsers.length > 0
-                ? allUsers.map(u => ({ label: u.name, value: u.id }))
-                : (toast.push(<Notification title="Info" type="info" duration={2500}>No members loaded.</Notification>), []);
-        default:
-            toast.push(<Notification title="Info" type="info" duration={2500}>Data source for "{entityType}" not configured.</Notification>);
-            return [{ label: `No ${entityType} available (placeholder)`, value: "" }];
-    }
-};
 
 const CreateTaskPage = () => {
   const params = useParams();
@@ -181,15 +163,22 @@ const CreateTaskPage = () => {
   const taskToEditFromState = location.state?.taskToEdit as TaskItemFromState | undefined;
 
   const [loggedInUserData, setLoggedInUserData] = useState<any>(null);
-  const { usersData = [], departmentsData = [], AllCompanyData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
-  const [isLinkEntityLoading, setIsLinkEntityLoading] = useState(false);
+  const { usersData = [], departmentsData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
   
   const { control, handleSubmit, watch, setValue, reset, formState: { errors, isValid, isSubmitting } } = useForm<CreateTaskFormData>({
     resolver: zodResolver(createTaskSchema), mode: "onChange",
     defaultValues: {
-      task_title: "", linkedToTypes: [], selectedLinkEntityId: null, assignedToIds: [],
-      status: "Pending", priority: "Medium", department_id: "",
-      dueDate: dayjs().add(1, 'day').toDate(), note_remark: "", additional_description: "", activity_type: "",
+      task_title: "",
+      module_name: "",
+      module_id: "",
+      assignedToIds: [],
+      status: "Not_Started", // Default to "Not Started"
+      priority: "Medium",
+      department_id: "",
+      dueDate: dayjs().add(1, 'day').toDate(),
+      note_remark: "",
+      additional_description: "",
+      activity_type: "",
     }
   });
 
@@ -210,20 +199,15 @@ const CreateTaskPage = () => {
       label: dept.name, value: String(dept.id)
     })) || [], [departmentsData?.data]);
 
-  const [selectedLinkedToTypesUI, setSelectedLinkedToTypesUI] = useState<LinkToOption[]>([]);
-  const [linkSelectOptions, setLinkSelectOptions] = useState<{ label: string, value: string }[]>([]);
   const [assignedMembers, setAssignedMembers] = useState<FormUser[]>([]);
-  const [currentDisplayStatus, setCurrentDisplayStatus] = useState<TaskStatusDisplay>("Pending");
+  const [currentDisplayStatus, setCurrentDisplayStatus] = useState<TaskStatusDisplay>("Not Started");
   const [comments, setComments] = useState<Comment[]>([]);
   const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
   const commentInputRef = useRef<HTMLInputElement>(null);
-  const watchedLinkedToTypes = watch("linkedToTypes");
   const watchedStatus = watch("status");
-  const previousLinkedToTypeRef = useRef<LinkToOption | undefined>();
 
   useEffect(() => {
     const taskData = taskToEditFromState;
-    console.log("taskData",taskData);
     
     if (isEditMode && taskData && taskData._originalData && String(taskData.id) === taskId && boardMembersOptions.length > 0) {
       const original = taskData._originalData;
@@ -231,45 +215,41 @@ const CreateTaskPage = () => {
         ? original.assign_to_users.map((u) => String(u.id))
         : (Array.isArray(original.assign_to) ? original.assign_to.map(id => String(id)) : [])) as string[];
 
-      const linkedToTypesFromApi = original.module_name && LINK_TO_OPTIONS.includes(original.module_name as LinkToOption)
-        ? [original.module_name as LinkToOption]
-        : [];
-      
-      let apiStatus: TaskStatusApi = "Pending";
+      // --- UPDATED STATUS HANDLING FOR EDIT MODE ---
+      let apiStatus: TaskStatusApi = "Not_Started";
       if (original.status) {
-        let statusKey = original.status.replace(/ /g, '_'); 
-        if(original.status.toLowerCase() === "pending"){ statusKey = "Pending" } // Explicitly handle lowercase "pending"
-        else if (original.status.toLowerCase() === "on hold"){ statusKey = "On_Hold"}
-        else if (original.status.toLowerCase() === "in progress"){ statusKey = "In_Progress"}
-        else if (original.status.toLowerCase() === "completed"){ statusKey = "Completed"}
-        else if (original.status.toLowerCase() === "cancelled"){ statusKey = "Cancelled"}
-
-
-        if (taskStatusLabelsApi.includes(statusKey as TaskStatusApi)) {
-          apiStatus = statusKey as TaskStatusApi;
-        } else {
-          console.warn(`Status "${original.status}" (processed as "${statusKey}") from state not recognized, defaulting to Pending.`);
-        }
+          const statusLower = original.status.toLowerCase();
+          if (statusLower === "not started") apiStatus = "Not_Started";
+          else if (statusLower === "pending") apiStatus = "Pending";
+          else if (statusLower === "in progress") apiStatus = "In_Progress";
+          else if (statusLower === "on hold") apiStatus = "On_Hold";
+          else if (statusLower === "review") apiStatus = "Review";
+          else if (statusLower === "completed") apiStatus = "Completed";
+          else if (statusLower === "cancelled") apiStatus = "Cancelled";
+          else {
+              console.warn(`Status "${original.status}" from state not recognized, defaulting to Not Started.`);
+          }
       }
       
       const priorityValue = original.priority?.charAt(0).toUpperCase() + original.priority?.slice(1).toLowerCase();
 
       reset({
-        task_title: original.task_title || taskData.note || "", // Fallback to top-level note for task_title
-        linkedToTypes: linkedToTypesFromApi,
+        task_title: original.task_title || taskData.note || "",
+        module_name: original.module_name || "",
+        module_id: String(original.module_id || ""),
         assignedToIds: assignedUserIds,
         status: apiStatus,
         priority: (["Low", "Medium", "High", "Urgent"].includes(priorityValue) ? priorityValue : "Medium") as CreateTaskFormData['priority'],
         department_id: String(original.department_id) || "",
         dueDate: original.due_data ? dayjs(original.due_data).toDate() : (taskData.dueDate ? dayjs(taskData.dueDate).toDate() : dayjs().add(1, 'day').toDate()),
-        note_remark: original.note_remark || taskData.description || "", // Fallback to top-level description for note_remark
+        note_remark: original.note_remark || taskData.description || "",
         additional_description: original.additional_description || "",
         activity_type: original.activity_type || "",
       });
 
-      const assigned =boardMembersOptions.length > 0 && boardMembersOptions.filter(member => assignedUserIds.includes(member.id));
-      setAssignedMembers(assigned);
-      setCurrentDisplayStatus(original.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) as TaskStatusDisplay || "Pending");
+      const assigned = boardMembersOptions.length > 0 && boardMembersOptions.filter(member => assignedUserIds.includes(member.id));
+      setAssignedMembers(assigned || []);
+      setCurrentDisplayStatus(original.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) as TaskStatusDisplay || "Not Started");
 
 
       const commentsToSet = taskData.comments || original.activity_notes || [];
@@ -295,52 +275,8 @@ const CreateTaskPage = () => {
         }))
       );
     }
-  }, [isEditMode, taskToEditFromState, taskId, reset, boardMembersOptions, setValue, AllCompanyData.length, departmentOptions.length]);
+  }, [isEditMode, taskToEditFromState, taskId, reset, boardMembersOptions, setValue, departmentOptions.length]);
 
-  useEffect(() => {
-    const currentPrimaryType = watchedLinkedToTypes && watchedLinkedToTypes.length > 0 ? watchedLinkedToTypes[0] : undefined;
-    setSelectedLinkedToTypesUI(watchedLinkedToTypes || []);
-    const taskDataForPreselection = taskToEditFromState;
-
-    if (currentPrimaryType) {
-        const companyDataJustArrived = currentPrimaryType === "Company" && AllCompanyData.length > 0 &&
-                                    (previousLinkedToTypeRef.current !== "Company" || (previousLinkedToTypeRef.current === "Company" && linkSelectOptions.length === 0));
-        const memberDataJustArrived = currentPrimaryType === "Member" && boardMembersOptions.length > 0 &&
-                                   (previousLinkedToTypeRef.current !== "Member" || (previousLinkedToTypeRef.current === "Member" && linkSelectOptions.length === 0));
-        const shouldProcess = currentPrimaryType !== previousLinkedToTypeRef.current || companyDataJustArrived || memberDataJustArrived;
-
-        if (shouldProcess) {
-            if (previousLinkedToTypeRef.current !== currentPrimaryType) {
-              setValue("selectedLinkEntityId", null, { shouldValidate: true });
-            }
-            setLinkSelectOptions([]);
-            setIsLinkEntityLoading(true);
-
-            processLinkableEntities(currentPrimaryType, boardMembersOptions, AllCompanyData as ApiCompany[])
-                .then(options => {
-                    setLinkSelectOptions(options);
-                    if (isEditMode && taskDataForPreselection?._originalData && options.length > 0) {
-                        let entityIdToSelect: string | null = null;
-                        const original = taskDataForPreselection._originalData;
-                        if (original.module_name === "Company" && original.company_ids && original.company_ids.length > 0) {
-                            entityIdToSelect = original.company_ids[0];
-                        } else if (original.linked_entity_id) {
-                            entityIdToSelect = String(original.linked_entity_id);
-                        }
-                        if (entityIdToSelect && options.some(opt => opt.value === entityIdToSelect)) {
-                            setValue("selectedLinkEntityId", entityIdToSelect, { shouldValidate: true });
-                        }
-                    }
-                })
-                .catch(error => { console.error("Failed to process linkable entities:", error); })
-                .finally(() => setIsLinkEntityLoading(false));
-        }
-    } else {
-        setLinkSelectOptions([]);
-        setValue("selectedLinkEntityId", null, { shouldValidate: false });
-    }
-    previousLinkedToTypeRef.current = currentPrimaryType;
-  }, [watchedLinkedToTypes, setValue, boardMembersOptions, AllCompanyData, isEditMode, taskToEditFromState, linkSelectOptions.length]);
 
   useEffect(() => {
     if (watchedStatus) {
@@ -368,8 +304,7 @@ const CreateTaskPage = () => {
 
   const submitComment = () => {
     const activityType = watch('activity_type');
-    if (!activityType && isEditMode) { // For edit mode, activity type is not strictly required for general comments if not prepended
-        // If you want to enforce activity type for all new comments in edit mode, remove isEditMode check
+    if (!activityType && isEditMode) { 
     } else if (!activityType) {
         toast.push(<Notification title="Missing Info" type="warning" duration={3000}>Please enter an activity type before commenting.</Notification>);
         return;
@@ -415,18 +350,11 @@ const CreateTaskPage = () => {
     const formDataPayload = new FormData();
     formDataPayload.append("user_id", String(loggedInUserData.id));
     formDataPayload.append("task_title", data.task_title);
+    
+    formDataPayload.append("module_name", data.module_name);
+    formDataPayload.append("module_id", data.module_id);
+    
     data.assignedToIds.forEach(id => formDataPayload.append("assign_to[]", id));
-    const moduleName = data.linkedToTypes[0] as LinkToOption;
-    formDataPayload.append("module_name", moduleName); // Use LinkToOption value (e.g., "Company")
-    formDataPayload.append("module_id", MODULE_ID_MAP[moduleName] || "0");
-
-    if (data.selectedLinkEntityId) {
-        if (moduleName === "Company") { // Specific key for company
-            formDataPayload.append("company_ids[]", data.selectedLinkEntityId);
-        } else { // Generic key for others, or add more specific keys
-            formDataPayload.append("linked_entity_id", data.selectedLinkEntityId);
-        }
-    }
     formDataPayload.append("status", data.status);
     formDataPayload.append("priority", data.priority);
     formDataPayload.append("department_id", data.department_id);
@@ -450,9 +378,9 @@ const CreateTaskPage = () => {
         const newUiComments = comments.filter(c => c.id.startsWith('temp-'));
         newUiComments.forEach((comment, index) => {
             const parts = comment.message.split(': ');
-            let activityTypeForComment = data.activity_type || "comment"; // Default if not in message
+            let activityTypeForComment = data.activity_type || "comment";
             let messageContent = comment.message;
-            if (parts.length > 1 && parts[0].trim() !== "") { // Check if first part is a non-empty activity type
+            if (parts.length > 1 && parts[0].trim() !== "") {
                 activityTypeForComment = parts[0].trim();
                 messageContent = parts.slice(1).join(': ').trim();
             }
@@ -535,34 +463,22 @@ const CreateTaskPage = () => {
               </div>
             </div>
 
-            {/* Link to & Select Entity */}
-            <div className='col-span-2'>
-              <div>
-                <label className="font-semibold mb-2 text-gray-900 dark:text-gray-100 block">Link to: <span className="text-red-500">*</span></label>
-                <Controller name="linkedToTypes" control={control}
-                  render={({ field }) => (
-                    <Select {...field} isMulti options={LINK_TO_OPTIONS.map(o => ({ label: o, value: o }))}
-                      value={field.value ? field.value.map(v => ({ label: v, value: v })) : []}
-                      onChange={opts => field.onChange(opts ? opts.map(o => o.value) : [])} placeholder="Select link types..." />
-                  )} />
-                {errors.linkedToTypes && <p className="text-red-500 text-xs mt-1">{errors.linkedToTypes.message}</p>}
+            {/* Module Name */}
+            <div className="flex items-center">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Module Name: <span className="text-red-500">*</span></label>
+              <div className="w-full">
+                <Controller name="module_name" control={control} render={({ field }) => <Input {...field} placeholder="E.g., Company, Lead" />} />
+                {errors.module_name && <p className="text-red-500 text-xs mt-1">{errors.module_name.message}</p>}
               </div>
-              {selectedLinkedToTypesUI.length > 0 && (
-                <div className="flex items-center my-3">
-                  <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Select {selectedLinkedToTypesUI[0]}:</label>
-                  <div className="w-full">
-                    <Controller name="selectedLinkEntityId" control={control}
-                      render={({ field }) => (
-                        <Select {...field}
-                          placeholder={isLinkEntityLoading ? `Loading ${selectedLinkedToTypesUI[0]}s...` : `Select a ${selectedLinkedToTypesUI[0]}...`}
-                          options={linkSelectOptions} value={linkSelectOptions.find(opt => opt.value === field.value) || null}
-                          onChange={opt => field.onChange(opt?.value)} isClearable isLoading={isLinkEntityLoading}
-                          isDisabled={isLinkEntityLoading || (linkSelectOptions.length === 0 || (linkSelectOptions.length === 1 && linkSelectOptions[0].value === ""))} />
-                      )} />
-                    {errors.selectedLinkEntityId && <p className="text-red-500 text-xs mt-1">{errors.selectedLinkEntityId.message}</p>}
-                  </div>
-                </div>
-              )}
+            </div>
+
+            {/* Module ID */}
+            <div className="flex items-center">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Module ID: <span className="text-red-500">*</span></label>
+              <div className="w-full">
+                <Controller name="module_id" control={control} render={({ field }) => <Input {...field} placeholder="Enter the ID of the related item" />} />
+                {errors.module_id && <p className="text-red-500 text-xs mt-1">{errors.module_id.message}</p>}
+              </div>
             </div>
 
             {/* Status */}
