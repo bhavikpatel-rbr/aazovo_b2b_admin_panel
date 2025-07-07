@@ -23,8 +23,6 @@ import {
     TbBriefcase,
     TbCalendar,
     TbPencil,
-    TbTrash,
-    TbKey,
     TbChevronRight,
     TbDownload,
     TbSearch,
@@ -39,18 +37,17 @@ import {
     TbCertificate,
     TbDeviceLaptop,
     TbLogout,
-    TbWall,
     TbCheck,
     TbFileText,
-    TbLinkOff,
     TbUserShare,
     TbArrowLeft,
 } from 'react-icons/tb'
 
 // Types & Services
-import { apiGetHREmployee } from '@/services/HRService' // Assuming this service exists
 import type { ColumnDef } from '@/components/shared/DataTable'
 import { BiChevronRight } from 'react-icons/bi'
+import { apiGetEmployeeById } from '@/reduxtool/master/middleware'
+import { useAppDispatch } from '@/reduxtool/store'
 
 // Define a more specific type based on your JSON response
 export type Employee = {
@@ -101,18 +98,19 @@ export const employeeStatusColor: Record<string, string> = {
 // --- HELPER & REUSABLE COMPONENTS ---
 
 interface EmployeeProfileHeaderProps {
-  employee: Employee | null;
+  employee: Employee;
 }
 const EmployeeProfileHeader = ({ employee }: EmployeeProfileHeaderProps) => {
   const navigate = useNavigate();
 
-  if (!employee) {
-    return <p className="text-center">Employee not found.</p>;
-  }
-
   const handleEdit = () => {
     navigate(`/hr-employees/employees/edit/${employee.id}`);
   };
+  
+  // Safely get the status, default to 'inactive' if null or undefined
+  console.log(employee, 'employee.status');
+  
+  const status = employee.status || 'inactive';
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -136,10 +134,10 @@ const EmployeeProfileHeader = ({ employee }: EmployeeProfileHeaderProps) => {
           <div className="mt-2">
             <Tag
               className={`${
-                employeeStatusColor[employee.status.toLowerCase()]
-              } text-white capitalize`}
+                employeeStatusColor[status]
+              } capitalize`}
             >
-              {employee.status.replace(/_/g, " ")}
+              {employee.status || 'N/A'}
             </Tag>
           </div>
         </div>
@@ -351,7 +349,7 @@ const RoleAndResponsibility = () => (
 );
 const OffBoardingInfo = ({ employee }: { employee: Employee }) => {
     // Show this section only if the employee status is something other than 'Active'
-    if (employee.status.toLowerCase() === 'active') {
+    if (employee.status == 'active') {
         return null;
     }
     return (
@@ -407,8 +405,7 @@ const AssetsTable = ({ assets }: { assets: Employee['assets'] }) => {
     );
 };
 
-const EmployeeDetailsTab = ({ employee }: { employee: Employee | null }) => {
-  if(!employee) return null;
+const EmployeeDetailsTab = ({ employee }: { employee: Employee }) => {
   return (
     <div>
       <RegistrationInfo employee={employee} />
@@ -426,17 +423,22 @@ const EmployeeDetailsTab = ({ employee }: { employee: Employee | null }) => {
 };
 
 
-const DocumentsTab = ({ employee }: { employee: Employee | null }) => {
+const DocumentsTab = ({ employee }: { employee: Employee }) => {
     const documentList = useMemo(() => {
         if (!employee) return [];
         const docs = [];
-        if (employee.identity_proof_path) docs.push({ name: 'Identity Proof', type: 'KYC', url: employee.identity_proof_path, uploadedAt: employee.updated_at });
-        if (employee.address_proof_path) docs.push({ name: 'Address Proof', type: 'KYC', url: employee.address_proof_path, uploadedAt: employee.updated_at });
-        if (employee.offer_letter_path) docs.push({ name: 'Offer Letter', type: 'Onboarding', url: employee.offer_letter_path, uploadedAt: employee.created_at });
-        if (employee.relieving_letter_path) docs.push({ name: 'Relieving Letter', type: 'Experience', url: employee.relieving_letter_path, uploadedAt: employee.updated_at });
-        employee.educational_certificates_path?.forEach((url, i) => docs.push({ name: `Educational Certificate ${i + 1}`, type: 'Education', url, uploadedAt: employee.updated_at }));
-        employee.experience_certificates_path?.forEach((url, i) => docs.push({ name: `Experience Certificate ${i + 1}`, type: 'Experience', url, uploadedAt: employee.updated_at }));
-        employee.salary_slips_path?.forEach((url, i) => docs.push({ name: `Salary Slip ${i + 1}`, type: 'Financial', url, uploadedAt: employee.updated_at }));
+        const addDoc = (name: string, type: string, url: string | null, date: string) => {
+            if(url) docs.push({name, type, url, uploadedAt: date})
+        }
+        
+        addDoc('Identity Proof', 'KYC', employee.identity_proof_path, employee.updated_at)
+        addDoc('Address Proof', 'KYC', employee.address_proof_path, employee.updated_at)
+        addDoc('Offer Letter', 'Onboarding', employee.offer_letter_path, employee.created_at)
+        addDoc('Relieving Letter', 'Experience', employee.relieving_letter_path, employee.updated_at)
+        
+        employee.educational_certificates_path?.forEach((url, i) => addDoc(`Educational Certificate ${i + 1}`, 'Education', url, employee.updated_at));
+        employee.experience_certificates_path?.forEach((url, i) => addDoc(`Experience Certificate ${i + 1}`, 'Experience', url, employee.updated_at));
+        employee.salary_slips_path?.forEach((url, i) => addDoc(`Salary Slip ${i + 1}`, 'Financial', url, employee.updated_at));
         
         return docs;
     }, [employee]);
@@ -448,43 +450,50 @@ const DocumentsTab = ({ employee }: { employee: Employee | null }) => {
     return (<> <div className="mb-4"> <SubTableTools searchQuery={searchQuery} onSearchChange={(val) => setSearchQuery(val)} onClearFilters={() => setSearchQuery('')} /> </div> <DataTable columns={columns} data={filteredData} /> </>);
 };
 // Other placeholder tabs
-const WallInquiryTab = () => <p>Wall Inquiry data will be displayed here.</p>;
-const OfferDemandsTab = () => <p>Offer & Demands data will be displayed here.</p>;
-const EmployeeTeamTab = () => <p>Team members reporting to this employee will be displayed here.</p>;
-const AssociatedMembersTab = () => <p>Associated members (clients, vendors) will be displayed here.</p>;
+const WallInquiryTab = () => <p className='text-gray-500'>Wall Inquiry data will be displayed here.</p>;
+const OfferDemandsTab = () => <p className='text-gray-500'>Offer & Demands data will be displayed here.</p>;
+const EmployeeTeamTab = () => <p className='text-gray-500'>Team members reporting to this employee will be displayed here.</p>;
+const AssociatedMembersTab = () => <p className='text-gray-500'>Associated members (clients, vendors) will be displayed here.</p>;
 
 // --- MAIN EMPLOYEE VIEW PAGE ---
 const EmployeeView = () => {
   const { id } = useParams<{ id: string }>();
   const [employee, setEmployee] = useState<Employee | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<string>(employeeViewNavigationList[0].link);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     const fetchEmployeeData = async () => {
-        if (!id) return;
+        if (!id) {
+            setError("No employee ID provided.");
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        setError(null);
         try {
-            // This is where you'd call your API
-            // const response = await apiGetHREmployee(id);
-            // For now, using the provided JSON as a mock response
-            const mockResponse = {
-                "data": {
-                    "id": 7, "name": "User", "profile_pic": null, "portal_email": null, "email": "user@gmail.com", "maritual_status": null, "email_verified": "false", "email_verified_token": null, "employee_id": "EMP-007", "timezone": "Asia/Kolkata", "last_login_at": null, "logout_at": null, "deleted_at": null, "created_at": "2025-07-05T06:58:24.000000Z", "updated_at": "2025-07-05T06:58:24.000000Z", "created_by": null, "temporarily_block_time": null, "date_of_joining": "2024-01-15T00:00:00.000000Z", "mobile_number": "9537897620", "mobile_number_code": "+91", "experience": null, "status": "Active", "date_of_birth": "1998-05-20T00:00:00.000000Z", "age": null, "gender": "Male", "nationality_id": null, "blood_group": "A+", "permanent_address": "123 Main St, Anytown", "local_address": "456 Park Ave, Anytown", "role_id": 2, "department_id": 1, "designation_id": 1, "country_id": null, "category_id": null, "subcategory_id": null, "brand_id": null, "product_service_id": null, "reporting_hr_id": null, "reporting_head_id": null, "training_date_of_completion": null, "specific_training_date_of_completion": null, "training_remark": null, "specific_training_remark": null, "identity_proof": "path/to/identity.pdf", "address_proof": "path/to/address.pdf", "educational_certificates": null, "experience_certificates": null, "offer_letter": "path/to/offer_letter.pdf", "past_offer_letter": null, "relieving_letter": null, "designation_letter": null, "salary_slips": null, "bank_account_proof": null, "pan_card": null, "passport_size_photograph": null, "exit_interview_conducted": false, "exit_interview_remark": null, "resignation_letter_received": false, "resignation_letter_remark": null, "company_assets_returned": null, "full_and_final_settlement": false, "assets_returned_remarks": null, "assets_returned": null, "fnf_remarks": null, "notice_period_status": null, "notice_period_remarks": null, "updated_by": null, "profile_pic_path": "/img/avatars/thumb-1.jpg", "identity_proof_path": "/docs/dummy.pdf", "address_proof_path": "/docs/dummy.pdf", "offer_letter_path": "/docs/dummy.pdf", "past_offer_letter_path": null, "relieving_letter_path": null, "designation_letter_path": null, "educational_certificates_path": ["/docs/dummy.pdf", "/docs/dummy2.pdf"], "experience_certificates_path": [], "salary_slips_path": [], "bank_account_proof_path": null, "pan_card_path": null, "passport_size_photograph_path": null, "assets": [{ "id": 1, "name": "MacBook Pro 16\"", "serial_number": "ASSET-MBP-001", "issued_on": "2024-01-15T00:00:00.000000Z", "status": "In Use" }],
-                    "roles": [{ "id": 4, "name": "user", "display_name": "User", "pivot": { "model_type": "App\\Models\\User", "model_id": 7, "role_id": 4 } }],
-                    "department": { "name": "Technology" }, "designation": { "name": "Senior Software Engineer" }, "country": null, "category": null, "sub_category": null, "brand": null, "product": null, "nationality": { "name": "Indian" }, "reporting_hr": null, "reporting_head": null
-                }
-            };
-            setEmployee(mockResponse.data);
-        } catch (error) {
-            console.error("Failed to fetch employee", error);
+            const response = await dispatch(apiGetEmployeeById(id)).unwrap();
+            if (response && response.data) {
+                 setEmployee(response.data);
+            } else {
+                setError("Employee not found.");
+                setEmployee(null);
+            }
+        } catch (err: any) {
+            console.error("Failed to fetch employee", err);
+            setError(err.message || "Failed to load employee details. Please try again.");
             setEmployee(null);
         } finally {
-            
+            setLoading(false);
         }
     }
     fetchEmployeeData();
-  }, [id]);
+  }, [id, dispatch]);
 
   const renderActiveSection = () => {
+    if (!employee) return null;
     switch (activeSection) {
       case "details": return <EmployeeDetailsTab employee={employee} />;
       case "documents": return <DocumentsTab employee={employee} />;
@@ -496,10 +505,8 @@ const EmployeeView = () => {
     }
   };
 
-
-  return (
-    <Container className="h-full">
-      <div className="flex gap-1 items-end mb-4">
+  const PageTitle = (
+      <div className="flex gap-1 items-center mb-4">
         <NavLink to="/hr-employees/employees">
           <h6 className="font-semibold hover:text-primary-600">
             Employees
@@ -507,12 +514,47 @@ const EmployeeView = () => {
         </NavLink>
         <BiChevronRight size={18} />
         <h6 className="font-semibold text-primary-600">
-          {employee ? employee.name : "View Employee"}
+          {employee?.name || 'View Employee'}
         </h6>
       </div>
+  );
+
+  if (loading) {
+    return (
+        <Container className="h-full">
+            {PageTitle}
+            <div className="flex justify-center items-center h-96">
+                <p>Loading...</p> 
+            </div>
+        </Container>
+    );
+  }
+
+  if (error) {
+     return <Container className="h-full">
+        {PageTitle}
+        <Card className='p-8 text-center'>
+            <p className='text-red-500 font-semibold'>{error}</p>
+        </Card>
+     </Container>;
+  }
+
+  if (!employee) {
+       return <Container className="h-full">
+        {PageTitle}
+        <Card className='p-8 text-center'>
+            <p>Employee could not be found.</p>
+        </Card>
+     </Container>;
+  }
+
+
+  return (
+    <Container className="h-full">
+      {PageTitle}
       <Card bodyClass="p-0">
         <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-          <EmployeeProfileHeader employee={employee} />
+          <EmployeeProfileHeader employee={employee?.data} />
         </div>
         <div className="px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700">
           <EmployeeViewNavigator activeSection={activeSection} onNavigate={setActiveSection} />
