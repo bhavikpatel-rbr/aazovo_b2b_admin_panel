@@ -84,6 +84,7 @@ import {
   addNotificationAction,
   getAllUsersAction,
   addScheduleAction,
+  addTaskAction, // ADDED
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
@@ -109,13 +110,24 @@ const scheduleSchema = z.object({
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
+// --- Zod Schema for Task Form (ADDED) ---
+const taskValidationSchema = z.object({
+  task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+  assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+  priority: z.string().min(1, 'Please select a priority.'),
+  due_date: z.date().nullable().optional(),
+  description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskValidationSchema>;
+
+
 // ============================================================================
 // --- MODALS SECTION ---
 // All modal components for Inquiries are defined here.
 // ============================================================================
 
 // --- Type Definitions for Modals ---
-export type InquiryModalType = 'notification' | 'schedule';
+export type InquiryModalType = 'notification' | 'schedule' | 'task'; // MODIFIED
 export interface InquiryModalState {
   isOpen: boolean;
   type: InquiryModalType | null;
@@ -304,6 +316,104 @@ const AddInquiryScheduleDialog: React.FC<{ inquiry: InquiryItem; onClose: () => 
   );
 };
 
+// --- Assign Task Dialog (ADDED) ---
+const AssignTaskDialog: React.FC<{
+  inquiry: InquiryItem;
+  onClose: () => void;
+  getAllUserDataOptions: SelectOption[];
+}> = ({ inquiry, onClose, getAllUserDataOptions }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const priorityOptions = [
+    { value: "High", label: "High" },
+    { value: "Medium", label: "Medium" },
+    { value: "Low", label: "Low" },
+  ];
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<TaskFormData>({
+    resolver: zodResolver(taskValidationSchema),
+    defaultValues: {
+      task_title: `Follow up on Inquiry: ${inquiry.inquiry_id}`,
+      assign_to: [],
+      priority: 'Medium',
+      due_date: null,
+      description: `Follow up regarding inquiry from ${inquiry.company_name} about "${inquiry.inquiry_subject}".`,
+    },
+    mode: 'onChange',
+  });
+
+  const onAssignTask = async (data: TaskFormData) => {
+    setIsLoading(true);
+    const payload = {
+      ...data,
+      due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
+      module_id: String(inquiry.id),
+      module_name: 'Inquiry',
+    };
+
+    try {
+      await dispatch(addTaskAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Task Assigned" children={`Successfully assigned task for inquiry ${inquiry.inquiry_id}.`} />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Task Assignment Failed" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for Inquiry: {inquiry.inquiry_id}</h5>
+      <UiForm onSubmit={handleSubmit(onAssignTask)}>
+        <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
+          <Controller name="task_title" control={control} render={({ field }) => <Input {...field} />} />
+        </UiFormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
+            <Controller name="assign_to" control={control} render={({ field }) => (
+                <UiSelect
+                    isMulti
+                    placeholder="Select User(s)"
+                    options={getAllUserDataOptions}
+                    value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))}
+                    onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])}
+                />
+            )} />
+          </UiFormItem>
+          <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
+            <Controller name="priority" control={control} render={({ field }) => (
+                <UiSelect
+                    placeholder="Select Priority"
+                    options={priorityOptions}
+                    value={priorityOptions.find(p => p.value === field.value)}
+                    onChange={(opt: any) => field.onChange(opt?.value)}
+                />
+            )} />
+          </UiFormItem>
+        </div>
+        <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
+          <Controller name="due_date" control={control} render={({ field }) => (
+            <DatePicker placeholder="Select a date" value={field.value} onChange={field.onChange} />
+          )} />
+        </UiFormItem>
+        <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
+          <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
+};
+
+
 // --- Modals Wrapper Component ---
 const InquiriesModals: React.FC<{
   modalState: InquiryModalState;
@@ -318,6 +428,8 @@ const InquiriesModals: React.FC<{
       return <AddInquiryNotificationDialog inquiry={inquiry} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
     case 'schedule':
       return <AddInquiryScheduleDialog inquiry={inquiry} onClose={onClose} />;
+    case 'task': // ADDED
+      return <AssignTaskDialog inquiry={inquiry} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
     default:
       return null;
   }
@@ -526,7 +638,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 // --- InquiryActionColumn Component (DataTable Actions) ---
-const InquiryActionColumn = ({ rowData, onViewDetail, onEdit, onOpenModal, onSendEmail, onSendWhatsapp }: {
+const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOpenModal, onSendEmail, onSendWhatsapp }: {
     rowData: InquiryItem;
     onViewDetail: (id: string) => void;
     onDeleteItem: (item: InquiryItem) => void;
@@ -536,10 +648,6 @@ const InquiryActionColumn = ({ rowData, onViewDetail, onEdit, onOpenModal, onSen
     onSendWhatsapp: (data: InquiryItem) => void;
 }) => {
   const handleEdit = () => onEdit && onEdit(rowData.id);
-  const handleAssignTask = () => {
-    toast.push(<Notification title="Coming Soon" type="info" duration={3000}>Task assignment feature is under development.</Notification>)
-  }
-
   return (
     <div className="flex items-center justify-center gap-1">
       {onEdit && (<Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400" role="button" onClick={handleEdit}><TbPencil /></div></Tooltip>)}
@@ -549,7 +657,7 @@ const InquiryActionColumn = ({ rowData, onViewDetail, onEdit, onOpenModal, onSen
           <Dropdown.Item onClick={() => onSendEmail(rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
           <Dropdown.Item onClick={() => onSendWhatsapp(rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
           <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification', rowData)}><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2" onClick={handleAssignTask}><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('task', rowData)}><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
           <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule', rowData)}><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
         </Dropdown>
       </Tooltip>
