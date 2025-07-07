@@ -15,7 +15,7 @@ const accountDocumentRoutes: Routes = [
   },
   {
     key: "accountDocuments",
-    path: `/fill-up-form`,
+    path: `/fill-up-form/:id/:formId`,
     component: lazy(() => import("@/views/Account-Documents/components/LogisticFrom")),
     authority: [ADMIN, USER],
     meta: {

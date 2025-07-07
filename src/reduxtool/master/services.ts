@@ -3212,3 +3212,21 @@ export const getfromIDcompanymemberActionAsync = async (id: object) => {
     return isAxiosError(err)
   }
 }
+
+export const getFillUpFormAsync = async (id: object) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/fill-up-form/${id}`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const submitFillUpFormAsync = async (data: object) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/fill-up-form`, { ...data })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
