@@ -125,9 +125,10 @@ export type RowDataItem = {
 
 // --- Zod Schema for Add/Edit Form ---
 const QUALITY_LEVELS_UI: SelectOption[] = [
-  { value: "A", label: "Grade A (High)" },
-  { value: "B", label: "Grade B (Medium)" },
-  { value: "C", label: "Grade C (Low)" },
+  { value: "A", label: "Grade A (Reliable)" },
+  { value: "B", label: "Grade B (Productive)" },
+  { value: "C", label: "Grade C (Mentoring)" },
+  { value: "D", label: "Grade D (Alignment )" },
 ];
 const qualityUIValues = QUALITY_LEVELS_UI.map((q) => q.value) as [
   string,
@@ -147,13 +148,13 @@ const statusUIValues = STATUS_OPTIONS_UI.map((s) => s.value) as [
 ];
 
 const statusColors: Record<string, string> = {
-  Row: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+  Row: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700",
   Identified:
-    "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100",
+    "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100 border border-blue-300 dark:border-blue-700",
   Verified:
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  Hold: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
-  Blacklist: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
+    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border border-emerald-300 dark:border-emerald-700",
+  Hold: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100 border border-amber-300 dark:border-amber-700",
+  Blacklist: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border border-red-300 dark:border-red-700",
 };
 
 const rowDataFormSchema = z.object({
@@ -539,7 +540,7 @@ const RowDataListing = () => {
     { header: "Country", accessorKey: "country_id", enableSorting: true, size: 160, cell: (props) => props.row.original.country?.name || String(props.getValue()), },
     { header: "Category", accessorKey: "category_id", enableSorting: true, size: 170, cell: (props) => props.row.original.category?.name || String(props.getValue()), },
     { header: "Brand", accessorKey: "brand_id", enableSorting: true, size: 160, cell: (props) => props.row.original.brand?.name || String(props.getValue()), },
-    { header: "Quality", accessorKey: "quality", enableSorting: true, size: 100, cell: (props) => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find((q) => q.value === qVal); return (<Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100", qVal === "B" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100", qVal === "C" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100")}>Grade: {qOpt?.label.split(" ")[1] || qVal}</Tag>); }, },
+    { header: "Quality", accessorKey: "quality", enableSorting: true, size: 100, cell: (props) => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find((q) => q.value === qVal); return (<Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100 border border-green-300 dark:border-green-700", qVal === "B" && "bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-100 border border-orange-300 dark:border-orange-700", qVal === "C" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100 border border-yellow-300 dark:border-yellow-700" , qVal === "D" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700")}>Grade: {qOpt?.label.split(" ")[1] || qVal}</Tag>); }, },
     { header: "Status", accessorKey: "status", enableSorting: true, size: 110, cell: (props) => { const sVal = props.getValue<string>(); const sOpt = STATUS_OPTIONS_UI.find((s) => s.value === sVal); return (<Tag className={classNames("capitalize", statusColors[sVal])}>{sOpt?.label || sVal}</Tag>); }, },
     { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, cell: (props) => { const { updated_at, name, roles } = props.row.original.updated_by_user; return (<div className="text-xs"><span>{name || "N/A"}{roles && (<><br /><b>{roles[0]?.display_name}</b></>)}</span><br /><span>{formatDate(updated_at)}</span></div>); }, },
     { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn item={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onBlacklist={() => handleBlacklistClick(props.row.original)} />), },
@@ -594,13 +595,29 @@ const RowDataListing = () => {
             <h5 className="mb-2 sm:mb-0">Raw Data Management</h5>
             <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 mb-4 gap-2">
             <Tooltip title="Click to show all data"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbDatabase size={24} /></div><div><h6 className="text-blue-500">{rowData?.counts?.total ?? "..."}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
             <Tooltip title="Click to filter by data added today"><div onClick={() => handleCardClick('today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendarWeek size={24} /></div><div><h6 className="text-violet-500">{rowData?.counts?.today ?? "..."}</h6><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
             <Tooltip title="Click to filter by duplicate mobile numbers"><div onClick={() => handleCardClick('duplicate')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbSquares size={24} /></div><div><h6 className="text-pink-500">{rowData?.counts?.duplicate ?? "..."}</h6><span className="font-semibold text-xs">Duplicate</span></div></Card></div></Tooltip>
             <Tooltip title="Click to filter by Grade A"><div onClick={() => handleCardClick('A')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><span className="text-xl font-bold">A</span></div><div><h6 className="text-green-500">{rowData?.counts?.grade_a ?? "..."}</h6><span className="font-semibold text-xs">Grade A</span></div></Card></div></Tooltip>
             <Tooltip title="Click to filter by Grade B"><div onClick={() => handleCardClick('B')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><span className="text-xl font-bold">B</span></div><div><h6 className="text-orange-500">{rowData?.counts?.grade_b ?? "..."}</h6><span className="font-semibold text-xs">Grade B</span></div></Card></div></Tooltip>
             <Tooltip title="Click to filter by Grade C"><div onClick={() => handleCardClick('C')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><span className="text-xl font-bold">C</span></div><div><h6 className="text-yellow-500">{rowData?.counts?.grade_c ?? "..."}</h6><span className="font-semibold text-xs">Grade C</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by Grade D">
+              <div onClick={() => handleCardClick('D')}>
+                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}>
+                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><span className="text-xl font-bold">D</span></div>
+                      <div><h6 className="text-yellow-500">{rowData?.counts
+                        ? rowData.counts.total - (
+                            (rowData.counts.grade_a || 0) +
+                            (rowData.counts.grade_b || 0) +
+                            (rowData.counts.grade_c || 0)
+                          )
+                        : "..."}
+                        </h6><span className="font-semibold text-xs">Grade D</span>
+                      </div>
+                  </Card>
+                </div>
+              </Tooltip>
           </div>
           <div className="mb-4">
             <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={openImportModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
@@ -636,7 +653,7 @@ const RowDataListing = () => {
         <div className="text-right mt-6"><Button variant="solid" onClick={closeViewDialog}>Close</Button></div>
       </Dialog>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400} footer={<div className="text-right w-full flex justify-end gap-2"><Button size="sm" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterRowDataForm" type="submit">Apply</Button></div>}>
-        <Form id="filterRowDataForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+        <Form id="filterRowDataForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col">
           <FormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Country" options={countryOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="Category"><Controller name="filterCategory" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Category" options={categoryOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="Brand"><Controller name="filterBrand" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select Brand" options={brandOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
