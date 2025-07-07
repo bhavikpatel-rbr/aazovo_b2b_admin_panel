@@ -80,7 +80,6 @@ const InquiryViewPage = () => {
     const navigate = useNavigate();
     const [inquiry, setInquiry] = useState<InquiryItem | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-
     useEffect(() => {
         if (!id) {
             toast.push(<Notification type="danger" title="Error">No Inquiry ID provided.</Notification>);

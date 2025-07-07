@@ -42,6 +42,7 @@ import Tooltip from "@/components/ui/Tooltip";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
+  TbAlarm,
   TbBell,
   TbBrandWhatsapp,
   TbBuilding,
@@ -54,16 +55,21 @@ import {
   TbCircleX,
   TbCloudUpload,
   TbColumns,
+  TbDownload,
   TbEye,
+  TbFileDescription,
   TbFilter,
   TbMail,
   TbPencil,
   TbPlus,
+  TbReceipt,
   TbReload,
   TbSearch,
   TbShieldCheck,
   TbShieldX,
+  TbUser,
   TbUserCircle,
+  TbUsersGroup,
   TbX
 } from "react-icons/tb";
 
@@ -78,6 +84,7 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addNotificationAction,
   addScheduleAction,
+  addTaskAction,
   deleteAllcompanyAction,
   getAllUsersAction,
   getCompanyAction,
@@ -316,6 +323,21 @@ const scheduleSchema = z.object({
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
+// --- Zod Schema for Task Form ---
+const taskValidationSchema = z.object({
+    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+    assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+    priority: z.string().min(1, 'Please select a priority.'),
+    due_date: z.date().nullable().optional(),
+    description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskValidationSchema>;
+const taskPriorityOptions: SelectOption[] = [
+    { value: 'Low', label: 'Low' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'High', label: 'High' },
+];
+
 // --- CSV Exporter Utility for Companies ---
 function exportToCsv(filename: string, rows: CompanyItem[]) {
   if (!rows || !rows.length) {
@@ -433,7 +455,7 @@ const CompanyListActionTools = () => {
 // --- MODALS SECTION ---
 // ============================================================================
 export type SelectOption = { value: any; label: string };
-export type ModalType = | "email" | "whatsapp" | "notification" | "task" | "active" | "schedule" | "calendar" | "members" | "alert" | "trackRecord" | "engagement" | "transaction" | "document" | "viewDetail";
+export type ModalType = | "email" | "whatsapp" | "notification" | "task" | "schedule" | "members" | "alert" | "transaction" | "document" | "viewDetail";
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: CompanyItem | null; }
 interface CompanyModalsProps { modalState: ModalState; onClose: () => void; getAllUserDataOptions: SelectOption[]; }
 
@@ -904,6 +926,129 @@ const AddCompanyScheduleDialog: React.FC<{ company: CompanyItem; onClose: () => 
   );
 };
 
+const AssignCompanyTaskDialog: React.FC<{ company: CompanyItem; onClose: () => void; userOptions: SelectOption[] }> = ({ company, onClose, userOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
+        resolver: zodResolver(taskValidationSchema),
+        defaultValues: {
+            task_title: `Follow up with ${company.company_name}`,
+            assign_to: [],
+            priority: 'Medium',
+            due_date: null,
+            description: `Follow up with company ${company.company_name} (${company.primary_email_id}) regarding their profile.`,
+        },
+        mode: 'onChange',
+    });
+
+    const onAssignTask = async (data: TaskFormData) => {
+        setIsLoading(true);
+        const payload = {
+            ...data,
+            due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
+            module_id: String(company.id),
+            module_name: 'Company',
+        };
+        try {
+            await dispatch(addTaskAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Task Assigned!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Assign Task for {company.company_name}</h5>
+            <UiForm onSubmit={handleSubmit(onAssignTask)}>
+                <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
+                    <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem>
+                </div>
+                <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem>
+                <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
+                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button></div>
+            </UiForm>
+        </Dialog>
+    );
+};
+
+const ViewCompanyMembersDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
+        <h5 className="mb-4">Members of {company.company_name}</h5>
+        <div className="max-h-96 overflow-y-auto">
+            {company.company_member_management && company.company_member_management.length > 0 ? (
+                <div className="space-y-3">
+                    {company.company_member_management.map(member => (
+                        <div key={member.id} className="p-3 border rounded-md dark:border-gray-600">
+                            <p className="font-semibold">{member.person_name}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">{member.designation}</p>
+                            <p className="text-xs text-gray-500">{member.number}</p>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p>No members found for this company.</p>
+            )}
+        </div>
+        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+    </Dialog>
+);
+
+const ViewCompanyDataDialog: React.FC<{ title: string; message: string; onClose: () => void; }> = ({ title, message, onClose }) => (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">{title}</h5>
+        <p>{message}</p>
+        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+    </Dialog>
+);
+
+const DownloadDocumentDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
+    const documents = useMemo(() => {
+        const allDocs: { name: string; url: string | null }[] = [];
+        company.company_certificate?.forEach(cert => {
+            if (cert.upload_certificate_path) {
+                allDocs.push({ name: cert.certificate_name, url: cert.upload_certificate_path });
+            }
+        });
+        company.billing_documents?.forEach(doc => {
+            if (doc.document) {
+                allDocs.push({ name: doc.document_name, url: doc.document });
+            }
+        });
+        return allDocs;
+    }, [company]);
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
+            <h5 className="mb-4">Download Documents for {company.company_name}</h5>
+            <div className="max-h-96 overflow-y-auto">
+                {documents.length > 0 ? (
+                    <div className="space-y-2">
+                        {documents.map((doc, index) => (
+                            <a key={index} href={doc.url!} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600">
+                                <span className="flex items-center gap-2">
+                                    <TbFileDescription className="text-lg" />
+                                    {doc.name}
+                                </span>
+                                <TbDownload className="text-lg text-blue-500" />
+                            </a>
+                        ))}
+                    </div>
+                ) : (
+                    <p>No documents available for download.</p>
+                )}
+            </div>
+            <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+        </Dialog>
+    );
+};
+
+
 // --- START: New action handler components ---
 const SendEmailAction: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
   useEffect(() => {
@@ -959,6 +1104,16 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getA
       return <AddCompanyNotificationDialog company={company} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
     case 'schedule': 
       return <AddCompanyScheduleDialog company={company} onClose={onClose} />;
+    case 'task':
+        return <AssignCompanyTaskDialog company={company} onClose={onClose} userOptions={getAllUserDataOptions} />;
+    case 'members':
+        return <ViewCompanyMembersDialog company={company} onClose={onClose} />;
+    case 'alert':
+        return <ViewCompanyDataDialog title={`Alerts for ${company.company_name}`} message="No alerts found for this company." onClose={onClose} />;
+    case 'transaction':
+        return <ViewCompanyDataDialog title={`Transactions for ${company.company_name}`} message="No transactions found for this company." onClose={onClose} />;
+    case 'document':
+        return <DownloadDocumentDialog company={company} onClose={onClose} />;
     default: 
       console.warn(`Unhandled modal type in CompanyModals: ${type}`);
       return null;
@@ -968,6 +1123,10 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getA
 
 const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, }: { rowData: CompanyItem; onEdit: (id: number) => void; onOpenModal: (type: ModalType, data: CompanyItem) => void; }) => {
   const navigate = useNavigate();
+  const handleAction = (e: React.MouseEvent, action: () => void) => {
+    e.stopPropagation();
+    action();
+  };
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit">
@@ -981,10 +1140,15 @@ const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, }: { rowData: Compa
         </div>
       </Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"> <TbMail size={18} /> <span className="text-xs">Send Email</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"> <TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"> <TbBell size={18} /> <span className="text-xs">Add Notification</span> </Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /><span className="text-xs">Add Schedule</span></Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal("email", rowData))} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal("whatsapp", rowData))} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal("notification", rowData))} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('schedule', rowData))} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('task', rowData))} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal("members", rowData))} className="flex items-center gap-2"><TbUsersGroup /> View Members</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal("alert", rowData))} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal("transaction", rowData))} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal("document", rowData))} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
       </Dropdown>
     </div>
   );
