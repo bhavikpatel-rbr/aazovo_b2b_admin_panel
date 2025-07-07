@@ -83,6 +83,7 @@ import {
 // Utils
 import { encryptStorage } from '@/utils/secureLocalStorage'
 import { config } from 'localforage'
+import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
 
 // --- Consolidated Type Definitions ---
 
@@ -387,19 +388,23 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                     <p className="text-sm flex items-center gap-1.5">
                         <TbCalendarEvent className="text-lg text-gray-500" />{' '}
                         <strong>Created:</strong>{' '}
-                        {task.createdDate.toLocaleString()}
+                        {formatCustomDateTime(task.createdDate)}
+                        {/* {task.createdDate.toLocaleString()} */}
                     </p>
                     {task.dueDate && (
                         <p className="text-sm flex items-center gap-1.5">
                             <TbCalendarEvent className="text-lg text-gray-500" />{' '}
-                            <strong>Due:</strong> {task.dueDate.toLocaleString()}
+                            <strong>Due:</strong> 
+                            {formatCustomDateTime(task.dueDate)}
+                            {/* {task.dueDate.toLocaleString()} */}
                         </p>
                     )}
                     {task.updated_at && (
                         <p className="text-sm flex items-center gap-1.5">
                             <TbCalendarEvent className="text-lg text-gray-500" />{' '}
                             <strong>Last Updated:</strong>{' '}
-                            {new Date(task.updated_at).toLocaleString()}
+                             {formatCustomDateTime(task.updated_at)}
+                            {/* {new Date(task.updated_at).toLocaleString()} */}
                         </p>
                     )}
                 </div>
@@ -471,9 +476,10 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                                             {comment.user?.name || 'System User'}
                                         </span>
                                         <span className="text-xs text-gray-400 dark:text-gray-500">
-                                            {new Date(
+                                            {formatCustomDateTime(comment.created_at)}
+                                            {/* {new Date(
                                                 comment.created_at,
-                                            ).toLocaleString()}
+                                            ).toLocaleString()} */}
                                         </span>
                                     </div>
                                     <p className="text-gray-600 dark:text-gray-300 text-xs mt-0.5">
@@ -1381,6 +1387,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
        }, []);
 
     useEffect(() => {
+        dispatch(getAllTaskAction())
         setIsLoading(masterLoadingStatus === 'loading')
         if (
             masterLoadingStatus === 'idle' &&
@@ -1658,8 +1665,12 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     }, []);
 
     const handleSendWhatsapp = useCallback((task: TaskItem) => {
-        const primaryAssignee = task._originalData?.assign_to_users?.[0];
-        const phone = primaryAssignee?.mobile_no?.replace(/\D/g, '');
+        console.log("task",task._originalData?.assign_to_users?.[0]?.mobile_number);
+        
+        const primaryAssignee = task._originalData?.assign_to_users?.[0]?.mobile_number
+;
+        const phone = primaryAssignee?.replace(/\D/g, '');
+console.log("phone",phone);
 
         if (!phone) {
             toast.push(<Notification type="warning" title="No Mobile Number" children="The primary assignee for this task does not have a mobile number." />);
@@ -1678,10 +1689,11 @@ console.log("userData",userData?.id);
         }
         setIsSubmittingAction(true);
         const payload = {
-            activity_comment: data.activity_comment,
+            notes: data.activity_comment,
             module_id: modalState.data.id,
             module_name: 'Task',
             user_id: userData.id,
+            item:"Task Activity"
         };
         try {
             await dispatch(addAllActionAction(payload)).unwrap();
@@ -1825,7 +1837,7 @@ console.log("userData",userData?.id);
                                 </Tooltip>
                                 <span className="text-gray-600 dark:text-gray-300">
                                     Created:{' '}
-                                    {task.createdDate.toLocaleDateString()}
+                                    {formatCustomDateTime(task.createdDate.toLocaleDateString())}
                                 </span>
                                 {task.dueDate && (
                                     <span className="text-gray-600 dark:text-gray-300">
