@@ -2099,11 +2099,11 @@ export const addJobApplicationAsync = async (applicationData: any) => {
 export const editJobApplicationAsync = async (applicationData: any) => {
 
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/other/job_application/${applicationData?.id}`, applicationData.data,{
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
+    const response = await axiosInstance.post(`${config.apiURL}/other/job_application/${applicationData?.id}`, applicationData.data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -3130,8 +3130,8 @@ export const getAllActionActionAsync = async () => {
 
 export const addAllActionActionAsync = async (data) => {
   try {
-    const getUserIDFromLocalStorage = JSON.parse(localStorage.getItem("@secure:UserData"))?.id;
-    const response = await axiosInstance.post(`${config.apiURL}/actives`, { ...data, "user_id": getUserIDFromLocalStorage })
+    // const getUserIDFromLocalStorage = JSON.parse(localStorage.getItem("@secure:UserData"))?.id;
+    const response = await axiosInstance.post(`${config.apiURL}/actives`, { ...data })
     return response?.data
   } catch (err) {
     return isAxiosError(err)
