@@ -1904,10 +1904,10 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
 
 
   const opportunityOptions = [
-    { value: "Indian Buyer", label: "Indian Buyer" },
     { value: "Indian Supplier", label: "Indian Supplier" },
-    { value: "Global Buyer", label: "Global Buyer" },
+    { value: "Indian Buyer", label: "Indian Buyer" },
     { value: "Global Supplier", label: "Global Supplier" },
+    { value: "Global Buyer", label: "Global Buyer" },
   ];
   const gradeOptions = [
     { value: "A", label: "A" },

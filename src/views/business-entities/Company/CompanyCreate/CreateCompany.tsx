@@ -676,11 +676,11 @@ const CompanyDetailsSection = ({
   ];
   const primaryBusinessTypeOptions = [
     { value: "Manufacturer", label: "Manufacturer" },
-    { value: "Exporter", label: "Exporter" },
-    { value: "Importer", label: "Importer" },
-    { value: "Trader", label: "Trader" },
-    { value: "Service Provider", label: "Service Provider" },
+    { value: "Distributor", label: "Distributor" },
+    { value: "Wholesaler", label: "Wholesaler" },
     { value: "Retailer", label: "Retailer" },
+    { value: "Corporate", label: "Corporate" },
+    { value: "Others", label: "Others" },
   ];
   const statusOptions = [
     { value: "Verified", label: "Verified" },
@@ -692,7 +692,11 @@ const CompanyDetailsSection = ({
   const officeTypeOptions = [
     { label: "Head Office", value: "Head Office" },
     { label: "Branch", value: "Branch" },
+    { label: "Regional Office", value: "Regional Office" },
     { label: "Warehouse", value: "Warehouse" },
+    { label: "Pick up location", value: "Pick up location" },
+    { label: "Delivery location", value: "Delivery location" },
+    { label: "Manufacturing unit", value: "Manufacturing unit" },
     { label: "Other", value: "Other" },
   ];
 
