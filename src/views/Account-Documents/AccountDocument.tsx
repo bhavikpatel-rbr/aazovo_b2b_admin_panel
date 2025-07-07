@@ -2014,10 +2014,10 @@ const AccountDocument = ({isDashboard}) => {
   );
 
   const [filteredColumns, setFilteredColumns] =
-    useState<ColumnDef<AccountDocumentListItem>[]>(columns);
+    useState<ColumnDef<AccountDocumentListItem>[]>(columns);  
   useEffect(() => {
     setFilteredColumns(columns);
-  }, [columns]);
+  }, []);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
