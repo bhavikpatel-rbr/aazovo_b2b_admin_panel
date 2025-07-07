@@ -636,7 +636,7 @@ const RowDataListing = () => {
       </Drawer>
       <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={700}>
         <h5 className="mb-4 text-lg font-semibold">Raw Data Details - {viewingItem?.name || viewingItem?.mobile_no}</h5>
-        {viewingItem && (<div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin", scrollbarColor: "#cbd5e0 transparent" }}>
+        {viewingItem && (<div className="space-y-2 text-sm max-h-[60vh] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin", scrollbarColor: "#cbd5e0 transparent" }}>
           {(Object.keys(viewingItem) as Array<keyof RowDataItem>).filter((key) => key !== "country" && key !== "category" && key !== "brand").map((key) => {
             let label = key.replace(/_id$/, "").replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
             let value: any = viewingItem[key as keyof RowDataItem];
