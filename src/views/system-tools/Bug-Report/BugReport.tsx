@@ -827,7 +827,7 @@ const BugReportListing = () => {
         <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" value={BUG_REPORT_STATUS_OPTIONS.find((opt) => opt.value === field.value)} options={BUG_REPORT_STATUS_OPTIONS} onChange={(opt) => field.onChange(opt?.value)} />)} />
       </FormItem>
       <FormItem label="Report Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.report} errorMessage={currentFormMethods.formState.errors.report?.message}><Controller name="report" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} rows={6} prefix={<TbFileDescription className="text-lg mt-2.5" />} placeholder="Please describe the bug in detail..." />)} /></FormItem>
-      <FormItem label="Attachment" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.attachment} errorMessage={currentFormMethods.formState.errors.attachment?.message as string}><Controller name="attachment" control={currentFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); }} prefix={<TbPaperclip className="text-lg" />} />)} />{editingItem?.attachment && !selectedFile && (<div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Current:{" "}<a href={editingItem.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">{editingItem.attachment}</a></div>)}</FormItem>
+      <FormItem label="Attachment" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.attachment} errorMessage={currentFormMethods.formState.errors.attachment?.message as string}><Controller name="attachment" control={currentFormMethods.control} render={({ field: { onChange, onBlur, name, ref } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); }} prefix={<TbPaperclip className="text-lg" />} />)} />{editingItem?.attachment && !selectedFile && (<div className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400 p-4 bg-gray-100 rounded-xl text-center">Current:{" "}<a href={editingItem.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{editingItem.attachment}</a></div>)}</FormItem>
     </div>
   );
 
@@ -920,7 +920,7 @@ const BugReportListing = () => {
             <TbPaperclip className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
             <p className="text-sm text-gray-800 dark:text-gray-100 break-all">
               <span className="font-semibold text-gray-500 dark:text-gray-400">Attachment:</span>{" "}
-              <a href={item.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+              <a href={item.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                 {item.attachment}
               </a>
             </p>
@@ -958,8 +958,8 @@ const BugReportListing = () => {
         </AdaptiveCard>
       </Container>
       <BugReportsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
-      <Drawer title={editingItem ? "Edit Bug Report" : "Report New Bug"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="bugReportForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? editingItem ? "Saving..." : "Submitting..." : editingItem ? "Save" : "Submit"}</Button></div>}>
-        <Form id="bugReportForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28">{renderDrawerForm(formMethods)}</Form>
+      <Drawer title={editingItem ? "Edit Bug Report" : "New Bug Report"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="bugReportForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? editingItem ? "Saving..." : "Submitting..." : editingItem ? "Save" : "Submit"}</Button></div>}>
+        <Form id="bugReportForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-2 relative">{renderDrawerForm(formMethods)}</Form>
       </Drawer>
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterBugReportForm" type="submit">Apply</Button></div>}>
         <Form id="filterBugReportForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">

@@ -290,15 +290,15 @@ const NumberSystems = () => {
  const renderDrawerForm = (isEdit: boolean) => {
     const applicableCountryOptions = isEdit ? countryOptions : addCountryOptions;
     return (
-        <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <FormItem label={<div>System Name<span className="text-red-500"> *</span></div>} invalid={!!formMethods.formState.errors.name} errorMessage={formMethods.formState.errors.name?.message}><Controller name="name" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., European System" />} /></FormItem>
                 <FormItem label="Prefix" invalid={!!formMethods.formState.errors.prefix} errorMessage={formMethods.formState.errors.prefix?.message}><Controller name="prefix" control={formMethods.control} render={({ field }) => <Input {...field} placeholder="e.g., EU" />} /></FormItem>
             </div>
             
-            <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-2">
                 <h6 className="text-sm font-semibold mb-3">Member Numbering</h6>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div>
                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Verified Members</p>
                         <FormItem label="Start No." invalid={!!formMethods.formState.errors.customer_code_starting} errorMessage={formMethods.formState.errors.customer_code_starting?.message}><Controller name="customer_code_starting" control={formMethods.control} render={({ field }) => <Input {...field} type="number" placeholder="e.g., 10001" />} /></FormItem>
@@ -310,9 +310,9 @@ const NumberSystems = () => {
                 </div>
             </div>
 
-            <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-2">
                 <h6 className="text-sm font-semibold mb-3">Company Numbering</h6>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                      <div>
                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Verified Companies</p>
                         <FormItem label="Start No." invalid={!!formMethods.formState.errors.company_code_starting} errorMessage={formMethods.formState.errors.company_code_starting?.message}><Controller name="company_code_starting" control={formMethods.control} render={({ field }) => <Input {...field} type="number" placeholder="e.g., 70001" />} /></FormItem>
@@ -324,7 +324,7 @@ const NumberSystems = () => {
                 </div>
             </div>
 
-            <div className="border-t border-gray-200 dark:border-gray-600 pt-4 space-y-4">
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-2 space-y-4">
                 <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!formMethods.formState.errors.status} errorMessage={formMethods.formState.errors.status?.message as string}><Controller name="status" control={formMethods.control} render={({ field }) => <Select placeholder="Select status" options={apiStatusOptions} value={apiStatusOptions.find(o => o.value === field.value)} onChange={o => field.onChange(o?.value)} />} /></FormItem>
                 <FormItem label="Applicable Countries" invalid={!!formMethods.formState.errors.country_ids} errorMessage={formMethods.formState.errors.country_ids?.message as string}><Controller name="country_ids" control={formMethods.control} render={({ field }) => <Select isMulti placeholder="Select countries..." options={applicableCountryOptions} value={applicableCountryOptions.filter(o => field.value?.includes(o.value))} onChange={v => field.onChange(v ? v.map(o => o.value) : [])} />} /></FormItem>
             </div>
@@ -357,7 +357,7 @@ const NumberSystems = () => {
       <SelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
       
       <Drawer title={editingItem ? "Edit Number System" : "Add New Number System"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="numberSystemForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? (editingItem ? "Saving..." : "Adding...") : "Save"}</Button></div>}>
-        <Form id="numberSystemForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-2 relative pb-20">{renderDrawerForm(!!editingItem)}{editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-gray-800 dark:text-gray-100">Latest Update:</b><br /><p className="font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p></div><div className='text-right'><span className="font-semibold">Created At:</span>{" "}<span>{formatCustomDateTime(editingItem.created_at)}</span><br /><span className="font-semibold">Updated At:</span>{" "}<span>{formatCustomDateTime(editingItem.updated_at)}</span></div></div></div>)}</Form>
+        <Form id="numberSystemForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-2 relative pb-20">{renderDrawerForm(!!editingItem)}{editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br /><p className="font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p></div><div className='text-right'><br/><span className="font-semibold">Created At:</span>{" "}<span>{formatCustomDateTime(editingItem.created_at)}</span><br /><span className="font-semibold">Updated At:</span>{" "}<span>{formatCustomDateTime(editingItem.updated_at)}</span></div></div></div>)}</Form>
       </Drawer>
 
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} width={400} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearAllFilters}>Clear</Button><Button size="sm" variant="solid" form="filterNumberSystemForm" type="submit">Apply</Button></div>}>
