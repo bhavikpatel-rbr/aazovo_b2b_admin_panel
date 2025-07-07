@@ -38,7 +38,6 @@ import Tooltip from "@/components/ui/Tooltip";
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlarm,
   TbAlertTriangle,
   TbBell,
   TbBookmark,
@@ -49,6 +48,7 @@ import {
   TbCalendar,
   TbCalendarEvent,
   TbCancel,
+  TbCheck,
   TbChecks,
   TbCircleCheck,
   TbCloudDownload,
@@ -72,6 +72,7 @@ import {
   TbStack2,
   TbTagStarred,
   TbUser,
+  TbUserCircle,
   TbX,
 } from "react-icons/tb";
 
@@ -85,10 +86,13 @@ import type {
 } from "@/components/shared/DataTable";
 
 // Redux
+import { authSelector } from "@/reduxtool/auth/authSlice";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addAllActionAction,
   addNotificationAction,
   addScheduleAction,
+  addTaskAction,
   deleteAllWallAction,
   getAllCompany,
   getAllUsersAction,
@@ -161,8 +165,11 @@ export type WallItem = {
   inquiry_count: number;
   share_count: number;
   is_bookmarked: boolean;
-  updated_by_name?: string;
-  updated_by_role?: string;
+  updated_by_user?: {
+    name: string;
+    profile_pic_path?: string | null;
+    roles: { display_name: string }[];
+  } | null;
   productId?: number;
   productSpecId?: number;
   memberTypeId?: number;
@@ -207,6 +214,23 @@ const scheduleSchema = z.object({
   notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
+// Zod Schema for Task Form
+const taskValidationSchema = z.object({
+    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+    assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+    priority: z.string().min(1, 'Please select a priority.'),
+    due_date: z.date().nullable().optional(),
+    description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskValidationSchema>;
+
+// Zod Schema for Activity Form
+const activitySchema = z.object({
+    item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+    notes: z.string().optional(),
+});
+type ActivityFormData = z.infer<typeof activitySchema>;
 
 
 // --- Status Colors and Options ---
@@ -256,12 +280,12 @@ export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, nam
 // ============================================================================
 // --- MODALS SECTION ---
 // ============================================================================
-export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "active" | "calendar" | "alert" | "share";
+export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "activity" | "calendar" | "alert" | "share";
 export interface WallModalState { isOpen: boolean; type: WallModalType | null; data: WallItem | null; }
-interface WallModalsProps { modalState: WallModalState; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }
+interface WallModalsProps { modalState: WallModalState; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; user: any; }
 
-const dummyUsers = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },];
-const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
+const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" },];
+const taskPriorityOptions = priorityOptions;
 const eventTypeOptions = [
   // Customer Engagement & Sales
   { value: 'Meeting', label: 'Meeting' },
@@ -341,45 +365,6 @@ const eventTypeOptions = [
 ]
 const dummyAlerts = [{ id: 1, severity: "warning", message: "Listing will expire in 3 days.", time: "4 days ago", }, { id: 2, severity: "info", message: "New inquiry received from John Doe.", time: "2 hours ago", },];
 
-const SendEmailDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { subject: "", message: "" }, });
-  const onSendEmail = (data: { subject: string; message: string }) => {
-    setIsLoading(true);
-    console.log("Sending email to", wallItem.member_email, "with data:", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Email Sent Successfully" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send Email to {wallItem.member_name}</h5>
-      <form onSubmit={handleSubmit(onSendEmail)}>
-        <FormItem label="Subject"><Controller name="subject" control={control} render={({ field }) => (<Input {...field} placeholder={`Regarding: ${wallItem.product_name}`} />)} /></FormItem>
-        <FormItem label="Message"><Controller name="message" control={control} render={({ field }) => (<RichTextEditor value={field.value} onChange={field.onChange} />)} /></FormItem>
-        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Send</Button></div>
-      </form>
-    </Dialog>
-  );
-};
-const SendWhatsAppDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-  const { control, handleSubmit } = useForm({ defaultValues: { message: `Hi ${wallItem.member_name}, I'm interested in your listing for "${wallItem.product_name}".`, }, });
-  const onSendMessage = (data: { message: string }) => {
-    const phone = wallItem.member_phone?.replace(/\D/g, "");
-    if (!phone) { toast.push(<Notification type="danger" title="Invalid Phone Number" />); return; }
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(data.message)}`;
-    window.open(url, "_blank");
-    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
-    onClose();
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send WhatsApp to {wallItem.member_name}</h5>
-      <form onSubmit={handleSubmit(onSendMessage)}>
-        <FormItem label="Message Template"><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
-        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit">Open WhatsApp</Button></div>
-      </form>
-    </Dialog>
-  );
-};
 const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }> = ({ wallItem, onClose, getAllUserDataOptions }) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
@@ -407,29 +392,72 @@ const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void;
     </Dialog>
   );
 };
-const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({ defaultValues: { title: "", assignee: null, dueDate: null, priority: null, description: "", }, });
-  const onAssignTask = (data: any) => {
-    setIsLoading(true);
-    console.log("Assigning task for", wallItem.product_name, "with data:", data);
-    setTimeout(() => { toast.push(<Notification type="success" title="Task Assigned" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
-      <form onSubmit={handleSubmit(onAssignTask)}>
-        <FormItem label="Task Title"><Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Follow up on listing" />)} /></FormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem label="Assign To"><Controller name="assignee" control={control} render={({ field }) => (<Select placeholder="Select User" options={dummyUsers} {...field} />)} /></FormItem>
-          <FormItem label="Priority"><Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} {...field} />)} /></FormItem>
-        </div>
-        <FormItem label="Due Date"><Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />)} /></FormItem>
-        <FormItem label="Description"><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
-        <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading}>Assign Task</Button></div>
-      </form>
-    </Dialog>
-  );
+const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }> = ({ wallItem, onClose, getAllUserDataOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
+        resolver: zodResolver(taskValidationSchema),
+        defaultValues: {
+            task_title: `Follow up on wall listing: ${wallItem.product_name}`,
+            assign_to: [],
+            priority: 'Medium',
+            due_date: null,
+            description: `Regarding wall item from ${wallItem.member_name} for product "${wallItem.product_name}".`,
+        },
+        mode: 'onChange'
+    });
+
+    const onAssignTask = async (data: TaskFormData) => {
+        setIsLoading(true);
+        try {
+            const payload = {
+                ...data,
+                due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
+                module_id: String(wallItem.id),
+                module_name: 'WallListing',
+            };
+            await dispatch(addTaskAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Task Assigned" children={`Successfully assigned task for item #${wallItem.id}.`} />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
+            <Form onSubmit={handleSubmit(onAssignTask)}>
+                <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
+                    <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
+                </FormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
+                        <Controller name="assign_to" control={control} render={({ field }) => (
+                            <UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />
+                        )} />
+                    </FormItem>
+                    <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
+                        <Controller name="priority" control={control} render={({ field }) => (
+                            <UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
+                        )} />
+                    </FormItem>
+                </div>
+                <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
+                    <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />} />
+                </FormItem>
+                <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
+                    <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
 };
 const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const dispatch = useAppDispatch();
@@ -460,6 +488,53 @@ const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> 
     </Dialog>
   );
 };
+const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; user: any; }> = ({ wallItem, onClose, user }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
+        resolver: zodResolver(activitySchema),
+        defaultValues: { item: `Follow up on ${wallItem.product_name}`, notes: '' },
+        mode: 'onChange',
+    });
+
+    const onAddActivity = async (data: ActivityFormData) => {
+        setIsLoading(true);
+        const payload = {
+            item: data.item,
+            notes: data.notes || '',
+            module_id: String(wallItem.id),
+            module_name: 'WallListing',
+            user_id: user.id,
+        };
+        try {
+            await dispatch(addAllActionAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Activity Added" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Add Activity Log for "{wallItem.product_name}"</h5>
+            <Form onSubmit={handleSubmit(onAddActivity)}>
+                <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
+                    <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} />
+                </FormItem>
+                <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+                    <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
+};
 const ViewAlertDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const alertColors: Record<string, string> = { danger: "red", warning: "amber", info: "blue", };
   return (
@@ -486,35 +561,20 @@ const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }
     </Dialog>
   );
 };
-const GenericActionDialog: React.FC<{ type: WallModalType | null; wallItem: WallItem; onClose: () => void; }> = ({ type, wallItem, onClose }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : "Confirm Action";
-  const handleConfirm = () => {
-    setIsLoading(true);
-    console.log(`Performing action '${type}' for wall item ${wallItem.product_name}`);
-    setTimeout(() => { toast.push(<Notification type="success" title="Action Completed" />); setIsLoading(false); onClose(); }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-2">{title}</h5>
-      <p>Are you sure you want to perform this action for <span className="font-semibold">{wallItem.product_name}</span>?</p>
-      <div className="text-right mt-6"><Button className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button></div>
-    </Dialog>
-  );
-};
-const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
+
+const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUserDataOptions, user }) => {
   const { type, data: wallItem, isOpen } = modalState;
   if (!isOpen || !wallItem) return null;
   const renderModalContent = () => {
     switch (type) {
-      case "email": return <SendEmailDialog wallItem={wallItem} onClose={onClose} />;
-      case "whatsapp": return <SendWhatsAppDialog wallItem={wallItem} onClose={onClose} />;
+      // Email and Whatsapp modals are no longer triggered from the dropdown, but are kept for potential other uses
       case "notification": return <AddNotificationDialog wallItem={wallItem} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-      case "task": return <AssignTaskDialog wallItem={wallItem} onClose={onClose} />;
+      case "task": return <AssignTaskDialog wallItem={wallItem} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
       case "calendar": return <AddScheduleDialog wallItem={wallItem} onClose={onClose} />;
+      case "activity": return <AddActivityDialog wallItem={wallItem} onClose={onClose} user={user} />;
       case "alert": return <ViewAlertDialog wallItem={wallItem} onClose={onClose} />;
       case "share": return <ShareWallLinkDialog wallItem={wallItem} onClose={onClose} />;
-      default: return (<GenericActionDialog type={type} wallItem={wallItem} onClose={onClose} />);
+      default: return null;
     }
   };
   return <>{renderModalContent()}</>;
@@ -551,22 +611,37 @@ function exportWallItemsToCsv(filename: string, rows: WallItem[]) {
 }
 
 // --- Child Components ---
-const StyledActionColumn = ({ onEdit, onViewDetail, onOpenModal, rowData }: { onEdit: () => void; onViewDetail: () => void; onOpenModal: (type: WallModalType, data: WallItem) => void; rowData: WallItem; }) => (
+const StyledActionColumn = ({
+  onEdit,
+  onViewDetail,
+  onOpenModal,
+  onSendEmail,
+  onSendWhatsapp,
+  rowData,
+}: {
+  onEdit: () => void;
+  onViewDetail: () => void;
+  onOpenModal: (type: WallModalType, data: WallItem) => void;
+  onSendEmail: () => void;
+  onSendWhatsapp: () => void;
+  rowData: WallItem;
+}) => (
   <div className="flex items-center justify-center">
     <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 rounded-md" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
     <Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md" role="button" onClick={onViewDetail}><TbEye /></div></Tooltip>
     <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-      <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+      <Dropdown.Item onClick={onSendEmail} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
+      <Dropdown.Item onClick={onSendWhatsapp} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Active</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Activity</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbBulb size={18} /> <span className="text-xs">Match Opportunity</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("share", rowData)} className="flex items-center gap-2"><TbShare size={18} /> <span className="text-xs">Share Wall Link</span></Dropdown.Item>
     </Dropdown>
   </div>
 );
+
 interface WallSearchProps { onInputChange: (value: string) => void; }
 const WallSearch = React.forwardRef<HTMLInputElement, WallSearchProps>(({ onInputChange }, ref) => (<DebouceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch />} onChange={(e) => onInputChange(e.target.value)} />));
 WallSearch.displayName = "WallSearch";
@@ -675,10 +750,11 @@ BookmarkButton.displayName = 'BookmarkButton';
 
 
 // --- Main Component ---
-const WallListing = ({ isDashboard }) => {
+const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
+  const { user } = useSelector(authSelector);
   const { wallListing, AllProductsData, AllCategorysData, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -690,16 +766,80 @@ const WallListing = ({ isDashboard }) => {
   const [selectedItems, setSelectedItems] = useState<WallItem[]>([]);
   const [modalState, setModalState] = useState<WallModalState>({ isOpen: false, type: null, data: null });
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
-  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_date" }, query: "" });
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
+  
+  // --- ADDED for Image Viewer ---
+  const [imageView, setImageView] = useState('');
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+
+  const openImageViewer = useCallback((path: string | null | undefined) => {
+    if (path) {
+      setImageView(path);
+      setIsImageViewerOpen(true);
+    } else {
+      toast.push(<Notification title="No Image" type="info">User has no profile picture.</Notification>);
+    }
+  }, []);
+
+  const closeImageViewer = useCallback(() => {
+    setIsImageViewerOpen(false);
+    setImageView('');
+  }, []);
+
 
   const mapApiToWallItem = useCallback(
     (apiItem: ApiWallItemFromSource): WallItem => ({
-      id: apiItem.id as number, productId: apiItem.product_id, product_name: apiItem.product_name, company_name: apiItem.company_name || "", companyId: apiItem.company_id_from_api || undefined, member_name: apiItem.member_name, memberId: String(apiItem.member_id_from_api || ""), memberTypeId: apiItem.member_type_id, member_email: apiItem.member_email || "", member_phone: apiItem.member_phone || "", product_category: apiItem.product_category || "", productCategoryId: apiItem.product_category_id, product_subcategory: apiItem.product_subcategory || "", subCategoryId: apiItem.subcategory_id, product_description: apiItem.product_description || "", product_specs: apiItem.product_specs || "", productSpecId: apiItem.product_spec_id, product_status: apiItem.product_status, quantity: Number(apiItem.quantity) || 0, price: Number(apiItem.price) || 0, want_to: apiItem.want_to as WallIntent | string, listing_type: apiItem.listing_type || "", shipping_options: apiItem.shipping_options || "", payment_method: apiItem.payment_method || "", warranty: apiItem.warranty || "", return_policy: apiItem.return_policy || "", listing_url: apiItem.listing_url || "", brand: apiItem.brand || "", brandId: apiItem.brand_id, product_images: apiItem.product_images || [], created_date: new Date(apiItem.created_date), updated_at: new Date(apiItem.updated_at), visibility: apiItem.visibility || "", priority: apiItem.priority || "", assigned_to: apiItem.assigned_to || "", interaction_type: apiItem.interaction_type || "", action: apiItem.action || "", recordStatus: apiItem.status as WallRecordStatus, cartoonTypeId: apiItem.cartoon_type_id, deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null, inquiry_count: Number(apiItem.inquiry_count) || 0, share_count: Number(apiItem.share_count) || 0, is_bookmarked: apiItem.is_bookmarked, updated_by_name: apiItem.updated_by_name, updated_by_role: apiItem.updated_by_role, createdById: apiItem.created_by, member: apiItem?.member || null,
+        id: apiItem.id as number,
+        productId: apiItem.product_id,
+        product_name: apiItem.product?.name || 'N/A',
+        company_name: apiItem.company_name || "",
+        companyId: apiItem.company_id || undefined,
+        member_name: apiItem.member?.name || 'N/A',
+        memberId: String(apiItem.member?.id || ""),
+        memberTypeId: apiItem.member_type_id,
+        member_email: apiItem.member?.email || "",
+        member_phone: apiItem.member?.number || "",
+        product_category: apiItem.product?.category?.name || "",
+        productCategoryId: apiItem.product?.category_id,
+        product_subcategory: apiItem.product?.sub_category?.name || "",
+        subCategoryId: apiItem.product?.sub_category_id,
+        product_description: apiItem.product?.description || "",
+        product_specs: apiItem.product_spec?.name || "",
+        productSpecId: apiItem.product_spec_id,
+        product_status: apiItem.product_status,
+        quantity: Number(apiItem.qty) || 0,
+        price: Number(apiItem.price) || 0,
+        want_to: apiItem.want_to as WallIntent | string,
+        listing_type: apiItem.listing_type || "",
+        shipping_options: apiItem.shipping_options || "",
+        payment_method: apiItem.payment_method || "",
+        warranty: apiItem.warranty_info || "",
+        return_policy: apiItem.return_policy || "",
+        listing_url: apiItem.product_url || "",
+        brand: apiItem.product?.brand?.name || "",
+        brandId: apiItem.product?.brand_id,
+        product_images: apiItem.product?.product_images_array || [],
+        created_date: new Date(apiItem.created_at),
+        updated_at: new Date(apiItem.updated_at),
+        visibility: apiItem.visibility || "",
+        priority: apiItem.priority || "",
+        assigned_to: apiItem.assigned_to_name || "",
+        interaction_type: apiItem.interaction_type || "",
+        action: apiItem.action || "",
+        recordStatus: apiItem.status as WallRecordStatus,
+        cartoonTypeId: apiItem.cartoon_type_id,
+        deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null,
+        inquiry_count: Number(apiItem.inquiries) || 0,
+        share_count: Number(apiItem.share) || 0,
+        is_bookmarked: apiItem.bookmark === 1,
+        updated_by_user: apiItem.updated_by_user || null,
+        createdById: apiItem.created_by,
+        member: apiItem?.member || null,
     }),
     []
-  );
+);
 
   const apiParams = useMemo(() => {
     const formatMultiSelect = (items: { value: any }[] | undefined) => { if (!items || items.length === 0) return undefined; return items.map((item) => item.value).join(","); };
@@ -735,6 +875,26 @@ const WallListing = ({ isDashboard }) => {
     setModalState({ isOpen: true, type, data: wallItem });
   }, []);
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
+
+  const handleSendEmail = useCallback((item: WallItem) => {
+    if (!item.member_email) {
+        toast.push(<Notification type="warning" title="No Email Address" children="This member does not have a valid email address." />);
+        return;
+    }
+    const subject = `Regarding your wall listing: ${item.product_name}`;
+    const body = `Dear ${item.member_name},\n\nI am interested in your listing for "${item.product_name}".\n\nKind regards,`;
+    window.open(`mailto:${item.member_email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  }, []);
+
+  const handleSendWhatsapp = useCallback((item: WallItem) => {
+    const phone = item.member_phone?.replace(/\D/g, '');
+    if (!phone) {
+        toast.push(<Notification type="warning" title="No Mobile Number" children="This member does not have a valid phone number." />);
+        return;
+    }
+    const message = `Hi ${item.member_name}, I'm interested in your listing for "${item.product_name}".`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  }, []);
 
   const onConfirmDeleteSelectedItems = useCallback(async () => {
     if (selectedItems.length === 0) { toast.push(<Notification title="No items selected" type="info">Please select items to delete.</Notification>); return; }
@@ -827,14 +987,14 @@ const WallListing = ({ isDashboard }) => {
         },
         {
           header: "Company & Member", accessorKey: "company_name", size: 260, cell: ({ row }) => {
-            const { name, id, member_email, member_phone } = row.original?.member || {};
+            const { name, id, email, number } = row.original?.member || {};
             return (
               <div className="flex flex-col gap-0.5 text-xs">
                 <div className="mt-1 pt-1 dark:border-gray-700 w-full">
                   {id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}
                   {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
-                  {member_email && (<a href={`mailto:${member_email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{member_email}</a>)}
-                  {member_phone && (<span className="block text-gray-600 dark:text-gray-300">{member_phone}</span>)}
+                  {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{email}</a>)}
+                  {number && (<span className="block text-gray-600 dark:text-gray-300">{number}</span>)}
                 </div>
               </div>
             );
@@ -873,10 +1033,30 @@ const WallListing = ({ isDashboard }) => {
           },
         },
         {
-          header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 180, cell: (props) => {
-            const { updated_at, updated_by_name, updated_by_role } = props.row.original || {};
-            const formattedDate = updated_at ? dayjs(updated_at).format("MMM D, YYYY h:mm A") : "N/A";
-            return (<div className="text-xs"><span>{updated_by_name || "N/A"}{updated_by_role && (<><br /><b>{updated_by_role}</b></>)}</span><br /><span>{formattedDate}</span></div>);
+          header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220,
+          cell: (props) => {
+            const { updated_at, updated_by_user } = props.row.original;
+            return (
+              <div className="flex items-center gap-2">
+                <Tooltip title="View Profile Picture">
+                    <Avatar
+                        src={updated_by_user?.profile_pic_path}
+                        shape="circle"
+                        size="sm"
+                        icon={<TbUserCircle />}
+                        className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                        onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+                    />
+                </Tooltip>
+                <div>
+                  <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                  <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+                  <div className="text-xs text-gray-500">
+                    {updated_at ? dayjs(updated_at).format("D MMM YYYY, h:mm A") : 'N/A'}
+                  </div>
+                </div>
+              </div>
+            );
           },
         },
         {
@@ -889,13 +1069,23 @@ const WallListing = ({ isDashboard }) => {
 
       if (!isDashboard) {
         baseColumns.push({
-          header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<WallItem, any>) => (<StyledActionColumn onViewDetail={() => openViewDrawer(props.row.original)} onEdit={() => openEditDrawer(props.row.original)} onOpenModal={handleOpenModal} rowData={props.row.original} />),
+          header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" }, 
+          cell: (props: CellContext<WallItem, any>) => (
+            <StyledActionColumn 
+              onViewDetail={() => openViewDrawer(props.row.original)} 
+              onEdit={() => openEditDrawer(props.row.original)} 
+              onOpenModal={handleOpenModal} 
+              onSendEmail={() => handleSendEmail(props.row.original)}
+              onSendWhatsapp={() => handleSendWhatsapp(props.row.original)}
+              rowData={props.row.original} 
+            />
+          ),
         });
       }
 
       return baseColumns;
     },
-    [isDashboard, openViewDrawer, openEditDrawer, handleOpenModal]
+    [isDashboard, openViewDrawer, openEditDrawer, handleOpenModal, handleSendEmail, handleSendWhatsapp, openImageViewer]
   );
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<WallItem>[]>([]);
@@ -937,7 +1127,7 @@ const WallListing = ({ isDashboard }) => {
               <Tooltip title="Click to show rejected listings"><div onClick={() => handleCardClick('status', 'Rejected')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.rejected}</b><span className="font-semibold text-[11px]">Rejected</span></div></Card></div></Tooltip>
             </div>
           )}
-          <WallTableTools isDashboard={isDashboard} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={handleImportData} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+          <WallTableTools isDashboard={!!isDashboard} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={handleImportData} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
           {!isDashboard && <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />}
           <div className="mt-4">
             <WallTable
@@ -951,7 +1141,7 @@ const WallListing = ({ isDashboard }) => {
       {!isDashboard && (
         <WallSelectedFooter selectedItems={selectedItems} deleteConfirmOpen={deleteSelectedConfirmOpen} setDeleteConfirmOpen={setDeleteSelectedConfirmOpen} onConfirmDelete={onConfirmDeleteSelectedItems} isDeleting={masterLoadingStatus === "loading"} />
       )}
-      <WallModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={useMemo(() => getAllUserData?.map((user: any) => ({ value: user?.id, label: user?.name })), [getAllUserData])} />
+      <WallModals modalState={modalState} onClose={handleCloseModal} user={user} getAllUserDataOptions={useMemo(() => getAllUserData?.map((user: any) => ({ value: user?.id, label: user?.name })), [getAllUserData])} />
       <Drawer title="View Wall Item Details" isOpen={isViewDrawerOpen} onClose={closeViewDrawer} onRequestClose={closeViewDrawer} width={700}>
         {editingItem && (
           <div className="p-4 space-y-3">
@@ -1008,6 +1198,10 @@ const WallListing = ({ isDashboard }) => {
           </FormItem>
         </Form>
       </ConfirmDialog>
+      {/* --- ADDED Image Viewer Dialog --- */}
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} width={600}>
+        <div className="flex justify-center items-center p-4">{imageView ? <img src={imageView} alt="User" className="max-w-full max-h-[80vh]" /> : <p>No image.</p>}</div>
+      </Dialog>
     </>
   );
 };
