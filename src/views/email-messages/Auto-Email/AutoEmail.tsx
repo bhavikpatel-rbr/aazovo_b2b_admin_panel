@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
 import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
@@ -22,6 +23,8 @@ import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, D
 // Icons
 import {
   TbPencil,
+  TbTrash,
+  TbChecks,
   TbSearch,
   TbFilter,
   TbPlus,
@@ -41,7 +44,7 @@ import {
 } from "react-icons/tb";
 
 // Types
-import type { OnSortParam, ColumnDef } from "@/components/shared/DataTable";
+import type { OnSortParam, ColumnDef, Row } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
 // Redux
@@ -53,6 +56,8 @@ import {
   editAutoEmailAction,
   submitExportReasonAction,
   getUsersAction,
+  deleteAutoEmailAction,
+  deleteAllAutoEmailsAction
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
@@ -115,7 +120,23 @@ const exportReasonSchema = z.object({
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 
-// --- CSV EXPORTER ---
+// --- HELPER FUNCTIONS & COMPONENTS ---
+const parseUserIds = (userIds: string | null | undefined): string[] => {
+    if (!userIds) return [];
+    try {
+        const parsed = JSON.parse(userIds);
+        if (Array.isArray(parsed)) {
+            return parsed.map(String);
+        }
+    } catch (e) {
+        if (typeof userIds === 'string') {
+            return userIds.split(',').map(id => id.trim()).filter(Boolean);
+        }
+    }
+    return [];
+};
+
+
 function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
 
@@ -127,7 +148,7 @@ function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[]) {
           const cells = [
               row.id,
               row.emailTypeDisplay,
-              row.usersDisplay?.map(u => u.name).join('; '), // Semicolon separated list of names
+              row.usersDisplay?.map(u => u.name).join('; '),
               row.status,
               row.updated_by_user?.name || 'N/A',
               row.updated_at ? formatCustomDateTime(row.updated_at) : 'N/A'
@@ -155,8 +176,6 @@ function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[]) {
   toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
   return false;
 }
-
-// --- HELPER COMPONENTS ---
 const ActionColumn = ({ onEdit }: { onEdit: () => void }) => (
     <div className="flex items-center justify-center gap-1.5">
         <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
@@ -222,7 +241,7 @@ const AutoEmailTableTools = ({ onSearchChange, onFilter, onExport, onClearFilter
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
-  filterData: FilterFormData; onRemoveFilter: (key: keyof FilterFormData, value: string) => void; onClearAll: () => void;
+  filterData: FilterFormData; onRemoveFilter: (key: keyof FilterFormData, value: string | number) => void; onClearAll: () => void;
 }) => {
     const { filterEmailTypes, filterUserIds, filterStatus } = filterData;
     if (!filterEmailTypes?.length && !filterUserIds?.length && !filterStatus?.length) return null;
@@ -230,11 +249,32 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
     return (
         <div className="flex flex-wrap items-center gap-2 mb-4 border-b pb-4">
             <span className="font-semibold text-sm text-gray-600 mr-2">Active Filters:</span>
-            {filterEmailTypes?.map(item => <Tag key={`type-${item.value}`} prefix>Type: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterEmailTypes', item.value)} /></Tag>)}
+            {filterEmailTypes?.map(item => <Tag key={`type-${item.value}`} prefix>Type: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterEmailTypes', String(item.value))} /></Tag>)}
             {filterUserIds?.map(item => <Tag key={`user-${item.value}`} prefix>User: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterUserIds', item.value)} /></Tag>)}
-            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterStatus', String(item.value))} /></Tag>)}
             <Button size="xs" variant="plain" className="text-red-600 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
         </div>
+    );
+};
+
+const AutoEmailsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: { selectedItems: AutoEmailItem[]; onDeleteSelected: () => void; isDeleting: boolean; }) => {
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    if (selectedItems.length === 0) return null;
+    return (
+        <>
+            <StickyFooter className="p-4 border-t" stickyClass="bg-white dark:bg-gray-800">
+                <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 font-semibold">
+                        <TbChecks className="text-lg text-emerald-500" />
+                        {selectedItems.length} selected
+                    </span>
+                    <Button size="sm" color="red" variant="plain" onClick={() => setConfirmOpen(true)} loading={isDeleting}>Delete Selected</Button>
+                </div>
+            </StickyFooter>
+            <ConfirmDialog type="danger" isOpen={confirmOpen} onConfirm={() => { onDeleteSelected(); setConfirmOpen(false); }} onCancel={() => setConfirmOpen(false)} title={`Delete ${selectedItems.length} items?`}>
+                <p>Are you sure you want to delete the {selectedItems.length} selected items? This action cannot be undone.</p>
+            </ConfirmDialog>
+        </>
     );
 };
 
@@ -249,12 +289,15 @@ const AutoEmailListing = () => {
     const [editingItem, setEditingItem] = useState<AutoEmailItem | null>(null);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
-    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '' });
+    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'updated_at' }, query: '' });
+    const [selectedItems, setSelectedItems] = useState<AutoEmailItem[]>([]);
+    const [itemToDelete, setItemToDelete] = useState<AutoEmailItem | null>(null);
 
     const userOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((u: ApiUser) => ({ value: String(u.id), label: u.name })) : [], [usersData]);
     
@@ -267,18 +310,29 @@ const AutoEmailListing = () => {
 
     const openImageViewer = useCallback((src?: string) => { if (src) { setViewerImageSrc(src); setIsImageViewerOpen(true); } }, []);
     const closeImageViewer = useCallback(() => { setIsImageViewerOpen(false); setViewerImageSrc(null); }, []);
-    const openAddDrawer = useCallback(() => { addFormMethods.reset({ email_type: EMAIL_TYPE_OPTIONS[0]?.value, user_ids: [], status: 'Active' }); setIsAddDrawerOpen(true); }, [addFormMethods]);
+    
+    const openAddDrawer = useCallback(() => {
+        setEditingItem(null);
+        addFormMethods.reset({ email_type: EMAIL_TYPE_OPTIONS[0]?.value, user_ids: [], status: 'Active' });
+        setIsAddDrawerOpen(true);
+    }, [addFormMethods]);
     const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
+    
     const openEditDrawer = useCallback((item: AutoEmailItem) => {
         setEditingItem(item);
-        editFormMethods.reset({ email_type: String(item.email_type), user_ids: item.user_ids ? String(item.user_ids).split(',').map(id => id.trim()) : [], status: (item.status === 'Active' || item.status === 'Inactive') ? item.status : 'Inactive' });
+        editFormMethods.reset({
+            email_type: String(item.email_type),
+            user_ids: item.user_ids,
+            status: (item.status === 'Active' || item.status === 'Inactive') ? item.status : 'Inactive'
+        });
         setIsEditDrawerOpen(true);
     }, [editFormMethods]);
     const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
 
     const onSubmitHandler = async (data: AutoEmailFormData) => {
         setIsSubmitting(true);
-        const apiPayload = { email_type: data.email_type, user_ids: data.user_ids.join(','), status: data.status };
+        // FIX: Send user_ids as an array directly
+        const apiPayload = { email_type: data.email_type, user_ids: data.user_ids, status: data.status };
         try {
             if (editingItem) {
                 await dispatch(editAutoEmailAction({ id: editingItem.id, ...apiPayload })).unwrap();
@@ -297,51 +351,56 @@ const AutoEmailListing = () => {
     
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         const sourceData = Array.isArray(autoEmailsData?.data) ? autoEmailsData.data : [];
-        const sourceDataWithDisplayNames: AutoEmailItem[] = sourceData.map((item: any) => {
-            const emailTypeLabel = EMAIL_TYPE_OPTIONS.find(et => et.value === String(item.email_type))?.label || String(item.email_type);
-            const userIdsArray = item.user_ids ? String(item.user_ids).split(',').map((id: string) => id.trim()) : [];
-            const users = userIdsArray.map((uid: string) => userOptions.find(u => u.value === uid)).filter(Boolean) as {value: string, label: string}[];
-            return { ...item, emailTypeDisplay: emailTypeLabel, usersDisplay: users.map(u => ({id: u.value, name: u.label})) };
-        });
+        const sourceDataWithDisplayNames: AutoEmailItem[] = sourceData.map((item: any) => ({
+            ...item,
+            emailTypeDisplay: EMAIL_TYPE_OPTIONS.find(et => et.value === String(item.email_type))?.label || String(item.email_type),
+            usersDisplay: item.user_ids.map(uid => usersData.find((u: ApiUser) => String(u.id) === uid)).filter(Boolean) as ApiUser[],
+        }));
 
         let processedData = cloneDeep(sourceDataWithDisplayNames);
         if (filterCriteria.filterEmailTypes?.length) { const v = filterCriteria.filterEmailTypes.map(et => et.value); processedData = processedData.filter(item => v.includes(String(item.email_type))); }
-        if (filterCriteria.filterUserIds?.length) { const v = filterCriteria.filterUserIds.map(u => u.value); processedData = processedData.filter(item => String(item.user_ids).split(',').some(uid => v.includes(uid.trim()))); }
-        if (filterCriteria.filterStatus?.length) { const v = filterCriteria.filterStatus.map(s => s.value); processedData = processedData.filter(item => v.includes(String(item.status))); }
+        if (filterCriteria.filterUserIds?.length) { const v = new Set(filterCriteria.filterUserIds.map(u => u.value)); processedData = processedData.filter(item => parseUserIds(item.user_ids).some(uid => v.has(uid))); }
+        if (filterCriteria.filterStatus?.length) { const v = new Set(filterCriteria.filterStatus.map(s => s.value)); processedData = processedData.filter(item => v.has(String(item.status))); }
         if (tableData.query) { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => String(item.id).toLowerCase().includes(q) || item.emailTypeDisplay?.toLowerCase().includes(q) || item.usersDisplay?.some(u => u.name.toLowerCase().includes(q)) || String(item.status).toLowerCase().includes(q)); }
         
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key) {
             processedData.sort((a, b) => {
                 let aVal: any = a[key as keyof AutoEmailItem], bVal: any = b[key as keyof AutoEmailItem];
-                if (key === 'updated_at') { return order === 'asc' ? new Date(aVal).getTime() - new Date(bVal).getTime() : new Date(bVal).getTime() - new Date(aVal).getTime(); }
+                if (key === 'updated_at' || key === 'created_at') { return order === 'asc' ? new Date(aVal).getTime() - new Date(bVal).getTime() : new Date(bVal).getTime() - new Date(aVal).getTime(); }
                 return order === 'asc' ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
             });
         }
         
-        return { pageData: processedData.slice((tableData.pageIndex-1) * tableData.pageSize, tableData.pageIndex * tableData.pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
-    }, [autoEmailsData, tableData, filterCriteria, userOptions]);
+        return { pageData: processedData.slice((tableData.pageIndex - 1) * tableData.pageSize, tableData.pageIndex * tableData.pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
+    }, [autoEmailsData.data, tableData, filterCriteria, usersData]);
 
     const activeFilterCount = useMemo(() => Object.values(filterCriteria).filter(v => Array.isArray(v) && v.length > 0).length, [filterCriteria]);
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
     const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
-    const handleSelectPageSizeChange = useCallback((value: number) => handleSetTableData({ pageSize: value, pageIndex: 1 }), [handleSetTableData]);
+    const handleSelectPageSizeChange = useCallback((value: number) => { handleSetTableData({ pageSize: value, pageIndex: 1 }); setSelectedItems([]) }, [handleSetTableData]);
     const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
     const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
     
     const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); handleSetTableData({ pageIndex: 1, query: '' }); }, [filterFormMethods, handleSetTableData]);
+    
     const handleCardClick = (status: 'Active' | 'Inactive' | 'all') => {
-        onClearFilters();
+        const newFilters: FilterFormData = {};
         if (status !== 'all') {
             const statusOption = AUTO_EMAIL_STATUS_OPTIONS.find(opt => opt.value === status);
-            if(statusOption) setFilterCriteria({ filterStatus: [statusOption] });
+            if(statusOption) newFilters.filterStatus = [statusOption];
         }
+        setFilterCriteria(newFilters);
+        filterFormMethods.reset(newFilters); // FIX: Sync filter drawer state
+        handleSetTableData({ pageIndex: 1, query: '' });
     };
+
     const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string | number) => {
         setFilterCriteria(prev => {
             const newCriteria = { ...prev };
             const currentFilterArray = newCriteria[key] as { value: string | number }[] | undefined;
             if (currentFilterArray) (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove);
+            filterFormMethods.reset(newCriteria); // Sync filter drawer state
             return newCriteria;
         });
         handleSetTableData({ pageIndex: 1 });
@@ -364,9 +423,50 @@ const AutoEmailListing = () => {
         } finally { setIsSubmittingExportReason(false); }
     };
 
+    const handleDeleteClick = useCallback((item: AutoEmailItem) => { setItemToDelete(item); }, []);
+    const onConfirmSingleDelete = useCallback(async () => {
+        if (!itemToDelete) return;
+        setIsDeleting(true);
+        try {
+            await dispatch(deleteAutoEmailAction({ id: itemToDelete.id })).unwrap();
+            toast.push(<Notification title="Deleted" type="success" />);
+            dispatch(getAutoEmailsAction());
+            setItemToDelete(null);
+        } catch (e: any) {
+            toast.push(<Notification title="Delete Failed" type="danger">{(e as Error).message}</Notification>);
+        } finally { setIsDeleting(false); }
+    }, [dispatch, itemToDelete]);
+
+    const onDeleteSelected = useCallback(async () => {
+        setIsDeleting(true);
+        const ids = selectedItems.map(item => item.id);
+        try {
+            await dispatch(deleteAllAutoEmailsAction({ ids: ids.join(',') })).unwrap();
+            toast.push(<Notification title="Bulk Delete Successful" type="success" />);
+            setSelectedItems([]);
+            dispatch(getAutoEmailsAction());
+        } catch (e: any) {
+            toast.push(<Notification title="Bulk Delete Failed" type="danger">{(e as Error).message}</Notification>);
+        } finally { setIsDeleting(false); }
+    }, [dispatch, selectedItems]);
+
+    const handleRowSelect = useCallback((checked: boolean, row: AutoEmailItem) => {
+        setSelectedItems(prev => checked ? [...prev, row] : prev.filter(item => item.id !== row.id));
+    }, []);
+    const handleAllRowSelect = useCallback((checked: boolean, rows: Row<AutoEmailItem>[]) => {
+        const originals = rows.map(r => r.original);
+        if (checked) {
+            const newItems = originals.filter(o => !selectedItems.some(s => s.id === o.id));
+            setSelectedItems(prev => [...prev, ...newItems]);
+        } else {
+            const originalIds = new Set(originals.map(o => o.id));
+            setSelectedItems(prev => prev.filter(s => !originalIds.has(s.id)));
+        }
+    }, [selectedItems]);
+
     const columns: ColumnDef<AutoEmailItem>[] = useMemo(() => [
         { header: "Email Type", accessorKey: "emailTypeDisplay", enableSorting: true, size: 250 },
-        { header: "User(s)", accessorKey: "usersDisplay", enableSorting: true, size: 250, cell: props => (
+        { header: "User(s)", accessorKey: "usersDisplay", enableSorting: false, size: 250, cell: props => (
             <div className="flex -space-x-2 rtl:space-x-reverse">
                 {props.row.original.usersDisplay?.slice(0, 3).map(user => (
                     <Tooltip key={user.id} title={user.name}><Avatar src={user.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} /></Tooltip>
@@ -383,7 +483,7 @@ const AutoEmailListing = () => {
             const { updated_at, updated_by_user } = props.row.original;
             return (
                 <div className="flex items-center gap-2">
-                    <Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} />
+                    <Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} />
                     <div>
                         <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
                         <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
@@ -392,8 +492,8 @@ const AutoEmailListing = () => {
                 </div>
             );
         }},
-        { header: "Actions", id: "actions", size: 120, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} /> },
-    ], [openEditDrawer, openImageViewer]);
+        { header: "Actions", id: "actions", size: 120, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+    ], [openEditDrawer, openImageViewer, handleDeleteClick]);
     
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<AutoEmailItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -414,9 +514,11 @@ const AutoEmailListing = () => {
                 </div>
                 <div className="mb-4"><AutoEmailTableTools onSearchChange={handleSearchChange} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} /></div>
                 <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-                <div className="mt-4"><DataTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === 'loading'} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} /></div>
+                <div className="mt-4"><DataTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === 'loading'} selectable onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} /></div>
             </AdaptiveCard>
         </Container>
+        
+        <AutoEmailsSelectedFooter selectedItems={selectedItems} onDeleteSelected={onDeleteSelected} isDeleting={isDeleting} />
 
         <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} width={600}>
             <div className="flex justify-center items-center p-4">{viewerImageSrc ? <img src={viewerImageSrc} alt="User" className="max-w-full max-h-[80vh]" /> : <p>No image.</p>}</div>
@@ -444,6 +546,10 @@ const AutoEmailListing = () => {
                 <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => <Select isMulti placeholder="Any Status" options={AUTO_EMAIL_STATUS_OPTIONS} value={field.value || []} onChange={val => field.onChange(val || [])} />} /></FormItem>
             </Form>
         </Drawer>
+        
+        <ConfirmDialog isOpen={!!itemToDelete} type="danger" title="Delete Configuration" onConfirm={onConfirmSingleDelete} onCancel={() => setItemToDelete(null)} onRequestClose={() => setItemToDelete(null)}>
+            <p>Are you sure you want to delete this auto email configuration?</p>
+        </ConfirmDialog>
 
         <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText="Submit & Export" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
             <Form id="exportReasonForm" onSubmit={e => e.preventDefault()} className="mt-2">
@@ -453,7 +559,7 @@ const AutoEmailListing = () => {
             </Form>
         </ConfirmDialog>
       </>
-    );
+    ); 
 };
 
 export default AutoEmailListing;
