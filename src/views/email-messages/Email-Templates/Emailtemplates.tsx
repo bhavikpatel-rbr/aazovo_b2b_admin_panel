@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
 
 // Icons
 import {
@@ -47,6 +47,7 @@ import {
   TbBuildingCog,
   TbBuildingOff,
   TbColumns,
+  TbUserCircle,
 } from "react-icons/tb";
 
 // Types
@@ -72,6 +73,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import dayjs from "dayjs";
+import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 
 // --- Define Types ---
 export type SelectOption = { value: string; label: string; };
@@ -172,7 +174,7 @@ type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 // --- CSV Exporter ---
 const CSV_HEADERS = ["ID", "Name", "Template ID", "Category", "SubCategory", "Brand", "Role", "Department", "Designation", "Status", "Updated By", "Updated Role", "Updated At"];
 type EmailTemplateExportItem = Omit<EmailTemplateItem, 'created_at' | 'updated_at' | 'created_by_user' | 'updated_by_user' | 'category' | 'sub_category' | 'brand' | 'role' | 'department' | 'designation'> & { updated_at_formatted?: string; };
-const CSV_KEYS: (keyof EmailTemplateExportItem)[] = [ "id", "name", "template_id", "categoryName", "subCategoryName", "brandName", "roleName", "departmentName", "designationName", "status", "updated_by_name", "updated_by_role", "updated_at_formatted",];
+const CSV_KEYS: (keyof EmailTemplateExportItem)[] = ["id", "name", "template_id", "categoryName", "subCategoryName", "brandName", "roleName", "departmentName", "designationName", "status", "updated_by_name", "updated_by_role", "updated_at_formatted",];
 function exportToCsv(filename: string, rows: EmailTemplateItem[]) { if (!rows || !rows.length) { return false; } const preparedRows: EmailTemplateExportItem[] = rows.map(row => ({ id: row.id, name: row.name, template_id: row.template_id, categoryName: row.categoryName, subCategoryName: row.subCategoryName, brandName: row.brandName, roleName: row.roleName, departmentName: row.departmentName, designationName: row.designationName, status: row.status, updated_by_name: row.updated_by_user?.name || "N/A", updated_by_role: row.updated_by_user?.roles?.[0]?.display_name || "N/A", updated_at_formatted: row.updated_at ? dayjs(row.updated_at).format('DD/MM/YYYY hh:mm A') : "N/A", })); const separator = ","; const csvContent = CSV_HEADERS.join(separator) + "\n" + preparedRows.map((row: any) => CSV_KEYS.map((k) => { let cell: any = row[k]; if (cell === null || cell === undefined) cell = ""; else cell = String(cell).replace(/"/g, '""'); if (String(cell).search(/("|,|\n)/g) >= 0) cell = `"${cell}"`; return cell; }).join(separator)).join("\n"); const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" }); const link = document.createElement("a"); if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = "hidden"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); return true; } toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false; }
 
 // --- Components (ActionColumn, etc.) ---
@@ -191,54 +193,54 @@ const EmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport, onClearF
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<EmailTemplateItem>[]>>;
   activeFilterCount: number;
 }) => {
-    const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-    const toggleColumn = (checked: boolean, colId: string) => {
-      if (checked) {
-          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-          if (originalColumn) {
-              setFilteredColumns(prev => {
-                  const newCols = [...prev, originalColumn];
-                  newCols.sort((a, b) => {
-                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                      return indexA - indexB;
-                  });
-                  return newCols;
-              });
-          }
-      } else {
-          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  const toggleColumn = (checked: boolean, colId: string) => {
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
       }
-    };
-    return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-            <div className="flex-grow">
-                <ItemSearch onInputChange={onSearchChange} />
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-                <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                    <div className="flex flex-col p-2">
-                        <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                        {columns.map((col) => {
-                            const id = col.id || col.accessorKey as string;
-                            return col.header && (
-                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
-                                        {col.header as string}
-                                    </Checkbox>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
-                    Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
-                </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
-            </div>
-        </div>
-    );
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
+  };
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+      <div className="flex-grow">
+        <ItemSearch onInputChange={onSearchChange} />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+          <div className="flex flex-col p-2">
+            <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+            {columns.map((col) => {
+              const id = col.id || col.accessorKey as string;
+              return col.header && (
+                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                  <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                    {col.header as string}
+                  </Checkbox>
+                </div>
+              );
+            })}
+          </div>
+        </Dropdown>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+          Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
+        </Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+      </div>
+    </div>
+  );
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
@@ -246,22 +248,22 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
   onClearAll: () => void;
 }) => {
-    const { filterNames, filterTemplateIds, filterCategoryIds, filterSubCategoryIds, filterBrandIds, filterRoleIds, filterDepartmentIds, filterDesignationIds, filterStatus } = filterData;
-    const hasFilters = [filterNames, filterTemplateIds, filterCategoryIds, filterSubCategoryIds, filterBrandIds, filterRoleIds, filterDepartmentIds, filterDesignationIds, filterStatus].some(f => f && f.length > 0);
-    if (!hasFilters) return null;
+  const { filterNames, filterTemplateIds, filterCategoryIds, filterSubCategoryIds, filterBrandIds, filterRoleIds, filterDepartmentIds, filterDesignationIds, filterStatus } = filterData;
+  const hasFilters = [filterNames, filterTemplateIds, filterCategoryIds, filterSubCategoryIds, filterBrandIds, filterRoleIds, filterDepartmentIds, filterDesignationIds, filterStatus].some(f => f && f.length > 0);
+  if (!hasFilters) return null;
 
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
-            {filterTemplateIds?.map(item => <Tag key={`id-${item.value}`} prefix>ID: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterTemplateIds', item.value)} /></Tag>)}
-            {filterCategoryIds?.map(item => <Tag key={`cat-${item.value}`} prefix>Cat: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategoryIds', item.value)} /></Tag>)}
-            {filterDepartmentIds?.map(item => <Tag key={`dept-${item.value}`} prefix>Dept: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterDepartmentIds', item.value)} /></Tag>)}
-            {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
-            {/* Add other filters as needed */}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterNames?.map(item => <Tag key={`name-${item.value}`} prefix>Name: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterNames', item.value)} /></Tag>)}
+      {filterTemplateIds?.map(item => <Tag key={`id-${item.value}`} prefix>ID: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterTemplateIds', item.value)} /></Tag>)}
+      {filterCategoryIds?.map(item => <Tag key={`cat-${item.value}`} prefix>Cat: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterCategoryIds', item.value)} /></Tag>)}
+      {filterDepartmentIds?.map(item => <Tag key={`dept-${item.value}`} prefix>Dept: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterDepartmentIds', item.value)} /></Tag>)}
+      {filterStatus?.map(item => <Tag key={`status-${item.value}`} prefix>Status: {item.label} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter('filterStatus', item.value)} /></Tag>)}
+      {/* Add other filters as needed */}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 type EmailTemplatesTableProps = { columns: ColumnDef<EmailTemplateItem>[]; data: EmailTemplateItem[]; loading: boolean; pagingData: { total: number; pageIndex: number; pageSize: number }; selectedItems: EmailTemplateItem[]; onPaginationChange: (page: number) => void; onSelectChange: (value: number) => void; onSort: (sort: OnSortParam) => void; onRowSelect: (checked: boolean, row: EmailTemplateItem) => void; onAllRowSelect: (checked: boolean, rows: Row<EmailTemplateItem>[]) => void; };
@@ -274,7 +276,7 @@ const EmailTemplatesListing = () => {
   const {
     emailTemplatesData: rawEmailTemplatesData = {},
     CategoriesData = [],
-    subCategoriesForSelectedCategoryData = [],
+    subCategoriesForSelectedCategoryData,
     aetSubCategories = [],
     BrandData = [],
     Roles = [],
@@ -306,8 +308,14 @@ const EmailTemplatesListing = () => {
   const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: ApiLookupItem) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
   const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
   const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [designationsData?.data]);
-  const subCategoryOptionsForForm = useMemo(() => Array.isArray(subCategoriesForSelectedCategoryData) ? subCategoriesForSelectedCategoryData.map((sc: ApiLookupItem) => ({ value: String(sc.id), label: sc.name })) : [], [subCategoriesForSelectedCategoryData]);
 
+  const [subCategoryOptionsForForm, setSubcategoryOptions] = useState<{ value: number; label: string }[]>([]);
+  
+  useEffect(() => {
+    if (subCategoriesForSelectedCategoryData) {
+      setSubcategoryOptions(subCategoriesForSelectedCategoryData?.map((sc: any) => ({ value: sc.id, label: sc.name, })) || []);
+    }
+  }, [subCategoriesForSelectedCategoryData]);
   useEffect(() => {
     dispatch(getEmailTemplatesAction());
     dispatch(getCategoriesAction());
@@ -326,12 +334,13 @@ const EmailTemplatesListing = () => {
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: 'onChange' });
 
-  // useEffect(() => {
-  //   if (selectedCategoryIdForForm && (isAddDrawerOpen || isEditDrawerOpen)) {
-  //     dispatch(getSubcategoriesByCategoryIdAction(selectedCategoryIdForForm));
-  //     setValue("sub_category_id", null, { shouldValidate: true, shouldDirty: true });
-  //   }
-  // }, [selectedCategoryIdForForm, dispatch, isAddDrawerOpen, isEditDrawerOpen, setValue]);
+  useEffect(() => {
+    if (selectedCategoryIdForForm && (isAddDrawerOpen || isEditDrawerOpen)) {
+      setSubcategoryOptions([]);
+      dispatch(getSubcategoriesByCategoryIdAction(selectedCategoryIdForForm));
+      setValue("sub_category_id", null, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [selectedCategoryIdForForm, dispatch, isAddDrawerOpen, isEditDrawerOpen, setValue]);
 
   const openAddDrawer = useCallback(() => {
     reset({ name: "", template_id: "", category_id: categoryOptions[0]?.value || "", sub_category_id: null, brand_id: null, role_id: null, department_id: null, designation_id: null, title: "", status: "Active", variables: [], });
@@ -380,7 +389,7 @@ const EmailTemplatesListing = () => {
   }, [isEditDrawerOpen, editingTemplate, dispatch, reset]);
 
   const closeEditDrawer = useCallback(() => { setEditingTemplate(null); setIsEditDrawerOpen(false); }, []);
-  
+
   const onSubmitHandler = async (data: EmailTemplateFormData) => {
     setIsSubmitting(true);
     const apiPayload = { ...data };
@@ -400,7 +409,7 @@ const EmailTemplatesListing = () => {
       toast.push(<Notification title={editingTemplate ? "Update Failed" : "Add Failed"} type="danger" duration={3000}>{errorMessage}</Notification>);
     } finally { setIsSubmitting(false); }
   };
-  
+
   const handleDeleteClick = useCallback((item: EmailTemplateItem) => { setTemplateToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
   const onConfirmSingleDelete = useCallback(async () => { if (!templateToDelete) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteEmailTemplateAction({ id: templateToDelete.id })).unwrap(); toast.push(<Notification title="Template Deleted" type="success" duration={2000}>{`Template "${templateToDelete.name}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== templateToDelete!.id)); dispatch(getEmailTemplatesAction()); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>); } finally { setIsDeleting(false); setTemplateToDelete(null); } }, [dispatch, templateToDelete]);
   const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => String(item.id)); try { await dispatch(deleteAllEmailTemplatesAction({ ids: idsToDelete.join(',') })).unwrap(); toast.push(<Notification title="Deletion Successful" type="success" duration={2000}>{`${idsToDelete.length} template(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getEmailTemplatesAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
@@ -409,26 +418,26 @@ const EmailTemplatesListing = () => {
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); closeFilterDrawer(); }, [closeFilterDrawer]);
   const onClearFilters = useCallback(() => { filterFormMethods.reset({}); setFilterCriteria({}); setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); dispatch(getEmailTemplatesAction()); setIsFilterDrawerOpen(false); }, [filterFormMethods, dispatch]);
-  
+
   const handleCardClick = useCallback((status: 'Active' | 'Inactive' | 'all') => {
-      onClearFilters();
-      if(status !== 'all') {
-          const statusOption = statusOptions.find(opt => opt.value === status);
-          if(statusOption) {
-            setFilterCriteria({ filterStatus: [statusOption] });
-          }
+    onClearFilters();
+    if (status !== 'all') {
+      const statusOption = statusOptions.find(opt => opt.value === status);
+      if (statusOption) {
+        setFilterCriteria({ filterStatus: [statusOption] });
       }
+    }
   }, [onClearFilters]);
 
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: string) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        const currentValues = prev[key] as { value: string; label: string }[] | undefined;
-        if (currentValues) {
-            const newValues = currentValues.filter(item => item.value !== value);
-            (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
-        }
-        return newFilters;
+      const newFilters = { ...prev };
+      const currentValues = prev[key] as { value: string; label: string }[] | undefined;
+      if (currentValues) {
+        const newValues = currentValues.filter(item => item.value !== value);
+        (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
+      }
+      return newFilters;
     });
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   }, []);
@@ -452,10 +461,15 @@ const EmailTemplatesListing = () => {
     const startIndex = (pageIndex - 1) * pageSize;
     return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
   }, [emailTemplatesData, tableData, filterCriteria, categoryOptions, allSubCategoryOptionsForFilter, brandOptions, roleOptions, departmentOptions, designationOptions]);
-  
+
   const activeFilterCount = useMemo(() => {
     return Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length;
   }, [filterCriteria]);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
+
+  const openImageViewer = useCallback((src?: string) => { if (src) { setViewerImageSrc(src); setIsImageViewerOpen(true); } }, []);
+  const closeImageViewer = useCallback(() => { setIsImageViewerOpen(false); setViewerImageSrc(null); }, []);
 
   const handlePaginationChange = useCallback((page: number) => setTableData(prev => ({ ...prev, pageIndex: page })), []);
   const handleSelectPageSizeChange = useCallback((value: number) => { setTableData(prev => ({ ...prev, pageSize: Number(value), pageIndex: 1 })); setSelectedItems([]); }, []);
@@ -469,11 +483,24 @@ const EmailTemplatesListing = () => {
     { header: "Category", accessorKey: "category_id", size: 130, cell: props => <Tooltip title={props.row.original.categoryName || String(props.getValue())}><span className="truncate block max-w-[120px]">{props.row.original.categoryName || String(props.getValue())}</span></Tooltip> },
     { header: "SubCategory", accessorKey: "sub_category_id", size: 130, cell: props => <Tooltip title={props.row.original.subCategoryName || (props.getValue() ? String(props.getValue()) : "N/A")}><span className="truncate block max-w-[120px]">{props.row.original.subCategoryName || (props.getValue() ? String(props.getValue()) : "N/A")}</span></Tooltip> },
     { header: "Department", accessorKey: "department_id", size: 130, cell: props => <Tooltip title={props.row.original.departmentName || (props.getValue() ? String(props.getValue()) : "N/A")}><span className="truncate block max-w-[120px]">{props.row.original.departmentName || (props.getValue() ? String(props.getValue()) : "N/A")}</span></Tooltip> },
-    { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold whitespace-nowrap", { "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500": status === "Active", "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500": status === "Inactive", })}>{status}</Tag>); }},
-    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? dayjs(updated_at).format('D MMM YYYY, h:mm A') : 'N/A'; return (<div className="text-xs"><span>{updated_by_user?.name || 'N/A'}{updated_by_user?.roles?.[0]?.display_name && (<><br /><b>{updated_by_user.roles[0].display_name}</b></>)}</span><br /><span>{formattedDate}</span></div>); }},
-    { header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
+    { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold whitespace-nowrap", { "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-emerald-300 dark:border-emerald-500": status === "Active", "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-red-300 dark:border-red-500": status === "Inactive", })}>{status}</Tag>); } },
+    {
+      header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220, cell: (props) => {
+        const { updated_at, updated_by_user } = props.row.original;
+        return (
+          <div className="flex items-center gap-2">
+            <Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} />
+            <div>
+              <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+              <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+              <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+            </div>
+          </div>
+        );
+      }
+    }, { header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
   ], [openEditDrawer, handleDeleteClick]);
-  
+
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<EmailTemplateItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
@@ -515,15 +542,15 @@ const EmailTemplatesListing = () => {
             <Tooltip title="Total times templates were used"><Card bodyClass={cardBodyClass} className="rounded-md border border-green-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMailForward size={24} /></div><div><h6 className="text-green-500">{counts.total_used_count ?? '0'}</h6><span className="font-semibold text-xs">Count Used</span></div></Card></Tooltip>
           </div>
           <div className="mb-4">
-            <EmailTemplatesTableTools 
-                onSearchChange={handleSearchInputChange} 
-                onFilter={openFilterDrawer} 
-                onExport={handleOpenExportModal} 
-                onClearFilters={onClearFilters}
-                columns={columns}
-                filteredColumns={filteredColumns}
-                setFilteredColumns={setFilteredColumns}
-                activeFilterCount={activeFilterCount}
+            <EmailTemplatesTableTools
+              onSearchChange={handleSearchInputChange}
+              onFilter={openFilterDrawer}
+              onExport={handleOpenExportModal}
+              onClearFilters={onClearFilters}
+              columns={columns}
+              filteredColumns={filteredColumns}
+              setFilteredColumns={setFilteredColumns}
+              activeFilterCount={activeFilterCount}
             />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
@@ -563,7 +590,7 @@ const EmailTemplatesListing = () => {
           <FormItem label="Template ID"><Controller name="filterTemplateIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Template ID" options={emailTemplatesData.map(t => ({ value: t.template_id, label: t.template_id })).filter((v, i, a) => a.findIndex(item => item.value === v.value) === i)} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="Category"><Controller name="filterCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Category" options={categoryOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="SubCategory"><Controller name="filterSubCategoryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any SubCategory" options={allSubCategoryOptionsForFilter} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={statusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])}/>)} /></FormItem>
+          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={statusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
           <FormItem label="Department"><Controller name="filterDepartmentIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Department" options={departmentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
         </Form>
       </Drawer>
@@ -575,6 +602,10 @@ const EmailTemplatesListing = () => {
           </FormItem>
         </Form>
       </ConfirmDialog>
+
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} width={600}>
+        <div className="flex justify-center items-center p-4">{viewerImageSrc ? <img src={viewerImageSrc} alt="User" className="max-w-full max-h-[80vh]" /> : <p>No image.</p>}</div>
+      </Dialog>
     </>
   );
 };
