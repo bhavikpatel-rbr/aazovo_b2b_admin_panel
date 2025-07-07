@@ -489,7 +489,7 @@ const EmailTemplatesListing = () => {
         const { updated_at, updated_by_user } = props.row.original;
         return (
           <div className="flex items-center gap-2">
-            <Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} />
+            <Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} />
             <div>
               <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
               <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
