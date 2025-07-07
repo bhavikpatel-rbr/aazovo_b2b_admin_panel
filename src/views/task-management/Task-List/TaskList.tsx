@@ -51,7 +51,7 @@ import {
     TbPaperclip,
     TbMessageCircle,
     TbColumns,
-    TbTrash // ADDED: Icon for delete action
+    TbTrash
 } from 'react-icons/tb'
 import { BsThreeDotsVertical } from 'react-icons/bs'
 
@@ -73,10 +73,16 @@ import {
     addNotificationAction,
     addScheduleAction,
     getAllUsersAction,
-    // ADDED: Placeholder actions to mirror RowDataListing.tsx functionality
     deleteTaskAction,
     updateTaskStatusAPI,
+    addAllActionAction, // ADDED: For activity/active logging
+    // @ts-ignore - Assuming this action exists for bulk delete
+    // deleteAllTasksAction,
 } from '@/reduxtool/master/middleware'
+
+// Utils
+import { encryptStorage } from '@/utils/secureLocalStorage'
+import { config } from 'localforage'
 
 // --- Consolidated Type Definitions ---
 
@@ -104,6 +110,7 @@ export interface TaskItem {
     attachments?: any[]
     updated_at?: string
     updated_by_name?: string
+    updated_by_user?: { name: string; roles: { display_name: string }[], profile_pic_path?: string } | null;
     _originalData?: any
 }
 
@@ -111,7 +118,8 @@ type FilterSelectOption = {
     value: string
     label: string
 }
-export type ModalType = 'notification' | 'schedule';
+// UPDATED: Added 'activity' to modal type
+export type ModalType = 'notification' | 'schedule' | 'activity';
 export interface ModalState {
     isOpen: boolean;
     type: ModalType | null;
@@ -143,6 +151,13 @@ const scheduleSchema = z.object({
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
+// ADDED: Schema for the activity dialog form
+const activitySchema = z.object({
+    activity_comment: z.string().min(3, "Activity note is required."),
+});
+type ActivityFormData = z.infer<typeof activitySchema>;
+
+
 // --- Constants ---
 export const taskStatusColor: Record<TaskStatus, string> = {
     pending: 'bg-amber-500',
@@ -155,7 +170,6 @@ export const taskStatusColor: Record<TaskStatus, string> = {
 }
 
 const eventTypeOptions = [
-    // Customer Engagement & Sales
     { value: 'Meeting', label: 'Meeting' },
     { value: 'Demo', label: 'Product Demo' },
     { value: 'IntroCall', label: 'Introductory Call' },
@@ -163,19 +177,13 @@ const eventTypeOptions = [
     { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
     { value: 'CheckIn', label: 'Customer Check-in' },
     { value: 'LogEmail', label: 'Log an Email' },
-
-    // Project & Task Management
     { value: 'Milestone', label: 'Project Milestone' },
     { value: 'Task', label: 'Task' },
     { value: 'FollowUp', label: 'General Follow-up' },
     { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-    // Customer Onboarding & Support
     { value: 'OnboardingSession', label: 'Onboarding Session' },
     { value: 'Training', label: 'Training Session' },
     { value: 'SupportCall', label: 'Support Call' },
-
-    // General & Administrative
     { value: 'Reminder', label: 'Reminder' },
     { value: 'Note', label: 'Add a Note' },
     { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
@@ -185,51 +193,6 @@ const eventTypeOptions = [
     { value: 'Lunch', label: 'Lunch / Break' },
     { value: 'Appointment', label: 'Personal Appointment' },
     { value: 'Other', label: 'Other' },
-    { value: 'ProjectKickoff', label: 'Project Kick-off' },
-    { value: 'InternalSync', label: 'Internal Team Sync' },
-    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
-    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
-    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
-    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
-    { value: 'ProjectSignOff', label: 'Project Sign-off' },
-    { value: 'PrepareReport', label: 'Prepare Report' },
-    { value: 'PresentFindings', label: 'Present Findings' },
-    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
-    { value: 'BugReplication', label: 'Bug Replication Session' },
-    { value: 'IssueEscalation', label: 'Escalate Issue' },
-    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
-    { value: 'FeatureRequest', label: 'Log Feature Request' },
-    { value: 'IntegrationSupport', label: 'Integration Support Call' },
-    { value: 'DataMigration', label: 'Data Migration/Import Task' },
-    { value: 'ColdCall', label: 'Cold Call' },
-    { value: 'DiscoveryCall', label: 'Discovery Call' },
-    { value: 'QualificationCall', label: 'Qualification Call' },
-    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
-    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
-    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
-    { value: 'ContractSent', label: 'Contract Sent' },
-    { value: 'NegotiationCall', label: 'Negotiation Call' },
-    { value: 'TrialSetup', label: 'Product Trial Setup' },
-    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
-    { value: 'WelcomeCall', label: 'Welcome Call' },
-    { value: 'ImplementationSession', label: 'Implementation Session' },
-    { value: 'UserTraining', label: 'User Training Session' },
-    { value: 'AdminTraining', label: 'Admin Training Session' },
-    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-    { value: 'HealthCheck', label: 'Customer Health Check' },
-    { value: 'FeedbackSession', label: 'Feedback Session' },
-    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
-    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
-    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
-    { value: 'InvoiceDue', label: 'Invoice Due' },
-    { value: 'SendInvoice', label: 'Send Invoice' },
-    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
-    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
-    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
-    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
-    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
-    { value: 'SendQuote', label: 'Send Quote/Estimate' },
 ]
 
 
@@ -449,6 +412,7 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                         <Avatar
                             size={20}
                             shape="circle"
+                            src={task._originalData?.created_by_user?.profile_pic_path}
                             icon={<TbUserCircle />}
                         />
                         <strong>Created By:</strong> {task.createdBy}
@@ -458,6 +422,7 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                             <Avatar
                                 size={20}
                                 shape="circle"
+                                src={task.updated_by_user?.profile_pic_path}
                                 icon={<TbUserCircle />}
                             />
                             <strong>Updated By:</strong> {task.updated_by_name}
@@ -557,19 +522,21 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
 
 // --- Reusable Components ---
 
-// CHANGED: ActionColumn component updated to include Delete and Change Status actions
+// UPDATED: ActionColumn now calls onOpenModal for 'activity'
 export const ActionColumn = ({
     onEdit,
     onView,
     onChangeStatus,
-    onDelete,
     onOpenModal,
+    onSendEmail,
+    onSendWhatsapp,
 }: {
     onEdit: () => void
     onView: () => void
     onChangeStatus?: () => void
-    onDelete?: () => void
     onOpenModal: (type: ModalType) => void;
+    onSendEmail: () => void;
+    onSendWhatsapp: () => void;
 }) => {
     const iconButtonClass =
         'text-lg p-0.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none'
@@ -607,20 +574,19 @@ export const ActionColumn = ({
                     <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
                 }
             >
-                {/* ADDED: Mark as Completed action */}
                 {onChangeStatus && (
                     <Dropdown.Item className="flex items-center gap-2" onClick={onChangeStatus}>
                         <TbChecks size={18} className="text-emerald-500" />
                         <span className="text-xs">Mark as Completed</span>
                     </Dropdown.Item>
                 )}
-                
-                <Dropdown.Item className="flex items-center gap-2">
+
+                <Dropdown.Item className="flex items-center gap-2" onClick={onSendEmail}>
                     <TbMail size={18} />
                     <span className="text-xs">Send Email</span>
                 </Dropdown.Item>
 
-                <Dropdown.Item className="flex items-center gap-2">
+                <Dropdown.Item className="flex items-center gap-2" onClick={onSendWhatsapp}>
                     <TbBrandWhatsapp size={18} />
                     <span className="text-xs">Send Whatsapp</span>
                 </Dropdown.Item>
@@ -635,28 +601,11 @@ export const ActionColumn = ({
                     <span className="text-xs">Add Schedule</span>
                 </Dropdown.Item>
 
-                <Dropdown.Item className="flex items-center gap-2">
+                <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('activity')}>
                     <TbTagStarred size={18} />
                     <span className="text-xs">Add Active</span>
                 </Dropdown.Item>
-
-                <Dropdown.Item className="flex items-center gap-2">
-                    <TbActivity size={18} />
-                    <span className="text-xs">Add / View Activity</span>
-                </Dropdown.Item>
-
-                {/* ADDED: Delete action with divider for separation */}
-                {onDelete && (
-                    <>
-                        <Dropdown.Item divider />
-                        <Dropdown.Item className="flex items-center gap-2" onClick={onDelete}>
-                            <TbTrash size={18} className="text-red-500" />
-                            <span className="text-xs text-red-500">Delete Task</span>
-                        </Dropdown.Item>
-                    </>
-                )}
             </Dropdown>
-
         </div>
     )
 }
@@ -1025,15 +974,12 @@ export const ActiveFiltersDisplay = ({
     )
 }
 
-// CHANGED: TaskSelected component now accepts an `isDeleting` prop for loading state
 export const TaskSelected = ({
     selectedTasks,
-    setSelectedTasks,
     onDeleteSelected,
     isDeleting,
 }: {
     selectedTasks: TaskItem[]
-    setSelectedTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>
     onDeleteSelected: () => void
     isDeleting: boolean;
 }) => {
@@ -1075,6 +1021,7 @@ export const TaskSelected = ({
                             className="text-red-600 hover:text-red-500"
                             onClick={handleDeleteClick}
                             loading={isDeleting}
+                            icon={<TbTrash />}
                         >
                             Delete
                         </Button>
@@ -1265,8 +1212,44 @@ const AddScheduleDialog: React.FC<{ task: TaskItem; onClose: () => void }> = ({ 
     );
 };
 
+// ADDED: Dialog for adding an activity/active note
+const AddActivityDialog = ({ task, onClose, onSubmit, isLoading }: { task: TaskItem; onClose: () => void; onSubmit: (data: ActivityFormData) => void; isLoading: boolean; }) => {
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
+        resolver: zodResolver(activitySchema),
+        defaultValues: { activity_comment: '' },
+        mode: 'onChange'
+    });
 
-const TaskModals = ({ modalState, onClose, getAllUserDataOptions }: { modalState: ModalState, onClose: () => void, getAllUserDataOptions: SelectOption[] }) => {
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Add Activity for Task: {task.note}</h5>
+            <UiFormComponents onSubmit={handleSubmit(onSubmit)}>
+                <UiFormItem label="Activity Note" invalid={!!errors.activity_comment} errorMessage={errors.activity_comment?.message}>
+                    <Controller name="activity_comment" control={control} render={({ field }) => <Input textArea {...field} placeholder="Enter activity details..." rows={4} />} />
+                </UiFormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Activity</Button>
+                </div>
+            </UiFormComponents>
+        </Dialog>
+    );
+};
+
+
+const TaskModals = ({
+    modalState,
+    onClose,
+    getAllUserDataOptions,
+    onConfirmActivity,
+    isSubmittingAction,
+}: {
+    modalState: ModalState,
+    onClose: () => void,
+    getAllUserDataOptions: SelectOption[],
+    onConfirmActivity: (data: ActivityFormData) => void,
+    isSubmittingAction: boolean,
+}) => {
     const { type, data: task, isOpen } = modalState;
     if (!isOpen || !task) return null;
 
@@ -1275,6 +1258,8 @@ const TaskModals = ({ modalState, onClose, getAllUserDataOptions }: { modalState
             return <AddNotificationDialog task={task} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
         case 'schedule':
             return <AddScheduleDialog task={task} onClose={onClose} />;
+        case 'activity':
+            return <AddActivityDialog task={task} onClose={onClose} onSubmit={onConfirmActivity} isLoading={isSubmittingAction} />;
         default:
             return null;
     }
@@ -1336,12 +1321,12 @@ const transformApiTaskToTaskItem = (apiTask: any): TaskItem => {
         attachments: apiTask.attachments || [],
         updated_at: apiTask.updated_at,
         updated_by_name: apiTask.updated_by_user?.name || undefined,
+        updated_by_user: apiTask.updated_by_user || null,
         _originalData: apiTask,
     }
 }
 
 // --- useTaskListingLogic Hook ---
-// CHANGED: This hook is heavily modified to use Redux for CRUD, manage loading states, and handle confirmations.
 export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } = {}) => {
     const navigate = useNavigate()
     const dispatch = useAppDispatch()
@@ -1377,20 +1362,23 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     const [viewingTask, setViewingTask] = useState<TaskItem | null>(null)
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
     const [visibleColumns, setVisibleColumns] = useState<ColumnDef<TaskItem>[]>([])
+    const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+    const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
 
-    // ADDED: State for action handling (delete, update)
     const [isDeleting, setIsDeleting] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [taskToDelete, setTaskToDelete] = useState<TaskItem | null>(null);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+    const [userData, setUserData] = useState<any>(null);
 
     const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
 
-
-    useEffect(() => {
-        dispatch(getAllTaskAction())
-        dispatch(getAllUsersAction())
-    }, [dispatch])
+     useEffect(() => {
+           const { useEncryptApplicationStorage } = config;
+           try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); } 
+           catch (error) { console.error("Error getting UserData:", error); }
+       }, []);
 
     useEffect(() => {
         setIsLoading(masterLoadingStatus === 'loading')
@@ -1467,7 +1455,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
                 let valA: any = a[key as keyof TaskItem]
                 let valB: any = b[key as keyof TaskItem]
 
-                if (key === 'createdDate' || key === 'dueDate') {
+                if (key === 'createdDate' || key === 'dueDate' || key === 'updated_at') {
                     valA = valA ? new Date(valA).getTime() : 0
                     valB = valB ? new Date(valB).getTime() : 0
                 } else if (typeof valA === 'string') {
@@ -1569,6 +1557,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
                 : prev.filter((item) => item.id !== row.id),
         )
     }, [])
+
     const handleAllRowSelect = useCallback(
         (checked: boolean, rows: Row<TaskItem>[]) => {
             setSelectedTasks(checked ? rows.map((r) => r.original) : [])
@@ -1584,8 +1573,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         },
         [navigate],
     )
-    
-    // CHANGED: handleDelete now just opens a confirmation dialog
+
     const handleDelete = useCallback(
         (taskToDelete: TaskItem) => {
             setTaskToDelete(taskToDelete);
@@ -1594,7 +1582,6 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         [],
     )
 
-    // ADDED: onConfirmDelete handles the actual deletion after confirmation
     const onConfirmDelete = useCallback(async () => {
         if (!taskToDelete) return;
         setIsDeleting(true);
@@ -1616,14 +1603,12 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         }
     }, [dispatch, taskToDelete]);
 
-    // CHANGED: handleChangeStatus now dispatches a Redux action
     const handleChangeStatus = useCallback(
         async (taskToUpdate: TaskItem, newStatus: TaskStatus = 'completed') => {
             setIsUpdating(true);
             try {
-                // Assuming a generic update action that takes an ID and a payload
                 const payload = { ...taskToUpdate, status: newStatus };
-                await dispatch(updateTaskStatusAPI({id: taskToUpdate.id, ...payload})).unwrap();
+                await dispatch(updateTaskStatusAPI({ id: taskToUpdate.id, ...payload })).unwrap();
                 toast.push(
                     <Notification title="Status Updated" type="success">
                         Task "{taskToUpdate.note}" marked as {newStatus.replace(/_/g, ' ')}.
@@ -1631,7 +1616,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
                 );
                 dispatch(getAllTaskAction()); // Re-fetch data
             } catch (error: any) {
-                 toast.push(<Notification title="Update Failed" type="danger" children={error.message || 'An error occurred.'} />);
+                toast.push(<Notification title="Update Failed" type="danger" children={error.message || 'An error occurred.'} />);
             } finally {
                 setIsUpdating(false);
             }
@@ -1639,27 +1624,77 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         [dispatch],
     );
 
-    // CHANGED: handleDeleteSelected now dispatches a Redux action
     const handleDeleteSelected = useCallback(async () => {
-        const idsToDelete = selectedTasks.map((t) => t.id);
+        const idsToDelete = selectedTasks.map((t) => String(t.id));
         if (idsToDelete.length === 0) return;
 
         setIsDeleting(true);
         try {
-            await dispatch(deleteAllTasksAction({ ids: idsToDelete })).unwrap();
+            // await dispatch(deleteAllTasksAction({ ids: idsToDelete })).unwrap();
             toast.push(
                 <Notification title="Tasks Deleted" type="success">
                     {idsToDelete.length} task(s) have been deleted.
                 </Notification>,
             );
             setSelectedTasks([]);
-            dispatch(getAllTaskAction()); // Re-fetch data
+            dispatch(getAllTaskAction());
         } catch (error: any) {
-             toast.push(<Notification title="Delete Failed" type="danger" children={error.message || 'An error occurred.'} />);
+            toast.push(<Notification title="Delete Failed" type="danger" children={error.message || 'An error occurred.'} />);
         } finally {
             setIsDeleting(false);
         }
     }, [dispatch, selectedTasks]);
+
+    const handleSendEmail = useCallback((task: TaskItem) => {
+        const primaryAssignee = task._originalData?.assign_to_users?.[0];
+        if (!primaryAssignee || !primaryAssignee.email) {
+            toast.push(<Notification type="info" title="No Email Found" children="The primary assignee for this task does not have an email address." />);
+            return;
+        }
+
+        const subject = `Regarding Task: ${task.note}`;
+        const body = `Hi ${primaryAssignee.name},\n\nThis is regarding the task titled "${task.note}" (ID: ${task.id}).\n\nPlease review the details.\n\nThank you.`;
+        window.open(`mailto:${primaryAssignee.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    }, []);
+
+    const handleSendWhatsapp = useCallback((task: TaskItem) => {
+        const primaryAssignee = task._originalData?.assign_to_users?.[0];
+        const phone = primaryAssignee?.mobile_no?.replace(/\D/g, '');
+
+        if (!phone) {
+            toast.push(<Notification type="warning" title="No Mobile Number" children="The primary assignee for this task does not have a mobile number." />);
+            return;
+        }
+
+        const message = `Hi ${primaryAssignee.name}, this is a message regarding the task: "${task.note}" (ID: ${task.id}).`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    }, []);
+console.log("userData",userData?.id);
+
+    const handleConfirmActivity = async (data: ActivityFormData) => {
+        if (!modalState.data || !userData?.id) {
+            toast.push(<Notification type="danger" title="Error" children="Invalid task or user not found." />);
+            return;
+        }
+        setIsSubmittingAction(true);
+        const payload = {
+            activity_comment: data.activity_comment,
+            module_id: modalState.data.id,
+            module_name: 'Task',
+            user_id: userData.id,
+        };
+        try {
+            await dispatch(addAllActionAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Activity Added" children="The activity has been logged successfully." />);
+            handleCloseModal();
+            dispatch(getAllTaskAction());
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsSubmittingAction(false);
+        }
+    };
+
 
     const handleOpenExportReasonModal = () => {
         if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
@@ -1717,6 +1752,18 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         setViewingTask(null)
     }, [])
 
+    const openImageViewer = useCallback((src?: string) => {
+        if (src) {
+            setViewerImageSrc(src);
+            setIsImageViewerOpen(true);
+        }
+    }, []);
+
+    const closeImageViewer = useCallback(() => {
+        setIsImageViewerOpen(false);
+        setViewerImageSrc(null);
+    }, []);
+
     const handleOpenModal = useCallback((type: ModalType, itemData: TaskItem) => {
         setModalState({ isOpen: true, type, data: itemData });
     }, []);
@@ -1735,24 +1782,27 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
                     enableSorting: true,
                     size: 160,
                     cell: (props) => {
-                        const createdBy = props.row.original.createdBy
-                        const initials = createdBy
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')
-                            .substring(0, 2)
-                            .toUpperCase()
+                        const { createdBy, _originalData } = props.row.original;
+                        const user = (_originalData as any)?.created_by_user;
+
                         return (
                             <div className="flex items-center gap-1.5 text-xs">
-                                <Avatar size={32} shape="circle">
-                                    {initials || <TbUserCircle />}
+                                <Avatar
+                                    size={32}
+                                    shape="circle"
+                                    src={user?.profile_pic_path}
+                                    icon={<TbUserCircle />}
+                                    className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                                    onClick={() => openImageViewer(user?.profile_pic_path)}
+                                >
+                                    {!user?.profile_pic_path && (createdBy || 'UC').substring(0, 2).toUpperCase()}
                                 </Avatar>
                                 <div className="flex flex-col gap-0.5">
                                     <span className="font-semibold">
                                         {createdBy}
                                     </span>
                                     <span className="text-gray-500 dark:text-gray-400">
-                                        {(props.row.original._originalData as any)?.created_by_user?.roles?.[0]?.display_name || ''}
+                                        {user?.roles?.[0]?.display_name || ''}
                                     </span>
                                 </div>
                             </div>
@@ -1869,6 +1919,32 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
                         )
                     },
                 },
+                {
+                    header: 'Updated Info',
+                    accessorKey: 'updated_at',
+                    enableSorting: true,
+                    size: 220,
+                    cell: (props) => {
+                        const { updated_at, updated_by_user } = props.row.original
+                        return (
+                            <div className="flex items-center gap-2">
+                                <Avatar
+                                    src={updated_by_user?.profile_pic_path}
+                                    shape="circle"
+                                    size="sm"
+                                    icon={<TbUserCircle />}
+                                    className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                                    onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+                                />
+                                <div>
+                                    <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+                                    <div className="text-xs text-gray-500">{updated_at ? dayjs(updated_at).format('DD MMM YYYY, h:mm A') : 'N/A'}</div>
+                                </div>
+                            </div>
+                        )
+                    },
+                },
             ];
 
             if (!isDashboard) {
@@ -1880,9 +1956,10 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
                         <ActionColumn
                             onEdit={() => handleEdit(props.row.original)}
                             onView={() => handleOpenViewModal(props.row.original)}
-                            onDelete={() => handleDelete(props.row.original)}
                             onChangeStatus={() => handleChangeStatus(props.row.original, 'completed')}
                             onOpenModal={(type) => handleOpenModal(type, props.row.original)}
+                            onSendEmail={() => handleSendEmail(props.row.original)}
+                            onSendWhatsapp={() => handleSendWhatsapp(props.row.original)}
                         />
                     ),
                 });
@@ -1890,7 +1967,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
 
             return baseColumns;
         },
-        [isDashboard, handleEdit, handleDelete, handleChangeStatus, handleOpenViewModal, handleOpenModal],
+        [isDashboard, handleEdit, handleChangeStatus, handleOpenViewModal, handleOpenModal, openImageViewer, handleSendEmail, handleSendWhatsapp],
     )
 
     useEffect(() => {
@@ -1946,9 +2023,9 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     )
 
     return {
-        // Base state and data
-        isLoading: isLoading || isUpdating, // Combine page load with update status
+        isLoading: isLoading || isUpdating,
         isDeleting,
+        isSubmittingAction,
         tasks,
         tableData,
         selectedTasks,
@@ -1960,57 +2037,42 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
         allFilteredAndSortedData,
         columns,
         visibleColumns,
-        
-        // Table handlers
         handlePaginationChange,
         handleSelectChange,
         handleSort,
         handleSearchChange,
-        
-        // Filter handlers
         handleApplyFilter,
         handleRemoveFilter,
         handleClearAllFilters,
-        
-        // Row selection handlers
         handleRowSelect,
         handleAllRowSelect,
-
-        // CRUD handlers
         handleDeleteSelected,
-        onConfirmDelete, // ADDED: New handler for single deletion confirmation
-        
-        // Data sources for filters
+        onConfirmDelete,
+        handleDelete,
         uniqueAssignees,
         uniqueStatuses,
-        
-        // Export modal
         isExportReasonModalOpen,
         setIsExportReasonModalOpen,
         isSubmittingExportReason,
         exportReasonFormMethods,
         handleOpenExportReasonModal,
         handleConfirmExportWithReason,
-        
-        // View modal
         isViewModalOpen,
         viewingTask,
         handleOpenViewModal,
         handleCloseViewModal,
-        
-        // Other modals (notification, schedule)
         modalState,
         handleCloseModal,
         getAllUserDataOptions,
-        
-        // Click handlers
         handleCardClick,
         handleColumnToggle,
-
-        // ADDED: state for delete confirmation
         taskToDelete,
         isDeleteConfirmOpen,
-        setIsDeleteConfirmOpen
+        setIsDeleteConfirmOpen,
+        isImageViewerOpen,
+        viewerImageSrc,
+        closeImageViewer,
+        handleConfirmActivity,
     }
 }
 
@@ -2152,15 +2214,15 @@ const StatusSummaryCards: React.FC<StatusSummaryCardsProps> = ({
 }
 
 // --- Main TaskList Component ---
-const TaskList = ({ isDashboard }) => {
+const TaskList = ({ isDashboard }: { isDashboard: boolean }) => {
     const pageTitle = 'Task List'
     const {
         isLoading,
         isDeleting,
+        isSubmittingAction,
         tasks,
         tableData,
         selectedTasks,
-        setSelectedTasks,
         filterData,
         pageData,
         total,
@@ -2192,11 +2254,14 @@ const TaskList = ({ isDashboard }) => {
         getAllUserDataOptions,
         handleCardClick,
         handleColumnToggle,
-        // ADDED: Destructure new state and handlers for deletion
         taskToDelete,
         isDeleteConfirmOpen,
         setIsDeleteConfirmOpen,
         onConfirmDelete,
+        isImageViewerOpen,
+        viewerImageSrc,
+        closeImageViewer,
+        handleConfirmActivity,
     } = useTaskListingLogic({ isDashboard })
 
     return (
@@ -2254,7 +2319,6 @@ const TaskList = ({ isDashboard }) => {
                 </AdaptiveCard>
                 <TaskSelected
                     selectedTasks={selectedTasks}
-                    setSelectedTasks={setSelectedTasks}
                     onDeleteSelected={handleDeleteSelected}
                     isDeleting={isDeleting && selectedTasks.length > 0}
                 />
@@ -2329,9 +2393,10 @@ const TaskList = ({ isDashboard }) => {
                 modalState={modalState}
                 onClose={handleCloseModal}
                 getAllUserDataOptions={getAllUserDataOptions}
+                onConfirmActivity={handleConfirmActivity}
+                isSubmittingAction={isSubmittingAction}
             />
 
-            {/* ADDED: Confirmation dialog for single task deletion */}
             <ConfirmDialog
                 isOpen={isDeleteConfirmOpen}
                 type="danger"
@@ -2346,6 +2411,25 @@ const TaskList = ({ isDashboard }) => {
                     Are you sure you want to delete the task "{taskToDelete?.note}"? This action cannot be undone.
                 </p>
             </ConfirmDialog>
+
+            <Dialog
+                isOpen={isImageViewerOpen}
+                onClose={closeImageViewer}
+                onRequestClose={closeImageViewer}
+                width={600}
+            >
+                <div className="flex justify-center items-center p-4">
+                    {viewerImageSrc ? (
+                        <img
+                            src={viewerImageSrc}
+                            alt="User"
+                            className="max-w-full max-h-[80vh]"
+                        />
+                    ) : (
+                        <p>No image to display.</p>
+                    )}
+                </div>
+            </Dialog>
         </>
     )
 }
