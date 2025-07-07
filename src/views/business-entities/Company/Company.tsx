@@ -842,81 +842,7 @@ const AddCompanyScheduleDialog: React.FC<{ company: CompanyItem; onClose: () => 
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const eventTypeOptions = [
-    // Customer Engagement & Sales
-    { value: 'Meeting', label: 'Meeting' },
-    { value: 'Demo', label: 'Product Demo' },
-    { value: 'IntroCall', label: 'Introductory Call' },
-    { value: 'FollowUpCall', label: 'Follow-up Call' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-    { value: 'CheckIn', label: 'Customer Check-in' },
-    { value: 'LogEmail', label: 'Log an Email' },
-
-    // Project & Task Management
-    { value: 'Milestone', label: 'Project Milestone' },
-    { value: 'Task', label: 'Task' },
-    { value: 'FollowUp', label: 'General Follow-up' },
-    { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-    // Customer Onboarding & Support
-    { value: 'OnboardingSession', label: 'Onboarding Session' },
-    { value: 'Training', label: 'Training Session' },
-    { value: 'SupportCall', label: 'Support Call' },
-
-    // General & Administrative
-    { value: 'Reminder', label: 'Reminder' },
-    { value: 'Note', label: 'Add a Note' },
-    { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
-    { value: 'StrategySession', label: 'Strategy Session' },
-    { value: 'TeamMeeting', label: 'Team Meeting' },
-    { value: 'PerformanceReview', label: 'Performance Review' },
-    { value: 'Lunch', label: 'Lunch / Break' },
-    { value: 'Appointment', label: 'Personal Appointment' },
-    { value: 'Other', label: 'Other' },
-    { value: 'ProjectKickoff', label: 'Project Kick-off' },
-    { value: 'InternalSync', label: 'Internal Team Sync' },
-    { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
-    { value: 'RequirementsGathering', label: 'Requirements Gathering' },
-    { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
-    { value: 'GoLive', label: 'Go-Live / Deployment Date' },
-    { value: 'ProjectSignOff', label: 'Project Sign-off' },
-    { value: 'PrepareReport', label: 'Prepare Report' },
-    { value: 'PresentFindings', label: 'Present Findings' },
-    { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
-    { value: 'BugReplication', label: 'Bug Replication Session' },
-    { value: 'IssueEscalation', label: 'Escalate Issue' },
-    { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
-    { value: 'FeatureRequest', label: 'Log Feature Request' },
-    { value: 'IntegrationSupport', label: 'Integration Support Call' },
-    { value: 'DataMigration', label: 'Data Migration/Import Task' },
-    { value: 'ColdCall', label: 'Cold Call' },
-    { value: 'DiscoveryCall', label: 'Discovery Call' },
-    { value: 'QualificationCall', label: 'Qualification Call' },
-    { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
-    { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
-    { value: 'ProposalReview', label: 'Proposal Review Meeting' },
-    { value: 'ContractSent', label: 'Contract Sent' },
-    { value: 'NegotiationCall', label: 'Negotiation Call' },
-    { value: 'TrialSetup', label: 'Product Trial Setup' },
-    { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
-    { value: 'WelcomeCall', label: 'Welcome Call' },
-    { value: 'ImplementationSession', label: 'Implementation Session' },
-    { value: 'UserTraining', label: 'User Training Session' },
-    { value: 'AdminTraining', label: 'Admin Training Session' },
-    { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-    { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-    { value: 'HealthCheck', label: 'Customer Health Check' },
-    { value: 'FeedbackSession', label: 'Feedback Session' },
-    { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
-    { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
-    { value: 'CaseStudyInterview', label: 'Case Study Interview' },
-    { value: 'InvoiceDue', label: 'Invoice Due' },
-    { value: 'SendInvoice', label: 'Send Invoice' },
-    { value: 'PaymentReminder', label: 'Send Payment Reminder' },
-    { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
-    { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
-    { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
-    { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
-    { value: 'SendQuote', label: 'Send Quote/Estimate' },
+    { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' }, { value: 'InternalSync', label: 'Internal Team Sync' }, { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' }, { value: 'RequirementsGathering', label: 'Requirements Gathering' }, { value: 'UAT', label: 'User Acceptance Testing (UAT)' }, { value: 'GoLive', label: 'Go-Live / Deployment Date' }, { value: 'ProjectSignOff', label: 'Project Sign-off' }, { value: 'PrepareReport', label: 'Prepare Report' }, { value: 'PresentFindings', label: 'Present Findings' }, { value: 'TroubleshootingCall', label: 'Troubleshooting Call' }, { value: 'BugReplication', label: 'Bug Replication Session' }, { value: 'IssueEscalation', label: 'Escalate Issue' }, { value: 'ProvideUpdate', label: 'Provide Update on Ticket' }, { value: 'FeatureRequest', label: 'Log Feature Request' }, { value: 'IntegrationSupport', label: 'Integration Support Call' }, { value: 'DataMigration', label: 'Data Migration/Import Task' }, { value: 'ColdCall', label: 'Cold Call' }, { value: 'DiscoveryCall', label: 'Discovery Call' }, { value: 'QualificationCall', label: 'Qualification Call' }, { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' }, { value: 'LinkedInMessage', label: 'Log LinkedIn Message' }, { value: 'ProposalReview', label: 'Proposal Review Meeting' }, { value: 'ContractSent', label: 'Contract Sent' }, { value: 'NegotiationCall', label: 'Negotiation Call' }, { value: 'TrialSetup', label: 'Product Trial Setup' }, { value: 'TrialCheckIn', label: 'Trial Check-in Call' }, { value: 'WelcomeCall', label: 'Welcome Call' }, { value: 'ImplementationSession', label: 'Implementation Session' }, { value: 'UserTraining', label: 'User Training Session' }, { value: 'AdminTraining', label: 'Admin Training Session' }, { value: 'MonthlyCheckIn', label: 'Monthly Check-in' }, { value: 'HealthCheck', label: 'Customer Health Check' }, { value: 'FeedbackSession', label: 'Feedback Session' }, { value: 'RenewalDiscussion', label: 'Renewal Discussion' }, { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' }, { value: 'CaseStudyInterview', label: 'Case Study Interview' }, { value: 'InvoiceDue', label: 'Invoice Due' }, { value: 'SendInvoice', label: 'Send Invoice' }, { value: 'PaymentReminder', label: 'Send Payment Reminder' }, { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' }, { value: 'ConfirmPayment', label: 'Confirm Payment Received' }, { value: 'ContractRenewalDue', label: 'Contract Renewal Due' }, { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' }, { value: 'SendQuote', label: 'Send Quote/Estimate' },
   ]
 
   const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
@@ -978,15 +904,64 @@ const AddCompanyScheduleDialog: React.FC<{ company: CompanyItem; onClose: () => 
   );
 };
 
+// --- START: New action handler components ---
+const SendEmailAction: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
+  useEffect(() => {
+    if (!company.primary_email_id) {
+      toast.push(<Notification type="warning" title="Missing Email" children="Primary email is not available for this company." />);
+      onClose();
+      return;
+    }
+    const subject = `Regarding Company: ${company.company_name}`;
+    const body = `Hello ${company.owner_name || company.company_name},\n\nThis is regarding your company profile (ID: ${company.id}).\n\n- Primary Contact: ${company.primary_contact_number_code || ''} ${company.primary_contact_number}\n\nThank you.`;
+    
+    window.open(`mailto:${company.primary_email_id}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    onClose();
+  }, [company, onClose]);
+
+  return null; // This component does not render anything
+};
+
+const SendWhatsAppAction: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
+  useEffect(() => {
+    const phone = company.primary_contact_number?.replace(/\D/g, '');
+    const countryCode = company.primary_contact_number_code?.replace(/\D/g, '');
+
+    if (!phone || !countryCode) {
+      toast.push(<Notification type="warning" title="Missing Number" children="Primary contact number is not available for this company." />);
+      onClose();
+      return;
+    }
+    
+    const fullPhoneNumber = `${countryCode}${phone}`;
+    const message = `Hello ${company.owner_name || company.company_name},\n\nThis is regarding your company profile with us.`;
+    
+    window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+    onClose();
+  }, [company, onClose]);
+
+  return null; // This component does not render anything
+};
+// --- END: New action handler components ---
+
 const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const { type, data: company, isOpen } = modalState;
   if (!isOpen || !company) return null;
 
   switch (type) {
-    case "viewDetail": return <ViewCompanyDetailDialog company={company} onClose={onClose} />;
-    case 'notification': return <AddCompanyNotificationDialog company={company} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
-    case 'schedule': return <AddCompanyScheduleDialog company={company} onClose={onClose} />;
-    default: return <Dialog isOpen={true}><p>Unhandled modal type: {type}</p></Dialog>;
+    case 'email':
+      return <SendEmailAction company={company} onClose={onClose} />;
+    case 'whatsapp':
+      return <SendWhatsAppAction company={company} onClose={onClose} />;
+    case "viewDetail": 
+      return <ViewCompanyDetailDialog company={company} onClose={onClose} />;
+    case 'notification': 
+      return <AddCompanyNotificationDialog company={company} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+    case 'schedule': 
+      return <AddCompanyScheduleDialog company={company} onClose={onClose} />;
+    default: 
+      console.warn(`Unhandled modal type in CompanyModals: ${type}`);
+      return null;
   }
 };
 // --- END MODALS SECTION ---
@@ -1335,7 +1310,6 @@ const CompanyListTable = () => {
   const cityOptions = useMemo(() => Array.from(new Set(companyList.map((c) => c.city))).filter(Boolean).map((ci) => ({ value: ci, label: ci })), [companyList]);
   const kycOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
   const billingOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
-  const { DatePickerRange } = DatePicker;
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-1";
 

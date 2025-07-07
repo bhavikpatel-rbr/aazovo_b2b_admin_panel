@@ -131,63 +131,32 @@ export type FormItem = {
 
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
-  filterStatus: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterContinent: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterBusinessType: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterState: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterCity: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterInterestedFor: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterInterestedCategory: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterBrand: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterKycVerified: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterBusinessOpportunity: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterCountry: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  filterDealing: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
-  memberGrade: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
+  filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterContinent: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterBusinessType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterState: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterCity: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterInterestedFor: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterInterestedCategory: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterBrand: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterKycVerified: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterBusinessOpportunity: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterCountry: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterDealing: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  memberGrade: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
-  reason: z
-    .string()
-    .min(10, "Reason for export is required minimum 10 characters.")
-    .max(255, "Reason cannot exceed 255 characters."),
+  reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- Zod Schema for Schedule Form ---
 const scheduleSchema = z.object({
   event_title: z.string().min(3, "Title must be at least 3 characters."),
-  event_type: z
-    .string({ required_error: "Event type is required." })
-    .min(1, "Event type is required."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
   date_time: z.date({ required_error: "Event date & time is required." }),
   remind_from: z.date().nullable().optional(),
   notes: z.string().optional(),
@@ -195,111 +164,19 @@ const scheduleSchema = z.object({
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS = [
-  "Member ID",
-  "Name",
-  "Email",
-  "Contact Number",
-  "Company Name",
-  "Company ID",
-  "Status",
-  "Joined Date",
-  "Business Type",
-  "Business Opportunity",
-  "Member Grade",
-  "Interested In",
-  "Brands",
-  "Location",
-  "Profile Completion (%)",
-];
-type MemberExportItem = {
-  id: string;
-  member_name: string;
-  member_email_id: string;
-  member_contact_number: string;
-  company_name: string;
-  company_id_actual: string;
-  status: string;
-  created_at_formatted: string;
-  business_type: string;
-  business_opportunity: string;
-  member_grade: string;
-  interested_in: string;
-  associated_brands_str: string;
-  member_location: string;
-  profile_completion: number;
-};
-const CSV_KEYS_EXPORT: (keyof MemberExportItem)[] = [
-  "id",
-  "member_name",
-  "member_email_id",
-  "member_contact_number",
-  "company_name",
-  "company_id_actual",
-  "status",
-  "created_at_formatted",
-  "business_type",
-  "business_opportunity",
-  "member_grade",
-  "interested_in",
-  "associated_brands_str",
-  "member_location",
-  "profile_completion",
-];
+const CSV_HEADERS = [ "Member ID", "Name", "Email", "Contact Number", "Company Name", "Company ID", "Status", "Joined Date", "Business Type", "Business Opportunity", "Member Grade", "Interested In", "Brands", "Location", "Profile Completion (%)", ];
+type MemberExportItem = { id: string; member_name: string; member_email_id: string; member_contact_number: string; company_name: string; company_id_actual: string; status: string; created_at_formatted: string; business_type: string; business_opportunity: string; member_grade: string; interested_in: string; associated_brands_str: string; member_location: string; profile_completion: number; };
+const CSV_KEYS_EXPORT: (keyof MemberExportItem)[] = [ "id", "member_name", "member_email_id", "member_contact_number", "company_name", "company_id_actual", "status", "created_at_formatted", "business_type", "business_opportunity", "member_grade", "interested_in", "associated_brands_str", "member_location", "profile_completion", ];
 
 function exportToCsv(filename: string, rows: FormItem[]) {
   if (!rows || !rows.length) {
-    toast.push(
-      <Notification title="No Data" type="info">
-        Nothing to export.
-      </Notification>
-    );
+    toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>);
     return false;
   }
-  const transformedRows: MemberExportItem[] = rows.map((row) => ({
-    id: row.id,
-    member_name: row.name || "N/A",
-    member_email_id: row.email || "N/A",
-    member_contact_number: row.number || "N/A",
-    company_name: row.company_name || "N/A",
-    company_id_actual: row.company_id_actual || "N/A",
-    status: row.status || "N/A",
-    created_at_formatted: row.created_at
-      ? new Date(row.created_at).toLocaleDateString("en-GB")
-      : "N/A",
-    business_type: row.business_type || "N/A",
-    business_opportunity: row.business_opportunity || "N/A",
-    member_grade: row.member_grade || "N/A",
-    interested_in: row.interested_in || "N/A",
-    associated_brands_str: Array.isArray(row.associated_brands)
-      ? row.associated_brands.join(", ")
-      : "N/A",
-    member_location: row.country?.name || "N/A",
-    profile_completion: row.profile_completion || 0,
-  }));
+  const transformedRows: MemberExportItem[] = rows.map((row) => ({ id: row.id, member_name: row.name || "N/A", member_email_id: row.email || "N/A", member_contact_number: row.number || "N/A", company_name: row.company_name || "N/A", company_id_actual: row.company_id_actual || "N/A", status: row.status || "N/A", created_at_formatted: row.created_at ? new Date(row.created_at).toLocaleDateString("en-GB") : "N/A", business_type: row.business_type || "N/A", business_opportunity: row.business_opportunity || "N/A", member_grade: row.member_grade || "N/A", interested_in: row.interested_in || "N/A", associated_brands_str: Array.isArray(row.associated_brands) ? row.associated_brands.join(", ") : "N/A", member_location: row.country?.name || "N/A", profile_completion: row.profile_completion || 0, }));
   const separator = ",";
-  const csvContent =
-    CSV_HEADERS.join(separator) +
-    "\n" +
-    transformedRows
-      .map((row) => {
-        return CSV_KEYS_EXPORT.map((k) => {
-          let cell: any = row[k as keyof MemberExportItem];
-          if (cell === null || cell === undefined) {
-            cell = "";
-          } else {
-            cell = String(cell).replace(/"/g, '""');
-          }
-          if (String(cell).search(/("|,|\n)/g) >= 0) {
-            cell = `"${cell}"`;
-          }
-          return cell;
-        }).join(separator);
-      })
-      .join("\n");
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const csvContent = CSV_HEADERS.join(separator) + "\n" + transformedRows.map((row) => { return CSV_KEYS_EXPORT.map((k) => { let cell: any = row[k as keyof MemberExportItem]; if (cell === null || cell === undefined) { cell = ""; } else { cell = String(cell).replace(/"/g, '""'); } if (String(cell).search(/("|,|\n)/g) >= 0) { cell = `"${cell}"`; } return cell; }).join(separator); }).join("\n");
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
@@ -310,185 +187,30 @@ function exportToCsv(filename: string, rows: FormItem[]) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.push(
-      <Notification title="Export Successful" type="success">
-        Data exported to {filename}.
-      </Notification>
-    );
+    toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>);
     return true;
   }
-  toast.push(
-    <Notification title="Export Failed" type="danger">
-      Browser does not support this feature.
-    </Notification>
-  );
+  toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
   return false;
 }
 
 // --- MODALS SECTION ---
-export type MemberModalType =
-  | "email"
-  | "whatsapp"
-  | "notification"
-  | "task"
-  | "active"
-  | "calendar"
-  | "alert"
-  | "trackRecord"
-  | "engagement"
-  | "document"
-  | "feedback"
-  | "wallLink"
-  | "viewDetail"
-  | "resetPassword";
-export interface MemberModalState {
-  isOpen: boolean;
-  type: MemberModalType | null;
-  data: FormItem | null;
-}
-interface MemberModalsProps {
-  modalState: MemberModalState;
-  onClose: () => void;
-}
+export type MemberModalType = | "notification" | "task" | "active" | "calendar" | "alert" | "trackRecord" | "engagement" | "document" | "feedback" | "wallLink" | "viewDetail" | "resetPassword";
+export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
+interface MemberModalsProps { modalState: MemberModalState; onClose: () => void; }
 
-const dummyUsers = [
-  { value: "user1", label: "Alice Johnson" },
-  { value: "user2", label: "Bob Williams" },
-  { value: "user3", label: "Charlie Brown" },
-];
-const priorityOptions = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-];
-const eventTypeOptions = [
-  // Customer Engagement & Sales
-  { value: "Meeting", label: "Meeting" },
-  { value: "Demo", label: "Product Demo" },
-  { value: "IntroCall", label: "Introductory Call" },
-  { value: "FollowUpCall", label: "Follow-up Call" },
-  { value: "QBR", label: "Quarterly Business Review (QBR)" },
-  { value: "CheckIn", label: "Customer Check-in" },
-  { value: "LogEmail", label: "Log an Email" },
-
-  // Project & Task Management
-  { value: "Milestone", label: "Project Milestone" },
-  { value: "Task", label: "Task" },
-  { value: "FollowUp", label: "General Follow-up" },
-  { value: "ProjectKickoff", label: "Project Kick-off" },
-
-  // Customer Onboarding & Support
-  { value: "OnboardingSession", label: "Onboarding Session" },
-  { value: "Training", label: "Training Session" },
-  { value: "SupportCall", label: "Support Call" },
-
-  // General & Administrative
-  { value: "Reminder", label: "Reminder" },
-  { value: "Note", label: "Add a Note" },
-  { value: "FocusTime", label: "Focus Time (Do Not Disturb)" },
-  { value: "StrategySession", label: "Strategy Session" },
-  { value: "TeamMeeting", label: "Team Meeting" },
-  { value: "PerformanceReview", label: "Performance Review" },
-  { value: "Lunch", label: "Lunch / Break" },
-  { value: "Appointment", label: "Personal Appointment" },
-  { value: "Other", label: "Other" },
-  { value: "ProjectKickoff", label: "Project Kick-off" },
-  { value: "InternalSync", label: "Internal Team Sync" },
-  { value: "ClientUpdateMeeting", label: "Client Update Meeting" },
-  { value: "RequirementsGathering", label: "Requirements Gathering" },
-  { value: "UAT", label: "User Acceptance Testing (UAT)" },
-  { value: "GoLive", label: "Go-Live / Deployment Date" },
-  { value: "ProjectSignOff", label: "Project Sign-off" },
-  { value: "PrepareReport", label: "Prepare Report" },
-  { value: "PresentFindings", label: "Present Findings" },
-  { value: "TroubleshootingCall", label: "Troubleshooting Call" },
-  { value: "BugReplication", label: "Bug Replication Session" },
-  { value: "IssueEscalation", label: "Escalate Issue" },
-  { value: "ProvideUpdate", label: "Provide Update on Ticket" },
-  { value: "FeatureRequest", label: "Log Feature Request" },
-  { value: "IntegrationSupport", label: "Integration Support Call" },
-  { value: "DataMigration", label: "Data Migration/Import Task" },
-  { value: "ColdCall", label: "Cold Call" },
-  { value: "DiscoveryCall", label: "Discovery Call" },
-  { value: "QualificationCall", label: "Qualification Call" },
-  { value: "SendFollowUpEmail", label: "Send Follow-up Email" },
-  { value: "LinkedInMessage", label: "Log LinkedIn Message" },
-  { value: "ProposalReview", label: "Proposal Review Meeting" },
-  { value: "ContractSent", label: "Contract Sent" },
-  { value: "NegotiationCall", label: "Negotiation Call" },
-  { value: "TrialSetup", label: "Product Trial Setup" },
-  { value: "TrialCheckIn", label: "Trial Check-in Call" },
-  { value: "WelcomeCall", label: "Welcome Call" },
-  { value: "ImplementationSession", label: "Implementation Session" },
-  { value: "UserTraining", label: "User Training Session" },
-  { value: "AdminTraining", label: "Admin Training Session" },
-  { value: "MonthlyCheckIn", label: "Monthly Check-in" },
-  { value: "QBR", label: "Quarterly Business Review (QBR)" },
-  { value: "HealthCheck", label: "Customer Health Check" },
-  { value: "FeedbackSession", label: "Feedback Session" },
-  { value: "RenewalDiscussion", label: "Renewal Discussion" },
-  { value: "UpsellOpportunity", label: "Upsell/Cross-sell Call" },
-  { value: "CaseStudyInterview", label: "Case Study Interview" },
-  { value: "InvoiceDue", label: "Invoice Due" },
-  { value: "SendInvoice", label: "Send Invoice" },
-  { value: "PaymentReminder", label: "Send Payment Reminder" },
-  { value: "ChaseOverduePayment", label: "Chase Overdue Payment" },
-  { value: "ConfirmPayment", label: "Confirm Payment Received" },
-  { value: "ContractRenewalDue", label: "Contract Renewal Due" },
-  { value: "DiscussBilling", label: "Discuss Billing/Invoice" },
-  { value: "SendQuote", label: "Send Quote/Estimate" },
-];
-const dummyAlerts = [
-  {
-    id: 1,
-    severity: "danger",
-    message: "KYC verification failed. Please re-submit documents.",
-    time: "2 days ago",
-  },
-  {
-    id: 2,
-    severity: "warning",
-    message: "Membership renewal is due in 7 days.",
-    time: "5 days ago",
-  },
-];
-const dummyTimeline = [
-  {
-    id: 1,
-    icon: <TbMail />,
-    title: "Email Sent",
-    desc: "Sent welcome email and onboarding guide.",
-    time: "2023-11-01",
-  },
-  {
-    id: 2,
-    icon: <TbCalendar />,
-    title: "Onboarding Call Scheduled",
-    desc: "Scheduled a call to discuss platform features.",
-    time: "2023-10-28",
-  },
-  {
-    id: 3,
-    icon: <TbUser />,
-    title: "Member Joined",
-    desc: "Initial registration completed.",
-    time: "2023-10-27",
-  },
-];
-const dummyDocs = [
-  { id: "doc1", name: "ID_Proof_Passport.pdf", type: "pdf", size: "1.8 MB" },
-  { id: "doc2", name: "Company_Registration.zip", type: "zip", size: "5.2 MB" },
-];
+const dummyUsers = [ { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" }, ];
+const priorityOptions = [ { value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, ];
+const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' }, ];
+const dummyAlerts = [ { id: 1, severity: "danger", message: "KYC verification failed. Please re-submit documents.", time: "2 days ago", }, { id: 2, severity: "warning", message: "Membership renewal is due in 7 days.", time: "5 days ago", }, ];
+const dummyTimeline = [ { id: 1, icon: <TbMail />, title: "Email Sent", desc: "Sent welcome email and onboarding guide.", time: "2023-11-01", }, { id: 2, icon: <TbCalendar />, title: "Onboarding Call Scheduled", desc: "Scheduled a call to discuss platform features.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Member Joined", desc: "Initial registration completed.", time: "2023-10-27", }, ];
+const dummyDocs = [ { id: "doc1", name: "ID_Proof_Passport.pdf", type: "pdf", size: "1.8 MB" }, { id: "doc2", name: "Company_Registration.zip", type: "zip", size: "5.2 MB" }, ];
 
 const MemberModals: React.FC<MemberModalsProps> = ({ modalState, onClose }) => {
   const { type, data: member, isOpen } = modalState;
   if (!isOpen || !member) return null;
   const renderModalContent = () => {
     switch (type) {
-      case "email":
-        return <SendEmailDialog member={member} onClose={onClose} />;
-      case "whatsapp":
-        return <SendWhatsAppDialog member={member} onClose={onClose} />;
       case "notification":
         return <AddNotificationDialog member={member} onClose={onClose} />;
       case "task":
@@ -513,102 +235,7 @@ const MemberModals: React.FC<MemberModalsProps> = ({ modalState, onClose }) => {
   };
   return <>{renderModalContent()}</>;
 };
-const SendEmailDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
-  member,
-  onClose,
-}) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit } = useForm({
-    defaultValues: { subject: "", message: "" },
-  });
-  const onSendEmail = (data: { subject: string; message: string }) => {
-    setIsLoading(true);
-    console.log("Sending email to", member.member_email_id, "with data:", data);
-    setTimeout(() => {
-      toast.push(
-        <Notification type="success" title="Email Sent Successfully" />
-      );
-      setIsLoading(false);
-      onClose();
-    }, 1000);
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send Email to {member.member_name}</h5>
-      <form onSubmit={handleSubmit(onSendEmail)}>
-        <FormItem label="Subject">
-          <Controller
-            name="subject"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </FormItem>
-        <FormItem label="Message">
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => (
-              <RichTextEditor value={field.value} onChange={field.onChange} />
-            )}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
-            Send
-          </Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-};
-const SendWhatsAppDialog: React.FC<{
-  member: FormItem;
-  onClose: () => void;
-}> = ({ member, onClose }) => {
-  const { control, handleSubmit } = useForm({
-    defaultValues: {
-      message: `Hi ${member.member_name}, regarding your membership...`,
-    },
-  });
-  const onSendMessage = (data: { message: string }) => {
-    const phone = member.member_contact_number?.replace(/\D/g, "");
-    if (!phone) {
-      toast.push(<Notification type="danger" title="Invalid Phone Number" />);
-      return;
-    }
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
-      data.message
-    )}`;
-    window.open(url, "_blank");
-    toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
-    onClose();
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Send WhatsApp to {member.member_name}</h5>
-      <form onSubmit={handleSubmit(onSendMessage)}>
-        <FormItem label="Message Template">
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={4} />}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit">
-            Open WhatsApp
-          </Button>
-        </div>
-      </form>
-    </Dialog>
-  );
-};
+
 const AddNotificationDialog: React.FC<{
   member: FormItem;
   onClose: () => void;
@@ -619,12 +246,7 @@ const AddNotificationDialog: React.FC<{
   });
   const onSend = (data: any) => {
     setIsLoading(true);
-    console.log(
-      "Sending in-app notification for",
-      member.member_name,
-      "with data:",
-      data
-    );
+    console.log("Sending in-app notification for", member.member_name, "with data:", data);
     setTimeout(() => {
       toast.push(<Notification type="success" title="Notification Sent" />);
       setIsLoading(false);
@@ -636,58 +258,26 @@ const AddNotificationDialog: React.FC<{
       <h5 className="mb-4">Add Notification for {member.member_name}</h5>
       <form onSubmit={handleSubmit(onSend)}>
         <FormItem label="Notification Title">
-          <Controller
-            name="title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
+          <Controller name="title" control={control} render={({ field }) => <Input {...field} />} />
         </FormItem>
         <FormItem label="Send to Users">
-          <Controller
-            name="users"
-            control={control}
-            render={({ field }) => (
-              <Select
-                isMulti
-                placeholder="Select Users"
-                options={dummyUsers}
-                {...field}
-              />
-            )}
-          />
+          <Controller name="users" control={control} render={({ field }) => ( <Select isMulti placeholder="Select Users" options={dummyUsers} {...field} /> )} />
         </FormItem>
         <FormItem label="Message">
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={3} />}
-          />
+          <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} />
         </FormItem>
         <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
-            Send Notification
-          </Button>
+          <Button className="mr-2" onClick={onClose}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading}>Send Notification</Button>
         </div>
       </form>
     </Dialog>
   );
 };
-const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
-  member,
-  onClose,
-}) => {
+const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({ member, onClose, }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { control, handleSubmit } = useForm({
-    defaultValues: {
-      title: "",
-      assignee: null,
-      dueDate: null,
-      priority: null,
-      description: "",
-    },
+    defaultValues: { title: "", assignee: null, dueDate: null, priority: null, description: "", },
   });
   const onAssignTask = (data: any) => {
     setIsLoading(true);
@@ -703,78 +293,31 @@ const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
       <h5 className="mb-4">Assign Task for {member.member_name}</h5>
       <form onSubmit={handleSubmit(onAssignTask)}>
         <FormItem label="Task Title">
-          <Controller
-            name="title"
-            control={control}
-            render={({ field }) => (
-              <Input {...field} placeholder="e.g., Follow up on KYC" />
-            )}
-          />
+          <Controller name="title" control={control} render={({ field }) => ( <Input {...field} placeholder="e.g., Follow up on KYC" /> )} />
         </FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormItem label="Assign To">
-            <Controller
-              name="assignee"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select User"
-                  options={dummyUsers}
-                  {...field}
-                />
-              )}
-            />
+            <Controller name="assignee" control={control} render={({ field }) => ( <Select placeholder="Select User" options={dummyUsers} {...field} /> )} />
           </FormItem>
           <FormItem label="Priority">
-            <Controller
-              name="priority"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Priority"
-                  options={priorityOptions}
-                  {...field}
-                />
-              )}
-            />
+            <Controller name="priority" control={control} render={({ field }) => ( <Select placeholder="Select Priority" options={priorityOptions} {...field} /> )} />
           </FormItem>
         </div>
         <FormItem label="Due Date">
-          <Controller
-            name="dueDate"
-            control={control}
-            render={({ field }) => (
-              <DatePicker
-                placeholder="Select date"
-                value={field.value as any}
-                onChange={field.onChange}
-              />
-            )}
-          />
+          <Controller name="dueDate" control={control} render={({ field }) => ( <DatePicker placeholder="Select date" value={field.value as any} onChange={field.onChange} /> )} />
         </FormItem>
         <FormItem label="Description">
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => <Input textArea {...field} />}
-          />
+          <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} />
         </FormItem>
         <div className="text-right mt-6">
-          <Button className="mr-2" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="solid" type="submit" loading={isLoading}>
-            Assign Task
-          </Button>
+          <Button className="mr-2" onClick={onClose}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading}>Assign Task</Button>
         </div>
       </form>
     </Dialog>
   );
 };
-const AddScheduleDialog: React.FC<{
-  member: FormItem;
-  onClose: () => void;
-}> = ({ member, onClose }) => {
+const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const {
@@ -783,13 +326,7 @@ const AddScheduleDialog: React.FC<{
     formState: { errors, isValid },
   } = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
-    defaultValues: {
-      event_title: `Meeting with ${member.member_name}`,
-      event_type: undefined,
-      date_time: null as any,
-      remind_from: null,
-      notes: `Regarding member ${member.member_name} (ID: ${member.id}).`,
-    },
+    defaultValues: { event_title: `Meeting with ${member.member_name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding member ${member.member_name} (ID: ${member.id}).` },
     mode: "onChange",
   });
   const onAddEvent = async (data: ScheduleFormData) => {
@@ -807,22 +344,10 @@ const AddScheduleDialog: React.FC<{
     };
     try {
       await dispatch(addScheduleAction(payload)).unwrap();
-      toast.push(
-        <Notification
-          type="success"
-          title="Event Scheduled"
-          children={`Successfully scheduled event for ${member.member_name}.`}
-        />
-      );
+      toast.push( <Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${member.member_name}.`} /> );
       onClose();
     } catch (error: any) {
-      toast.push(
-        <Notification
-          type="danger"
-          title="Scheduling Failed"
-          children={error?.message || "An unknown error occurred."}
-        />
-      );
+      toast.push( <Notification type="danger" title="Scheduling Failed" children={error?.message || "An unknown error occurred."} /> );
     } finally {
       setIsLoading(false);
     }
@@ -831,138 +356,43 @@ const AddScheduleDialog: React.FC<{
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Add Schedule for {member.member_name}</h5>
       <UiForm onSubmit={handleSubmit(onAddEvent)}>
-        <UiFormItem
-          label="Event Title"
-          invalid={!!errors.event_title}
-          errorMessage={errors.event_title?.message}
-        >
-          <Controller
-            name="event_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
+        <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message} >
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} />
         </UiFormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UiFormItem
-            label="Event Type"
-            invalid={!!errors.event_type}
-            errorMessage={errors.event_type?.message}
-          >
-            <Controller
-              name="event_type"
-              control={control}
-              render={({ field }) => (
-                <UiSelect
-                  placeholder="Select Type"
-                  options={eventTypeOptions}
-                  value={eventTypeOptions.find((o) => o.value === field.value)}
-                  onChange={(opt: any) => field.onChange(opt?.value)}
-                />
-              )}
-            />
+          <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message} >
+            <Controller name="event_type" control={control} render={({ field }) => ( <UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find((o) => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} />
           </UiFormItem>
-          <UiFormItem
-            label="Event Date & Time"
-            invalid={!!errors.date_time}
-            errorMessage={errors.date_time?.message}
-          >
-            <Controller
-              name="date_time"
-              control={control}
-              render={({ field }) => (
-                <DatePicker.DateTimepicker
-                  placeholder="Select date and time"
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
-            />
+          <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message} >
+            <Controller name="date_time" control={control} render={({ field }) => ( <DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} /> )} />
           </UiFormItem>
         </div>
-        <UiFormItem
-          label="Reminder Date & Time (Optional)"
-          invalid={!!errors.remind_from}
-          errorMessage={errors.remind_from?.message}
-        >
-          <Controller
-            name="remind_from"
-            control={control}
-            render={({ field }) => (
-              <DatePicker.DateTimepicker
-                placeholder="Select date and time"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
+        <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message} >
+          <Controller name="remind_from" control={control} render={({ field }) => ( <DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} /> )} />
         </UiFormItem>
-        <UiFormItem
-          label="Notes"
-          invalid={!!errors.notes}
-          errorMessage={errors.notes?.message}
-        >
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => <Input textArea {...field} />}
-          />
+        <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message} >
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
         </UiFormItem>
         <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            type="submit"
-            loading={isLoading}
-            disabled={!isValid || isLoading}
-          >
-            Save Event
-          </Button>
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading} >Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button>
         </div>
       </UiForm>
     </Dialog>
   );
 };
-const ViewAlertDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
-  member,
-  onClose,
-}) => {
-  const alertColors: Record<string, string> = {
-    danger: "red",
-    warning: "amber",
-    info: "blue",
-  };
+const ViewAlertDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({ member, onClose, }) => {
+  const alertColors: Record<string, string> = { danger: "red", warning: "amber", info: "blue", };
   return (
-    <Dialog
-      isOpen={true}
-      onClose={onClose}
-      onRequestClose={onClose}
-      width={600}
-    >
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600} >
       <h5 className="mb-4">Alerts for {member.member_name}</h5>
       <div className="mt-4 flex flex-col gap-3">
         {dummyAlerts.length > 0 ? (
           dummyAlerts.map((alert) => (
-            <div
-              key={alert.id}
-              className={`p-3 rounded-lg border-l-4 border-${
-                alertColors[alert.severity]
-              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
-                alertColors[alert.severity]
-              }-500/10`}
-            >
+            <div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${ alertColors[alert.severity] }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${ alertColors[alert.severity] }-500/10`} >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
-                  <TbAlertTriangle
-                    className={`text-${alertColors[alert.severity]}-500 mt-1`}
-                    size={20}
-                  />
+                  <TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} />
                   <p className="text-sm">{alert.message}</p>
                 </div>
                 <span className="text-xs text-gray-400 whitespace-nowrap">
@@ -976,24 +406,14 @@ const ViewAlertDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
         )}
       </div>
       <div className="text-right mt-6">
-        <Button variant="solid" onClick={onClose}>
-          Close
-        </Button>
+        <Button variant="solid" onClick={onClose}>Close</Button>
       </div>
     </Dialog>
   );
 };
-const TrackRecordDialog: React.FC<{
-  member: FormItem;
-  onClose: () => void;
-}> = ({ member, onClose }) => {
+const TrackRecordDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
   return (
-    <Dialog
-      isOpen={true}
-      onClose={onClose}
-      onRequestClose={onClose}
-      width={600}
-    >
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600} >
       <h5 className="mb-4">Track Record for {member.member_name}</h5>
       <div className="mt-4 -ml-4">
         {dummyTimeline.map((item, index) => (
@@ -1015,17 +435,12 @@ const TrackRecordDialog: React.FC<{
         ))}
       </div>
       <div className="text-right mt-2">
-        <Button variant="solid" onClick={onClose}>
-          Close
-        </Button>
+        <Button variant="solid" onClick={onClose}>Close</Button>
       </div>
     </Dialog>
   );
 };
-const ViewEngagementDialog: React.FC<{
-  member: FormItem;
-  onClose: () => void;
-}> = ({ member, onClose }) => {
+const ViewEngagementDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Engagement for {member.member_name}</h5>
@@ -1036,9 +451,7 @@ const ViewEngagementDialog: React.FC<{
         </div>
         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <p className="text-xs text-gray-500">Health Score</p>
-          <p className="font-bold text-lg text-green-500">
-            {member.health_score || 85}%
-          </p>
+          <p className="font-bold text-lg text-green-500">{member.health_score || 85}%</p>
         </div>
         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <p className="text-xs text-gray-500">Logins (30d)</p>
@@ -1050,30 +463,19 @@ const ViewEngagementDialog: React.FC<{
         </div>
       </div>
       <div className="text-right mt-6">
-        <Button variant="solid" onClick={onClose}>
-          Close
-        </Button>
+        <Button variant="solid" onClick={onClose}>Close</Button>
       </div>
     </Dialog>
   );
 };
-const DownloadDocumentDialog: React.FC<{
-  member: FormItem;
-  onClose: () => void;
-}> = ({ member, onClose }) => {
-  const iconMap: Record<string, React.ReactElement> = {
-    pdf: <TbFileText className="text-red-500" />,
-    zip: <TbFileZip className="text-amber-500" />,
-  };
+const DownloadDocumentDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
+  const iconMap: Record<string, React.ReactElement> = { pdf: <TbFileText className="text-red-500" />, zip: <TbFileZip className="text-amber-500" />, };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">Documents for {member.member_name}</h5>
       <div className="flex flex-col gap-3 mt-4">
         {dummyDocs.map((doc) => (
-          <div
-            key={doc.id}
-            className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
-          >
+          <div key={doc.id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50" >
             <div className="flex items-center gap-3">
               {React.cloneElement(iconMap[doc.type] || <TbClipboardText />, {
                 size: 28,
@@ -1095,15 +497,9 @@ const DownloadDocumentDialog: React.FC<{
     </Dialog>
   );
 };
-const GenericActionDialog: React.FC<{
-  type: MemberModalType | null;
-  member: FormItem;
-  onClose: () => void;
-}> = ({ type, member, onClose }) => {
+const GenericActionDialog: React.FC<{ type: MemberModalType | null; member: FormItem; onClose: () => void; }> = ({ type, member, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const title = type
-    ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}`
-    : "Confirm Action";
+  const title = type ? `Confirm: ${type.charAt(0).toUpperCase() + type.slice(1)}` : "Confirm Action";
   const handleConfirm = () => {
     setIsLoading(true);
     console.log(`Performing action '${type}' for member ${member.member_name}`);
@@ -1116,73 +512,37 @@ const GenericActionDialog: React.FC<{
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-2">{title}</h5>
-      <p>
-        Are you sure you want to perform this action for{" "}
-        <span className="font-semibold">{member.member_name}</span>?
-      </p>
+      <p>Are you sure you want to perform this action for{" "} <span className="font-semibold">{member.member_name}</span>?</p>
       <div className="text-right mt-6">
-        <Button className="mr-2" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>
-          Confirm
-        </Button>
+        <Button className="mr-2" onClick={onClose}>Cancel</Button>
+        <Button variant="solid" onClick={handleConfirm} loading={isLoading}>Confirm</Button>
       </div>
     </Dialog>
   );
 };
-const ViewMemberDetailDialog: React.FC<{
-  member: any;
-  onClose: () => void;
-}> = ({ member, onClose }) => {
+const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = ({ member, onClose }) => {
   const getDisplayValue = (value: any, fallback = "N/A") => value || fallback;
   const joinDate = member.member_join_date || member.created_at || "N/A";
-  const formattedJoinDate =
-    joinDate !== "N/A"
-      ? new Date(joinDate).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })
-      : "N/A";
+  const formattedJoinDate = joinDate !== "N/A" ? new Date(joinDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", }) : "N/A";
   const renderDetailItem = (label: string, value: React.ReactNode) => (
     <div className="mb-3">
       <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="text-sm font-semibold">
-        {value === "" || value === undefined || value === null ? "N/A" : value}
-      </p>
+      <p className="text-sm font-semibold">{value === "" || value === undefined || value === null ? "N/A" : value}</p>
     </div>
   );
-  const renderListAsTags = (
-    list: (string | number)[] | undefined | null,
-    itemClassName = "text-xs"
-  ) => {
+  const renderListAsTags = ( list: (string | number)[] | undefined | null, itemClassName = "text-xs" ) => {
     if (!list || list.length === 0) return "N/A";
     return (
       <div className="flex flex-wrap gap-1">
-        {list.map((item, idx) => (
-          <Tag key={idx} className={itemClassName}>
-            {getDisplayValue(item)}
-          </Tag>
-        ))}
+        {list.map((item, idx) => ( <Tag key={idx} className={itemClassName}> {getDisplayValue(item)} </Tag> ))}
       </div>
     );
   };
-  const formatDate = (
-    dateString: string | undefined | null,
-    includeTime = false
-  ) => {
+  const formatDate = ( dateString: string | undefined | null, includeTime = false ) => {
     if (!dateString) return "N/A";
     try {
-      const options: Intl.DateTimeFormatOptions = {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      };
-      if (includeTime) {
-        options.hour = "2-digit";
-        options.minute = "2-digit";
-      }
+      const options: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric", };
+      if (includeTime) { options.hour = "2-digit"; options.minute = "2-digit"; }
       return new Date(dateString).toLocaleDateString("en-GB", options);
     } catch (error) {
       console.error("Error formatting date:", dateString, error);
@@ -1197,332 +557,122 @@ const ViewMemberDetailDialog: React.FC<{
   const renderLink = (url: string | undefined | null, text?: string) => {
     const displayUrl = getDisplayValue(url);
     if (displayUrl === "N/A") return "N/A";
-    const isUrl =
-      typeof displayUrl === "string" &&
-      (displayUrl.startsWith("http://") || displayUrl.startsWith("https://"));
+    const isUrl = typeof displayUrl === "string" && (displayUrl.startsWith("http://") || displayUrl.startsWith("https://"));
     if (isUrl) {
-      return (
-        <a
-          href={displayUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline"
-        >
-          {text || displayUrl}
-        </a>
-      );
+      return ( <a href={displayUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" > {text || displayUrl} </a> );
     }
     return displayUrl;
   };
   const statusColorMap: Record<string, string> = {
-    active:
-      "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
+    active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
     blocked: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
-    inactive:
-      "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100",
-    unregistered:
-      "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
+    inactive: "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100",
+    unregistered: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
   };
   const currentStatus = (member.status || "inactive").toLowerCase();
   return (
-    <Dialog
-      isOpen={true}
-      onClose={onClose}
-      onRequestClose={onClose}
-      width={700}
-    >
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={700} >
       <div className="p-1">
-        <h5 className="mb-6 text-xl font-semibold">
-          Member Details: {getDisplayValue(member.name)}
-        </h5>
+        <h5 className="mb-6 text-xl font-semibold">Member Details: {getDisplayValue(member.name)}</h5>
         <div className="max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar">
-          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-            Basic Information
-          </h6>
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Basic Information</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
             {renderDetailItem("Member ID", getDisplayValue(member.id))}
             {renderDetailItem("Name", getDisplayValue(member.name))}
-            {renderDetailItem(
-              "Status",
-              <Tag
-                className={`${
-                  statusColorMap[currentStatus] || statusColorMap["inactive"]
-                } capitalize`}
-              >
-                {getDisplayValue(member.status)}
-              </Tag>
-            )}
-            {renderDetailItem(
-              "Interested In",
-              getDisplayValue(member.interested_in)
-            )}
+            {renderDetailItem( "Status", <Tag className={`${ statusColorMap[currentStatus] || statusColorMap["inactive"] } capitalize`} > {getDisplayValue(member.status)} </Tag> )}
+            {renderDetailItem( "Interested In", getDisplayValue(member.interested_in) )}
             {renderDetailItem("Joined Date", formattedJoinDate)}
-            {renderDetailItem(
-              "Last Updated At",
-              formatDate(member.updated_at, true)
-            )}
-            {renderDetailItem(
-              "Profile Completion",
-              <div className="flex items-center gap-2">
-                <span>{getDisplayValue(member.profile_completion, 0)}%</span>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 flex-grow">
-                  <div
-                    className="bg-blue-500 h-1.5 rounded-full"
-                    style={{
-                      width: `${getDisplayValue(
-                        member.profile_completion,
-                        0
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-              </div>
-            )}
-            {renderDetailItem(
-              "Profile Picture",
-              member.full_profile_pic
-                ? renderLink(member.full_profile_pic, "View Image")
-                : "N/A"
-            )}
+            {renderDetailItem( "Last Updated At", formatDate(member.updated_at, true) )}
+            {renderDetailItem( "Profile Completion", <div className="flex items-center gap-2"> <span>{getDisplayValue(member.profile_completion, 0)}%</span> <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 flex-grow"> <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${getDisplayValue( member.profile_completion, 0 )}%`, }} ></div> </div> </div> )}
+            {renderDetailItem( "Profile Picture", member.full_profile_pic ? renderLink(member.full_profile_pic, "View Image") : "N/A" )}
           </div>
           <hr className="my-6" />
-          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-            Contact Information
-          </h6>
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Contact Information</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem(
-              "Primary Number",
-              `${getDisplayValue(member.number_code)} ${getDisplayValue(
-                member.number
-              )}`
-            )}
+            {renderDetailItem( "Primary Number", `${getDisplayValue(member.number_code)} ${getDisplayValue( member.number )}` )}
             {renderDetailItem("Email", getDisplayValue(member.email))}
-            {renderDetailItem(
-              "WhatsApp Number",
-              getDisplayValue(member.whatsApp_no)
-            )}
-            {renderDetailItem(
-              "Alternate Contact Number",
-              `${getDisplayValue(
-                member.alternate_contact_number_code
-              )} ${getDisplayValue(member.alternate_contact_number)}`
-            )}
-            {renderDetailItem(
-              "Landline Number",
-              getDisplayValue(member.landline_number)
-            )}
+            {renderDetailItem( "WhatsApp Number", getDisplayValue(member.whatsApp_no) )}
+            {renderDetailItem( "Alternate Contact Number", `${getDisplayValue( member.alternate_contact_number_code )} ${getDisplayValue(member.alternate_contact_number)}` )}
+            {renderDetailItem( "Landline Number", getDisplayValue(member.landline_number) )}
             {renderDetailItem("Fax Number", getDisplayValue(member.fax_number))}
-            {renderDetailItem(
-              "Alternate Email",
-              getDisplayValue(member.alternate_email)
-            )}
+            {renderDetailItem( "Alternate Email", getDisplayValue(member.alternate_email) )}
           </div>
           <hr className="my-6" />
-          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-            Company Information
-          </h6>
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Company Information</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem(
-              "Temporary Company Name",
-              getDisplayValue(member.company_temp)
-            )}
-            {renderDetailItem(
-              "Actual Company Name",
-              getDisplayValue(member.company_actual)
-            )}
-            {renderDetailItem(
-              "Business Type",
-              getDisplayValue(member.business_type)
-            )}
+            {renderDetailItem( "Temporary Company Name", getDisplayValue(member.company_temp) )}
+            {renderDetailItem( "Actual Company Name", getDisplayValue(member.company_actual) )}
+            {renderDetailItem( "Business Type", getDisplayValue(member.business_type) )}
           </div>
           <hr className="my-6" />
-          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-            Address & Location
-          </h6>
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Address & Location</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
             {renderDetailItem("Address", getDisplayValue(member.address))}
             {renderDetailItem("City", getDisplayValue(member.city))}
             {renderDetailItem("State", getDisplayValue(member.state))}
             {renderDetailItem("Pincode", getDisplayValue(member.pincode))}
             {renderDetailItem("Country", getDisplayValue(member.country?.name))}
-            {renderDetailItem(
-              "Continent",
-              getDisplayValue(member.continent?.name)
-            )}
+            {renderDetailItem( "Continent", getDisplayValue(member.continent?.name) )}
           </div>
           <hr className="my-6" />
-          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-            Social & Web Presence
-          </h6>
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Social & Web Presence</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
             {renderDetailItem("Website", renderLink(member.website))}
-            {renderDetailItem(
-              "LinkedIn Profile",
-              renderLink(member.linkedIn_profile)
-            )}
-            {renderDetailItem(
-              "Facebook Profile",
-              renderLink(member.facebook_profile)
-            )}
-            {renderDetailItem(
-              "Instagram Handle",
-              renderLink(member.instagram_handle)
-            )}
+            {renderDetailItem( "LinkedIn Profile", renderLink(member.linkedIn_profile) )}
+            {renderDetailItem( "Facebook Profile", renderLink(member.facebook_profile) )}
+            {renderDetailItem( "Instagram Handle", renderLink(member.instagram_handle) )}
             {renderDetailItem("Botim ID", renderLink(member.botim_id))}
             {renderDetailItem("Skype ID", renderLink(member.skype_id))}
             {renderDetailItem("WeChat ID", renderLink(member.wechat_id))}
           </div>
           <hr className="my-6" />
-          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-            Business & Membership
-          </h6>
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Business & Membership</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem(
-              "Business Opportunity",
-              getDisplayValue(member.business_opportunity)
-            )}
-            {renderDetailItem(
-              "Member Grade",
-              getDisplayValue(member.member_grade)
-            )}
-            {renderDetailItem(
-              "Dealing in Bulk",
-              getDisplayValue(member.dealing_in_bulk)
-            )}
-            {renderDetailItem(
-              "Current Membership Plan",
-              getDisplayValue(member.membership_plan_current)
-            )}
-            {renderDetailItem(
-              "Upgrade Plan Suggestion",
-              getDisplayValue(member.upgrade_your_plan)
-            )}
+            {renderDetailItem( "Business Opportunity", getDisplayValue(member.business_opportunity) )}
+            {renderDetailItem( "Member Grade", getDisplayValue(member.member_grade) )}
+            {renderDetailItem( "Dealing in Bulk", getDisplayValue(member.dealing_in_bulk) )}
+            {renderDetailItem( "Current Membership Plan", getDisplayValue(member.membership_plan_current) )}
+            {renderDetailItem( "Upgrade Plan Suggestion", getDisplayValue(member.upgrade_your_plan) )}
           </div>
           <hr className="my-6" />
-          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-            Permissions
-          </h6>
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Permissions</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem(
-              "Product Upload Permission",
-              renderBoolean(member.product_upload_permission)
-            )}
-            {renderDetailItem(
-              "Wall Enquiry Permission",
-              renderBoolean(member.wall_enquiry_permission)
-            )}
-            {renderDetailItem(
-              "Enquiry Permission",
-              renderBoolean(member.enquiry_permission)
-            )}
-            {renderDetailItem(
-              "Trade Inquiry Allowed",
-              renderBoolean(member.trade_inquiry_allowed)
-            )}
+            {renderDetailItem( "Product Upload Permission", renderBoolean(member.product_upload_permission) )}
+            {renderDetailItem( "Wall Enquiry Permission", renderBoolean(member.wall_enquiry_permission) )}
+            {renderDetailItem( "Enquiry Permission", renderBoolean(member.enquiry_permission) )}
+            {renderDetailItem( "Trade Inquiry Allowed", renderBoolean(member.trade_inquiry_allowed) )}
           </div>
           <hr className="my-6" />
-          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-            Preferences & Miscellaneous
-          </h6>
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Preferences & Miscellaneous</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem(
-              "Favourite Products",
-              member.favourite_products_list &&
-                member.favourite_products_list.length > 0 ? (
-                <ul className="list-disc list-inside">
-                  {member.favourite_products_list.map((product: any) => (
-                    <li key={product.id}>{getDisplayValue(product.name)}</li>
-                  ))}
-                </ul>
-              ) : (
-                "N/A"
-              )
-            )}
-            {renderDetailItem(
-              "Favourite Brands",
-              member.favourite_brands_list &&
-                member.favourite_brands_list.length > 0
-                ? renderListAsTags(
-                    member.favourite_brands_list.map(
-                      (brand: any) => brand.name || brand
-                    )
-                  )
-                : "N/A"
-            )}
-            {renderDetailItem(
-              "Top-level Brand Name",
-              getDisplayValue(member.brand_name)
-            )}
-            {renderDetailItem(
-              "Top-level Category",
-              getDisplayValue(member.category)
-            )}
-            {renderDetailItem(
-              "Top-level Subcategory",
-              getDisplayValue(member.subcategory)
-            )}
+            {renderDetailItem( "Favourite Products", member.favourite_products_list && member.favourite_products_list.length > 0 ? ( <ul className="list-disc list-inside"> {member.favourite_products_list.map((product: any) => ( <li key={product.id}>{getDisplayValue(product.name)}</li> ))} </ul> ) : ( "N/A" ) )}
+            {renderDetailItem( "Favourite Brands", member.favourite_brands_list && member.favourite_brands_list.length > 0 ? renderListAsTags( member.favourite_brands_list.map( (brand: any) => brand.name || brand ) ) : "N/A" )}
+            {renderDetailItem( "Top-level Brand Name", getDisplayValue(member.brand_name) )}
+            {renderDetailItem( "Top-level Category", getDisplayValue(member.category) )}
+            {renderDetailItem( "Top-level Subcategory", getDisplayValue(member.subcategory) )}
             {renderDetailItem("Remarks", getDisplayValue(member.remarks))}
           </div>
           <hr className="my-6" />
-          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-            Administrative Information
-          </h6>
+          <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Administrative Information</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem(
-              "Created By",
-              getDisplayValue(member.created_by_user?.name)
-            )}
-            {renderDetailItem(
-              "Updated By",
-              getDisplayValue(member.updated_by_user?.name)
-            )}
-            {renderDetailItem(
-              "Relationship Manager",
-              getDisplayValue(member.relationship_manager?.name)
-            )}
+            {renderDetailItem( "Created By", getDisplayValue(member.created_by_user?.name) )}
+            {renderDetailItem( "Updated By", getDisplayValue(member.updated_by_user?.name) )}
+            {renderDetailItem( "Relationship Manager", getDisplayValue(member.relationship_manager?.name) )}
           </div>
-          {member.dynamic_member_profiles &&
-            member.dynamic_member_profiles.length > 0 && (
+          {member.dynamic_member_profiles && member.dynamic_member_profiles.length > 0 && (
               <>
                 <hr className="my-6" />
-                <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">
-                  Dynamic Member Profiles
-                </h6>
-                {member.dynamic_member_profiles.map(
-                  (profile: any, index: number) => (
-                    <div
-                      key={profile.id || index}
-                      className="mb-6 p-4 border rounded-md dark:border-gray-700"
-                    >
-                      <h5 className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">
-                        Profile {index + 1}:{" "}
-                        {getDisplayValue(profile.member_type?.name)}
-                      </h5>
+                <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Dynamic Member Profiles</h6>
+                {member.dynamic_member_profiles.map( (profile: any, index: number) => (
+                    <div key={profile.id || index} className="mb-6 p-4 border rounded-md dark:border-gray-700" >
+                      <h5 className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Profile {index + 1}:{" "} {getDisplayValue(profile.member_type?.name)}</h5>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                        {renderDetailItem(
-                          "Member Type",
-                          getDisplayValue(profile.member_type?.name)
-                        )}
-                        {renderDetailItem(
-                          "Brands",
-                          renderListAsTags(profile.brand_names)
-                        )}
-                        {renderDetailItem(
-                          "Categories",
-                          renderListAsTags(profile.category_names)
-                        )}
-                        {renderDetailItem(
-                          "Sub-categories",
-                          renderListAsTags(profile.sub_category_names)
-                        )}
-                        {renderDetailItem(
-                          "Profile Created At",
-                          formatDate(profile.created_at, true)
-                        )}
-                        {renderDetailItem(
-                          "Profile Updated At",
-                          formatDate(profile.updated_at, true)
-                        )}
+                        {renderDetailItem( "Member Type", getDisplayValue(profile.member_type?.name) )}
+                        {renderDetailItem( "Brands", renderListAsTags(profile.brand_names) )}
+                        {renderDetailItem( "Categories", renderListAsTags(profile.category_names) )}
+                        {renderDetailItem( "Sub-categories", renderListAsTags(profile.sub_category_names) )}
+                        {renderDetailItem( "Profile Created At", formatDate(profile.created_at, true) )}
+                        {renderDetailItem( "Profile Updated At", formatDate(profile.updated_at, true) )}
                       </div>
                     </div>
                   )
@@ -1531,9 +681,7 @@ const ViewMemberDetailDialog: React.FC<{
             )}
         </div>
         <div className="text-right mt-8">
-          <Button variant="solid" onClick={onClose}>
-            Close
-          </Button>
+          <Button variant="solid" onClick={onClose}>Close</Button>
         </div>
       </div>
     </Dialog>
@@ -1676,11 +824,15 @@ const ActionColumn = ({
   onEdit,
   onViewDetail,
   onOpenModal,
+  onSendEmail,
+  onSendWhatsapp,
 }: {
   rowData: FormItem;
   onEdit: () => void;
   onViewDetail: () => void;
   onOpenModal: (type: MemberModalType, data: FormItem) => void;
+  onSendEmail: (data: FormItem) => void;
+  onSendWhatsapp: (data: FormItem) => void;
 }) => {
   return (
     <div className="flex items-center justify-center gap-1">
@@ -1708,14 +860,14 @@ const ActionColumn = ({
         }
       >
         <Dropdown.Item
-          onClick={() => onOpenModal("email", rowData)}
+          onClick={() => onSendEmail(rowData)}
           className="flex items-center gap-2"
         >
           {" "}
           <TbMail size={18} /> <span className="text-xs">Send Email</span>{" "}
         </Dropdown.Item>
         <Dropdown.Item
-          onClick={() => onOpenModal("whatsapp", rowData)}
+          onClick={() => onSendWhatsapp(rowData)}
           className="flex items-center gap-2"
         >
           {" "}
@@ -1775,7 +927,6 @@ const ActionColumn = ({
     </div>
   );
 };
-
 // --- ActiveFiltersDisplay Component ---
 const ActiveFiltersDisplay = ({
   filterData,
@@ -1925,6 +1076,26 @@ const FormListTable = ({
       return newCriteria;
     });
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+  };
+
+  const handleSendEmail = (member: FormItem) => {
+    if (!member.member_email_id) {
+        toast.push(<Notification type="warning" title="Missing Email" children="Email is not available for this member." />);
+        return;
+    }
+    const subject = `Regarding your membership with us`;
+    const body = `Hello ${member.member_name},\n\nWe are contacting you regarding...\n\nThank you.`;
+    window.open(`mailto:${member.member_email_id}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  };
+
+  const handleSendWhatsapp = (member: FormItem) => {
+    const phone = member.member_contact_number?.replace(/\D/g, '');
+    if (!phone) {
+        toast.push(<Notification type="warning" title="Missing Phone" children="Contact number is not available for this member." />);
+        return;
+    }
+    const message = `Hi ${member.member_name}, this is a message regarding your membership.`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleOpenModal = (type: MemberModalType, memberData: FormItem) =>
@@ -2118,196 +1289,93 @@ const FormListTable = ({
   const handleEdit = (form: FormItem) =>
     navigate(`/business-entities/member-edit/${form.id}`, { state: form });
   const handleViewDetails = (form: FormItem) =>
-    navigate(`/business-entities/member-view/${form.id}`);
+    handleOpenModal('viewDetail', form);
 
   const columns: ColumnDef<FormItem>[] = useMemo(
     () => [
       {
-        header: "Member",
-        accessorKey: "member_name",
-        id: "member",
-        size: 180,
+        header: "Member", accessorKey: "member_name", id: "member", size: 180,
         cell: (props) => (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
               <div className="text-xs">
-                <b className="text-xs text-blue-500">
-                  <em>70892{props.row.original.id || ""}</em>
-                </b>{" "}
-                <br />
+                <b className="text-xs text-blue-500"><em>70892{props.row.original.id || ""}</em></b> <br />
                 <b className="texr-xs">{props.row.original.name || ""}</b>
               </div>
             </div>
             <div className="text-xs">
-              <div className="text-xs text-gray-500">
-                {props.row.original.email || ""}
-              </div>
-              <div className="text-xs text-gray-500">
-                {props.row.original.number || ""}
-              </div>
-              <div className="text-xs text-gray-500">
-                {props.row.original.country?.name || ""}
-              </div>
+              <div className="text-xs text-gray-500">{props.row.original.email || ""}</div>
+              <div className="text-xs text-gray-500">{props.row.original.number || ""}</div>
+              <div className="text-xs text-gray-500">{props.row.original.country?.name || ""}</div>
             </div>
           </div>
         ),
       },
       {
-        header: "Company",
-        accessorKey: "company_name",
-        id: "company",
-        size: 200,
+        header: "Company", accessorKey: "company_name", id: "company", size: 200,
         cell: (props) => (
           <div className="ml-2 rtl:mr-2 text-xs">
-            <b className="text-xs ">
-              <em className="text-blue-500">
-                {props.row.original.company_id_actual || ""}
-              </em>
-            </b>
+            <b className="text-xs "><em className="text-blue-500">{props.row.original.company_id_actual || ""}</em></b>
             <div className="text-xs flex gap-1">
               <MdCheckCircle size={20} className="text-green-500" />
-              <b className="">
-                {props.row.original.company_name || "Unique Enterprise"}
-              </b>
+              <b className="">{props.row.original.company_name || "Unique Enterprise"}</b>
             </div>
           </div>
         ),
       },
       {
-        header: "Status",
-        accessorKey: "member_status",
-        id: "status",
-        size: 140,
+        header: "Status", accessorKey: "member_status", id: "status", size: 140,
         cell: (props) => {
           const { status: member_status, created_at } = props.row.original;
           return (
             <div className="flex flex-col text-xs">
-              <Tag
-                className={`${
-                  statusColor[member_status as keyof typeof statusColor]
-                } inline capitalize`}
-              >
-                {member_status || ""}
-              </Tag>
-              <span className="mt-0.5">
-                <div className="text-[10px] text-gray-500 mt-0.5">
-                  Joined Date:{" "}
-                  {new Date(created_at)
-                    .toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })
-                    .replace(/ /g, "/") || "N/A"}
-                </div>
-              </span>
+              <Tag className={`${statusColor[member_status as keyof typeof statusColor]} inline capitalize`}>{member_status || ""}</Tag>
+              <span className="mt-0.5"><div className="text-[10px] text-gray-500 mt-0.5">Joined Date:{" "}{new Date(created_at).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric", }).replace(/ /g, "/") || "N/A"}</div></span>
             </div>
           );
         },
       },
       {
-        header: "Profile",
-        accessorKey: "profile_completion",
-        id: "profile",
-        size: 220,
+        header: "Profile", accessorKey: "profile_completion", id: "profile", size: 220,
         cell: (props) => (
           <div className="text-xs flex flex-col">
-            <span>
-              <b>RM: </b>
-              {props.row.original.name || ""}
-            </span>
-            <span>
-              <b>Grade: {props.row.original.member_grade || ""}</b>
-            </span>
-            <span>
-              <b>
-                Business Opportunity:{" "}
-                {props.row.original.business_opportunity || ""}
-              </b>
-            </span>
-            <Tooltip
-              title={`Profile: ${props.row.original.profile_completion || 0}%`}
-            >
+            <span><b>RM: </b>{props.row.original.name || ""}</span>
+            <span><b>Grade: {props.row.original.member_grade || ""}</b></span>
+            <span><b>Business Opportunity: {props.row.original.business_opportunity || ""}</b></span>
+            <Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`} >
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
-                <div
-                  className="bg-blue-500 h-1.5 rounded-full"
-                  style={{
-                    width: `${props.row.original.profile_completion || 0}%`,
-                  }}
-                ></div>
+                <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%`, }}></div>
               </div>
             </Tooltip>
           </div>
         ),
       },
       {
-        header: "Preferences",
-        accessorKey: "associated_brands",
-        id: "preferences",
-        size: 300,
+        header: "Preferences", accessorKey: "associated_brands", id: "preferences", size: 300,
         cell: (props) => {
           const [isOpen, setIsOpen] = useState<boolean>(false);
           const openDialog = () => setIsOpen(true);
           const closeDialog = () => setIsOpen(false);
           return (
             <div className="flex flex-col gap-1">
-              <span className="text-xs">
-                <b className="text-xs">
-                  Business Type: {props.row.original.business_type || ""}
-                </b>
-              </span>
+              <span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || ""}</b></span>
               <span className="text-xs flex items-center gap-1">
-                <span onClick={openDialog}>
-                  <TbInfoCircle
-                    size={16}
-                    className="text-blue-500 cursor-pointer"
-                  />
-                </span>
-                <b className="text-xs">
-                  Brands: {props.row.original.brand_name || ""}
-                </b>
+                <span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span>
+                <b className="text-xs">Brands: {props.row.original.brand_name || ""}</b>
               </span>
-              <span className="text-xs">
-                <span className="text-[11px]">
-                  <b className="text-xs">Interested: </b>
-                  {props.row.original.interested_in}
-                </span>
-              </span>
-              <Dialog
-                width={620}
-                isOpen={isOpen}
-                onRequestClose={closeDialog}
-                onClose={closeDialog}
-              >
+              <span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in}</span></span>
+              <Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}>
                 <h6>Dynamic Profile</h6>
                 <Table className="mt-6">
                   <thead className="bg-gray-100 rounded-md">
-                    <Tr>
-                      <Td width={130}>Member Type</Td>
-                      <Td>Brands</Td>
-                      <Td>Category</Td>
-                      <Td>Sub Category</Td>
-                    </Tr>
+                    <Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr>
                   </thead>
                   <tbody>
                     <Tr>
                       <Td>INS - PREMIUM</Td>
-                      <Td>
-                        <span className="flex gap-0.5 flex-wrap">
-                          <Tag>Apple</Tag>
-                          <Tag>Samsung</Tag>
-                          <Tag>POCO</Tag>
-                        </span>
-                      </Td>
-                      <Td>
-                        <Tag>Electronics</Tag>
-                      </Td>
-                      <Td>
-                        <span className="flex gap-0.5 flex-wrap">
-                          <Tag>Mobile</Tag>
-                          <Tag>Laptop</Tag>
-                        </span>
-                      </Td>
+                      <Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td>
+                      <Td><Tag>Electronics</Tag></Td>
+                      <Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td>
                     </Tr>
                   </tbody>
                 </Table>
@@ -2317,41 +1385,23 @@ const FormListTable = ({
         },
       },
       {
-        header: "Actions",
-        id: "action",
-        size: 130,
-        meta: { HeaderClass: "text-center" },
+        header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" },
         cell: (props) => (
-          <ActionColumn
-            rowData={props.row.original}
-            onEdit={() => handleEdit(props.row.original)}
-            onViewDetail={() => handleViewDetails(props.row.original)}
-            onOpenModal={handleOpenModal}
-          />
+          <ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onViewDetail={() => handleViewDetails(props.row.original)} onOpenModal={handleOpenModal} onSendEmail={handleSendEmail} onSendWhatsapp={handleSendWhatsapp} />
         ),
       },
     ],
-    [handleOpenModal]
+    [handleOpenModal, handleSendEmail, handleSendWhatsapp, handleViewDetails]
   );
 
   const [filteredColumns, setFilteredColumns] = useState(columns);
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
-      const originalColumn = columns.find(
-        (c) => (c.id || c.accessorKey) === colId
-      );
+      const originalColumn = columns.find( (c) => (c.id || c.accessorKey) === colId );
       if (originalColumn) {
         setFilteredColumns((prev) => {
           const newCols = [...prev, originalColumn];
-          newCols.sort((a, b) => {
-            const indexA = columns.findIndex(
-              (c) => (c.id || c.accessorKey) === (a.id || a.accessorKey)
-            );
-            const indexB = columns.findIndex(
-              (c) => (c.id || c.accessorKey) === (b.id || b.accessorKey)
-            );
-            return indexA - indexB;
-          });
+          newCols.sort((a, b) => { const indexA = columns.findIndex( (c) => (c.id || c.accessorKey) === (a.id || a.accessorKey) ); const indexB = columns.findIndex( (c) => (c.id || c.accessorKey) === (b.id || b.accessorKey) ); return indexA - indexB; });
           return newCols;
         });
       }
@@ -2394,20 +1444,12 @@ const FormListTable = ({
       const originalItemsOnPage = currentRows.map((r) => r.original);
       if (checked) {
         setSelectedMembers((prevSelected) => {
-          const newSelections = originalItemsOnPage.filter(
-            (pageItem) =>
-              !prevSelected.some((selItem) => selItem.id === pageItem.id)
-          );
+          const newSelections = originalItemsOnPage.filter( (pageItem) => !prevSelected.some((selItem) => selItem.id === pageItem.id) );
           return [...prevSelected, ...newSelections];
         });
       } else {
         setSelectedMembers((prevSelected) =>
-          prevSelected.filter(
-            (selItem) =>
-              !originalItemsOnPage.some(
-                (pageItem) => pageItem.id === selItem.id
-              )
-          )
+          prevSelected.filter( (selItem) => !originalItemsOnPage.some( (pageItem) => pageItem.id === selItem.id ) )
         );
       }
     },
@@ -2415,51 +1457,18 @@ const FormListTable = ({
   );
   const getBrandOptions = useMemo(() => {
     if (!forms) return [];
-    return forms
-      .flatMap((f) => f.associated_brands)
-      .filter((v, i, a) => a.indexOf(v) === i && v)
-      .map((b) => ({ value: b, label: b }));
+    return forms.flatMap((f) => f.associated_brands).filter((v, i, a) => a.indexOf(v) === i && v).map((b) => ({ value: b, label: b }));
   }, [forms]);
 
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <FormListSearch
-          onInputChange={handleQueryChange}
-          value={tableData.query}
-        />
+        <FormListSearch onInputChange={handleQueryChange} value={tableData.query} />
         <div className="flex gap-2">
-          <Dropdown
-            renderTitle={<Button icon={<TbColumns />} />}
-            placement="bottom-end"
-          >
+          <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end" >
             <div className="flex flex-col p-2">
-              <div className="font-semibold mb-1 border-b pb-1">
-                Toggle Columns
-              </div>
-              {columns.map(
-                (col) =>
-                  col.header && (
-                    <div
-                      key={col.id || (col.accessorKey as string)}
-                      className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"
-                    >
-                      <Checkbox
-                        checked={isColumnVisible(
-                          col.id || (col.accessorKey as string)
-                        )}
-                        onChange={(checked) =>
-                          toggleColumn(
-                            checked,
-                            col.id || (col.accessorKey as string)
-                          )
-                        }
-                      >
-                        {col.header as string}
-                      </Checkbox>
-                    </div>
-                  )
-              )}
+              <div className="font-semibold mb-1 border-b pb-1">Toggle Columns</div>
+              {columns.map( (col) => col.header && ( <div key={col.id || (col.accessorKey as string)} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2" > <Checkbox checked={isColumnVisible( col.id || (col.accessorKey as string) )} onChange={(checked) => toggleColumn( checked, col.id || (col.accessorKey as string) )} > {col.header as string} </Checkbox> </div> ) )}
             </div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload">
@@ -2467,313 +1476,72 @@ const FormListTable = ({
           </Tooltip>
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
-            {activeFilterCount > 0 && (
-              <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-                {activeFilterCount}
-              </span>
-            )}
+            {activeFilterCount > 0 && ( <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full"> {activeFilterCount} </span> )}
           </Button>
-          <Button
-            icon={<TbCloudUpload />}
-            onClick={handleOpenExportReasonModal}
-            disabled={
-              !allFilteredAndSortedData || allFilteredAndSortedData.length === 0
-            }
-          >
-            Export
-          </Button>
+          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={ !allFilteredAndSortedData || allFilteredAndSortedData.length === 0 } >Export</Button>
         </div>
       </div>
-      <ActiveFiltersDisplay
-        filterData={filterCriteria}
-        onRemoveFilter={handleRemoveFilter}
-        onClearAll={onClearFilters}
-      />
+      <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
       <DataTable
         selectable
         columns={filteredColumns}
         data={pageData}
         noData={!isLoading && (!pageData || pageData.length === 0)}
         loading={isLoading}
-        pagingData={{
-          total: total,
-          pageIndex: tableData.pageIndex as number,
-          pageSize: tableData.pageSize as number,
-        }}
+        pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }}
         onPaginationChange={handlePaginationChange}
         onSelectChange={handleSelectChange}
         onSort={handleSort}
         onCheckBoxChange={handleRowSelect}
         onIndeterminateCheckBoxChange={handleAllRowSelect}
       />
-      <Drawer
-        title="Filters"
-        isOpen={isFilterDrawerOpen}
-        onClose={closeFilterDrawer}
-        onRequestClose={closeFilterDrawer}
-        width={480}
-        footer={
-          <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterMemberForm"
-              type="submit"
-            >
-              Apply
-            </Button>
-          </div>
-        }
-      >
-        <UiForm
-          id="filterMemberForm"
-          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-        >
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={480} footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button> <Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button> </div> } >
+        <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} >
           <div className="sm:grid grid-cols-2 gap-2">
             <UiFormItem label="Status">
-              <Controller
-                name="filterStatus"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Status"
-                    options={memberStatusOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Status" options={memberStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="Business Type">
-              <Controller
-                name="filterBusinessType"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Type"
-                    options={businessTypeOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterBusinessType" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Type" options={businessTypeOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="Business Opportunity">
-              <Controller
-                name="filterBusinessOpportunity"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Opportunity"
-                    options={businessOpportunityOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterBusinessOpportunity" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Opportunity" options={businessOpportunityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="Continent">
-              <Controller
-                name="filterContinent"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Continent"
-                    options={continentOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterContinent" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Continent" options={continentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="Country">
-              <Controller
-                name="filterCountry"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Country"
-                    options={[{ label: "India", value: "India" }]}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Country" options={[{ label: "India", value: "India" }]} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="State">
-              <Controller
-                name="filterState"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select State"
-                    options={stateOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterState" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select State" options={stateOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="City">
-              <Controller
-                name="filterCity"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select City"
-                    options={cityOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select City" options={cityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="Interested For">
-              <Controller
-                name="filterInterestedFor"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Interest"
-                    options={interestedForOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterInterestedFor" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Interest" options={interestedForOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="Interested Category">
-              <Controller
-                name="filterInterestedCategory"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Category"
-                    options={businessTypeOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterInterestedCategory" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Category" options={businessTypeOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="Brand">
-              <Controller
-                name="filterBrand"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Brand"
-                    options={getBrandOptions}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterBrand" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Brand" options={getBrandOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="Dealing in Bulk">
-              <Controller
-                name="filterDealing"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select"
-                    options={[
-                      { label: "Yes", value: "Yes" },
-                      { label: "No", value: "No" },
-                    ]}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="filterDealing" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select" options={[ { label: "Yes", value: "Yes" }, { label: "No", value: "No" }, ]} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
             <UiFormItem label="Grade">
-              <Controller
-                name="memberGrade"
-                control={filterFormMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isMulti
-                    placeholder="Select Grade"
-                    options={[
-                      { label: "A", value: "A" },
-                      { label: "B", value: "B" },
-                      { label: "C", value: "C" },
-                    ]}
-                    value={field.value || []}
-                    onChange={(val) => field.onChange(val || [])}
-                  />
-                )}
-              />
+              <Controller name="memberGrade" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Grade" options={[ { label: "A", value: "A" }, { label: "B", value: "B" }, { label: "C", value: "C" }, ]} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
             </UiFormItem>
           </div>
         </UiForm>
       </Drawer>
       <MemberModals modalState={modalState} onClose={handleCloseModal} />
-      <ConfirmDialog
-        isOpen={isExportReasonModalOpen}
-        type="info"
-        title="Reason for Export"
-        onClose={() => setIsExportReasonModalOpen(false)}
-        onRequestClose={() => setIsExportReasonModalOpen(false)}
-        onCancel={() => setIsExportReasonModalOpen(false)}
-        onConfirm={exportReasonFormMethods.handleSubmit(
-          handleConfirmExportWithReason
-        )}
-        loading={isSubmittingExportReason}
-        confirmText={
-          isSubmittingExportReason ? "Submitting..." : "Submit & Export"
-        }
-        cancelText="Cancel"
-        confirmButtonProps={{
-          disabled:
-            !exportReasonFormMethods.formState.isValid ||
-            isSubmittingExportReason,
-        }}
-      >
-        <UiForm
-          id="exportReasonForm"
-          onSubmit={(e) => {
-            e.preventDefault();
-            exportReasonFormMethods.handleSubmit(
-              handleConfirmExportWithReason
-            )();
-          }}
-          className="flex flex-col gap-4 mt-2"
-        >
-          <UiFormItem
-            label="Please provide a reason for exporting this data:"
-            invalid={!!exportReasonFormMethods.formState.errors.reason}
-            errorMessage={
-              exportReasonFormMethods.formState.errors.reason?.message
-            }
-          >
-            <Controller
-              name="reason"
-              control={exportReasonFormMethods.control}
-              render={({ field }) => (
-                <Input
-                  textArea
-                  {...field}
-                  placeholder="Enter reason..."
-                  rows={3}
-                />
-              )}
-            />
+      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit( handleConfirmExportWithReason )} loading={isSubmittingExportReason} confirmText={ isSubmittingExportReason ? "Submitting..." : "Submit & Export" } cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason, }} >
+        <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit( handleConfirmExportWithReason )(); }} className="flex flex-col gap-4 mt-2" >
+          <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={ exportReasonFormMethods.formState.errors.reason?.message } >
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => ( <Input textArea {...field} placeholder="Enter reason..." rows={3} /> )} />
           </UiFormItem>
         </UiForm>
       </ConfirmDialog>
@@ -2792,11 +1560,7 @@ const FormListSelected = () => {
   const dispatch = useAppDispatch();
   const handleConfirmDelete = async () => {
     if (!selectedMembers || selectedMembers.length === 0) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          No members selected for deletion.
-        </Notification>
-      );
+      toast.push( <Notification title="Error" type="danger"> No members selected for deletion. </Notification> );
       setDeleteConfirmationOpen(false);
       return;
     }
@@ -2804,32 +1568,19 @@ const FormListSelected = () => {
     try {
       const ids = selectedMembers.map((data) => data.id);
       await dispatch(deleteAllMemberAction({ ids: ids.join(",") })).unwrap();
-      toast.push(
-        <Notification title="Members Deleted" type="success" duration={2000}>
-          {selectedMembers.length} member(s) deleted.
-        </Notification>
-      );
+      toast.push( <Notification title="Members Deleted" type="success" duration={2000}> {selectedMembers.length} member(s) deleted. </Notification> );
       dispatch(getMemberAction());
       setSelectedMembers([]);
     } catch (error: any) {
       const errorMessage = error.message || "Could not delete members.";
-      toast.push(
-        <Notification title="Failed to Delete" type="danger" duration={3000}>
-          {errorMessage}
-        </Notification>
-      );
+      toast.push( <Notification title="Failed to Delete" type="danger" duration={3000}> {errorMessage} </Notification> );
       console.error("Delete members Error:", error);
     }
   };
   const handleSend = () => {
     setSendMessageLoading(true);
     setTimeout(() => {
-      toast.push(
-        <Notification type="success" title="Message Sent">
-          Message sent to {selectedMembers.length} member(s)!
-        </Notification>,
-        { placement: "top-center" }
-      );
+      toast.push( <Notification type="success" title="Message Sent"> Message sent to {selectedMembers.length} member(s)! </Notification>, { placement: "top-center" } );
       setSendMessageLoading(false);
       setSendMessageDialogOpen(false);
       setSelectedMembers([]);
@@ -2841,10 +1592,7 @@ const FormListSelected = () => {
   }
   return (
     <>
-      <StickyFooter
-        className="flex items-center justify-between py-4 bg-white dark:bg-gray-800"
-        stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8"
-      >
+      <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8" >
         <div className="container mx-auto">
           <div className="flex items-center justify-between">
             <span>
@@ -2861,63 +1609,22 @@ const FormListSelected = () => {
               </span>
             </span>
             <div className="flex items-center">
-              <Button
-                size="sm"
-                className="ltr:mr-3 rtl:ml-3"
-                type="button"
-                color="red-600"
-                onClick={handleDelete}
-              >
-                Delete
-              </Button>
-              <Button
-                size="sm"
-                variant="solid"
-                onClick={() => setSendMessageDialogOpen(true)}
-              >
-                Message
-              </Button>
+              <Button size="sm" className="ltr:mr-3 rtl:ml-3" type="button" color="red-600" onClick={handleDelete} >Delete</Button>
+              <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)} >Message</Button>
             </div>
           </div>
         </div>
       </StickyFooter>
-      <ConfirmDialog
-        isOpen={deleteConfirmationOpen}
-        type="danger"
-        title={`Remove ${selectedMembers.length} Member(s)`}
-        onClose={handleCancelDelete}
-        onRequestClose={handleCancelDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-        confirmButtonColor="red-600"
-      >
-        <p>
-          Are you sure you want to remove {selectedMembers.length} selected
-          member(s)? This action can't be undone.
-        </p>
+      <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title={`Remove ${selectedMembers.length} Member(s)`} onClose={handleCancelDelete} onRequestClose={handleCancelDelete} onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} confirmButtonColor="red-600" >
+        <p> Are you sure you want to remove {selectedMembers.length} selected member(s)? This action can't be undone. </p>
       </ConfirmDialog>
-      <Dialog
-        isOpen={sendMessageDialogOpen}
-        onRequestClose={() => setSendMessageDialogOpen(false)}
-        onClose={() => setSendMessageDialogOpen(false)}
-        width={600}
-      >
+      <Dialog isOpen={sendMessageDialogOpen} onRequestClose={() => setSendMessageDialogOpen(false)} onClose={() => setSendMessageDialogOpen(false)} width={600} >
         <h5 className="mb-2">Send Message</h5>
         <p>Send message to the following {selectedMembers.length} member(s):</p>
-        <Avatar.Group
-          chained
-          omittedAvatarTooltip
-          className="my-4"
-          maxCount={6}
-          omittedAvatarProps={{ size: 30 }}
-        >
+        <Avatar.Group chained omittedAvatarTooltip className="my-4" maxCount={6} omittedAvatarProps={{ size: 30 }} >
           {selectedMembers.map((member) => (
             <Tooltip key={member.id} title={member.member_name}>
-              <Avatar
-                size={30}
-                src={member.member_photo || undefined}
-                icon={!member.member_photo ? <TbUserCircle /> : undefined}
-              />
+              <Avatar size={30} src={member.member_photo || undefined} icon={!member.member_photo ? <TbUserCircle /> : undefined} />
             </Tooltip>
           ))}
         </Avatar.Group>
@@ -2925,17 +1632,8 @@ const FormListSelected = () => {
           <RichTextEditor value={messageContent} onChange={setMessageContent} />
         </div>
         <div className="ltr:justify-end flex items-center gap-2 mt-4">
-          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            variant="solid"
-            loading={sendMessageLoading}
-            onClick={handleSend}
-          >
-            Send
-          </Button>
+          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button>
+          <Button size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend} >Send</Button>
         </div>
       </Dialog>
     </>
