@@ -322,7 +322,7 @@ const AutoEmailListing = () => {
         setEditingItem(item);
         editFormMethods.reset({
             email_type: String(item.email_type),
-            user_ids: parseUserIds(item.user_ids),
+            user_ids: item.user_ids,
             status: (item.status === 'Active' || item.status === 'Inactive') ? item.status : 'Inactive'
         });
         setIsEditDrawerOpen(true);
@@ -354,7 +354,7 @@ const AutoEmailListing = () => {
         const sourceDataWithDisplayNames: AutoEmailItem[] = sourceData.map((item: any) => ({
             ...item,
             emailTypeDisplay: EMAIL_TYPE_OPTIONS.find(et => et.value === String(item.email_type))?.label || String(item.email_type),
-            usersDisplay: parseUserIds(item.user_ids).map(uid => usersData.find((u: ApiUser) => String(u.id) === uid)).filter(Boolean) as ApiUser[],
+            usersDisplay: item.user_ids.map(uid => usersData.find((u: ApiUser) => String(u.id) === uid)).filter(Boolean) as ApiUser[],
         }));
 
         let processedData = cloneDeep(sourceDataWithDisplayNames);
