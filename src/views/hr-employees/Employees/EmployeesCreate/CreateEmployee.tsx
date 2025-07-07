@@ -70,11 +70,11 @@ const employeeFormValidationSchema = z.object({
         password: z.string().optional(),
     }),
     personalInformation: z.object({
-        status: requiredSelectSchema,
+        status: requiredSelectSchema.refine(val => val !== null, "Status is required."),
         dateOfBirth: z.date({ required_error: "Date of birth is required." }).nullable(),
         age: z.union([z.string(), z.number()]).optional().nullable(),
         gender: optionalSelectSchema,
-        nationalityId: requiredSelectSchema,
+        nationalityId: requiredSelectSchema.refine(val => val !== null, "Nationality is required."),
         bloodGroup: optionalSelectSchema,
         permanentAddress: z.string().optional().nullable(),
         localAddress: z.string().optional().nullable(),
@@ -169,12 +169,12 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
     const maritalStatusOptions = [{ value: 'single', label: 'Single' }, { value: 'married', label: 'Married' }];
     return (
         <Card id="personalInformation"><h4 className="mb-6">Personal Information</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FormItem label="Status" invalid={!!errors.personalInformation?.status} errorMessage={(errors.personalInformation?.status as any)?.message}><Controller name="personalInformation.status" control={control} defaultValue={{ value: 'Active', label: 'Active' }} render={({ field }) => <Select placeholder="Select Status" options={statusOptions} {...field} />} /></FormItem>
-            <FormItem label="Date of Birth" invalid={!!errors.personalInformation?.dateOfBirth} errorMessage={errors.personalInformation?.dateOfBirth?.message}><Controller name="personalInformation.dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select Date" value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label={<>Status <span className="text-red-500">*</span></>} invalid={!!errors.personalInformation?.status} errorMessage={(errors.personalInformation?.status as any)?.message}><Controller name="personalInformation.status" control={control} defaultValue={{ value: 'Active', label: 'Active' }} render={({ field }) => <Select placeholder="Select Status" options={statusOptions} {...field} />} /></FormItem>
+            <FormItem label={<>Date of Birth <span className="text-red-500">*</span></>} invalid={!!errors.personalInformation?.dateOfBirth} errorMessage={errors.personalInformation?.dateOfBirth?.message}><Controller name="personalInformation.dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select Date" value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Age" invalid={!!errors.personalInformation?.age} errorMessage={errors.personalInformation?.age?.message}><Controller name="personalInformation.age" control={control} render={({ field }) => <Input type="number" placeholder="Enter Age" {...field} onChange={e => field.onChange(parseInt(e.target.value) || '')} />} /></FormItem>
             <FormItem label="Gender" invalid={!!errors.personalInformation?.gender} errorMessage={(errors.personalInformation?.gender as any)?.message}><Controller name="personalInformation.gender" control={control} render={({ field }) => <Select placeholder="Select Gender" options={genderOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Marital Status" invalid={!!errors.personalInformation?.maritalStatus} errorMessage={(errors.personalInformation?.maritalStatus as any)?.message}><Controller name="personalInformation.maritalStatus" control={control} render={({ field }) => <Select placeholder="Select Marital Status" options={maritalStatusOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Nationality" invalid={!!errors.personalInformation?.nationalityId} errorMessage={(errors.personalInformation?.nationalityId as any)?.message}><Controller name="personalInformation.nationalityId" control={control} render={({ field }) => <Select placeholder="Select Nationality" options={nationalityOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label={<>Nationality <span className="text-red-500">*</span></>} invalid={!!errors.personalInformation?.nationalityId} errorMessage={(errors.personalInformation?.nationalityId as any)?.message}><Controller name="personalInformation.nationalityId" control={control} render={({ field }) => <Select placeholder="Select Nationality" options={nationalityOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Blood Group" invalid={!!errors.personalInformation?.bloodGroup} errorMessage={(errors.personalInformation?.bloodGroup as any)?.message}><Controller name="personalInformation.bloodGroup" control={control} render={({ field }) => <Select placeholder="Select Blood Group" options={bloodGroupOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Permanent Address" invalid={!!errors.personalInformation?.permanentAddress} errorMessage={errors.personalInformation?.permanentAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.permanentAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Permanent Address" {...field} />} /></FormItem>
             <FormItem label="Local Address" invalid={!!errors.personalInformation?.localAddress} errorMessage={errors.personalInformation?.localAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.localAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Local Address" {...field} />} /></FormItem>
@@ -371,8 +371,9 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('local_address', values.personalInformation?.localAddress || '');
         formData.append('maritual_status', objToValue(values.personalInformation?.maritalStatus));
 
+
         formData.append('role_id', objToValue(values.roleResponsibility?.roleId));
-        formData.append('department_id', arrayToCommaString(values.roleResponsibility?.departmentId));
+        formData.append('department_id', values.roleResponsibility?.departmentId?.map(item => item.value));
         formData.append('designation_id', objToValue(values.roleResponsibility?.designationId));
         formData.append('country_id', arrayToCommaString(values.roleResponsibility?.countryId));
         formData.append('category_id', arrayToCommaString(values.roleResponsibility?.categoryId));
@@ -521,7 +522,7 @@ const EmployeeFormPage = () => {
 
             const commaStringToArray = (str: string | null | undefined): string[] => (str ? String(str).split(',') : []);
 
-            return {
+            const transformed = {
                 id: apiData.id,
                 registration: {
                     fullName: apiData.name || '',
@@ -533,11 +534,11 @@ const EmployeeFormPage = () => {
                 },
                 personalInformation: {
                     status: { value: apiData.status || 'Active', label: apiData.status || 'Active' },
-                    dateOfBirth: apiData.date_of_birth ? new Date(api-data.date_of_birth) : null,
+                    dateOfBirth: apiData.date_of_birth ? new Date(apiData.date_of_birth) : null,
                     age: apiData.age || '',
                     gender: { value: apiData.gender || '', label: apiData.gender || '' },
                     nationalityId: findOption(countryOptions, apiData.nationality_id),
-                    bloodGroup: { value: apiData.blood_group || '', label: apiData.blood_tgroup || '' },
+                    bloodGroup: { value: apiData.blood_group || '', label: apiData.blood_group || '' },
                     permanentAddress: apiData.permanent_address || '',
                     localAddress: apiData.local_address || '',
                     maritalStatus: { value: apiData.maritual_status || '', label: apiData.maritual_status || '' },
@@ -612,7 +613,7 @@ const EmployeeFormPage = () => {
             }
         };
         fetchCompanyData();
-    }, [employeeId]);
+    }, [employeeId, lookups, dispatch, isEditMode]);
 
     const handleFormSubmit = (formData: FormData, id?: string) => {
         setIsSubmitting(true);

@@ -185,6 +185,9 @@ const _UserDropdown = () => {
     setuserData(getUserData());
   }, []);
 
+  console.log("userData",userData);
+  
+
   return (
     <>
       <Dropdown
@@ -216,9 +219,9 @@ const _UserDropdown = () => {
                 </span>
               </div>
               <div className="mt-2 flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-                <span>{userData?.role || "N/A"}</span>
+                <span>{userData?.role?.name || "N/A"}</span>
                 <span className="text-gray-300 dark:text-gray-600">|</span>
-                <span>{userData?.department || "N/A"}</span>
+                <span>{userData?.department?.name || "N/A"}</span>
               </div>
             </div>
           </div>

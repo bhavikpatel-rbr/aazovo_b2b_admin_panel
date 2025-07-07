@@ -755,31 +755,30 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
 
   const { DocumentTypeData = [], formsData: tokenForm = [], EmployeesList = [], AllCompanyData = [], getfromIDcompanymemberData = [] } = useSelector(masterSelector);
 
-  const DocumentTypeDataOptions = DocumentTypeData?.map((p: any) => ({
+  const DocumentTypeDataOptions = DocumentTypeData?.legth > 0 ? DocumentTypeData?.map((p: any) => ({
     value: p.id,
     label: p.name,
-  }));
+  })) : [];
 
-  const tokenFormDataOptions = tokenForm?.map((p: any) => ({
+  const tokenFormDataOptions =  tokenForm?.legth > 0 ?  tokenForm?.map((p: any) => ({
     value: p.id,
     label: p.form_title,
-  }));
+  })) : [];
 
-  const EmployyDataOptions = EmployeesList.data?.data?.map((p: any) => ({
+  const EmployyDataOptions =  EmployeesList?.legth > 0 ?  EmployeesList.data?.data?.map((p: any) => ({
     value: p.id,
     label: p.name,
-  }));
+  })): [];
 
-  const AllCompanyDataOptions = AllCompanyData?.map((p: any) => ({
+  const AllCompanyDataOptions =  AllCompanyData?.legth > 0 ?  AllCompanyData?.map((p: any) => ({
     value: String(p.id),
     label: p.company_name,
-  }));
+  })): [];
 
-  const companyMemberOptions = useMemo(() =>
-    getfromIDcompanymemberData?.map((p: any) => ({
+  const companyMemberOptions = useMemo(() => AllCompanyData?.legth > 0 ? getfromIDcompanymemberData?.map((p: any) => ({
       value: p.id,
       label: p.name,
-    })) || [],
+    })) : [],
     [getfromIDcompanymemberData]);
 
 
