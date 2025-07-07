@@ -1252,6 +1252,7 @@ const AccountDocumentTableTools = ({
   filteredColumns,
   setFilteredColumns,
   activeFilterCount,
+  isDashboard
 }: any) => {
   const isColumnVisible = (colId: string) =>
     filteredColumns.some((c: any) => (c.id || c.accessorKey) === colId);
@@ -1289,7 +1290,7 @@ const AccountDocumentTableTools = ({
           placeholder="Quick Search..."
         />
       </div>
-      <div className="flex gap-1">
+      {!isDashboard &&<div className="flex gap-1">
         <Dropdown
           renderTitle={<Button icon={<TbColumns />} />}
           placement="bottom-end"
@@ -1330,7 +1331,7 @@ const AccountDocumentTableTools = ({
         <Button icon={<TbCloudUpload />} onClick={onExport}>
           Export
         </Button>
-      </div>
+      </div> }
     </div>
   );
 };
@@ -1440,7 +1441,7 @@ const AccountDocumentSelectedFooter = ({
 };
 
 // --- Main Account Document Component ---
-const AccountDocument = () => {
+const AccountDocument = ({isDashboard}) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { getAllUserData = [], getaccountdoc } = useSelector(
@@ -1983,30 +1984,40 @@ const AccountDocument = () => {
           );
         },
       },
-      {
-        header: "Actions",
-        id: "actions",
-        size: 160,
-        meta: { HeaderClass: "text-center" },
-        cell: (props: CellContext<AccountDocumentListItem, any>) => (
-          <AccountDocumentActionColumn
-            onDelete={() => handleDeleteClick(props.row.original)}
-            onOpenModal={handleOpenModal}
-            onEdit={() => handleOpenEditDrawer(props.row.original)}
-            onView={() => handleViewClick(props.row.original)}
-            rowData={props.row.original}
-          />
-        ),
-      },
+      ...(!isDashboard
+        ? [
+            {
+              header: "Actions",
+              id: "actions",
+              size: 160,
+              meta: { HeaderClass: "text-center" },
+              cell: (props: CellContext<AccountDocumentListItem, any>) => (
+                <AccountDocumentActionColumn
+                  onDelete={() => handleDeleteClick(props.row.original)}
+                  onOpenModal={handleOpenModal}
+                  onEdit={() => handleOpenEditDrawer(props.row.original)}
+                  onView={() => handleViewClick(props.row.original)}
+                  rowData={props.row.original}
+                />
+              ),
+            },
+          ]
+        : []),
     ],
-    [handleDeleteClick, handleOpenModal, handleViewClick, handleOpenEditDrawer]
+    [
+      isDashboard,
+      handleDeleteClick,
+      handleOpenModal,
+      handleViewClick,
+      handleOpenEditDrawer,
+    ]
   );
 
   const [filteredColumns, setFilteredColumns] =
     useState<ColumnDef<AccountDocumentListItem>[]>(columns);
   useEffect(() => {
     setFilteredColumns(columns);
-  }, []);
+  }, [columns]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -2037,15 +2048,15 @@ const AccountDocument = () => {
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h5 className="mb-2 sm:mb-0">Account Document</h5>
-            <Button
-              variant="solid"
-              icon={<TbPlus />}
-              className="px-5"
-              onClick={handleOpenAddDrawer}
+          {!isDashboard &&  <h5 className="mb-2 sm:mb-0">Account Document</h5>}
+            {!isDashboard &&<Button
+            variant="solid"
+            icon={<TbPlus />}
+            className="px-5"
+            onClick={handleOpenAddDrawer}
             >
               Add New
-            </Button>
+            </Button> }
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
             <Tooltip title="Click to show all documents">
@@ -2151,6 +2162,7 @@ const AccountDocument = () => {
             </Tooltip>
           </div>
           <AccountDocumentTableTools
+          isDashboard={isDashboard}
             onSearchChange={handleSearchChange}
             onFilter={openFilterDrawer}
             onExport={handleOpenExportReasonModal}
