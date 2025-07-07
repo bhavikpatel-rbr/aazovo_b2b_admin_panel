@@ -99,7 +99,7 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- Zod Schema for Schedule Form (ADDED) ---
+// --- Zod Schema for Schedule Form ---
 const scheduleSchema = z.object({
   event_title: z.string().min(3, "Title must be at least 3 characters."),
   event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
@@ -237,7 +237,7 @@ const AddInquiryNotificationDialog: React.FC<{
   );
 };
 
-// --- Schedule Dialog (ADDED) ---
+// --- Schedule Dialog ---
 const AddInquiryScheduleDialog: React.FC<{ inquiry: InquiryItem; onClose: () => void }> = ({ inquiry, onClose }) => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
@@ -526,16 +526,20 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 // --- InquiryActionColumn Component (DataTable Actions) ---
-const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOpenModal, onSendEmail, onSendWhatsapp }: { 
-    rowData: InquiryItem; 
-    onViewDetail: (id: string) => void; 
-    onDeleteItem: (item: InquiryItem) => void; 
-    onEdit?: (id: string) => void; 
-    onOpenModal: (type: InquiryModalType, data: InquiryItem) => void; 
-    onSendEmail: (data: InquiryItem) => void; 
+const InquiryActionColumn = ({ rowData, onViewDetail, onEdit, onOpenModal, onSendEmail, onSendWhatsapp }: {
+    rowData: InquiryItem;
+    onViewDetail: (id: string) => void;
+    onDeleteItem: (item: InquiryItem) => void;
+    onEdit?: (id: string) => void;
+    onOpenModal: (type: InquiryModalType, data: InquiryItem) => void;
+    onSendEmail: (data: InquiryItem) => void;
     onSendWhatsapp: (data: InquiryItem) => void;
 }) => {
   const handleEdit = () => onEdit && onEdit(rowData.id);
+  const handleAssignTask = () => {
+    toast.push(<Notification title="Coming Soon" type="info" duration={3000}>Task assignment feature is under development.</Notification>)
+  }
+
   return (
     <div className="flex items-center justify-center gap-1">
       {onEdit && (<Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400" role="button" onClick={handleEdit}><TbPencil /></div></Tooltip>)}
@@ -545,7 +549,7 @@ const InquiryActionColumn = ({ rowData, onViewDetail, onDeleteItem, onEdit, onOp
           <Dropdown.Item onClick={() => onSendEmail(rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
           <Dropdown.Item onClick={() => onSendWhatsapp(rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
           <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('notification', rowData)}><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
-          <Dropdown.Item className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
+          <Dropdown.Item className="flex items-center gap-2" onClick={handleAssignTask}><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
           <Dropdown.Item className="flex items-center gap-2" onClick={() => onOpenModal('schedule', rowData)}><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
         </Dropdown>
       </Tooltip>
@@ -825,7 +829,7 @@ const InquiryListTable = () => {
     if (order && key) {
       data.sort((a, b) => {
         const aVal = a[key as keyof InquiryItem] ?? ""; const bVal = b[key as keyof InquiryItem] ?? "";
-        if (["inquiry_date", "response_date", "resolution_date", "follow_up_date"].includes(key)) { const dateA = aVal && aVal !== "N/A" ? new Date(aVal as string).getTime() : order === "asc" ? Infinity : -Infinity; const dateB = bVal && bVal !== "N/A" ? new Date(bVal as string).getTime() : order === "asc" ? Infinity : -Infinity; if (isNaN(dateA)) return 1; if (isNaN(dateB)) return -1; return order === "asc" ? dateA - dateB : dateB - dateA; }
+        if (["inquiry_date", "response_date", "resolution_date", "follow_up_date"].includes(key)) { const dateA = aVal && aVal !== "N/A" ? new Date(aVal as string).getTime() : order === "asc" ? Infinity : -Infinity; const dateB = bVal && bVal !== "N/A" ? new Date(bVal as string).getTime() : order === "asc" ? Infinity : -Infinity; if (isNaN(dateA)) return 1; if (isNaN(dateB)) return -1; return order === "asc" ? dateA - dateB : dateB - aVal; }
         if (typeof aVal === "string" && typeof bVal === "string") return order === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         if (typeof aVal === "number" && typeof bVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal;
         return 0;
