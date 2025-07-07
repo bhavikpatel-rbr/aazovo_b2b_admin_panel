@@ -639,9 +639,9 @@ const EmployeeFormPage = () => {
         navigate('/hr-employees/employees');
     };
 
-    if (isLoading || (isEditMode && !employeeData)) {
-        return <Container className="h-full"><div className="h-full flex flex-col items-center justify-center"><Spinner size={40} /><h3>Loading Employee Data...</h3></div></Container>;
-    }
+    // if (isLoading || (isEditMode && !employeeData)) {
+    //     return <Container className="h-full"><div className="h-full flex flex-col items-center justify-center"><Spinner size={40} /><h3>Loading Employee Data...</h3></div></Container>;
+    // }
 
     return (
         <Container className="h-full">

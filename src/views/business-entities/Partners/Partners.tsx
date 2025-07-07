@@ -42,16 +42,21 @@ import Tooltip from "@/components/ui/Tooltip";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
+  TbAlarm,
+  TbBell,
   TbBrandWhatsapp,
   TbCalendarEvent,
   TbChecks,
   TbCloudUpload,
   TbColumns,
+  TbDownload,
   TbEye,
+  TbFileDescription,
   TbFilter,
   TbMail,
   TbPencil,
   TbPlus,
+  TbReceipt,
   TbReload,
   TbSearch,
   TbUser,
@@ -73,8 +78,11 @@ import type {
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addNotificationAction,
   addScheduleAction,
+  addTaskAction,
   deleteAllpartnerAction,
+  getAllUsersAction,
   getContinentsAction,
   getCountriesAction,
   getpartnerAction,
@@ -108,9 +116,20 @@ export type PartnerItem = {
   kyc_verified: boolean;
   due_after_3_months_date: string;
   created_at: string;
+  partner_team_members: {
+      id: number;
+      person_name: string;
+      designation: string;
+      number: string;
+  }[];
+  partner_certificate: {
+      id: number;
+      certificate_name: string;
+      upload_certificate_path: string;
+  }[];
   [key: string]: any;
 };
-
+export type SelectOption = { value: any; label: string; };
 // --- Zod Schema for Partner Filter Form ---
 const partnerFilterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -139,6 +158,30 @@ const scheduleSchema = z.object({
   notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
+// --- Zod Schema for Task Form ---
+const taskValidationSchema = z.object({
+    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+    assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+    priority: z.string().min(1, 'Please select a priority.'),
+    due_date: z.date().nullable().optional(),
+    description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskValidationSchema>;
+
+// --- Zod Schema for Notification ---
+const notificationSchema = z.object({
+    notification_title: z.string().min(3, 'Title must be at least 3 characters long.'),
+    send_users: z.array(z.number()).min(1, 'Please select at least one user.'),
+    message: z.string().min(10, 'Message must be at least 10 characters long.'),
+});
+type NotificationFormData = z.infer<typeof notificationSchema>;
+
+const taskPriorityOptions: SelectOption[] = [
+    { value: 'Low', label: 'Low' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'High', label: 'High' },
+];
 
 // --- CSV Exporter Utility ---
 const PARTNER_CSV_HEADERS = ["ID", "Name", "Partner Code", "Ownership Type", "Status", "Country", "State", "City", "KYC Verified", "Created Date", "Owner", "Contact Number", "Email", "Website", "GST", "PAN"];
@@ -216,6 +259,7 @@ interface PartnerListStore {
   partnerCount: any;
   CountriesData: any[];
   ContinentsData: any[];
+  getAllUserData: SelectOption[];
   partnerListTotal: number;
   setPartnerList: React.Dispatch<React.SetStateAction<PartnerItem[]>>;
   setSelectedPartners: React.Dispatch<React.SetStateAction<PartnerItem[]>>;
@@ -229,16 +273,18 @@ const usePartnerList = (): PartnerListStore => {
 };
 
 const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { partnerData, CountriesData, ContinentsData } = useSelector(masterSelector);
+  const { partnerData, CountriesData, ContinentsData, getAllUserData = [] } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
   const [partnerList, setPartnerList] = useState<PartnerItem[]>(partnerData?.data ?? []);
   const [selectedPartners, setSelectedPartners] = useState<PartnerItem[]>([]);
   const [partnerCount, setPartnerCount] = useState(partnerData?.counts ?? {});
   const [partnerListTotal, setPartnerListTotal] = useState<number>(partnerData?.data?.length ?? 0);
+  const getAllUserDataOptionsData = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
 
   useEffect(() => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
+    dispatch(getAllUsersAction());
   }, [dispatch]);
 
   useEffect(() => {
@@ -259,6 +305,7 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children
       partnerCount,
       ContinentsData: Array.isArray(ContinentsData) ? ContinentsData : [],
       CountriesData: Array.isArray(CountriesData) ? CountriesData : [],
+      getAllUserData: getAllUserDataOptionsData,
     }}
     >
       {children}
@@ -267,7 +314,7 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 // --- MODALS SECTION ---
-export type ModalType = 'email' | 'whatsapp' | 'schedule';
+export type ModalType = 'email' | 'whatsapp' | 'schedule' | 'notification' | 'task' | 'members' | 'alert' | 'transaction' | 'document';
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: PartnerItem | null; }
 
 const AddPartnerScheduleDialog: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
@@ -336,6 +383,142 @@ const AddPartnerScheduleDialog: React.FC<{ partner: PartnerItem; onClose: () => 
   );
 };
 
+const AddPartnerNotificationDialog: React.FC<{ partner: PartnerItem; onClose: () => void; userOptions: SelectOption[]; }> = ({ partner, onClose, userOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: {
+            notification_title: `Regarding Partner: ${partner.partner_name}`,
+            send_users: [],
+            message: `This is a notification regarding partner "${partner.partner_name}" (${partner.partner_code}). Please review their details.`,
+        },
+        mode: 'onChange',
+    });
+
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = { ...formData, module_id: String(partner.id), module_name: 'Partner' };
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Send" children={error?.message || 'An error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Notify User about: {partner.partner_name}</h5>
+            <UiForm onSubmit={handleSubmit(onSend)}>
+                <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem>
+                <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
+                <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
+                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
+            </UiForm>
+        </Dialog>
+    );
+};
+
+const AssignPartnerTaskDialog: React.FC<{ partner: PartnerItem; onClose: () => void; userOptions: SelectOption[] }> = ({ partner, onClose, userOptions }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
+        resolver: zodResolver(taskValidationSchema),
+        defaultValues: { task_title: `Follow up with ${partner.partner_name}`, assign_to: [], priority: 'Medium', due_date: null, description: `Follow up with partner ${partner.partner_name} (${partner.primary_email_id}).` },
+        mode: 'onChange',
+    });
+
+    const onAssignTask = async (data: TaskFormData) => {
+        setIsLoading(true);
+        const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(partner.id), module_name: 'Partner' };
+        try {
+            await dispatch(addTaskAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Task Assigned!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Assign Task for {partner.partner_name}</h5>
+            <UiForm onSubmit={handleSubmit(onAssignTask)}>
+                <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
+                    <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} /></UiFormItem>
+                </div>
+                <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem>
+                <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
+                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button></div>
+            </UiForm>
+        </Dialog>
+    );
+};
+
+const ViewPartnerMembersDialog: React.FC<{ partner: PartnerItem; onClose: () => void; }> = ({ partner, onClose }) => (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
+        <h5 className="mb-4">Team Members of {partner.partner_name}</h5>
+        <div className="max-h-96 overflow-y-auto">
+            {partner.partner_team_members && partner.partner_team_members.length > 0 ? (
+                <div className="space-y-3">
+                    {partner.partner_team_members.map(member => (
+                        <div key={member.id} className="p-3 border rounded-md dark:border-gray-600">
+                            <p className="font-semibold">{member.person_name}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">{member.designation}</p>
+                            <p className="text-xs text-gray-500">{member.number}</p>
+                        </div>
+                    ))}
+                </div>
+            ) : <p>No team members found for this partner.</p>}
+        </div>
+        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+    </Dialog>
+);
+
+const DownloadPartnerDocumentDialog: React.FC<{ partner: PartnerItem; onClose: () => void; }> = ({ partner, onClose }) => {
+    const documents = useMemo(() => {
+        return partner.partner_certificate?.map(cert => ({
+            name: cert.certificate_name,
+            url: cert.upload_certificate_path,
+        })) || [];
+    }, [partner]);
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
+            <h5 className="mb-4">Download Documents for {partner.partner_name}</h5>
+            <div className="max-h-96 overflow-y-auto">
+                {documents.length > 0 ? (
+                    <div className="space-y-2">
+                        {documents.map((doc, index) => (
+                            <a key={index} href={doc.url!} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600">
+                                <span className="flex items-center gap-2"><TbFileDescription className="text-lg" />{doc.name}</span>
+                                <TbDownload className="text-lg text-blue-500" />
+                            </a>
+                        ))}
+                    </div>
+                ) : <p>No documents available for download.</p>}
+            </div>
+            <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+        </Dialog>
+    );
+};
+
+const ViewPartnerDataDialog: React.FC<{ title: string; message: string; onClose: () => void; }> = ({ title, message, onClose }) => (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">{title}</h5><p>{message}</p>
+        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+    </Dialog>
+);
+
+
 const SendPartnerEmailAction: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
     useEffect(() => {
         if (!partner.primary_email_id) {
@@ -374,23 +557,23 @@ const SendPartnerWhatsAppAction: React.FC<{ partner: PartnerItem; onClose: () =>
     return null; 
 };
 
-const PartnerModals: React.FC<{ modalState: ModalState; onClose: () => void; }> = ({ modalState, onClose }) => {
-  const { type, data: partner, isOpen } = modalState;
-  if (!isOpen || !partner) return null;
+const PartnerModals: React.FC<{ modalState: ModalState; onClose: () => void; userOptions: SelectOption[] }> = ({ modalState, onClose, userOptions }) => {
+    const { type, data: partner, isOpen } = modalState;
+    if (!isOpen || !partner) return null;
 
-  switch (type) {
-    case 'email':
-      return <SendPartnerEmailAction partner={partner} onClose={onClose} />;
-    case 'whatsapp':
-        return <SendPartnerWhatsAppAction partner={partner} onClose={onClose} />;
-    case 'schedule':
-      return <AddPartnerScheduleDialog partner={partner} onClose={onClose} />;
-    default:
-      console.warn(`Unhandled modal type: ${type}`);
-      return null;
-  }
+    switch (type) {
+        case 'email': return <SendPartnerEmailAction partner={partner} onClose={onClose} />;
+        case 'whatsapp': return <SendPartnerWhatsAppAction partner={partner} onClose={onClose} />;
+        case 'schedule': return <AddPartnerScheduleDialog partner={partner} onClose={onClose} />;
+        case 'notification': return <AddPartnerNotificationDialog partner={partner} onClose={onClose} userOptions={userOptions} />;
+        case 'task': return <AssignPartnerTaskDialog partner={partner} onClose={onClose} userOptions={userOptions} />;
+        case 'members': return <ViewPartnerMembersDialog partner={partner} onClose={onClose} />;
+        case 'alert': return <ViewPartnerDataDialog title={`Alerts for ${partner.partner_name}`} message="No alerts found for this partner." onClose={onClose} />;
+        case 'transaction': return <ViewPartnerDataDialog title={`Transactions for ${partner.partner_name}`} message="No transactions found for this partner." onClose={onClose} />;
+        case 'document': return <DownloadPartnerDocumentDialog partner={partner} onClose={onClose} />;
+        default: console.warn(`Unhandled modal type: ${type}`); return null;
+    }
 };
-
 
 // --- Child Components ---
 const PartnerListSearch: React.FC<{ onInputChange: (value: string) => void; value: string; }> = ({ onInputChange, value }) => {
@@ -414,17 +597,22 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
   onOpenModal: (type: ModalType, data: PartnerItem) => void;
 }) => {
   const navigate = useNavigate();
+  const handleAction = (e: React.MouseEvent, action: () => void) => { e.stopPropagation(); action(); };
+
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit"><div className="text-xl cursor-pointer hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
       <Tooltip title="View"><div className="text-xl cursor-pointer hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/partner-view/${rowData.id}`)}><TbEye /></div></Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item onClick={() => onOpenModal('email', rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal('whatsapp', rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2">
-          <TbCalendarEvent size={18} />
-          <span className="text-xs">Add Schedule</span>
-        </Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('email', rowData))} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('whatsapp', rowData))} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('notification', rowData))} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('schedule', rowData))} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('task', rowData))} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('members', rowData))} className="flex items-center gap-2"><TbUsersGroup /> View Members</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('alert', rowData))} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('transaction', rowData))} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('document', rowData))} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
       </Dropdown>
     </div>
   );
@@ -475,7 +663,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
 const PartnerListTable = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { partnerList, setSelectedPartners, partnerCount, ContinentsData, CountriesData } = usePartnerList();
+  const { partnerList, setSelectedPartners, partnerCount, ContinentsData, CountriesData, getAllUserData } = usePartnerList();
   const [isLoading, setIsLoading] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -736,7 +924,7 @@ const PartnerListTable = () => {
           </div>
         </UiForm>
       </Drawer>
-      <PartnerModals modalState={modalState} onClose={handleCloseModal} />
+      <PartnerModals modalState={modalState} onClose={handleCloseModal} userOptions={getAllUserData} />
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
         <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
           <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>

@@ -165,9 +165,9 @@ const scheduleSchema = z.object({
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS = [ "Member ID", "Name", "Email", "Contact Number", "Company Name", "Company ID", "Status", "Joined Date", "Business Type", "Business Opportunity", "Member Grade", "Interested In", "Brands", "Location", "Profile Completion (%)", ];
+const CSV_HEADERS = ["Member ID", "Name", "Email", "Contact Number", "Company Name", "Company ID", "Status", "Joined Date", "Business Type", "Business Opportunity", "Member Grade", "Interested In", "Brands", "Location", "Profile Completion (%)",];
 type MemberExportItem = { id: string; member_name: string; member_email_id: string; member_contact_number: string; company_name: string; company_id_actual: string; status: string; created_at_formatted: string; business_type: string; business_opportunity: string; member_grade: string; interested_in: string; associated_brands_str: string; member_location: string; profile_completion: number; };
-const CSV_KEYS_EXPORT: (keyof MemberExportItem)[] = [ "id", "member_name", "member_email_id", "member_contact_number", "company_name", "company_id_actual", "status", "created_at_formatted", "business_type", "business_opportunity", "member_grade", "interested_in", "associated_brands_str", "member_location", "profile_completion", ];
+const CSV_KEYS_EXPORT: (keyof MemberExportItem)[] = ["id", "member_name", "member_email_id", "member_contact_number", "company_name", "company_id_actual", "status", "created_at_formatted", "business_type", "business_opportunity", "member_grade", "interested_in", "associated_brands_str", "member_location", "profile_completion",];
 
 function exportToCsv(filename: string, rows: FormItem[]) {
   if (!rows || !rows.length) {
@@ -200,12 +200,12 @@ export type MemberModalType = | "notification" | "task" | "active" | "calendar" 
 export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
 interface MemberModalsProps { modalState: MemberModalState; onClose: () => void; }
 
-const dummyUsers = [ { value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" }, ];
-const priorityOptions = [ { value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, ];
-const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' }, ];
-const dummyAlerts = [ { id: 1, severity: "danger", message: "KYC verification failed. Please re-submit documents.", time: "2 days ago", }, { id: 2, severity: "warning", message: "Membership renewal is due in 7 days.", time: "5 days ago", }, ];
-const dummyTimeline = [ { id: 1, icon: <TbMail />, title: "Email Sent", desc: "Sent welcome email and onboarding guide.", time: "2023-11-01", }, { id: 2, icon: <TbCalendar />, title: "Onboarding Call Scheduled", desc: "Scheduled a call to discuss platform features.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Member Joined", desc: "Initial registration completed.", time: "2023-10-27", }, ];
-const dummyDocs = [ { id: "doc1", name: "ID_Proof_Passport.pdf", type: "pdf", size: "1.8 MB" }, { id: "doc2", name: "Company_Registration.zip", type: "zip", size: "5.2 MB" }, ];
+const dummyUsers = [{ value: "user1", label: "Alice Johnson" }, { value: "user2", label: "Bob Williams" }, { value: "user3", label: "Charlie Brown" },];
+const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
+const eventTypeOptions = [{ value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' },];
+const dummyAlerts = [{ id: 1, severity: "danger", message: "KYC verification failed. Please re-submit documents.", time: "2 days ago", }, { id: 2, severity: "warning", message: "Membership renewal is due in 7 days.", time: "5 days ago", },];
+const dummyTimeline = [{ id: 1, icon: <TbMail />, title: "Email Sent", desc: "Sent welcome email and onboarding guide.", time: "2023-11-01", }, { id: 2, icon: <TbCalendar />, title: "Onboarding Call Scheduled", desc: "Scheduled a call to discuss platform features.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Member Joined", desc: "Initial registration completed.", time: "2023-10-27", },];
+const dummyDocs = [{ id: "doc1", name: "ID_Proof_Passport.pdf", type: "pdf", size: "1.8 MB" }, { id: "doc2", name: "Company_Registration.zip", type: "zip", size: "5.2 MB" },];
 
 const MemberModals: React.FC<MemberModalsProps> = ({ modalState, onClose }) => {
   const { type, data: member, isOpen } = modalState;
@@ -262,7 +262,7 @@ const AddNotificationDialog: React.FC<{
           <Controller name="title" control={control} render={({ field }) => <Input {...field} />} />
         </FormItem>
         <FormItem label="Send to Users">
-          <Controller name="users" control={control} render={({ field }) => ( <Select isMulti placeholder="Select Users" options={dummyUsers} {...field} /> )} />
+          <Controller name="users" control={control} render={({ field }) => (<Select isMulti placeholder="Select Users" options={dummyUsers} {...field} />)} />
         </FormItem>
         <FormItem label="Message">
           <Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={3} />} />
@@ -294,18 +294,18 @@ const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({
       <h5 className="mb-4">Assign Task for {member.member_name}</h5>
       <form onSubmit={handleSubmit(onAssignTask)}>
         <FormItem label="Task Title">
-          <Controller name="title" control={control} render={({ field }) => ( <Input {...field} placeholder="e.g., Follow up on KYC" /> )} />
+          <Controller name="title" control={control} render={({ field }) => (<Input {...field} placeholder="e.g., Follow up on KYC" />)} />
         </FormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormItem label="Assign To">
-            <Controller name="assignee" control={control} render={({ field }) => ( <Select placeholder="Select User" options={dummyUsers} {...field} /> )} />
+            <Controller name="assignee" control={control} render={({ field }) => (<Select placeholder="Select User" options={dummyUsers} {...field} />)} />
           </FormItem>
           <FormItem label="Priority">
-            <Controller name="priority" control={control} render={({ field }) => ( <Select placeholder="Select Priority" options={priorityOptions} {...field} /> )} />
+            <Controller name="priority" control={control} render={({ field }) => (<Select placeholder="Select Priority" options={priorityOptions} {...field} />)} />
           </FormItem>
         </div>
         <FormItem label="Due Date">
-          <Controller name="dueDate" control={control} render={({ field }) => ( <DatePicker placeholder="Select date" value={field.value as any} onChange={field.onChange} /> )} />
+          <Controller name="dueDate" control={control} render={({ field }) => (<DatePicker placeholder="Select date" value={field.value as any} onChange={field.onChange} />)} />
         </FormItem>
         <FormItem label="Description">
           <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} />} />
@@ -345,10 +345,10 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; }> = 
     };
     try {
       await dispatch(addScheduleAction(payload)).unwrap();
-      toast.push( <Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${member.member_name}.`} /> );
+      toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${member.member_name}.`} />);
       onClose();
     } catch (error: any) {
-      toast.push( <Notification type="danger" title="Scheduling Failed" children={error?.message || "An unknown error occurred."} /> );
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || "An unknown error occurred."} />);
     } finally {
       setIsLoading(false);
     }
@@ -362,14 +362,14 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; }> = 
         </UiFormItem>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message} >
-            <Controller name="event_type" control={control} render={({ field }) => ( <UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find((o) => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} /> )} />
+            <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find((o) => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
           </UiFormItem>
           <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message} >
-            <Controller name="date_time" control={control} render={({ field }) => ( <DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} /> )} />
+            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
           </UiFormItem>
         </div>
         <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message} >
-          <Controller name="remind_from" control={control} render={({ field }) => ( <DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} /> )} />
+          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} />
         </UiFormItem>
         <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message} >
           <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} />
@@ -390,7 +390,7 @@ const ViewAlertDialog: React.FC<{ member: FormItem; onClose: () => void }> = ({ 
       <div className="mt-4 flex flex-col gap-3">
         {dummyAlerts.length > 0 ? (
           dummyAlerts.map((alert) => (
-            <div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${ alertColors[alert.severity] }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${ alertColors[alert.severity] }-500/10`} >
+            <div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`} >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
                   <TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} />
@@ -523,7 +523,7 @@ const GenericActionDialog: React.FC<{ type: MemberModalType | null; member: Form
 };
 const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = ({ member, onClose }) => {
   const getDisplayValue = (value: any, fallback = "N/A") => value || fallback;
-  const joinDate = formatCustomDateTime(member.member_join_date || member.created_at)  || "N/A";
+  const joinDate = formatCustomDateTime(member.member_join_date || member.created_at) || "N/A";
   const formattedJoinDate = joinDate !== "N/A" ? joinDate : "N/A";
   const renderDetailItem = (label: string, value: React.ReactNode) => (
     <div className="mb-3">
@@ -531,15 +531,15 @@ const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = 
       <p className="text-sm font-semibold">{value === "" || value === undefined || value === null ? "N/A" : value}</p>
     </div>
   );
-  const renderListAsTags = ( list: (string | number)[] | undefined | null, itemClassName = "text-xs" ) => {
+  const renderListAsTags = (list: (string | number)[] | undefined | null, itemClassName = "text-xs") => {
     if (!list || list.length === 0) return "N/A";
     return (
       <div className="flex flex-wrap gap-1">
-        {list.map((item, idx) => ( <Tag key={idx} className={itemClassName}> {getDisplayValue(item)} </Tag> ))}
+        {list.map((item, idx) => (<Tag key={idx} className={itemClassName}> {getDisplayValue(item)} </Tag>))}
       </div>
     );
   };
-  const formatDate = ( dateString: string | undefined | null, includeTime = false ) => {
+  const formatDate = (dateString: string | undefined | null, includeTime = false) => {
     if (!dateString) return "N/A";
     try {
       const options: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric", };
@@ -560,7 +560,7 @@ const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = 
     if (displayUrl === "N/A") return "N/A";
     const isUrl = typeof displayUrl === "string" && (displayUrl.startsWith("http://") || displayUrl.startsWith("https://"));
     if (isUrl) {
-      return ( <a href={displayUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" > {text || displayUrl} </a> );
+      return (<a href={displayUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" > {text || displayUrl} </a>);
     }
     return displayUrl;
   };
@@ -580,30 +580,30 @@ const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
             {renderDetailItem("Member ID", getDisplayValue(member.id))}
             {renderDetailItem("Name", getDisplayValue(member.name))}
-            {renderDetailItem( "Status", <Tag className={`${ statusColorMap[currentStatus] || statusColorMap["inactive"] } capitalize`} > {getDisplayValue(member.status)} </Tag> )}
-            {renderDetailItem( "Interested In", getDisplayValue(member.interested_in) )}
+            {renderDetailItem("Status", <Tag className={`${statusColorMap[currentStatus] || statusColorMap["inactive"]} capitalize`} > {getDisplayValue(member.status)} </Tag>)}
+            {renderDetailItem("Interested In", getDisplayValue(member.interested_in))}
             {renderDetailItem("Joined Date", formattedJoinDate)}
-            {renderDetailItem( "Last Updated At", formatDate(member.updated_at, true) )}
-            {renderDetailItem( "Profile Completion", <div className="flex items-center gap-2"> <span>{getDisplayValue(member.profile_completion, 0)}%</span> <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 flex-grow"> <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${getDisplayValue( member.profile_completion, 0 )}%`, }} ></div> </div> </div> )}
-            {renderDetailItem( "Profile Picture", member.full_profile_pic ? renderLink(member.full_profile_pic, "View Image") : "N/A" )}
+            {renderDetailItem("Last Updated At", formatDate(member.updated_at, true))}
+            {renderDetailItem("Profile Completion", <div className="flex items-center gap-2"> <span>{getDisplayValue(member.profile_completion, 0)}%</span> <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 flex-grow"> <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${getDisplayValue(member.profile_completion, 0)}%`, }} ></div> </div> </div>)}
+            {renderDetailItem("Profile Picture", member.full_profile_pic ? renderLink(member.full_profile_pic, "View Image") : "N/A")}
           </div>
           <hr className="my-6" />
           <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Contact Information</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem( "Primary Number", `${getDisplayValue(member.number_code)} ${getDisplayValue( member.number )}` )}
+            {renderDetailItem("Primary Number", `${getDisplayValue(member.number_code)} ${getDisplayValue(member.number)}`)}
             {renderDetailItem("Email", getDisplayValue(member.email))}
-            {renderDetailItem( "WhatsApp Number", getDisplayValue(member.whatsApp_no) )}
-            {renderDetailItem( "Alternate Contact Number", `${getDisplayValue( member.alternate_contact_number_code )} ${getDisplayValue(member.alternate_contact_number)}` )}
-            {renderDetailItem( "Landline Number", getDisplayValue(member.landline_number) )}
+            {renderDetailItem("WhatsApp Number", getDisplayValue(member.whatsApp_no))}
+            {renderDetailItem("Alternate Contact Number", `${getDisplayValue(member.alternate_contact_number_code)} ${getDisplayValue(member.alternate_contact_number)}`)}
+            {renderDetailItem("Landline Number", getDisplayValue(member.landline_number))}
             {renderDetailItem("Fax Number", getDisplayValue(member.fax_number))}
-            {renderDetailItem( "Alternate Email", getDisplayValue(member.alternate_email) )}
+            {renderDetailItem("Alternate Email", getDisplayValue(member.alternate_email))}
           </div>
           <hr className="my-6" />
           <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Company Information</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem( "Temporary Company Name", getDisplayValue(member.company_temp) )}
-            {renderDetailItem( "Actual Company Name", getDisplayValue(member.company_actual) )}
-            {renderDetailItem( "Business Type", getDisplayValue(member.business_type) )}
+            {renderDetailItem("Temporary Company Name", getDisplayValue(member.company_temp))}
+            {renderDetailItem("Actual Company Name", getDisplayValue(member.company_actual))}
+            {renderDetailItem("Business Type", getDisplayValue(member.business_type))}
           </div>
           <hr className="my-6" />
           <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Address & Location</h6>
@@ -613,15 +613,15 @@ const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = 
             {renderDetailItem("State", getDisplayValue(member.state))}
             {renderDetailItem("Pincode", getDisplayValue(member.pincode))}
             {renderDetailItem("Country", getDisplayValue(member.country?.name))}
-            {renderDetailItem( "Continent", getDisplayValue(member.continent?.name) )}
+            {renderDetailItem("Continent", getDisplayValue(member.continent?.name))}
           </div>
           <hr className="my-6" />
           <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Social & Web Presence</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
             {renderDetailItem("Website", renderLink(member.website))}
-            {renderDetailItem( "LinkedIn Profile", renderLink(member.linkedIn_profile) )}
-            {renderDetailItem( "Facebook Profile", renderLink(member.facebook_profile) )}
-            {renderDetailItem( "Instagram Handle", renderLink(member.instagram_handle) )}
+            {renderDetailItem("LinkedIn Profile", renderLink(member.linkedIn_profile))}
+            {renderDetailItem("Facebook Profile", renderLink(member.facebook_profile))}
+            {renderDetailItem("Instagram Handle", renderLink(member.instagram_handle))}
             {renderDetailItem("Botim ID", renderLink(member.botim_id))}
             {renderDetailItem("Skype ID", renderLink(member.skype_id))}
             {renderDetailItem("WeChat ID", renderLink(member.wechat_id))}
@@ -629,57 +629,57 @@ const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = 
           <hr className="my-6" />
           <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Business & Membership</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem( "Business Opportunity", getDisplayValue(member.business_opportunity) )}
-            {renderDetailItem( "Member Grade", getDisplayValue(member.member_grade) )}
-            {renderDetailItem( "Dealing in Bulk", getDisplayValue(member.dealing_in_bulk) )}
-            {renderDetailItem( "Current Membership Plan", getDisplayValue(member.membership_plan_current) )}
-            {renderDetailItem( "Upgrade Plan Suggestion", getDisplayValue(member.upgrade_your_plan) )}
+            {renderDetailItem("Business Opportunity", getDisplayValue(member.business_opportunity))}
+            {renderDetailItem("Member Grade", getDisplayValue(member.member_grade))}
+            {renderDetailItem("Dealing in Bulk", getDisplayValue(member.dealing_in_bulk))}
+            {renderDetailItem("Current Membership Plan", getDisplayValue(member.membership_plan_current))}
+            {renderDetailItem("Upgrade Plan Suggestion", getDisplayValue(member.upgrade_your_plan))}
           </div>
           <hr className="my-6" />
           <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Permissions</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem( "Product Upload Permission", renderBoolean(member.product_upload_permission) )}
-            {renderDetailItem( "Wall Enquiry Permission", renderBoolean(member.wall_enquiry_permission) )}
-            {renderDetailItem( "Enquiry Permission", renderBoolean(member.enquiry_permission) )}
-            {renderDetailItem( "Trade Inquiry Allowed", renderBoolean(member.trade_inquiry_allowed) )}
+            {renderDetailItem("Product Upload Permission", renderBoolean(member.product_upload_permission))}
+            {renderDetailItem("Wall Enquiry Permission", renderBoolean(member.wall_enquiry_permission))}
+            {renderDetailItem("Enquiry Permission", renderBoolean(member.enquiry_permission))}
+            {renderDetailItem("Trade Inquiry Allowed", renderBoolean(member.trade_inquiry_allowed))}
           </div>
           <hr className="my-6" />
           <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Preferences & Miscellaneous</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem( "Favourite Products", member.favourite_products_list && member.favourite_products_list.length > 0 ? ( <ul className="list-disc list-inside"> {member.favourite_products_list.map((product: any) => ( <li key={product.id}>{getDisplayValue(product.name)}</li> ))} </ul> ) : ( "N/A" ) )}
-            {renderDetailItem( "Favourite Brands", member.favourite_brands_list && member.favourite_brands_list.length > 0 ? renderListAsTags( member.favourite_brands_list.map( (brand: any) => brand.name || brand ) ) : "N/A" )}
-            {renderDetailItem( "Top-level Brand Name", getDisplayValue(member.brand_name) )}
-            {renderDetailItem( "Top-level Category", getDisplayValue(member.category) )}
-            {renderDetailItem( "Top-level Subcategory", getDisplayValue(member.subcategory) )}
+            {renderDetailItem("Favourite Products", member.favourite_products_list && member.favourite_products_list.length > 0 ? (<ul className="list-disc list-inside"> {member.favourite_products_list.map((product: any) => (<li key={product.id}>{getDisplayValue(product.name)}</li>))} </ul>) : ("N/A"))}
+            {renderDetailItem("Favourite Brands", member.favourite_brands_list && member.favourite_brands_list.length > 0 ? renderListAsTags(member.favourite_brands_list.map((brand: any) => brand.name || brand)) : "N/A")}
+            {renderDetailItem("Top-level Brand Name", getDisplayValue(member.brand_name))}
+            {renderDetailItem("Top-level Category", getDisplayValue(member.category))}
+            {renderDetailItem("Top-level Subcategory", getDisplayValue(member.subcategory))}
             {renderDetailItem("Remarks", getDisplayValue(member.remarks))}
           </div>
           <hr className="my-6" />
           <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Administrative Information</h6>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-            {renderDetailItem( "Created By", getDisplayValue(member.created_by_user?.name) )}
-            {renderDetailItem( "Updated By", getDisplayValue(member.updated_by_user?.name) )}
-            {renderDetailItem( "Relationship Manager", getDisplayValue(member.relationship_manager?.name) )}
+            {renderDetailItem("Created By", getDisplayValue(member.created_by_user?.name))}
+            {renderDetailItem("Updated By", getDisplayValue(member.updated_by_user?.name))}
+            {renderDetailItem("Relationship Manager", getDisplayValue(member.relationship_manager?.name))}
           </div>
           {member.dynamic_member_profiles && member.dynamic_member_profiles.length > 0 && (
-              <>
-                <hr className="my-6" />
-                <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Dynamic Member Profiles</h6>
-                {member.dynamic_member_profiles.map( (profile: any, index: number) => (
-                    <div key={profile.id || index} className="mb-6 p-4 border rounded-md dark:border-gray-700" >
-                      <h5 className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Profile {index + 1}:{" "} {getDisplayValue(profile.member_type?.name)}</h5>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                        {renderDetailItem( "Member Type", getDisplayValue(profile.member_type?.name) )}
-                        {renderDetailItem( "Brands", renderListAsTags(profile.brand_names) )}
-                        {renderDetailItem( "Categories", renderListAsTags(profile.category_names) )}
-                        {renderDetailItem( "Sub-categories", renderListAsTags(profile.sub_category_names) )}
-                        {renderDetailItem( "Profile Created At", formatDate(profile.created_at, true) )}
-                        {renderDetailItem( "Profile Updated At", formatDate(profile.updated_at, true) )}
-                      </div>
-                    </div>
-                  )
-                )}
-              </>
-            )}
+            <>
+              <hr className="my-6" />
+              <h6 className="mb-4 text-base font-medium text-gray-700 dark:text-gray-300">Dynamic Member Profiles</h6>
+              {member.dynamic_member_profiles.map((profile: any, index: number) => (
+                <div key={profile.id || index} className="mb-6 p-4 border rounded-md dark:border-gray-700" >
+                  <h5 className="text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">Profile {index + 1}:{" "} {getDisplayValue(profile.member_type?.name)}</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                    {renderDetailItem("Member Type", getDisplayValue(profile.member_type?.name))}
+                    {renderDetailItem("Brands", renderListAsTags(profile.brand_names))}
+                    {renderDetailItem("Categories", renderListAsTags(profile.category_names))}
+                    {renderDetailItem("Sub-categories", renderListAsTags(profile.sub_category_names))}
+                    {renderDetailItem("Profile Created At", formatDate(profile.created_at, true))}
+                    {renderDetailItem("Profile Updated At", formatDate(profile.updated_at, true))}
+                  </div>
+                </div>
+              )
+              )}
+            </>
+          )}
         </div>
         <div className="text-right mt-8">
           <Button variant="solid" onClick={onClose}>Close</Button>
@@ -820,6 +820,7 @@ const FormListActionTools = () => {
     </div>
   );
 };
+
 const ActionColumn = ({
   rowData,
   onEdit,
@@ -835,6 +836,7 @@ const ActionColumn = ({
   onSendEmail: (data: FormItem) => void;
   onSendWhatsapp: (data: FormItem) => void;
 }) => {
+  const navigate = useNavigate();
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Edit">
@@ -905,7 +907,7 @@ const ActionColumn = ({
           <TbTagStarred size={18} /> <span className="text-xs">Add Active</span>{" "}
         </Dropdown.Item>
         <Dropdown.Item
-          onClick={() => onOpenModal("trackRecord", rowData)}
+          onClick={() => navigate(`/business-entities/company-view/${rowData.id}`)}
           className="flex items-center gap-2"
         >
           {" "}
@@ -1081,8 +1083,8 @@ const FormListTable = ({
 
   const handleSendEmail = (member: FormItem) => {
     if (!member.member_email_id) {
-        toast.push(<Notification type="warning" title="Missing Email" children="Email is not available for this member." />);
-        return;
+      toast.push(<Notification type="warning" title="Missing Email" children="Email is not available for this member." />);
+      return;
     }
     const subject = `Regarding your membership with us`;
     const body = `Hello ${member.member_name},\n\nWe are contacting you regarding...\n\nThank you.`;
@@ -1092,8 +1094,8 @@ const FormListTable = ({
   const handleSendWhatsapp = (member: FormItem) => {
     const phone = member.member_contact_number?.replace(/\D/g, '');
     if (!phone) {
-        toast.push(<Notification type="warning" title="Missing Phone" children="Contact number is not available for this member." />);
-        return;
+      toast.push(<Notification type="warning" title="Missing Phone" children="Contact number is not available for this member." />);
+      return;
     }
     const message = `Hi ${member.member_name}, this is a message regarding your membership.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
@@ -1398,11 +1400,11 @@ const FormListTable = ({
   const [filteredColumns, setFilteredColumns] = useState(columns);
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
-      const originalColumn = columns.find( (c) => (c.id || c.accessorKey) === colId );
+      const originalColumn = columns.find((c) => (c.id || c.accessorKey) === colId);
       if (originalColumn) {
         setFilteredColumns((prev) => {
           const newCols = [...prev, originalColumn];
-          newCols.sort((a, b) => { const indexA = columns.findIndex( (c) => (c.id || c.accessorKey) === (a.id || a.accessorKey) ); const indexB = columns.findIndex( (c) => (c.id || c.accessorKey) === (b.id || b.accessorKey) ); return indexA - indexB; });
+          newCols.sort((a, b) => { const indexA = columns.findIndex((c) => (c.id || c.accessorKey) === (a.id || a.accessorKey)); const indexB = columns.findIndex((c) => (c.id || c.accessorKey) === (b.id || b.accessorKey)); return indexA - indexB; });
           return newCols;
         });
       }
@@ -1445,12 +1447,12 @@ const FormListTable = ({
       const originalItemsOnPage = currentRows.map((r) => r.original);
       if (checked) {
         setSelectedMembers((prevSelected) => {
-          const newSelections = originalItemsOnPage.filter( (pageItem) => !prevSelected.some((selItem) => selItem.id === pageItem.id) );
+          const newSelections = originalItemsOnPage.filter((pageItem) => !prevSelected.some((selItem) => selItem.id === pageItem.id));
           return [...prevSelected, ...newSelections];
         });
       } else {
         setSelectedMembers((prevSelected) =>
-          prevSelected.filter( (selItem) => !originalItemsOnPage.some( (pageItem) => pageItem.id === selItem.id ) )
+          prevSelected.filter((selItem) => !originalItemsOnPage.some((pageItem) => pageItem.id === selItem.id))
         );
       }
     },
@@ -1469,7 +1471,7 @@ const FormListTable = ({
           <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end" >
             <div className="flex flex-col p-2">
               <div className="font-semibold mb-1 border-b pb-1">Toggle Columns</div>
-              {columns.map( (col) => col.header && ( <div key={col.id || (col.accessorKey as string)} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2" > <Checkbox checked={isColumnVisible( col.id || (col.accessorKey as string) )} onChange={(checked) => toggleColumn( checked, col.id || (col.accessorKey as string) )} > {col.header as string} </Checkbox> </div> ) )}
+              {columns.map((col) => col.header && (<div key={col.id || (col.accessorKey as string)} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2" > <Checkbox checked={isColumnVisible(col.id || (col.accessorKey as string))} onChange={(checked) => toggleColumn(checked, col.id || (col.accessorKey as string))} > {col.header as string} </Checkbox> </div>))}
             </div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload">
@@ -1477,9 +1479,9 @@ const FormListTable = ({
           </Tooltip>
           <Button icon={<TbFilter />} onClick={openFilterDrawer}>
             Filter
-            {activeFilterCount > 0 && ( <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full"> {activeFilterCount} </span> )}
+            {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full"> {activeFilterCount} </span>)}
           </Button>
-          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={ !allFilteredAndSortedData || allFilteredAndSortedData.length === 0 } >Export</Button>
+          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData || allFilteredAndSortedData.length === 0} >Export</Button>
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
@@ -1496,53 +1498,53 @@ const FormListTable = ({
         onCheckBoxChange={handleRowSelect}
         onIndeterminateCheckBoxChange={handleAllRowSelect}
       />
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={480} footer={ <div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button> <Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button> </div> } >
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={480} footer={<div className="text-right w-full"> <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button> <Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button> </div>} >
         <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} >
           <div className="sm:grid grid-cols-2 gap-2">
             <UiFormItem label="Status">
-              <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Status" options={memberStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={memberStatusOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="Business Type">
-              <Controller name="filterBusinessType" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Type" options={businessTypeOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterBusinessType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Type" options={businessTypeOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="Business Opportunity">
-              <Controller name="filterBusinessOpportunity" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Opportunity" options={businessOpportunityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterBusinessOpportunity" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Opportunity" options={businessOpportunityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="Continent">
-              <Controller name="filterContinent" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Continent" options={continentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterContinent" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Continent" options={continentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="Country">
-              <Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Country" options={[{ label: "India", value: "India" }]} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Country" options={[{ label: "India", value: "India" }]} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="State">
-              <Controller name="filterState" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select State" options={stateOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterState" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select State" options={stateOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="City">
-              <Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select City" options={cityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select City" options={cityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="Interested For">
-              <Controller name="filterInterestedFor" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Interest" options={interestedForOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterInterestedFor" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Interest" options={interestedForOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="Interested Category">
-              <Controller name="filterInterestedCategory" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Category" options={businessTypeOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterInterestedCategory" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Category" options={businessTypeOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="Brand">
-              <Controller name="filterBrand" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Brand" options={getBrandOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterBrand" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brand" options={getBrandOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="Dealing in Bulk">
-              <Controller name="filterDealing" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select" options={[ { label: "Yes", value: "Yes" }, { label: "No", value: "No" }, ]} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="filterDealing" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select" options={[{ label: "Yes", value: "Yes" }, { label: "No", value: "No" },]} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
             <UiFormItem label="Grade">
-              <Controller name="memberGrade" control={filterFormMethods.control} render={({ field }) => ( <UiSelect isMulti placeholder="Select Grade" options={[ { label: "A", value: "A" }, { label: "B", value: "B" }, { label: "C", value: "C" }, ]} value={field.value || []} onChange={(val) => field.onChange(val || [])} /> )} />
+              <Controller name="memberGrade" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Grade" options={[{ label: "A", value: "A" }, { label: "B", value: "B" }, { label: "C", value: "C" },]} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} />
             </UiFormItem>
           </div>
         </UiForm>
       </Drawer>
       <MemberModals modalState={modalState} onClose={handleCloseModal} />
-      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit( handleConfirmExportWithReason )} loading={isSubmittingExportReason} confirmText={ isSubmittingExportReason ? "Submitting..." : "Submit & Export" } cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason, }} >
-        <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit( handleConfirmExportWithReason )(); }} className="flex flex-col gap-4 mt-2" >
-          <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={ exportReasonFormMethods.formState.errors.reason?.message } >
-            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => ( <Input textArea {...field} placeholder="Enter reason..." rows={3} /> )} />
+      <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason, }} >
+        <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2" >
+          <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message} >
+            <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
           </UiFormItem>
         </UiForm>
       </ConfirmDialog>
@@ -1561,7 +1563,7 @@ const FormListSelected = () => {
   const dispatch = useAppDispatch();
   const handleConfirmDelete = async () => {
     if (!selectedMembers || selectedMembers.length === 0) {
-      toast.push( <Notification title="Error" type="danger"> No members selected for deletion. </Notification> );
+      toast.push(<Notification title="Error" type="danger"> No members selected for deletion. </Notification>);
       setDeleteConfirmationOpen(false);
       return;
     }
@@ -1569,19 +1571,19 @@ const FormListSelected = () => {
     try {
       const ids = selectedMembers.map((data) => data.id);
       await dispatch(deleteAllMemberAction({ ids: ids.join(",") })).unwrap();
-      toast.push( <Notification title="Members Deleted" type="success" duration={2000}> {selectedMembers.length} member(s) deleted. </Notification> );
+      toast.push(<Notification title="Members Deleted" type="success" duration={2000}> {selectedMembers.length} member(s) deleted. </Notification>);
       dispatch(getMemberAction());
       setSelectedMembers([]);
     } catch (error: any) {
       const errorMessage = error.message || "Could not delete members.";
-      toast.push( <Notification title="Failed to Delete" type="danger" duration={3000}> {errorMessage} </Notification> );
+      toast.push(<Notification title="Failed to Delete" type="danger" duration={3000}> {errorMessage} </Notification>);
       console.error("Delete members Error:", error);
     }
   };
   const handleSend = () => {
     setSendMessageLoading(true);
     setTimeout(() => {
-      toast.push( <Notification type="success" title="Message Sent"> Message sent to {selectedMembers.length} member(s)! </Notification>, { placement: "top-center" } );
+      toast.push(<Notification type="success" title="Message Sent"> Message sent to {selectedMembers.length} member(s)! </Notification>, { placement: "top-center" });
       setSendMessageLoading(false);
       setSendMessageDialogOpen(false);
       setSelectedMembers([]);
