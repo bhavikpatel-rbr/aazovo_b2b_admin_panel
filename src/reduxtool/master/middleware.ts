@@ -5316,3 +5316,24 @@ export const getFilledFormAction = createAsyncThunk(
     }
   }
 )
+
+
+export const getAllCountAction = createAsyncThunk(
+  "auth/getAllCountAction",
+  async (id, { rejectWithValue, dispatch }) => {
+    try {
+      const response1: AxiosResponse<any> = await getOpportunitiesAsync()
+      const response2: AxiosResponse<any> = await getLeadAsync()
+      const response3: AxiosResponse<any> = await getAllTaskAsync()
+      const response4: AxiosResponse<any> = await getpWallListingAsync()
+      const response5: AxiosResponse<any> = await getaccountdocActionAsync()
+      if (response1) {
+        return { response1, response2, response3, response4, response5 }
+      }
+
+      return rejectWithValue(response1)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
