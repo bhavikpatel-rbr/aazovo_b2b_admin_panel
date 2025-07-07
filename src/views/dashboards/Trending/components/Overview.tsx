@@ -290,17 +290,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'Opportunity' && (
                             <div>
                                 <div className="lg:flex  gap-2 justify-between mt-4">
-                                    <div className="whitespace-nowrap pr-4 border-r border-r-gray-200">
-                                        <span className=" font-semibold text-black dark:text-white">
-                                            Growth Rate
-                                        </span>
-                                        <div className="flex gap-1 items-center">
-                                            <h3>22%</h3>
-                                            <span className="text-green-600 text-lg">
-                                                <FaArrowUpLong />
-                                            </span>
-                                        </div>
-                                    </div>
+                                  
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar field="Total" percent={20} color="text-[#6610f2]" className="bg-[#6610f2] dark:opacity-70" />
                                         <Bar field="Active" percent={20} color="text-[#28a745]" className="bg-[#28a745] dark:opacity-70" />
@@ -317,9 +307,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 <div className="mt-8 block  gap-2">
                                     <div className="flex justify-between items-center mb-6">
                                         <h6>Opportunity Leaderboard</h6>
-                                        {/* <div className="flex gap-2 items-center text-sm">
-                                            <h6 className="text-sm">Match Score</h6>
-                                        </div> */}
+                                       
                                     </div>
                                     <Opportunities isDashboard={true} />
                                 </div>
@@ -330,17 +318,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'Leads' && (
                             <div>
                                 <div className="lg:flex gap-2 justify-between mt-4">
-                                    <div className="whitespace-nowrap pr-4 border-r border-r-gray-200">
-                                        <span className=" font-semibold text-black dark:text-white">
-                                            Growth Rate
-                                        </span>
-                                        <div className="flex gap-1 items-center">
-                                            <h3>2%</h3>
-                                            <span className="text-red-600 text-lg">
-                                                <FaArrowDownLong />
-                                            </span>
-                                        </div>
-                                    </div>
+                                   
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar field="Total" percent={20} color="text-[#6610f2]" className="bg-[#6610f2] dark:opacity-70" />
                                         <Bar field="Recently" percent={20} color="text-[#2ecc71]" className="bg-[#2ecc71] dark:opacity-70" />
@@ -358,11 +336,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 <div className="mt-8 block  gap-2">
                                     <div className="flex justify-between items-center mb-6">
                                         <h6>Leads Leaderboard</h6>
-                                        <div className="flex gap-2 items-center text-sm">
-                                            {/* <h6 className="text-sm">
-                                                Conversion Rate
-                                            </h6> */}
-                                        </div>
+                                       
                                     </div>
                                     <Leads isDashboard={true} />
                                 </div>
@@ -373,17 +347,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'Tasks' && (
                             <div>
                                 <div className="lg:flex gap-2 justify-between mt-4">
-                                    <div className="whitespace-nowrap pr-4 border-r border-r-gray-200">
-                                        <span className=" font-semibold text-black dark:text-white">
-                                            Growth Rate
-                                        </span>
-                                        <div className="flex gap-1 items-center">
-                                            <h3>13%</h3>
-                                            <span className="text-green-600 text-lg">
-                                                <FaArrowUpLong />
-                                            </span>
-                                        </div>
-                                    </div>
+                                   
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar field="Total" percent={20} color="text-[#6610f2]" className="bg-[#6610f2] dark:opacity-70" />
                                         <Bar field="Verified" percent={20} color="text-[#6610f2]" className="bg-[#6610f2] dark:opacity-70" />
@@ -402,9 +366,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 <div className="mt-8 block  gap-2">
                                     <div className="flex justify-between items-center mb-6">
                                         <h6>Tasks Leaderboard</h6>
-                                        {/* <div className="flex gap-2 items-center text-sm">
-                                            <h6 className="text-sm">Trust Score</h6>
-                                        </div> */}
+
                                     </div>
                                     <TaskList isDashboard={true} />
                                 </div>
@@ -415,17 +377,7 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                         {selectedCategory === 'WallListing' && (
                             <div>
                                 <div className="lg:flex gap-2 justify-between mt-4">
-                                    <div className="whitespace-nowrap pr-4 border-r border-r-gray-200">
-                                        <span className=" font-semibold text-black dark:text-white">
-                                            Growth Rate
-                                        </span>
-                                        <div className="flex gap-1 items-center">
-                                            <h3>17%</h3>
-                                            <span className="text-green-600 text-lg">
-                                                <FaArrowUpLong />
-                                            </span>
-                                        </div>
-                                    </div>
+                                    
                                     <div className="lg:pl-4 flex items-center gap-1 w-full">
                                         <Bar field="Total" percent={20} color="text-[#6610f2]" className="bg-[#6610f2] dark:opacity-70" />
                                         <Bar field="Active" percent={20} color="text-[#2ecc71]" className="bg-[#2ecc71] dark:opacity-70" />
@@ -443,11 +395,6 @@ const Overview = ({ data }: StatisticGroupsProps) => {
                                 <div className="mt-8 block  gap-2">
                                     <div className="flex justify-between items-center mb-6">
                                         <h6>Wall Listing Leaderboard</h6>
-                                        {/* <div className="flex gap-2 items-center text-sm">
-                                            <h6 className="text-sm">
-                                                Performance Score
-                                            </h6>
-                                        </div> */}
                                     </div>
                                     <WallListing isDashboard={true} />
                                 </div>
