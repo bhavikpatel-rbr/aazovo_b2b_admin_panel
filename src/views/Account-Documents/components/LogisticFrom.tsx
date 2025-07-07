@@ -138,7 +138,7 @@ const MultiCheckboxField: FC<{ control: Control<any>, field: FormField }> = ({ c
         // On a 3-column grid (lg), this means it takes up 3 columns.
         <FormItem label={field.label} className="md:col-span-2 lg:col-span-3">
             {/* The options themselves are laid out in a responsive grid, up to 3 columns */}
-            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2`}>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mt-2`}>
                 {field.options?.map(option => (
                     <div key={option.name} className="flex items-center gap-2">
                         <Controller
@@ -270,6 +270,7 @@ const FillUpForm = () => {
     const [imagePreviews, setImagePreviews] = useState<{ [fieldName: string]: string }>({});
     const [isImageDrawerOpen, setIsImageDrawerOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
     const previousBlobUrls = useRef<{ [key: string]: string }>({});
 
     const { handleSubmit, control, formState: { isSubmitting }, reset } = useForm({ defaultValues: {} });
@@ -455,8 +456,9 @@ const FillUpForm = () => {
     };
 
     // Handlers for the image viewer drawer
-    const handleImageClick = (imageUrl: string) => {
+    const handleImageClick = (imageUrl: string, fieldName: string) => {
         setSelectedImage(imageUrl);
+        setSelectedLabel(fieldName)
         setIsImageDrawerOpen(true);
     };
     const closeImageDrawer = () => {
@@ -519,10 +521,18 @@ const FillUpForm = () => {
                             <div className="space-y-4">
                             {Object.keys(imagePreviews).length > 0 ? (
                                 Object.entries(imagePreviews).map(([fieldName, imageUrl]) => (
+                                    <>
+                                    <span>
+                                        {fieldName
+                                            .split('.')
+                                            .pop()
+                                            ?.replace(/_/g, ' ')
+                                            .replace(/\b\w/g, c => c.toUpperCase())}
+                                    </span>
                                     <div 
-                                        key={fieldName} 
+                                        key={fieldName}
                                         className="cursor-pointer border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-md overflow-hidden transition-colors" 
-                                        onClick={() => handleImageClick(imageUrl)}
+                                        onClick={() => handleImageClick(imageUrl, fieldName)}
                                     >
                                         <img
                                             src={imageUrl}
@@ -530,6 +540,7 @@ const FillUpForm = () => {
                                             className="w-full h-auto object-cover"
                                         />
                                     </div>
+                                    </>
                                 ))
                             ) : (
                                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
@@ -591,8 +602,17 @@ const FillUpForm = () => {
                 width={500}
             >
                 <div className="p-4 h-full overflow-y-auto">
-                    {selectedImage && (
+                    {selectedImage && selectedLabel &&  (
+                        <>
+                        <span>
+                            {selectedLabel
+                                .split('.')
+                                .pop()
+                                ?.replace(/_/g, ' ')
+                                .replace(/\b\w/g, c => c.toUpperCase())}
+                        </span>
                         <img src={selectedImage} alt="Selected Document" className="w-full h-auto border border-indigo-200 rounded-md" />
+                        </>
                     )}
                 </div>
             </Drawer>

@@ -1,5 +1,3 @@
-// src/components/template/UserProfileDropdown.tsx
-
 import { useEffect, useState, useRef } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
@@ -9,6 +7,7 @@ import Avatar from "@/components/ui/Avatar";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { Dialog } from "@/components/ui/Dialog"; // We need the base Dialog for our custom modal
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 
@@ -19,7 +18,7 @@ import { config } from "@/utils/config";
 
 // Redux & State
 import { useAppDispatch } from "@/reduxtool/store";
-import { logoutAction } from "@/reduxtool/auth/middleware";
+import { logoutAction, updateUserProfilePictureAction } from "@/reduxtool/auth/middleware";
 
 // Icons
 import {
@@ -27,156 +26,164 @@ import {
   PiPulseDuotone,
   PiSignOutDuotone,
   PiCameraDuotone,
-  PiMapPinDuotone,
-  PiEnvelopeSimpleDuotone,
-  PiPhone,
+  PiUploadSimpleDuotone,
 } from "react-icons/pi";
 import { IoMdCheckmarkCircle } from "react-icons/io";
 
 const { useEncryptApplicationStorage } = config;
 
-// --- 1. Reusable Profile Card Component ---
-const UserProfileCard = ({
-  userData,
-  newAvatarPreview,
-}: {
-  userData: any;
-  newAvatarPreview: string | null;
-}) => {
-  const avatarSrc =
-    userData?.profile_pic_path;
-    // console.log("Avatar Source:", avatarSrc);
-  return (
-    <div>
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-        <div className="relative flex-shrink-0">
-          {/* <Avatar shape="round" size={100} src={userData?.profile_pic_path} /> */}
-          <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800"></div>
-        </div>
-        <div className="flex flex-col gap-4 w-full">
-          <div>
-            <div className="flex items-center gap-2">
-              <h5 className="font-bold" style={{ fontSize: '1rem'}}>
-                {userData?.name || "Atkinson"}
-              </h5>
-              <IoMdCheckmarkCircle className="text-blue-500 text-xl" />
-            </div>
-            <div className="flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400" style={{ lineHeight: "24px"}}>
-              <span className="flex items-center gap-1.5">
-                <PiUserDuotone /> {userData?.designtion || "Web Designer"}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <PiPhone /> {userData?.phone || "+12365412"}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <PiEnvelopeSimpleDuotone />{" "}
-                {userData?.email || "info@gmail.com"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+// --- MOCK API SERVICE ---
+// In a real app, this would be in a separate file (e.g., src/services/UserService.ts)
+// It simulates uploading a file and getting a new URL back from the server.
+// const uploadProfileImage = (file: File): Promise<{ newImageUrl: string }> => {
+//   console.log(`Uploading file: ${file.name}`);
+//   return new Promise((resolve) => {
+//     setTimeout(() => {
+//       // Simulate success by returning a new random image URL
+//       const newImageUrl = `https://picsum.photos/200?random=${Math.random()}`;
+//       console.log(`File uploaded. New URL: ${newImageUrl}`);
+//       resolve({ newImageUrl });
+//     }, 1500); // 1.5-second delay to simulate network
+//   });
+// };
 
-// --- 2. MODIFIED Confirmation Modal for Image Change (using ConfirmDialog) ---
-interface ConfirmImageChangeModalProps {
+
+// --- 1. NEW - Profile Image Upload Modal Component ---
+// This is a dedicated modal for a better user experience.
+interface ProfileImageUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  newAvatarPreview: string | null;
-  onConfirm: () => void;
+  onSave: (file: File) => void;
   isLoading: boolean;
   userData: any;
 }
-const ConfirmImageChangeModal = ({
+const ProfileImageUploadModal = ({
   isOpen,
   onClose,
-  newAvatarPreview,
-  onConfirm,
+  onSave,
   isLoading,
   userData,
-}: ConfirmImageChangeModalProps) => {
-  return (
-    <ConfirmDialog
-      isOpen={isOpen}
-      onClose={onClose}
-      onRequestClose={onClose}
-      onCancel={onClose}
-      onConfirm={onConfirm}
-      loading={isLoading}
-      width={477}
-      title="Profile Image Change"
-      type="info"
-      confirmText="Save"
-    >
-      <UserProfileCard
-        userData={userData}
-        newAvatarPreview={newAvatarPreview}
-      />
-    </ConfirmDialog>
-  );
-};
-
-// --- 3. Main Dropdown Component ---
-const _UserDropdown = () => {
-  const [userData, setuserData] = useState<any>(null);
-  const dispatch = useAppDispatch();
+}: ProfileImageUploadModalProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
   const [newAvatarPreview, setNewAvatarPreview] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const avatarSrc = userData?.profile_pic_path || "/img/avatars/default-user.jpg";
-  const avatarProps = { src: avatarSrc };
 
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
+  const currentAvatarSrc = userData?.profile_pic_path || "/img/avatars/default-user.jpg";
+  const avatarToShow = newAvatarPreview || currentAvatarSrc;
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setNewAvatarFile(file);
+      // Create a temporary URL to preview the image
       setNewAvatarPreview(URL.createObjectURL(file));
-      setIsConfirmModalOpen(true);
     }
+    // Reset file input to allow selecting the same file again
     event.target.value = "";
   };
-  const handleConfirmUpload = () => {
-    if (!newAvatarFile) return;
-    setIsUploading(true);
-    setTimeout(() => {
-      console.log("Uploading file:", newAvatarFile.name);
-      toast.push(<Notification title="Avatar Updated" type="success" />);
-      setIsUploading(false);
-      closeAndResetModal();
-    }, 1500);
+
+  const handleTriggerFileInput = () => {
+    fileInputRef.current?.click();
   };
-  const closeAndResetModal = () => {
-    setIsConfirmModalOpen(false);
-    if (newAvatarPreview) {
-      URL.revokeObjectURL(newAvatarPreview);
+
+  const handleSaveClick = () => {
+    if (newAvatarFile) {
+      onSave(newAvatarFile);
     }
+  };
+  
+  // Clean up the object URL when the component unmounts or preview changes
+  useEffect(() => {
+    return () => {
+        if (newAvatarPreview) {
+            URL.revokeObjectURL(newAvatarPreview);
+        }
+    }
+  }, [newAvatarPreview])
+
+  // Reset state when the modal is closed
+  const handleClose = () => {
     setNewAvatarFile(null);
     setNewAvatarPreview(null);
+    onClose();
   };
-  const handleSignOutClick = () => {
-    setIsLogoutDialogOpen(true);
-  };
-  const onDialogClose = () => {
-    setIsLogoutDialogOpen(false);
-  };
-  const onDialogConfirm = () => {
-    dispatch(logoutAction());
-  };
+
+  return (
+    <Dialog
+      isOpen={isOpen}
+      onClose={handleClose}
+      onRequestClose={handleClose}
+      width={400}
+    >
+        <h5 className="mb-4">Change Profile Photo</h5>
+        <div className="flex flex-col items-center gap-6">
+            <div className="relative group">
+                <Avatar size={120} shape="circle" src={avatarToShow} />
+                <div 
+                    className="absolute inset-0  bg-opacity-0 group-hover:bg-opacity-50 rounded-full flex items-center justify-center cursor-pointer transition-opacity"
+                    onClick={handleTriggerFileInput}
+                >
+                    <div className="text-center text-white opacity-0 group-hover:opacity-100 p-4">
+                        <PiCameraDuotone className="text-3xl mx-auto" />
+                        <span className="text-xs font-semibold">Change Photo</span>
+                    </div>
+                </div>
+            </div>
+
+            <Button
+                variant="solid"
+                color="blue-600"
+                icon={<PiUploadSimpleDuotone />}
+                onClick={handleTriggerFileInput}
+            >
+                Choose an Image
+            </Button>
+
+            {/* Hidden file input is triggered by the button/avatar overlay */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/png, image/jpeg, image/gif"
+                onChange={handleFileSelect}
+            />
+        </div>
+        <div className="text-right mt-6">
+            <Button className="mr-2" onClick={handleClose}>
+                Cancel
+            </Button>
+            <Button
+                variant="solid"
+                loading={isLoading}
+                disabled={!newAvatarFile || isLoading}
+                onClick={handleSaveClick}
+            >
+                Save
+            </Button>
+        </div>
+    </Dialog>
+  );
+};
+
+
+// --- 2. Main Dropdown Component (Modified) ---
+const _UserDropdown = () => {
+  const [userData, setuserData] = useState<any>(null);
+  const dispatch = useAppDispatch();
+  
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  
+  const avatarSrc = userData?.profile_pic_path || "/img/avatars/default-user.jpg";
+  const avatarProps = { src: avatarSrc };
+  const profileUrl = userData?.id ? `/hr-employees/employees/view/${userData.id}` : '/';
+
+  // Fetch initial user data
   useEffect(() => {
     const getUserData = () => {
       try {
-        return encryptStorage.getItem(
-          "UserData",
-          !useEncryptApplicationStorage
-        );
+        return encryptStorage.getItem("UserData", !useEncryptApplicationStorage);
       } catch (error) {
         console.error("Error getting UserData:", error);
         return null;
@@ -185,8 +192,68 @@ const _UserDropdown = () => {
     setuserData(getUserData());
   }, []);
 
-  console.log("userData",userData);
+  const handleOpenImageModal = () => {
+    setIsImageModalOpen(true);
+  };
   
+  const handleCloseImageModal = () => {
+    setIsImageModalOpen(false);
+  };
+
+  const handleSaveProfileImage = async (file: File) => {
+    setIsUploading(true);
+    
+    // Create a FormData object to send the file
+    const formData = new FormData();
+    formData.append('profile_pic', file); // 'profile_pic' is the key your backend expects
+
+    try {
+      // Step 1: Call the real API service
+       const response = await dispatch(updateUserProfilePictureAction(formData));
+console.log("response",response.payload);
+
+      // Step 2: Extract the new image URL from the API response
+      // **IMPORTANT**: Adjust the path below to match your actual API response structure!
+      // For example, it might be response.data.newImageUrl or response.data.user.profile_pic_path
+      const newImageUrl = response.payload; 
+
+      if (!newImageUrl) {
+          throw new Error("New image URL not found in API response.");
+      }
+
+      // Step 3: Create the updated user data object
+      const updatedUserData = {
+        ...userData,
+        profile_pic_path: response.payload,
+      };
+
+      // Step 4: Update state and local storage
+      setuserData(updatedUserData);
+      encryptStorage.setItem("UserData", updatedUserData, !useEncryptApplicationStorage);
+
+      // Step 5: Show success feedback and close modal
+      toast.push(<Notification title="Avatar Updated" type="success" />);
+      handleCloseImageModal();
+
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+      toast.push(<Notification title="Upload Failed" type="danger" message="Please check the console and try again."/>);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSignOutClick = () => {
+    setIsLogoutDialogOpen(true);
+  };
+
+  const onDialogClose = () => {
+    setIsLogoutDialogOpen(false);
+  };
+
+  const onDialogConfirm = () => {
+    dispatch(logoutAction());
+  };
 
   return (
     <>
@@ -205,7 +272,8 @@ const _UserDropdown = () => {
           <div className="flex items-start gap-2">
             <div
               className="relative flex-shrink-0 rounded-full group cursor-pointer"
-              onClick={handleAvatarClick}
+              // THIS NOW OPENS THE MODAL
+              onClick={handleOpenImageModal}
             >
               <Avatar size={60} shape="circle" {...avatarProps} />
               <div className="absolute inset-0 bg-opacity-0 group-hover:bg-opacity-40 rounded-full flex items-center justify-center transition-opacity duration-200">
@@ -217,21 +285,19 @@ const _UserDropdown = () => {
                 <span className="font-bold text-gray-900 dark:text-gray-100">
                   {userData?.name || "Super Admin"}
                 </span>
+                <IoMdCheckmarkCircle className="text-blue-500" />
               </div>
               <div className="mt-2 flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-                <span>{userData?.role?.name || "N/A"}</span>
-                <span className="text-gray-300 dark:text-gray-600">|</span>
                 <span>{userData?.department?.name || "N/A"}</span>
+                <span className="text-gray-300 dark:text-gray-600">|</span>
+                <span>{userData?.designation?.name || "N/A"}</span>
               </div>
             </div>
           </div>
         </Dropdown.Item>
         <Dropdown.Item variant="divider" />
         <Dropdown.Item eventKey="View Profile" className="px-0">
-          <Link
-            className="flex h-full w-full px-3"
-            to="/layouts/UserProfile/ProfileSettings"
-          >
+          <Link className="flex h-full w-full px-3" to={profileUrl}>
             <span className="flex gap-2 items-center w-full">
               <PiUserDuotone className="text-xl" />
               <span>View My Profile</span>
@@ -260,23 +326,16 @@ const _UserDropdown = () => {
         </Dropdown.Item>
       </Dropdown>
 
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/png, image/jpeg, image/gif"
-        onChange={handleFileSelect}
-      />
-
-      <ConfirmImageChangeModal
-        isOpen={isConfirmModalOpen}
-        onClose={closeAndResetModal}
-        newAvatarPreview={newAvatarPreview}
-        onConfirm={handleConfirmUpload}
+      {/* RENDER THE NEW MODAL */}
+      <ProfileImageUploadModal
+        isOpen={isImageModalOpen}
+        onClose={handleCloseImageModal}
+        onSave={handleSaveProfileImage}
         isLoading={isUploading}
         userData={userData}
       />
 
+      {/* LOGOUT CONFIRMATION DIALOG (Unchanged) */}
       <ConfirmDialog
         isOpen={isLogoutDialogOpen}
         type="danger"
@@ -288,7 +347,6 @@ const _UserDropdown = () => {
         onConfirm={onDialogConfirm}
         confirmText="Logout"
       >
-        {/* <UserProfileCard userData={userData} newAvatarPreview={null} /> */}
         <p>Are you sure you want to log out?</p>
       </ConfirmDialog>
     </>
