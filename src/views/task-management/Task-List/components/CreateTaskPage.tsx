@@ -232,6 +232,7 @@ const CreateTaskPage = () => {
       }
       
       const priorityValue = original.priority?.charAt(0).toUpperCase() + original.priority?.slice(1).toLowerCase();
+console.log("original",original.activity_notes[0]?.activity_type);
 
       reset({
         task_title: original.task_title || taskData.note || "",
@@ -244,7 +245,7 @@ const CreateTaskPage = () => {
         dueDate: original.due_data ? dayjs(original.due_data).toDate() : (taskData.dueDate ? dayjs(taskData.dueDate).toDate() : dayjs().add(1, 'day').toDate()),
         note_remark: original.note_remark || taskData.description || "",
         additional_description: original.additional_description || "",
-        activity_type: original.activity_type || "",
+        activity_type: original.activity_notes[0]?.activity_type || "",
       });
 
       const assigned = boardMembersOptions.length > 0 && boardMembersOptions.filter(member => assignedUserIds.includes(member.id));
@@ -253,13 +254,15 @@ const CreateTaskPage = () => {
 
 
       const commentsToSet = taskData.comments || original.activity_notes || [];
+      console.log("commentsToSet",commentsToSet);
+      
       setComments(
         commentsToSet.map((note) => ({
           id: String(note.id),
-          name: note.user?.name || "Unknown User",
-          src: note.user?.profile_pic_path || note.user?.profile_pic || '/img/avatars/default-avatar.png',
+          name: note.user?.name || note?.name,
+          src: note.user?.profile_pic_path || note?.src || '/img/avatars/default-avatar.png',
           date: dayjs(note.created_at).toDate(),
-          message: note.activity_comment,
+          message: note.activity_comment ||note?.message ,
           user_id: String(note.user_id),
         })).sort((a, b) => b.date.getTime() - a.date.getTime())
       );
