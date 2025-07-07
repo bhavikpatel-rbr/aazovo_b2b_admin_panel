@@ -442,6 +442,7 @@ type LeadListItem = {
   supplier: any;
   member_email?: string;
   member_phone?: string;
+  formId: any
 };
 
 export type SelectOption = { value: any; label: string };
@@ -1903,6 +1904,7 @@ const LeadsListing = ({ isDashboard }) => {
         supplier: apiLead.supplier,
         member_email: apiLead.customer?.email,
         member_phone: apiLead.customer?.mobile_no,
+        formId: apiLead.form_id
       })
     );
   }, [LeadsData?.data?.data]);
@@ -2039,13 +2041,14 @@ const LeadsListing = ({ isDashboard }) => {
     async (lead: LeadListItem) => {
       try {
         // Dispatch the action to fetch the form ID associated with the lead.
-        const resultAction = await dispatch(
-          getStartProcessAction({ module_id: lead.id, module_name: "Lead" })
-        ).unwrap();
+        // const resultAction = await dispatch(
+        //   getStartProcessAction({ module_id: lead.id, module_name: "Lead" })
+        // ).unwrap();
 
         // Extract the form_id from the action's payload.
         // This structure depends on your API response.
-        const formId = resultAction?.data?.form_id;
+        const formId = lead?.formId;
+        console.log(lead);
 
         if (formId) {
           // Navigate to the dynamic form page with the lead ID and the retrieved form ID.

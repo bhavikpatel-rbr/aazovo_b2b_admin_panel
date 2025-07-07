@@ -3248,3 +3248,21 @@ export const getFilledFormAsync = async (id: object) => {
     return isAxiosError(err)
   }
 }
+
+export const submitStartProcessAsync = async (data: object) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/sales-form`, { ...data })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getStartProcessAsync = async (id: object) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/sales-form/${id}`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}

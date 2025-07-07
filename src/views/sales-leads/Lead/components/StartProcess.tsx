@@ -6,9 +6,9 @@ import { useAppDispatch } from '@/reduxtool/store'
 import { useSelector } from 'react-redux'
 import { 
     getFillUpFormAction, 
-    submitFillUpFormAction,
-    getAccountDocByIdAction,
-    getFilledFormAction,
+    submitStartProcessAction,
+    getLeadByIdAction,
+    getStartProcessAction,
 } from '@/reduxtool/master/middleware'
 
 // UI Components
@@ -251,14 +251,14 @@ const NavigatorComponent: FC<{ sections: FormSection[]; activeSection: string; o
 );
 
 
-const FillUpForm = () => {
+const SalesForm = () => {
     const { id, formId } = useParams();
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
 
     const {
         formResponse = null,
-        filledFormData = null,
+        startFormData = null,
         loading: isReduxLoading,
         error
     } = useSelector(masterSelector);
@@ -313,10 +313,10 @@ const FillUpForm = () => {
             }
             try {
                 // Determine if form is already filled to decide which data to fetch
-                const accountDoc = await dispatch(getAccountDocByIdAction(id)).unwrap();
+                const accountDoc = await dispatch(getLeadByIdAction(id)).unwrap();
                 await Promise.all([
                     dispatch(getFillUpFormAction(formId)),
-                    dispatch(getFilledFormAction(id))
+                    dispatch(getStartProcessAction(id))
                 ]);
             } catch (err: any) {
                 toast.push(<Notification type="danger" title="Error" children={err?.message} />);
@@ -342,8 +342,8 @@ const FillUpForm = () => {
             
             const initialPreviews: { [fieldName: string]: string } = {};
 
-            if (filledFormData) {
-                const savedAnswers = filledFormData?.form_data;
+            if (startFormData) {
+                const savedAnswers = startFormData?.sales_form;
                 if (savedAnswers) {
                     const defaultValues = prepareDefaultValues(uiStructure, savedAnswers);
                     reset(defaultValues);
@@ -367,7 +367,7 @@ const FillUpForm = () => {
             }
             setImagePreviews(initialPreviews);
         }
-    }, [formResponse, filledFormData, isLoading, reset]);
+    }, [formResponse, startFormData, isLoading, reset]);
 
     const fileToBase64 = (file: File): Promise<string> =>
         new Promise((resolve, reject) => {
@@ -418,14 +418,14 @@ const FillUpForm = () => {
         try {
             const processedValues = await getProcessedFormData(values, formStructure);
             const payload = {
-                accountdoc_id: Number(id),
+                lead_id: Number(id),
                 form_id: Number(formId),
-                form_data: processedValues,
+                sales_form: processedValues,
             };
 
-            await dispatch(submitFillUpFormAction(payload)).unwrap();
+            await dispatch(submitStartProcessAction(payload)).unwrap();
             toast.push(<Notification type="success" title="Form Submitted Successfully!" />);
-            navigate('/account-document');
+            navigate('/sales-leads/lead');
 
         } catch (err: any) {
             toast.push(
@@ -503,8 +503,8 @@ const FillUpForm = () => {
             {/* Form Title */}
             {/* <h3 className="mb-4">{formStructure.form_title}</h3> */}
             <div className="flex gap-1 items-end mb-3">
-                <NavLink to="/account-document">   
-                <h6 className="font-semibold hover:text-primary-600">Account Documents</h6>
+                <NavLink to="/sales-leads/lead">   
+                <h6 className="font-semibold hover:text-primary-600">Leads</h6>
                 </NavLink>
                 <BiChevronRight size={22} />
                 <h6 className="font-semibold text-primary-600 dark:text-primary-300">
@@ -629,4 +629,4 @@ const FillUpForm = () => {
     )
 }
 
-export default FillUpForm;
+export default SalesForm;

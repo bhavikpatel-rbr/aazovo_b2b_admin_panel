@@ -114,6 +114,7 @@ import {
   getSalesPersonAction,
   getSellerListingsAction,
   getSlidersAction,
+  getStartProcessAction,
   getSubcategoriesByCategoryIdAction,
   getSubscribersAction,
   getSuppliersAction,
@@ -209,6 +210,7 @@ const INITIAL_STATE: any = {
   getaccountdoc: [],
   formResponse: [],
   filledFormData:[],
+  startFormData: [],
   accountDocumentById: 0,
   getfromIDcompanymemberData: 0,
 };
@@ -750,6 +752,10 @@ const masterSlice = createSlice({
     builder.addCase(getFilledFormAction.fulfilled, (state, { payload }) => ({
       ...state,
       filledFormData: payload,
+    }));
+    builder.addCase(getStartProcessAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      startFormData: payload,
     }));
   },
 });
