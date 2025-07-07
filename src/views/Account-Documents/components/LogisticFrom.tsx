@@ -318,14 +318,14 @@ const FillUpForm = () => {
             try {
                 // Determine if form is already filled to decide which data to fetch
                 const accountDoc = await dispatch(getAccountDocByIdAction(id)).unwrap();
-                if (accountDoc?.is_filled) {
+                // if (accountDoc?.is_filled) {
                     await Promise.all([
                         dispatch(getFillUpFormAction(formId)),
                         dispatch(getFilledFormAction(id))
                     ]);
-                } else {
-                    await dispatch(getFillUpFormAction(formId));
-                }
+                // } else {
+                    // await dispatch(getFillUpFormAction(formId));
+                // }
             } catch (err: any) {
                 toast.push(<Notification type="danger" title="Error" children={err?.message} />);
             } finally {
