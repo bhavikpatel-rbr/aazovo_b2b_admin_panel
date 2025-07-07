@@ -1,7 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import dayjs from "dayjs";
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from 'react-router-dom';
 import { z } from "zod";
@@ -89,50 +95,40 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 
-// --- Type Definitions ---
+// --- START: Detailed Type Definitions ---
 interface UserReference { id: number; name: string; profile_pic_path: string | null; }
 interface ContinentReference { id: number; name: string; }
 interface CountryReference { id: number; name: string; }
-interface CompanyCertificate { id: number; company_id: string; certificate_id: string; certificate_name: string; upload_certificate: string | null; upload_certificate_path: string; }
-interface CompanyBankDetail { id: number; company_id: string; type: string | null; bank_account_number: string; bank_name: string; ifsc_code: string; verification_photo: string | null; }
-interface CompanyReference { id: number; person_name: string; company_id: string; number: string; remark: string; }
-interface OfficeInfo { id: number; company_id: string; office_type: string; office_name: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string; address: string; }
-interface CompanySpotVerification { id: number; company_id: string; verified_by_name: string; verified: boolean; remark: string; photo_upload: string | null; photo_upload_path: string; }
-interface BillingDocument { id: number; company_id: string; document_name: string; document: string | null; }
-interface CompanyMemberManagement { id: number; company_id: string; member_id: string; designation: string; person_name: string; number: string; }
-interface TeamMember { id: number; company_id: string; team_name: string; designation: string; person_name: string; number: string; }
-export type CompanyItem = { id: number; company_code: string | null; company_name: string; status: | "Verified" | "Non Verified" | "Active" | "Pending" | "Inactive" | "active" | "inactive"; primary_email_id: string; primary_contact_number: string; primary_contact_number_code: string; alternate_contact_number: string | null; alternate_contact_number_code: string | null; alternate_email_id: string | null; general_contact_number: string | null; general_contact_number_code: string | null; ownership_type: string; owner_name: string; company_address: string; continent_id: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; pan_number: string | null; trn_number: string | null; tan_number: string | null; establishment_year: string | null; no_of_employees: string | null; company_website: string | null; primary_business_type: string | null; support_email: string | null; general_mobile: string | null; notification_email: string | null; kyc_verified: boolean; enable_billing: boolean; facebook_url: string | null; instagram_url: string | null; linkedIn_url: string | null; youtube_url: string | null; twitter_url: string | null; company_logo: string | null; created_at: string; updated_at: string; created_by: string; updated_by: string; deleted_at: string | null; members_count: number; teams_count: number; due_after_3_months_date: string; profile_completion: number; created_by_user: UserReference | null; updated_by_user: UserReference | null; continent: ContinentReference; country: CountryReference; company_certificate: CompanyCertificate[]; company_bank_details: CompanyBankDetail[]; company_references: CompanyReference[]; office_info: OfficeInfo[]; company_spot_verification: CompanySpotVerification[]; billing_documents: BillingDocument[]; company_member_management: CompanyMemberManagement[]; company_team_members: TeamMember[]; };
+interface CompanyCertificate { id: number; company_id: number; certificate_id: number; certificate_name: string; upload_certificate: string | null; upload_certificate_path: string; }
+interface CompanyBankDetail { id: number; company_id: number; type: string | null; bank_account_number: string; bank_name: string; ifsc_code: string; verification_photo: string | null; }
+interface CompanyReference { id: number; person_name: string; company_id: number; number: string; remark: string; }
+interface OfficeInfo { id: number; company_id: number; office_type: string; office_name: string; country_id: number; state: string; city: string; zip_code: string; gst_number: string; address: string; }
+interface CompanySpotVerification { id: number; company_id: number; verified_by_name: string; verified: boolean; remark: string; photo_upload: string | null; photo_upload_path: string; }
+interface BillingDocument { id: number; company_id: number; document_name: string; document: string | null; }
+interface CompanyMemberManagement { id: number; company_id: number; member_id: number; designation: string; person_name: string; number: string; }
+interface TeamMember { id: number; company_id: number; team_name: string; designation: string; person_name: string; number: string; }
+
+export type CompanyItem = {
+    id: number; company_code: string | null; company_name: string; status: | "Verified" | "Non Verified" | "Active" | "Pending" | "Inactive" | "active" | "inactive"; primary_email_id: string; primary_contact_number: string; primary_contact_number_code: string; alternate_contact_number: string | null; alternate_contact_number_code: string | null; alternate_email_id: string | null; general_contact_number: string | null; general_contact_number_code: string | null; ownership_type: string; owner_name: string; company_address: string; continent_id: number; country_id: number; state: string; city: string; zip_code: string; gst_number: string | null; pan_number: string | null; trn_number: string | null; tan_number: string | null; establishment_year: string | null; no_of_employees: number | null; company_website: string | null; primary_business_type: string | null; support_email: string | null; general_mobile: string | null; notification_email: string | null; kyc_verified: boolean; enable_billing: boolean; facebook_url: string | null; instagram_url: string | null; linkedIn_url: string | null; youtube_url: string | null; twitter_url: string | null; company_logo: string | null; created_at: string; updated_at: string; created_by: number; updated_by: number; deleted_at: string | null; members_count: number; teams_count: number; due_after_3_months_date: string; created_by_user: UserReference | null; updated_by_user: UserReference | null; continent: ContinentReference; country: CountryReference; company_certificate: CompanyCertificate[]; company_bank_details: CompanyBankDetail[]; company_references: CompanyReference[]; office_info: OfficeInfo[]; company_spot_verification: CompanySpotVerification[]; billing_documents: BillingDocument[]; company_member_management: CompanyMemberManagement[]; company_team_members: TeamMember[]; profile_completion: number; "206AB_file": string | null; "ABCQ_file": string | null; office_photo_file: string | null; gst_certificate_file: string | null; authority_letter_file: string | null; visiting_card_file: string | null; cancel_cheque_file: string | null; aadhar_card_file: string | null; pan_card_file: string | null; other_document_file: string | null; wall: { buy: number; sell: number; total: number; }; opportunities: { offers: number; demands: number; total: number; }; leads: { total: number; };
+};
+// --- END: Detailed Type Definitions ---
 
 // --- Zod Schemas ---
-const companyFilterFormSchema = z.object({
-  filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterCompanyType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterContinent: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterCountry: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterState: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterCity: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterKycVerified: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterEnableBilling: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterCreatedDate: z.array(z.date().nullable()).optional().default([null, null]),
-});
+const companyFilterFormSchema = z.object({ filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterCompanyType: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterContinent: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterCountry: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterState: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterCity: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterKycVerified: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterEnableBilling: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterCreatedDate: z.array(z.date().nullable()).optional().default([null, null]), });
 type CompanyFilterFormData = z.infer<typeof companyFilterFormSchema>;
-
 const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."), });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
-
 const scheduleSchema = z.object({ event_title: z.string().min(3, "Title must be at least 3 characters."), event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."), date_time: z.date({ required_error: "Event date & time is required." }), remind_from: z.date().nullable().optional(), notes: z.string().optional(), });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
-
 const taskValidationSchema = z.object({ task_title: z.string().min(3, 'Task title must be at least 3 characters.'), assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'), priority: z.string().min(1, 'Please select a priority.'), due_date: z.date().nullable().optional(), description: z.string().optional(), });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
 const taskPriorityOptions: SelectOption[] = [ { value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' }, ];
 
 // --- Utility Functions & Constants ---
 function exportToCsv(filename: string, rows: CompanyItem[]) {
-    // ... (Your export logic is fine, no changes needed)
     if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
     const CSV_HEADERS = ["ID", "Company Name", "Owner Name", "Ownership Type", "Status", "Contact", "Email", "Country", "State", "City", "KYC Verified", "Created Date"];
-    const preparedRows = rows.map(row => ({ id: row.id, company_name: row.company_name, owner_name: row.owner_name, ownership_type: row.ownership_type, status: row.status, primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`, primary_email_id: row.primary_email_id, country: row.country?.name || 'N/A', state: row.state, city: row.city, kyc_verified: row.kyc_verified ? 'Yes' : 'No', created_at: row.created_at ? new Date(row.created_at).toLocaleDateString() : 'N/A' }));
+    const preparedRows = rows.map(row => ({ id: row.id, company_name: row.company_name, owner_name: row.owner_name, ownership_type: row.ownership_type, status: row.status, primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`, primary_email_id: row.primary_email_id, country: row.country?.name || 'N/A', state: row.state, city: row.city, kyc_verified: row.kyc_verified ? 'Yes' : 'No', created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A' }));
     const csvContent = [ CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => JSON.stringify(row[header.toLowerCase().replace(/ /g, '_') as keyof typeof row] ?? '', (key, value) => value === null ? '' : value) ).join(',')) ].join('\n');
     const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -141,12 +137,7 @@ function exportToCsv(filename: string, rows: CompanyItem[]) {
     return false;
 }
 
-export const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => {
-  if (!statusValue) return "bg-gray-200 text-gray-600";
-  const lowerCaseStatus = statusValue.toLowerCase();
-  const companyStatusColors: Record<string, string> = { active: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300", verified: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300", pending: "border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300", inactive: "border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300", "non verified": "border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300", };
-  return companyStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600";
-};
+export const getCompanyStatusClass = (statusValue?: CompanyItem["status"]): string => { if (!statusValue) return "bg-gray-200 text-gray-600"; const lowerCaseStatus = statusValue.toLowerCase(); const companyStatusColors: Record<string, string> = { active: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300", verified: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300", pending: "border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300", inactive: "border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300", "non verified": "border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300", }; return companyStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600"; };
 
 // --- START: MODALS SECTION ---
 export type SelectOption = { value: any; label: string };
@@ -155,105 +146,65 @@ export interface ModalState { isOpen: boolean; type: ModalType | null; data: Com
 interface CompanyModalsProps { modalState: ModalState; onClose: () => void; getAllUserDataOptions: SelectOption[]; }
 
 const ViewCompanyDetailDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
-    // ... (Your existing ViewCompanyDetailDialog component is fine, no changes needed)
+    const renderDetailItem = (label: string, value: any, isLink = false) => {
+        if (value === null || value === undefined || value === "") return null;
+        return ( <div className="mb-3"> <span className="font-semibold text-gray-700 dark:text-gray-200">{label}:{" "}</span> {isLink ? (<a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{String(value)}</a>) : (<span className="text-gray-600 dark:text-gray-400">{String(value)}</span>)} </div> );
+    };
+    const renderVerificationStatus = (label: string, verified: boolean | number, remark?: string | null, file?: string | null) => {
+        return ( <div className="mb-3 p-2 border rounded-md dark:border-gray-600"> <div className="flex items-center justify-between"> <div> <span className="font-semibold">{label}: </span> {verified ? ( <Tag prefix prefixClass="bg-emerald-500">Verified</Tag> ) : ( <Tag prefix prefixClass="bg-red-500">Not Verified</Tag> )} </div> {file && <a href={file} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View File</a>} </div> {remark && <p className="text-xs text-gray-500 mt-1">Remark: {remark}</p>} </div> );
+    };
+
     return (
         <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={800}>
-            {/* Your existing implementation */}
+            <div className="max-h-[80vh] overflow-y-auto pr-4">
+                <h4 className="mb-6">Company Details: {company.company_name}</h4>
+                <Card className="mb-4" bordered> <h5 className="mb-2">Basic Information</h5> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4"> {renderDetailItem("Company Code", company.company_code)} {renderDetailItem("Ownership Type", company.ownership_type)} {renderDetailItem("Owner Name", company.owner_name)} <div className="mb-3"> <span className="font-semibold text-gray-700 dark:text-gray-200">Status:{" "}</span> <span className="text-gray-600 dark:text-gray-400"><Tag className={`${getCompanyStatusClass(company.status)} capitalize`}>{company.status}</Tag></span> </div> {renderDetailItem("Establishment Year", company.establishment_year)} {renderDetailItem("No. of Employees", company.no_of_employees)} {renderDetailItem("Primary Business Type", company.primary_business_type)} {renderDetailItem("Profile Completion", `${company.profile_completion}%`)} </div> </Card>
+                <Card className="mb-4" bordered> <h5 className="mb-2">Contact Information</h5> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4"> {renderDetailItem("Primary Email", company.primary_email_id)} {renderDetailItem("Primary Contact", `${company.primary_contact_number_code} ${company.primary_contact_number}`)} {renderDetailItem("Alternate Email", company.alternate_email_id)} {renderDetailItem("Alternate Contact", company.alternate_contact_number ? `${company.alternate_contact_number_code} ${company.alternate_contact_number}`: "N/A")} {renderDetailItem("Website", company.company_website, true)} </div> </Card>
+                <Card className="mb-4" bordered> <h5 className="mb-2">Legal & Financial</h5> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4"> {renderDetailItem("GST Number", company.gst_number)} {renderDetailItem("PAN Number", company.pan_number)} {renderDetailItem("TRN Number", company.trn_number)} {renderDetailItem("TAN Number", company.tan_number)} <div className="mb-3"><span className="font-semibold text-gray-700 dark:text-gray-200">KYC Verified:{" "}</span><span className="text-gray-600 dark:text-gray-400">{company.kyc_verified ? <MdCheckCircle className="text-green-500 text-xl inline-block" /> : <MdCancel className="text-red-500 text-xl inline-block" />}</span></div> <div className="mb-3"><span className="font-semibold text-gray-700 dark:text-gray-200">Billing Enabled:{" "}</span><span className="text-gray-600 dark:text-gray-400">{company.enable_billing ? <MdCheckCircle className="text-green-500 text-xl inline-block" /> : <MdCancel className="text-red-500 text-xl inline-block" />}</span></div> {renderDetailItem("Billing Due Date", company.due_after_3_months_date ? dayjs(company.due_after_3_months_date).format('D MMM YYYY') : "N/A")} </div> </Card>
+                {company.company_bank_details?.length > 0 && ( <Card className="mb-4" bordered> <h5 className="mb-2">Bank Details</h5> {company.company_bank_details.map((bank) => ( <div key={bank.id} className="mb-3 p-2 border rounded-md dark:border-gray-600"> {renderDetailItem("Bank Name", bank.bank_name)} {renderDetailItem("Account Number", bank.bank_account_number)} {renderDetailItem("IFSC Code", bank.ifsc_code)} {renderDetailItem("Type", bank.type || "N/A")} {bank.verification_photo && renderDetailItem("Verification Photo", <a href={bank.verification_photo} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Photo</a>)} </div> ))} </Card> )}
+                <Card className="mb-4" bordered> <h5 className="mb-2">Document Verification Status</h5> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4"> {renderVerificationStatus("Office Photo", company.office_photo_verified, company.office_photo_remark, company.office_photo_file)} {renderVerificationStatus("GST Certificate", company.gst_certificate_verified, company.gst_certificate_remark, company.gst_certificate_file)} {renderVerificationStatus("Authority Letter", company.authority_letter_verified, company.authority_letter_remark, company.authority_letter_file)} {renderVerificationStatus("Visiting Card", company.visiting_card_verified, company.visiting_card_remark, company.visiting_card_file)} {renderVerificationStatus("Cancel Cheque", company.cancel_cheque_verified, company.cancel_cheque_remark, company.cancel_cheque_file)} {renderVerificationStatus("Aadhar Card", company.aadhar_card_verified, company.aadhar_card_remark, company.aadhar_card_file)} {renderVerificationStatus("PAN Card", company.pan_card_verified, company.pan_card_remark, company.pan_card_file)} </div> </Card>
+                {company.office_info?.length > 0 && ( <Card className="mb-4" bordered> <h5 className="mb-2">Office Information</h5> {company.office_info.map((office) => ( <div key={office.id} className="mb-3 p-2 border rounded-md dark:border-gray-600"> {renderDetailItem("Office Name", office.office_name)} {renderDetailItem("Office Type", office.office_type)} {renderDetailItem("Address", office.address)} {renderDetailItem("City", office.city)} {renderDetailItem("State", office.state)} {renderDetailItem("Zip Code", office.zip_code)} {renderDetailItem("GST Number", office.gst_number)} </div> ))} </Card> )}
+                {company.company_certificate?.length > 0 && ( <Card className="mb-4" bordered> <h5 className="mb-2">Certificates</h5> {company.company_certificate.map((cert) => ( <div key={cert.id} className="mb-2 flex justify-between items-center"> <span> {cert.certificate_name} ({cert.certificate_id}) </span> {cert.upload_certificate_path && ( <a href={cert.upload_certificate_path} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Certificate </a> )} </div> ))} </Card> )}
+            </div>
+            <div className="text-right mt-6"><Button variant="solid" onClick={onClose}> Close </Button></div>
         </Dialog>
     );
 };
 const AddCompanyNotificationDialog: React.FC<{ company: CompanyItem; onClose: () => void; getAllUserDataOptions: SelectOption[]; }> = ({ company, onClose, getAllUserDataOptions }) => {
-    // ... (Your existing AddCompanyNotificationDialog component is fine, but ensure it uses UiForm & UiFormItem)
-    return <Dialog isOpen={true} onClose={onClose}>...</Dialog>
+    const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(z.object({ notification_title: z.string().min(3), send_users: z.array(z.number()).min(1), message: z.string().min(10) })), defaultValues: { notification_title: `Regarding Company: ${company.company_name}`, send_users: [], message: `This is a notification for company "${company.company_name}" (${company.company_code}). Please review the details.`, }, mode: 'onChange', });
+    const onSend = async (formData: any) => { setIsLoading(true); const payload = { ...formData, module_id: String(company.id), module_name: 'Company' }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed" children={error?.message} />); } finally { setIsLoading(false); } };
+    return ( <Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Notify User about: {company.company_name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => ( <UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog> );
 };
 const AddCompanyScheduleDialog: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => {
-    // ... (Your existing AddCompanyScheduleDialog component is fine, but ensure it uses UiForm & UiFormItem)
-    return <Dialog isOpen={true} onClose={onClose}>...</Dialog>
+    const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false); const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'FollowUpCall', label: 'Follow-up Call' } ];
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), defaultValues: { event_title: `Meeting with ${company.company_name}`, date_time: null as any }, mode: 'onChange' });
+    const onAddEvent = async (data: ScheduleFormData) => { setIsLoading(true); const payload = { ...data, module_id: Number(company.id), module_name: 'Company', date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }) }; try { await dispatch(addScheduleAction(payload)).unwrap(); toast.push(<Notification type="success" title="Event Scheduled" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message} />); } finally { setIsLoading(false); } };
+    return ( <Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Add Schedule for {company.company_name}</h5> <UiForm onSubmit={handleSubmit(onAddEvent)}> <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem> <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></UiFormItem> <UiFormItem label="Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button></div> </UiForm> </Dialog> );
 };
 const AssignCompanyTaskDialog: React.FC<{ company: CompanyItem; onClose: () => void; userOptions: SelectOption[] }> = ({ company, onClose, userOptions }) => {
-    // ... (Your existing AssignCompanyTaskDialog component is fine, but ensure it uses UiForm & UiFormItem)
-    return <Dialog isOpen={true} onClose={onClose}>...</Dialog>
+    const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({ resolver: zodResolver(taskValidationSchema), defaultValues: { task_title: `Follow up with ${company.company_name}`, assign_to: [], priority: 'Medium', }, mode: 'onChange' });
+    const onAssignTask = async (data: TaskFormData) => { setIsLoading(true); const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(company.id), module_name: 'Company', }; try { await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message} />); } finally { setIsLoading(false); } };
+    return ( <Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {company.company_name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> </div> <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog> );
 };
-const ViewCompanyMembersDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-        <h5 className="mb-4">Members of {company.company_name}</h5>
-        <div className="max-h-96 overflow-y-auto">
-            {company.company_member_management && company.company_member_management.length > 0 ? (
-                <div className="space-y-3">
-                    {company.company_member_management.map(member => (
-                        <div key={member.id} className="p-3 border rounded-md dark:border-gray-600">
-                            <p className="font-semibold">{member.person_name}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">{member.designation}</p>
-                            <p className="text-xs text-gray-500">{member.number}</p>
-                        </div>
-                    ))}
-                </div>
-            ) : ( <p>No members found for this company.</p> )}
-        </div>
-        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
-);
-const ViewCompanyDataDialog: React.FC<{ title: string; message: string; onClose: () => void; }> = ({ title, message, onClose }) => (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-        <h5 className="mb-4">{title}</h5>
-        <p>{message}</p>
-        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
-);
+const ViewCompanyMembersDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => ( <Dialog isOpen={true} onClose={onClose} width={600}> <h5 className="mb-4">Members of {company.company_name}</h5> <div className="max-h-96 overflow-y-auto"> {company.company_member_management?.length > 0 ? ( <div className="space-y-3">{company.company_member_management.map(member => (<div key={member.id} className="p-3 border rounded-md dark:border-gray-600"><p className="font-semibold">{member.person_name}</p><p className="text-sm text-gray-600 dark:text-gray-300">{member.designation}</p><p className="text-xs text-gray-500">{member.number}</p></div>))}</div> ) : (<p>No members found.</p>)} </div> <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div> </Dialog> );
+const ViewCompanyDataDialog: React.FC<{ title: string; message: string; onClose: () => void; }> = ({ title, message, onClose }) => ( <Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">{title}</h5> <p>{message}</p> <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div> </Dialog> );
 const DownloadDocumentDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
     const documents = useMemo(() => {
-        const allDocs: { name: string; url: string | null }[] = [];
-        company.company_certificate?.forEach(cert => { if (cert.upload_certificate_path) { allDocs.push({ name: cert.certificate_name, url: cert.upload_certificate_path }); } });
-        company.billing_documents?.forEach(doc => { if (doc.document) { allDocs.push({ name: doc.document_name, url: doc.document }); } });
-        return allDocs;
+        const allDocs: { name: string; url: string }[] = [];
+        const addDoc = (name: string, path: string | null | undefined) => { if (path) { allDocs.push({ name, url: path }); } };
+        addDoc("206AB Form", company["206AB_file"]); addDoc("ABCQ Form", company.ABCQ_file); addDoc("Office Photo", company.office_photo_file); addDoc("GST Certificate", company.gst_certificate_file); addDoc("Authority Letter", company.authority_letter_file); addDoc("Visiting Card", company.visiting_card_file); addDoc("Cancel Cheque", company.cancel_cheque_file); addDoc("Aadhar Card", company.aadhar_card_file); addDoc("PAN Card", company.pan_card_file); addDoc("Other Document", company.other_document_file); company.company_certificate?.forEach(cert => addDoc(cert.certificate_name || `Certificate #${cert.id}`, cert.upload_certificate_path)); company.billing_documents?.forEach(doc => addDoc(doc.document_name, doc.document)); company.company_bank_details?.forEach((bank, index) => addDoc(`Bank Verification Photo (${bank.bank_name || index + 1})`, bank.verification_photo));
+        return allDocs.sort((a, b) => a.name.localeCompare(b.name));
     }, [company]);
-    
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-            <h5 className="mb-4">Download Documents for {company.company_name}</h5>
-            <div className="max-h-96 overflow-y-auto">
-                {documents.length > 0 ? (
-                    <div className="space-y-2">
-                        {documents.map((doc, index) => (
-                            <a key={index} href={doc.url!} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600">
-                                <span className="flex items-center gap-2"><TbFileDescription className="text-lg" />{doc.name}</span>
-                                <TbDownload className="text-lg text-blue-500" />
-                            </a>
-                        ))}
-                    </div>
-                ) : ( <p>No documents available for download.</p> )}
-            </div>
-            <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-        </Dialog>
-    );
+    return ( <Dialog isOpen={true} onClose={onClose} width={600}> <h5 className="mb-4">Download Documents for {company.company_name}</h5> <div className="max-h-96 overflow-y-auto"> {documents.length > 0 ? ( <div className="space-y-2"> {documents.map((doc, index) => ( <a key={index} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600"> <span className="flex items-center gap-2"><TbFileDescription className="text-lg" />{doc.name}</span> <TbDownload className="text-lg text-blue-500" /> </a> ))} </div> ) : ( <p>No documents available for download.</p> )} </div> <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div> </Dialog> );
 };
-const SendEmailAction: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
-  useEffect(() => {
-    if (!company.primary_email_id) { toast.push(<Notification type="warning" title="Missing Email" children="Primary email is not available for this company." />); onClose(); return; }
-    const subject = `Regarding Company: ${company.company_name}`;
-    const body = `Hello ${company.owner_name || company.company_name},\n\nThis is regarding your company profile (ID: ${company.id}).\n\n- Primary Contact: ${company.primary_contact_number_code || ''} ${company.primary_contact_number}\n\nThank you.`;
-    window.open(`mailto:${company.primary_email_id}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-    onClose();
-  }, [company, onClose]);
-  return null;
-};
-const SendWhatsAppAction: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
-  useEffect(() => {
-    const phone = company.primary_contact_number?.replace(/\D/g, '');
-    const countryCode = company.primary_contact_number_code?.replace(/\D/g, '');
-    if (!phone || !countryCode) { toast.push(<Notification type="warning" title="Missing Number" children="Primary contact number is not available for this company." />); onClose(); return; }
-    const fullPhoneNumber = `${countryCode}${phone}`;
-    const message = `Hello ${company.owner_name || company.company_name},\n\nThis is regarding your company profile with us.`;
-    window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
-    onClose();
-  }, [company, onClose]);
-  return null;
-};
+const SendEmailAction: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => { useEffect(() => { if (!company.primary_email_id) { toast.push(<Notification type="warning" title="Missing Email" children="Primary email is not available." />); onClose(); return; } const subject = `Regarding Company: ${company.company_name}`; const body = `Hello ${company.owner_name || company.company_name},\n\nThis is regarding your company profile (ID: ${company.id}).`; window.open(`mailto:${company.primary_email_id}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`); onClose(); }, [company, onClose]); return null; };
+const SendWhatsAppAction: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => { useEffect(() => { const phone = company.primary_contact_number?.replace(/\D/g, ''); const countryCode = company.primary_contact_number_code?.replace(/\D/g, ''); if (!phone || !countryCode) { toast.push(<Notification type="warning" title="Missing Number" children="Primary contact number is not available." />); onClose(); return; } const fullPhoneNumber = `${countryCode}${phone}`; const message = `Hello ${company.owner_name || company.company_name},\n\nThis is regarding your company profile with us.`; window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank'); onClose(); }, [company, onClose]); return null; };
 
 const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const { type, data: company, isOpen } = modalState;
   if (!isOpen || !company) return null;
-
   switch (type) {
     case 'email': return <SendEmailAction company={company} onClose={onClose} />;
     case 'whatsapp': return <SendWhatsAppAction company={company} onClose={onClose} />;
@@ -268,44 +219,40 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getA
     default: return null;
   }
 };
-// --- END MODALS SECTION ---
 
-// --- Child Components (Search, ActionTools, Table, etc.) ---
-const CompanyListContext = React.createContext<{ companyList: CompanyItem[], setSelectedCompanies: React.Dispatch<React.SetStateAction<CompanyItem[]>>, companyCount: any, ContinentsData: any[], CountriesData: any[], getAllUserData: SelectOption[] } | undefined>(undefined);
-const useCompanyList = () => { const context = React.useContext(CompanyListContext); if (!context) throw new Error("useCompanyList must be used within a CompanyListProvider"); return context; };
+// --- Child Components ---
+const CompanyListContext = createContext<{ companyList: CompanyItem[], setSelectedCompanies: React.Dispatch<React.SetStateAction<CompanyItem[]>>, companyCount: any, ContinentsData: any[], CountriesData: any[], getAllUserData: SelectOption[], selectedCompanies: CompanyItem[] } | undefined>(undefined);
+const useCompanyList = () => { const context = useContext(CompanyListContext); if (!context) throw new Error("useCompanyList must be used within a CompanyListProvider"); return context; };
 const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-   const dispatch = useAppDispatch();
   const { CompanyData, CountriesData, ContinentsData, getAllUserData = [] } = useSelector(masterSelector);
   const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
   const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+  const dispatch = useAppDispatch();
   useEffect(() => { dispatch(getCompanyAction()); dispatch(getCountriesAction()); dispatch(getContinentsAction()); dispatch(getAllUsersAction()) }, [dispatch]);
-
-  return (
-    <CompanyListContext.Provider value={{ companyList: CompanyData?.data ?? [], setSelectedCompanies, companyCount: CompanyData?.counts ?? {}, selectedCompanies, ContinentsData: Array.isArray(ContinentsData) ? ContinentsData : [], CountriesData: Array.isArray(CountriesData) ? CountriesData : [], getAllUserData: getAllUserDataOptions, }}>{children}</CompanyListContext.Provider>
-  );
+  return ( <CompanyListContext.Provider value={{ companyList: CompanyData?.data ?? [], setSelectedCompanies, companyCount: CompanyData?.counts ?? {}, selectedCompanies, ContinentsData: Array.isArray(ContinentsData) ? ContinentsData : [], CountriesData: Array.isArray(CountriesData) ? CountriesData : [], getAllUserData: getAllUserDataOptions, }}>{children}</CompanyListContext.Provider> );
 };
 const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, }: { rowData: CompanyItem; onEdit: (id: number) => void; onOpenModal: (type: ModalType, data: CompanyItem) => void; }) => {
-  const navigate = useNavigate();
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
-      <Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/company-view/${rowData.id}`)}><TbEye /></div></Tooltip>
-      <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal('task', rowData)} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("members", rowData)} className="flex items-center gap-2"><TbUsersGroup /> View Members</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("transaction", rowData)} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
-      </Dropdown>
-    </div>
-  );
+    const navigate = useNavigate();
+    return (
+        <div className="flex items-center justify-center gap-1">
+            <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600" role="button" onClick={() => onEdit(rowData.id)}><TbPencil /></div></Tooltip>
+            <Tooltip title="View"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/company-view/${rowData.id}`)}><TbEye /></div></Tooltip>
+            <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
+                <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal('task', rowData)} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal("members", rowData)} className="flex items-center gap-2"><TbUsersGroup /> View Members</Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal("transaction", rowData)} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item>
+                <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
+            </Dropdown>
+        </div>
+    );
 };
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: CompanyFilterFormData; onRemoveFilter: (key: keyof CompanyFilterFormData, value: string) => void; onClearAll: () => void; }) => {
-    // ... (Your existing ActiveFiltersDisplay component is fine, no changes needed)
+    // ... (Your existing implementation is fine)
     return <div>...</div>
 };
 
@@ -313,7 +260,7 @@ const CompanyListTable = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const { companyList, setSelectedCompanies, companyCount, ContinentsData, CountriesData, getAllUserData } = useCompanyList();
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading] = useState(false);
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "", });
     const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [filterCriteria, setFilterCriteria] = useState<CompanyFilterFormData>({ filterCreatedDate: [null, null], });
@@ -343,35 +290,21 @@ const CompanyListTable = () => {
 
     const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
         let filteredData = [...companyList];
-        // ... (Your existing filtering logic is fine)
         if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selectedStatuses = filterCriteria.filterStatus.map((s) => s.value.toLowerCase()); filteredData = filteredData.filter((company) => company.status && selectedStatuses.includes(company.status.toLowerCase())); }
         if (filterCriteria.filterCompanyType && filterCriteria.filterCompanyType.length > 0) { const selectedTypes = filterCriteria.filterCompanyType.map((t) => t.value); filteredData = filteredData.filter((company) => selectedTypes.includes(company.ownership_type)); }
         if (tableData.query) { filteredData = filteredData.filter((i) => Object.values(i).some((v) => { if (typeof v === "object" && v !== null) { return Object.values(v).some((nestedV) => String(nestedV).toLowerCase().includes(tableData.query.toLowerCase())); } return String(v).toLowerCase().includes(tableData.query.toLowerCase()); })); }
-
-        let count = 0;
-        if (filterCriteria.filterStatus?.length) count++;
-        // ... and so on for other filters
-
+        let count = 0; if (filterCriteria.filterStatus?.length) count++;
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key) { filteredData.sort((a, b) => { let av = a[key as keyof CompanyItem] as any; let bv = b[key as keyof CompanyItem] as any; if (key.includes(".")) { const keys = key.split("."); av = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), a); bv = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), b); } av = av ?? ""; bv = bv ?? ""; if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); if (typeof av === "number" && typeof bv === "number") return order === "asc" ? av - bv : bv - av; if (typeof av === "boolean" && typeof bv === "boolean") return order === "asc" ? (av === bv ? 0 : av ? -1 : 1) : (av === bv ? 0 : av ? 1 : -1); return 0; }); }
-        
-        const pI = tableData.pageIndex as number;
-        const pS = tableData.pageSize as number;
-        return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
+        const pI = tableData.pageIndex as number; const pS = tableData.pageSize as number; return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
     }, [companyList, tableData, filterCriteria]);
 
     const closeFilterDrawer = () => setFilterDrawerOpen(false);
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
         setIsSubmittingExportReason(true);
-        const fileName = `companies_export_${new Date().toISOString().split('T')[0]}.csv`;
-        try {
-            await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Company', file_name: fileName })).unwrap();
-            toast.push(<Notification title="Export Reason Submitted" type="success" />);
-            const exportSuccess = exportToCsv(fileName, allFilteredAndSortedData);
-            if (exportSuccess) setIsExportReasonModalOpen(false);
-        } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } 
-        finally { setIsSubmittingExportReason(false); }
+        const fileName = `companies_export_${dayjs().format('YYYYMMDD')}.csv`;
+        try { await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Company', file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); const exportSuccess = exportToCsv(fileName, allFilteredAndSortedData); if (exportSuccess) setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsSubmittingExportReason(false); }
     };
     const handleEditCompany = (id: number) => navigate(`/business-entities/company-edit/${id}`);
     const handleSetTableData = (d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d }));
@@ -386,10 +319,11 @@ const CompanyListTable = () => {
     const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
 
     const columns: ColumnDef<CompanyItem>[] = useMemo(() => [
-        { header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }) => { const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original; return ( <div className="flex flex-col"> <div className="flex items-center gap-2"> <Avatar src={company_logo ? `https://aazovo.codefriend.in/${company_logo}` : undefined} size="sm" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => company_logo && openImageViewer(company_logo)} icon={<TbUserCircle />} /> <div> <h6 className="text-xs font-semibold"><em className="text-blue-600">{company_code || "Company Code"}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || "N/A"}</span> <span className="text-xs mt-1"><b>Primary Business Type:</b> {primary_business_type || "N/A"}</span> <div className="text-xs text-gray-500">{city}, {state}, {country?.name || "N/A"}</div> </div> ); }, },
+        { header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }: { row: Row<CompanyItem> }) => { const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original; return ( <div className="flex flex-col"> <div className="flex items-center gap-2"> <Avatar src={company_logo ? `https://aazovo.codefriend.in/${company_logo}` : undefined} size="sm" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => company_logo && openImageViewer(company_logo)} icon={<TbUserCircle />} /> <div> <h6 className="text-xs font-semibold"><em className="text-blue-600">{company_code || "Company Code"}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || "N/A"}</span> <span className="text-xs mt-1"><b>Primary Business Type:</b> {primary_business_type || "N/A"}</span> <div className="text-xs text-gray-500">{city}, {state}, {country?.name || "N/A"}</div> </div> ); }, },
         { header: "Contact", accessorKey: "owner_name", id: "contact", size: 180, cell: (props) => { const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original; return ( <div className="text-xs flex flex-col gap-0.5"> {owner_name && (<span><b>Owner: </b> {owner_name}</span>)} {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)} {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)} {company_website && (<a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>)} </div> ); }, },
         { header: "Legal IDs & Status", accessorKey: "status", id: "legal", size: 180, cell: ({ row }) => { const { gst_number, pan_number, status } = row.original; return ( <div className="flex flex-col gap-0.5 text-[11px]"> {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>} {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>} <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{status}</Tag> </div> ); }, },
         { header: "Profile & Scores", accessorKey: "profile_completion", id: "profile", size: 190, cell: ({ row }) => { const { members_count = 0, teams_count = 0, profile_completion = 0, kyc_verified, enable_billing, due_after_3_months_date } = row.original; const formattedDate = due_after_3_months_date ? dayjs(due_after_3_months_date).format('D MMM, YYYY') : "N/A"; return ( <div className="flex flex-col gap-1 text-xs"> <span><b>Members:</b> {members_count}</span> <span><b>Teams:</b> {teams_count}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <div className="flex gap-1 items-center"><b>Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <span><b>Billing Due:</b> {formattedDate}</span> <Tooltip title={`Profile Completion ${profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"> <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div> </div> </Tooltip> </div> ); }, },
+        { header: "Business", accessorKey: "wall.total", size: 180, meta: { HeaderClass: "text-center" }, cell: (props: { row: Row<CompanyItem> }) => ( <div className='flex flex-col gap-2 text-center items-center '> <Tooltip title={`Buy: ${props.row.original.wall.buy} | Sell: ${props.row.original.wall.sell} | Total: ${props.row.original.wall.total}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props.row.original.wall.buy} | {props.row.original.wall.sell} | {props.row.original.wall.total} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original.opportunities.offers} | Demands: ${props.row.original.opportunities.demands} | Total: ${props.row.original.opportunities.total}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props.row.original.opportunities.offers} | {props.row.original.opportunities.demands} | {props.row.original.opportunities.total} </div> </Tooltip> <Tooltip title={`Total: ${props.row.original.leads.total}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props.row.original.leads.total} </div> </Tooltip> </div> ) },
         { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <CompanyActionColumn rowData={props.row.original} onEdit={handleEditCompany} onOpenModal={handleOpenModal} /> },
     ], [handleOpenModal, openImageViewer, navigate]);
 
@@ -430,15 +364,7 @@ const CompanyListTable = () => {
                     <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
                         <div className="flex flex-col p-2">
                             <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                            {columns.map((col) => {
-                                const id = col.id || col.accessorKey as string;
-                                if (!col.header) return null;
-                                return (
-                                <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox>
-                                </div>
-                                )
-                            })}
+                            {columns.map((col) => { const id = col.id || col.accessorKey as string; if (!col.header) return null; return ( <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"> <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox> </div> ) })}
                         </div>
                     </Dropdown>
                     <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
@@ -479,48 +405,45 @@ const CompanyListTable = () => {
         </>
     );
 };
-
 const CompanyListSelected = () => {
-  const { selectedCompanies, setSelectedCompanies } = useCompanyList();
-  const dispatch = useAppDispatch();
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const handleDelete = () => setDeleteConfirmationOpen(true);
-  const handleCancelDelete = () => setDeleteConfirmationOpen(false);
-  const handleConfirmDelete = async () => {
-    if (!selectedCompanies) return;
-    setIsDeleting(true);
-    try {
-      const ids = selectedCompanies.map((d) => String(d.id));
-      await dispatch(deleteAllcompanyAction({ ids: ids.join(",") })).unwrap();
-      toast.push(<Notification title="Companies Deleted" type="success" />);
-      dispatch(getCompanyAction());
-    } catch (error: any) {
-      toast.push(<Notification title="Failed to Delete" type="danger">{error.message}</Notification>);
-    } finally {
-      setIsDeleting(false);
-      setSelectedCompanies([]);
-      setDeleteConfirmationOpen(false);
-    }
-  };
-  if (selectedCompanies.length === 0) return null;
-  return (
-    <>
-      <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
-        <div className="container mx-auto flex items-center justify-between">
-          <span>
-            <span className="flex items-center gap-2"><TbChecks className="text-lg text-primary-600" /><span className="font-semibold">{selectedCompanies.length} Companies selected</span></span>
-          </span>
-          <div className="flex items-center">
-            <Button size="sm" className="ltr:mr-3 rtl:ml-3" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50"} onClick={handleDelete}>Delete</Button>
-          </div>
-        </div>
-      </StickyFooter>
-      <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title="Remove Companies" onClose={handleCancelDelete} onConfirm={handleConfirmDelete} loading={isDeleting}>
-        <p>Are you sure you want to remove these companies? This action can't be undone.</p>
-      </ConfirmDialog>
-    </>
-  );
+    const { selectedCompanies, setSelectedCompanies } = useCompanyList();
+    const dispatch = useAppDispatch();
+    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const handleDelete = () => setDeleteConfirmationOpen(true);
+    const handleCancelDelete = () => setDeleteConfirmationOpen(false);
+    const handleConfirmDelete = async () => {
+        if (!selectedCompanies) return;
+        setIsDeleting(true);
+        try {
+            const ids = selectedCompanies.map((d) => String(d.id));
+            await dispatch(deleteAllcompanyAction({ ids: ids.join(",") })).unwrap();
+            toast.push(<Notification title="Companies Deleted" type="success" />);
+            dispatch(getCompanyAction());
+        } catch (error: any) {
+            toast.push(<Notification title="Failed to Delete" type="danger">{error.message}</Notification>);
+        } finally {
+            setIsDeleting(false);
+            setSelectedCompanies([]);
+            setDeleteConfirmationOpen(false);
+        }
+    };
+    if (selectedCompanies.length === 0) return null;
+    return (
+        <>
+            <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
+                <div className="container mx-auto flex items-center justify-between">
+                    <span><span className="flex items-center gap-2"><TbChecks className="text-lg text-primary-600" /><span className="font-semibold">{selectedCompanies.length} Companies selected</span></span></span>
+                    <div className="flex items-center">
+                        <Button size="sm" className="ltr:mr-3 rtl:ml-3" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50"} onClick={handleDelete}>Delete</Button>
+                    </div>
+                </div>
+            </StickyFooter>
+            <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title="Remove Companies" onClose={handleCancelDelete} onConfirm={handleConfirmDelete} loading={isDeleting}>
+                <p>Are you sure you want to remove these companies? This action can't be undone.</p>
+            </ConfirmDialog>
+        </>
+    );
 };
 
 const Company = () => {
