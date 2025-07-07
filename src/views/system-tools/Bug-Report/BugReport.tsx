@@ -68,6 +68,7 @@ import {
   TbPlus,
   TbReload,
   TbSearch,
+  TbTagStarred,
   TbUser,
   TbUserCircle,
   TbX,
@@ -312,11 +313,12 @@ const ActionColumn = ({
     <Tooltip title="View Details"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip>
     <Tooltip title="Edit Report"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onEdit}><TbPencil /></button></Tooltip>
     <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-      <Dropdown.Item className="flex items-center gap-2" onClick={onAddNotification}><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2" onClick={onAssignToTask}><TbUser size={18} /> <span className="text-xs">Assign to Task</span></Dropdown.Item>
       <Dropdown.Item className="flex items-center gap-2" onClick={onSendEmail}><TbMailShare size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
       <Dropdown.Item className="flex items-center gap-2" onClick={onSendWhatsapp}><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onAssignToTask}><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
       <Dropdown.Item className="flex items-center gap-2" onClick={onAddSchedule}><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2" onClick={onAddNotification}><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
+      <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /><span className="text-xs">Add Active</span>{" "}</Dropdown.Item>
     </Dropdown>
   </div>
 );
@@ -795,7 +797,7 @@ const BugReportListing = () => {
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<BugReportItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => r.id && !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id).filter((id) => id !== undefined)); setSelectedItems((pS) => pS.filter((i) => i.id && !cPRIds.has(i.id))); } }, []);
 
   const baseColumns: ColumnDef<BugReportItem>[] = useMemo(() => [
-    { header: "Reported By", accessorKey: "name", size: 180, enableSorting: true, cell: (props) => (<span className="font-semibold">{props.getValue<string>()}</span>) },
+    { header: "Reported By", accessorKey: "name", size: 180, enableSorting: true, cell: (props) => (<span className="font-semibold text-[13px]">{props.getValue<string>()}</span>) },
     { header: "Contact", accessorKey: "email", size: 200, cell: (props) => (<div><span>{props.row.original.email}</span> <br /><span className="text-xs text-gray-500">{props.row.original.mobile_no}</span></div>) },
     { header: "Reported On", accessorKey: "created_at", size: 200, enableSorting: true, cell: (props) => (<div className="text-xs">{dayjs(props.getValue<string>()).format("DD MMM YYYY, h:mm A")}</div>) },
     { header: "Severity", accessorKey: "severity", size: 120, cell: (props) => (<span>{props.row.original.severity}</span>) },
@@ -816,7 +818,7 @@ const BugReportListing = () => {
   const activeFilterCount = useMemo(() => Object.values(filterCriteria).filter(v => (Array.isArray(v) ? v.length > 0 : !!v)).length, [filterCriteria]);
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
       <FormItem label={<div>Name<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}><Controller name="name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle className="text-lg" />} placeholder="Your Name" />)} /></FormItem>
       <FormItem label={<div>Email<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.email} errorMessage={currentFormMethods.formState.errors.email?.message}><Controller name="email" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail className="text-lg" />} placeholder="your.email@example.com" />)} /></FormItem>
       <FormItem label="Mobile No." className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.mobile_no} errorMessage={currentFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone className="text-lg" />} placeholder="+XX-XXXXXXXXXX" />)} /></FormItem>
@@ -830,15 +832,109 @@ const BugReportListing = () => {
   );
 
   const renderViewDetails = (item: BugReportItem) => (
-    <div className="p-1 space-y-5">
-      <div className="flex items-center justify-between"><div className="flex items-start"><TbInfoCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</h6><Tag className={classNames("capitalize text-sm", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{item.status}</Tag></div></div><Dropdown renderTitle={<Button size="xs" variant="twoTone" disabled={isChangingStatus}>Change Status</Button>}>{BUG_REPORT_STATUS_OPTIONS.map(opt => (<Dropdown.Item key={opt.value} onClick={() => handleChangeStatus(item, opt.value)}>Mark as {opt.label}</Dropdown.Item>))}</Dropdown></div>
-      <div className="flex items-start"><TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Name</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.name}</p></div></div>
-      <div className="flex items-start"><TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Email</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.email}</p></div></div>
-      {item.mobile_no && (<div className="flex items-start"><TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Mobile No.</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.mobile_no}</p></div></div>)}
-      <div className="flex items-start"><TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Report Description</h6><p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">{item.report}</p></div></div>
-      {item.attachment && (<div className="flex items-start"><TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Attachment</h6><a href={item.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline break-all text-base">{item.attachment}</a></div></div>)}
-      {item.created_at && (<div className="flex items-start"><TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reported On</h6><p className="text-gray-800 dark:text-gray-100 text-base">{new Date(item.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p></div></div>)}
-    </div>
+    // <div className="p-1 space-y-5">
+    //   <div className="flex items-center justify-between"><div className="flex items-start"><TbInfoCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</h6><Tag className={classNames("capitalize text-sm", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{item.status}</Tag></div></div><Dropdown renderTitle={<Button size="xs" variant="twoTone" disabled={isChangingStatus}>Change Status</Button>}>{BUG_REPORT_STATUS_OPTIONS.map(opt => (<Dropdown.Item key={opt.value} onClick={() => handleChangeStatus(item, opt.value)}>Mark as {opt.label}</Dropdown.Item>))}</Dropdown></div>
+    //   <div className="flex items-start"><TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Name</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.name}</p></div></div>
+    //   <div className="flex items-start"><TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Email</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.email}</p></div></div>
+    //   {item.mobile_no && (<div className="flex items-start"><TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Mobile No.</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.mobile_no}</p></div></div>)}
+    //   <div className="flex items-start"><TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Report Description</h6><p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">{item.report}</p></div></div>
+    //   {item.attachment && (<div className="flex items-start"><TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Attachment</h6><a href={item.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline break-all text-base">{item.attachment}</a></div></div>)}
+    //   {item.created_at && (<div className="flex items-start"><TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reported On</h6><p className="text-gray-800 dark:text-gray-100 text-base">{new Date(item.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p></div></div>)}
+    // </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-lg border-emerald-300">
+        {/* Status */}
+        <div className="flex items-start">
+          <TbInfoCircle className="text-xl mr-2 mt-1 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">Status:</span>{" "}
+            <Tag className={classNames("capitalize text-sm ml-1", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>
+              {item.status}
+            </Tag>
+          </p>
+        </div>
+
+        {/* Change Status Button */}
+        <div className="flex justify-end items-start">
+          <Dropdown
+            renderTitle={
+              <Button size="xs" variant="twoTone" disabled={isChangingStatus}>
+                Change Status
+              </Button>
+            }
+          >
+            {BUG_REPORT_STATUS_OPTIONS.map((opt) => (
+              <Dropdown.Item key={opt.value} onClick={() => handleChangeStatus(item, opt.value)}>
+                Mark as {opt.label}
+              </Dropdown.Item>
+            ))}
+          </Dropdown>
+        </div>
+
+        {/* Name */}
+        <div className="flex items-start">
+          <TbUserCircle className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">Name:</span> {item.name}
+          </p>
+        </div>
+
+        {/* Email */}
+        <div className="flex items-start">
+          <TbMail className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">Email:</span> {item.email}
+          </p>
+        </div>
+
+        {/* Mobile No. */}
+        {item.mobile_no && (
+          <div className="flex items-start">
+            <TbPhone className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+            <p className="text-sm text-gray-800 dark:text-gray-100">
+              <span className="font-semibold text-gray-500 dark:text-gray-400">Mobile No.:</span> {item.mobile_no}
+            </p>
+          </div>
+        )}
+
+        {/* Reported On */}
+        {item.created_at && (
+          <div className="flex items-start">
+            <TbCalendarEvent className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+            <p className="text-sm text-gray-800 dark:text-gray-100">
+              <span className="font-semibold text-gray-500 dark:text-gray-400">Reported On:</span>{" "}
+              {new Date(item.created_at).toLocaleString("en-US", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}
+            </p>
+          </div>
+        )}
+
+        {/* Attachment */}
+        {item.attachment && (
+          <div className="flex items-start col-span-full">
+            <TbPaperclip className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+            <p className="text-sm text-gray-800 dark:text-gray-100 break-all">
+              <span className="font-semibold text-gray-500 dark:text-gray-400">Attachment:</span>{" "}
+              <a href={item.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+                {item.attachment}
+              </a>
+            </p>
+          </div>
+        )}
+
+        {/* Report Description */}
+        <div className="flex items-start col-span-full">
+          <TbFileDescription className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">Report Description:</span> {item.report}
+          </p>
+        </div>
+      </div>
   );
 
   const tableLoading = masterLoadingStatus === "pending" || isSubmitting || isDeleting || isChangingStatus;
@@ -871,8 +967,8 @@ const BugReportListing = () => {
           <FormItem label="Reported By (Name/Email)"><Controller name="filterReportedBy" control={filterFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Enter name or email to filter" />)} /></FormItem>
         </Form>
       </Drawer>
-      <Dialog isOpen={isViewModalOpen} onClose={closeViewModal} onRequestClose={closeViewModal} width={600}>
-        <h5 className="mb-4">Bug Report Details</h5>{viewingItem && renderViewDetails(viewingItem)}<div className="text-right mt-6"><Button variant="solid" onClick={closeViewModal}>Close</Button></div>
+      <Dialog isOpen={isViewModalOpen} onClose={closeViewModal} onRequestClose={closeViewModal} width={720}>
+        <h5 className="mb-1">Bug Report Details</h5>{viewingItem && renderViewDetails(viewingItem)}<div className="text-right mt-4 p-1"><Button variant="solid" onClick={closeViewModal}>Close</Button></div>
       </Dialog>
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Bug Report" onClose={() => setSingleDeleteConfirmOpen(false)} onConfirm={onConfirmSingleDelete} loading={isDeleting} confirmButtonColor="red-600"><p>Are you sure you want to delete the report by "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p></ConfirmDialog>
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Exporting Bug Reports" onClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}><Form id="exportBugReportsReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2"><FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
