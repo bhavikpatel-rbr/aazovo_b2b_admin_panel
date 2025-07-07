@@ -110,6 +110,8 @@ import type {
   OnSortParam,
   Row,
 } from "@/components/shared/DataTable";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import { config } from "localforage";
 
 interface TableQueries extends CommonTableQueries { }
 
@@ -143,24 +145,24 @@ const scheduleSchema = z.object({
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 const taskValidationSchema = z.object({
-    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
-    assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
-    priority: z.string().min(1, 'Please select a priority.'),
-    due_date: z.date().nullable().optional(),
-    description: z.string().optional(),
+  task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+  assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+  priority: z.string().min(1, 'Please select a priority.'),
+  due_date: z.date().nullable().optional(),
+  description: z.string().optional(),
 });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
 
 const notificationSchema = z.object({
-    notification_title: z.string().min(3, "Title must be at least 3 characters long."),
-    send_users: z.array(z.number()).min(1, "Please select at least one user."),
-    message: z.string().min(10, "Message must be at least 10 characters long."),
+  notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+  send_users: z.array(z.number()).min(1, "Please select at least one user."),
+  message: z.string().min(10, "Message must be at least 10 characters long."),
 });
 type NotificationFormData = z.infer<typeof notificationSchema>;
 
 const activitySchema = z.object({
-    item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
-    notes: z.string().optional(),
+  item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+  notes: z.string().optional(),
 });
 type ActivityFormData = z.infer<typeof activitySchema>;
 
@@ -235,7 +237,7 @@ export interface OfferDemandModalState { isOpen: boolean; type: OfferDemandModal
 interface OfferDemandModalsProps { modalState: OfferDemandModalState; onClose: () => void; getAllUserDataOptions: SelectOption[] }
 
 const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" },];
-const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'InternalSync', label: 'Internal Team Sync' }, { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' }, { value: 'RequirementsGathering', label: 'Requirements Gathering' }, { value: 'UAT', label: 'User Acceptance Testing (UAT)' }, { value: 'GoLive', label: 'Go-Live / Deployment Date' }, { value: 'ProjectSignOff', label: 'Project Sign-off' }, { value: 'PrepareReport', label: 'Prepare Report' }, { value: 'PresentFindings', label: 'Present Findings' }, { value: 'TroubleshootingCall', label: 'Troubleshooting Call' }, { value: 'BugReplication', label: 'Bug Replication Session' }, { value: 'IssueEscalation', label: 'Escalate Issue' }, { value: 'ProvideUpdate', label: 'Provide Update on Ticket' }, { value: 'FeatureRequest', label: 'Log Feature Request' }, { value: 'IntegrationSupport', label: 'Integration Support Call' }, { value: 'DataMigration', label: 'Data Migration/Import Task' }, { value: 'ColdCall', label: 'Cold Call' }, { value: 'DiscoveryCall', label: 'Discovery Call' }, { value: 'QualificationCall', label: 'Qualification Call' }, { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' }, { value: 'LinkedInMessage', label: 'Log LinkedIn Message' }, { value: 'ProposalReview', label: 'Proposal Review Meeting' }, { value: 'ContractSent', label: 'Contract Sent' }, { value: 'NegotiationCall', label: 'Negotiation Call' }, { value: 'TrialSetup', label: 'Product Trial Setup' }, { value: 'TrialCheckIn', label: 'Trial Check-in Call' }, { value: 'WelcomeCall', label: 'Welcome Call' }, { value: 'ImplementationSession', label: 'Implementation Session' }, { value: 'UserTraining', label: 'User Training Session' }, { value: 'AdminTraining', label: 'Admin Training Session' }, { value: 'MonthlyCheckIn', label: 'Monthly Check-in' }, { value: 'HealthCheck', label: 'Customer Health Check' }, { value: 'FeedbackSession', label: 'Feedback Session' }, { value: 'RenewalDiscussion', label: 'Renewal Discussion' }, { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' }, { value: 'CaseStudyInterview', label: 'Case Study Interview' }, { value: 'InvoiceDue', label: 'Invoice Due' }, { value: 'SendInvoice', label: 'Send Invoice' }, { value: 'PaymentReminder', label: 'Send Payment Reminder' }, { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' }, { value: 'ConfirmPayment', label: 'Confirm Payment Received' }, { value: 'ContractRenewalDue', label: 'Contract Renewal Due' }, { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' }, { value: 'SendQuote', label: 'Send Quote/Estimate' }];
+const eventTypeOptions = [{ value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'InternalSync', label: 'Internal Team Sync' }, { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' }, { value: 'RequirementsGathering', label: 'Requirements Gathering' }, { value: 'UAT', label: 'User Acceptance Testing (UAT)' }, { value: 'GoLive', label: 'Go-Live / Deployment Date' }, { value: 'ProjectSignOff', label: 'Project Sign-off' }, { value: 'PrepareReport', label: 'Prepare Report' }, { value: 'PresentFindings', label: 'Present Findings' }, { value: 'TroubleshootingCall', label: 'Troubleshooting Call' }, { value: 'BugReplication', label: 'Bug Replication Session' }, { value: 'IssueEscalation', label: 'Escalate Issue' }, { value: 'ProvideUpdate', label: 'Provide Update on Ticket' }, { value: 'FeatureRequest', label: 'Log Feature Request' }, { value: 'IntegrationSupport', label: 'Integration Support Call' }, { value: 'DataMigration', label: 'Data Migration/Import Task' }, { value: 'ColdCall', label: 'Cold Call' }, { value: 'DiscoveryCall', label: 'Discovery Call' }, { value: 'QualificationCall', label: 'Qualification Call' }, { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' }, { value: 'LinkedInMessage', label: 'Log LinkedIn Message' }, { value: 'ProposalReview', label: 'Proposal Review Meeting' }, { value: 'ContractSent', label: 'Contract Sent' }, { value: 'NegotiationCall', label: 'Negotiation Call' }, { value: 'TrialSetup', label: 'Product Trial Setup' }, { value: 'TrialCheckIn', label: 'Trial Check-in Call' }, { value: 'WelcomeCall', label: 'Welcome Call' }, { value: 'ImplementationSession', label: 'Implementation Session' }, { value: 'UserTraining', label: 'User Training Session' }, { value: 'AdminTraining', label: 'Admin Training Session' }, { value: 'MonthlyCheckIn', label: 'Monthly Check-in' }, { value: 'HealthCheck', label: 'Customer Health Check' }, { value: 'FeedbackSession', label: 'Feedback Session' }, { value: 'RenewalDiscussion', label: 'Renewal Discussion' }, { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' }, { value: 'CaseStudyInterview', label: 'Case Study Interview' }, { value: 'InvoiceDue', label: 'Invoice Due' }, { value: 'SendInvoice', label: 'Send Invoice' }, { value: 'PaymentReminder', label: 'Send Payment Reminder' }, { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' }, { value: 'ConfirmPayment', label: 'Confirm Payment Received' }, { value: 'ContractRenewalDue', label: 'Contract Renewal Due' }, { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' }, { value: 'SendQuote', label: 'Send Quote/Estimate' }];
 const dummyAlerts = [{ id: 1, severity: "danger", message: "Offer #OD123 has low engagement.", time: "2 days ago", }, { id: 2, severity: "warning", message: "Demand #DD456 is approaching its expiration date.", time: "5 days ago", },];
 const dummyTimeline = [{ id: 1, icon: <TbMail />, title: "Initial Offer Created", desc: "Offer was created and sent.", time: "2023-11-01", }, { id: 2, icon: <TbCalendarEvent />, title: "Follow-up Call Scheduled", desc: "Scheduled a call.", time: "2023-10-28", }, { id: 3, icon: <TbUser />, title: "Item Assigned", desc: "Assigned to team.", time: "2023-10-27", },];
 const dummyDocs = [{ id: "doc1", name: "Offer_Details.pdf", type: "pdf", size: "1.2 MB", }, { id: "doc2", name: "Images.zip", type: "zip", size: "8.5 MB", },];
@@ -385,8 +387,15 @@ const DownloadDocumentDialog: React.FC<{ item: OfferDemandItem; onClose: () => v
     </Dialog>
   );
 };
+
 const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
   const dispatch = useAppDispatch();
+  const [userData, setUserData] = useState<any>(null);
+useEffect(() => {
+  const { useEncryptApplicationStorage } = config;
+  try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+  catch (error) { console.error("Error getting UserData:", error); }
+}, []);
   const { user } = useSelector(authSelector);
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const { type, data: item, isOpen } = modalState;
@@ -396,7 +405,7 @@ const OfferDemandModals: React.FC<OfferDemandModalsProps> = ({ modalState, onClo
   const handleConfirmNotification = async (formData: NotificationFormData) => { if (!item) return; setIsSubmittingAction(true); const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String((item.originalApiItem as any).id), module_name: 'OfferDemand', }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
   const handleConfirmTask = async (data: TaskFormData) => { if (!item) return; setIsSubmittingAction(true); try { const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String((item.originalApiItem as any).id), module_name: 'OfferDemand', }; await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
   const handleConfirmSchedule = async (data: ScheduleFormData) => { if (!item) return; setIsSubmittingAction(true); const payload = { module_id: Number((item.originalApiItem as any).id), module_name: 'OfferDemand', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '', }; try { await dispatch(addScheduleAction(payload)).unwrap(); toast.push(<Notification type="success" title="Event Scheduled" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
-  const handleConfirmActivity = async (data: ActivityFormData) => { if (!item || !user?.id) return; setIsSubmittingAction(true); const payload = { item: data.item, notes: data.notes || '', module_id: String((item.originalApiItem as any).id), module_name: 'OfferDemand', user_id: user.id, }; try { await dispatch(addAllActionAction(payload)).unwrap(); toast.push(<Notification type="success" title="Activity Added" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+  const handleConfirmActivity = async (data: ActivityFormData) => { if (!item || !userData?.id) return; setIsSubmittingAction(true); const payload = { item: data.item, notes: data.notes || '', module_id: String((item.originalApiItem as any).id), module_name: 'OfferDemand', user_id: userData.id, }; try { await dispatch(addAllActionAction(payload)).unwrap(); toast.push(<Notification type="success" title="Activity Added" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsSubmittingAction(false); } };
 
   const renderModalContent = () => {
     switch (type) {
@@ -635,7 +644,7 @@ const OffersDemands = () => {
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
-  
+
   // --- ADDED for Image Viewer ---
   const [imageView, setImageView] = useState('');
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -661,23 +670,23 @@ const OffersDemands = () => {
 
   const handleOpenModal = useCallback((type: OfferDemandModalType, itemData: OfferDemandItem) => {
     if (type === 'email') {
-        const subject = `Regarding your ${itemData.type}: ${itemData.name}`;
-        const body = `Dear ${itemData.createdByInfo.userName},\n\n`;
-        window.open(`mailto:${itemData.createdByInfo.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-        toast.push(<Notification type="success" title="Opening Email Client" />);
-        return;
+      const subject = `Regarding your ${itemData.type}: ${itemData.name}`;
+      const body = `Dear ${itemData.createdByInfo.userName},\n\n`;
+      window.open(`mailto:${itemData.createdByInfo.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+      toast.push(<Notification type="success" title="Opening Email Client" />);
+      return;
     }
     if (type === 'whatsapp') {
-        const phone = "1234567890"; // Placeholder phone number
-        if (!phone) {
-            toast.push(<Notification type="danger" title="Invalid Phone Number" />);
-            return;
-        }
-        const message = `Hi ${itemData.createdByInfo.userName}, regarding your ${itemData.type}: "${itemData.name}"...`;
-        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-        window.open(url, "_blank");
-        toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+      const phone = "1234567890"; // Placeholder phone number
+      if (!phone) {
+        toast.push(<Notification type="danger" title="Invalid Phone Number" />);
         return;
+      }
+      const message = `Hi ${itemData.createdByInfo.userName}, regarding your ${itemData.type}: "${itemData.name}"...`;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(url, "_blank");
+      toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
+      return;
     }
     setModalState({ isOpen: true, type, data: itemData });
   }, []);
@@ -878,32 +887,32 @@ const OffersDemands = () => {
     },
     { header: "Created By / Assigned", accessorKey: "createdByInfo.userName", id: "createdBy", enableSorting: true, size: 180, cell: (props: CellContext<OfferDemandItem, any>) => { const item = props.row.original; const fCD = dayjs(item.createdDate).format('D MMM YYYY, h:mm A'); return (<div className="flex flex-col gap-1"><div className="flex items-center gap-2"><Avatar size={28} shape="circle" icon={<TbUserCircle />} /><span className="font-semibold">{item.createdByInfo.userName}</span></div>{item.assignedToInfo && (<div className="text-xs text-gray-600 dark:text-gray-300"><b>Assigned: </b> {item.assignedToInfo.userName}</div>)}<div className="text-xs text-gray-500 dark:text-gray-400"><span>{fCD}</span></div></div>); }, },
     {
-        header: 'Updated Info',
-        accessorKey: 'updated_at',
-        enableSorting: true,
-        size: 220,
-        cell: props => {
-            const { updated_at, updated_by_user } = props.row.original;
-            return (
-                <div className="flex items-center gap-2">
-                <Tooltip title="View Profile Picture">
-                    <Avatar
-                        src={updated_by_user?.profile_pic_path}
-                        shape="circle"
-                        size="sm"
-                        icon={<TbUserCircle />}
-                        className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                        onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
-                    />
-                </Tooltip>
-                <div>
-                    <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
-                    <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
-                    <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
-                </div>
-                </div>
-            );
-        }
+      header: 'Updated Info',
+      accessorKey: 'updated_at',
+      enableSorting: true,
+      size: 220,
+      cell: props => {
+        const { updated_at, updated_by_user } = props.row.original;
+        return (
+          <div className="flex items-center gap-2">
+            <Tooltip title="View Profile Picture">
+              <Avatar
+                src={updated_by_user?.profile_pic_path}
+                shape="circle"
+                size="sm"
+                icon={<TbUserCircle />}
+                className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+                onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+              />
+            </Tooltip>
+            <div>
+              <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+              <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+              <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
+            </div>
+          </div>
+        );
+      }
     },
     { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 120, cell: (props: CellContext<OfferDemandItem, any>) => (<ActionColumn rowData={props.row.original} onEdit={() => handleEdit(props.row.original)} onView={() => handleOpenModal("viewDetails", props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onOpenModal={handleOpenModal} />), },
   ], [handleEdit, handleDeleteClick, handleOpenModal, openImageViewer]);
@@ -941,7 +950,7 @@ const OffersDemands = () => {
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
             <div className="flex flex-col md:flex-row gap-2">
-              <Button icon={<TbRefresh />} onClick={() => fetchData()} title="Refresh Data">Refresh</Button>
+              {/* <Button icon={<TbRefresh />} onClick={() => fetchData()} title="Refresh Data">Refresh</Button> */}
               <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/sales-leads/offers/create")} block>Add Offer</Button>
               <Button icon={<TbPlus />} variant="solid" onClick={() => navigate("/sales-leads/demands/create")} block>Add Demand</Button>
             </div>

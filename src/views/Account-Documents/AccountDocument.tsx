@@ -1033,7 +1033,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
 
   const companyMemberOptions = useMemo(
     () =>
-      getfromIDcompanymemberData?.map((p: any) => ({
+      getfromIDcompanymemberData.length > 0 && getfromIDcompanymemberData?.map((p: any) => ({
         value: p.id,
         label: p.name,
       })) || [],
