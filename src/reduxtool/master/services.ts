@@ -3215,7 +3215,7 @@ export const getfromIDcompanymemberActionAsync = async (id: object) => {
 
 export const getFillUpFormAsync = async (id: object) => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/fill-up-form/${id}`)
+    const response = await axiosInstance.get(`${config.apiURL}/master/get-form-builder/${id}`)
     return response?.data
   } catch (err) {
     return isAxiosError(err)
@@ -3225,6 +3225,24 @@ export const getFillUpFormAsync = async (id: object) => {
 export const submitFillUpFormAsync = async (data: object) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/fill-up-form`, { ...data })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getAccountDocByIdAsync = async (id: string) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/account_doc/${id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getFilledFormAsync = async (id: object) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/fill-up-form/${id}`)
     return response?.data
   } catch (err) {
     return isAxiosError(err)
