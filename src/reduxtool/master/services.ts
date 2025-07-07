@@ -467,9 +467,7 @@ export const getAllTaskAsync = async () => {
 
 export const getAllTaskByStatuesAsync = async () => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/get-all-task-by-status`, {
-      "user_id": 53
-    })
+    const response = await axiosInstance.post(`${config.apiURL}/get-all-task-by-status`,)
     return response
   } catch (err) {
     return isAxiosError(err)
