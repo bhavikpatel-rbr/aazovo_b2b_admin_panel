@@ -30,7 +30,7 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 
-// --- New nested Zod Schema structure (similar to CreateOffer) ---
+// --- Zod Schema Definitions for Form Validation ---
 const priceListItemSchema = z.object({
   color: z.string(),
   qty: z.number().optional(),
@@ -54,40 +54,32 @@ const demandFormSchema = z.object({
   groupB: z.string().optional().nullable(),
 });
 
+// --- Type Definitions ---
 type DemandFormData = z.infer<typeof demandFormSchema>;
 type OptionType = { value: number | string; label: string };
 
-// Helper to parse stringified JSON from the old API structure
-const parseJsonArray = (jsonString: string | null | undefined): number[] => {
-  if (!jsonString) return [];
-  try {
-    const parsed = JSON.parse(jsonString);
-    return Array.isArray(parsed) ? parsed.map(Number).filter(n => !isNaN(n)) : [];
-  } catch (e) {
-    return [];
-  }
-};
 
 const CreateDemand = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
 
-  // Determine if it's an edit operation
+  // Determine if it's an edit operation based on navigation state
   const id = location.state?.originalApiItem?.id;
   const isEdit = !!id;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // --- Data Fetching and State Management ---
   useEffect(() => {
-    // Fetch master data
+    // Fetch all necessary master data on component mount
     dispatch(getUsersAction());
     dispatch(getAllProductAction());
     dispatch(getMembersAction());
     dispatch(getProductsAction());
     dispatch(getProductSpecificationsAction());
 
-    // Fetch specific demand data only for editing
+    // If in edit mode, fetch the specific demand's data
     if (isEdit) {
       dispatch(getDemandById(id));
     }
@@ -99,17 +91,17 @@ const CreateDemand = () => {
     memberData = [],
     ProductsData = [],
     ProductSpecificationsData = [],
-    currentDemand: demandData,
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
 
-  // Memoized options for select dropdowns
+  // --- Memoized Select Options ---
   const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: u.name })) : [], [usersData]);
   const productOptions: OptionType[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
   const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label: m.name })) : [], [memberData]);
   const statusOptions: OptionType[] = [{ value: "active", label: "Active" }, { value: "non-active", label: "Non-Active" }];
   const productSpecOptions: OptionType[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((spec: any) => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
 
+  // --- Form Initialization ---
   const {
     control,
     handleSubmit,
@@ -131,55 +123,72 @@ const CreateDemand = () => {
   });
   
   const { fields, append, remove } = useFieldArray({ control, name: "product_data" });
-  
   const watchedProductGroups = watch("product_data");
 
-  // --- Populate form when editing ---
+  // --- Populate Form When Editing ---
   useEffect(() => {
-    if (isEdit && demandData && ProductsData.length) {
-        // NOTE: This logic transforms the old flat API response into the new nested structure.
-        // It assumes sellers/buyers from the top level apply to all product groups.
-        const sellerIds = parseJsonArray(demandData.seller_section);
-        const buyerIds = parseJsonArray(demandData.buyer_section);
+    const demandDataFromState = location.state?.originalApiItem;
+    const masterDataIsReady = ProductSpecificationsData.length > 0;
 
-        const itemsByProduct = (demandData.price_list_details?.items || []).reduce((acc: any, item: any) => {
-            const productId = parseInt(item.product_id);
-            if (!acc[productId]) {
-                acc[productId] = [];
+    if (isEdit && demandDataFromState && masterDataIsReady) {
+        // Step 1: Parse the `groupA` text block to extract structured details
+        const groupAText = demandDataFromState.groupA || "";
+        
+        let status: "active" | "non-active" = 'active';
+        let specName = '';
+        const items = [];
+
+        const statusMatch = groupAText.match(/Status:\s*(.*)/i);
+        if (statusMatch) {
+            const parsedStatus = statusMatch[1].trim().toLowerCase();
+            if (parsedStatus === 'active' || parsedStatus === 'non-active') {
+                status = parsedStatus;
             }
-            acc[productId].push({
-                color: item.color,
-                qty: item.qty,
-                price: item.price,
+        }
+
+        const specMatch = groupAText.match(/Specification:\s*(.*)/i);
+        if (specMatch) {
+            specName = specMatch[1].trim();
+        }
+        
+        const itemRegex = /-\s*Color:\s*(.+?),\s*Qty:\s*([\d.]+),\s*Price:\s*\$([\d.]+)/g;
+        let match;
+        while ((match = itemRegex.exec(groupAText)) !== null) {
+            items.push({
+                color: match[1].trim(),
+                qty: parseFloat(match[2]),
+                price: parseFloat(match[3]),
             });
-            return acc;
-        }, {});
+        }
 
-        const reconstructedProductData = Object.keys(itemsByProduct).length > 0
-            ? Object.keys(itemsByProduct).map(productIdStr => {
-                const productId = parseInt(productIdStr);
-                return {
-                    product_id: productId,
-                    seller_ids: sellerIds,
-                    buyer_ids: buyerIds,
-                    status: demandData.price_list_details?.status || 'active',
-                    spec_id: demandData.price_list_details?.spec_id || null,
-                    items: itemsByProduct[productId],
-                };
-            })
-            : [{ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] }]; // Fallback for no items
+        // Step 2: Convert parsed specification name (e.g., "India") to its ID
+        const specObject = ProductSpecificationsData.find(spec => spec.name === specName);
+        const spec_id = specObject ? specObject.id : null;
 
+        // Step 3: Reconstruct the `product_data` array for the form
+        const reconstructedProductData = (demandDataFromState.demand_products || []).map((productInfo: any) => ({
+            product_id: productInfo.product_id,
+            seller_ids: productInfo.seller_ids || [],
+            buyer_ids: productInfo.buyer_ids || [],
+            status: status,
+            spec_id: spec_id,
+            items: items,
+        }));
+
+        // Step 4: Call `reset` to populate the entire form with the prepared data
         reset({
-            name: demandData.name || "",
-            assign_user: demandData.assign_user ? Number(demandData.assign_user) : null,
-            groupA: demandData.groupA || "",
-            groupB: demandData.groupB || "",
-            product_data: reconstructedProductData,
+            name: demandDataFromState.name || "",
+            assign_user: demandDataFromState.assign_user ? Number(demandDataFromState.assign_user) : null,
+            groupA: demandDataFromState.groupA || "",
+            groupB: demandDataFromState.groupB || "",
+            product_data: reconstructedProductData.length > 0
+                ? reconstructedProductData
+                : [{ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] }],
         });
     }
-}, [isEdit, demandData, ProductsData, reset]);
+  }, [isEdit, location.state, reset, ProductSpecificationsData]);
 
-
+  // --- Event Handlers ---
   const handleProductChange = (groupIndex: number, productId: number | null) => {
     setValue(`product_data.${groupIndex}.product_id`, productId);
     
@@ -194,7 +203,7 @@ const CreateDemand = () => {
     const newItems = colors
       .map((c: string) => c.trim())
       .filter(Boolean)
-      .map((color: string) => ({ color }));
+      .map((color: string) => ({ color, qty: undefined, price: undefined }));
 
     setValue(`product_data.${groupIndex}.items`, newItems, { shouldValidate: true });
   };
@@ -263,6 +272,7 @@ const CreateDemand = () => {
   const onFormSubmit = useCallback(async (data: DemandFormData) => {
     setIsSubmitting(true);
     const apiPayload = {
+      id: isEdit ? id : undefined,
       name: data.name,
       groupA: data.groupA,
       groupB: data.groupB,
@@ -278,7 +288,7 @@ const CreateDemand = () => {
     try {
       const actionType = isEdit ? 'Updated' : 'Created';
       if (isEdit) {
-        await dispatch(editDemandAction({ id, ...apiPayload })).unwrap();
+        await dispatch(editDemandAction(apiPayload)).unwrap();
       } else {
         await dispatch(addDemandAction(apiPayload)).unwrap();
       }
@@ -299,14 +309,13 @@ const CreateDemand = () => {
     reset();
     navigate("/sales-leads/offers-demands");
   };
-
-  const isLoading = masterLoadingStatus === "loading" && !isEdit;
-  const isEditingLoading = masterLoadingStatus === "loading" && isEdit && !demandData;
+  
+  const isLoading = masterLoadingStatus === "loading";
 
   return (
     <Form id="demandForm" onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <Card className="mb-2">
-        {isLoading || isEditingLoading ? (
+        {isLoading && !isEdit ? (
           <div className="flex justify-center p-10"><Spinner size="lg" /></div>
         ) : (
           <>
@@ -365,7 +374,7 @@ const CreateDemand = () => {
                 <>
                     <div className="grid lg:grid-cols-2 gap-4 mb-4">
                         <FormItem label="Status">
-                            <Controller name={`product_data.${index}.status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={option.value} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
+                            <Controller name={`product_data.${index}.status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={String(option.value)} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
                         </FormItem>
                         <FormItem label="Product Spec Options">
                             <Controller name={`product_data.${index}.spec_id`} control={control} render={({ field }) => <UiSelect placeholder="Select a Spec" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} />} />

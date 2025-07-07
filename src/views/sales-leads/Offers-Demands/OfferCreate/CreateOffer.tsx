@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Controller, useForm, useFieldArray } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
@@ -19,8 +19,10 @@ import { TbFileText, TbPlus, TbTrash } from "react-icons/tb";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addOfferAction,
+  editOfferAction, // Added for editing
   getAllProductAction,
   getMembersAction,
+  getOfferById, // Added for editing
   getProductsAction,
   getProductSpecificationsAction,
   getUsersAction,
@@ -28,7 +30,7 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 
-// --- MODIFICATION: New nested Zod Schema structure ---
+// --- Zod Schema Definitions (Unchanged) ---
 const priceListItemSchema = z.object({
   color: z.string(),
   qty: z.number().optional(),
@@ -36,7 +38,7 @@ const priceListItemSchema = z.object({
 });
 
 const productDataSchema = z.object({
-  product_id: z.number({ required_error: "Product is required." }).nullable(), // Allow null for initial state
+  product_id: z.number({ required_error: "Product is required." }).nullable(),
   seller_ids: z.array(z.number()).min(1, "At least one seller is required."),
   buyer_ids: z.array(z.number()).min(1, "At least one buyer is required."),
   status: z.enum(["active", "non-active"]).default("active"),
@@ -52,23 +54,35 @@ const offerFormSchema = z.object({
   groupB: z.string().optional().nullable(),
 });
 
+// --- Type Definitions ---
 type OfferFormData = z.infer<typeof offerFormSchema>;
 type OptionType = { value: number | string; label: string };
 
 const CreateOffer = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // Hook to access navigation state
   const dispatch = useAppDispatch();
 
-  // No more local state for price list - RHF handles everything
+  // --- MODIFICATION: Determine if it's an edit operation ---
+  const id = location.state?.originalApiItem?.id;
+  const isEdit = !!id;
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // --- MODIFICATION: Data Fetching for Create and Edit ---
   useEffect(() => {
+    // Fetch all necessary master data on component mount
     dispatch(getUsersAction());
     dispatch(getAllProductAction());
     dispatch(getMembersAction());
     dispatch(getProductsAction());
     dispatch(getProductSpecificationsAction());
-  }, [dispatch]);
+
+    // If in edit mode, fetch the specific offer's data
+    if (isEdit) {
+      dispatch(getOfferById(id));
+    }
+  }, [dispatch, id, isEdit]);
 
   const {
     usersData = [],
@@ -79,13 +93,14 @@ const CreateOffer = () => {
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
 
-  // Memoized options for select dropdowns
+  // --- Memoized Select Options (Unchanged) ---
   const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: u.name })) : [], [usersData]);
   const productOptions: OptionType[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
   const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label: m.name })) : [], [memberData]);
   const statusOptions: OptionType[] = [{ value: "active", label: "Active" }, { value: "non-active", label: "Non-Active" }];
   const productSpecOptions: OptionType[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((spec: any) => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
 
+  // --- Form Initialization (Unchanged) ---
   const {
     control,
     handleSubmit,
@@ -95,7 +110,6 @@ const CreateOffer = () => {
     formState: { errors },
   } = useForm<OfferFormData>({
     resolver: zodResolver(offerFormSchema),
-    // --- MODIFICATION: Default values match the new nested schema
     defaultValues: {
       name: "",
       assign_user: null,
@@ -108,15 +122,77 @@ const CreateOffer = () => {
   });
   
   const { fields, append, remove } = useFieldArray({ control, name: "product_data" });
-  
   const watchedProductGroups = watch("product_data");
 
-  // --- MODIFICATION: Logic to populate a group's table when its product changes
+  // --- MODIFICATION: Populate Form When Editing ---
+  useEffect(() => {
+    const offerDataFromState = location.state?.originalApiItem;
+    const masterDataIsReady = ProductSpecificationsData.length > 0;
+
+    if (isEdit && offerDataFromState && masterDataIsReady) {
+        // Step 1: Parse the `groupA` text block
+        const groupAText = offerDataFromState.groupA || "";
+        
+        let status: "active" | "non-active" = 'active';
+        let specName = '';
+        const items = [];
+
+        const statusMatch = groupAText.match(/Status:\s*(.*)/i);
+        if (statusMatch) {
+            const parsedStatus = statusMatch[1].trim().toLowerCase();
+            if (parsedStatus === 'active' || parsedStatus === 'non-active') {
+                status = parsedStatus;
+            }
+        }
+
+        const specMatch = groupAText.match(/Specification:\s*(.*)/i);
+        if (specMatch) {
+            specName = specMatch[1].trim();
+        }
+        
+        const itemRegex = /-\s*Color:\s*(.+?),\s*Qty:\s*([\d.]+),\s*Price:\s*\$([\d.]+)/g;
+        let match;
+        while ((match = itemRegex.exec(groupAText)) !== null) {
+            items.push({
+                color: match[1].trim(),
+                qty: parseFloat(match[2]),
+                price: parseFloat(match[3]),
+            });
+        }
+
+        // Step 2: Convert spec name to ID
+        const specObject = ProductSpecificationsData.find(spec => spec.name === specName);
+        const spec_id = specObject ? specObject.id : null;
+
+        // Step 3: Reconstruct `product_data` array (assuming API provides `offer_products`)
+        const reconstructedProductData = (offerDataFromState.offer_products || []).map((productInfo: any) => ({
+            product_id: productInfo.product_id,
+            seller_ids: productInfo.seller_ids || [],
+            buyer_ids: productInfo.buyer_ids || [],
+            status: status,
+            spec_id: spec_id,
+            items: items,
+        }));
+
+        // Step 4: Populate the form
+        reset({
+            name: offerDataFromState.name || "",
+            assign_user: offerDataFromState.assign_user ? Number(offerDataFromState.assign_user) : null,
+            groupA: offerDataFromState.groupA || "",
+            groupB: offerDataFromState.groupB || "",
+            product_data: reconstructedProductData.length > 0
+                ? reconstructedProductData
+                : [{ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] }],
+        });
+    }
+  }, [isEdit, location.state, reset, ProductSpecificationsData]);
+
+  // --- Event Handlers (Largely Unchanged) ---
   const handleProductChange = (groupIndex: number, productId: number | null) => {
     setValue(`product_data.${groupIndex}.product_id`, productId);
     
     if (!productId) {
-      setValue(`product_data.${groupIndex}.items`, []); // Clear table if product is deselected
+      setValue(`product_data.${groupIndex}.items`, []);
       return;
     }
 
@@ -126,7 +202,7 @@ const CreateOffer = () => {
     const newItems = colors
       .map((c: string) => c.trim())
       .filter(Boolean)
-      .map((color: string) => ({ color })); // Default qty/price are handled by schema
+      .map((color: string) => ({ color, qty: undefined, price: undefined }));
 
     setValue(`product_data.${groupIndex}.items`, newItems, { shouldValidate: true });
   };
@@ -143,8 +219,6 @@ const CreateOffer = () => {
     return { totalQty, totalPrice };
   }, [watchedProductGroups]);
 
-
-  // --- MODIFICATION: Reworked note generation to use the nested data structure
   const handleGenerateAndCopyNotes = () => {
     const relevantGroups = watchedProductGroups.filter(
         g => g.product_id && g.items.some(i => i.qty && i.qty > 0)
@@ -155,8 +229,8 @@ const CreateOffer = () => {
       return;
     }
 
-    let messageA = ""; // With prices
-    let messageB = ""; // Without prices
+    let messageA = "";
+    let messageB = "";
 
     relevantGroups.forEach(group => {
         const productName = productOptions.find(p => p.value === group.product_id)?.label || "Unknown Product";
@@ -193,47 +267,59 @@ const CreateOffer = () => {
     toast.push(<Notification title="Success" type="info">Notes generated and copied below.</Notification>);
   };
 
+  // --- MODIFICATION: Form Submission Logic for Create and Edit ---
   const onFormSubmit = useCallback(async (data: OfferFormData) => {
     setIsSubmitting(true);
-    // Transform payload to only include complete groups
     const apiPayload = {
+      id: isEdit ? id : undefined,
       name: data.name,
       groupA: data.groupA,
       groupB: data.groupB,
       assign_user: data.assign_user,
-      product_data: data.product_data.filter(p => p.product_id), // RHF data is already in the right shape
+      product_data: data.product_data
+          .filter(p => p.product_id)
+          .map(group => ({
+              ...group,
+              items: group.items.filter(item => item.qty && item.qty > 0)
+          })),
     };
 
     try {
-      // NOTE: Ensure your `addOfferAction` and backend API can handle the nested `product_data` structure.
-      await dispatch(addOfferAction(apiPayload)).unwrap();
-      toast.push(<Notification title="Offer Created" type="success">Offer "{data.name}" has been successfully created.</Notification>);
+      const actionType = isEdit ? 'Updated' : 'Created';
+      if (isEdit) {
+        await dispatch(editOfferAction(apiPayload)).unwrap();
+      } else {
+        await dispatch(addOfferAction(apiPayload)).unwrap();
+      }
+      
+      toast.push(<Notification title={`Offer ${actionType}`} type="success">Offer "{data.name}" has been successfully {actionType.toLowerCase()}.</Notification>);
       reset();
       navigate("/sales-leads/offers-demands");
     } catch (error: any) {
-      const errorMessage = error?.message || "Could not create offer. Please try again.";
-      toast.push(<Notification title="Creation Failed" type="danger">{errorMessage}</Notification>);
+      const actionType = isEdit ? 'Update' : 'Creation';
+      const errorMessage = error?.message || `Could not ${actionType.toLowerCase()} offer. Please try again.`;
+      toast.push(<Notification title={`${actionType} Failed`} type="danger">{errorMessage}</Notification>);
     } finally {
       setIsSubmitting(false);
     }
-  }, [dispatch, navigate, reset]);
+  }, [dispatch, navigate, reset, isEdit, id]);
 
   const handleCancel = () => {
     reset();
     navigate("/sales-leads/offers-demands");
   };
-
+  
   const isLoading = masterLoadingStatus === "loading";
 
+  // --- MODIFICATION: Render logic with updated titles and buttons ---
   return (
-    // Set a key on the form to force re-render on reset, helping clear field array state
     <Form id="offerForm" onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <Card className="mb-2">
-        {isLoading && !productsMasterData.length ? (
+        {isLoading && !isEdit ? (
           <div className="flex justify-center p-10"><Spinner size="lg" /></div>
         ) : (
           <>
-            <h4 className="mb-6">Create Offer</h4>
+            <h4 className="mb-6">{isEdit ? 'Edit Offer' : 'Create Offer'}</h4>
             <div className="grid md:grid-cols-2 gap-4">
               <FormItem label="Offer Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
                 <Controller name="name" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Q4 Gadget Offer" />} />
@@ -246,7 +332,6 @@ const CreateOffer = () => {
         )}
       </Card>
       
-      {/* --- MODIFICATION: Loop to render each Product Group. The redundant button that appeared before each card has been removed for a cleaner look. --- */}
       {fields.map((field, index) => (
         <Card key={field.id} className="mb-2">
             <div className="flex justify-end mb-2">
@@ -261,7 +346,6 @@ const CreateOffer = () => {
                 )}
             </div>
             
-            {/* Top section for selectors */}
             <div className="p-4 border rounded-md dark:border-gray-600 grid lg:grid-cols-3 gap-4 items-start mb-6">
                 <div>
                     <FormItem label="Product" invalid={!!errors.product_data?.[index]?.product_id} errorMessage={errors.product_data?.[index]?.product_id?.message}>
@@ -286,12 +370,11 @@ const CreateOffer = () => {
                 </div>
             </div>
 
-            {/* Table section, only shows if a product is selected */}
             {watchedProductGroups[index]?.product_id && (
                 <>
                     <div className="grid lg:grid-cols-2 gap-4 mb-4">
                         <FormItem label="Status">
-                            <Controller name={`product_data.${index}.status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={option.value} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
+                            <Controller name={`product_data.${index}.status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={String(option.value)} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
                         </FormItem>
                         <FormItem label="Product Spec Options">
                             <Controller name={`product_data.${index}.spec_id`} control={control} render={({ field }) => <UiSelect placeholder="Select a Spec" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} />} />
@@ -340,14 +423,12 @@ const CreateOffer = () => {
 
       <div className="grid md:grid-cols-2 gap-6 mb-4">
         <Card>
-          {/* MODIFICATION: Added margin-bottom to the heading for better spacing */}
           <h5 className="mb-4">Group A Notes</h5>
           <FormItem invalid={!!errors.groupA} errorMessage={errors.groupA?.message}>
             <Controller name="groupA" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate & Copy Notes' to populate..." rows={12} />} />
           </FormItem>
         </Card>
         <Card>
-          {/* MODIFICATION: Added margin-bottom to the heading for better spacing */}
           <h5 className="mb-4">Group B Notes</h5>
           <FormItem invalid={!!errors.groupB} errorMessage={errors.groupB?.message}>
             <Controller name="groupB" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate & Copy Notes' to populate..." rows={12} />} />
@@ -358,7 +439,7 @@ const CreateOffer = () => {
       <Card bodyClass="flex justify-end gap-2">
         <Button type="button" onClick={handleCancel} disabled={isSubmitting}>Cancel</Button>
         <Button type="submit" form="offerForm" variant="solid" loading={isSubmitting} disabled={isSubmitting || isLoading}>
-            {isSubmitting ? "Saving..." : 'Save Offer'}
+            {isSubmitting ? "Saving..." : (isEdit ? 'Update Offer' : 'Save Offer')}
         </Button>
       </Card>
     </Form>
