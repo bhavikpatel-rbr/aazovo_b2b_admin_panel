@@ -77,6 +77,8 @@ const AddTask = ({
 
     // Effect to populate form when taskToEdit changes or for a new task
     useEffect(() => {
+        console.log("taskToEdit",taskToEdit);
+        
         if (taskToEdit) {
             setTaskTitle(taskToEdit.task_title);
             setStatus(taskToEdit.status || statusList[0]);
