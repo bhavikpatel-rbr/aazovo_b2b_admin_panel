@@ -88,7 +88,7 @@ type ApiBrandItem = {
   icon_full_path?: string;
 };
 
-export type BrandStatus = "active" | "inactive";
+export type BrandStatus = "Active" | "Inactive";
 export type BrandItem = {
   id: number;
   name: string;
@@ -162,10 +162,10 @@ function exportToCsvBrand(filename: string, rows: BrandItem[]) {
 
 const BRAND_ICON_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "https://your-api-domain.com/storage/";
 const statusColor: Record<BrandStatus, string> = {
-  active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
-  inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
+  Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
+  Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
 };
-const uiStatusOptions: { value: BrandStatus; label: string }[] = [ { value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }, ];
+const uiStatusOptions: { value: BrandStatus; label: string }[] = [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" }, ];
 const apiStatusOptions: { value: "Active" | "Inactive"; label: string }[] = [ { value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" }, ];
 const showHeaderOptions: { value: "1" | "0"; label: string }[] = [ { value: "1", label: "Yes" }, { value: "0", label: "No" }, ];
 
@@ -321,7 +321,7 @@ const Brands = () => {
         if (apiItem.icon.startsWith("http")) fullPath = apiItem.icon;
         else fullPath = `${BRAND_ICON_BASE_URL}${apiItem.icon.startsWith("/") ? apiItem.icon.substring(1) : apiItem.icon}`;
       }
-      return { id: apiItem.id, name: apiItem.name, slug: apiItem.slug, icon: apiItem.icon, icon_full_path: fullPath, showHeader: Number(apiItem.show_header), status: apiItem.status === "Active" ? "active" : "inactive", metaTitle: apiItem.meta_title, metaDescription: apiItem.meta_descr, metaKeyword: apiItem.meta_keyword, createdAt: apiItem.created_at, updatedAt: apiItem.updated_at, mobileNo: apiItem.mobile_no, };
+      return { id: apiItem.id, name: apiItem.name, slug: apiItem.slug, icon: apiItem.icon, icon_full_path: fullPath, showHeader: Number(apiItem.show_header), status: apiItem.status === "Active" ? "Active" : "Inactive", metaTitle: apiItem.meta_title, metaDescription: apiItem.meta_descr, metaKeyword: apiItem.meta_keyword, createdAt: apiItem.created_at, updatedAt: apiItem.updated_at, mobileNo: apiItem.mobile_no, };
     });
   }, [BrandData]);
 
@@ -344,7 +344,7 @@ const Brands = () => {
 
   const openEditDrawer = (brand: BrandItem) => {
     setEditingBrand(brand);
-    editFormMethods.reset({ name: brand.name, slug: brand.slug, mobile_no: brand.mobileNo || null, icon: null, show_header: String(brand.showHeader) as "0" | "1", status: brand.status === "active" ? "Active" : "Inactive", meta_title: brand.metaTitle || null, meta_descr: brand.metaDescription || null, meta_keyword: brand.metaKeyword || null, });
+    editFormMethods.reset({ name: brand.name, slug: brand.slug, mobile_no: brand.mobileNo || null, icon: null, show_header: String(brand.showHeader) as "0" | "1", status: brand.status === "Active" ? "Active" : "Inactive", meta_title: brand.metaTitle || null, meta_descr: brand.metaDescription || null, meta_keyword: brand.metaKeyword || null, });
     setEditFormPreviewUrl(null); setEditDrawerOpen(true);
   };
   const closeEditDrawer = () => { setEditDrawerOpen(false); setEditingBrand(null); if (editFormPreviewUrl) URL.revokeObjectURL(editFormPreviewUrl); setEditFormPreviewUrl(null); };
@@ -522,8 +522,8 @@ const Brands = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 mb-4 gap-4">
             <Tooltip title="Click to show all brands"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbBrandRedux size={20} /></div><div><h6 className="text-sm">{(mappedBrands || []).length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show active brands"><div onClick={() => handleCardClick('active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbCircleCheck size={20} /></div><div><h6 className="text-sm">{(mappedBrands || []).filter(d => d.status === 'active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show inactive brands"><div onClick={() => handleCardClick('inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbCancel size={20} /></div><div><h6 className="text-sm">{(mappedBrands || []).filter(d => d.status === 'inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show Active brands"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbCircleCheck size={20} /></div><div><h6 className="text-sm">{(mappedBrands || []).filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show Inactive brands"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbCancel size={20} /></div><div><h6 className="text-sm">{(mappedBrands || []).filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
           </div>
           <div className="mb-4">
             <BrandTableTools

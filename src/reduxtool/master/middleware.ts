@@ -4744,7 +4744,7 @@ export const updateTaskStatusAPI = createAsyncThunk<any, any>(
       console.log("name", response);
 
       if (response?.status === 200) {
-        dispatch(getAllTaskAction())
+        dispatch(getAllTaskByStatuesAction())
 
         return response?.data
       }
