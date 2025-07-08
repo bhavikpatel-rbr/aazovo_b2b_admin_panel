@@ -112,7 +112,7 @@ export type JobPostItem = {
 // --- Constants for Form Selects ---
 const JOB_POST_STATUS_OPTIONS_FORM: { value: JobPostStatusForm; label: string }[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }]
 const jobPostStatusFormValues = JOB_POST_STATUS_OPTIONS_FORM.map((s) => s.value) as [JobPostStatusForm, ...JobPostStatusForm[]]
-const jobStatusColor: Record<JobPostStatusApi, string> = { Active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100', Inactive: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100' }
+const jobStatusColor: Record<JobPostStatusApi, string> = { Active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700', Inactive: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700' }
 const PORTAL_OPTIONS = [{ label: 'Linkedin', value: 'Linkedin' }, { label: 'Naukri', value: 'Naukri' }, { label: 'Internal', value: 'Internal' }, { label: 'Glassdoor', value: 'Glassdoor' }]
 
 // --- Zod Schemas ---
@@ -487,10 +487,10 @@ const JobPostsListing = () => {
     
     const columns: ColumnDef<JobPostItem>[] = useMemo(() => [
         { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 20; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold cursor-help">{displayValue}</span></Tooltip>) } },
-        { header: 'Status', accessorKey: 'status', size: 100, enableSorting: true, cell: (props) => { const statusVal = props.getValue<JobPostStatusApi>(); return (<Tag className={classNames('capitalize whitespace-nowrap min-w-[70px] text-center', jobStatusColor[statusVal] || 'bg-gray-100 text-gray-600')}>{statusVal}</Tag>) } },
         { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { const deptId = String(props.getValue()); const department = departmentOptions.find((opt) => opt.value === deptId); return department ? department.label : deptId } },
         { header: 'Location', accessorKey: 'location', size: 130, enableSorting: true },
         { header: 'Vacancies', accessorKey: 'vacancies', size: 90, enableSorting: true, meta: { cellClass: 'text-center', headerClass: 'text-center' } },
+        { header: 'Status', accessorKey: 'status', size: 100, enableSorting: true, cell: (props) => { const statusVal = props.getValue<JobPostStatusApi>(); return (<Tag className={classNames('capitalize whitespace-nowrap text-center', jobStatusColor[statusVal] || 'bg-gray-100 text-gray-600')}>{statusVal}</Tag>) } },
         { 
             header: 'Updated Info', 
             accessorKey: 'updated_at', 
@@ -518,7 +518,7 @@ const JobPostsListing = () => {
                 ); 
             } 
         },
-        { header: 'Actions', id: 'actions', meta: { headerClass: 'text-center', cellClass: 'text-center' }, size: 100, cell: (props) => (<ActionColumn item={props.row.original} onEdit={openEditDrawer} onOpenModal={handleOpenModal} />) },
+        { header: 'Actions', id: 'actions', meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => (<ActionColumn item={props.row.original} onEdit={openEditDrawer} onOpenModal={handleOpenModal} />) },
     ], [departmentOptions, openEditDrawer, handleOpenModal]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<JobPostItem>[]>(columns);
@@ -527,7 +527,7 @@ const JobPostsListing = () => {
     const renderDrawerForm = (currentFormMethods: typeof formMethods, currentEditingItem: JobPostItem | null) => {
         const { fields, append, remove } = useFieldArray({ control: currentFormMethods.control, name: 'job_plateforms' });
         return (<>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <FormItem label={<div>Job Title<span className="text-red-500"> *</span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.job_title} errorMessage={currentFormMethods.formState.errors.job_title?.message}><Controller name="job_title" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbBriefcase />} placeholder="e.g., Software Engineer" />)} /></FormItem>
                 <FormItem label={<div>Job Department<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.job_department_id} errorMessage={currentFormMethods.formState.errors.job_department_id?.message}><Controller name="job_department_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder={departmentOptions.length > 0 ? 'Select Department' : 'Loading...'} options={departmentOptions} value={departmentOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} disabled={departmentOptions.length === 0 && masterLoadingStatus === 'loading'} />)} /></FormItem>
                 <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}><Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={JOB_POST_STATUS_OPTIONS_FORM} value={JOB_POST_STATUS_OPTIONS_FORM.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem>
@@ -540,7 +540,7 @@ const JobPostsListing = () => {
                 <div className="flex justify-between items-center mb-2"><h6 className="text-gray-700 dark:text-gray-200">Job Platforms<span className="text-red-500"> *</span></h6><Button type="button" size="sm" variant="outline" onClick={() => append({ portal: '', link: '', application_count: 0, id: null })}>Add Platform</Button></div>
                 {currentFormMethods.formState.errors.job_plateforms && !currentFormMethods.formState.errors.job_plateforms.root && !Array.isArray(currentFormMethods.formState.errors.job_plateforms) && (<div className="text-red-500 text-xs mb-2">{currentFormMethods.formState.errors.job_plateforms.message}</div>)}
                 {fields.map((field, index) => (
-                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-x-3 gap-y-2 border p-3 rounded-md mb-3 items-end">
+                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-x-3 gap-y-2 border p-3 rounded-md mb-3 items-end border-gray-200">
                         <FormItem label="Portal" className="mb-0" invalid={!!currentFormMethods.formState.errors.job_plateforms?.[index]?.portal} errorMessage={currentFormMethods.formState.errors.job_plateforms?.[index]?.portal?.message}><Controller name={`job_plateforms.${index}.portal`} control={currentFormMethods.control} render={({ field: controllerField }) => (<Select {...controllerField} placeholder="Select Portal" options={PORTAL_OPTIONS} value={PORTAL_OPTIONS.find((o) => o.value === controllerField.value)} onChange={(opt) => controllerField.onChange(opt?.value)} />)} /></FormItem>
                         <FormItem label="Link" className="mb-0" invalid={!!currentFormMethods.formState.errors.job_plateforms?.[index]?.link} errorMessage={currentFormMethods.formState.errors.job_plateforms?.[index]?.link?.message}><Controller name={`job_plateforms.${index}.link`} control={currentFormMethods.control} render={({ field: controllerField }) => (<Input {...controllerField} placeholder="https://linkedin.com/jobs/..." />)} /></FormItem>
                         <FormItem label="App. Count" className="mb-0 md:w-32" invalid={!!currentFormMethods.formState.errors.job_plateforms?.[index]?.application_count} errorMessage={currentFormMethods.formState.errors.job_plateforms?.[index]?.application_count?.message}><Controller name={`job_plateforms.${index}.application_count`} control={currentFormMethods.control} render={({ field: controllerField }) => (<Input {...controllerField} type="number" min={0} placeholder="0" />)} /></FormItem>
@@ -587,7 +587,7 @@ const JobPostsListing = () => {
             <JobPostModals modalState={modalState} onClose={handleCloseModal} userOptions={userOptions} />
 
             <Drawer title={editingItem ? 'Edit Job Post' : 'Add New Job Post'} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="jobPostForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? editingItem ? 'Saving...' : 'Adding...' : editingItem ? 'Save' : 'Save'}</Button></div>}>
-                <Form id="jobPostForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-2 ">{renderDrawerForm(formMethods, editingItem)}</Form>
+                <Form id="jobPostForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-1">{renderDrawerForm(formMethods, editingItem)}</Form>
             </Drawer>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full flex justify-end gap-2"><Button size="sm" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterJobPostForm" type="submit">Apply</Button></div>}>
                 <Form id="filterJobPostForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">

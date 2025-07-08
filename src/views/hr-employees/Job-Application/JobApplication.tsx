@@ -325,7 +325,7 @@ const JobApplicationListing = () => {
     };
     
     const columns: ColumnDef<JobApplicationItemInternal>[] = useMemo(() => [
-        { header: 'Applicant', accessorKey: 'name', cell: (props) => ( <div className="flex items-center"> <Avatar size={28} shape="circle" src={props.row.original.avatar} icon={<TbUserCircle />} >{!props.row.original.avatar && props.row.original.name?.[0]?.toUpperCase()}</Avatar> <div className="ml-2"> <span className="font-semibold">{props.row.original.name}</span> <div className="text-xs text-gray-500">{props.row.original.email}</div> </div> </div> ) },
+        { header: 'Applicant', accessorKey: 'name', cell: (props) => ( <div className="flex items-center"> <div className="ml-2"> <span className="font-semibold">{props.row.original.name}</span> <div className="text-xs text-gray-500">{props.row.original.email}</div> </div> </div> ) },
         { header: 'Status', accessorKey: 'status', width: 120, cell: (props) => <Tag className={`${applicationStatusColor[props.row.original.status]} text-white capitalize px-2 py-1 text-xs`}>{props.row.original.status}</Tag> },
         { header: 'Mobile', accessorKey: 'mobileNo', width: 140, cell: (props) => props.row.original.mobileNo || '-' },
         { header: 'Department', accessorKey: 'departmentName', width: 160, cell: (props) => props.row.original.departmentName || '-' },
