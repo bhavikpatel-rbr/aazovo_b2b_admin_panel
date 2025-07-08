@@ -553,10 +553,10 @@ const Products = () => {
   const [thumbImagePreviewUrl, setThumbImagePreviewUrl] = useState<string | null>(null);
   const [newThumbImageFile, setNewThumbImageFile] = useState<File | null>(null);
   const [galleryImages, setGalleryImages] = useState<ProductGalleryImageItem[]>([]);
-  const domainOptions = useMemo(() => domainsData?.data?.map((d: any) => ({ value: d.id, label: d.domain })) || [], [domainsData?.data]);
+  const domainOptions = useMemo(() => domainsData?.map((d: any) => ({ value: d.id, label: d.domain })) || [], [domainsData?.data]);
   const categoryOptions = useMemo(() => Array.isArray(GlobalCategoriesData) ? GlobalCategoriesData.map((c: any) => ({ value: c.id, label: c.name })) : [], [GlobalCategoriesData]);
   const brandOptions = useMemo(() => (BrandData && BrandData.length > 0) ? BrandData?.map((b: any) => ({ value: b.id, label: b.name })) || [] : [], [BrandData]);
-  const unitOptions = useMemo(() => unitData?.data?.map((u: any) => ({ value: u.id, label: u.name })) || [], [unitData?.data]);
+  const unitOptions = useMemo(() => unitData?.map((u: any) => ({ value: u.id, label: u.name })) || [], [unitData?.data]);
   const countryOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: c.id, label: c.name })) : [], [CountriesData]);
   const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData?.map((u: any) => ({ value: u.id, label: u.name })) || [] : [], [getAllUserData]);
   const [subcategoryOptions, setSubcategoryOptions] = useState<{ value: number; label: string }[]>([]);
@@ -1029,11 +1029,11 @@ const Products = () => {
                     <UiSelect options={apiProductStatusOptions} value={apiProductStatusOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />
                   )} />
                 </FormItem>
-                <FormItem label={<div>Domains<span className="text-red-500"> * </span></div>} isRequired className="md:col-span-2" invalid={!!formErrors.domain_ids} errorMessage={formErrors.domain_ids?.message}>
+                {/* <FormItem label={<div>Domains<span className="text-red-500"> * </span></div>} isRequired className="md:col-span-2" invalid={!!formErrors.domain_ids} errorMessage={formErrors.domain_ids?.message}>
                   <Controller name="domain_ids" control={formControl} render={({ field }) => (
                     <UiSelect isMulti options={domainOptions} value={domainOptions.filter((opt) => field.value?.includes(opt.value))} onChange={(opts) => field.onChange(opts ? opts.map((opt) => opt.value) : [])} />
                   )} />
-                </FormItem>
+                </FormItem> */}
                 <FormItem label={<div>Category<span className="text-red-500"> * </span></div>} isRequired invalid={!!formErrors.category_id} errorMessage={formErrors.category_id?.message}>
                   <Controller name="category_id" control={formControl} render={({ field }) => (
                     <UiSelect options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable />
