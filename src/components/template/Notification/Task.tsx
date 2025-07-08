@@ -33,6 +33,7 @@ import Card from '@/components/ui/Card'
 import Spinner from '@/components/ui/Spinner'
 import { FormItem, Form } from '@/components/ui/Form'
 import Tag from '@/components/ui/Tag'
+import Avatar from '@/components/ui/Avatar' // <-- ADDED IMPORT
 
 // Icons
 import {
@@ -55,7 +56,6 @@ import {
     HiOutlineUserGroup,
     HiOutlineFlag
 } from 'react-icons/hi'
-import { useNavigate } from 'react-router-dom'
 
 // --- Type Definitions, Schemas & Constants ---
 type Priority = 'Low' | 'Medium' | 'High'
@@ -91,7 +91,7 @@ const taskValidationSchema = z.object({
 
 export type TaskFormData = z.infer<typeof taskValidationSchema>
 
-const statusConfig: Record<TaskStatus, { label: string; color: string; icon: JSX.Element }> = {
+const statusConfig: Record<TaskStatus, { label: string; color: string; icon: any }> = {
     Pending: { label: 'Pending', color: 'amber', icon: <BiTimeFive /> },
     in_progress: { label: 'In Progress', color: 'blue', icon: <BiHourglass /> },
     Completed: { label: 'Completed', color: 'emerald', icon: <BiCheckCircle /> },
@@ -114,8 +114,6 @@ const TaskToggle = ({ className, count }: { className?: string, count: number })
         <BiTask />
     </div>
 )
-
-// AddTaskModal remains largely the same as it's a functional form
 
 const AddTaskModal = ({
     isOpen,
@@ -288,54 +286,95 @@ const AddTaskModal = ({
     )
 }
 
-// --- NEW: Heavily Redesigned Task View Modal ---
-const TaskViewModal = ({ task, isOpen, onClose }: { task: Task | null, isOpen: boolean, onClose: () => void }) => {
+// --- NEW: Heavily Redesigned Task View Modal (inspired by the provided example) ---
+const TaskViewModal = ({ task, isOpen, onClose }: { task: Task | null; isOpen: boolean; onClose: () => void }) => {
     if (!task) return null;
+
     const statusInfo = statusConfig[task.status];
-    const assignedToText = task.assign_to_users?.length > 0 ? task.assign_to_users.map((a) => a.name).join(', ') : 'Not Assigned';
+    const assignedUsers = task.assign_to_users || [];
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={600}>
-            <div className="space-y-6">
-                <div className="pb-4 border-b border-gray-200 dark:border-gray-600">
-                    <Tag className={classNames('text-sm', `bg-${statusInfo?.color}-500`)}>{statusInfo.label}</Tag>
-                    <h4 className="font-bold mt-2">{task.task_title}</h4>
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            onRequestClose={onClose}
+            title={
+                <span className="truncate max-w-md">
+                    Task Details: {task.task_title}
+                </span>
+            }
+            width={700}
+        >
+            <div className="p-1 sm:p-4 space-y-4 overflow-y-auto max-h-[75vh]">
+                <div className="border-b pb-3">
+                    <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1">
+                        General Information
+                    </h6>
+                    <p className="text-sm">
+                        <strong>Task ID:</strong> {task.id}
+                    </p>
+                    <p className="text-sm">
+                        <strong>Title:</strong> {task.task_title}
+                    </p>
+                    <p className="text-sm flex items-center">
+                        <strong>Status:</strong>
+                        <Tag className={classNames('ml-2 text-white text-xs px-1.5 py-0.5')}>
+                            {task.status}
+                        </Tag>
+                    </p>
+                    <p className="text-sm flex items-center">
+                        <strong>Priority:</strong>
+                        <Tag className={classNames('ml-2 text-white text-xs px-1.5 py-0.5', getPriorityClasses(task.priority))}>
+                            {task.priority}
+                        </Tag>
+                    </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
-                    <div className="flex items-start gap-3">
-                        <HiOutlineUserCircle className="text-xl text-gray-400 mt-1" />
-                        <div>
-                            <p className="text-xs text-gray-500">Assigned To</p>
-                            <p className="font-semibold">{assignedToText}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <HiOutlineHashtag className="text-xl text-gray-400 mt-1" />
-                        <div>
-                            <p className="text-xs text-gray-500">Priority</p>
-                            <Tag className={classNames('text-xs', getPriorityClasses(task.priority))}>{task.priority}</Tag>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <HiOutlineCalendar className="text-xl text-gray-400 mt-1" />
-                        <div>
-                            <p className="text-xs text-gray-500">Due Date</p>
-                            <p className="font-semibold">{task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Not set'}</p>
-                        </div>
-                    </div>
+
+                <div className="border-b pb-3">
+                    <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1">
+                        Dates
+                    </h6>
+                    <p className="text-sm flex items-center gap-1.5">
+                        <HiOutlineCalendar className="text-lg text-gray-500" />
+                        <strong>Due:</strong> {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Not set'}
+                    </p>
                 </div>
+
+                <div className="border-b pb-3">
+                    <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1.5">
+                        <HiOutlineUserGroup className="text-lg text-gray-500" />
+                        Assigned To
+                    </h6>
+                    {assignedUsers.length > 0 ? (
+                        <div className="flex flex-wrap gap-x-6 gap-y-3 mt-1">
+                            {assignedUsers.map(user => (
+                                <div key={user.id} className="flex items-center gap-2">
+                                    <Avatar shape="circle" size="sm">
+                                        {user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                    </Avatar>
+                                    <span className="text-sm font-medium">{user.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500">Not assigned to any user.</p>
+                    )}
+                </div>
+
                 {task.description && (
-                    <div className="flex items-start gap-3">
-                        <HiOutlineDocumentText className="text-xl text-gray-400 mt-1 flex-shrink-0" />
-                        <div>
-                            <p className="text-xs text-gray-500">Description</p>
-                            <p className="text-sm whitespace-pre-wrap">{task.description}</p>
-                        </div>
+                    <div className="border-b pb-3">
+                        <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1.5">
+                            <HiOutlineDocumentText className="text-lg text-gray-500" /> Description
+                        </h6>
+                        <p className="text-sm whitespace-pre-wrap">{task.description}</p>
                     </div>
                 )}
-            </div>
-            <div className="text-right mt-8">
-                <Button variant="solid" onClick={onClose}>Close</Button>
+                
+                {!task.description && (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                        No additional details provided for this task.
+                    </p>
+                )}
             </div>
         </Dialog>
     );
@@ -442,7 +481,6 @@ const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, task, isDeleting
 
 // --- Main Component Logic ---
 const _Tasks = ({ className }: { className?: string }) => {
-    const navigate = useNavigate()
     const dispatch = useAppDispatch();
     const { AllTaskData = [], Employees = [], status: loadingStatus, isSubmitting, AllCompanyData = [] } = useSelector(masterSelector, shallowEqual);
     useEffect(() => {
@@ -466,7 +504,7 @@ const _Tasks = ({ className }: { className?: string }) => {
     const openDeleteConfirmation = (task: Task) => { setTaskToDelete(task); setDeleteConfirmIsOpen(true); };
     const closeDeleteConfirmation = () => { setTaskToDelete(null); setDeleteConfirmIsOpen(false); };
     const handleConfirmDelete = async () => { /* ...omitted for brevity... */ if (!taskToDelete) return; try { await dispatch(deleteTaskAction(taskToDelete.id)).unwrap(); toast.push(<Notification type="success" title="Task Deleted" />); closeDeleteConfirmation(); } catch (e) { toast.push(<Notification type="danger" title="Failed to Delete">{e.message || 'Error'}</Notification>); closeDeleteConfirmation(); } };
-    const handleViewTask = (task: Task) => { navigate(`/task/task-list/create/${task.id}`) };
+    const handleViewTask = (task: Task) => { setViewingTask(task); setViewModalIsOpen(true); };
     const closeViewModal = () => { setViewModalIsOpen(false); setViewingTask(null); };
 
     const taskCounts = useMemo(() => {

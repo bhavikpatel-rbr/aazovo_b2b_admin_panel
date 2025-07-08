@@ -213,7 +213,7 @@ const INITIAL_STATE: any = {
   filledFormData:[],
   startFormData: [],
   accountDocumentById: 0,
-  getfromIDcompanymemberData: 0,
+  getfromIDcompanymemberData: [],
   AllCountData: [],
 };
 
