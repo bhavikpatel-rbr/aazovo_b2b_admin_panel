@@ -41,6 +41,7 @@ import {
   editUnitAction,
   getaccountdocAction,
   getActivityLogAction,
+  getActualCompanyAction,
   getAllActionAction,
   getAllCompany,
   getAllCountAction,
@@ -215,6 +216,7 @@ const INITIAL_STATE: any = {
   accountDocumentById: 0,
   getfromIDcompanymemberData: [],
   AllCountData: [],
+  actualCompanyData:[],
 };
 
 const masterSlice = createSlice({
@@ -763,7 +765,12 @@ const masterSlice = createSlice({
       ...state,
       AllCountData: payload,
     }));
+    builder.addCase(getActualCompanyAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      actualCompanyData: payload,
+    }));
   },
+  
 });
 
 export const masterSelector = (state: RootState) => state?.Master;

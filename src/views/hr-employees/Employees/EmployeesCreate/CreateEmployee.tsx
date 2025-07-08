@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useForm, Controller, useFieldArray, type Control, type FieldErrors, UseFormReturn } from 'react-hook-form';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -15,11 +15,11 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import { Card, Button, Input, DatePicker, Select, Radio, Checkbox, FormItem, Spinner, Notification, toast } from '@/components/ui';
 import { BiChevronRight } from 'react-icons/bi';
 import { HiOutlineTrash } from 'react-icons/hi';
-import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById, getCategoriesAction } from '@/reduxtool/master/middleware';
+import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById } from '@/reduxtool/master/middleware';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
 import {
     getRolesAction, getDepartmentsAction, getDesignationsAction,
-    getCountriesAction, getParentCategoriesAction,
+    getCountriesAction, getCategoriesAction,
     getBrandAction, getAllProductsAction, getMemberAction, getReportingTo
 } from '@/reduxtool/master/middleware';
 
@@ -49,8 +49,6 @@ type FormSectionKey = keyof Omit<EmployeeFormSchema, 'id'>;
 
 
 // --- 2. ZOD SCHEMA ---
-// --- CHANGE [1]: Updated the Zod schema to include all required fields from other sections.
-// This is crucial for the `isValid` flag to work correctly across the entire form.
 const requiredSelectSchema = z.object({ label: z.string(), value: z.string() }, { required_error: "This field is required." }).nullable();
 const optionalSelectSchema = z.object({ label: z.string(), value: z.string() }).nullable().optional();
 const requiredFileSchema = z.union([
@@ -81,20 +79,18 @@ const employeeFormValidationSchema = z.object({
         maritalStatus: optionalSelectSchema,
     }),
     documentSubmission: z.object({
-        // Add validation for fields you marked as required in the UI
         identity_proof: requiredFileSchema.refine(val => val !== null, "Identity proof is required."),
         address_proof: requiredFileSchema.refine(val => val !== null, "Address proof is required."),
-    }).passthrough(), // Use passthrough to allow other (optional) document fields
+    }).passthrough(),
 
     roleResponsibility: z.object({
-        // Add validation for required roles/responsibilities
         roleId: requiredSelectSchema.refine(val => val !== null, "Role is required."),
         departmentId: z.array(z.object({ label: z.string(), value: z.string() })).min(1, "At least one department is required."),
         designationId: requiredSelectSchema.refine(val => val !== null, "Designation is required."),
-    }).passthrough(), // Use passthrough to allow other optional fields in this section
+    }).passthrough(),
 
 }).passthrough().refine(data => {
-    // Conditionally require password only if it's NOT in edit mode (i.e., no ID)
+    // For new employees, password is required and must be at least 6 characters
     if (!data.id && (!data.registration.password || data.registration.password.length < 6)) {
         return false;
     }
@@ -105,8 +101,8 @@ const employeeFormValidationSchema = z.object({
 });
 
 
-// --- 3. FORM SECTION & NAVIGATOR COMPONENTS ---
-// (No changes needed in these components: Navigator, RegistrationSection, PersonalInformationSection, etc.)
+// --- 3. FORM SECTION & NAVIGATOR COMPONENTS (UNCHANGED) ---
+// These components were already well-structured and did not need changes.
 const Navigator = ({ activeSection, onNavigate }: { activeSection: FormSectionKey, onNavigate: (key: FormSectionKey) => void }) => {
     const sections: { key: FormSectionKey; label: string }[] = [
         { key: 'registration', label: 'Registration' }, { key: 'personalInformation', label: 'Personal Info' }, { key: 'documentSubmission', label: 'Documents' },
@@ -130,7 +126,6 @@ const Navigator = ({ activeSection, onNavigate }: { activeSection: FormSectionKe
         </div>
     );
 };
-
 const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
     const isEditMode = !!control._formValues.id;
     const dispatch = useAppDispatch();
@@ -157,7 +152,6 @@ const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
         </div></Card>
     );
 };
-
 const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) => {
     const dispatch = useAppDispatch();
     const { CountriesData = [] } = useSelector(masterSelector);
@@ -181,7 +175,6 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
         </div></Card>
     );
 };
-
 const DocumentSubmissionSection = ({ control, errors }: FormSectionBaseProps) => {
     const documentFields = [
         { name: 'profile_pic', label: "Profile Picture", accept: ".pdf,.jpg,.jpeg,.png"  },
@@ -220,17 +213,10 @@ const DocumentSubmissionSection = ({ control, errors }: FormSectionBaseProps) =>
         </div></Card>
     );
 };
-
 const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) => {
-    const dispatch = useAppDispatch();
+    // This component already fetches its data in the parent, so it's fine.
     const { Roles, departmentsData, designationsData, BrandData, CategoriesData, AllProducts, memberData, reportingTo, CountriesData } = useSelector(masterSelector);
-    useEffect(() => {
-        dispatch(getRolesAction()); dispatch(getDepartmentsAction()); dispatch(getDesignationsAction()); dispatch(getBrandAction());
-        dispatch(getCategoriesAction()); dispatch(getAllProductsAction()); dispatch(getMemberAction()); dispatch(getReportingTo());
-        dispatch(getCountriesAction());
-    }, [dispatch]);
-
-
+    
     const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => toOptions(departmentsData?.data), [departmentsData]);
@@ -255,7 +241,6 @@ const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) =>
         </div></Card>
     );
 };
-
 const EquipmentsAssetsSection = ({ control, errors }: FormSectionBaseProps) => {
     const { fields, append, remove } = useFieldArray({ control, name: 'equipmentsAssetsProvided.items' });
     const onAddAsset = () => append({ name: '', serial_no: '', remark: '', provided: true, attachment: null });
@@ -289,7 +274,6 @@ const EquipmentsAssetsSection = ({ control, errors }: FormSectionBaseProps) => {
             </div></Card>
     );
 };
-
 const TrainingSection = ({ control, errors }: FormSectionBaseProps) => (
     <Card id="trainingInformation"><h4 className="mb-6">Training Information</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         <div className="flex flex-col gap-y-4"><h5 className="text-base font-semibold">Induction Training</h5>
@@ -302,13 +286,12 @@ const TrainingSection = ({ control, errors }: FormSectionBaseProps) => (
         </div>
     </div></Card>
 );
-
 const OffBoardingSection = ({ control, errors }: FormSectionBaseProps) => {
     const config = [
         { key: 'exit_interview_conducted', label: 'Exit Interview Conducted?', options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }], remarksKey: 'exit_interview_remark', remarksLabel: 'Remarks' },
         { key: 'resignation_letter_received', label: 'Resignation Letter Received?', options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }], remarksKey: 'resignation_letter_remark', remarksLabel: 'Remarks' },
         { key: 'company_assets_returned', label: 'Company Assets Returned?', options: [{ value: 'all', label: 'All' }, { value: 'partial', label: 'Partial' }, { value: 'none', label: 'None' }], remarksKey: 'assets_returned_remarks', remarksLabel: 'Remarks' },
-        { key: 'full_and_final_settlement', label: 'FNF Processed?', options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }], remarksKey: 'fnf_remarks', remarksLabel: 'Remarks' },
+        { key: 'full_and_final_settlement', label: 'FNF Processed?', options: [{ value: 'yes', label: 'Yes' }, { value: 'no', 'label': 'No' }], remarksKey: 'fnf_remarks', remarksLabel: 'Remarks' },
     ];
     return (
         <Card id="offBoarding"><h4 className="mb-6">Off-Boarding Process</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
@@ -322,6 +305,7 @@ const OffBoardingSection = ({ control, errors }: FormSectionBaseProps) => {
     );
 };
 
+
 // --- 4. CORE FORM COMPONENT ---
 const sectionKeys: FormSectionKey[] = ['registration', 'personalInformation', 'documentSubmission', 'roleResponsibility', 'training', 'equipmentsAssetsProvided', 'offBoarding'];
 interface EmployeeFormProps { onFormSubmit: (data: FormData, id?: string) => void; defaultValues?: Partial<EmployeeFormSchema>; isEdit?: boolean; isSubmitting?: boolean; onDiscard: () => void; }
@@ -329,18 +313,23 @@ interface EmployeeFormProps { onFormSubmit: (data: FormData, id?: string) => voi
 const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, isSubmitting = false, onDiscard }: EmployeeFormProps) => {
     const [activeSection, setActiveSection] = useState<FormSectionKey>('registration');
     const activeSectionIndex = sectionKeys.indexOf(activeSection);
-    
-    // --- CHANGE [2]: Get `isValid` from formState and set validation `mode` to 'onChange'
-    const { 
-        handleSubmit, 
-        reset, 
-        control, 
-        formState: { errors, isValid } 
+
+    const {
+        handleSubmit,
+        reset,
+        control,
+        formState: { errors, isValid } // FIX: Destructure `isValid` for button state
     } = useForm<EmployeeFormSchema>({
         defaultValues: defaultValues || {},
         resolver: zodResolver(employeeFormValidationSchema),
-        mode: 'onChange', // This makes `isValid` update as the user types
+        mode: 'onChange', // 'onChange' is good for immediate feedback
     });
+
+    useEffect(() => {
+        if (defaultValues && !isEmpty(defaultValues)) {
+            reset(defaultValues);
+        }
+    }, [defaultValues, reset]);
 
     const internalFormSubmit = (values: EmployeeFormSchema) => {
         const formData = new FormData();
@@ -353,14 +342,18 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
             formData.append('employee_id', defaultValues.id);
         }
 
+        // Registration
         formData.append('name', values.registration?.fullName || '');
         formData.append('date_of_joining', formatDate(values.registration?.dateOfJoining));
         formData.append('mobile_number', values.registration?.mobileNumber || '');
         formData.append('mobile_number_code', objToValue(values.registration?.mobileNumberCode));
         formData.append('email', values.registration?.email || '');
         formData.append('experience', values.registration?.experience || '');
-        if (!isEdit && values.registration.password) formData.append('password', values.registration.password);
+        if (!isEdit && values.registration.password) {
+            formData.append('password', values.registration.password);
+        }
 
+        // Personal Info
         formData.append('status', objToValue(values.personalInformation?.status));
         formData.append('date_of_birth', formatDate(values.personalInformation?.dateOfBirth));
         formData.append('age', String(values.personalInformation?.age || ''));
@@ -371,9 +364,9 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('local_address', values.personalInformation?.localAddress || '');
         formData.append('maritual_status', objToValue(values.personalInformation?.maritalStatus));
 
-
+        // Role & Responsibility
         formData.append('role_id', objToValue(values.roleResponsibility?.roleId));
-        formData.append('department_id', values.roleResponsibility?.departmentId?.map(item => item.value));
+        formData.append('department_id', arrayToCommaString(values.roleResponsibility?.departmentId)); // FIX: Ensure department_id is handled correctly
         formData.append('designation_id', objToValue(values.roleResponsibility?.designationId));
         formData.append('country_id', arrayToCommaString(values.roleResponsibility?.countryId));
         formData.append('category_id', arrayToCommaString(values.roleResponsibility?.categoryId));
@@ -383,17 +376,20 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('reporting_hr_id', arrayToCommaString(values.roleResponsibility?.reportingHrId));
         formData.append('reporting_head_id', objToValue(values.roleResponsibility?.reportingHeadId));
 
+        // Documents
         Object.entries(values.documentSubmission || {}).forEach(([key, file]) => {
             if (file instanceof File) {
                 formData.append(key, file);
             }
         });
 
+        // Training
         formData.append('training_date_of_completion', formatDate(values.training?.inductionDateCompletion));
         formData.append('training_remark', values.training?.inductionRemarks || '');
         formData.append('specific_training_date_of_completion', formatDate(values.training?.departmentTrainingDateCompletion));
         formData.append('specific_training_remark', values.training?.departmentTrainingRemarks || '');
-
+        
+        // Off-Boarding
         const yesNoToBoolString = (value: 'yes' | 'no' | '') => String(Number(value === 'yes'));
         formData.append('exit_interview_conducted', yesNoToBoolString(values.offBoarding?.exit_interview_conducted));
         formData.append('resignation_letter_received', yesNoToBoolString(values.offBoarding?.resignation_letter_received));
@@ -404,6 +400,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('assets_returned_remarks', values.offBoarding?.assets_returned_remarks || '');
         formData.append('fnf_remarks', values.offBoarding?.fnf_remarks || '');
 
+        // Equipment
         if (values.equipmentsAssetsProvided?.items) {
             const equipmentDataForJson = values.equipmentsAssetsProvided.items.map(item => ({ name: item.name, serial_no: item.serial_no, remark: item.remark, provided: item.provided }));
             formData.append('equipments_assets_issued', JSON.stringify(equipmentDataForJson));
@@ -413,7 +410,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
                 }
             });
         }
-
+        
         onFormSubmit(formData, defaultValues?.id);
     };
 
@@ -435,7 +432,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
     const handlePrevious = () => activeSectionIndex > 0 && setActiveSection(sectionKeys[activeSectionIndex - 1]);
 
     return (
-        <form onSubmit={handleSubmit(internalFormSubmit, (err) => console.log("Form Validation Errors:", err))} className="h-full">
+        <form onSubmit={handleSubmit(internalFormSubmit)} className="h-full">
             <div className="h-full flex flex-col justify-between">
                 <div className="flex-grow pb-6">
                     <div className="flex gap-1 items-end mb-3">
@@ -458,7 +455,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
                         <div className="flex items-center gap-2">
                             <Button type="button" onClick={handlePrevious} disabled={isSubmitting || activeSectionIndex === 0}>Previous</Button>
                             <Button type="button" onClick={handleNext} disabled={isSubmitting || activeSectionIndex === sectionKeys.length - 1}>Next</Button>
-                            {/* --- CHANGE [3]: Updated the disabled prop on the submit button. --- */}
+                            {/* FIX: Disable button if form is invalid to prevent submission with errors */}
                             <Button variant="solid" type="submit" loading={isSubmitting} disabled={isSubmitting || !isValid}>
                                 {isEdit ? "Update" : "Create"}
                             </Button>
@@ -471,38 +468,80 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
 };
 
 
-// --- 5. PAGE-LEVEL COMPONENT ---
-// (No changes needed in this component)
+// --- 5. PAGE-LEVEL COMPONENT (REFACTORED) ---
 const EmployeeFormPage = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const { id: employeeId } = useParams<{ id: string }>();
     const isEditMode = !!employeeId;
 
-    const [employeeData, setEmployeeData] = useState<Partial<EmployeeFormSchema> | null>(null);
+    const [initialData, setInitialData] = useState<Partial<EmployeeFormSchema> | null>(null);
+    // FIX: State to hold the raw, untransformed data from the API
+    const [rawEmployeeData, setRawEmployeeData] = useState<any | null>(null);
     const [isLoading, setIsLoading] = useState(isEditMode);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
 
     const lookups = useSelector(masterSelector);
 
+    // FIX: Effect to fetch all necessary lookup data. Runs once on component mount.
     useEffect(() => {
         dispatch(getRolesAction());
         dispatch(getDepartmentsAction());
         dispatch(getDesignationsAction());
         dispatch(getCountriesAction());
-        dispatch(getParentCategoriesAction());
+        dispatch(getCategoriesAction());
         dispatch(getBrandAction());
         dispatch(getAllProductsAction());
         dispatch(getMemberAction());
         dispatch(getReportingTo());
     }, [dispatch]);
 
+    // FIX: Effect that ONLY fetches the raw employee data.
+    // It runs only when the employeeId changes, preventing infinite loops.
     useEffect(() => {
+        if (isEditMode && employeeId) {
+            setIsLoading(true);
+            dispatch(apiGetEmployeeById(employeeId)).unwrap()
+                .then(actionResult => {
+                    if (actionResult?.data?.data) {
+                        setRawEmployeeData(actionResult.data.data);
+                    } else {
+                        throw new Error('Employee data not found.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to fetch employee data:', error);
+                    toast.push(<Notification title="Error" type="danger">Could not load employee details.</Notification>);
+                    navigate('/hr-employees/employees');
+                });
+        } else {
+            // For 'add' mode, provide an empty object and stop loading.
+            setInitialData({});
+            setIsLoading(false);
+        }
+    }, [employeeId, dispatch, isEditMode, navigate]);
 
+    // FIX: Effect that transforms the raw data into form-compatible state.
+    // It depends on the raw data and the lookup data, ensuring it runs
+    // only when the necessary data is available and ready.
+    useEffect(() => {
+        if (!isEditMode || !rawEmployeeData) {
+            return;
+        }
+
+        // Wait until essential lookups are loaded to prevent transformation errors.
+        const lookupsReady = lookups.CountriesData?.length > 0 && 
+                             lookups.Roles?.length > 0 &&
+                             lookups.departmentsData?.data?.length > 0;
+        if (!lookupsReady) {
+            return; // Don't proceed until lookups are available
+        }
+        
+        // This transformation logic is moved here from the old combined effect.
         const apiToForm = (apiData: any): Partial<EmployeeFormSchema> => {
             const findOption = (options: { value: string, label: string }[], value: any) => options.find(o => String(o.value) === String(value));
-            const findMultiOptions = (options: { value: string, label: string }[], values: any[]) => Array.isArray(values) ? options.filter(o => values.includes(String(o.value))) : [];
+            const findMultiOptions = (options: { value: string, label: string }[], values: any[]) => Array.isArray(values) ? options.filter(o => values.some(val => String(o.value) === String(val))) : [];
             const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
             const mapApiBoolToYesNo = (value: any): 'yes' | 'no' | '' => {
                 if (value === true || value === 1 || value === '1') return 'yes';
@@ -514,15 +553,15 @@ const EmployeeFormPage = () => {
             const departmentOptions = toOptions(lookups.departmentsData?.data);
             const designationOptions = toOptions(lookups.designationsData?.data);
             const countryOptions = toOptions(lookups.CountriesData);
-            const categoryOptions = toOptions(lookups.ParentCategories?.data);
-            const brandOptions = toOptions(lookups.BrandData);
-            const productOptions = toOptions(lookups.AllProducts);
+            const categoryOptions = toOptions(lookups.CategoriesData || []);
+            const brandOptions = toOptions(lookups.BrandData || []);
+            const productOptions = toOptions(lookups.AllProducts || []);
             const reportingHrOptions = toOptions(lookups.reportingTo?.data);
-            const reportingHeadOptions = toOptions(lookups.memberData?.data?.data || lookups.memberData?.data);
+            const reportingHeadOptions = toOptions(lookups.memberData);
 
             const commaStringToArray = (str: string | null | undefined): string[] => (str ? String(str).split(',') : []);
 
-            const transformed = {
+            return {
                 id: apiData.id,
                 registration: {
                     fullName: apiData.name || '',
@@ -549,7 +588,7 @@ const EmployeeFormPage = () => {
                     designationId: findOption(designationOptions, apiData.designation_id),
                     countryId: findMultiOptions(countryOptions, commaStringToArray(apiData.country_id)),
                     categoryId: findMultiOptions(categoryOptions, commaStringToArray(apiData.category_id)),
-                    subcategoryId: [], // Subcategory needs parent category to be fetched first
+                    subcategoryId: [], // You may need to fetch subcategories based on categories
                     brandId: findMultiOptions(brandOptions, commaStringToArray(apiData.brand_id)),
                     productServiceId: findMultiOptions(productOptions, commaStringToArray(apiData.product_service_id)),
                     reportingHrId: findMultiOptions(reportingHrOptions, commaStringToArray(apiData.reporting_hr_id)),
@@ -587,33 +626,12 @@ const EmployeeFormPage = () => {
                     items: (apiData.assets || []).map((item: any) => ({ ...item, attachment: item.attachment_url || null })),
                 },
             };
-            return transformed;
         };
 
-        const fetchCompanyData = async () => {
-            if (isEditMode && employeeId) {
-                setIsLoading(true);
-                const actionResult = await dispatch(apiGetEmployeeById(employeeId)).unwrap();
-                console.log(actionResult, 'actionResult');
+        setInitialData(apiToForm(rawEmployeeData));
+        setIsLoading(false); // Stop loading once data is transformed and ready for the form
 
-                try {
-                    if (actionResult) {
-                        setEmployeeData(apiToForm(actionResult?.data?.data))
-                        setIsLoading(false)
-                    } else if (!isEditMode) {
-                        setEmployeeData({});
-                        setIsLoading(false);
-                    }
-                } catch {
-
-                }
-            } else if (!isEditMode) {
-                setEmployeeData({});
-                setIsLoading(false);
-            }
-        };
-        fetchCompanyData();
-    }, [employeeId, lookups, dispatch, isEditMode]);
+    }, [rawEmployeeData, lookups, isEditMode]);
 
     const handleFormSubmit = (formData: FormData, id?: string) => {
         setIsSubmitting(true);
@@ -625,10 +643,14 @@ const EmployeeFormPage = () => {
                     toast.push(<Notification title="Success" type="success">{`Employee ${isEditMode ? 'updated' : 'added'} successfully.`}</Notification>);
                     navigate('/hr-employees/employees');
                 } else {
-                    toast.push(<Notification title="Error" type="danger" duration={5000}>{JSON.stringify(res?.errors) || 'Submission failed'}</Notification>);
+                    // Handle server-side validation errors if they exist
+                    const errorMessages = res?.errors ? Object.values(res.errors).flat().join(' ') : 'Submission failed';
+                    toast.push(<Notification title="Error" type="danger" duration={5000}>{errorMessages}</Notification>);
                 }
             })
-            .catch((err: any) => { toast.push(<Notification title="Error" type="danger">{err.message || 'An error occurred.'}</Notification>); })
+            .catch((err: any) => { 
+                toast.push(<Notification title="Error" type="danger">{err.message || 'An unexpected error occurred.'}</Notification>);
+            })
             .finally(() => setIsSubmitting(false));
     };
 
@@ -639,16 +661,25 @@ const EmployeeFormPage = () => {
         navigate('/hr-employees/employees');
     };
 
-    // if (isLoading || (isEditMode && !employeeData)) {
-    //     return <Container className="h-full"><div className="h-full flex flex-col items-center justify-center"><Spinner size={40} /><h3>Loading Employee Data...</h3></div></Container>;
-    // }
+    // FIX: Re-enabled the loading spinner for better UX while fetching and processing data
+    if (isLoading) {
+        return (
+            <Container className="h-full">
+                <div className="h-full flex flex-col items-center justify-center">
+                    <Spinner size={40} />
+                    <h3 className="mt-4">Loading Employee Data...</h3>
+                </div>
+            </Container>
+        );
+    }
 
     return (
         <Container className="h-full">
-            {employeeData && (
+            {/* Render the form only when initialData is not null */}
+            {initialData && (
                 <EmployeeFormComponent
                     isEdit={isEditMode}
-                    defaultValues={employeeData}
+                    defaultValues={initialData}
                     onFormSubmit={handleFormSubmit}
                     isSubmitting={isSubmitting}
                     onDiscard={onDiscardOpen}

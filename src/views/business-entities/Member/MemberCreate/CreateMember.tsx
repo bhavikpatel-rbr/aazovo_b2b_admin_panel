@@ -78,6 +78,7 @@ import {
   editMemberAction,
   editRequestFeedbackAction,
   getAllProductsAction,
+  getActualCompanyAction, // Added new action
   getBrandAction,
   getCategoriesAction,
   getCompanyAction,
@@ -121,10 +122,12 @@ export interface MemberFormSchema {
   status?: string | { label: string; value: string };
   company_name?: string | { label: string; value: string };
   company_name_temp?: string | { label: string; value: string };
+  company_code?: string; // New field for actual company code
   address?: string;
   company_description?: string | null;
   company_address?: string;
   whatsapp_number?: string;
+  whatsapp_country_code?: string | { label: string; value: string };
   alternate_contact_country_code?: string | { label: string; value: string };
   alternate_contact_number?: string;
   landline_number?: string;
@@ -180,6 +183,7 @@ export interface FormSectionBaseProps {
   control: Control<MemberFormSchema>;
   errors: FieldErrors<MemberFormSchema>;
   formMethods: UseFormReturn<MemberFormSchema>;
+  isEditMode?: boolean; // Added for conditional rendering
 }
 interface ApiSingleCustomerItem {
   id: number;
@@ -209,6 +213,7 @@ interface ApiSingleCustomerItem {
   office_no?: string;
   alt_mobile?: string;
   alt_email?: string;
+  whatsapp_country_code?:string;
   alternate_contact_country_code?: string;
   botim?: string;
   skype?: string;
@@ -403,6 +408,7 @@ const transformApiToFormSchema = (
     contact_country_code: createCountryCodeOption(formData.number_code),
     company_name_temp: formData.company_temp || "",
     company_name: formData.company_actual || "",
+    // company_code is handled by a separate action and useEffect in the component
     status: toSelectOption(formData.status),
     continent_id: formData.continent ? { value: String(formData.continent.id), label: formData.continent.name } : undefined,
     country_id: formData.country ? { value: String(formData.country.id), label: formData.country.name } : undefined,
@@ -411,6 +417,7 @@ const transformApiToFormSchema = (
     pincode: formData.pincode || "",
     address: formData.address || "",
     whatsapp_number: formData.whatsApp_no || "",
+    whatsapp_country_code: createCountryCodeOption(formData.whatsapp_country_code),
     alternate_contact_number: formData.alternate_contact_number || "",
     alternate_contact_country_code: createCountryCodeOption(formData.alternate_contact_number_code),
     landline_number: formData.landline_number || "",
@@ -499,6 +506,7 @@ const preparePayloadForApi = (
     email: formData.email || "",
     company_temp: formData.company_name_temp || "",
     company_actual: formData.company_name || "",
+    company_code: formData.company_code || null, // New field added to payload
     status: getValue(formData.status) || null,
     continent_id: getValue(formData.continent_id) || null,
     country_id: getValue(formData.country_id) || null,
@@ -507,6 +515,7 @@ const preparePayloadForApi = (
     pincode: formData.pincode || "",
     address: formData.address || "",
     whatsApp_no: formData.whatsapp_number || "",
+    whatsapp_country_code: getValue(formData.whatsapp_country_code) || null,
     alternate_contact_number: formData.alternate_contact_number || "",
     alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,
     landline_number: formData.landline_number || "",
@@ -2291,14 +2300,26 @@ const PersonalDetailsComponent = ({
   control,
   errors,
   isEditMode,
+  formMethods,
 }: FormSectionBaseProps) => {
-  // Assuming `CompanyData` is fetched and available in the master slice
   const {
     CountriesData = [],
     ContinentsData = [],
     CompanyData = [],
+    actualCompanyData, // Fetched via new action
   } = useSelector(masterSelector);
 
+  const { setValue } = formMethods;
+
+  const showActualCompany = isEditMode && actualCompanyData && actualCompanyData.id;
+
+  useEffect(() => {
+    // When actualCompanyData is fetched, update the form fields
+    if (showActualCompany) {
+      setValue('company_name', actualCompanyData.company_name);
+      setValue('company_code', actualCompanyData.company_code);
+    }
+  }, [actualCompanyData, showActualCompany, setValue]);
 
   const countryOptions = CountriesData.map((country: any) => ({
     value: String(country.id),
@@ -2315,10 +2336,6 @@ const PersonalDetailsComponent = ({
     label: continent.name,
   }));
 
-  const companyOptions = CompanyData?.data?.map((c: any) => ({
-    value: String(c.id),
-    label: c.company_name,
-  })); // Assumes structure {id, name}
   const statusOptions = [
     { label: "Active", value: "Active" },
     { label: "Unregistered", value: "Unregistered" },
@@ -2394,7 +2411,6 @@ const PersonalDetailsComponent = ({
           label="Password (leave blank to keep current)"
           invalid={!!errors.password}
           errorMessage={errors.password?.message}
-        //   className="md:col-span-3"
         >
           <Controller
             name="password"
@@ -2402,8 +2418,8 @@ const PersonalDetailsComponent = ({
             render={({ field }) => (
               <Input
                 type="password"
-                disabled={isEditMode ? true : false}
-                placeholder="Enter new password"
+                disabled={isEditMode}
+                placeholder={isEditMode ? "Password cannot be changed" : "Enter new password"}
                 {...field}
               />
             )}
@@ -2413,7 +2429,6 @@ const PersonalDetailsComponent = ({
           label="Company Name (Temp)"
           invalid={!!errors.company_name_temp}
           errorMessage={(errors.company_name_temp as any)?.message}
-        //   className="md:col-span-3"
         >
           <Controller
             name="company_name_temp"
@@ -2421,32 +2436,39 @@ const PersonalDetailsComponent = ({
             render={({ field }) => (
               <Input
                 placeholder="Enter temporary company"
-                // options={companyOptions}
                 {...field}
-              // isClearable
               />
             )}
           />
         </FormItem>
-        <FormItem
-          label="Company Name (Actual)"
-          invalid={!!errors.company_name}
-          errorMessage={(errors.company_name as any)?.message}
-        //   className="md:col-span-3"
-        >
-          <Controller
-            name="company_name"
-            control={control}
-            render={({ field }) => (
-              <Input
-                placeholder="Enter company name"
-                // options={companyOptions}
-                {...field}
-              // isClearable
+        
+        {/* Conditionally rendered Actual Company fields */}
+        {showActualCompany && (
+          <>
+            <FormItem
+              label="Company Name (Actual)"
+              invalid={!!errors.company_name}
+              errorMessage={(errors.company_name as any)?.message}
+            >
+              <Controller
+                name="company_name"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    placeholder="Actual company name"
+                    {...field}
+                    readOnly 
+                  />
+                )}
               />
-            )}
-          />
-        </FormItem>
+            </FormItem>
+            <Controller
+              name="company_code"
+              control={control}
+              render={({ field }) => <input type="hidden" {...field} />}
+            />
+          </>
+        )}
 
         <FormItem
           label={<div>Status<span className="text-red-500"> * </span></div>}
@@ -3035,7 +3057,7 @@ const MemberFormComponent = (props: {
     if (currentIndex > 0) setActiveSection(navigationKeys[currentIndex - 1]);
   };
 
-  const renderActiveSection = (isEditMode: isEditMode) => {
+  const renderActiveSection = () => {
     const sectionProps = { errors, control, formMethods, isEditMode };
     switch (activeSection) {
       case "personalDetails":
@@ -3077,7 +3099,7 @@ const MemberFormComponent = (props: {
           onNavigate={setActiveSection}
         />
       </Card>
-      <div className="flex flex-col gap-4 pb-20">{renderActiveSection(isEditMode)}</div>
+      <div className="flex flex-col gap-4 pb-20">{renderActiveSection()}</div>
       <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center p-4">
           <div>
@@ -3168,10 +3190,12 @@ const MemberCreate = () => {
     status: { label: "Active", value: "Active" },
     company_name: undefined,
     company_name_temp: undefined,
+    company_code: "", // New field initialized
     address: "",
     company_description: "",
     company_address: "",
     whatsapp_number: "",
+    whatsapp_country_code: "",
     alternate_contact_country_code: undefined,
     alternate_contact_number: "",
     landline_number: "",
@@ -3240,6 +3264,9 @@ const MemberCreate = () => {
           console.log(response, "Fetched Member Data");
 
           if (response) {
+            // After fetching member, fetch their actual company info
+            await dispatch(getActualCompanyAction(id)); 
+
             const apiMemberData: ApiSingleCustomerItem = response;
             const transformed = transformApiToFormSchema(apiMemberData);
             setInitialData({ ...emptyForm, ...transformed });
