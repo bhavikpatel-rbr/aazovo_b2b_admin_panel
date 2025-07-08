@@ -340,40 +340,46 @@ const TaskViewModal = ({ task, isOpen, onClose }: { task: Task | null, isOpen: b
     );
 };
 
-// --- NEW: Dynamic & Attractive Summary Cards ---
+// --- MODIFIED: Summary Cards design updated to match the reference style ---
 const TaskSummaryCards = ({ counts, activeFilter, onCardClick }: { counts: Record<FilterStatus | 'total', number>, activeFilter: FilterStatus, onCardClick: (status: FilterStatus) => void }) => {
     const cardData = [
-        { key: 'all', title: 'Total Tasks', count: counts.total, icon: <BiTask />, color: 'indigo' },
-        { key: 'Pending', title: 'Pending', count: counts.Pending, icon: <BiTimeFive />, color: 'amber' },
-        { key: 'in_progress', title: 'In Progress', count: counts.in_progress, icon: <BiHourglass />, color: 'blue' },
-        { key: 'Completed', title: 'Completed', count: counts.Completed, icon: <BiCheckCircle />, color: 'emerald' },
+        { key: 'all', title: 'Total Tasks', count: counts.total, icon: <BiTask size={24} />, color: 'indigo' },
+        { key: 'Pending', title: 'Pending', count: counts.Pending, icon: <BiTimeFive size={24}/>, color: 'amber' },
+        { key: 'in_progress', title: 'In Progress', count: counts.in_progress, icon: <BiHourglass size={24}/>, color: 'blue' },
+        { key: 'Completed', title: 'Completed', count: counts.Completed, icon: <BiCheckCircle size={24}/>, color: 'emerald' },
     ];
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {cardData.map((card) => {
                 const isActive = activeFilter === card.key;
-                const activeClasses = `bg-gradient-to-br from-${card.color}-50 dark:from-${card.color}-500/20 to-white dark:to-gray-800 ring-2 ring-${card.color}-500`;
+                const activeClasses = `ring-2 ring-offset-1 dark:ring-offset-gray-900 ring-${card.color}-500`;
 
                 return (
-                    <div key={card.key} onClick={() => onCardClick(card.key as FilterStatus)}>
-                        <Card
-                            clickable
-                            bodyClass="p-4"
-                            className={classNames(
-                                'transition-all duration-300 transform hover:scale-105 hover:shadow-lg',
-                                isActive ? activeClasses : 'shadow-sm'
-                            )}
-                        >
-                            <div className="flex items-center gap-4">
-                                <span className={classNames('text-3xl', `text-${card.color}-500`)}>{card.icon}</span>
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{card.title}</p>
-                                    <h5 className="font-bold">{card.count}</h5>
+                    <Tooltip title={`Click to filter by ${card.title}`} key={card.key}>
+                        <div onClick={() => onCardClick(card.key as FilterStatus)}>
+                            <Card
+                                clickable
+                                bodyClass="flex gap-2 p-2"
+                                className={classNames(
+                                    'rounded-md transition-shadow duration-200 ease-in-out',
+                                    'hover:shadow-lg',
+                                    'shadow-sm'
+                                )}
+                            >
+                                <div className={classNames(
+                                    'h-12 w-12 rounded-md flex items-center justify-center shrink-0',
+                                    `bg-${card.color}-100 dark:bg-${card.color}-500/20 text-${card.color}-500`
+                                )}>
+                                    {card.icon}
                                 </div>
-                            </div>
-                        </Card>
-                    </div>
+                                <div>
+                                    <h6 className={classNames('font-bold', `text-${card.color}-500 dark:text-${card.color}-300`)}>{card.count}</h6>
+                                    <span className="font-semibold text-xs text-gray-700 dark:text-gray-300">{card.title}</span>
+                                </div>
+                            </Card>
+                        </div>
+                    </Tooltip>
                 );
             })}
         </div>
@@ -487,7 +493,7 @@ const _Tasks = ({ className }: { className?: string }) => {
                     <header className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 space-y-4">
                         <div className="flex justify-between items-center">
                             <h5 className="mb-0">My Tasks ({taskCounts.total})</h5>
-                            <Button variant="solid" size="sm" icon={<HiOutlinePlus />} onClick={() => setAddTaskModalIsOpen(true)}>New Task</Button>
+                            <Button variant="solid" icon={<HiOutlinePlus />} onClick={() => setAddTaskModalIsOpen(true)}>Add New</Button>
                         </div>
                         <TaskSummaryCards counts={taskCounts} activeFilter={statusFilter} onCardClick={setStatusFilter} />
                     </header>
@@ -501,29 +507,37 @@ const _Tasks = ({ className }: { className?: string }) => {
                                     {filteredTasks.map((task) => {
                                         const assignedToText = task.assign_to_users?.length > 3 ? `${task.assign_to_users.slice(0, 3).map(u => u.name).join(', ')} +${task.assign_to_users.length - 3}` : task.assign_to_users?.map(u => u.name).join(', ') || 'N/A';
                                         return (
-                                            <Card key={task.id} className="relative pl-5 pr-4 py-4 hover:shadow-lg transition-shadow duration-200">
+                                            <div key={task.id} className="relative pl-4 pr-3 py-2 hover:shadow-lg transition-shadow duration-200 min-h-0">
                                                 {/* Priority Indicator Bar */}
                                                 <div className={classNames('absolute left-0 top-0 h-full w-1.5 rounded-l-lg', getPriorityClasses(task.priority))} />
 
-                                                <div className="flex flex-col gap-3">
-                                                    <div className="flex items-start justify-between">
-                                                        <h6 className="font-semibold pr-4">{task.task_title}</h6>
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <h6 className="font-semibold pr-2 text-sm truncate">{task.task_title}</h6>
                                                         <div className="flex items-center gap-1 flex-shrink-0">
-                                                            <Tooltip title="View Details"><Button size="xs" shape="circle" variant="plain" icon={<HiOutlineEye />} onClick={() => handleViewTask(task)} /></Tooltip>
-                                                            <Tooltip title="Delete Task"><Button size="xs" shape="circle" variant="plain" icon={<HiOutlineTrash />} onClick={() => openDeleteConfirmation(task)} /></Tooltip>
+                                                            <Tooltip title="View Details">
+                                                                <Button size="xs" shape="circle" variant="plain" icon={<HiOutlineEye />} onClick={() => handleViewTask(task)} />
+                                                            </Tooltip>
+                                                            <Tooltip title="Delete Task">
+                                                                <Button size="xs" shape="circle" variant="plain" icon={<HiOutlineTrash />} onClick={() => openDeleteConfirmation(task)} />
+                                                            </Tooltip>
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                                                         <span className="flex items-center gap-1.5"><HiOutlineUserCircle /> {assignedToText}</span>
-                                                        {task.due_date && <span className="flex items-center gap-1.5"><HiOutlineCalendar /> {new Date(task.due_date).toLocaleDateString()}</span>}
+                                                        {task.due_date && (
+                                                            <span className="flex items-center gap-1.5">
+                                                                <HiOutlineCalendar /> {new Date(task.due_date).toLocaleDateString()}
+                                                            </span>
+                                                        )}
                                                     </div>
 
-                                                    <div className="flex items-center justify-end border-t border-gray-200 dark:border-gray-600 pt-3 mt-1">
+                                                    <div className="flex items-center justify-end border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
                                                         <TaskStatusChanger taskId={task.id} currentStatus={task.status} onChange={handleChangeStatus} />
                                                     </div>
                                                 </div>
-                                            </Card>
+                                            </div>
                                         );
                                     })}
                                 </div>
