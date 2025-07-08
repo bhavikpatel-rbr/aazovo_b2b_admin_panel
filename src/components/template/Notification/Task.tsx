@@ -55,6 +55,7 @@ import {
     HiOutlineUserGroup,
     HiOutlineFlag
 } from 'react-icons/hi'
+import { useNavigate } from 'react-router-dom'
 
 // --- Type Definitions, Schemas & Constants ---
 type Priority = 'Low' | 'Medium' | 'High'
@@ -441,6 +442,7 @@ const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, task, isDeleting
 
 // --- Main Component Logic ---
 const _Tasks = ({ className }: { className?: string }) => {
+    const navigate = useNavigate()
     const dispatch = useAppDispatch();
     const { AllTaskData = [], Employees = [], status: loadingStatus, isSubmitting, AllCompanyData = [] } = useSelector(masterSelector, shallowEqual);
     useEffect(() => {
@@ -464,7 +466,7 @@ const _Tasks = ({ className }: { className?: string }) => {
     const openDeleteConfirmation = (task: Task) => { setTaskToDelete(task); setDeleteConfirmIsOpen(true); };
     const closeDeleteConfirmation = () => { setTaskToDelete(null); setDeleteConfirmIsOpen(false); };
     const handleConfirmDelete = async () => { /* ...omitted for brevity... */ if (!taskToDelete) return; try { await dispatch(deleteTaskAction(taskToDelete.id)).unwrap(); toast.push(<Notification type="success" title="Task Deleted" />); closeDeleteConfirmation(); } catch (e) { toast.push(<Notification type="danger" title="Failed to Delete">{e.message || 'Error'}</Notification>); closeDeleteConfirmation(); } };
-    const handleViewTask = (task: Task) => { setViewingTask(task); setViewModalIsOpen(true); };
+    const handleViewTask = (task: Task) => { navigate(`/task/task-list/create/${task.id}`) };
     const closeViewModal = () => { setViewModalIsOpen(false); setViewingTask(null); };
 
     const taskCounts = useMemo(() => {
