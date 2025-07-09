@@ -162,7 +162,7 @@ export interface MemberFormSchema {
   upgrade_plan?: string | { label: string; value: string };
   request_description?: string;
   favourite_product_id?: Array<{ label: string; value: string }>;
-  business_opportunity?: string | { label: string; value: string };
+  business_opportunity?: Array<{ label: string; value: string }>;
   member_grade?: string | { label: string; value: string };
   relationship_manager?: string | { label: string; value: string };
   remarks?: string;
@@ -430,7 +430,9 @@ const transformApiToFormSchema = (
     facebook_profile: formData.facebook_profile || "",
     instagram_handle: formData.instagram_handle || "",
     website: formData.website || "",
-    business_opportunity: toSelectOption(formData.business_opportunity),
+    business_opportunity: Array.isArray(formData.business_opportunity)
+      ? formData.business_opportunity.map((item: string) => ({ value: item, label: item }))
+      : [],
     business_type: toSelectOption(formData.business_type),
     favourite_product_id: formData.favourite_products_list?.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
     interested_in: toSelectOption(formData.interested_in),
@@ -528,7 +530,7 @@ const preparePayloadForApi = (
     facebook_profile: formData.facebook_profile || "",
     instagram_handle: formData.instagram_handle || "",
     website: formData.website || "",
-    business_opportunity: getValue(formData.business_opportunity) || null,
+    business_opportunity: formData.business_opportunity?.map(p => getValue(p)) || [],
     business_type: getValue(formData.business_type) || null,
     favourite_product_id: formData.favourite_product_id?.map(p => getValue(p)) || [],
     interested_in: getValue(formData.interested_in) || null,
@@ -1970,6 +1972,7 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
                 placeholder="Select opportunity"
                 options={opportunityOptions}
                 isClearable
+                isMulti
               />
             )}
           />
@@ -3230,7 +3233,7 @@ const MemberCreate = () => {
     upgrade_plan: undefined,
     request_description: "",
     favourite_product_id: [],
-    business_opportunity: undefined,
+    business_opportunity: [],
     member_grade: undefined,
     relationship_manager: undefined,
     remarks: "",

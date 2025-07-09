@@ -4826,7 +4826,7 @@ export const getEmployeesListingAction = createAsyncThunk(
   }
 );
 
-export const addEmployeesAction = createAsyncThunk(
+export const addEmployeesAction = createAsyncThunk<any, any>(
   "auth/addEmployeesListingAction",
   async (payload, { rejectWithValue, dispatch }) => {
     try {
