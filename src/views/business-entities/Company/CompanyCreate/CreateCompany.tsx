@@ -1437,7 +1437,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         // primary_contact_number: z.string().trim().min(1, "Primary Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
         // primary_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
         // general_contact_number: z.string().trim().min(1, "Landline number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
-        general_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
+        // general_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
         alternate_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
         alternate_contact_number_code: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
         // primary_email_id: z.string().trim().min(1, "Primary Email is required.").email("Invalid email format."),
