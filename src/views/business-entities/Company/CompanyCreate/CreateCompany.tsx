@@ -691,7 +691,7 @@ const CompanyDetailsSection = ({
     .filter((c: any) => c.phone_code)
     .map((c: any) => ({
         value: `${c.phone_code}`,
-        label: `${c.iso_code}`,
+        label: `${c.phone_code}`,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
@@ -851,9 +851,9 @@ const CompanyDetailsSection = ({
         <FormItem label="Company Website" invalid={!!errors.company_website} errorMessage={errors.company_website?.message as string}>
           <Controller name="company_website" control={control} render={({ field }) => (<Input type="url" placeholder="https://example.com" {...field} />)} />
         </FormItem>
-        <FormItem label="Primary Business Type" invalid={!!errors.primary_business_type} errorMessage={errors.primary_business_type?.message as string}>
+        {/* <FormItem label="Primary Business Type" invalid={!!errors.primary_business_type} errorMessage={errors.primary_business_type?.message as string}>
           <Controller name="primary_business_type" control={control} render={({ field }) => (<Select placeholder="Select Business Type" options={primaryBusinessTypeOptions} {...field} />)} />
-        </FormItem>
+        </FormItem> */}
       </div>
 
       <hr className="my-6" />
