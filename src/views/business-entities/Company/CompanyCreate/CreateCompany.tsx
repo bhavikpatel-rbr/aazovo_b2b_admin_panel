@@ -196,7 +196,6 @@ export interface CompanyFormSchema {
   company_bank_details?: CompanyBankDetailItemFE[];
 
   USER_ACCESS?: boolean;
-  // BILLING_FIELD?: boolean; // Removed
   billing_documents?: BillingDocItemFE[];
   enabled_billing_docs?: EnabledBillingDocItemFE[]; // New
 
@@ -247,7 +246,6 @@ interface ApiSingleCompanyItem {
   support_email?: string | null;
   notification_email?: string | null;
   kyc_verified?: boolean | string;
-  // enable_billing?: boolean | string; // Removed from direct mapping
   company_certificate?: Array<{ certificate_id: string; certificate_name: string; upload_certificate: string | null; upload_certificate_path?: string; }>;
   office_info?: Array<{ office_type: string; office_name: string; address: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; contact_person?: string; office_email?: string; office_phone?: string; }>;
   declaration_206AB_url?: string | null;
@@ -290,12 +288,12 @@ interface ApiSingleCompanyItem {
   secondary_ifsc_code?: string | null;
   secondary_swift_code?: string | null; // New
   secondary_bank_verification_photo?: string | null;
-  company_bank_details?: Array<{ bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; }>; // Added swift_code
+  company_bank_details?: Array<{ bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; }>;
   billing_documents?: Array<{ document_name: string; document: string | null; }>;
-  enabled_billing_docs?: Array<{ document_name: string; document: string | null; }>; // New
+  enable_billing_documents?: Array<{ id: number; document_name: string; document: string | null; }>; // Corrected from enabled_billing_docs
   company_member_management?: Array<{ member_id: string; designation: string; person_name: string; number: string; }>;
   company_team_members?: Array<{ team_name: string; designation: string; person_name: string; number: string; }>;
-  company_spot_verification?: Array<{ verified_by_id?: string; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; photo_upload_path?: string; }>; // Added verified_by_id
+  company_spot_verification?: Array<{ verified_by_id?: string | number; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; }>;
   company_references?: Array<{ person_name: string; company_id: string; number: string; remark: string | null; }>;
 }
 
@@ -305,6 +303,7 @@ const transformApiToFormSchema = (
   allCountries: Array<{ id: string | number; name: string }>,
   allContinents: Array<{ id: string | number; name: string }>,
   allMembers: Array<{ value: string; label: string }>,
+  allEmployees: Array<{ value: string; label: string }>,
   allCompaniesForRef: Array<{ value: string; label: string }>
 ): Partial<CompanyFormSchema> => {
     const stringToBoolean = (value: boolean | string | undefined | null): boolean => {
@@ -316,27 +315,18 @@ const transformApiToFormSchema = (
         return false;
     };
     
-    const findOptionByValue = (options: Array<{ value: string; label: string }>, value?: string | null) => {
+    const findOptionByValue = (options: Array<{ value: string; label: string }>, value?: string | number | null) => {
         if (!value) return undefined;
         return options.find(opt => String(opt.value) === String(value));
     };
 
     const findOptionByLabel = (options: Array<{ value: string; label: string }>, label?: string | null) => {
         if (!label) return undefined;
-        // This is a bit brittle, but required if API only gives name.
         return options.find(opt => opt.label.toLowerCase().includes(label.toLowerCase()));
     };
 
     const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
     const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
-    
-    // Assuming you have a doc type list for this new feature
-    const enabledBillDocTypes = [
-        { label: 'Proforma Invoice', value: 'Proforma Invoice'},
-        { label: 'Commercial Invoice', value: 'Commercial Invoice'},
-        { label: 'Packing List', value: 'Packing List'},
-        { label: 'Certificate of Origin', value: 'Certificate of Origin'},
-    ];
     
     return {
         id: apiData.id,
@@ -444,7 +434,8 @@ const transformApiToFormSchema = (
             document_name: doc.document_name || '',
             document: doc.document || null,
         })) || [],
-        enabled_billing_docs: apiData.enabled_billing_docs?.map(doc => ({
+        enabled_billing_docs: apiData.enable_billing_documents?.map(doc => ({
+            id: String(doc.id),
             document_name: doc.document_name,
             document: doc.document || null
         })) || [],
@@ -464,8 +455,8 @@ const transformApiToFormSchema = (
     
         company_spot_verification: apiData.company_spot_verification?.map(item => ({
             verified: stringToBoolean(item.verified),
-            verified_by_id: findOptionByValue(allMembers, item.verified_by_id) || findOptionByLabel(allMembers, item.verified_by_name),
-            photo_upload: item.photo_upload_path || item.photo_upload || null,
+            verified_by_id: findOptionByValue(allEmployees, item.verified_by_id) || findOptionByLabel(allEmployees, item.verified_by_name),
+            photo_upload: item.photo_upload || null,
             remark: item.remark || '',
         })) || [],
         company_references: apiData.company_references?.map(ref => ({
@@ -523,7 +514,6 @@ const preparePayloadForApi = (
     simpleFields.forEach(field => appendField(field, data[field]));
   
     appendField("kyc_verified", data.USER_ACCESS);
-    // Removed BILLING_FIELD
   
     appendFileIfExists("company_logo", data.company_logo);
     appendFileIfExists("primary_bank_verification_photo", data.primary_bank_verification_photo);
@@ -805,12 +795,6 @@ const CompanyDetailsSection = ({
             <div className="w-3/5"> <Controller name="general_contact_number" control={control} render={({ field }) => (<Input placeholder="Company Landline" {...field} />)} /> </div>
           </div>
         </FormItem>
-         {/* <FormItem className="sm:col-span-6 lg:col-span-6" label="Support Email" invalid={!!errors.support_email} errorMessage={errors.support_email?.message as string}>
-          <Controller name="support_email" control={control} render={({ field }) => (<Input type="email" placeholder="support@example.com" {...field} />)} />
-        </FormItem> */}
-        {/* <FormItem label="Notification Email" className="sm:col-span-6 lg:col-span-6">
-          <Controller name="notification_email" control={control} render={({ field }) => (<Input type="email" placeholder="notifications@example.com" {...field} />)} />
-        </FormItem> */}
       </div>
 
       <hr className="my-6" />
@@ -852,9 +836,6 @@ const CompanyDetailsSection = ({
         <FormItem label="Company Website" invalid={!!errors.company_website} errorMessage={errors.company_website?.message as string}>
           <Controller name="company_website" control={control} render={({ field }) => (<Input type="url" placeholder="https://example.com" {...field} />)} />
         </FormItem>
-        {/* <FormItem label="Primary Business Type" invalid={!!errors.primary_business_type} errorMessage={errors.primary_business_type?.message as string}>
-          <Controller name="primary_business_type" control={control} render={({ field }) => (<Select placeholder="Select Business Type" options={primaryBusinessTypeOptions} {...field} />)} />
-        </FormItem> */}
       </div>
 
       <hr className="my-6" />
@@ -1119,25 +1100,17 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const { fields, append, remove } = useFieldArray({ control, name: "company_spot_verification" });
-  const { MemberData, EmployeesList } = useSelector(masterSelector);
+  const { EmployeesList } = useSelector(masterSelector);
+
   const employeeOptions = useMemo(() => {
-    const data = EmployeesList?.data || EmployeesList || [];
-    return Array.isArray(data.data)
-      ? data.data.map((m: any) => ({
-          value: String(m.id),
-          label: `${m.name || 'N/A'} (ID:${m.id})`,
-        }))
-      : [];
+    const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
+    const actualList = Array.isArray(employeeDataSource) ? employeeDataSource : [];
+    
+    return actualList.map((m: any) => ({
+      value: String(m.id),
+      label: `${m.name || 'N/A'} (ID:${m.id})`,
+    }));
   }, [EmployeesList]);
-  const memberOptions = useMemo(() => {
-    const data = MemberData?.data || MemberData || [];
-    return Array.isArray(data)
-      ? data.map((m: any) => ({
-          value: String(m.id),
-          label: `${m.name || 'N/A'} (ID:${m.id})`,
-        }))
-      : [];
-  }, [MemberData]);
 
   return (
     <Card id="spotVerification">
@@ -1232,13 +1205,6 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
   const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
   const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs"});
 
-  const enabledBillDocTypes = [
-    { label: 'Proforma Invoice', value: 'Proforma Invoice'},
-    { label: 'Commercial Invoice', value: 'Commercial Invoice'},
-    { label: 'Packing List', value: 'Packing List'},
-    { label: 'Certificate of Origin', value: 'Certificate of Origin'},
-  ];
-
   return (
     <Card id="accessibility">
       <h4 className="mb-6">Accessibility & Configuration</h4>
@@ -1253,7 +1219,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
           <h5 className="mb-0">Billing Documents</h5>
           <div className="flex gap-2">
             <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: "", document: null })}> Add Billing Doc </Button>
-            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_name: undefined, document: null })}> Add Enable Billing Documents </Button>
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_name: '', document: null })}> Add Enable Billing Documents </Button>
           </div>
         </div>
         
@@ -1656,7 +1622,7 @@ const CompanyCreate = () => {
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData } = useSelector(masterSelector);
+  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList } = useSelector(masterSelector);
 
 
   const getEmptyFormValues = (): CompanyFormSchema => ({
@@ -1702,7 +1668,7 @@ const CompanyCreate = () => {
 
   useEffect(() => {
     // Guard clause to prevent running until all lookup data is available.
-    const lookupsReady = CountriesData?.length > 0 && ContinentsData?.length > 0 && MemberData && AllCompaniesData;
+    const lookupsReady = CountriesData?.length > 0 && ContinentsData?.length > 0 && MemberData && AllCompaniesData && EmployeesList;
 
     if (isEditMode && id && lookupsReady) {
       const fetchCompanyData = async () => {
@@ -1711,12 +1677,21 @@ const CompanyCreate = () => {
           const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
           if (actionResult) {
             const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `${m.name} (ID:${m.id})` }));
+            
+            const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
+            const employeeList = Array.isArray(employeeDataSource) ? employeeDataSource : [];
+            const allEmployeesForSelect = employeeList.map((m: any) => ({
+                value: String(m.id),
+                label: `${m.name || 'N/A'} (ID:${m.id})`,
+            }));
+
             const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: c.company_name }));
             const transformed = transformApiToFormSchema(
               actionResult, 
               CountriesData, 
               ContinentsData,
               allMembersForSelect,
+              allEmployeesForSelect,
               allCompaniesForRefSelect
             );
             setInitialData({ ...getEmptyFormValues(), ...transformed });
@@ -1736,7 +1711,7 @@ const CompanyCreate = () => {
       setInitialData(getEmptyFormValues());
       setPageLoading(false);
     }
-  }, [id, isEditMode, navigate, dispatch, CountriesData, ContinentsData, MemberData, AllCompaniesData]);
+  }, [id, isEditMode, navigate, dispatch, CountriesData, ContinentsData, MemberData, AllCompaniesData, EmployeesList]);
 
 
   const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
