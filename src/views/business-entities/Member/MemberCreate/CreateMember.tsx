@@ -2224,7 +2224,7 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
                   )}
                 />
               </FormItem>
-              <FormItem
+              {/* <FormItem
                 label="Select Category(s)"
                 invalid={!!errors.member_profiles?.[index]?.categories}
                 errorMessage={
@@ -2245,7 +2245,7 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
                     />
                   )}
                 />
-              </FormItem>
+              </FormItem> */}
               <FormItem
                 label="Select Sub Category(s)"
                 invalid={!!errors.member_profiles?.[index]?.sub_categories}
