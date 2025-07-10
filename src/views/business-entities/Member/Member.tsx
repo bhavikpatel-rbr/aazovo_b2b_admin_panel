@@ -700,10 +700,11 @@ const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = 
   );
 };
 const statusColor: Record<string, string> = {
-  active: "bg-green-200 text-green-600",
-  inactive: "bg-red-200 text-red-600",
-  Active: "bg-green-200 text-green-600",
-  Disabled: "bg-red-200 text-red-600",
+  active: "border border-emerald-200 bg-emerald-100 text-emerald-600",
+  inactive: "border border-red-300 bg-red-100 text-red-600",
+  Active: "border border-emerald-300 bg-emerald-100 text-emerald-600",
+  Disabled: "border border-red-300 bg-red-100 text-red-600",
+  Unregistered: "border border-orange-300 bg-orange-100 text-orange-600"
 };
 const memberStatusOptions = [
   { value: "Active", label: "Active" },
