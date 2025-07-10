@@ -2308,7 +2308,7 @@ const PersonalDetailsComponent = ({
   const countryCodeOptions = CountriesData
     .map((c: any) => ({
       value: `+${c.phone_code}`,
-      label: `${c.iso_code} (${c.phone_code})`,
+      label: `${c.phone_code}`,
     })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
 
   const continentOptions = ContinentsData.map((continent: any) => ({
@@ -2571,7 +2571,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
   const countryCodeOptions = CountriesData
     .map((c: any) => ({
       value: `+${c.phone_code}`,
-      label: `${c.iso_code} (${c.phone_code})`,
+      label: `${c.phone_code}`,
     })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
 
   return (
