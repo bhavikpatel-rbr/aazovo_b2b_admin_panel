@@ -197,7 +197,7 @@ export type ProductItem = {
   countryId: number | null;
   countryName?: string;
   domainIds: number[];
-  domainNames?: string[];
+  // domainNames?: string[];
   color: string | null;
   hsnCode: string | null;
   shelfLife: string | null;
@@ -1707,11 +1707,11 @@ const Products = () => {
   const [galleryImages, setGalleryImages] = useState<ProductGalleryImageItem[]>(
     []
   );
-  const domainOptions = useMemo(
-    () =>
-      domainsData?.map((d: any) => ({ value: d.id, label: d.domain })) || [],
-    [domainsData?.data]
-  );
+  // const domainOptions = useMemo(
+  //   () =>
+  //     domainsData?.map((d: any) => ({ value: d.id, label: d.domain })) || [],
+  //   [domainsData?.data]
+  // );
   const categoryOptions = useMemo(
     () =>
       Array.isArray(GlobalCategoriesData)
@@ -1727,7 +1727,7 @@ const Products = () => {
     [BrandData]
   );
   const unitOptions = useMemo(
-    () => unitData?.map((u: any) => ({ value: u.id, label: u.name })) || [],
+    () => unitData?.data?.map((u: any) => ({ value: u.id, label: u.name })) || [],
     [unitData?.data]
   );
   const countryOptions = useMemo(
@@ -1904,9 +1904,9 @@ const Products = () => {
             .map((id) => parseInt(id.trim(), 10))
             .filter((id) => !isNaN(id))
         : [];
-      const domainNames = parsedDomainIds
-        .map((id) => domainOptions.find((d) => d.value === id)?.label)
-        .filter(Boolean) as string[];
+      // const domainNames = parsedDomainIds
+      //   .map((id) => domainOptions.find((d) => d.value === id)?.label)
+      //   .filter(Boolean) as string[];
       const gallery: ProductGalleryImageItem[] = [];
       if (
         apiItem.product_images_array &&
@@ -2003,7 +2003,7 @@ const Products = () => {
           countryOptions.find((c) => c.value === Number(apiItem.country_id))
             ?.label,
         domainIds: parsedDomainIds,
-        domainNames,
+        // domainNames,
         color: apiItem.color,
         hsnCode: apiItem.hsn_code,
         shelfLife: apiItem.shelf_life,
@@ -2030,7 +2030,7 @@ const Products = () => {
     });
   }, [
     ProductsData,
-    domainOptions,
+    // domainOptions,
     categoryOptions,
     brandOptions,
     unitOptions,
@@ -4058,10 +4058,10 @@ const Products = () => {
                     label="Country of Origin"
                     value={productToView.countryName || "-"}
                   />
-                  <DialogDetailRow
+                  {/* <DialogDetailRow
                     label="Domains"
                     value={productToView.domainNames?.join(", ") || "-"}
-                  />
+                  /> */}
                 </div>
               </Card>
               <Card>

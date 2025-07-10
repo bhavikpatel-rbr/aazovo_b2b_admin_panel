@@ -141,7 +141,7 @@ export const getUnitAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getUnitAsync()
       if (response?.data?.status === true) {
-        return response?.data?.data
+        return response?.data
       }
 
       return rejectWithValue(response)
