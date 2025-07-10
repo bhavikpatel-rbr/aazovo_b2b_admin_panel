@@ -85,7 +85,7 @@ import {
   deleteRowDataAction,
   deleteAllRowDataAction,
   getCountriesAction,
-  getCategoriesAction,
+  getParentCategoriesAction,
   getBrandAction,
   importRowDataAction,
   submitExportReasonAction,
@@ -357,7 +357,7 @@ const RowDataSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: 
 
 const RowDataListing = () => {
   const dispatch = useAppDispatch();
-  const { rowData = [], CountriesData = [], CategoriesData = [], BrandData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+  const { rowData = [], CountriesData = [], ParentCategories = [], BrandData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
   const [countryOptions, setCountryOptions] = useState<SelectOption[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
   const [brandOptions, setBrandOptions] = useState<SelectOption[]>([]);
@@ -388,10 +388,10 @@ const RowDataListing = () => {
     return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
   };
 
-  useEffect(() => { dispatch(getRowDataAction()); dispatch(getCountriesAction()); dispatch(getCategoriesAction()); dispatch(getBrandAction()); }, [dispatch]);
+  useEffect(() => { dispatch(getRowDataAction()); dispatch(getCountriesAction()); dispatch(getParentCategoriesAction()); dispatch(getBrandAction()); }, [dispatch]);
 
   useEffect(() => { setCountryOptions(Array.isArray(CountriesData) ? CountriesData.map((c: CountryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [CountriesData]);
-  useEffect(() => { setCategoryOptions(Array.isArray(CategoriesData) ? CategoriesData.map((c: CategoryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [CategoriesData]);
+  useEffect(() => { setCategoryOptions(Array.isArray(ParentCategories) ? ParentCategories.map((c: CategoryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [ParentCategories]);
   useEffect(() => { setBrandOptions(Array.isArray(BrandData) ? BrandData.map((b: BrandListItem) => ({ value: String(b.id), label: b.name })) : []) }, [BrandData]);
 
   const defaultFormValues: RowDataFormData = useMemo(() => ({ country_id: countryOptions[0]?.value || "", category_id: categoryOptions[0]?.value || "", brand_id: brandOptions[0]?.value || "", mobile_no: "", email: "", name: "", company_name: "", quality: QUALITY_LEVELS_UI[0]?.value || "A", city: "", status: STATUS_OPTIONS_UI.find((s) => s.value === "Row")?.value || "Row", remarks: "", }), [countryOptions, categoryOptions, brandOptions]);
