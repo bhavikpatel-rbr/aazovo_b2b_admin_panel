@@ -2097,7 +2097,7 @@ const AccountDocument = () => {
   );
 
   const [filteredColumns, setFilteredColumns] =
-    useState<ColumnDef<AccountDocumentListItem>[]>(columns);
+    useState<ColumnDef<AccountDocumentListItem>[]>(columns);  
   useEffect(() => {
     setFilteredColumns(columns);
   }, []);
