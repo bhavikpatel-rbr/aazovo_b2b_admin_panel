@@ -63,10 +63,16 @@
   .select-clear-indicator {
     @apply text-lg px-2 cursor-pointer;
   }
+  
+
 
   .select-sm {
     .select-indicators-container {
       @apply px-1;
     }
+  }
+
+  .phone_code .select-indicators-container{
+    @apply p-0 pr-1.5;
   }
 }
