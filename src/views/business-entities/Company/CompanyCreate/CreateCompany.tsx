@@ -717,11 +717,10 @@ const CompanyDetailsSection = ({
     { value: "Others", label: "Others" },
   ];
   const statusOptions = [
-    { value: "Verified", label: "Verified" },
-    { value: "Non Verified", label: "Non Verified" },
     { value: "Active", label: "Active" },
+    { value: "Disabled", label: "Disabled" },
+    { value: "Blocked", label: "Blocked" },
     { value: "Inactive", label: "Inactive" },
-    { value: "Pending", label: "Pending" },
   ];
   const officeTypeOptions = [
     { label: "Head Office", value: "Head Office" },
@@ -767,13 +766,13 @@ const CompanyDetailsSection = ({
         <FormItem label={<div>City<span className="text-red-500"> * </span></div>} invalid={!!errors.city} errorMessage={errors.city?.message as string}>
           <Controller name="city" control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
         </FormItem>
-        <FormItem label={<div>State<span className="text-red-500"> * </span></div>} invalid={!!errors.state} errorMessage={errors.state?.message as string}>
+        <FormItem label={<div>State</div>} invalid={!!errors.state} errorMessage={errors.state?.message as string}>
           <Controller name="state" control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
         </FormItem>
-        <FormItem label={<div>ZIP / Postal Code<span className="text-red-500"> * </span></div>} invalid={!!errors.zip_code} errorMessage={errors.zip_code?.message as string}>
+        <FormItem label={<div>Postal Code</div>} invalid={!!errors.zip_code} errorMessage={errors.zip_code?.message as string}>
           <Controller name="zip_code" control={control} render={({ field }) => <Input placeholder="ZIP / Postal Code" {...field} />} />
         </FormItem>
-        <FormItem label={<div>Company Address<span className="text-red-500"> * </span></div>} invalid={!!errors.company_address} errorMessage={errors.company_address?.message as string} className="md:col-span-5">
+        <FormItem label={<div>Company Address</div>} invalid={!!errors.company_address} errorMessage={errors.company_address?.message as string} className="md:col-span-5">
           <Controller name="company_address" control={control} render={({ field }) => (<Input placeholder="Company Address" {...field} />)} />
         </FormItem>
       </div>
@@ -781,14 +780,14 @@ const CompanyDetailsSection = ({
       <hr className="my-6" />
       <h4 className="mb-4">Contact Information</h4>
       <div className="sm:grid md:grid-cols-12 gap-3">
-        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Email ID<span className="text-red-500"> * </span></div>} invalid={!!errors.primary_email_id} errorMessage={errors.primary_email_id?.message as string}>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Email ID</div>} invalid={!!errors.primary_email_id} errorMessage={errors.primary_email_id?.message as string}>
           <Controller name="primary_email_id" control={control} render={({ field }) => (<Input type="email" placeholder="Primary Email" {...field} />)} />
         </FormItem>
         <FormItem className="sm:col-span-6 lg:col-span-8" label="Alternate E-mail ID" invalid={!!errors.alternate_email_id} errorMessage={errors.alternate_email_id?.message as string}>
           <Controller name="alternate_email_id" control={control} render={({ field }) => (<Input type="email" placeholder="Alternate Email" {...field} />)} />
         </FormItem>
         
-        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Contact Number<span className="text-red-500"> * </span></div>} invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code} errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Contact Number</div>} invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code} errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}>
           <div className="flex items-start gap-2">
             <div className="w-2/5"> <Controller name="primary_contact_number_code" control={control} render={({ field }) => (<Select options={countryCodeOptions} placeholder="Code" {...field} />)} /> </div>
             <div className="w-3/5"> <Controller name="primary_contact_number" control={control} render={({ field }) => (<Input placeholder="Primary Contact" {...field} />)} /> </div>
@@ -800,18 +799,17 @@ const CompanyDetailsSection = ({
             <div className="w-3/5"> <Controller name="alternate_contact_number" control={control} render={({ field }) => (<Input placeholder="Alternate Contact" {...field} />)} /> </div>
           </div>
         </FormItem>
-        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Landline<span className="text-red-500"> * </span></div>} invalid={!!errors.general_contact_number || !!errors.general_contact_number_code} errorMessage={(errors.general_contact_number?.message || (errors.general_contact_number_code as any)?.message) as string}>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Landline</div>} invalid={!!errors.general_contact_number || !!errors.general_contact_number_code} errorMessage={(errors.general_contact_number?.message || (errors.general_contact_number_code as any)?.message) as string}>
           <div className="flex items-start gap-2">
-            <div className="w-2/5"> <Controller name="general_contact_number_code" control={control} render={({ field }) => (<Select options={countryCodeOptions} placeholder="Code" {...field} />)} /> </div>
             <div className="w-3/5"> <Controller name="general_contact_number" control={control} render={({ field }) => (<Input placeholder="Company Landline" {...field} />)} /> </div>
           </div>
         </FormItem>
-         <FormItem className="sm:col-span-6 lg:col-span-6" label="Support Email" invalid={!!errors.support_email} errorMessage={errors.support_email?.message as string}>
+         {/* <FormItem className="sm:col-span-6 lg:col-span-6" label="Support Email" invalid={!!errors.support_email} errorMessage={errors.support_email?.message as string}>
           <Controller name="support_email" control={control} render={({ field }) => (<Input type="email" placeholder="support@example.com" {...field} />)} />
-        </FormItem>
-        <FormItem label="Notification Email" className="sm:col-span-6 lg:col-span-6">
+        </FormItem> */}
+        {/* <FormItem label="Notification Email" className="sm:col-span-6 lg:col-span-6">
           <Controller name="notification_email" control={control} render={({ field }) => (<Input type="email" placeholder="notifications@example.com" {...field} />)} />
-        </FormItem>
+        </FormItem> */}
       </div>
 
       <hr className="my-6" />
@@ -823,10 +821,10 @@ const CompanyDetailsSection = ({
         <FormItem label={<div>PAN Number<span className="text-red-500"> * </span></div>} invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}>
           <Controller name="pan_number" control={control} render={({ field }) => (<Input placeholder="PAN Number" {...field} />)} />
         </FormItem>
-        <FormItem label={<div>TRN Number<span className="text-red-500"> * </span></div>} invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
+        <FormItem label={<div>TRN Number</div>} invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
           <Controller name="trn_number" control={control} render={({ field }) => (<Input placeholder="TRN Number" {...field} />)} />
         </FormItem>
-        <FormItem label={<div>TAN Number<span className="text-red-500"> * </span></div>} invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}>
+        <FormItem label={<div>TAN Number</div>} invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}>
           <Controller name="tan_number" control={control} render={({ field }) => (<Input placeholder="TAN Number" {...field} />)} />
         </FormItem>
       </div>
@@ -974,7 +972,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
            <div key={doc.name}>
                 <label className="flex items-center gap-2 mb-1">
                     <Controller name={doc.enabledName} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
-                    {doc.label} {doc.required && <span className="text-red-500">*</span>} (Verified)
+                    {doc.label} {doc.required && <span className="text-red-500">*</span>}
                 </label>
               <FormItem invalid={!!(errors as any)[doc.name]} errorMessage={(errors as any)[doc.name]?.message as string} >
                 <Controller name={doc.name} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
@@ -1436,48 +1434,48 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     const companySchema = z.object({
         id: z.union([z.string(), z.number()]).optional(),
         company_name: z.string().trim().min(1, "Company Name is required."),
-        primary_contact_number: z.string().trim().min(1, "Primary Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
-        primary_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
-        general_contact_number: z.string().trim().min(1, "Landline number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
+        // primary_contact_number: z.string().trim().min(1, "Primary Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
+        // primary_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
+        // general_contact_number: z.string().trim().min(1, "Landline number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
         general_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
         alternate_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
         alternate_contact_number_code: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-        primary_email_id: z.string().trim().min(1, "Primary Email is required.").email("Invalid email format."),
+        // primary_email_id: z.string().trim().min(1, "Primary Email is required.").email("Invalid email format."),
         alternate_email_id: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
         ownership_type: z.object({ label: z.string(), value: z.string().min(1, "Ownership Type is required.") }, { required_error: "Ownership Type is required." }),
         owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
-        company_address: z.string().trim().min(1, "Company Address is required."),
+        // company_address: z.string().trim().min(1, "Company Address is required."),
         city: z.string().trim().min(1, "City is required."),
-        state: z.string().trim().min(1, "State is required."),
-        zip_code: z.string().trim().min(1, "ZIP/Postal Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
+        // state: z.string().trim().min(1, "State is required."),
+        // zip_code: z.string().trim().min(1, "ZIP/Postal Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
         country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
         continent_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
         gst_number: z.string().trim().min(1, "GST Number is required.").regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format."),
         pan_number: z.string().trim().min(1, "PAN Number is required.").regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format."),
-        trn_number: z.string().trim().min(1, "TRN Number is required."),
-        tan_number: z.string().trim().min(1, "TAN Number is required."),
+        // trn_number: z.string().trim().min(1, "TRN Number is required."),
+        // tan_number: z.string().trim().min(1, "TAN Number is required."),
         establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
         no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d+$/).optional().nullable(), z.literal("")]).optional().nullable(),
         company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
         company_logo: z.any().optional().nullable(),
         primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
         status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
-        support_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
+        // support_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
         notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     
         company_certificate: z.array(z.object({
-            certificate_id: z.string().min(1, "Certificate ID is required."),
-            certificate_name: z.string().trim().min(1, "Certificate Name is required."),
+            certificate_id: z.string(),
+            certificate_name: z.string().trim(),
             upload_certificate: z.any().optional().nullable(),
         })).optional(),
         office_info: z.array(z.object({
-            office_type: z.object({ label: z.string(), value: z.string().min(1, "Office type is required.") }, { required_error: "Office type is required." }),
-            office_name: z.string().trim().min(1, "Office name is required."),
-            address: z.string().trim().min(1, "Address is required."),
-            country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
-            state: z.string().trim().min(1, "State is required."),
-            city: z.string().trim().min(1, "City is required."),
-            zip_code: z.string().trim().min(1, "ZIP Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
+            office_type: z.object({ label: z.string(), value: z.string() }, { required_error: "Office type is required." }),
+            office_name: z.string().trim(),
+            address: z.string().trim(),
+            country_id: z.object({ label: z.string(), value: z.string()}, { required_error: "Country is required." }),
+            state: z.string().trim(),
+            city: z.string().trim(),
+            zip_code: z.string().trim().regex(/^\d{3,10}$/, "Invalid ZIP code format."),
             gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
             contact_person: z.string().trim().optional().nullable(),
             office_email: z.string().trim().email("Invalid email format.").optional().nullable(),
