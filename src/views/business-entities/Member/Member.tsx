@@ -863,7 +863,8 @@ const ActionColumn = ({
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600"
           role="button"
-          onClick={() => onViewDetail(rowData)}
+          // onClick={() => onViewDetail(rowData)}
+          onClick={()=> navigate(`/business-entities/member-view/${rowData.id}`)}
         >
           <TbEye />
         </div>
