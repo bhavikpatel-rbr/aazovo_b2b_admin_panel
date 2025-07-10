@@ -763,7 +763,7 @@ const CompanyDetailsSection = ({
         <FormItem label="Continent" invalid={!!errors.continent_id} errorMessage={errors.continent_id?.message as string}>
           <Controller name="continent_id" control={control} render={({ field }) => (<Select placeholder="Select Continent" options={continentOptions} {...field} />)} />
         </FormItem>
-        <FormItem label={<div>City<span className="text-red-500"> * </span></div>} invalid={!!errors.city} errorMessage={errors.city?.message as string}>
+        <FormItem label={<div>City</div>} invalid={!!errors.city} errorMessage={errors.city?.message as string}>
           <Controller name="city" control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
         </FormItem>
         <FormItem label={<div>State</div>} invalid={!!errors.state} errorMessage={errors.state?.message as string}>
