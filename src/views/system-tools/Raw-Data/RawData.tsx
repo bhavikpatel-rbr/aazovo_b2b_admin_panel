@@ -631,12 +631,12 @@ const RowDataListing = () => {
       <RowDataSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting && selectedItems.length > 0} />
       <Drawer title={editingItem ? "Edit Raw Data" : "Add New Raw Data"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting} type="button">Cancel</Button><Button size="sm" variant="solid" form="rowDataForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? editingItem ? "Saving..." : "Adding..." : "Save"}</Button></div>}>
         <Form id="rowDataForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-4 relative pb-28">{renderDrawerForm()}
-          {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_name || "N/A"}</p><p>{editingItem.updated_by_role || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{formatDate(editingItem.created_at)}</span><br /><span className="font-semibold">Updated At:</span> <span>{formatDate(editingItem.updated_at)}</span></div></div></div>)}
+          {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0].display_name || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{formatDate(editingItem.created_at)}</span><br /><span className="font-semibold">Updated At:</span> <span>{formatDate(editingItem.updated_at)}</span></div></div></div>)}
         </Form>
       </Drawer>
-      <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={700}>
+      <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={800}>
         <h5 className="mb-4 text-lg font-semibold">Raw Data Details - {viewingItem?.name || viewingItem?.mobile_no}</h5>
-        {viewingItem && (<div className="space-y-2 text-sm max-h-[60vh] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin", scrollbarColor: "#cbd5e0 transparent" }}>
+        {viewingItem && (<div className="space-y-2 text-sm max-h-[60vh] overflow-y-auto pr-1 border border-green-400 rounded-lg shadow-xl p-2 grid grid-cols-1 md:grid-cols-2" style={{ scrollbarWidth: "thin", scrollbarColor: "#cbd5e0 transparent" }}>
           {(Object.keys(viewingItem) as Array<keyof RowDataItem>).filter((key) => key !== "country" && key !== "category" && key !== "brand").map((key) => {
             let label = key.replace(/_id$/, "").replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
             let value: any = viewingItem[key as keyof RowDataItem];
@@ -646,8 +646,11 @@ const RowDataListing = () => {
             else if (key === "quality") value = QUALITY_LEVELS_UI.find((q) => q.value === value)?.label || String(value);
             else if (key === "status") value = STATUS_OPTIONS_UI.find((s) => s.value === value)?.label || String(value);
             else if ((key === "created_at" || key === "updated_at") && value) { value = formatDate(value); }
+            else if (key === "created_by" || key === "updated_by" ){ return }
+            else if( key === "created_by_user" ) value = value?.name
+            else if( key === "updated_by_user" ) value = value?.name
             value = value === null || value === undefined || value === "" ? (<span className="text-gray-400">-</span>) : (String(value));
-            return (<div key={key} className="flex py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0"><span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span><span className="w-2/3 text-gray-900 dark:text-gray-100">{value}</span></div>);
+            return (<div key={key} className="flex py-1 border-b border-gray-200 dark:border-gray-700 last:border-b-0"><span className="font-medium w-1/3 text-gray-700 dark:text-gray-300">{label}:</span><span className="w-2/3 text-gray-900 dark:text-gray-100">{value}</span></div>);
           })}
         </div>)}
         <div className="text-right mt-6"><Button variant="solid" onClick={closeViewDialog}>Close</Button></div>
