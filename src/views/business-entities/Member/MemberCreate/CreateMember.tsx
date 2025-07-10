@@ -80,7 +80,7 @@ import {
   getAllProductsAction,
   getActualCompanyAction, // Added new action
   getBrandAction,
-  getCategoriesAction,
+  getParentCategoriesAction,
   getCompanyAction,
   getContinentsAction,
   getCountriesAction,
@@ -1896,7 +1896,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
   // Assuming these are fetched from Redux. You must implement the respective actions and reducers.
   const {
     BrandData = [],
-    CategoriesData = [],
+    ParentCategories = [],
     subCategoriesForSelectedCategoryData = [],
     ProductsData = [],
     Employees = [],
@@ -1919,11 +1919,11 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     value: b.id,
     label: b.name,
   }));
-  const categoryOptions = CategoriesData.map((c: any) => ({
+  const categoryOptions = ParentCategories.map((c: any) => ({
     value: c.id,
     label: c.name,
   }));
-  const subCategoryOptions = subCategoriesForSelectedCategoryData.map((sc: any) => ({ // Assuming subCategoriesForSelectedCategoryData is structured like CategoriesData
+  const subCategoryOptions = subCategoriesForSelectedCategoryData.map((sc: any) => ({ // Assuming subCategoriesForSelectedCategoryData is structured like ParentCategories
     value: sc.id,
     label: sc.name,
   }));
@@ -2579,7 +2579,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
       <h4 className="mb-6">Social & Contact Information</h4>
       <div className="grid md:grid-cols-3 gap-4">
         <FormItem
-          label={<div>WhatsApp No.<span className="text-red-500"> * </span></div>}
+          label={<div>WhatsApp No</div>}
           invalid={!!errors.whatsapp_number}
           errorMessage={errors.whatsapp_number?.message}
         >
@@ -2900,7 +2900,6 @@ const MemberFormComponent = (props: {
           message: "Password must be at least 6 characters if provided",
         }),
       mobile_no: z.string().trim().min(1, "Mobile number is required"),
-      whatsapp_number: z.string().trim().min(1, "Whatsapp is required"),
       country_id: z
         .union([
           z.string(),
@@ -3049,7 +3048,7 @@ const MemberCreate = () => {
 
   // --- START: CORRECTED STATE MANAGEMENT ---
   const { 
-    CategoriesData = [], 
+    ParentCategories = [], 
     subCategoriesForSelectedCategoryData = [] 
   } = useSelector(masterSelector, shallowEqual);
 
@@ -3136,7 +3135,7 @@ const MemberCreate = () => {
     dispatch(getContinentsAction());
     dispatch(getCompanyAction());
     dispatch(getBrandAction());
-    dispatch(getCategoriesAction());
+    dispatch(getParentCategoriesAction());
     // Fetch all subcategories by passing 0 or a non-existent ID
     dispatch(getSubcategoriesByCategoryIdAction(0)); 
     dispatch(getEmployeesAction());
@@ -3162,7 +3161,7 @@ const MemberCreate = () => {
             // Pass the master data arrays to the transformer function for lookups
             const transformed = transformApiToFormSchema(
               apiMemberData,
-              CategoriesData,
+              ParentCategories,
               subCategoriesForSelectedCategoryData
             );
 
@@ -3192,7 +3191,7 @@ const MemberCreate = () => {
       };
 
       // Only fetch data if master data is available, to avoid race conditions
-      if (CategoriesData.length > 0 && subCategoriesForSelectedCategoryData.length > 0) {
+      if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0) {
           fetchMemberData();
       }
     } else {
@@ -3204,7 +3203,7 @@ const MemberCreate = () => {
     isEditMode, 
     navigate, 
     dispatch, 
-    CategoriesData, 
+    ParentCategories, 
     subCategoriesForSelectedCategoryData
   ]);
   // --- END: CORRECTED useEffect ---
