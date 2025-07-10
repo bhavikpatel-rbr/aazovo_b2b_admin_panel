@@ -44,8 +44,7 @@ import Tr from "@/components/ui/Table/Tr";
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlarm, TbBell, TbBrandWhatsapp, TbCalendarEvent, TbChecks, TbCloudUpload, TbColumns, TbDownload, TbEye, TbFileDescription, TbFileSearch, TbFilter, TbMail, TbPencil, TbPlus, TbReceipt, TbReload, TbSearch, TbUser, TbUserCancel, TbUserCheck, TbUserExclamation, TbUserCircle, TbUsersGroup, TbX,
-  TbInfoCircle
+  TbAlarm, TbBell, TbBrandWhatsapp, TbCalendarEvent, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbPencil, TbPlus, TbReceipt, TbReload, TbSearch, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
 } from "react-icons/tb";
 
 // Types & Utils
@@ -98,11 +97,20 @@ export type FormItem = {
   created_at: string;
   full_profile_pic: string | null;
   brand_name: string | null;
+  whatsapp_country_code: string | null;
+  whatsApp_no: string | null;
+  alternate_contact_number_code: string | null;
+  alternate_contact_number: string | null;
+  alternate_email: string | null;
+  website: string | null;
+  dealing_in_bulk: string | null;
+  created_by_user: UserReference | null;
+  updated_by_user: UserReference | null;
   [key: string]: any;
 };
 // --- END: Detailed Type Definitions ---
 
-// --- Zod Schemas ---
+// --- Zod Schemas & Constants ---
 const filterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterBusinessType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -135,6 +143,7 @@ const taskValidationSchema = z.object({
 type TaskFormData = z.infer<typeof taskValidationSchema>;
 type NotificationFormData = { notification_title: string; send_users: number[]; message: string; }
 const taskPriorityOptions: SelectOption[] = [ { value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' }, ];
+const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Other', label: 'Other' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'OnboardingSession', label: 'Onboarding Session' }];
 
 // --- CSV Exporter Utility ---
 function exportToCsv(filename: string, rows: FormItem[]) {
@@ -151,7 +160,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
 }
 
 // --- START: MODALS SECTION ---
-export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction" | "document";
+export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction";
 export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
 
 const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
@@ -168,11 +177,41 @@ const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void; userOp
     return ( <Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> </div> <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog> );
 };
 
-const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
-  const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false); const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Other', label: 'Other' }, ];
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({ resolver: zodResolver(scheduleSchema), defaultValues: { event_title: `Meeting with ${member.name}`, date_time: null as any, notes: `Regarding member ${member.name} (ID: ${member.id}).` }, mode: "onChange", });
-  const onAddEvent = async (data: ScheduleFormData) => { setIsLoading(true); const payload = { module_id: Number(member.id), module_name: "Member", event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format("YYYY-MM-DDTHH:mm:ss"), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format("YYYY-MM-DDTHH:mm:ss") }), notes: data.notes || "" }; try { await dispatch(addScheduleAction(payload)).unwrap(); toast.push(<Notification type="success" title="Event Scheduled" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message} />); } finally { setIsLoading(false); } };
-  return ( <Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Add Schedule for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAddEvent)}> <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></UiFormItem> <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button></div> </UiForm> </Dialog> );
+const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSubmit: (data: ScheduleFormData) => void; isLoading: boolean; }> = ({ member, onClose, onSubmit, isLoading }) => {
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: { event_title: `Meeting with ${member.name}`, date_time: null as any, notes: `Regarding member ${member.name} (ID: ${member.id}).`, remind_from: null, event_type: undefined },
+    mode: "onChange",
+  });
+
+  return (
+    <Dialog isOpen={true} onClose={onClose}>
+      <h5 className="mb-4">Add Schedule for {member.name}</h5>
+      <UiForm onSubmit={handleSubmit(onSubmit)}>
+        <UiFormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}>
+          <Controller name="event_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
+        </UiFormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UiFormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}>
+            <Controller name="event_type" control={control} render={({ field }) => (<UiSelect placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} />
+          </UiFormItem>
+          <UiFormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}>
+            <Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date & time" value={field.value} onChange={field.onChange} />)} />
+          </UiFormItem>
+        </div>
+        <UiFormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}>
+          <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select reminder date & time" value={field.value} onChange={field.onChange} />)} />
+        </UiFormItem>
+        <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+            <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} value={field.value ?? ""} />} />
+        </UiFormItem>
+        <div className="text-right mt-6">
+            <Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button>
+            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
 };
 
 const ViewMemberDetailDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
@@ -259,16 +298,41 @@ const GenericInfoDialog: React.FC<{ title: string; onClose: () => void; }> = ({ 
 
 const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void; userOptions: SelectOption[]; }> = ({ modalState, onClose, userOptions }) => {
   const { type, data: member, isOpen } = modalState;
+  const dispatch = useAppDispatch();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirmSchedule = async (data: ScheduleFormData) => {
+    if (!member) return;
+    setIsSubmitting(true);
+    const payload = {
+        module_id: Number(member.id),
+        module_name: "Member",
+        event_title: data.event_title,
+        event_type: data.event_type,
+        date_time: dayjs(data.date_time).format("YYYY-MM-DDTHH:mm:ss"),
+        ...(data.remind_from && { remind_from: dayjs(data.remind_from).format("YYYY-MM-DDTHH:mm:ss") }),
+        notes: data.notes || ""
+    };
+    try {
+        await dispatch(addScheduleAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Event Scheduled" />);
+        onClose();
+    } catch (error: any) {
+        toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message} />);
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
   if (!isOpen || !member) return null;
 
   switch (type) {
-    case "calendar": return <AddScheduleDialog member={member} onClose={onClose} />;
+    case "calendar": return <AddScheduleDialog member={member} onClose={onClose} onSubmit={handleConfirmSchedule} isLoading={isSubmitting} />;
     case "task": return <AssignTaskDialog member={member} onClose={onClose} userOptions={userOptions} />;
     case "notification": return <AddNotificationDialog member={member} onClose={onClose} userOptions={userOptions} />;
     case "viewDetail": return <ViewMemberDetailDialog member={member} onClose={onClose} />;
     case "alert": return <GenericInfoDialog title={`Alerts for ${member.name}`} onClose={onClose} />;
     case "transaction": return <GenericInfoDialog title={`Transactions for ${member.name}`} onClose={onClose} />;
-    case "document": return <GenericInfoDialog title={`Documents for ${member.name}`} onClose={onClose} />;
     default: return null;
   }
 };
@@ -298,8 +362,23 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal: (type: MemberModalType, data: FormItem) => void; }) => {
   const navigate = useNavigate();
-  const handleSendEmail = (member: FormItem) => { if (!member.email) { toast.push(<Notification type="warning" title="Missing Email" />); return; } window.open(`mailto:${member.email}`); };
-  const handleSendWhatsapp = (member: FormItem) => { if (!member.number) { toast.push(<Notification type="warning" title="Missing Number" />); return; } const fullNumber = (member.number_code || '').replace(/\D/g, '') + member.number.replace(/\D/g, ''); window.open(`https://wa.me/${fullNumber}`, '_blank'); };
+
+  const handleSendEmail = (member: FormItem) => {
+    if (!member.email) {
+      toast.push(<Notification type="warning" title="Missing Email" children="Primary email is not available." />);
+      return;
+    }
+    window.open(`mailto:${member.email}`);
+  };
+
+  const handleSendWhatsapp = (member: FormItem) => {
+    if (!member.number) {
+      toast.push(<Notification type="warning" title="Missing Number" children="Primary contact number is not available." />);
+      return;
+    }
+    const fullNumber = (member.number_code || '').replace(/\D/g, '') + member.number.replace(/\D/g, '');
+    window.open(`https://wa.me/${fullNumber}`, '_blank');
+  };
 
   return (
     <div className="flex items-center justify-center gap-1">
@@ -314,7 +393,6 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
         <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("transaction", rowData)} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
       </Dropdown>
     </div>
   );
@@ -355,38 +433,12 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const onClearFilters = () => { setFilterCriteria({}); setTableData(prev => ({ ...prev, query: "", pageIndex: 1 })); };
   const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev }; const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove); return newCriteria; }); setTableData(prev => ({ ...prev, pageIndex: 1 })); };
 
-  const { activeFilterCount, pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData: FormItem[] = forms ? cloneDeep(forms) : [];
-    const { filterStatus, filterBusinessType, filterBusinessOpportunity, filterCountry, filterInterestedFor, memberGrade } = filterCriteria;
-    
-    if (filterStatus?.length) { const values = filterStatus.map(opt => opt.value); processedData = processedData.filter(item => values.includes(item.status)); }
-    if (filterBusinessType?.length) { const values = filterBusinessType.map(opt => opt.value); processedData = processedData.filter(item => item.business_type && values.includes(item.business_type)); }
-    if (filterBusinessOpportunity?.length) { const values = filterBusinessOpportunity.map(opt => opt.value); processedData = processedData.filter(item => item.business_opportunity && values.some(v => item.business_opportunity.includes(v))); }
-    if (filterCountry?.length) { const values = filterCountry.map(opt => opt.value); processedData = processedData.filter(item => item.country?.name && values.includes(item.country.name)); }
-    if (filterInterestedFor?.length) { const values = filterInterestedFor.map(opt => opt.value); processedData = processedData.filter(item => item.interested_in && values.includes(item.interested_in)); }
-    if (memberGrade?.length) { const values = memberGrade.map(opt => opt.value); processedData = processedData.filter(item => item.member_grade && values.includes(item.member_grade)); }
-    
-    if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => item.name?.toLowerCase().includes(query) || item.email?.toLowerCase().includes(query) || item.company_temp?.toLowerCase().includes(query) || item.company_actual?.toLowerCase().includes(query) || String(item.id).includes(query)); }
-
-    const count = Object.values(filterCriteria).filter(v => Array.isArray(v) && v.length > 0).length;
-    const { order, key } = tableData.sort as OnSortParam;
-    if (order && key) { processedData.sort((a, b) => { const aValue = a[key as keyof FormItem] ?? ""; const bValue = b[key as keyof FormItem] ?? ""; if (typeof aValue === 'string' && typeof bValue === 'string') return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue); if (typeof aValue === 'number' && typeof bValue === 'number') return order === 'asc' ? aValue - bValue : bValue - aValue; return 0; }); }
-    const pageIndex = tableData.pageIndex as number, pageSize = tableData.pageSize as number, startIndex = (pageIndex - 1) * pageSize;
-    return { activeFilterCount: count, pageData: processedData.slice(startIndex, startIndex + pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
-  }, [forms, tableData, filterCriteria]);
-
-  const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info" />); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
-    setIsSubmittingExportReason(true);
-    const fileName = `members_export_${dayjs().format('YYYYMMDD')}.csv`;
-    try {
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Member', file_name: fileName })).unwrap();
-      toast.push(<Notification title="Reason Submitted" type="success" />);
-      exportToCsv(fileName, allFilteredAndSortedData);
-      setIsExportReasonModalOpen(false);
-    } catch (error: any) { toast.push(<Notification title="Submission Failed" type="danger" children={error.message} />); } finally { setIsSubmittingExportReason(false); }
+  const onRefreshData = () => {
+    onClearFilters();
+    dispatch(getMemberAction());
+    toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />);
   };
-
+  
   const columns: ColumnDef<FormItem>[] = useMemo(() => [
     { header: "Member", accessorKey: "name", id: "member", size: 200, cell: ({ row }) => (
         <div className="flex flex-col gap-1">
@@ -428,7 +480,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
             </Tooltip>
         </div>
     )},
-    { header: "Preferences", id: "preferences", size: 250, cell: ({ row }) => {
+    { header: "Preferences", accessorKey: 'interested_in', id: "preferences", size: 250, cell: ({ row }) => {
         const [isOpen, setIsOpen] = useState(false);
         const { dynamic_member_profiles, brand_name, business_type, interested_in } = row.original;
         const brandDisplay = (dynamic_member_profiles?.[0]?.brand_names?.[0]) ? dynamic_member_profiles[0].brand_names.join(', ') : (brand_name || "N/A");
@@ -462,6 +514,62 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     { header: "Actions", id: "action", size: 120, meta: { HeaderClass: "text-center" }, cell: props => <ActionColumn rowData={props.row.original} onOpenModal={(type, data) => setModalState({ isOpen: true, type, data })} /> },
   ], []);
 
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<FormItem>[]>(columns);
+  useEffect(() => setFilteredColumns(columns), [columns]);
+  
+  const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
+  
+  const toggleColumn = (checked: boolean, colId: string) => {
+      if (checked) {
+          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+          if (originalColumn) {
+              setFilteredColumns(prev => {
+                  const newCols = [...prev, originalColumn];
+                  newCols.sort((a, b) => {
+                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+                      return indexA - indexB;
+                  });
+                  return newCols;
+              });
+          }
+      } else {
+          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+      }
+  };
+
+  const { activeFilterCount, pageData, total, allFilteredAndSortedData } = useMemo(() => {
+    let processedData: FormItem[] = forms ? cloneDeep(forms) : [];
+    const { filterStatus, filterBusinessType, filterBusinessOpportunity, filterCountry, filterInterestedFor, memberGrade } = filterCriteria;
+    
+    if (filterStatus?.length) { const values = filterStatus.map(opt => opt.value); processedData = processedData.filter(item => values.includes(item.status)); }
+    if (filterBusinessType?.length) { const values = filterBusinessType.map(opt => opt.value); processedData = processedData.filter(item => item.business_type && values.includes(item.business_type)); }
+    if (filterBusinessOpportunity?.length) { const values = filterBusinessOpportunity.map(opt => opt.value); processedData = processedData.filter(item => item.business_opportunity && values.some(v => item.business_opportunity.includes(v))); }
+    if (filterCountry?.length) { const values = filterCountry.map(opt => opt.value); processedData = processedData.filter(item => item.country?.name && values.includes(item.country.name)); }
+    if (filterInterestedFor?.length) { const values = filterInterestedFor.map(opt => opt.value); processedData = processedData.filter(item => item.interested_in && values.includes(item.interested_in)); }
+    if (memberGrade?.length) { const values = memberGrade.map(opt => opt.value); processedData = processedData.filter(item => item.member_grade && values.includes(item.member_grade)); }
+    
+    if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => item.name?.toLowerCase().includes(query) || item.email?.toLowerCase().includes(query) || item.company_temp?.toLowerCase().includes(query) || item.company_actual?.toLowerCase().includes(query) || String(item.id).includes(query)); }
+
+    const count = Object.values(filterCriteria).filter(v => Array.isArray(v) && v.length > 0).length;
+    const { order, key } = tableData.sort as OnSortParam;
+    if (order && key) { processedData.sort((a, b) => { const aValue = a[key as keyof FormItem] ?? ""; const bValue = b[key as keyof FormItem] ?? ""; if (typeof aValue === 'string' && typeof bValue === 'string') return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue); if (typeof aValue === 'number' && typeof bValue === 'number') return order === 'asc' ? aValue - bValue : bValue - aValue; return 0; }); }
+    const pageIndex = tableData.pageIndex as number, pageSize = tableData.pageSize as number, startIndex = (pageIndex - 1) * pageSize;
+    return { activeFilterCount: count, pageData: processedData.slice(startIndex, startIndex + pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
+  }, [forms, tableData, filterCriteria]);
+
+  const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info" />); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const fileName = `members_export_${dayjs().format('YYYYMMDD')}.csv`;
+    try {
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Member', file_name: fileName })).unwrap();
+      toast.push(<Notification title="Reason Submitted" type="success" />);
+      exportToCsv(fileName, allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) { toast.push(<Notification title="Submission Failed" type="danger" children={error.message} />); } finally { setIsSubmittingExportReason(false); }
+  };
+
   const handleSetTableData = (d: Partial<TableQueries>) => setTableData(p => ({ ...p, ...d }));
   const handlePaginationChange = (p: number) => handleSetTableData({ pageIndex: p });
   const handleSelectChange = (v: number) => handleSetTableData({ pageSize: v, pageIndex: 1 });
@@ -484,13 +592,29 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <DebouceInput value={tableData.query} placeholder="Quick Search..." onChange={e => handleSetTableData({ query: e, pageIndex: 1 })} />
         <div className="flex gap-2">
-            <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onClearFilters} /></Tooltip>
+            <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+                <div className="flex flex-col p-2">
+                    <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+                    {columns.map((col) => {
+                        const id = col.id || col.accessorKey as string;
+                        if (!col.header || id === 'action') return null;
+                        return (
+                            <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                                <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                                    {col.header as string}
+                                </Checkbox>
+                            </div>
+                        );
+                    })}
+                </div>
+            </Dropdown>
+            <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
             <Button icon={<TbFilter />} onClick={() => setFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
             <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-      <DataTable selectable columns={columns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+      <DataTable selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button></div>}>
         <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
@@ -570,8 +694,7 @@ const Member = () => {
   const navigate = useNavigate();
   const { MemberData } = useSelector(masterSelector);
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
-  const memberStatusOptions = [ { value: "Active", label: "Active" }, { value: "Disabled", label: "Disabled" }, { value: "Unregistered", label: "Unregistered" }];
-
+  
   const counts = useMemo(() => {
     const list = MemberData?.data || [];
     return {
@@ -596,10 +719,26 @@ const Member = () => {
                 <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 mb-4 gap-3">
-                <div onClick={() => handleCardClick("All")} className="cursor-pointer"><Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div><div><h6>{counts.total}</h6><span className="text-xs font-semibold">Total</span></div></Card></div>
-                <div onClick={() => handleCardClick("Active")} className="cursor-pointer"><Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserCheck size={24} /></div><div><h6>{counts.active}</h6><span className="text-xs font-semibold">Active</span></div></Card></div>
-                <div onClick={() => handleCardClick("Disabled")} className="cursor-pointer"><Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserCancel size={24} /></div><div><h6>{counts.disabled}</h6><span className="text-xs font-semibold">Disabled</span></div></Card></div>
-                <div onClick={() => handleCardClick("Unregistered")} className="cursor-pointer"><Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserExclamation size={24} /></div><div><h6>{counts.unregistered}</h6><span className="text-xs font-semibold">Unregistered</span></div></Card></div>
+                <Tooltip title="Click to show all members">
+                  <div onClick={() => handleCardClick("All")} className="cursor-pointer">
+                    <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div><div><h6>{counts.total}</h6><span className="text-xs font-semibold">Total</span></div></Card>
+                  </div>
+                </Tooltip>
+                <Tooltip title="Click to show active members">
+                  <div onClick={() => handleCardClick("Active")} className="cursor-pointer">
+                    <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserCheck size={24} /></div><div><h6>{counts.active}</h6><span className="text-xs font-semibold">Active</span></div></Card>
+                  </div>
+                </Tooltip>
+                <Tooltip title="Click to show disabled members">
+                  <div onClick={() => handleCardClick("Disabled")} className="cursor-pointer">
+                    <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserCancel size={24} /></div><div><h6>{counts.disabled}</h6><span className="text-xs font-semibold">Disabled</span></div></Card>
+                  </div>
+                </Tooltip>
+                <Tooltip title="Click to show unregistered members">
+                  <div onClick={() => handleCardClick("Unregistered")} className="cursor-pointer">
+                    <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserExclamation size={24} /></div><div><h6>{counts.unregistered}</h6><span className="text-xs font-semibold">Unregistered</span></div></Card>
+                  </div>
+                </Tooltip>
               </div>
               <FormListTable filterCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
             </div>
