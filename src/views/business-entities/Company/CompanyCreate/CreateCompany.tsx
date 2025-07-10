@@ -28,6 +28,7 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addcompanyAction,
   deletecompanyAction,
+  getEmployeesListingAction,
   editCompanyAction,
   getBrandAction,
   getCategoriesAction,
@@ -111,8 +112,8 @@ interface BillingDocItemFE {
 // New type for Enable Billing Docs
 interface EnabledBillingDocItemFE {
     id?: string;
-    document_type?: { label: string, value: string };
-    document_file?: File | string | null;
+    document_name?: string;
+    document?: File | string | null;
 }
 
 export interface CompanyFormSchema {
@@ -291,7 +292,7 @@ interface ApiSingleCompanyItem {
   secondary_bank_verification_photo?: string | null;
   company_bank_details?: Array<{ bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; }>; // Added swift_code
   billing_documents?: Array<{ document_name: string; document: string | null; }>;
-  enabled_billing_docs?: Array<{ document_type: string; document_file: string | null; }>; // New
+  enabled_billing_docs?: Array<{ document_name: string; document: string | null; }>; // New
   company_member_management?: Array<{ member_id: string; designation: string; person_name: string; number: string; }>;
   company_team_members?: Array<{ team_name: string; designation: string; person_name: string; number: string; }>;
   company_spot_verification?: Array<{ verified_by_id?: string; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; photo_upload_path?: string; }>; // Added verified_by_id
@@ -444,8 +445,8 @@ const transformApiToFormSchema = (
             document: doc.document || null,
         })) || [],
         enabled_billing_docs: apiData.enabled_billing_docs?.map(doc => ({
-            document_type: findOptionByValue(enabledBillDocTypes, doc.document_type),
-            document_file: doc.document_file || null
+            document_name: doc.document_name,
+            document: doc.document || null
         })) || [],
     
         company_members: apiData.company_member_management?.map(m => ({
@@ -587,8 +588,8 @@ const preparePayloadForApi = (
 
     // Enabled Billing Documents (New)
     data.enabled_billing_docs?.forEach((doc: EnabledBillingDocItemFE, index: number) => {
-        appendField(`enabled_billing_docs[${index}][document_type]`, doc.document_type);
-        appendFileIfExists(`enabled_billing_docs[${index}][document_file]`, doc.document_file);
+        appendField(`enabled_billing_docs[${index}][document_name]`, doc.document_name);
+        appendFileIfExists(`enabled_billing_docs[${index}][document]`, doc.document);
     });
   
     // Member Management
@@ -1118,8 +1119,16 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const { fields, append, remove } = useFieldArray({ control, name: "company_spot_verification" });
-  const { MemberData } = useSelector(masterSelector);
-  
+  const { MemberData, EmployeesList } = useSelector(masterSelector);
+  const employeeOptions = useMemo(() => {
+    const data = EmployeesList?.data || EmployeesList || [];
+    return Array.isArray(data.data)
+      ? data.data.map((m: any) => ({
+          value: String(m.id),
+          label: `${m.name || 'N/A'} (ID:${m.id})`,
+        }))
+      : [];
+  }, [EmployeesList]);
   const memberOptions = useMemo(() => {
     const data = MemberData?.data || MemberData || [];
     return Array.isArray(data)
@@ -1145,7 +1154,7 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
               <div className="flex items-center gap-4">
                 <Controller name={`company_spot_verification.${index}.verified`} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
                 <FormItem label={`Verified By ${index+1}`} className="flex-grow" invalid={!!errors.company_spot_verification?.[index]?.verified_by} errorMessage={(errors.company_spot_verification?.[index]?.verified_by as any)?.message as string}>
-                  <Controller name={`company_spot_verification.${index}.verified_by`} control={control} render={({ field }) => (<Select placeholder="Select Employee" options={memberOptions} {...field} />)} />
+                  <Controller name={`company_spot_verification.${index}.verified_by`} control={control} render={({ field }) => (<Select placeholder="Select Employee" options={employeeOptions} {...field} />)} />
                 </FormItem>
               </div>
               <FormItem label={`Upload Document ${index+1}`}>
@@ -1244,7 +1253,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
           <h5 className="mb-0">Billing Documents</h5>
           <div className="flex gap-2">
             <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: "", document: null })}> Add Billing Doc </Button>
-            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_type: undefined, document_file: null })}> Add Enable Billing Documents </Button>
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_name: undefined, document: null })}> Add Enable Billing Documents </Button>
           </div>
         </div>
         
@@ -1255,7 +1264,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
             <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
                 <FormItem label={`Doc Name ${index+1}`} className="md:col-span-4" invalid={!!errors.billing_documents?.[index]?.document_name} errorMessage={errors.billing_documents?.[index]?.document_name?.message as string}>
-                  <Controller name={`billing_documents.${index}.document_name`} control={control} render={({ field }) => (<Input placeholder="e.g., Invoice Template" {...field} />)} />
+                  <Controller name={`billing_documents.${index}.document_name`} control={control} render={({ field }) => (<Input placeholder="Document Name" {...field} />)} />
                 </FormItem>
                 <FormItem label={`Upload Doc ${index+1}`} className="md:col-span-4">
                   <Controller name={`billing_documents.${index}.document`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest}/>)} />
@@ -1276,15 +1285,15 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
         {/* New Enabled Billing Docs */}
         {enabledFields.length > 0 && <h6 className="mt-4 -mb-2">Enabled Billing Documents</h6>}
         {enabledFields.map((item, index) => {
-            const docFileValue = watch(`enabled_billing_docs.${index}.document_file`);
+            const docFileValue = watch(`enabled_billing_docs.${index}.document`);
             return (
                  <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
                     <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
-                        <FormItem label={`Document Type ${index+1}`} className="md:col-span-4" invalid={!!errors.enabled_billing_docs?.[index]?.document_type} errorMessage={(errors.enabled_billing_docs?.[index]?.document_type as any)?.message as string}>
-                            <Controller name={`enabled_billing_docs.${index}.document_type`} control={control} render={({field}) => <Select placeholder="Select Document Type" options={enabledBillDocTypes} {...field} />} />
+                        <FormItem label={`Document Type ${index+1}`} className="md:col-span-4" invalid={!!errors.enabled_billing_docs?.[index]?.document_name} errorMessage={(errors.enabled_billing_docs?.[index]?.document_name as any)?.message as string}>
+                            <Controller name={`enabled_billing_docs.${index}.document_name`} control={control} render={({field}) => <Input placeholder="Document Name" {...field} />} />
                         </FormItem>
                         <FormItem label={`Upload File ${index+1}`} className="md:col-span-4">
-                            <Controller name={`enabled_billing_docs.${index}.document_file`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest}/>)} />
+                            <Controller name={`enabled_billing_docs.${index}.document`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest}/>)} />
                             {docFileValue && (
                                 <div className="mt-1">
                                     {docFileValue instanceof File ? (<span className="text-sm text-gray-500">{docFileValue.name}</span>)
@@ -1464,7 +1473,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     
         company_certificate: z.array(z.object({
-            certificate_id: z.string(),
+            certificate_id: z.any(),
             certificate_name: z.string().trim(),
             upload_certificate: z.any().optional().nullable(),
         })).optional(),
@@ -1479,7 +1488,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
             gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
             contact_person: z.string().trim().optional().nullable(),
             office_email: z.string().trim().email("Invalid email format.").optional().nullable(),
-            office_phone: z.string().regex(/^\d{7,15}$/, "Invalid phone number.").optional().nullable(),
+            office_phone: z.string().optional().nullable(),
         })).optional(),
         
         // KYC Docs
@@ -1514,8 +1523,8 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
             document: z.any().optional().nullable(),
         })).optional(),
         enabled_billing_docs: z.array(z.object({
-            document_type: z.object({ label: z.string(), value: z.string()}, { required_error: "Document type is required."}),
-            document_file: z.any().optional().nullable()
+            document_name: z.string().trim().min(1, "Document type is required."),
+            document: z.any().optional().nullable()
         })).optional(),
         
         company_members: z.array(z.object({
@@ -1685,6 +1694,7 @@ const CompanyCreate = () => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
     dispatch(getBrandAction());
+    dispatch(getEmployeesListingAction());
     dispatch(getCategoriesAction());
     dispatch(getMemberAction());
     dispatch(getCompanyAction());
