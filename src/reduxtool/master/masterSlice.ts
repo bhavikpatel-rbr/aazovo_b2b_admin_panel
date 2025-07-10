@@ -41,6 +41,7 @@ import {
   editUnitAction,
   getaccountdocAction,
   getActivityLogAction,
+  getActualCompanyAction,
   getAllActionAction,
   getAllCompany,
   getAllCountAction,
@@ -115,6 +116,7 @@ import {
   getSalesPersonAction,
   getSellerListingsAction,
   getSlidersAction,
+  getStartProcessAction,
   getSubcategoriesByCategoryIdAction,
   getSubscribersAction,
   getSuppliersAction,
@@ -210,9 +212,11 @@ const INITIAL_STATE: any = {
   getaccountdoc: [],
   formResponse: [],
   filledFormData:[],
+  startFormData: [],
   accountDocumentById: 0,
-  getfromIDcompanymemberData: 0,
+  getfromIDcompanymemberData: [],
   AllCountData: [],
+  actualCompanyData:[],
 };
 
 const masterSlice = createSlice({
@@ -753,11 +757,20 @@ const masterSlice = createSlice({
       ...state,
       filledFormData: payload,
     }));
-     builder.addCase(getAllCountAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(getStartProcessAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      startFormData: payload,
+    }));
+    builder.addCase(getAllCountAction.fulfilled, (state, { payload }) => ({
       ...state,
       AllCountData: payload,
     }));
+    builder.addCase(getActualCompanyAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      actualCompanyData: payload,
+    }));
   },
+  
 });
 
 export const masterSelector = (state: RootState) => state?.Master;

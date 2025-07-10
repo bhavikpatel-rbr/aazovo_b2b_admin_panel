@@ -33,6 +33,7 @@ import Card from '@/components/ui/Card'
 import Spinner from '@/components/ui/Spinner'
 import { FormItem, Form } from '@/components/ui/Form'
 import Tag from '@/components/ui/Tag'
+import Avatar from '@/components/ui/Avatar' // <-- ADDED IMPORT
 
 // Icons
 import {
@@ -90,7 +91,7 @@ const taskValidationSchema = z.object({
 
 export type TaskFormData = z.infer<typeof taskValidationSchema>
 
-const statusConfig: Record<TaskStatus, { label: string; color: string; icon: JSX.Element }> = {
+const statusConfig: Record<TaskStatus, { label: string; color: string; icon: any }> = {
     Pending: { label: 'Pending', color: 'amber', icon: <BiTimeFive /> },
     in_progress: { label: 'In Progress', color: 'blue', icon: <BiHourglass /> },
     Completed: { label: 'Completed', color: 'emerald', icon: <BiCheckCircle /> },
@@ -113,8 +114,6 @@ const TaskToggle = ({ className, count }: { className?: string, count: number })
         <BiTask />
     </div>
 )
-
-// AddTaskModal remains largely the same as it's a functional form
 
 const AddTaskModal = ({
     isOpen,
@@ -287,93 +286,140 @@ const AddTaskModal = ({
     )
 }
 
-// --- NEW: Heavily Redesigned Task View Modal ---
-const TaskViewModal = ({ task, isOpen, onClose }: { task: Task | null, isOpen: boolean, onClose: () => void }) => {
+// --- NEW: Heavily Redesigned Task View Modal (inspired by the provided example) ---
+const TaskViewModal = ({ task, isOpen, onClose }: { task: Task | null; isOpen: boolean; onClose: () => void }) => {
     if (!task) return null;
+
     const statusInfo = statusConfig[task.status];
-    const assignedToText = task.assign_to_users?.length > 0 ? task.assign_to_users.map((a) => a.name).join(', ') : 'Not Assigned';
+    const assignedUsers = task.assign_to_users || [];
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={600}>
-            <div className="space-y-6">
-                <div className="pb-4 border-b border-gray-200 dark:border-gray-600">
-                    <Tag className={classNames('text-sm', `bg-${statusInfo?.color}-500`)}>{statusInfo.label}</Tag>
-                    <h4 className="font-bold mt-2">{task.task_title}</h4>
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            onRequestClose={onClose}
+            title={
+                <span className="truncate max-w-md">
+                    Task Details: {task.task_title}
+                </span>
+            }
+            width={700}
+        >
+            <div className="p-1 sm:p-4 space-y-4 overflow-y-auto max-h-[75vh]">
+                <div className="border-b pb-3">
+                    <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1">
+                        General Information
+                    </h6>
+                    <p className="text-sm">
+                        <strong>Task ID:</strong> {task.id}
+                    </p>
+                    <p className="text-sm">
+                        <strong>Title:</strong> {task.task_title}
+                    </p>
+                    <p className="text-sm flex items-center">
+                        <strong>Status:</strong>
+                        <Tag className={classNames('ml-2 text-white text-xs px-1.5 py-0.5')}>
+                            {task.status}
+                        </Tag>
+                    </p>
+                    <p className="text-sm flex items-center">
+                        <strong>Priority:</strong>
+                        <Tag className={classNames('ml-2 text-white text-xs px-1.5 py-0.5', getPriorityClasses(task.priority))}>
+                            {task.priority}
+                        </Tag>
+                    </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
-                    <div className="flex items-start gap-3">
-                        <HiOutlineUserCircle className="text-xl text-gray-400 mt-1" />
-                        <div>
-                            <p className="text-xs text-gray-500">Assigned To</p>
-                            <p className="font-semibold">{assignedToText}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <HiOutlineHashtag className="text-xl text-gray-400 mt-1" />
-                        <div>
-                            <p className="text-xs text-gray-500">Priority</p>
-                            <Tag className={classNames('text-xs', getPriorityClasses(task.priority))}>{task.priority}</Tag>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <HiOutlineCalendar className="text-xl text-gray-400 mt-1" />
-                        <div>
-                            <p className="text-xs text-gray-500">Due Date</p>
-                            <p className="font-semibold">{task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Not set'}</p>
-                        </div>
-                    </div>
+
+                <div className="border-b pb-3">
+                    <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1">
+                        Dates
+                    </h6>
+                    <p className="text-sm flex items-center gap-1.5">
+                        <HiOutlineCalendar className="text-lg text-gray-500" />
+                        <strong>Due:</strong> {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Not set'}
+                    </p>
                 </div>
+
+                <div className="border-b pb-3">
+                    <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1.5">
+                        <HiOutlineUserGroup className="text-lg text-gray-500" />
+                        Assigned To
+                    </h6>
+                    {assignedUsers.length > 0 ? (
+                        <div className="flex flex-wrap gap-x-6 gap-y-3 mt-1">
+                            {assignedUsers.map(user => (
+                                <div key={user.id} className="flex items-center gap-2">
+                                    <Avatar shape="circle" size="sm">
+                                        {user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                    </Avatar>
+                                    <span className="text-sm font-medium">{user.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500">Not assigned to any user.</p>
+                    )}
+                </div>
+
                 {task.description && (
-                    <div className="flex items-start gap-3">
-                        <HiOutlineDocumentText className="text-xl text-gray-400 mt-1 flex-shrink-0" />
-                        <div>
-                            <p className="text-xs text-gray-500">Description</p>
-                            <p className="text-sm whitespace-pre-wrap">{task.description}</p>
-                        </div>
+                    <div className="border-b pb-3">
+                        <h6 className="font-semibold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1.5">
+                            <HiOutlineDocumentText className="text-lg text-gray-500" /> Description
+                        </h6>
+                        <p className="text-sm whitespace-pre-wrap">{task.description}</p>
                     </div>
                 )}
-            </div>
-            <div className="text-right mt-8">
-                <Button variant="solid" onClick={onClose}>Close</Button>
+                
+                {!task.description && (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                        No additional details provided for this task.
+                    </p>
+                )}
             </div>
         </Dialog>
     );
 };
 
-// --- NEW: Dynamic & Attractive Summary Cards ---
+// --- MODIFIED: Summary Cards design updated to match the reference style ---
 const TaskSummaryCards = ({ counts, activeFilter, onCardClick }: { counts: Record<FilterStatus | 'total', number>, activeFilter: FilterStatus, onCardClick: (status: FilterStatus) => void }) => {
     const cardData = [
-        { key: 'all', title: 'Total Tasks', count: counts.total, icon: <BiTask />, color: 'indigo' },
-        { key: 'Pending', title: 'Pending', count: counts.Pending, icon: <BiTimeFive />, color: 'amber' },
-        { key: 'in_progress', title: 'In Progress', count: counts.in_progress, icon: <BiHourglass />, color: 'blue' },
-        { key: 'Completed', title: 'Completed', count: counts.Completed, icon: <BiCheckCircle />, color: 'emerald' },
+        { key: 'all', title: 'Total Tasks', count: counts.total, icon: <BiTask size={24} />, color: 'indigo' },
+        { key: 'Pending', title: 'Pending', count: counts.Pending, icon: <BiTimeFive size={24}/>, color: 'amber' },
+        { key: 'in_progress', title: 'In Progress', count: counts.in_progress, icon: <BiHourglass size={24}/>, color: 'blue' },
+        { key: 'Completed', title: 'Completed', count: counts.Completed, icon: <BiCheckCircle size={24}/>, color: 'emerald' },
     ];
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {cardData.map((card) => {
                 const isActive = activeFilter === card.key;
-                const activeClasses = `bg-gradient-to-br from-${card.color}-50 dark:from-${card.color}-500/20 to-white dark:to-gray-800 ring-2 ring-${card.color}-500`;
+                const activeClasses = `ring-2 ring-offset-1 dark:ring-offset-gray-900 ring-${card.color}-500`;
 
                 return (
-                    <div key={card.key} onClick={() => onCardClick(card.key as FilterStatus)}>
-                        <Card
-                            clickable
-                            bodyClass="p-4"
-                            className={classNames(
-                                'transition-all duration-300 transform hover:scale-105 hover:shadow-lg',
-                                isActive ? activeClasses : 'shadow-sm'
-                            )}
-                        >
-                            <div className="flex items-center gap-4">
-                                <span className={classNames('text-3xl', `text-${card.color}-500`)}>{card.icon}</span>
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{card.title}</p>
-                                    <h5 className="font-bold">{card.count}</h5>
+                    <Tooltip title={`Click to filter by ${card.title}`} key={card.key}>
+                        <div onClick={() => onCardClick(card.key as FilterStatus)}>
+                            <Card
+                                clickable
+                                bodyClass="flex gap-2 p-2"
+                                className={classNames(
+                                    'rounded-md transition-shadow duration-200 ease-in-out',
+                                    'hover:shadow-lg',
+                                    'shadow-sm'
+                                )}
+                            >
+                                <div className={classNames(
+                                    'h-12 w-12 rounded-md flex items-center justify-center shrink-0',
+                                    `bg-${card.color}-100 dark:bg-${card.color}-500/20 text-${card.color}-500`
+                                )}>
+                                    {card.icon}
                                 </div>
-                            </div>
-                        </Card>
-                    </div>
+                                <div>
+                                    <h6 className={classNames('font-bold', `text-${card.color}-500 dark:text-${card.color}-300`)}>{card.count}</h6>
+                                    <span className="font-semibold text-xs text-gray-700 dark:text-gray-300">{card.title}</span>
+                                </div>
+                            </Card>
+                        </div>
+                    </Tooltip>
                 );
             })}
         </div>
@@ -487,7 +533,7 @@ const _Tasks = ({ className }: { className?: string }) => {
                     <header className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/60 space-y-4">
                         <div className="flex justify-between items-center">
                             <h5 className="mb-0">My Tasks ({taskCounts.total})</h5>
-                            <Button variant="solid" size="sm" icon={<HiOutlinePlus />} onClick={() => setAddTaskModalIsOpen(true)}>New Task</Button>
+                            <Button variant="solid" icon={<HiOutlinePlus />} onClick={() => setAddTaskModalIsOpen(true)}>Add New</Button>
                         </div>
                         <TaskSummaryCards counts={taskCounts} activeFilter={statusFilter} onCardClick={setStatusFilter} />
                     </header>
@@ -501,29 +547,37 @@ const _Tasks = ({ className }: { className?: string }) => {
                                     {filteredTasks.map((task) => {
                                         const assignedToText = task.assign_to_users?.length > 3 ? `${task.assign_to_users.slice(0, 3).map(u => u.name).join(', ')} +${task.assign_to_users.length - 3}` : task.assign_to_users?.map(u => u.name).join(', ') || 'N/A';
                                         return (
-                                            <Card key={task.id} className="relative pl-5 pr-4 py-4 hover:shadow-lg transition-shadow duration-200">
+                                            <div key={task.id} className="relative pl-4 pr-3 py-2 hover:shadow-lg transition-shadow duration-200 min-h-0">
                                                 {/* Priority Indicator Bar */}
                                                 <div className={classNames('absolute left-0 top-0 h-full w-1.5 rounded-l-lg', getPriorityClasses(task.priority))} />
 
-                                                <div className="flex flex-col gap-3">
-                                                    <div className="flex items-start justify-between">
-                                                        <h6 className="font-semibold pr-4">{task.task_title}</h6>
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <h6 className="font-semibold pr-2 text-sm truncate">{task.task_title}</h6>
                                                         <div className="flex items-center gap-1 flex-shrink-0">
-                                                            <Tooltip title="View Details"><Button size="xs" shape="circle" variant="plain" icon={<HiOutlineEye />} onClick={() => handleViewTask(task)} /></Tooltip>
-                                                            <Tooltip title="Delete Task"><Button size="xs" shape="circle" variant="plain" icon={<HiOutlineTrash />} onClick={() => openDeleteConfirmation(task)} /></Tooltip>
+                                                            <Tooltip title="View Details">
+                                                                <Button size="xs" shape="circle" variant="plain" icon={<HiOutlineEye />} onClick={() => handleViewTask(task)} />
+                                                            </Tooltip>
+                                                            <Tooltip title="Delete Task">
+                                                                <Button size="xs" shape="circle" variant="plain" icon={<HiOutlineTrash />} onClick={() => openDeleteConfirmation(task)} />
+                                                            </Tooltip>
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                                                         <span className="flex items-center gap-1.5"><HiOutlineUserCircle /> {assignedToText}</span>
-                                                        {task.due_date && <span className="flex items-center gap-1.5"><HiOutlineCalendar /> {new Date(task.due_date).toLocaleDateString()}</span>}
+                                                        {task.due_date && (
+                                                            <span className="flex items-center gap-1.5">
+                                                                <HiOutlineCalendar /> {new Date(task.due_date).toLocaleDateString()}
+                                                            </span>
+                                                        )}
                                                     </div>
 
-                                                    <div className="flex items-center justify-end border-t border-gray-200 dark:border-gray-600 pt-3 mt-1">
+                                                    <div className="flex items-center justify-end border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
                                                         <TaskStatusChanger taskId={task.id} currentStatus={task.status} onChange={handleChangeStatus} />
                                                     </div>
                                                 </div>
-                                            </Card>
+                                            </div>
                                         );
                                     })}
                                 </div>

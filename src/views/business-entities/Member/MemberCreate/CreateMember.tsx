@@ -78,8 +78,9 @@ import {
   editMemberAction,
   editRequestFeedbackAction,
   getAllProductsAction,
+  getActualCompanyAction, // Added new action
   getBrandAction,
-  getCategoriesAction,
+  getParentCategoriesAction,
   getCompanyAction,
   getContinentsAction,
   getCountriesAction,
@@ -87,7 +88,8 @@ import {
   getMemberByIdAction,
   getMemberTypeAction,
   // Actions for the listing component
-  getRequestFeedbacksAction
+  getRequestFeedbacksAction,
+  getSubcategoriesByCategoryIdAction
 } from "@/reduxtool/master/middleware";
 
 // Types
@@ -121,10 +123,12 @@ export interface MemberFormSchema {
   status?: string | { label: string; value: string };
   company_name?: string | { label: string; value: string };
   company_name_temp?: string | { label: string; value: string };
+  company_code?: string; // New field for actual company code
   address?: string;
   company_description?: string | null;
   company_address?: string;
   whatsapp_number?: string;
+  whatsapp_country_code?: string | { label: string; value: string };
   alternate_contact_country_code?: string | { label: string; value: string };
   alternate_contact_number?: string;
   landline_number?: string;
@@ -149,17 +153,16 @@ export interface MemberFormSchema {
   other_trading_license?: string;
   usfda_license?: string;
   other_trading_license_2?: string;
-  wall_enquiry_permission?: boolean | string;
-  enquiry_permission?: boolean | string;
-  interested_for?: string;
+  wall_enquiry_permission?: string | { label: string; value: string }; // Updated type
+  interested_in?: string | { label: string; value: string };
   customer_code_permanent?: string;
   product_upload_permission?: boolean | string;
-  trade_inquiry_allowed?: string | { label: string; value: string };
+  trade_inquiry_allowed?: string | { label: string; value: string }; // Updated type
   membership_plan_text?: string;
   upgrade_plan?: string | { label: string; value: string };
   request_description?: string;
   favourite_product_id?: Array<{ label: string; value: string }>;
-  business_opportunity?: string | { label: string; value: string };
+  business_opportunity?: Array<{ label: string; value: string }>;
   member_grade?: string | { label: string; value: string };
   relationship_manager?: string | { label: string; value: string };
   remarks?: string;
@@ -180,6 +183,7 @@ export interface FormSectionBaseProps {
   control: Control<MemberFormSchema>;
   errors: FieldErrors<MemberFormSchema>;
   formMethods: UseFormReturn<MemberFormSchema>;
+  isEditMode?: boolean; // Added for conditional rendering
 }
 interface ApiSingleCustomerItem {
   id: number;
@@ -209,6 +213,7 @@ interface ApiSingleCustomerItem {
   office_no?: string;
   alt_mobile?: string;
   alt_email?: string;
+  whatsapp_country_code?:string;
   alternate_contact_country_code?: string;
   botim?: string;
   skype?: string;
@@ -229,12 +234,12 @@ interface ApiSingleCustomerItem {
   other_trading_license?: string;
   usfda_license?: string;
   other_trading_license_2?: string;
-  wall_enquiry_permission?: "0" | "1" | string;
-  enquiry_permission?: "0" | "1" | string;
+  wall_enquiry_permission?: string; // Updated
+  enquiry_permission?: "0" | "1" | string; // Kept for safety, though removed from form
   interested_for?: string;
   customer_code_permanent?: string;
   product_upload_permission?: "0" | "1" | string;
-  trade_inquiry_allowed?: string;
+  trade_inquiry_allowed?: string; // Updated
   membership_plan?: string;
   upgrade_your_plan?: string;
   request_feedback?: string;
@@ -378,13 +383,43 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 // --- Helper Functions ---
 // In src/views/members/MemberFormPage.tsx
 
+/**
+ * Transforms API data into the format required by the form.
+ * It now accepts master data lists to correctly map interested categories and sub-categories.
+ */
 const transformApiToFormSchema = (
-  formData: any // Use a more specific type reflecting the API response
+  formData: any, // API response data for a single customer
+  allCategories: any[], // Master list of all categories
+  allSubCategories: any[] // Master list of all sub-categories
 ): Partial<MemberFormSchema> => {
   console.log(formData, "API data for form transformation");
 
+  // Helper to convert a simple value to a { value, label } object for Select components
   const toSelectOption = (value: string | undefined | null) =>
     value ? { value: value, label: value } : undefined;
+
+  // Helper to parse a JSON string of IDs and map them to { value, label } objects
+  // using a provided master list for name lookups.
+  const createOptionsFromIdString = (idString: string, masterList: any[]) => {
+    if (!idString || typeof idString !== 'string' || !idString.startsWith('[')) {
+        return [];
+    }
+    try {
+        const ids: (string | number)[] = JSON.parse(idString);
+        if (!Array.isArray(ids)) return [];
+
+        // Create a lookup map for efficient name retrieval
+        const masterMap = new Map(masterList.map(item => [String(item.id), item.name]));
+
+        return ids.map(id => ({
+            value: String(id),
+            label: masterMap.get(String(id)) || `Unknown ID: ${id}` // Provide a fallback label
+        }));
+    } catch (e) {
+        console.error("Failed to parse ID string or map options:", e);
+        return [];
+    }
+  };
 
   const normalizeCountryCode = (code: string | undefined | null) =>
     code ? code.replace(/^\+\+/, "+") : undefined;
@@ -395,7 +430,6 @@ const transformApiToFormSchema = (
   };
 
   return {
-    // ... (all other personal/contact/etc. fields remain the same as before) ...
     id: formData.id,
     name: formData.name || "",
     email: formData.email || "",
@@ -411,6 +445,7 @@ const transformApiToFormSchema = (
     pincode: formData.pincode || "",
     address: formData.address || "",
     whatsapp_number: formData.whatsApp_no || "",
+    whatsapp_country_code: createCountryCodeOption(formData.whatsapp_country_code),
     alternate_contact_number: formData.alternate_contact_number || "",
     alternate_contact_country_code: createCountryCodeOption(formData.alternate_contact_number_code),
     landline_number: formData.landline_number || "",
@@ -423,31 +458,30 @@ const transformApiToFormSchema = (
     facebook_profile: formData.facebook_profile || "",
     instagram_handle: formData.instagram_handle || "",
     website: formData.website || "",
-    business_opportunity: toSelectOption(formData.business_opportunity),
+    business_opportunity: Array.isArray(formData.business_opportunity)
+      ? formData.business_opportunity.map((item: string) => ({ value: item, label: item }))
+      : [],
     business_type: toSelectOption(formData.business_type),
     favourite_product_id: formData.favourite_products_list?.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
     interested_in: toSelectOption(formData.interested_in),
+    
+    // --- START: CORRECTED DROPDOWN POPULATION ---
+    interested_category_ids: createOptionsFromIdString(formData.interested_category_ids, allCategories),
+    interested_subcategory_ids: createOptionsFromIdString(formData.interested_subcategory_ids, allSubCategories),
+    // --- END: CORRECTED DROPDOWN POPULATION ---
+    
     member_grade: toSelectOption(formData.member_grade),
     relationship_manager: formData.relationship_manager ? { value: String(formData.relationship_manager.id), label: formData.relationship_manager.name } : undefined,
     dealing_in_bulk: formData.dealing_in_bulk || "No",
     remarks: formData.remarks || "",
 
-    // --- START: CORRECTED DYNAMIC MEMBER PROFILE TRANSFORMATION ---
     member_profiles: formData.dynamic_member_profiles?.map((apiProfile: any) => {
-      // Helper to parse stringified JSON and zip with names
       const createSelectOptions = (idJsonString: string, names: string[]) => {
         try {
-          // Check if the input is a valid stringified array before parsing
-          if (typeof idJsonString !== 'string' || !idJsonString.startsWith('[')) {
-            return [];
-          }
+          if (typeof idJsonString !== 'string' || !idJsonString.startsWith('[')) return [];
           const ids: (string | number)[] = JSON.parse(idJsonString);
           const safeNames = Array.isArray(names) ? names : [];
-          
-          if (!Array.isArray(ids) || ids.length !== safeNames.length) {
-            return [];
-          }
-
+          if (!Array.isArray(ids) || ids.length !== safeNames.length) return [];
           return ids.map((id, index) => ({
             value: id,
             label: safeNames[index],
@@ -458,24 +492,18 @@ const transformApiToFormSchema = (
         }
       };
       
-console.log("apiProfile.member_type",apiProfile.member_type.id);
-
       return {
-        db_id: apiProfile.id, // Store the database ID for updates
+        db_id: apiProfile.id,
         member_type: {value: apiProfile.member_type.id,label:  apiProfile.member_type.name},
         brands: createSelectOptions(apiProfile.brand_id, apiProfile.brand_names),
         categories: createSelectOptions(apiProfile.category_id, apiProfile.category_names),
         sub_categories: createSelectOptions(apiProfile.sub_category_id, apiProfile.sub_category_names),
       };
-      
-      
     }) || [],
-    // --- END: CORRECTED DYNAMIC MEMBER PROFILE TRANSFORMATION ---
 
     product_upload_permission: formData.product_upload_permission === "1" || formData.product_upload_permission === true,
-    wall_enquiry_permission: formData.wall_enquiry_permission === "1" || formData.wall_enquiry_permission === true,
-    enquiry_permission: formData.enquiry_permission === "1" || formData.enquiry_permission === true,
-    trade_inquiry_allowed: formData.trade_inquiry_allowed === "1" || formData.trade_inquiry_allowed === true,
+    wall_enquiry_permission: toSelectOption(formData.wall_enquiry_permission),
+    trade_inquiry_allowed: toSelectOption(formData.trade_inquiry_allowed),
     membership_plan_text: formData.membership_plan_current || "",
     upgrade_plan: toSelectOption(formData.upgrade_your_plan),
     is_blacklisted: formData.is_blacklisted === "1" || formData.is_blacklisted === true,
@@ -499,6 +527,7 @@ const preparePayloadForApi = (
     email: formData.email || "",
     company_temp: formData.company_name_temp || "",
     company_actual: formData.company_name || "",
+    company_code: formData.company_code || null, // New field added to payload
     status: getValue(formData.status) || null,
     continent_id: getValue(formData.continent_id) || null,
     country_id: getValue(formData.country_id) || null,
@@ -507,6 +536,7 @@ const preparePayloadForApi = (
     pincode: formData.pincode || "",
     address: formData.address || "",
     whatsApp_no: formData.whatsapp_number || "",
+    whatsapp_country_code: getValue(formData.whatsapp_country_code) || null,
     alternate_contact_number: formData.alternate_contact_number || "",
     alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,
     landline_number: formData.landline_number || "",
@@ -519,18 +549,19 @@ const preparePayloadForApi = (
     facebook_profile: formData.facebook_profile || "",
     instagram_handle: formData.instagram_handle || "",
     website: formData.website || "",
-    business_opportunity: getValue(formData.business_opportunity) || null,
+    business_opportunity: formData.business_opportunity?.map(p => getValue(p)) || [],
     business_type: getValue(formData.business_type) || null,
     favourite_product_id: formData.favourite_product_id?.map(p => getValue(p)) || [],
     interested_in: getValue(formData.interested_in) || null,
+    interested_category_ids: formData.interested_category_ids?.map(c => getValue(c)) || [],
+    interested_subcategory_ids: formData.interested_subcategory_ids?.map(sc => getValue(sc)) || [],
     member_grade: getValue(formData.member_grade) || null,
     relationship_manager_id: getValue(formData.relationship_manager) || null,
     dealing_in_bulk: formData.dealing_in_bulk || "No",
     remarks: formData.remarks || "",
     product_upload_permission: formData.product_upload_permission ? "1" : "0",
-    wall_enquiry_permission: formData.wall_enquiry_permission ? "1" : "0",
-    enquiry_permission: formData.enquiry_permission ? "1" : "0",
-    trade_inquiry_allowed: formData.trade_inquiry_allowed ? "1" : "0",
+    wall_enquiry_permission: getValue(formData.wall_enquiry_permission) || null, // Updated
+    trade_inquiry_allowed: getValue(formData.trade_inquiry_allowed) || null, // Updated
     membership_plan_current: formData.membership_plan_text || "",
     upgrade_your_plan: getValue(formData.upgrade_plan) || null,
     is_blacklisted: formData.is_blacklisted ? "1" : "0",
@@ -566,6 +597,7 @@ const preparePayloadForApi = (
 
   return payload;
 };
+
 
 const CSV_HEADERS_RF = [
   "ID",
@@ -1864,8 +1896,8 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
   // Assuming these are fetched from Redux. You must implement the respective actions and reducers.
   const {
     BrandData = [],
-    CategoriesData = [],
-    subCategoriesData = [],
+    ParentCategories = [],
+    subCategoriesForSelectedCategoryData = [],
     ProductsData = [],
     Employees = [],
     AllProducts = [],
@@ -1887,11 +1919,11 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     value: b.id,
     label: b.name,
   }));
-  const categoryOptions = CategoriesData.map((c: any) => ({
+  const categoryOptions = ParentCategories.map((c: any) => ({
     value: c.id,
     label: c.name,
   }));
-  const subCategoryOptions = CategoriesData.map((sc: any) => ({
+  const subCategoryOptions = subCategoriesForSelectedCategoryData.map((sc: any) => ({ // Assuming subCategoriesForSelectedCategoryData is structured like ParentCategories
     value: sc.id,
     label: sc.name,
   }));
@@ -1928,16 +1960,6 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     { value: "For Buy", label: "For Buy" },
     { value: "Both", label: "Both" },
   ];
-  // const memberTypeOptions = [
-  //   { value: 1, label: "INS - PREMIUM" },
-  //   { value: 2, label: "INS - SUPER" },
-  //   { value: 3, label: "INS - TOP" },
-  //   { value: 4, label: "INS - SUPPLIER" },
-  //   { value: 5, label: "GLB - PREMIUM" },
-  //   { value: 6, label: "GLB - BUYER" },
-  //   { value: 7, label: "INDIAN" },
-  //   { value: 8, label: "GLOBAL SUPPLIER" },
-  // ];
 const memberTypeOptions = MemberTypeData.map((m: any) => ({
     value: m.id,
     label: m.name,
@@ -1946,20 +1968,39 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
     <Card id="memberProfile">
       <h4 className="mb-6">Additional Member Profile</h4>
       <div className="grid md:grid-cols-3 gap-4">
-
         <FormItem
-          label="Business Opportunity"
-          invalid={!!errors.business_opportunity}
-          errorMessage={errors.business_opportunity?.message as string}
+          label={<div>Interested Categories<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.interested_category_ids}
+          errorMessage={errors.interested_category_ids?.message as string}
         >
           <Controller
-            name="business_opportunity"
+            name="interested_category_ids"
             control={control}
             render={({ field }) => (
               <Select
                 {...field}
-                placeholder="Select opportunity"
-                options={opportunityOptions}
+                isMulti
+                placeholder="Select interested categories"
+                options={categoryOptions}
+                isClearable
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Interested Sub Categories"
+          invalid={!!errors.interested_subcategory_ids}
+          errorMessage={errors.interested_subcategory_ids?.message as string}
+        >
+          <Controller
+            name="interested_subcategory_ids"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                isMulti
+                placeholder="Select interested sub categories"
+                options={subCategoryOptions}
                 isClearable
               />
             )}
@@ -1990,6 +2031,59 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
           />
         </FormItem>
         <FormItem
+          label={<div>Interested For</div>}
+          invalid={!!errors.interested_in}
+          errorMessage={errors.interested_in?.message as string}
+        >
+          <Controller
+            name="interested_in"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select interested categories"
+                options={interestedinOption}
+                isClearable
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Dealing in Bulk"
+          invalid={!!errors.dealing_in_bulk}
+          errorMessage={errors.dealing_in_bulk?.message as string}
+        >
+          <Controller
+            name="dealing_in_bulk"
+            control={control}
+            render={({ field }) => (
+              <Radio.Group {...field} className="flex gap-4 mt-2">
+                <Radio value="Yes">Yes</Radio>
+                <Radio value="No">No</Radio>
+              </Radio.Group>
+            )}
+          />
+        </FormItem>
+        <FormItem
+          label="Business Opportunity"
+          invalid={!!errors.business_opportunity}
+          errorMessage={errors.business_opportunity?.message as string}
+        >
+          <Controller
+            name="business_opportunity"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Select opportunity"
+                options={opportunityOptions}
+                isClearable
+                isMulti
+              />
+            )}
+          />
+        </FormItem>
+        <FormItem
           label="Favourite Product(s)"
           invalid={!!errors.favourite_product_id}
           errorMessage={errors.favourite_product_id?.message as string}
@@ -2008,80 +2102,6 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
             )}
           />
         </FormItem>
-        <FormItem
-          label={<div>Interested For</div>}
-          invalid={!!errors.interested_in}
-          errorMessage={errors.interested_in?.message as string}
-        >
-          <Controller
-            name="interested_in"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Select interested categories"
-                options={interestedinOption}
-                isClearable
-              />
-            )}
-          />
-        </FormItem>
-        {/* <FormItem
-          label={<div>Interested Categories<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.interested_category_ids}
-          errorMessage={errors.interested_category_ids?.message as string}
-        >
-          <Controller
-            name="interested_category_ids"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Select interested categories"
-                options={categoryOptions}
-                isClearable
-              />
-            )}
-          />
-        </FormItem> */}
-        {/* <FormItem
-          label="Interested Sub Categories"
-          invalid={!!errors.interested_subcategory_ids}
-          errorMessage={errors.interested_subcategory_ids?.message as string}
-        >
-          <Controller
-            name="interested_subcategory_ids"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                isMulti
-                placeholder="Select interested sub categories"
-                options={subCategoryOptions}
-                isClearable
-              />
-            )}
-          />
-        </FormItem> */}
-        {/* <FormItem
-          label="Favourite Brands"
-          invalid={!!errors.favourite_brands}
-          errorMessage={errors.favourite_brands?.message as string}
-        >
-          <Controller
-            name="favourite_brands"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                isMulti
-                placeholder="Select favourite brands"
-                options={brandOptions}
-                isClearable
-              />
-            )}
-          />
-        </FormItem> */}
         <FormItem
           label="Member Grade"
           invalid={!!errors.member_grade}
@@ -2115,34 +2135,6 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
                 options={managerOptions}
                 isClearable
               />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Dealing in Bulk"
-          invalid={!!errors.dealing_in_bulk}
-          errorMessage={errors.dealing_in_bulk?.message as string}
-        >
-          {/* <Controller
-            name="dealing_in_bulk"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Select option"
-                options={yesNoOptions}
-                isClearable
-              />
-            )}
-          /> */}
-          <Controller
-            name="dealing_in_bulk"
-            control={control}
-            render={({ field }) => (
-              <Radio.Group {...field} className="flex gap-4 mt-2">
-                <Radio value="Yes">Yes</Radio>
-                <Radio value="No">No</Radio>
-              </Radio.Group>
             )}
           />
         </FormItem>
@@ -2188,7 +2180,6 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
                 onClick={() => remove(index)}
               >Remove
               </Button>
-              {/* <Button size="sm" type="button" shape="circle" variant="plain" icon={<HiTrash className="text-red-500" />} onClick={() => remove(index)} /> */}
             </div>
             <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
               <FormItem
@@ -2233,8 +2224,7 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
                   )}
                 />
               </FormItem>
-              {/* Category */}
-              <FormItem
+              {/* <FormItem
                 label="Select Category(s)"
                 invalid={!!errors.member_profiles?.[index]?.categories}
                 errorMessage={
@@ -2255,10 +2245,9 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
                     />
                   )}
                 />
-              </FormItem>
+              </FormItem> */}
               <FormItem
                 label="Select Sub Category(s)"
-                // className="md:col-span-2"
                 invalid={!!errors.member_profiles?.[index]?.sub_categories}
                 errorMessage={
                   errors.member_profiles?.[index]?.sub_categories
@@ -2291,23 +2280,35 @@ const PersonalDetailsComponent = ({
   control,
   errors,
   isEditMode,
+  formMethods,
 }: FormSectionBaseProps) => {
-  // Assuming `CompanyData` is fetched and available in the master slice
   const {
     CountriesData = [],
     ContinentsData = [],
     CompanyData = [],
+    actualCompanyData, // Fetched via new action
   } = useSelector(masterSelector);
 
+  const { setValue } = formMethods;
 
-  const countryOptions = CountriesData.map((country: any) => ({
+  const showActualCompany = isEditMode && actualCompanyData && actualCompanyData.id;
+
+  useEffect(() => {
+    // When actualCompanyData is fetched, update the form fields
+    if (showActualCompany) {
+      setValue('company_name', actualCompanyData.company_name);
+      setValue('company_code', actualCompanyData.company_code);
+    }
+  }, [actualCompanyData, showActualCompany, setValue]);
+
+  const countryOptions = CountriesData?.map((country: any) => ({
     value: String(country.id),
     label: country.name,
   }));
   const countryCodeOptions = CountriesData
     .map((c: any) => ({
       value: `+${c.phone_code}`,
-      label: `${c.iso_code} (${c.phone_code})`,
+      label: `${c.phone_code}`,
     })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
 
   const continentOptions = ContinentsData.map((continent: any) => ({
@@ -2315,10 +2316,6 @@ const PersonalDetailsComponent = ({
     label: continent.name,
   }));
 
-  const companyOptions = CompanyData?.data?.map((c: any) => ({
-    value: String(c.id),
-    label: c.company_name,
-  })); // Assumes structure {id, name}
   const statusOptions = [
     { label: "Active", value: "Active" },
     { label: "Unregistered", value: "Unregistered" },
@@ -2329,6 +2326,23 @@ const PersonalDetailsComponent = ({
     <Card id="personalDetails">
       <h4 className="mb-6">Personal Details</h4>
       <div className="grid md:grid-cols-3 gap-4">
+        <FormItem
+          label={<div>Status<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.status}
+          errorMessage={errors.status?.message as string}
+        >
+          <Controller
+            name="status"
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                placeholder="Please Select"
+                options={statusOptions}
+              />
+            )}
+          />
+        </FormItem>
         <FormItem
           label={<div>Full Name<span className="text-red-500"> * </span></div>}
           invalid={!!errors.name}
@@ -2357,7 +2371,7 @@ const PersonalDetailsComponent = ({
               render={({ field }) => (
                 <Select
                   placeholder="Code"
-                  className="w-32"
+                  className="phone_code w-38" 
                   options={countryCodeOptions}
                   {...field}
                 />
@@ -2389,31 +2403,10 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
-
-        <FormItem
-          label="Password (leave blank to keep current)"
-          invalid={!!errors.password}
-          errorMessage={errors.password?.message}
-        //   className="md:col-span-3"
-        >
-          <Controller
-            name="password"
-            control={control}
-            render={({ field }) => (
-              <Input
-                type="password"
-                disabled={isEditMode ? true : false}
-                placeholder="Enter new password"
-                {...field}
-              />
-            )}
-          />
-        </FormItem>
         <FormItem
           label="Company Name (Temp)"
           invalid={!!errors.company_name_temp}
           errorMessage={(errors.company_name_temp as any)?.message}
-        //   className="md:col-span-3"
         >
           <Controller
             name="company_name_temp"
@@ -2421,68 +2414,42 @@ const PersonalDetailsComponent = ({
             render={({ field }) => (
               <Input
                 placeholder="Enter temporary company"
-                // options={companyOptions}
                 {...field}
-              // isClearable
               />
             )}
           />
         </FormItem>
-        <FormItem
-          label="Company Name (Actual)"
-          invalid={!!errors.company_name}
-          errorMessage={(errors.company_name as any)?.message}
-        //   className="md:col-span-3"
-        >
-          <Controller
-            name="company_name"
-            control={control}
-            render={({ field }) => (
-              <Input
-                placeholder="Enter company name"
-                // options={companyOptions}
-                {...field}
-              // isClearable
+        
+        {showActualCompany ? (
+          <>
+            <FormItem
+              label="Company Name (Actual)"
+              invalid={!!errors.company_name}
+              errorMessage={(errors.company_name as any)?.message}
+            >
+              <Controller
+                name="company_name"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    placeholder="Actual company name"
+                    {...field}
+                    readOnly 
+                  />
+                )}
               />
-            )}
-          />
-        </FormItem>
+            </FormItem>
+            <Controller
+              name="company_code"
+              control={control}
+              render={({ field }) => <input type="hidden" {...field} />}
+            />
+          </>
+        ) : (
+            // A placeholder to maintain layout consistency in create mode
+             <div></div>
+        )}
 
-        <FormItem
-          label={<div>Status<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.status}
-          errorMessage={errors.status?.message as string}
-        >
-          <Controller
-            name="status"
-            control={control}
-            render={({ field }) => (
-              <Select
-                {...field}
-                placeholder="Please Select"
-                options={statusOptions}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Continent"
-          invalid={!!errors.continent_id}
-          errorMessage={errors.continent_id?.message as string}
-        >
-          <Controller
-            name="continent_id"
-            control={control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select Continent"
-                options={continentOptions}
-                {...field}
-                isClearable
-              />
-            )}
-          />
-        </FormItem>
         <FormItem
           label={<div>Country<span className="text-red-500"> * </span></div>}
           invalid={!!errors.country_id}
@@ -2501,6 +2468,26 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
+
+        <FormItem
+          label="Continent"
+          invalid={!!errors.continent_id}
+          errorMessage={errors.continent_id?.message as string}
+        >
+          <Controller
+            name="continent_id"
+            control={control}
+            render={({ field }) => (
+              <Select
+                placeholder="Select Continent"
+                options={continentOptions}
+                {...field}
+                isClearable
+              />
+            )}
+          />
+        </FormItem>
+
         <FormItem
           label="State"
           invalid={!!errors.state}
@@ -2528,8 +2515,6 @@ const PersonalDetailsComponent = ({
           />
         </FormItem>
 
-
-
         <FormItem
           label="Pincode"
           invalid={!!errors.pincode}
@@ -2543,6 +2528,7 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
+
         <FormItem
           label="Address"
           invalid={!!errors.address}
@@ -2557,6 +2543,23 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
+        <FormItem
+          label={isEditMode ? "Password (leave blank to keep current)" : "Password"}
+          invalid={!!errors.password}
+          errorMessage={errors.password?.message}
+        >
+          <Controller
+            name="password"
+            control={control}
+            render={({ field }) => (
+              <Input
+                type="password"
+                placeholder={isEditMode ? "Unchanged" : "Enter new password"}
+                {...field}
+              />
+            )}
+          />
+        </FormItem>
       </div>
     </Card>
   );
@@ -2565,34 +2568,29 @@ const PersonalDetailsComponent = ({
 const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
   const { CountriesData = [] } = useSelector(masterSelector);
 
-  const countryOptions = CountriesData.map((country: any) => ({
-    value: String(country.id),
-    label: country.name,
-  }));
-
   const countryCodeOptions = CountriesData
     .map((c: any) => ({
       value: `+${c.phone_code}`,
-      label: `${c.iso_code} (${c.phone_code})`,
+      label: `${c.phone_code}`,
     })).filter((v, i, a) => a.findIndex((t) => t.value === v.value) === i); // Unique phone codes
 
   return (
     <Card id="socialContactInformation">
       <h4 className="mb-6">Social & Contact Information</h4>
-      <div className="grid md:grid-cols-3 gap-4" style={{ width: "22vh !important" }}>
+      <div className="grid md:grid-cols-3 gap-4">
         <FormItem
-          label={<div>WhatsApp No.<span className="text-red-500"> * </span></div>}
+          label={<div>WhatsApp No</div>}
           invalid={!!errors.whatsapp_number}
           errorMessage={errors.whatsapp_number?.message}
         >
-          <div className="flex items-center gap-2" style={{ width: "22vh !important" }}>
+          <div className="flex items-center gap-2">
             <Controller
               name="whatsapp_country_code"
               control={control}
               render={({ field }) => (
                 <Select
                   placeholder="Code"
-                  className="w-28"
+                  className="phone_code w-38"
                   options={countryCodeOptions}
                   {...field}
                 />
@@ -2626,7 +2624,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
                 <Select
                   {...field}
                   placeholder="Code"
-                  className="w-28"
+                  className="phone_code w-38"
                   options={countryCodeOptions}
                 />
               )}
@@ -2639,6 +2637,19 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
               )}
             />
           </div>
+        </FormItem>
+        <FormItem
+          label="Alternate Email"
+          invalid={!!errors.alternate_email}
+          errorMessage={errors.alternate_email?.message}
+        >
+          <Controller
+            name="alternate_email"
+            control={control}
+            render={({ field }) => (
+              <Input type="email" placeholder="Alternate email" {...field} />
+            )}
+          />
         </FormItem>
         <FormItem
           label="Landline Number"
@@ -2663,19 +2674,6 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
             control={control}
             render={({ field }) => (
               <Input type="tel" placeholder="Fax" {...field} />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Alternate Email"
-          invalid={!!errors.alternate_email}
-          errorMessage={errors.alternate_email?.message}
-        >
-          <Controller
-            name="alternate_email"
-            control={control}
-            render={({ field }) => (
-              <Input type="email" placeholder="Alternate email" {...field} />
             )}
           />
         </FormItem>
@@ -2773,14 +2771,21 @@ const MemberAccessibilityComponent = ({
   control,
   errors,
 }: FormSectionBaseProps) => {
-  const yesNoOptions = [
-    { value: "Yes", label: "Yes" },
-    { value: "No", label: "No" },
+  const wallListingOptions = [
+    { value: "Disable", label: "Disable" },
+    { value: "On Request", label: "On Request" },
+    { value: "Approved", label: "Approved" },
+  ];
+  const tradeInquiryOptions = [
+    { value: "disabled", label: "Disabled" },
+    { value: "both", label: "Allowed for both" },
+    { value: "sell", label: "Allowed for Sell" },
+    { value: "buy", label: "Allowed for Buy" },
   ];
   return (
     <Card id="memberAccessibility">
       <h4 className="mb-6">Member Accessibility</h4>
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
         <FormItem
           label="Product Upload Permission"
           invalid={!!errors.product_upload_permission}
@@ -2800,7 +2805,7 @@ const MemberAccessibilityComponent = ({
           />
         </FormItem>
         <FormItem
-          label="Wall Enquiry Permission"
+          label="Wall Listing Permission"
           invalid={!!errors.wall_enquiry_permission}
           errorMessage={errors.wall_enquiry_permission?.message as string}
         >
@@ -2808,35 +2813,17 @@ const MemberAccessibilityComponent = ({
             name="wall_enquiry_permission"
             control={control}
             render={({ field }) => (
-              <Checkbox
-                checked={!!field.value}
-                onChange={(checked) => field.onChange(checked)}
-              >
-                Enabled
-              </Checkbox>
+              <Select
+                {...field}
+                placeholder="Select Permission"
+                options={wallListingOptions}
+                isClearable
+              />
             )}
           />
         </FormItem>
         <FormItem
-          label="Enquiry Permission"
-          invalid={!!errors.enquiry_permission}
-          errorMessage={errors.enquiry_permission?.message as string}
-        >
-          <Controller
-            name="enquiry_permission"
-            control={control}
-            render={({ field }) => (
-              <Checkbox
-                checked={!!field.value}
-                onChange={(checked) => field.onChange(checked)}
-              >
-                Enabled
-              </Checkbox>
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Trade Inquiry Allowed"
+          label="Trade Inquiry Permission"
           invalid={!!errors.trade_inquiry_allowed}
           errorMessage={errors.trade_inquiry_allowed?.message as string}
         >
@@ -2844,26 +2831,14 @@ const MemberAccessibilityComponent = ({
             name="trade_inquiry_allowed"
             control={control}
             render={({ field }) => (
-              <Checkbox
-                checked={!!field.value}
-                onChange={(checked) => field.onChange(checked)}
-              >
-                Enabled
-              </Checkbox>
-            )}
-          />
-          {/* <Controller
-            name="trade_inquiry_allowed"
-            control={control}
-            render={({ field }) => (
               <Select
                 {...field}
-                placeholder="Select"
-                options={yesNoOptions}
+                placeholder="Select Permission"
+                options={tradeInquiryOptions}
                 isClearable
               />
             )}
-          /> */}
+          />
         </FormItem>
       </div>
     </Card>
@@ -2871,46 +2846,14 @@ const MemberAccessibilityComponent = ({
 };
 
 const MembershipPlanComponent = ({ control, errors }: FormSectionBaseProps) => {
-  const planOptions = [
-    { value: "Basic", label: "Basic" },
-    { value: "Premium", label: "Premium" },
-    { value: "Enterprise", label: "Enterprise" },
-  ];
   return (
     <Card id="membershipPlanDetails">
       <h4 className="mb-6">Membership Plan Details</h4>
-      <div className="grid md:grid-cols-2 gap-4">
-        <FormItem
-          label="Membership Plan (Current)"
-          invalid={!!errors.membership_plan_text}
-          errorMessage={errors.membership_plan_text?.message}
-        >
-          <Controller
-            name="membership_plan_text"
-            control={control}
-            render={({ field }) => (
-              <Input placeholder="e.g., Premium Plan" {...field} />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Upgrade Your Plan"
-          invalid={!!errors.upgrade_plan}
-          errorMessage={errors.upgrade_plan?.message as string}
-        >
-          <Controller
-            name="upgrade_plan"
-            control={control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select New Plan"
-                options={planOptions}
-                {...field}
-                isClearable
-              />
-            )}
-          />
-        </FormItem>
+      <div className="flex justify-center items-center h-40 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+        <div className="text-center text-gray-400 dark:text-gray-500">
+          <h5 className="mb-2">Coming Soon</h5>
+          <p>This feature is currently under development.</p>
+        </div>
       </div>
     </Card>
   );
@@ -2922,27 +2865,6 @@ const RequestAndFeedbacksComponent = ({
   return (
     <div id="requestAndFeedbacks" className="flex flex-col gap-4">
       <RequestAndFeedbackListing />
-      {/* <Card>
-        <h4 className="mb-6">Add New Feedback / Request to this Member</h4>
-        <FormItem
-          label="Your Message"
-          invalid={!!errors.request_description}
-          errorMessage={errors.request_description?.message}
-        >
-          <Controller
-            name="request_description"
-            control={control}
-            render={({ field }) => (
-              <Input
-                textArea
-                rows={4}
-                placeholder="Describe your request or feedback in detail..."
-                {...field}
-              />
-            )}
-          />
-        </FormItem>
-      </Card> */}
     </div>
   );
 };
@@ -2978,18 +2900,6 @@ const MemberFormComponent = (props: {
           message: "Password must be at least 6 characters if provided",
         }),
       mobile_no: z.string().trim().min(1, "Mobile number is required"),
-      whatsapp_number: z.string().trim().min(1, "Whatsapp is required"),
-      // company_name: z
-      //   .union([
-      //     z.string(),
-      //     z.object({ value: z.string().min(1), label: z.string() }),
-      //   ])
-      //   .refine(
-      //     (val) =>
-      //       (typeof val === "string" && val.trim() !== "") ||
-      //       (typeof val === "object" && !!val?.value),
-      //     { message: "Company Name is required" }
-      //   ),
       country_id: z
         .union([
           z.string(),
@@ -3001,7 +2911,9 @@ const MemberFormComponent = (props: {
             (typeof val === "object" && !!val?.value),
           { message: "Country is required" }
         ),
-      // address: z.string().trim().min(1, "Address is required"),
+        interested_category_ids: z
+        .array(z.any())
+        .min(1, { message: "Interested categories are required." }),
     })
     .passthrough();
   const formMethods = useForm<MemberFormSchema>({
@@ -3035,7 +2947,7 @@ const MemberFormComponent = (props: {
     if (currentIndex > 0) setActiveSection(navigationKeys[currentIndex - 1]);
   };
 
-  const renderActiveSection = (isEditMode: isEditMode) => {
+  const renderActiveSection = () => {
     const sectionProps = { errors, control, formMethods, isEditMode };
     switch (activeSection) {
       case "personalDetails":
@@ -3046,8 +2958,6 @@ const MemberFormComponent = (props: {
         return <MemberAccessibilityComponent {...sectionProps} />;
       case "membershipPlanDetails":
         return <MembershipPlanComponent {...sectionProps} />;
-      // case "requestAndFeedbacks":
-      //   return <RequestAndFeedbacksComponent {...sectionProps} />;
       case "memberProfile":
         return <MemberProfileComponent {...sectionProps} />;
       default:
@@ -3077,7 +2987,7 @@ const MemberFormComponent = (props: {
           onNavigate={setActiveSection}
         />
       </Card>
-      <div className="flex flex-col gap-4 pb-20">{renderActiveSection(isEditMode)}</div>
+      <div className="flex flex-col gap-4 pb-20">{renderActiveSection()}</div>
       <Card className="mt-auto sticky bottom-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center p-4">
           <div>
@@ -3137,15 +3047,19 @@ const MemberCreate = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { id } = useParams<{ id?: string }>();
-  console.log(id, "ididididididididididid");
-
   const isEditMode = Boolean(id);
 
-  const [initialData, setInitialData] =
-    useState<Partial<MemberFormSchema> | null>(null);
+  // --- START: CORRECTED STATE MANAGEMENT ---
+  const { 
+    ParentCategories = [], 
+    subCategoriesForSelectedCategoryData = [] 
+  } = useSelector(masterSelector, shallowEqual);
+
+  const [initialData, setInitialData] = useState<Partial<MemberFormSchema> | null>(null);
   const [pageLoading, setPageLoading] = useState(isEditMode);
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // --- END: CORRECTED STATE MANAGEMENT ---
 
   const getEmptyFormValues = (): Partial<MemberFormSchema> => ({
     role_type: { label: "Member", value: "0" },
@@ -3168,10 +3082,12 @@ const MemberCreate = () => {
     status: { label: "Active", value: "Active" },
     company_name: undefined,
     company_name_temp: undefined,
+    company_code: "", // New field initialized
     address: "",
     company_description: "",
     company_address: "",
     whatsapp_number: "",
+    whatsapp_country_code: "",
     alternate_contact_country_code: undefined,
     alternate_contact_number: "",
     landline_number: "",
@@ -3196,9 +3112,8 @@ const MemberCreate = () => {
     other_trading_license: "",
     usfda_license: "",
     other_trading_license_2: "",
-    wall_enquiry_permission: false,
-    enquiry_permission: false,
-    interested_for: "",
+    wall_enquiry_permission: undefined,
+    interested_in: "",
     customer_code_permanent: "",
     product_upload_permission: false,
     trade_inquiry_allowed: undefined,
@@ -3206,7 +3121,7 @@ const MemberCreate = () => {
     upgrade_plan: undefined,
     request_description: "",
     favourite_product_id: [],
-    business_opportunity: undefined,
+    business_opportunity: [],
     member_grade: undefined,
     relationship_manager: undefined,
     remarks: "",
@@ -3223,13 +3138,15 @@ const MemberCreate = () => {
     dispatch(getContinentsAction());
     dispatch(getCompanyAction());
     dispatch(getBrandAction());
-    dispatch(getCategoriesAction());
-    // dispatch(getSubcategoriesByIdAction());
+    dispatch(getParentCategoriesAction());
+    // Fetch all subcategories by passing 0 or a non-existent ID
+    dispatch(getSubcategoriesByCategoryIdAction(0)); 
     dispatch(getEmployeesAction());
     dispatch(getAllProductsAction());
     dispatch(getMemberTypeAction());
   }, [dispatch]);
 
+  // --- START: CORRECTED useEffect for fetching and transforming data ---
   useEffect(() => {
     const emptyForm = getEmptyFormValues();
     if (isEditMode && id) {
@@ -3237,11 +3154,20 @@ const MemberCreate = () => {
         setPageLoading(true);
         try {
           const response = await dispatch(getMemberByIdAction(id)).unwrap();
-          console.log(response, "Fetched Member Data");
-
+          
           if (response) {
+            // After fetching member, fetch their actual company info
+            await dispatch(getActualCompanyAction(id)); 
+
             const apiMemberData: ApiSingleCustomerItem = response;
-            const transformed = transformApiToFormSchema(apiMemberData);
+
+            // Pass the master data arrays to the transformer function for lookups
+            const transformed = transformApiToFormSchema(
+              apiMemberData,
+              ParentCategories,
+              subCategoriesForSelectedCategoryData
+            );
+
             setInitialData({ ...emptyForm, ...transformed });
           } else {
             toast.push(
@@ -3266,12 +3192,24 @@ const MemberCreate = () => {
           setPageLoading(false);
         }
       };
-      fetchMemberData();
+
+      // Only fetch data if master data is available, to avoid race conditions
+      if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0) {
+          fetchMemberData();
+      }
     } else {
       setInitialData(emptyForm);
       setPageLoading(false);
     }
-  }, [id, isEditMode, navigate, dispatch]);
+  }, [
+    id, 
+    isEditMode, 
+    navigate, 
+    dispatch, 
+    ParentCategories, 
+    subCategoriesForSelectedCategoryData
+  ]);
+  // --- END: CORRECTED useEffect ---
 
   const handleFormSubmit = async (
     formValues: MemberFormSchema,

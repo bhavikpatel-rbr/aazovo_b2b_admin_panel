@@ -119,7 +119,7 @@ export type FormItem = {
   trust_score: number;
   activity_score: number;
   associated_brands: string[];
-  business_category: string[];
+  business_type: string[];
   interested_in: string;
   company_id: string;
   company_name: string;
@@ -127,6 +127,17 @@ export type FormItem = {
   member_location: string;
   kyc_status: string;
   health_score?: number;
+  relationship_manager?: {
+    id: number;
+    name: string;
+  };
+  dynamic_member_profiles?: {
+    id: number;
+    member_type?: { name: string };
+    brand_names?: string[];
+    category_names?: string[];
+    sub_category_names?: string[];
+  }[];
   [key: string]: any;
 };
 
@@ -689,10 +700,11 @@ const ViewMemberDetailDialog: React.FC<{ member: any; onClose: () => void; }> = 
   );
 };
 const statusColor: Record<string, string> = {
-  active: "bg-green-200 text-green-600",
-  inactive: "bg-red-200 text-red-600",
-  Active: "bg-green-200 text-green-600",
-  Disabled: "bg-red-200 text-red-600",
+  active: "border border-emerald-200 bg-emerald-100 text-emerald-600",
+  inactive: "border border-red-300 bg-red-100 text-red-600",
+  Active: "border border-emerald-300 bg-emerald-100 text-emerald-600",
+  Disabled: "border border-red-300 bg-red-100 text-red-600",
+  Unregistered: "border border-orange-300 bg-orange-100 text-orange-600"
 };
 const memberStatusOptions = [
   { value: "Active", label: "Active" },
@@ -852,7 +864,8 @@ const ActionColumn = ({
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600"
           role="button"
-          onClick={() => onViewDetail(rowData)}
+          // onClick={() => onViewDetail(rowData)}
+          onClick={()=> navigate(`/business-entities/member-view/${rowData.id}`)}
         >
           <TbEye />
         </div>
@@ -1302,7 +1315,7 @@ const FormListTable = ({
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
               <div className="text-xs">
-                <b className="text-xs text-blue-500"><em>70892{props.row.original.id || ""}</em></b> <br />
+                <b className="text-xs text-blue-500"><em>{props.row.original.member_code || ""}</em></b> <br />
                 <b className="texr-xs">{props.row.original.name || ""}</b>
               </div>
             </div>
@@ -1318,10 +1331,15 @@ const FormListTable = ({
         header: "Company", accessorKey: "company_name", id: "company", size: 200,
         cell: (props) => (
           <div className="ml-2 rtl:mr-2 text-xs">
-            <b className="text-xs "><em className="text-blue-500">{props.row.original.company_id_actual || ""}</em></b>
-            <div className="text-xs flex gap-1">
-              <MdCheckCircle size={20} className="text-green-500" />
-              <b className="">{props.row.original.company_name || "Unique Enterprise"}</b>
+            {props.row.original.company_actual && (
+              <div className="text-xs flex gap-1 items-center mt-0.5">
+              {/* <MdCheckCircle size={16} className="text-green-500" /> */}
+              <b>Actual: </b>{props.row.original.company_code} | {props.row.original.company_actual}
+            </div>
+            )}
+            <div className="text-xs flex gap-1 items-center mt-0.5">
+              {/* <MdCheckCircle size={16} className="text-green-500" /> */}
+              <b>Temp: </b>{props.row.original.company_temp || "N/A"}
             </div>
           </div>
         ),
@@ -1342,9 +1360,9 @@ const FormListTable = ({
         header: "Profile", accessorKey: "profile_completion", id: "profile", size: 220,
         cell: (props) => (
           <div className="text-xs flex flex-col">
-            <span><b>RM: </b>{props.row.original.name || ""}</span>
-            <span><b>Grade: {props.row.original.member_grade || ""}</b></span>
-            <span><b>Business Opportunity: {props.row.original.business_opportunity || ""}</b></span>
+            <span><b>RM: </b>{props.row.original.relationship_manager?.name || "N/A"}</span>
+            <span><b>Grade: {props.row.original.member_grade || "N/A"}</b></span>
+            <span><b>Business Opportunity: {props.row.original.business_opportunity || "N/A"}</b></span>
             <Tooltip title={`Profile: ${props.row.original.profile_completion || 0}%`} >
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
                 <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${props.row.original.profile_completion || 0}%`, }}></div>
@@ -1359,14 +1377,33 @@ const FormListTable = ({
           const [isOpen, setIsOpen] = useState<boolean>(false);
           const openDialog = () => setIsOpen(true);
           const closeDialog = () => setIsOpen(false);
+
+          const { dynamic_member_profiles, brand_name, interested_in, business_type } = props.row.original;
+
+          const brandDisplay =
+            (dynamic_member_profiles && dynamic_member_profiles.length > 0 && dynamic_member_profiles[0]?.brand_names?.length > 0)
+              ? dynamic_member_profiles[0].brand_names.join(', ')
+              : brand_name || "N/A";
+
+          const renderTags = (items: string[] | undefined | null) => {
+            if (!items || items.length === 0) return 'N/A';
+            return (
+              <span className="flex gap-1 flex-wrap">
+                {items.map((item) => (
+                  <Tag key={item}>{item}</Tag>
+                ))}
+              </span>
+            );
+          };
+
           return (
             <div className="flex flex-col gap-1">
-              <span className="text-xs"><b className="text-xs">Business Type: {props.row.original.business_type || ""}</b></span>
+              <span className="text-xs"><b className="text-xs">Business Type: {business_type || "N/A"}</b></span>
               <span className="text-xs flex items-center gap-1">
                 <span onClick={openDialog}><TbInfoCircle size={16} className="text-blue-500 cursor-pointer" /></span>
-                <b className="text-xs">Brands: {props.row.original.brand_name || ""}</b>
+                <b className="text-xs">Brands: {brandDisplay}</b>
               </span>
-              <span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{props.row.original.interested_in}</span></span>
+              <span className="text-xs"><span className="text-[11px]"><b className="text-xs">Interested: </b>{interested_in || 'N/A'}</span></span>
               <Dialog width={620} isOpen={isOpen} onRequestClose={closeDialog} onClose={closeDialog}>
                 <h6>Dynamic Profile</h6>
                 <Table className="mt-6">
@@ -1374,12 +1411,20 @@ const FormListTable = ({
                     <Tr><Td width={130}>Member Type</Td><Td>Brands</Td><Td>Category</Td><Td>Sub Category</Td></Tr>
                   </thead>
                   <tbody>
-                    <Tr>
-                      <Td>INS - PREMIUM</Td>
-                      <Td><span className="flex gap-0.5 flex-wrap"><Tag>Apple</Tag><Tag>Samsung</Tag><Tag>POCO</Tag></span></Td>
-                      <Td><Tag>Electronics</Tag></Td>
-                      <Td><span className="flex gap-0.5 flex-wrap"><Tag>Mobile</Tag><Tag>Laptop</Tag></span></Td>
-                    </Tr>
+                    {dynamic_member_profiles && dynamic_member_profiles.length > 0 ? (
+                      dynamic_member_profiles.map((profile, index) => (
+                        <Tr key={profile.id || index}>
+                          <Td>{profile.member_type?.name || 'N/A'}</Td>
+                          <Td>{renderTags(profile.brand_names)}</Td>
+                          <Td>{renderTags(profile.category_names)}</Td>
+                          <Td>{renderTags(profile.sub_category_names)}</Td>
+                        </Tr>
+                      ))
+                    ) : (
+                      <Tr>
+                        <Td colSpan={4} className="text-center">No dynamic profiles available.</Td>
+                      </Tr>
+                    )}
                   </tbody>
                 </Table>
               </Dialog>

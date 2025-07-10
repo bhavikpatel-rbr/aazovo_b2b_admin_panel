@@ -86,6 +86,15 @@ const salesLeadsRoute: Routes = [
     },
   },
   {
+    key: "salesLeads.lead",
+    path: `/start-process/:id/:formId`,
+    component: lazy(() => import("@/views/sales-leads/Lead/components/StartProcess")),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+  {
     key: "salesLeads.offersDemands",
     path: `${SALES_LEADS_PREFIX_PATH}/offers-demands`,
     component: lazy(() => import("@/views/sales-Leads/Offers-Demands")),

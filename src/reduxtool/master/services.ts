@@ -2708,6 +2708,15 @@ export const getMemberByIdAsync = async (id: string | number) => {
   }
 }
 
+export const getActualCompanyAsync = async (id: string | number) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/get-company/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
 export const deleteOfferAsync = async (OfferData: any) => {
   try {
     const response = await axiosInstance.delete(`${config.apiURL}/offer/${OfferData}`)
@@ -2929,7 +2938,7 @@ export const addEmployeeListAsync = async (payload) => {
   }
 }
 
-export const editEmployeeListAsync = async (payload) => {
+export const editEmployeeListAsync = async (payload: any) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
     const response = await axiosInstance.post(`${config.apiURL}/employee/${payload.employeeId}`, payload.data)
@@ -3243,6 +3252,24 @@ export const getAccountDocByIdAsync = async (id: string) => {
 export const getFilledFormAsync = async (id: object) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/fill-up-form/${id}`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const submitStartProcessAsync = async (data: object) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/sales-form`, { ...data })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getStartProcessAsync = async (id: object) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/sales-form/${id}`)
     return response?.data
   } catch (err) {
     return isAxiosError(err)

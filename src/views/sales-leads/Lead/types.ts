@@ -47,6 +47,7 @@ export type LeadListItem = {
   assigned_sales_person_id?: string | number | null;
   created_at: Date | string;
   updated_at?: Date | string;
+  formId: any
 } & LeadSourcingDetails; // Merging sourcing details for a flatter structure if needed
 
 // --- Zod Schema for Add/Edit Lead Form (UPDATED to match JSON keys and types) ---

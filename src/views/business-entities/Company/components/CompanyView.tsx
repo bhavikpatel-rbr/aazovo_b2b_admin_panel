@@ -36,7 +36,8 @@ import {
   TbUsersGroup,
   TbReportMoney,
   TbLicense,
-  TbArrowLeft
+  TbArrowLeft,
+  TbCoinRupee
 } from 'react-icons/tb';
 
 // Types and Data
@@ -122,7 +123,9 @@ const companyViewNavigationList = [
   { label: "Details", link: "details", icon: <TbUser /> },
   { label: "Documents", link: "documents", icon: <TbFileText /> },
   { label: "Members & Teams", link: "members", icon: <TbUsersGroup /> },
-  { label: "Bank & Billing", link: "billing", icon: <TbReportMoney /> },
+  { label: "Bank ", link: "bank", icon: <TbBuildingBank /> },
+  { label: "Billing", link: "billing", icon: <TbReportMoney /> },
+  { label: "Transactions", link: "transactions", icon: <TbCoinRupee /> },
   { label: "Offices", link: "offices", icon: <TbBuildingBank /> },
 ];
 

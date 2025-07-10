@@ -251,10 +251,47 @@ const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, }: { rowData: Compa
         </div>
     );
 };
-const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: CompanyFilterFormData; onRemoveFilter: (key: keyof CompanyFilterFormData, value: string) => void; onClearAll: () => void; }) => {
-    // ... (Your existing implementation is fine)
-    return <div>...</div>
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
+  filterData: CompanyFilterFormData;
+  onRemoveFilter: (key: keyof CompanyFilterFormData, value: string) => void;
+  onClearAll: () => void;
+}) => {
+  const filterKeyToLabelMap: Record<string, string> = {
+    filterStatus: 'Status', filterCompanyType: 'Type', filterContinent: 'Continent',
+    filterCountry: 'Country', filterState: 'State', filterCity: 'City',
+    filterKycVerified: 'KYC', filterEnableBilling: 'Billing',
+  };
+  const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
+    if (!value || (Array.isArray(value) && value.length === 0)) return [];
+    if (key === 'filterCreatedDate') {
+      const dateArray = value as [Date | null, Date | null];
+      if (dateArray[0] && dateArray[1]) {
+        return [{ key, value: 'date-range', label: `Date: ${dateArray[0].toLocaleDateString()} - ${dateArray[1].toLocaleDateString()}` }];
+      }
+      return [];
+    }
+    if (Array.isArray(value)) {
+      return value.filter(item => item !== null && item !== undefined).map((item: { value: string; label: string }) => ({
+        key, value: item.value, label: `${filterKeyToLabelMap[key] || 'Filter'}: ${item.label}`,
+      }));
+    }
+    return [];
+  });
+  if (activeFiltersList.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {activeFiltersList.map(filter => (
+        <Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
+          {filter.label}
+          <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof CompanyFilterFormData, filter.value)} />
+        </Tag>
+      ))}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
+
 
 const CompanyListTable = () => {
     const navigate = useNavigate();
@@ -292,8 +329,23 @@ const CompanyListTable = () => {
         let filteredData = [...companyList];
         if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selectedStatuses = filterCriteria.filterStatus.map((s) => s.value.toLowerCase()); filteredData = filteredData.filter((company) => company.status && selectedStatuses.includes(company.status.toLowerCase())); }
         if (filterCriteria.filterCompanyType && filterCriteria.filterCompanyType.length > 0) { const selectedTypes = filterCriteria.filterCompanyType.map((t) => t.value); filteredData = filteredData.filter((company) => selectedTypes.includes(company.ownership_type)); }
+        if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) { const selectedContinents = filterCriteria.filterContinent.map((c) => c.value); filteredData = filteredData.filter((company) => company.continent && selectedContinents.includes(company.continent.name)); }
+        if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) { const selectedCountries = filterCriteria.filterCountry.map((c) => c.value); filteredData = filteredData.filter((company) => company.country && selectedCountries.includes(company.country.name)); }
+        if (filterCriteria.filterState && filterCriteria.filterState.length > 0) { const selectedStates = filterCriteria.filterState.map((s) => s.value); filteredData = filteredData.filter((company) => selectedStates.includes(company.state)); }
+        if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) { const selectedCities = filterCriteria.filterCity.map((c) => c.value); filteredData = filteredData.filter((company) => selectedCities.includes(company.city)); }
+        if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) { const selectedKycValues = filterCriteria.filterKycVerified.map((k) => k.value === "Yes"); filteredData = filteredData.filter((company) => selectedKycValues.includes(company.kyc_verified)); }
+        if (filterCriteria.filterEnableBilling && filterCriteria.filterEnableBilling.length > 0) { const selectedBillingValues = filterCriteria.filterEnableBilling.map((b) => b.value === "Yes"); filteredData = filteredData.filter((company) => selectedBillingValues.includes(company.enable_billing)); }
+        if (filterCriteria.filterCreatedDate && filterCriteria.filterCreatedDate[0] && filterCriteria.filterCreatedDate[1]) { const [startDate, endDate] = filterCriteria.filterCreatedDate; const inclusiveEndDate = new Date(endDate as Date); inclusiveEndDate.setHours(23, 59, 59, 999); filteredData = filteredData.filter((company) => { const createdDate = new Date(company.created_at); return (createdDate >= (startDate as Date) && createdDate <= inclusiveEndDate); }); }
         if (tableData.query) { filteredData = filteredData.filter((i) => Object.values(i).some((v) => { if (typeof v === "object" && v !== null) { return Object.values(v).some((nestedV) => String(nestedV).toLowerCase().includes(tableData.query.toLowerCase())); } return String(v).toLowerCase().includes(tableData.query.toLowerCase()); })); }
+
         let count = 0; if (filterCriteria.filterStatus?.length) count++;
+    if (filterCriteria.filterCompanyType?.length) count++;
+    if (filterCriteria.filterContinent?.length) count++;
+    if (filterCriteria.filterCountry?.length) count++;
+    if (filterCriteria.filterState?.length) count++;
+    if (filterCriteria.filterCity?.length) count++;
+    if (filterCriteria.filterKycVerified?.length) count++;
+    if (filterCriteria.filterEnableBilling?.length) count++;
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key) { filteredData.sort((a, b) => { let av = a[key as keyof CompanyItem] as any; let bv = b[key as keyof CompanyItem] as any; if (key.includes(".")) { const keys = key.split("."); av = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), a); bv = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), b); } av = av ?? ""; bv = bv ?? ""; if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); if (typeof av === "number" && typeof bv === "number") return order === "asc" ? av - bv : bv - av; if (typeof av === "boolean" && typeof bv === "boolean") return order === "asc" ? (av === bv ? 0 : av ? -1 : 1) : (av === bv ? 0 : av ? 1 : -1); return 0; }); }
         const pI = tableData.pageIndex as number; const pS = tableData.pageSize as number; return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
@@ -409,6 +461,8 @@ const CompanyListSelected = () => {
     const { selectedCompanies, setSelectedCompanies } = useCompanyList();
     const dispatch = useAppDispatch();
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+      const [sendMessageDialogOpen, setSendMessageDialogOpen] = useState(false);
+  const [sendMessageLoading, setSendMessageLoading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const handleDelete = () => setDeleteConfirmationOpen(true);
     const handleCancelDelete = () => setDeleteConfirmationOpen(false);
@@ -428,6 +482,15 @@ const CompanyListSelected = () => {
             setDeleteConfirmationOpen(false);
         }
     };
+    const handleSend = () => {
+    setSendMessageLoading(true);
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Message Sent" />);
+      setSendMessageLoading(false);
+      setSendMessageDialogOpen(false);
+      setSelectedCompanies([]);
+    }, 500);
+  };
     if (selectedCompanies.length === 0) return null;
     return (
         <>
@@ -436,12 +499,25 @@ const CompanyListSelected = () => {
                     <span><span className="flex items-center gap-2"><TbChecks className="text-lg text-primary-600" /><span className="font-semibold">{selectedCompanies.length} Companies selected</span></span></span>
                     <div className="flex items-center">
                         <Button size="sm" className="ltr:mr-3 rtl:ml-3" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50"} onClick={handleDelete}>Delete</Button>
+            <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>Message</Button>
+                    
                     </div>
                 </div>
             </StickyFooter>
             <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title="Remove Companies" onClose={handleCancelDelete} onConfirm={handleConfirmDelete} loading={isDeleting}>
                 <p>Are you sure you want to remove these companies? This action can't be undone.</p>
             </ConfirmDialog>
+            <Dialog isOpen={sendMessageDialogOpen} onClose={() => setSendMessageDialogOpen(false)}>
+        <h5 className="mb-2">Send Message</h5>
+        <Avatar.Group chained omittedAvatarTooltip className="mt-4" maxCount={4}>
+          {selectedCompanies.map((c) => (<Tooltip key={c.id} title={c.company_name}><Avatar src={c.company_logo ? `https://aazovo.codefriend.in/${c.company_logo}` : undefined} icon={<TbUserCircle />} /></Tooltip>))}
+        </Avatar.Group>
+        <div className="my-4"><RichTextEditor /></div>
+        <div className="text-right flex items-center gap-2">
+          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button>
+          <Button size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend}>Send</Button>
+        </div>
+      </Dialog>
         </>
     );
 };

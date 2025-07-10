@@ -25,7 +25,7 @@ export default defineConfig({
         secure: false
       },
     },
-  
+    host: true
   },
   build: {
     outDir: 'build'

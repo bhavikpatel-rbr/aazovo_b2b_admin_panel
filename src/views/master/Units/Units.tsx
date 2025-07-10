@@ -135,8 +135,9 @@ const Units = () => {
     const [imageToView, setImageToView] = useState<string | null>(null);
 
     const { unitData = [], ParentCategories = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+    
     const categoryOptionsForSelect = useMemo(() => Array.isArray(ParentCategories) ? ParentCategories.map((cat: Category) => ({ value: cat.id, label: cat.name })) : [], [ParentCategories]);
-    const unitNameOptionsForFilter = useMemo(() => Array.isArray(unitData) ? [...new Set(unitData.map(doc => doc.name))].sort().map(name => ({ value: name, label: name })) : [], [unitData]);
+    const unitNameOptionsForFilter = useMemo(() => Array.isArray(unitData?.data) ? [...new Set(unitData?.data.map(doc => doc.name))].sort().map(name => ({ value: name, label: name })) : [], [unitData?.data]);
 
     useEffect(() => { dispatch(getUnitAction()); dispatch(getParentCategoriesAction()); }, [dispatch]);
 
@@ -197,7 +198,7 @@ const Units = () => {
     useEffect(() => { setFilteredColumns(columns); }, [columns]);
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-        let processedData: UnitItem[] = cloneDeep(unitData || []);
+        let processedData: UnitItem[] = cloneDeep(unitData?.data || []);
         if (activeFilters.names?.length) { const names = new Set(activeFilters.names.map(n => n.toLowerCase())); processedData = processedData.filter(item => names.has(item.name.toLowerCase())); }
         if (activeFilters.categoryIds?.length) { const catIds = new Set(activeFilters.categoryIds.map(id => Number(id))); processedData = processedData.filter(item => item.categories?.some(cat => catIds.has(cat.id))); }
         if (activeFilters.status?.length) { const statuses = new Set(activeFilters.status); processedData = processedData.filter(item => statuses.has(item.status)); }
@@ -219,8 +220,11 @@ const Units = () => {
         const pageIndex = tableData.pageIndex as number;
         const pageSize = tableData.pageSize as number;
         const startIndex = (pageIndex - 1) * pageSize;
+        if (!Array.isArray(processedData)) {
+          processedData = Object.values(processedData); // or convert properly
+        }
         return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
-    }, [unitData, tableData, activeFilters]);
+    }, [unitData?.data, tableData, activeFilters]);
 
     const activeFilterCount = useMemo(() => {
         let count = 0; if (activeFilters.names?.length) count++; if (activeFilters.categoryIds?.length) count++; if (activeFilters.status?.length) count++; return count;
@@ -280,9 +284,9 @@ const Units = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
-                        <Tooltip title="Click to show all units"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{unitData.length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show active units"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{unitData.length > 0 && unitData.filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show inactive units"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{unitData.length > 0 && unitData.filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show all units"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{unitData?.data.length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active units"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{unitData?.data.length > 0 && unitData?.data.filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show inactive units"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{unitData?.data.length > 0 && unitData?.data.filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
                     </div>
                     <div className="mb-4">
                         <UnitTableTools

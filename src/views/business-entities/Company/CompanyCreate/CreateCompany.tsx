@@ -28,6 +28,7 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addcompanyAction,
   deletecompanyAction,
+  getEmployeesListingAction,
   editCompanyAction,
   getBrandAction,
   getCategoriesAction,
@@ -65,7 +66,7 @@ interface CompanyTeamItemFE {
 interface SpotVerificationItemFE {
   id?: string;
   verified?: boolean;
-  verified_by_name?: string;
+  verified_by_id?: { label: string; value: string }; // Changed from verified_by_name
   photo_upload?: File | string | null;
   remark?: string;
 }
@@ -75,6 +76,7 @@ interface CompanyBankDetailItemFE {
   bank_account_number?: string;
   bank_name?: string;
   ifsc_code?: string;
+  swift_code?: string; // New
   verification_photo?: File | string | null;
   type?: { label: string; value: string };
 }
@@ -96,9 +98,9 @@ interface BranchItemFE {
   city?: string;
   zip_code?: string;
   gst_number?: string;
-  contact_person?: string; // New
-  office_email?: string; // New
-  office_phone?: string; // New
+  contact_person?: string;
+  office_email?: string;
+  office_phone?: string;
 }
 
 interface BillingDocItemFE {
@@ -107,12 +109,11 @@ interface BillingDocItemFE {
   document?: File | string | null;
 }
 
-interface ReferenceItemFE {
-  id?: string;
-  person_name?: string;
-  company_id?: { label: string; value: string };
-  number?: string;
-  remark?: string;
+// New type for Enable Billing Docs
+interface EnabledBillingDocItemFE {
+    id?: string;
+    document_name?: string;
+    document?: File | string | null;
 }
 
 export interface CompanyFormSchema {
@@ -185,16 +186,19 @@ export interface CompanyFormSchema {
   primary_account_number?: string;
   primary_bank_name?: string;
   primary_ifsc_code?: string;
+  primary_swift_code?: string; // New
   primary_bank_verification_photo?: File | string | null;
   secondary_account_number?: string;
   secondary_bank_name?: string;
   secondary_ifsc_code?: string;
+  secondary_swift_code?: string; // New
   secondary_bank_verification_photo?: File | string | null;
   company_bank_details?: CompanyBankDetailItemFE[];
 
   USER_ACCESS?: boolean;
-  BILLING_FIELD?: boolean;
+  // BILLING_FIELD?: boolean; // Removed
   billing_documents?: BillingDocItemFE[];
+  enabled_billing_docs?: EnabledBillingDocItemFE[]; // New
 
   company_members?: CompanyMemberItemFE[];
   company_teams?: CompanyTeamItemFE[];
@@ -243,7 +247,7 @@ interface ApiSingleCompanyItem {
   support_email?: string | null;
   notification_email?: string | null;
   kyc_verified?: boolean | string;
-  enable_billing?: boolean | string;
+  // enable_billing?: boolean | string; // Removed from direct mapping
   company_certificate?: Array<{ certificate_id: string; certificate_name: string; upload_certificate: string | null; upload_certificate_path?: string; }>;
   office_info?: Array<{ office_type: string; office_name: string; address: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; contact_person?: string; office_email?: string; office_phone?: string; }>;
   declaration_206AB_url?: string | null;
@@ -279,16 +283,19 @@ interface ApiSingleCompanyItem {
   primary_account_number?: string | null;
   primary_bank_name?: string | null;
   primary_ifsc_code?: string | null;
+  primary_swift_code?: string | null; // New
   primary_bank_verification_photo?: string | null;
   secondary_account_number?: string | null;
   secondary_bank_name?: string | null;
   secondary_ifsc_code?: string | null;
+  secondary_swift_code?: string | null; // New
   secondary_bank_verification_photo?: string | null;
-  company_bank_details?: Array<{ bank_account_number: string; bank_name: string; ifsc_code: string; type: string; verification_photo: string | null; }>;
+  company_bank_details?: Array<{ bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; }>; // Added swift_code
   billing_documents?: Array<{ document_name: string; document: string | null; }>;
+  enabled_billing_docs?: Array<{ document_name: string; document: string | null; }>; // New
   company_member_management?: Array<{ member_id: string; designation: string; person_name: string; number: string; }>;
   company_team_members?: Array<{ team_name: string; designation: string; person_name: string; number: string; }>;
-  company_spot_verification?: Array<{ verified: boolean | string; verified_by_name: string; remark: string | null; photo_upload: string | null; photo_upload_path?: string; }>;
+  company_spot_verification?: Array<{ verified_by_id?: string; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; photo_upload_path?: string; }>; // Added verified_by_id
   company_references?: Array<{ person_name: string; company_id: string; number: string; remark: string | null; }>;
 }
 
@@ -314,8 +321,22 @@ const transformApiToFormSchema = (
         return options.find(opt => String(opt.value) === String(value));
     };
 
+    const findOptionByLabel = (options: Array<{ value: string; label: string }>, label?: string | null) => {
+        if (!label) return undefined;
+        // This is a bit brittle, but required if API only gives name.
+        return options.find(opt => opt.label.toLowerCase().includes(label.toLowerCase()));
+    };
+
     const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
     const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
+    
+    // Assuming you have a doc type list for this new feature
+    const enabledBillDocTypes = [
+        { label: 'Proforma Invoice', value: 'Proforma Invoice'},
+        { label: 'Commercial Invoice', value: 'Commercial Invoice'},
+        { label: 'Packing List', value: 'Packing List'},
+        { label: 'Certificate of Origin', value: 'Certificate of Origin'},
+    ];
     
     return {
         id: apiData.id,
@@ -402,24 +423,30 @@ const transformApiToFormSchema = (
         primary_account_number: apiData.primary_account_number || '',
         primary_bank_name: apiData.primary_bank_name || null,
         primary_ifsc_code: apiData.primary_ifsc_code || '',
+        primary_swift_code: apiData.primary_swift_code || '',
         primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
         secondary_account_number: apiData.secondary_account_number || '',
         secondary_bank_name: apiData.secondary_bank_name || null,
         secondary_ifsc_code: apiData.secondary_ifsc_code || '',
+        secondary_swift_code: apiData.secondary_swift_code || '',
         secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
         company_bank_details: apiData.company_bank_details?.map(bank => ({
             bank_account_number: bank.bank_account_number || '',
             bank_name: bank.bank_name || undefined,
             ifsc_code: bank.ifsc_code || '',
+            swift_code: bank.swift_code || '',
             type: bank.type ? { label: bank.type, value: bank.type } : undefined,
             verification_photo: bank.verification_photo || null,
         })) || [],
     
         USER_ACCESS: stringToBoolean(apiData.kyc_verified),
-        BILLING_FIELD: stringToBoolean(apiData.enable_billing),
         billing_documents: apiData.billing_documents?.map(doc => ({
             document_name: doc.document_name || '',
             document: doc.document || null,
+        })) || [],
+        enabled_billing_docs: apiData.enabled_billing_docs?.map(doc => ({
+            document_name: doc.document_name,
+            document: doc.document || null
         })) || [],
     
         company_members: apiData.company_member_management?.map(m => ({
@@ -437,7 +464,7 @@ const transformApiToFormSchema = (
     
         company_spot_verification: apiData.company_spot_verification?.map(item => ({
             verified: stringToBoolean(item.verified),
-            verified_by_name: item.verified_by_name || '',
+            verified_by_id: findOptionByValue(allMembers, item.verified_by_id) || findOptionByLabel(allMembers, item.verified_by_name),
             photo_upload: item.photo_upload_path || item.photo_upload || null,
             remark: item.remark || '',
         })) || [],
@@ -490,12 +517,13 @@ const preparePayloadForApi = (
         "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
         "company_address", "city", "state", "zip_code", "country_id", "continent_id", "gst_number", "pan_number", "trn_number", "tan_number",
         "establishment_year", "no_of_employees", "company_website", "primary_business_type", "status", "support_email", "notification_email",
-        "primary_account_number", "primary_bank_name", "primary_ifsc_code", "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code"
+        "primary_account_number", "primary_bank_name", "primary_ifsc_code", "primary_swift_code", 
+        "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code"
     ];
     simpleFields.forEach(field => appendField(field, data[field]));
   
     appendField("kyc_verified", data.USER_ACCESS);
-    appendField("enable_billing", data.BILLING_FIELD);
+    // Removed BILLING_FIELD
   
     appendFileIfExists("company_logo", data.company_logo);
     appendFileIfExists("primary_bank_verification_photo", data.primary_bank_verification_photo);
@@ -547,6 +575,7 @@ const preparePayloadForApi = (
       apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
       apiPayload.append(`company_bank_details[${index}][bank_name]`,bank.bank_name || '');
       apiPayload.append(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code || '');
+      apiPayload.append(`company_bank_details[${index}][swift_code]`, bank.swift_code || ''); // New
       apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
       appendFileIfExists(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
     });
@@ -555,6 +584,12 @@ const preparePayloadForApi = (
     data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
       apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name || "");
       appendFileIfExists(`billing_documents[${index}][document]`, doc.document);
+    });
+
+    // Enabled Billing Documents (New)
+    data.enabled_billing_docs?.forEach((doc: EnabledBillingDocItemFE, index: number) => {
+        appendField(`enabled_billing_docs[${index}][document_name]`, doc.document_name);
+        appendFileIfExists(`enabled_billing_docs[${index}][document]`, doc.document);
     });
   
     // Member Management
@@ -575,7 +610,7 @@ const preparePayloadForApi = (
     // Spot Verifications
     data.company_spot_verification?.forEach((item: SpotVerificationItemFE, index: number) => {
       apiPayload.append(`company_spot_verification[${index}][verified]`, item.verified ? "1" : "0");
-      apiPayload.append(`company_spot_verification[${index}][verified_by_name]`, item.verified_by_name || "");
+      appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id); // Changed
       apiPayload.append(`company_spot_verification[${index}][remark]`, item.remark || "");
       appendFileIfExists(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
     });
@@ -657,7 +692,7 @@ const CompanyDetailsSection = ({
     .filter((c: any) => c.phone_code)
     .map((c: any) => ({
         value: `${c.phone_code}`,
-        label: `${c.phone_code} (${c.name} - ${c.iso_code})`,
+        label: `${c.phone_code}`,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
@@ -683,11 +718,10 @@ const CompanyDetailsSection = ({
     { value: "Others", label: "Others" },
   ];
   const statusOptions = [
-    { value: "Verified", label: "Verified" },
-    { value: "Non Verified", label: "Non Verified" },
     { value: "Active", label: "Active" },
+    { value: "Disabled", label: "Disabled" },
+    { value: "Blocked", label: "Blocked" },
     { value: "Inactive", label: "Inactive" },
-    { value: "Pending", label: "Pending" },
   ];
   const officeTypeOptions = [
     { label: "Head Office", value: "Head Office" },
@@ -724,22 +758,22 @@ const CompanyDetailsSection = ({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 mt-4">
-        <FormItem label="Continent" invalid={!!errors.continent_id} errorMessage={errors.continent_id?.message as string}>
-          <Controller name="continent_id" control={control} render={({ field }) => (<Select placeholder="Select Continent" options={continentOptions} {...field} />)} />
-        </FormItem>
         <FormItem label={<div>Country<span className="text-red-500"> * </span></div>} invalid={!!errors.country_id} errorMessage={errors.country_id?.message as string}>
           <Controller name="country_id" control={control} render={({ field }) => (<Select placeholder="Select Country" options={countryOptions} {...field} />)} />
         </FormItem>
-        <FormItem label={<div>State<span className="text-red-500"> * </span></div>} invalid={!!errors.state} errorMessage={errors.state?.message as string}>
-          <Controller name="state" control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
+        <FormItem label="Continent" invalid={!!errors.continent_id} errorMessage={errors.continent_id?.message as string}>
+          <Controller name="continent_id" control={control} render={({ field }) => (<Select placeholder="Select Continent" options={continentOptions} {...field} />)} />
         </FormItem>
-        <FormItem label={<div>City<span className="text-red-500"> * </span></div>} invalid={!!errors.city} errorMessage={errors.city?.message as string}>
+        <FormItem label={<div>City</div>} invalid={!!errors.city} errorMessage={errors.city?.message as string}>
           <Controller name="city" control={control} render={({ field }) => (<Input placeholder="Enter city" {...field} />)} />
         </FormItem>
-        <FormItem label={<div>ZIP / Postal Code<span className="text-red-500"> * </span></div>} invalid={!!errors.zip_code} errorMessage={errors.zip_code?.message as string}>
-          <Controller name="zip_code" control={control} render={({ field }) => <Input placeholder="ZIP Code" {...field} />} />
+        <FormItem label={<div>State</div>} invalid={!!errors.state} errorMessage={errors.state?.message as string}>
+          <Controller name="state" control={control} render={({ field }) => (<Input placeholder="Enter state" {...field} />)} />
         </FormItem>
-        <FormItem label={<div>Company Address<span className="text-red-500"> * </span></div>} invalid={!!errors.company_address} errorMessage={errors.company_address?.message as string} className="md:col-span-5">
+        <FormItem label={<div>Postal Code</div>} invalid={!!errors.zip_code} errorMessage={errors.zip_code?.message as string}>
+          <Controller name="zip_code" control={control} render={({ field }) => <Input placeholder="ZIP / Postal Code" {...field} />} />
+        </FormItem>
+        <FormItem label={<div>Company Address</div>} invalid={!!errors.company_address} errorMessage={errors.company_address?.message as string} className="md:col-span-5">
           <Controller name="company_address" control={control} render={({ field }) => (<Input placeholder="Company Address" {...field} />)} />
         </FormItem>
       </div>
@@ -747,20 +781,14 @@ const CompanyDetailsSection = ({
       <hr className="my-6" />
       <h4 className="mb-4">Contact Information</h4>
       <div className="sm:grid md:grid-cols-12 gap-3">
-        <FormItem className="sm:col-span-6 lg:col-span-3" label={<div>Primary Email ID<span className="text-red-500"> * </span></div>} invalid={!!errors.primary_email_id} errorMessage={errors.primary_email_id?.message as string}>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Email ID</div>} invalid={!!errors.primary_email_id} errorMessage={errors.primary_email_id?.message as string}>
           <Controller name="primary_email_id" control={control} render={({ field }) => (<Input type="email" placeholder="Primary Email" {...field} />)} />
         </FormItem>
-        <FormItem className="sm:col-span-6 lg:col-span-3" label="Alternate E-mail ID" invalid={!!errors.alternate_email_id} errorMessage={errors.alternate_email_id?.message as string}>
+        <FormItem className="sm:col-span-6 lg:col-span-8" label="Alternate E-mail ID" invalid={!!errors.alternate_email_id} errorMessage={errors.alternate_email_id?.message as string}>
           <Controller name="alternate_email_id" control={control} render={({ field }) => (<Input type="email" placeholder="Alternate Email" {...field} />)} />
         </FormItem>
-        <FormItem className="sm:col-span-6 lg:col-span-3" label="Support Email" invalid={!!errors.support_email} errorMessage={errors.support_email?.message as string}>
-          <Controller name="support_email" control={control} render={({ field }) => (<Input type="email" placeholder="support@example.com" {...field} />)} />
-        </FormItem>
-        <FormItem label="Notification Email" className="sm:col-span-6 lg:col-span-3">
-          <Controller name="notification_email" control={control} render={({ field }) => (<Input type="email" placeholder="notifications@example.com" {...field} />)} />
-        </FormItem>
         
-        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Contact Number<span className="text-red-500"> * </span></div>} invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code} errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Contact Number</div>} invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code} errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}>
           <div className="flex items-start gap-2">
             <div className="w-2/5"> <Controller name="primary_contact_number_code" control={control} render={({ field }) => (<Select options={countryCodeOptions} placeholder="Code" {...field} />)} /> </div>
             <div className="w-3/5"> <Controller name="primary_contact_number" control={control} render={({ field }) => (<Input placeholder="Primary Contact" {...field} />)} /> </div>
@@ -772,12 +800,17 @@ const CompanyDetailsSection = ({
             <div className="w-3/5"> <Controller name="alternate_contact_number" control={control} render={({ field }) => (<Input placeholder="Alternate Contact" {...field} />)} /> </div>
           </div>
         </FormItem>
-        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>General Contact Number<span className="text-red-500"> * </span></div>} invalid={!!errors.general_contact_number || !!errors.general_contact_number_code} errorMessage={(errors.general_contact_number?.message || (errors.general_contact_number_code as any)?.message) as string}>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Landline</div>} invalid={!!errors.general_contact_number || !!errors.general_contact_number_code} errorMessage={(errors.general_contact_number?.message || (errors.general_contact_number_code as any)?.message) as string}>
           <div className="flex items-start gap-2">
-            <div className="w-2/5"> <Controller name="general_contact_number_code" control={control} render={({ field }) => (<Select options={countryCodeOptions} placeholder="Code" {...field} />)} /> </div>
-            <div className="w-3/5"> <Controller name="general_contact_number" control={control} render={({ field }) => (<Input placeholder="Company Mobile" {...field} />)} /> </div>
+            <div className="w-3/5"> <Controller name="general_contact_number" control={control} render={({ field }) => (<Input placeholder="Company Landline" {...field} />)} /> </div>
           </div>
         </FormItem>
+         {/* <FormItem className="sm:col-span-6 lg:col-span-6" label="Support Email" invalid={!!errors.support_email} errorMessage={errors.support_email?.message as string}>
+          <Controller name="support_email" control={control} render={({ field }) => (<Input type="email" placeholder="support@example.com" {...field} />)} />
+        </FormItem> */}
+        {/* <FormItem label="Notification Email" className="sm:col-span-6 lg:col-span-6">
+          <Controller name="notification_email" control={control} render={({ field }) => (<Input type="email" placeholder="notifications@example.com" {...field} />)} />
+        </FormItem> */}
       </div>
 
       <hr className="my-6" />
@@ -789,10 +822,10 @@ const CompanyDetailsSection = ({
         <FormItem label={<div>PAN Number<span className="text-red-500"> * </span></div>} invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}>
           <Controller name="pan_number" control={control} render={({ field }) => (<Input placeholder="PAN Number" {...field} />)} />
         </FormItem>
-        <FormItem label="TRN Number" invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
+        <FormItem label={<div>TRN Number</div>} invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
           <Controller name="trn_number" control={control} render={({ field }) => (<Input placeholder="TRN Number" {...field} />)} />
         </FormItem>
-        <FormItem label="TAN Number" invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}>
+        <FormItem label={<div>TAN Number</div>} invalid={!!errors.tan_number} errorMessage={errors.tan_number?.message as string}>
           <Controller name="tan_number" control={control} render={({ field }) => (<Input placeholder="TAN Number" {...field} />)} />
         </FormItem>
       </div>
@@ -800,14 +833,11 @@ const CompanyDetailsSection = ({
       <hr className="my-6" />
       <h4 className="mb-4">Company Information</h4>
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <FormItem label="Primary Business Type" invalid={!!errors.primary_business_type} errorMessage={errors.primary_business_type?.message as string}>
-          <Controller name="primary_business_type" control={control} render={({ field }) => (<Select placeholder="Select Business Type" options={primaryBusinessTypeOptions} {...field} />)} />
-        </FormItem>
-        <FormItem label="Establishment Year" invalid={!!errors.establishment_year} errorMessage={errors.establishment_year?.message as string}>
+         <FormItem label="Establishment Year" invalid={!!errors.establishment_year} errorMessage={errors.establishment_year?.message as string}>
           <Controller name="establishment_year" control={control} render={({ field }) => (<Input placeholder="YYYY" maxLength={4} {...field} />)} />
         </FormItem>
-        <FormItem label="Company Website" invalid={!!errors.company_website} errorMessage={errors.company_website?.message as string}>
-          <Controller name="company_website" control={control} render={({ field }) => (<Input type="url" placeholder="https://example.com" {...field} />)} />
+         <FormItem label="No. of Employees" invalid={!!errors.no_of_employees} errorMessage={errors.no_of_employees?.message as string}>
+          <Controller name="no_of_employees" control={control} render={({ field }) => (<NumericInput placeholder="e.g., 100" {...field} onChange={(value) => field.onChange(value)} />)} />
         </FormItem>
         <FormItem label="Company Logo/Brochure" invalid={!!errors.company_logo} errorMessage={errors.company_logo?.message as string}>
           <Controller name="company_logo" control={control} render={({ field: { onChange, ref, value, ...restField } }) => (<Input type="file" ref={ref} onChange={(e) => onChange(e.target.files?.[0])} {...restField} />)} />
@@ -819,9 +849,12 @@ const CompanyDetailsSection = ({
             </div>
           )}
         </FormItem>
-        <FormItem label="No. of Employees" invalid={!!errors.no_of_employees} errorMessage={errors.no_of_employees?.message as string}>
-          <Controller name="no_of_employees" control={control} render={({ field }) => (<NumericInput placeholder="e.g., 100" {...field} onChange={(value) => field.onChange(value)} />)} />
+        <FormItem label="Company Website" invalid={!!errors.company_website} errorMessage={errors.company_website?.message as string}>
+          <Controller name="company_website" control={control} render={({ field }) => (<Input type="url" placeholder="https://example.com" {...field} />)} />
         </FormItem>
+        {/* <FormItem label="Primary Business Type" invalid={!!errors.primary_business_type} errorMessage={errors.primary_business_type?.message as string}>
+          <Controller name="primary_business_type" control={control} render={({ field }) => (<Select placeholder="Select Business Type" options={primaryBusinessTypeOptions} {...field} />)} />
+        </FormItem> */}
       </div>
 
       <hr className="my-6" />
@@ -916,13 +949,13 @@ const CompanyDetailsSection = ({
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const kycDocs = [
-    { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const },
-    { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const },
-    { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const },
+    { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: true },
+    { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const, required: true },
+    { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const, required: true },
     { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_remark_enabled" as const },
-    { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const },
+    { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: true },
     { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_remark_enabled" as const },
-    { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const },
+    { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: true },
     { label: "194Q Declaration", name: "ABCQ_file" as const, remarkName: "ABCQ_remark" as const, enabledName: "ABCQ_remark_enabled" as const },
     { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
   ];
@@ -938,10 +971,10 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
           
           return (
            <div key={doc.name}>
-              <label className="flex items-center gap-2 mb-1">
-                <Controller name={doc.enabledName} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
-                {doc.label} (Verified)
-              </label>
+                <label className="flex items-center gap-2 mb-1">
+                    <Controller name={doc.enabledName} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
+                    {doc.label} {doc.required && <span className="text-red-500">*</span>}
+                </label>
               <FormItem invalid={!!(errors as any)[doc.name]} errorMessage={(errors as any)[doc.name]?.message as string} >
                 <Controller name={doc.name} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
               </FormItem>
@@ -986,7 +1019,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
   return (
     <Card id="bankDetails">
       <h4 className="mb-6">Bank Details (Primary)</h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
         <FormItem label="Primary Account Number" invalid={!!errors.primary_account_number} errorMessage={errors.primary_account_number?.message as string}>
           <Controller name="primary_account_number" control={control} render={({ field }) => (<Input placeholder="Primary Account No." {...field} />)} />
         </FormItem>
@@ -996,7 +1029,10 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
         <FormItem label="Primary IFSC Code" invalid={!!errors.primary_ifsc_code} errorMessage={errors.primary_ifsc_code?.message as string}>
           <Controller name="primary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Primary IFSC" {...field} />)} />
         </FormItem>
-        <FormItem label="Primary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
+         <FormItem label="Primary Swift Code" invalid={!!errors.primary_swift_code} errorMessage={errors.primary_swift_code?.message as string}>
+          <Controller name="primary_swift_code" control={control} render={({ field }) => (<Input placeholder="Primary Swift Code" {...field} />)} />
+        </FormItem>
+        <FormItem label="Primary Bank Verification Photo" className="md:col-span-4" invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
           <Controller name="primary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest}/>)} />
           {primaryBankPhotoValue && (
             <div className="mt-1">
@@ -1010,7 +1046,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 
       <hr className="my-3" />
       <h4 className="mb-6">Bank Details (Secondary)</h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
         <FormItem label="Secondary Account Number" invalid={!!errors.secondary_account_number} errorMessage={errors.secondary_account_number?.message as string}>
           <Controller name="secondary_account_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
         </FormItem>
@@ -1020,7 +1056,10 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
         <FormItem label="Secondary IFSC Code" invalid={!!errors.secondary_ifsc_code} errorMessage={errors.secondary_ifsc_code?.message as string}>
           <Controller name="secondary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Secondary IFSC" {...field} />)} />
         </FormItem>
-        <FormItem label="Secondary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
+         <FormItem label="Secondary Swift Code" invalid={!!errors.secondary_swift_code} errorMessage={errors.secondary_swift_code?.message as string}>
+          <Controller name="secondary_swift_code" control={control} render={({ field }) => (<Input placeholder="Secondary Swift Code" {...field} />)} />
+        </FormItem>
+        <FormItem label="Secondary Bank Verification Photo" className="md:col-span-4" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
           <Controller name="secondary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
            {secondaryBankPhotoValue && (
              <div className="mt-1">
@@ -1035,7 +1074,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
       <hr className="my-6" />
       <div className="flex justify-between items-center mb-4">
         <h4 className="mb-0">Additional Bank Details</h4>
-        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ bank_account_number: "", bank_name: undefined, ifsc_code: "", verification_photo: null, type: undefined })}> Add More Banks </Button>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ bank_account_number: "", bank_name: undefined, ifsc_code: "", swift_code: "", verification_photo: null, type: undefined })}> Add More Banks </Button>
       </div>
       {fields.map((item, index) => {
         const bankPhotoValue = watch(`company_bank_details.${index}.verification_photo`);
@@ -1055,7 +1094,10 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               <FormItem label={`IFSC Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.ifsc_code} errorMessage={errors.company_bank_details?.[index]?.ifsc_code?.message as string}>
                 <Controller name={`company_bank_details.${index}.ifsc_code`} control={control} render={({ field }) => (<Input placeholder="IFSC" {...field} />)} />
               </FormItem>
-              <FormItem label={`Bank Verification Photo ${index + 1}`} className="md:col-span-2">
+               <FormItem label={`Swift Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.swift_code} errorMessage={errors.company_bank_details?.[index]?.swift_code?.message as string}>
+                <Controller name={`company_bank_details.${index}.swift_code`} control={control} render={({ field }) => (<Input placeholder="Swift Code" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Bank Verification Photo ${index + 1}`} className="md:col-span-1">
                 <Controller name={`company_bank_details.${index}.verification_photo`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest}/>)} />
                  {bankPhotoValue && (
                     <div className="mt-1">
@@ -1077,12 +1119,31 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const { fields, append, remove } = useFieldArray({ control, name: "company_spot_verification" });
+  const { MemberData, EmployeesList } = useSelector(masterSelector);
+  const employeeOptions = useMemo(() => {
+    const data = EmployeesList?.data || EmployeesList || [];
+    return Array.isArray(data.data)
+      ? data.data.map((m: any) => ({
+          value: String(m.id),
+          label: `${m.name || 'N/A'} (ID:${m.id})`,
+        }))
+      : [];
+  }, [EmployeesList]);
+  const memberOptions = useMemo(() => {
+    const data = MemberData?.data || MemberData || [];
+    return Array.isArray(data)
+      ? data.map((m: any) => ({
+          value: String(m.id),
+          label: `${m.name || 'N/A'} (ID:${m.id})`,
+        }))
+      : [];
+  }, [MemberData]);
 
   return (
     <Card id="spotVerification">
       <div className="flex justify-between items-center mb-4">
         <h4 className="mb-0">Spot Verifications</h4>
-        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ verified: false, verified_by_name: "", photo_upload: null, remark: "" })}> Add Verification Entry </Button>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ verified: false, verified_by_id: undefined, photo_upload: null, remark: "" })}> Add Verification Entry </Button>
       </div>
       {fields.map((item, index) => {
         const photoValue = watch(`company_spot_verification.${index}.photo_upload`);
@@ -1092,8 +1153,8 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 items-start">
               <div className="flex items-center gap-4">
                 <Controller name={`company_spot_verification.${index}.verified`} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
-                <FormItem label={`Verified By (Name) ${index+1}`} className="flex-grow" invalid={!!errors.company_spot_verification?.[index]?.verified_by_name} errorMessage={errors.company_spot_verification?.[index]?.verified_by_name?.message as string}>
-                  <Controller name={`company_spot_verification.${index}.verified_by_name`} control={control} render={({ field }) => (<Input placeholder="Verifier's Name" {...field} />)} />
+                <FormItem label={`Verified By ${index+1}`} className="flex-grow" invalid={!!errors.company_spot_verification?.[index]?.verified_by_id} errorMessage={(errors.company_spot_verification?.[index]?.verified_by_id as any)?.message as string}>
+                  <Controller name={`company_spot_verification.${index}.verified_by_id`} control={control} render={({ field }) => (<Select placeholder="Select Employee" options={employeeOptions} {...field} />)} />
                 </FormItem>
               </div>
               <FormItem label={`Upload Document ${index+1}`}>
@@ -1169,15 +1230,20 @@ const ReferenceSection = ({ control, errors, formMethods }: FormSectionBaseProps
 const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
-  
+  const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs"});
+
+  const enabledBillDocTypes = [
+    { label: 'Proforma Invoice', value: 'Proforma Invoice'},
+    { label: 'Commercial Invoice', value: 'Commercial Invoice'},
+    { label: 'Packing List', value: 'Packing List'},
+    { label: 'Certificate of Origin', value: 'Certificate of Origin'},
+  ];
+
   return (
     <Card id="accessibility">
       <h4 className="mb-6">Accessibility & Configuration</h4>
       <div className="grid grid-cols-1 gap-y-6">
         <div className="flex items-center gap-x-8">
-          <FormItem label={<div>Enable Billing</div>} invalid={!!errors.BILLING_FIELD} errorMessage={(errors.BILLING_FIELD as any)?.message as string}>
-            <Controller name="BILLING_FIELD" control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange}> Enabled </Checkbox>)} />
-          </FormItem>
           <FormItem label={<div>User Access</div>} invalid={!!errors.USER_ACCESS} errorMessage={(errors.USER_ACCESS as any)?.message as string}>
             <Controller name="USER_ACCESS" control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange}> Enabled </Checkbox>)} />
           </FormItem>
@@ -1185,15 +1251,20 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
         <hr />
         <div className="flex justify-between items-center">
           <h5 className="mb-0">Billing Documents</h5>
-          <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: "", document: null })}> Add Billing Doc </Button>
+          <div className="flex gap-2">
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: "", document: null })}> Add Billing Doc </Button>
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_name: undefined, document: null })}> Add Enable Billing Documents </Button>
+          </div>
         </div>
+        
+        {/* Old Billing Docs */}
         {fields.map((item, index) => {
           const docFileValue = watch(`billing_documents.${index}.document`);
           return (
             <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
                 <FormItem label={`Doc Name ${index+1}`} className="md:col-span-4" invalid={!!errors.billing_documents?.[index]?.document_name} errorMessage={errors.billing_documents?.[index]?.document_name?.message as string}>
-                  <Controller name={`billing_documents.${index}.document_name`} control={control} render={({ field }) => (<Input placeholder="e.g., Invoice Template" {...field} />)} />
+                  <Controller name={`billing_documents.${index}.document_name`} control={control} render={({ field }) => (<Input placeholder="Document Name" {...field} />)} />
                 </FormItem>
                 <FormItem label={`Upload Doc ${index+1}`} className="md:col-span-4">
                   <Controller name={`billing_documents.${index}.document`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest}/>)} />
@@ -1209,6 +1280,32 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
               </div>
             </Card>
           );
+        })}
+
+        {/* New Enabled Billing Docs */}
+        {enabledFields.length > 0 && <h6 className="mt-4 -mb-2">Enabled Billing Documents</h6>}
+        {enabledFields.map((item, index) => {
+            const docFileValue = watch(`enabled_billing_docs.${index}.document`);
+            return (
+                 <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
+                    <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
+                        <FormItem label={`Document Type ${index+1}`} className="md:col-span-4" invalid={!!errors.enabled_billing_docs?.[index]?.document_name} errorMessage={(errors.enabled_billing_docs?.[index]?.document_name as any)?.message as string}>
+                            <Controller name={`enabled_billing_docs.${index}.document_name`} control={control} render={({field}) => <Input placeholder="Document Name" {...field} />} />
+                        </FormItem>
+                        <FormItem label={`Upload File ${index+1}`} className="md:col-span-4">
+                            <Controller name={`enabled_billing_docs.${index}.document`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest}/>)} />
+                            {docFileValue && (
+                                <div className="mt-1">
+                                    {docFileValue instanceof File ? (<span className="text-sm text-gray-500">{docFileValue.name}</span>)
+                                    : typeof docFileValue === 'string' ? (<a href={`${docFileValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
+                                    : null}
+                                </div>
+                            )}
+                        </FormItem>
+                        <Button type="button" shape="circle" size="sm" className="mt-2 md:mt-0 md:self-center" icon={<TbTrash />} onClick={() => removeEnabled(index)} variant="plain" />
+                    </div>
+                </Card>
+            )
         })}
       </div>
     </Card>
@@ -1340,90 +1437,94 @@ type CompanyFormComponentProps = {
 const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
     const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
-  
+
+    const fileValidation = z.any().refine(val => val !== null && val !== undefined && val !== '', { message: "File is required." });
+
     const companySchema = z.object({
         id: z.union([z.string(), z.number()]).optional(),
         company_name: z.string().trim().min(1, "Company Name is required."),
-        primary_contact_number: z.string().trim().min(1, "Primary Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
-        primary_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
-        general_contact_number: z.string().trim().min(1, "General Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
-        general_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
+        // primary_contact_number: z.string().trim().min(1, "Primary Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
+        // primary_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
+        // general_contact_number: z.string().trim().min(1, "Landline number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
+        // general_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
         alternate_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
         alternate_contact_number_code: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-        primary_email_id: z.string().trim().min(1, "Primary Email is required.").email("Invalid email format."),
+        // primary_email_id: z.string().trim().min(1, "Primary Email is required.").email("Invalid email format."),
         alternate_email_id: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
         ownership_type: z.object({ label: z.string(), value: z.string().min(1, "Ownership Type is required.") }, { required_error: "Ownership Type is required." }),
         owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
-        company_address: z.string().trim().min(1, "Company Address is required."),
-        city: z.string().trim().min(1, "City is required."),
-        state: z.string().trim().min(1, "State is required."),
-        zip_code: z.string().trim().min(1, "ZIP/Postal Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
+        // company_address: z.string().trim().min(1, "Company Address is required."),
+        city: z.string().trim(),
+        // state: z.string().trim().min(1, "State is required."),
+        // zip_code: z.string().trim().min(1, "ZIP/Postal Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
         country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
         continent_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
         gst_number: z.string().trim().min(1, "GST Number is required.").regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format."),
         pan_number: z.string().trim().min(1, "PAN Number is required.").regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format."),
-        trn_number: z.string().trim().optional().or(z.literal("")).nullable(),
-        tan_number: z.string().trim().optional().or(z.literal("")).nullable(),
+        // trn_number: z.string().trim().min(1, "TRN Number is required."),
+        // tan_number: z.string().trim().min(1, "TAN Number is required."),
         establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
         no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d+$/).optional().nullable(), z.literal("")]).optional().nullable(),
         company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
         company_logo: z.any().optional().nullable(),
         primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
         status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
-        support_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
+        // support_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
         notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     
         company_certificate: z.array(z.object({
-            certificate_id: z.number().min(1, "Certificate ID is required."),
-            certificate_name: z.string().trim().min(1, "Certificate Name is required."),
+            certificate_id: z.any(),
+            certificate_name: z.string().trim(),
             upload_certificate: z.any().optional().nullable(),
         })).optional(),
         office_info: z.array(z.object({
-            office_type: z.object({ label: z.string(), value: z.string().min(1, "Office type is required.") }, { required_error: "Office type is required." }),
-            office_name: z.string().trim().min(1, "Office name is required."),
-            address: z.string().trim().min(1, "Address is required."),
-            country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
-            state: z.string().trim().min(1, "State is required."),
-            city: z.string().trim().min(1, "City is required."),
-            zip_code: z.string().trim().min(1, "ZIP Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
+            office_type: z.object({ label: z.string(), value: z.string() }, { required_error: "Office type is required." }),
+            office_name: z.string().trim(),
+            address: z.string().trim(),
+            country_id: z.object({ label: z.string(), value: z.string()}, { required_error: "Country is required." }),
+            state: z.string().trim(),
+            city: z.string().trim(),
+            zip_code: z.string().trim().regex(/^\d{3,10}$/, "Invalid ZIP code format."),
             gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
-            contact_person: z.string().trim().nullable(),
-            office_email: z.string().trim().email("Invalid email format.").nullable(),
-            office_phone: z.number().max(10, "Invalid phone number.").nullable().or(z.string().max(10, "Invalid phone number.").nullable()).nullable(),
+            contact_person: z.string().trim().optional().nullable(),
+            office_email: z.string().trim().email("Invalid email format.").optional().nullable(),
+            office_phone: z.string().optional().nullable(),
         })).optional(),
         
-        declaration_206ab: z.any().optional().nullable(), declaration_206ab_remark: z.string().optional().or(z.literal("")).nullable(), declaration_206ab_remark_enabled: z.boolean().optional(),
-        ABCQ_file: z.any().optional().nullable(), ABCQ_remark: z.string().optional().or(z.literal("")).nullable(), ABCQ_remark_enabled: z.boolean().optional(),
-        office_photo_file: z.any().optional().nullable(), office_photo_remark: z.string().optional().or(z.literal("")).nullable(), office_photo_remark_enabled: z.boolean().optional(),
-        gst_certificate_file: z.any().optional().nullable(), gst_certificate_remark: z.string().optional().or(z.literal("")).nullable(), gst_certificate_remark_enabled: z.boolean().optional(),
-        authority_letter_file: z.any().optional().nullable(), authority_letter_remark: z.string().optional().or(z.literal("")).nullable(), authority_letter_remark_enabled: z.boolean().optional(),
-        visiting_card_file: z.any().optional().nullable(), visiting_card_remark: z.string().optional().or(z.literal("")).nullable(), visiting_card_remark_enabled: z.boolean().optional(),
-        cancel_cheque_file: z.any().optional().nullable(), cancel_cheque_remark: z.string().optional().or(z.literal("")).nullable(), cancel_cheque_remark_enabled: z.boolean().optional(),
-        aadhar_card_file: z.any().optional().nullable(), aadhar_card_remark: z.string().optional().or(z.literal("")).nullable(), aadhar_card_remark_enabled: z.boolean().optional(),
-        pan_card_file: z.any().optional().nullable(), pan_card_remark: z.string().optional().or(z.literal("")).nullable(), pan_card_remark_enabled: z.boolean().optional(),
-        other_document_file: z.any().optional().nullable(), other_document_remark: z.string().optional().or(z.literal("")).nullable(), other_document_remark_enabled: z.boolean().optional(),
-    
+        // KYC Docs
+        aadhar_card_file: fileValidation,
+        pan_card_file: fileValidation,
+        gst_certificate_file: fileValidation,
+        cancel_cheque_file: fileValidation,
+        office_photo_file: fileValidation,
+        
         primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
         primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
         primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
+        primary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
         primary_bank_verification_photo: z.any().optional().nullable(),
         secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
         secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
         secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
+        secondary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
         secondary_bank_verification_photo: z.any().optional().nullable(),
         company_bank_details: z.array(z.object({
             bank_account_number: z.string().trim().min(1,"Account number required if bank entry added"),
             bank_name: z.string().min(1,"Bank name required"),
             ifsc_code: z.string().trim().min(1,"IFSC code required"),
+            swift_code: z.string().trim().optional().nullable(),
             verification_photo: z.any().optional().nullable(),
             type: z.object({ label: z.string(), value: z.string().min(1, "Bank type required") }, {required_error: "Bank type is required"}),
         })).optional(),
     
         USER_ACCESS: z.boolean({required_error: "User Access selection is required"}),
-        BILLING_FIELD: z.boolean({required_error: "Billing Field selection is required"}),
         billing_documents: z.array(z.object({
             document_name: z.string().trim().min(1, "Document name is required."),
             document: z.any().optional().nullable(),
+        })).optional(),
+        enabled_billing_docs: z.array(z.object({
+            document_name: z.string().trim().min(1, "Document type is required."),
+            document: z.any().optional().nullable()
         })).optional(),
         
         company_members: z.array(z.object({
@@ -1442,7 +1543,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     
         company_spot_verification: z.array(z.object({
             verified: z.boolean().optional(),
-            verified_by_name: z.string().trim().min(1, "Verifier name is required."),
+            verified_by_id: z.object({ label: z.string(), value: z.string() }, {required_error: "Verifier selection is required."}),
             photo_upload: z.any().optional().nullable(),
             remark: z.string().trim().optional().or(z.literal("")).nullable(),
         })).optional(),
@@ -1532,7 +1633,10 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
             <div className="flex items-center gap-2">
               <Button type="button" onClick={handlePrevious} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === 0} > Previous </Button>
               <Button type="button" onClick={handleNext} disabled={isSubmitting || navigationKeys.indexOf(activeSection) === navigationKeys.length - 1} > Next </Button>
-              <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit)} disabled={isSubmitting} > {isEditMode ? "Update" : "Create"} </Button>
+              <Button variant="solid" type="button" loading={isSubmitting} onClick={handleSubmit(internalFormSubmit, (err) => {
+                  console.log("Validation Errors: ", err);
+                  toast.push(<Notification type="danger" title="Validation Error">Please fix the errors before submitting.</Notification>);
+              })} disabled={isSubmitting} > {isEditMode ? "Update" : "Create"} </Button>
             </div>
           </div>
         </Card>
@@ -1577,10 +1681,11 @@ const CompanyCreate = () => {
     pan_card_file: null, pan_card_remark: "", pan_card_remark_enabled: false,
     other_document_file: null, other_document_remark: "", other_document_remark_enabled: false,
     primary_account_number: "", primary_bank_name: null, primary_ifsc_code: "",
-    primary_bank_verification_photo: null, secondary_account_number: "",
-    secondary_bank_name: null, secondary_ifsc_code: "",
-    secondary_bank_verification_photo: null, company_bank_details: [],
-    USER_ACCESS: false, BILLING_FIELD: false, billing_documents: [],
+    primary_swift_code: "", primary_bank_verification_photo: null, 
+    secondary_account_number: "", secondary_bank_name: null, secondary_ifsc_code: "",
+    secondary_swift_code: "", secondary_bank_verification_photo: null, 
+    company_bank_details: [],
+    USER_ACCESS: false, billing_documents: [], enabled_billing_docs: [],
     company_members: [], company_teams: [],
     company_spot_verification: [], company_references: [],
   });
@@ -1589,6 +1694,7 @@ const CompanyCreate = () => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
     dispatch(getBrandAction());
+    dispatch(getEmployeesListingAction());
     dispatch(getCategoriesAction());
     dispatch(getMemberAction());
     dispatch(getCompanyAction());
