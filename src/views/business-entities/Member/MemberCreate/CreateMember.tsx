@@ -2371,7 +2371,7 @@ const PersonalDetailsComponent = ({
               render={({ field }) => (
                 <Select
                   placeholder="Code"
-                  className="w-32"
+                  className="phone_code w-38" 
                   options={countryCodeOptions}
                   {...field}
                 />
@@ -2590,7 +2590,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
               render={({ field }) => (
                 <Select
                   placeholder="Code"
-                  className="w-28"
+                  className="phone_code w-38"
                   options={countryCodeOptions}
                   {...field}
                 />
@@ -2624,7 +2624,7 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
                 <Select
                   {...field}
                   placeholder="Code"
-                  className="w-28"
+                  className="phone_code w-38"
                   options={countryCodeOptions}
                 />
               )}
