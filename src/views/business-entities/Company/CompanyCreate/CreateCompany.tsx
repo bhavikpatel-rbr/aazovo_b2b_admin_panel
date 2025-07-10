@@ -691,7 +691,7 @@ const CompanyDetailsSection = ({
     .filter((c: any) => c.phone_code)
     .map((c: any) => ({
         value: `${c.phone_code}`,
-        label: `${c.phone_code} (${c.name} - ${c.iso_code})`,
+        label: `${c.iso_code}`,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
