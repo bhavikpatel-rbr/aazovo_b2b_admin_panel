@@ -290,7 +290,7 @@ console.log("response",response.payload);
               </div>
               <div className="mt-2 flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                 <span>{userData?.department?.name || "N/A"}</span>
-                <span className="text-gray-300 dark:text-gray-600">|</span>
+                <br />
                 <span>{userData?.designation?.name || "N/A"}</span>
               </div>
             </div>

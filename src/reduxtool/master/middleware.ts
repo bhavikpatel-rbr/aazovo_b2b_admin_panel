@@ -5061,7 +5061,8 @@ export const addPinnedAction = createAsyncThunk<any, any>(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addPinnedTabAsync(data);
-      if (response?.data?.status === true) {
+      // console.log(response?.status);
+      if (response?.status === true) {
         dispatch(getPinnedTabAction());
         return response;
       } else {
