@@ -1445,7 +1445,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
         ownership_type: z.object({ label: z.string(), value: z.string().min(1, "Ownership Type is required.") }, { required_error: "Ownership Type is required." }),
         owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
         // company_address: z.string().trim().min(1, "Company Address is required."),
-        city: z.string().trim().min(1, "City is required."),
+        city: z.string().trim(),
         // state: z.string().trim().min(1, "State is required."),
         // zip_code: z.string().trim().min(1, "ZIP/Postal Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
         country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
