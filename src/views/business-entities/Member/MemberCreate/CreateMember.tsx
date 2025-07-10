@@ -2772,9 +2772,9 @@ const MemberAccessibilityComponent = ({
   errors,
 }: FormSectionBaseProps) => {
   const wallListingOptions = [
-    { value: "disable", label: "Disable" },
-    { value: "on_request", label: "On Request" },
-    { value: "approved", label: "Approved" },
+    { value: "Disable", label: "Disable" },
+    { value: "On Request", label: "On Request" },
+    { value: "Approved", label: "Approved" },
   ];
   const tradeInquiryOptions = [
     { value: "disabled", label: "Disabled" },
