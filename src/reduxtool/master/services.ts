@@ -2938,7 +2938,7 @@ export const addEmployeeListAsync = async (payload) => {
   }
 }
 
-export const editEmployeeListAsync = async (payload) => {
+export const editEmployeeListAsync = async (payload: any) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
     const response = await axiosInstance.post(`${config.apiURL}/employee/${payload.employeeId}`, payload.data)
