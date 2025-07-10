@@ -18,6 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
+import RichTextEditor from '@/components/shared/RichTextEditor'; // Assuming this is the correct path
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
@@ -100,7 +101,7 @@ interface UserReference { id: number; name: string; profile_pic_path: string | n
 interface ContinentReference { id: number; name: string; }
 interface CountryReference { id: number; name: string; }
 interface CompanyCertificate { id: number; company_id: number; certificate_id: number; certificate_name: string; upload_certificate: string | null; upload_certificate_path: string; }
-interface CompanyBankDetail { id: number; company_id: number; type: string | null; bank_account_number: string; bank_name: string; ifsc_code: string; verification_photo: string | null; }
+interface CompanyBankDetail { id: number; company_id: number; type: string | null; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code: string | null; verification_photo: string | null; }
 interface CompanyReference { id: number; person_name: string; company_id: number; number: string; remark: string; }
 interface OfficeInfo { id: number; company_id: number; office_type: string; office_name: string; country_id: number; state: string; city: string; zip_code: string; gst_number: string; address: string; }
 interface CompanySpotVerification { id: number; company_id: number; verified_by_name: string; verified: boolean; remark: string; photo_upload: string | null; photo_upload_path: string; }
@@ -109,7 +110,7 @@ interface CompanyMemberManagement { id: number; company_id: number; member_id: n
 interface TeamMember { id: number; company_id: number; team_name: string; designation: string; person_name: string; number: string; }
 
 export type CompanyItem = {
-    id: number; company_code: string | null; company_name: string; status: | "Verified" | "Non Verified" | "Active" | "Pending" | "Inactive" | "active" | "inactive"; primary_email_id: string; primary_contact_number: string; primary_contact_number_code: string; alternate_contact_number: string | null; alternate_contact_number_code: string | null; alternate_email_id: string | null; general_contact_number: string | null; general_contact_number_code: string | null; ownership_type: string; owner_name: string; company_address: string; continent_id: number; country_id: number; state: string; city: string; zip_code: string; gst_number: string | null; pan_number: string | null; trn_number: string | null; tan_number: string | null; establishment_year: string | null; no_of_employees: number | null; company_website: string | null; primary_business_type: string | null; support_email: string | null; general_mobile: string | null; notification_email: string | null; kyc_verified: boolean; enable_billing: boolean; facebook_url: string | null; instagram_url: string | null; linkedIn_url: string | null; youtube_url: string | null; twitter_url: string | null; company_logo: string | null; created_at: string; updated_at: string; created_by: number; updated_by: number; deleted_at: string | null; members_count: number; teams_count: number; due_after_3_months_date: string; created_by_user: UserReference | null; updated_by_user: UserReference | null; continent: ContinentReference; country: CountryReference; company_certificate: CompanyCertificate[]; company_bank_details: CompanyBankDetail[]; company_references: CompanyReference[]; office_info: OfficeInfo[]; company_spot_verification: CompanySpotVerification[]; billing_documents: BillingDocument[]; company_member_management: CompanyMemberManagement[]; company_team_members: TeamMember[]; profile_completion: number; "206AB_file": string | null; "ABCQ_file": string | null; office_photo_file: string | null; gst_certificate_file: string | null; authority_letter_file: string | null; visiting_card_file: string | null; cancel_cheque_file: string | null; aadhar_card_file: string | null; pan_card_file: string | null; other_document_file: string | null; wall: { buy: number; sell: number; total: number; }; opportunities: { offers: number; demands: number; total: number; }; leads: { total: number; };
+    id: number; company_code: string | null; company_name: string; status: | "Verified" | "Non Verified" | "Active" | "Pending" | "Inactive" | "active" | "inactive"; primary_email_id: string; primary_contact_number: string; primary_contact_number_code: string; alternate_contact_number: string | null; alternate_contact_number_code: string | null; alternate_email_id: string | null; general_contact_number: string | null; general_contact_number_code: string | null; ownership_type: string; owner_name: string; company_address: string; continent_id: number; country_id: number; state: string; city: string; zip_code: string; gst_number: string | null; pan_number: string | null; trn_number: string | null; tan_number: string | null; establishment_year: string | null; no_of_employees: number | null; company_website: string | null; primary_business_type: string | null; support_email: string | null; general_mobile: string | null; notification_email: string | null; kyc_verified: boolean; enable_billing: boolean; facebook_url: string | null; instagram_url: string | null; linkedIn_url: string | null; youtube_url: string | null; twitter_url: string | null; company_logo: string | null; created_at: string; updated_at: string; created_by: number; updated_by: number; deleted_at: string | null; members_count: number; teams_count: number; due_after_3_months_date: string; created_by_user: UserReference | null; updated_by_user: UserReference | null; continent: ContinentReference; country: CountryReference; company_certificate: CompanyCertificate[]; company_bank_details: CompanyBankDetail[]; company_references: CompanyReference[]; office_info: OfficeInfo[]; company_spot_verification: CompanySpotVerification[]; billing_documents: BillingDocument[]; company_member_management: CompanyMemberManagement[]; company_team_members: TeamMember[]; profile_completion: number; "206AB_file": string | null; "206AB_remark": string | null; "206AB_verified": boolean | number; "ABCQ_file": string | null; "ABCQ_remark": string | null; "ABCQ_verified": boolean | number; office_photo_file: string | null; "office_photo_remark": string | null; "office_photo_verified": boolean | number; gst_certificate_file: string | null; "gst_certificate_remark": string | null; "gst_certificate_verified": boolean | number; authority_letter_file: string | null; "authority_letter_remark": string | null; "authority_letter_verified": boolean | number; visiting_card_file: string | null; "visiting_card_remark": string | null; "visiting_card_verified": boolean | number; cancel_cheque_file: string | null; "cancel_cheque_remark": string | null; "cancel_cheque_verified": boolean | number; aadhar_card_file: string | null; "aadhar_card_remark": string | null; "aadhar_card_verified": boolean | number; pan_card_file: string | null; "pan_card_remark": string | null; "pan_card_verified": boolean | number; other_document_file: string | null; "other_document_remark": string | null; "other_document_verified": boolean | number; wall: { buy: number; sell: number; total: number; }; opportunities: { offers: number; demands: number; total: number; }; leads: { total: number; };
 };
 // --- END: Detailed Type Definitions ---
 
@@ -122,6 +123,7 @@ const scheduleSchema = z.object({ event_title: z.string().min(3, "Title must be 
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 const taskValidationSchema = z.object({ task_title: z.string().min(3, 'Task title must be at least 3 characters.'), assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'), priority: z.string().min(1, 'Please select a priority.'), due_date: z.date().nullable().optional(), description: z.string().optional(), });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
+type NotificationFormData = { notification_title: string; send_users: number[]; message: string; } // Added for notification form
 const taskPriorityOptions: SelectOption[] = [ { value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' }, ];
 
 // --- Utility Functions & Constants ---
@@ -161,7 +163,7 @@ const ViewCompanyDetailDialog: React.FC<{ company: CompanyItem; onClose: () => v
                 <Card className="mb-4" bordered> <h5 className="mb-2">Basic Information</h5> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4"> {renderDetailItem("Company Code", company.company_code)} {renderDetailItem("Ownership Type", company.ownership_type)} {renderDetailItem("Owner Name", company.owner_name)} <div className="mb-3"> <span className="font-semibold text-gray-700 dark:text-gray-200">Status:{" "}</span> <span className="text-gray-600 dark:text-gray-400"><Tag className={`${getCompanyStatusClass(company.status)} capitalize`}>{company.status}</Tag></span> </div> {renderDetailItem("Establishment Year", company.establishment_year)} {renderDetailItem("No. of Employees", company.no_of_employees)} {renderDetailItem("Primary Business Type", company.primary_business_type)} {renderDetailItem("Profile Completion", `${company.profile_completion}%`)} </div> </Card>
                 <Card className="mb-4" bordered> <h5 className="mb-2">Contact Information</h5> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4"> {renderDetailItem("Primary Email", company.primary_email_id)} {renderDetailItem("Primary Contact", `${company.primary_contact_number_code} ${company.primary_contact_number}`)} {renderDetailItem("Alternate Email", company.alternate_email_id)} {renderDetailItem("Alternate Contact", company.alternate_contact_number ? `${company.alternate_contact_number_code} ${company.alternate_contact_number}`: "N/A")} {renderDetailItem("Website", company.company_website, true)} </div> </Card>
                 <Card className="mb-4" bordered> <h5 className="mb-2">Legal & Financial</h5> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4"> {renderDetailItem("GST Number", company.gst_number)} {renderDetailItem("PAN Number", company.pan_number)} {renderDetailItem("TRN Number", company.trn_number)} {renderDetailItem("TAN Number", company.tan_number)} <div className="mb-3"><span className="font-semibold text-gray-700 dark:text-gray-200">KYC Verified:{" "}</span><span className="text-gray-600 dark:text-gray-400">{company.kyc_verified ? <MdCheckCircle className="text-green-500 text-xl inline-block" /> : <MdCancel className="text-red-500 text-xl inline-block" />}</span></div> <div className="mb-3"><span className="font-semibold text-gray-700 dark:text-gray-200">Billing Enabled:{" "}</span><span className="text-gray-600 dark:text-gray-400">{company.enable_billing ? <MdCheckCircle className="text-green-500 text-xl inline-block" /> : <MdCancel className="text-red-500 text-xl inline-block" />}</span></div> {renderDetailItem("Billing Due Date", company.due_after_3_months_date ? dayjs(company.due_after_3_months_date).format('D MMM YYYY') : "N/A")} </div> </Card>
-                {company.company_bank_details?.length > 0 && ( <Card className="mb-4" bordered> <h5 className="mb-2">Bank Details</h5> {company.company_bank_details.map((bank) => ( <div key={bank.id} className="mb-3 p-2 border rounded-md dark:border-gray-600"> {renderDetailItem("Bank Name", bank.bank_name)} {renderDetailItem("Account Number", bank.bank_account_number)} {renderDetailItem("IFSC Code", bank.ifsc_code)} {renderDetailItem("Type", bank.type || "N/A")} {bank.verification_photo && renderDetailItem("Verification Photo", <a href={bank.verification_photo} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Photo</a>)} </div> ))} </Card> )}
+                {company.company_bank_details?.length > 0 && ( <Card className="mb-4" bordered> <h5 className="mb-2">Bank Details</h5> {company.company_bank_details.map((bank) => ( <div key={bank.id} className="mb-3 p-2 border rounded-md dark:border-gray-600"> {renderDetailItem("Bank Name", bank.bank_name)} {renderDetailItem("Account Number", bank.bank_account_number)} {renderDetailItem("IFSC Code", bank.ifsc_code)} {renderDetailItem("SWIFT Code", bank.swift_code)} {renderDetailItem("Type", bank.type || "N/A")} {bank.verification_photo && renderDetailItem("Verification Photo", <a href={bank.verification_photo} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Photo</a>)} </div> ))} </Card> )}
                 <Card className="mb-4" bordered> <h5 className="mb-2">Document Verification Status</h5> <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4"> {renderVerificationStatus("Office Photo", company.office_photo_verified, company.office_photo_remark, company.office_photo_file)} {renderVerificationStatus("GST Certificate", company.gst_certificate_verified, company.gst_certificate_remark, company.gst_certificate_file)} {renderVerificationStatus("Authority Letter", company.authority_letter_verified, company.authority_letter_remark, company.authority_letter_file)} {renderVerificationStatus("Visiting Card", company.visiting_card_verified, company.visiting_card_remark, company.visiting_card_file)} {renderVerificationStatus("Cancel Cheque", company.cancel_cheque_verified, company.cancel_cheque_remark, company.cancel_cheque_file)} {renderVerificationStatus("Aadhar Card", company.aadhar_card_verified, company.aadhar_card_remark, company.aadhar_card_file)} {renderVerificationStatus("PAN Card", company.pan_card_verified, company.pan_card_remark, company.pan_card_file)} </div> </Card>
                 {company.office_info?.length > 0 && ( <Card className="mb-4" bordered> <h5 className="mb-2">Office Information</h5> {company.office_info.map((office) => ( <div key={office.id} className="mb-3 p-2 border rounded-md dark:border-gray-600"> {renderDetailItem("Office Name", office.office_name)} {renderDetailItem("Office Type", office.office_type)} {renderDetailItem("Address", office.address)} {renderDetailItem("City", office.city)} {renderDetailItem("State", office.state)} {renderDetailItem("Zip Code", office.zip_code)} {renderDetailItem("GST Number", office.gst_number)} </div> ))} </Card> )}
                 {company.company_certificate?.length > 0 && ( <Card className="mb-4" bordered> <h5 className="mb-2">Certificates</h5> {company.company_certificate.map((cert) => ( <div key={cert.id} className="mb-2 flex justify-between items-center"> <span> {cert.certificate_name} ({cert.certificate_id}) </span> {cert.upload_certificate_path && ( <a href={cert.upload_certificate_path} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Certificate </a> )} </div> ))} </Card> )}
@@ -292,7 +294,6 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   );
 };
 
-
 const CompanyListTable = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
@@ -300,7 +301,7 @@ const CompanyListTable = () => {
     const [isLoading] = useState(false);
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "", });
     const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
-    const [filterCriteria, setFilterCriteria] = useState<CompanyFilterFormData>({ filterCreatedDate: [null, null], });
+    const [filterCriteria, setFilterCriteria] = useState<CompanyFilterFormData & { customFilter?: string }>({ filterCreatedDate: [null, null], });
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null, });
@@ -311,45 +312,93 @@ const CompanyListTable = () => {
     const handleOpenModal = (type: ModalType, companyData: CompanyItem) => setModalState({ isOpen: true, type, data: companyData });
     const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
     const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); };
-    const onApplyFiltersSubmit = (data: CompanyFilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); setFilterDrawerOpen(false); };
-    const onClearFilters = () => { const defaultFilters = { filterCreatedDate: [null, null] as [Date | null, Date | null], filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [], }; setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: "" }); };
-    const handleRemoveFilter = (key: keyof CompanyFilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev }; if (key === 'filterCreatedDate') { (newCriteria as any)[key] = [null, null]; } else { const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove); (newCriteria as any)[key] = newFilterArray; } } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
+    const onApplyFiltersSubmit = (data: CompanyFilterFormData) => { setFilterCriteria({ ...data, customFilter: undefined }); handleSetTableData({ pageIndex: 1 }); setFilterDrawerOpen(false); };
+    const onClearFilters = () => { const defaultFilters = { customFilter: undefined, filterCreatedDate: [null, null] as [Date | null, Date | null], filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [], }; setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: "" }); };
+    const handleRemoveFilter = (key: keyof CompanyFilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev, customFilter: undefined }; if (key === 'filterCreatedDate') { (newCriteria as any)[key] = [null, null]; } else { const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove); (newCriteria as any)[key] = newFilterArray; } } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
     const onRefreshData = () => { onClearFilters(); dispatch(getCompanyAction()); toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />); };
-    const handleCardClick = (filterType: string, value: string) => {
-        const newCriteria: CompanyFilterFormData = { filterCreatedDate: [null, null], filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [], };
-        if (filterType === 'status') {
-            const statusOption = statusOptions.find(opt => opt.value === value);
-            if (statusOption) { newCriteria.filterStatus = [statusOption]; }
+    
+    // --- START: MODIFIED LOGIC ---
+    const handleCardClick = (cardType: 'active' | 'inactive' | 'verified' | 'non_verified' | 'eligible' | 'not_eligible') => {
+        const defaultFilters = {
+            filterCreatedDate: [null, null] as [Date | null, Date | null],
+            filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [],
+            filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [],
+            customFilter: undefined,
+        };
+
+        let newCriteria: CompanyFilterFormData & { customFilter?: string } = { ...defaultFilters };
+
+        switch (cardType) {
+            case 'active':
+                newCriteria.filterStatus = [{ value: 'Active', label: 'Active' }];
+                break;
+            case 'inactive':
+                newCriteria.filterStatus = [{ value: 'Inactive', label: 'Inactive' }];
+                break;
+            case 'verified':
+                // As requested: filters by kyc_verified boolean, not status string
+                newCriteria.filterKycVerified = [{ value: 'Yes', label: 'Yes' }];
+                break;
+            case 'non_verified':
+                 // As requested: filters by kyc_verified boolean, not status string
+                newCriteria.filterKycVerified = [{ value: 'No', label: 'No' }];
+                break;
+            case 'eligible':
+                // kyc_verified IS true AND enable_billing IS true
+                newCriteria.filterKycVerified = [{ value: 'Yes', label: 'Yes' }];
+                newCriteria.filterEnableBilling = [{ value: 'Yes', label: 'Yes' }];
+                break;
+            case 'not_eligible':
+                // kyc_verified IS false OR enable_billing IS false
+                // This requires a special filter path because it's an OR condition
+                newCriteria.customFilter = 'not_eligible';
+                break;
         }
+
         setFilterCriteria(newCriteria);
-        handleSetTableData({ pageIndex: 1, query: "" });
+        handleSetTableData({ pageIndex: 1, query: "" }); // Reset pagination and search
     };
 
     const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
         let filteredData = [...companyList];
-        if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selectedStatuses = filterCriteria.filterStatus.map((s) => s.value.toLowerCase()); filteredData = filteredData.filter((company) => company.status && selectedStatuses.includes(company.status.toLowerCase())); }
-        if (filterCriteria.filterCompanyType && filterCriteria.filterCompanyType.length > 0) { const selectedTypes = filterCriteria.filterCompanyType.map((t) => t.value); filteredData = filteredData.filter((company) => selectedTypes.includes(company.ownership_type)); }
-        if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) { const selectedContinents = filterCriteria.filterContinent.map((c) => c.value); filteredData = filteredData.filter((company) => company.continent && selectedContinents.includes(company.continent.name)); }
-        if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) { const selectedCountries = filterCriteria.filterCountry.map((c) => c.value); filteredData = filteredData.filter((company) => company.country && selectedCountries.includes(company.country.name)); }
-        if (filterCriteria.filterState && filterCriteria.filterState.length > 0) { const selectedStates = filterCriteria.filterState.map((s) => s.value); filteredData = filteredData.filter((company) => selectedStates.includes(company.state)); }
-        if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) { const selectedCities = filterCriteria.filterCity.map((c) => c.value); filteredData = filteredData.filter((company) => selectedCities.includes(company.city)); }
-        if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) { const selectedKycValues = filterCriteria.filterKycVerified.map((k) => k.value === "Yes"); filteredData = filteredData.filter((company) => selectedKycValues.includes(company.kyc_verified)); }
-        if (filterCriteria.filterEnableBilling && filterCriteria.filterEnableBilling.length > 0) { const selectedBillingValues = filterCriteria.filterEnableBilling.map((b) => b.value === "Yes"); filteredData = filteredData.filter((company) => selectedBillingValues.includes(company.enable_billing)); }
-        if (filterCriteria.filterCreatedDate && filterCriteria.filterCreatedDate[0] && filterCriteria.filterCreatedDate[1]) { const [startDate, endDate] = filterCriteria.filterCreatedDate; const inclusiveEndDate = new Date(endDate as Date); inclusiveEndDate.setHours(23, 59, 59, 999); filteredData = filteredData.filter((company) => { const createdDate = new Date(company.created_at); return (createdDate >= (startDate as Date) && createdDate <= inclusiveEndDate); }); }
+
+        // Handle special 'OR' filter from card click first
+        if (filterCriteria.customFilter === 'not_eligible') {
+            filteredData = filteredData.filter(company => !company.kyc_verified || !company.enable_billing);
+        } else {
+            // Apply standard 'AND' filters from cards or the filter drawer
+            if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selectedStatuses = filterCriteria.filterStatus.map((s) => s.value.toLowerCase()); filteredData = filteredData.filter((company) => company.status && selectedStatuses.includes(company.status.toLowerCase())); }
+            if (filterCriteria.filterCompanyType && filterCriteria.filterCompanyType.length > 0) { const selectedTypes = filterCriteria.filterCompanyType.map((t) => t.value); filteredData = filteredData.filter((company) => selectedTypes.includes(company.ownership_type)); }
+            if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) { const selectedContinents = filterCriteria.filterContinent.map((c) => c.value); filteredData = filteredData.filter((company) => company.continent && selectedContinents.includes(company.continent.name)); }
+            if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) { const selectedCountries = filterCriteria.filterCountry.map((c) => c.value); filteredData = filteredData.filter((company) => company.country && selectedCountries.includes(company.country.name)); }
+            if (filterCriteria.filterState && filterCriteria.filterState.length > 0) { const selectedStates = filterCriteria.filterState.map((s) => s.value); filteredData = filteredData.filter((company) => selectedStates.includes(company.state)); }
+            if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) { const selectedCities = filterCriteria.filterCity.map((c) => c.value); filteredData = filteredData.filter((company) => selectedCities.includes(company.city)); }
+            if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) { const selectedKycValues = filterCriteria.filterKycVerified.map((k) => k.value === "Yes"); filteredData = filteredData.filter((company) => selectedKycValues.includes(company.kyc_verified)); }
+            if (filterCriteria.filterEnableBilling && filterCriteria.filterEnableBilling.length > 0) { const selectedBillingValues = filterCriteria.filterEnableBilling.map((b) => b.value === "Yes"); filteredData = filteredData.filter((company) => selectedBillingValues.includes(company.enable_billing)); }
+            if (filterCriteria.filterCreatedDate && filterCriteria.filterCreatedDate[0] && filterCriteria.filterCreatedDate[1]) { const [startDate, endDate] = filterCriteria.filterCreatedDate; const inclusiveEndDate = new Date(endDate as Date); inclusiveEndDate.setHours(23, 59, 59, 999); filteredData = filteredData.filter((company) => { const createdDate = new Date(company.created_at); return (createdDate >= (startDate as Date) && createdDate <= inclusiveEndDate); }); }
+        }
+
+        // Apply global search query
         if (tableData.query) { filteredData = filteredData.filter((i) => Object.values(i).some((v) => { if (typeof v === "object" && v !== null) { return Object.values(v).some((nestedV) => String(nestedV).toLowerCase().includes(tableData.query.toLowerCase())); } return String(v).toLowerCase().includes(tableData.query.toLowerCase()); })); }
 
-        let count = 0; if (filterCriteria.filterStatus?.length) count++;
-    if (filterCriteria.filterCompanyType?.length) count++;
-    if (filterCriteria.filterContinent?.length) count++;
-    if (filterCriteria.filterCountry?.length) count++;
-    if (filterCriteria.filterState?.length) count++;
-    if (filterCriteria.filterCity?.length) count++;
-    if (filterCriteria.filterKycVerified?.length) count++;
-    if (filterCriteria.filterEnableBilling?.length) count++;
+        let count = 0; 
+        if(filterCriteria.customFilter) count++;
+        if (filterCriteria.filterStatus?.length) count++;
+        if (filterCriteria.filterCompanyType?.length) count++;
+        if (filterCriteria.filterContinent?.length) count++;
+        if (filterCriteria.filterCountry?.length) count++;
+        if (filterCriteria.filterState?.length) count++;
+        if (filterCriteria.filterCity?.length) count++;
+        if (filterCriteria.filterKycVerified?.length) count++;
+        if (filterCriteria.filterEnableBilling?.length) count++;
+        
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key) { filteredData.sort((a, b) => { let av = a[key as keyof CompanyItem] as any; let bv = b[key as keyof CompanyItem] as any; if (key.includes(".")) { const keys = key.split("."); av = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), a); bv = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), b); } av = av ?? ""; bv = bv ?? ""; if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); if (typeof av === "number" && typeof bv === "number") return order === "asc" ? av - bv : bv - av; if (typeof av === "boolean" && typeof bv === "boolean") return order === "asc" ? (av === bv ? 0 : av ? -1 : 1) : (av === bv ? 0 : av ? 1 : -1); return 0; }); }
-        const pI = tableData.pageIndex as number; const pS = tableData.pageSize as number; return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
+        
+        const pI = tableData.pageIndex as number; const pS = tableData.pageSize as number; 
+        return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
     }, [companyList, tableData, filterCriteria]);
+    // --- END: MODIFIED LOGIC ---
 
     const closeFilterDrawer = () => setFilterDrawerOpen(false);
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
@@ -400,16 +449,19 @@ const CompanyListTable = () => {
                 <h5>Company</h5>
                 <div className="flex flex-col md:flex-row gap-3"><Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/company-create")}>Add New</Button></div>
             </div>
+            {/* --- START: MODIFIED CARDS JSX --- */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
                 <Tooltip title="Click to show all companies"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBuilding size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm ">{companyCount?.total ?? 0}</b><span className="text-[9px] font-semibold">Total</span></div></Card></div></Tooltip>
-                <Tooltip title="Click to filter by Active status"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBuildingBank size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.active ?? 0}</b><span className="text-[9px] font-semibold">Active</span></div></Card></div></Tooltip>
-                <Tooltip title="Click to filter by Inactive status"><div onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.inactive ?? 0}</b><span className="text-[9px] font-semibold">Inactive</span></div></Card></div></Tooltip>
-                <Tooltip title="Click to filter by Verified status"><div onClick={() => handleCardClick('status', 'Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
-                <Tooltip title="Click to filter by Non Verified status"><div onClick={() => handleCardClick('status', 'Non Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.non_verified ?? 0}</b><span className="text-[9px] font-semibold">Non Verified</span></div></Card></div></Tooltip>
-                <Card bodyClass={cardBodyClass} className="rounded-md border border-violet-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbShieldCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.eligible ?? 0}</b><span className="text-[9px] font-semibold">Eligible</span></div></Card>
-                <Card bodyClass={cardBodyClass} className="rounded-md border border-red-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbShieldX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.not_eligible ?? 0}</b><span className="text-[9px] font-semibold">Not Eligible</span></div></Card>
-                <Card bodyClass={cardBodyClass} className="rounded-md border border-orange-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbBuildingCommunity size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.members ?? 0}</b><span className="text-[9px] font-semibold">Members</span></div></Card>
+                <Tooltip title="Click to show Active companies"><div onClick={() => handleCardClick('active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBuildingBank size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.active ?? 0}</b><span className="text-[9px] font-semibold">Active</span></div></Card></div></Tooltip>
+                <Tooltip title="Click to show Inactive companies"><div onClick={() => handleCardClick('inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.inactive ?? 0}</b><span className="text-[9px] font-semibold">Inactive</span></div></Card></div></Tooltip>
+                <Tooltip title="Click to show KYC Verified companies"><div onClick={() => handleCardClick('verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
+                <Tooltip title="Click to show Non-KYC Verified companies"><div onClick={() => handleCardClick('non_verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.non_verified ?? 0}</b><span className="text-[9px] font-semibold">Non Verified</span></div></Card></div></Tooltip>
+                <Tooltip title="Click to show Eligible companies (KYC and Billing enabled)"><div onClick={() => handleCardClick('eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-violet-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbShieldCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.eligible ?? 0}</b><span className="text-[9px] font-semibold">Eligible</span></div></Card></div></Tooltip>
+                <Tooltip title="Click to show Not Eligible companies (KYC or Billing disabled)"><div onClick={() => handleCardClick('not_eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-red-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbShieldX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.not_eligible ?? 0}</b><span className="text-[9px] font-semibold">Not Eligible</span></div></Card></div></Tooltip>
+                {/* <Tooltip title="Click to show Not Eligible companies (KYC or Billing disabled)"><div onClick={() => handleCardClick('not_eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-red-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbShieldX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.not_eligible ?? 0}</b><span className="text-[9px] font-semibold">Not Eligible</span></div></Card></div></Tooltip> */}
+            <Card bodyClass={cardBodyClass} className="rounded-md border border-orange-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbBuildingCommunity size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.members ?? 0}</b><span className="text-[9px] font-semibold">Members</span></div></Card>
             </div>
+            {/* --- END: MODIFIED CARDS JSX --- */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
                 <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} value={tableData.query} />
                 <div className="flex gap-2">
