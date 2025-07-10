@@ -66,7 +66,7 @@ interface CompanyTeamItemFE {
 interface SpotVerificationItemFE {
   id?: string;
   verified?: boolean;
-  verified_by?: { label: string; value: string }; // Changed from verified_by_name
+  verified_by_id?: { label: string; value: string }; // Changed from verified_by_name
   photo_upload?: File | string | null;
   remark?: string;
 }
@@ -464,7 +464,7 @@ const transformApiToFormSchema = (
     
         company_spot_verification: apiData.company_spot_verification?.map(item => ({
             verified: stringToBoolean(item.verified),
-            verified_by: findOptionByValue(allMembers, item.verified_by_id) || findOptionByLabel(allMembers, item.verified_by_name),
+            verified_by_id: findOptionByValue(allMembers, item.verified_by_id) || findOptionByLabel(allMembers, item.verified_by_name),
             photo_upload: item.photo_upload_path || item.photo_upload || null,
             remark: item.remark || '',
         })) || [],
@@ -610,7 +610,7 @@ const preparePayloadForApi = (
     // Spot Verifications
     data.company_spot_verification?.forEach((item: SpotVerificationItemFE, index: number) => {
       apiPayload.append(`company_spot_verification[${index}][verified]`, item.verified ? "1" : "0");
-      appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by); // Changed
+      appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id); // Changed
       apiPayload.append(`company_spot_verification[${index}][remark]`, item.remark || "");
       appendFileIfExists(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
     });
@@ -1143,7 +1143,7 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
     <Card id="spotVerification">
       <div className="flex justify-between items-center mb-4">
         <h4 className="mb-0">Spot Verifications</h4>
-        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ verified: false, verified_by: undefined, photo_upload: null, remark: "" })}> Add Verification Entry </Button>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ verified: false, verified_by_id: undefined, photo_upload: null, remark: "" })}> Add Verification Entry </Button>
       </div>
       {fields.map((item, index) => {
         const photoValue = watch(`company_spot_verification.${index}.photo_upload`);
@@ -1153,8 +1153,8 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 items-start">
               <div className="flex items-center gap-4">
                 <Controller name={`company_spot_verification.${index}.verified`} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
-                <FormItem label={`Verified By ${index+1}`} className="flex-grow" invalid={!!errors.company_spot_verification?.[index]?.verified_by} errorMessage={(errors.company_spot_verification?.[index]?.verified_by as any)?.message as string}>
-                  <Controller name={`company_spot_verification.${index}.verified_by`} control={control} render={({ field }) => (<Select placeholder="Select Employee" options={employeeOptions} {...field} />)} />
+                <FormItem label={`Verified By ${index+1}`} className="flex-grow" invalid={!!errors.company_spot_verification?.[index]?.verified_by_id} errorMessage={(errors.company_spot_verification?.[index]?.verified_by_id as any)?.message as string}>
+                  <Controller name={`company_spot_verification.${index}.verified_by_id`} control={control} render={({ field }) => (<Select placeholder="Select Employee" options={employeeOptions} {...field} />)} />
                 </FormItem>
               </div>
               <FormItem label={`Upload Document ${index+1}`}>
@@ -1543,7 +1543,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     
         company_spot_verification: z.array(z.object({
             verified: z.boolean().optional(),
-            verified_by: z.object({ label: z.string(), value: z.string() }, {required_error: "Verifier selection is required."}),
+            verified_by_id: z.object({ label: z.string(), value: z.string() }, {required_error: "Verifier selection is required."}),
             photo_upload: z.any().optional().nullable(),
             remark: z.string().trim().optional().or(z.literal("")).nullable(),
         })).optional(),
