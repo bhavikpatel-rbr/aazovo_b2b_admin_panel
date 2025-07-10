@@ -1969,7 +1969,7 @@ const memberTypeOptions = MemberTypeData.map((m: any) => ({
       <h4 className="mb-6">Additional Member Profile</h4>
       <div className="grid md:grid-cols-3 gap-4">
         <FormItem
-          label={<div>Interested Categories</div>}
+          label={<div>Interested Categories<span className="text-red-500"> * </span></div>}
           invalid={!!errors.interested_category_ids}
           errorMessage={errors.interested_category_ids?.message as string}
         >
@@ -2911,6 +2911,9 @@ const MemberFormComponent = (props: {
             (typeof val === "object" && !!val?.value),
           { message: "Country is required" }
         ),
+        interested_category_ids: z
+        .array(z.any())
+        .min(1, { message: "Interested categories are required." }),
     })
     .passthrough();
   const formMethods = useForm<MemberFormSchema>({
