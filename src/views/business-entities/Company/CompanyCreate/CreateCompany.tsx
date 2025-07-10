@@ -246,11 +246,13 @@ interface ApiSingleCompanyItem {
   support_email?: string | null;
   notification_email?: string | null;
   kyc_verified?: boolean | string;
-  company_certificate?: Array<{ certificate_id: string; certificate_name: string; upload_certificate: string | null; upload_certificate_path?: string; }>;
-  office_info?: Array<{ office_type: string; office_name: string; address: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; contact_person?: string; office_email?: string; office_phone?: string; }>;
-  declaration_206AB_url?: string | null;
-  declaration_206AB_verify?: boolean | string;
-  declaration_206AB_remark?: string | null;
+  company_certificate?: Array<{ id: number; certificate_id: string; certificate_name: string; upload_certificate: string | null; upload_certificate_path?: string; }>;
+  office_info?: Array<{ id: number; office_type: string; office_name: string; address: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; contact_person?: string; office_email?: string; office_phone?: string; }>;
+
+  // --- CORRECTED KYC DOCUMENT KEYS START HERE ---
+  ['206AB_file']?: string | null;
+  ['206AB_verified']?: boolean | string;
+  ['206AB_remark']?: string | null;
   ABCQ_file?: string | null;
   ABCQ_verified?: boolean | string;
   ABCQ_remark?: string | null;
@@ -278,23 +280,25 @@ interface ApiSingleCompanyItem {
   other_document_file?: string | null;
   other_document_verified?: boolean | string;
   other_document_remark?: string | null;
+  // --- CORRECTED KYC DOCUMENT KEYS END HERE ---
+
   primary_account_number?: string | null;
   primary_bank_name?: string | null;
   primary_ifsc_code?: string | null;
-  primary_swift_code?: string | null; // New
+  primary_swift_code?: string | null;
   primary_bank_verification_photo?: string | null;
   secondary_account_number?: string | null;
   secondary_bank_name?: string | null;
   secondary_ifsc_code?: string | null;
-  secondary_swift_code?: string | null; // New
+  secondary_swift_code?: string | null;
   secondary_bank_verification_photo?: string | null;
-  company_bank_details?: Array<{ bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; }>;
-  billing_documents?: Array<{ document_name: string; document: string | null; }>;
-  enable_billing_documents?: Array<{ id: number; document_name: string; document: string | null; }>; // Corrected from enabled_billing_docs
+  company_bank_details?: Array<{ id: number; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; }>;
+  billing_documents?: Array<{ id: number; document_name: string; document: string | null; }>;
+  enable_billing_documents?: Array<{ id: number; document_name: string; document: string | null; }>;
   company_member_management?: Array<{ member_id: string; designation: string; person_name: string; number: string; }>;
   company_team_members?: Array<{ team_name: string; designation: string; person_name: string; number: string; }>;
-  company_spot_verification?: Array<{ verified_by_id?: string | number; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; }>;
-  company_references?: Array<{ person_name: string; company_id: string; number: string; remark: string | null; }>;
+  company_spot_verification?: Array<{ id: number; verified_by_id?: string | number; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; }>;
+  company_references?: Array<{ id: number; person_name: string; company_id: string; number: string; remark: string | null; }>;
 }
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
@@ -303,7 +307,7 @@ const transformApiToFormSchema = (
   allCountries: Array<{ id: string | number; name: string }>,
   allContinents: Array<{ id: string | number; name: string }>,
   allMembers: Array<{ value: string; label: string }>,
-  allEmployees: Array<{ value: string; label: string }>,
+  allEmployees: Array<{ value: string; label:string }>,
   allCompaniesForRef: Array<{ value: string; label: string }>
 ): Partial<CompanyFormSchema> => {
     const stringToBoolean = (value: boolean | string | undefined | null): boolean => {
@@ -316,7 +320,7 @@ const transformApiToFormSchema = (
     };
     
     const findOptionByValue = (options: Array<{ value: string; label: string }>, value?: string | number | null) => {
-        if (!value) return undefined;
+        if (value === null || value === undefined) return undefined;
         return options.find(opt => String(opt.value) === String(value));
     };
 
@@ -361,11 +365,13 @@ const transformApiToFormSchema = (
         notification_email: apiData.notification_email || '',
     
         company_certificate: apiData.company_certificate?.map(cert => ({
+            id: String(cert.id), // Important for FieldArray key
             certificate_id: cert.certificate_id,
             certificate_name: cert.certificate_name || '',
             upload_certificate: cert.upload_certificate_path || cert.upload_certificate || null,
         })) || [],
         office_info: apiData.office_info?.map(office => ({
+            id: String(office.id), // Important for FieldArray key
             office_type: office.office_type ? { label: office.office_type, value: office.office_type } : undefined,
             office_name: office.office_name || '',
             address: office.address || '',
@@ -379,9 +385,10 @@ const transformApiToFormSchema = (
             office_phone: office.office_phone || '',
         })) || [],
     
-        declaration_206ab: apiData.declaration_206AB_url || null,
-        declaration_206ab_remark: apiData.declaration_206AB_remark || '',
-        declaration_206ab_remark_enabled: stringToBoolean(apiData.declaration_206AB_verify),
+        // --- USING CORRECTED KEYS TO POPULATE FORM STATE ---
+        declaration_206ab: apiData["206AB_file"] || null,
+        declaration_206ab_remark: apiData["206AB_remark"] || '',
+        declaration_206ab_remark_enabled: stringToBoolean(apiData["206AB_verified"]),
         ABCQ_file: apiData.ABCQ_file || null,
         ABCQ_remark: apiData.ABCQ_remark || '',
         ABCQ_remark_enabled: stringToBoolean(apiData.ABCQ_verified),
@@ -411,16 +418,17 @@ const transformApiToFormSchema = (
         other_document_remark_enabled: stringToBoolean(apiData.other_document_verified),
     
         primary_account_number: apiData.primary_account_number || '',
-        primary_bank_name: apiData.primary_bank_name || null,
+        primary_bank_name: apiData.primary_bank_name || '',
         primary_ifsc_code: apiData.primary_ifsc_code || '',
         primary_swift_code: apiData.primary_swift_code || '',
         primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
         secondary_account_number: apiData.secondary_account_number || '',
-        secondary_bank_name: apiData.secondary_bank_name || null,
+        secondary_bank_name: apiData.secondary_bank_name || '',
         secondary_ifsc_code: apiData.secondary_ifsc_code || '',
         secondary_swift_code: apiData.secondary_swift_code || '',
         secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
         company_bank_details: apiData.company_bank_details?.map(bank => ({
+            id: String(bank.id), // Important for FieldArray key
             bank_account_number: bank.bank_account_number || '',
             bank_name: bank.bank_name || undefined,
             ifsc_code: bank.ifsc_code || '',
@@ -431,11 +439,12 @@ const transformApiToFormSchema = (
     
         USER_ACCESS: stringToBoolean(apiData.kyc_verified),
         billing_documents: apiData.billing_documents?.map(doc => ({
+            id: String(doc.id), // Important for FieldArray key
             document_name: doc.document_name || '',
             document: doc.document || null,
         })) || [],
         enabled_billing_docs: apiData.enable_billing_documents?.map(doc => ({
-            id: String(doc.id),
+            id: String(doc.id), // Important for FieldArray key
             document_name: doc.document_name,
             document: doc.document || null
         })) || [],
@@ -454,12 +463,14 @@ const transformApiToFormSchema = (
         })) || [],
     
         company_spot_verification: apiData.company_spot_verification?.map(item => ({
+            id: String(item.id), // Important for FieldArray key
             verified: stringToBoolean(item.verified),
             verified_by_id: findOptionByValue(allEmployees, item.verified_by_id) || findOptionByLabel(allEmployees, item.verified_by_name),
             photo_upload: item.photo_upload || null,
             remark: item.remark || '',
         })) || [],
         company_references: apiData.company_references?.map(ref => ({
+            id: String(ref.id), // Important for FieldArray key
             person_name: ref.person_name || '',
             company_id: findOptionByValue(allCompaniesForRef, ref.company_id),
             number: ref.number || '',
@@ -490,6 +501,11 @@ const preparePayloadForApi = (
       }
     };
     
+    // This helper function correctly handles three states for a file input in edit mode:
+    // 1. New File (instanceof File): Appends the file to be uploaded.
+    // 2. Cleared/Null File: Appends an empty string, signaling to the backend to delete the file.
+    // 3. Existing File (string URL): Does nothing, so the key is omitted from the payload.
+    //    The backend should interpret the absence of the key as "no change, keep the existing file".
     const appendFileIfExists = (key: string, value: any) => {
       if (value instanceof File) {
           apiPayload.append(key, value);
@@ -576,11 +592,19 @@ const preparePayloadForApi = (
       appendFileIfExists(`billing_documents[${index}][document]`, doc.document);
     });
 
-    // Enabled Billing Documents (New)
+    // --- FIX STARTS HERE ---
+    // Enabled Billing Documents
+    // Note: The API key is `enable_billing_documents`, while the form state uses `enabled_billing_docs`.
+    // This was corrected from `enabled_billing_docs` to `enable_billing_documents`.
     data.enabled_billing_docs?.forEach((doc: EnabledBillingDocItemFE, index: number) => {
-        appendField(`enabled_billing_docs[${index}][document_name]`, doc.document_name);
-        appendFileIfExists(`enabled_billing_docs[${index}][document]`, doc.document);
+        appendField(`enable_billing_documents[${index}][document_name]`, doc.document_name);
+        appendFileIfExists(`enable_billing_documents[${index}][document]`, doc.document);
+        // It's crucial to send the item ID back in edit mode so the backend can correctly identify which record to update.
+        if (isEditMode && doc.id) {
+            appendField(`enable_billing_documents[${index}][id]`, doc.id);
+        }
     });
+    // --- FIX ENDS HERE ---
   
     // Member Management
     data.company_members?.forEach((member: CompanyMemberItemFE, index: number) => {
