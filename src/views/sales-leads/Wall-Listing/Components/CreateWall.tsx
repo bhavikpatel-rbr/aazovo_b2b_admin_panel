@@ -1,10 +1,11 @@
 // src/views/your-path/business-entities/WallItemForm.tsx
 // MODIFIED: This file is now fully equipped to handle both Add and Edit operations.
+// It also supports adding multiple items at once in "Add" mode.
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
@@ -43,37 +44,42 @@ import { useSelector } from 'react-redux';
 // Types
 export type WallIntent = "Buy" | "Sell" | "Exchange";
 
-// --- MODIFIED & CORRECTED ZOD SCHEMA ---
-// Validates the actual IDs (productId, member_id) for better reliability.
-const wallItemFormSchema = z.object({
+// --- NEW ZOD SCHEMA for a single item ---
+// Validates fields for a single wall item form, with new mandatory fields.
+const singleWallItemSchema = z.object({
+  // New order & required fields
+  status: z.string().min(1, "Status is required."),
   productId: z.number().min(1, "Product is required."),
   member_id: z.number().min(1, "Member is required."),
   qty: z.coerce.number({ required_error: "Quantity is required." }).min(1, "Quantity must be at least 1."),
-  price: z.coerce.number().min(0, "Price cannot be negative.").nullable().optional(),
   intent: z.enum(["Buy", "Sell", "Exchange"] as const, { required_error: "Intent (Want to) is required." }),
   productStatus: z.string().min(1, "Product Status is required."),
+  activeHours: z.string({ required_error: "Active Hours is required." }).min(1, "Active Hours are required."),
+  
+  // Optional fields
   productSpecId: z.coerce.number().nullable().optional(),
-  deviceCondition: z.string().nullable().optional(),
+  price: z.coerce.number().min(0, "Price cannot be negative.").nullable().optional(),
   color: z.string().max(50, "Color too long.").nullable().optional(),
   cartoonTypeId: z.string().nullable().optional(),
   dispatchStatus: z.string().max(100, "Dispatch status too long.").nullable().optional(),
-  dispatchMode: z.string().nullable().optional(),
   paymentTermId: z.coerce.number().nullable().optional(),
   eta: z.date().nullable().optional(),
   location: z.string().max(100, "Location too long.").nullable().optional(),
-  listingType: z.string().nullable().optional(),
-  visibility: z.string().min(1, "Visibility is required."),
-  priority: z.string().nullable().optional(),
-  adminStatus: z.string().nullable().optional(),
-  status: z.string().min(1, "Status is required."),
+  deviceCondition: z.string().nullable().optional(),
   assignedTeamId: z.coerce.number().nullable().optional(),
-  activeHours: z.string().nullable().optional(),
-  productUrl: z.string().url("Invalid URL format.").or(z.literal("")).optional().nullable(),
-  warrantyInfo: z.string().optional().nullable(),
-  returnPolicy: z.string().optional().nullable(),
-  internalRemarks: z.string().nullable().optional(),
+  remarks: z.string().nullable().optional(), // New remarks field
 });
+
+// Main form schema using an array of items.
+const wallItemFormSchema = z.object({
+  wallItems: z.array(singleWallItemSchema).min(1, "At least one item is required."),
+});
+
+// Type for a single item's form data
+type SingleWallItemFormData = z.infer<typeof singleWallItemSchema>;
+// Type for the entire form data (the array of items)
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
+
 
 // Define option types for clarity
 type ProductOptionType = { value: number; label: string };
@@ -88,87 +94,97 @@ const productStatusOptions = [{ value: "Active", label: "Active" }, { value: "No
 const statusOptions = [{ value: "Pending", label: "Pending" }, { value: "Active", label: "Active" }, { value: "Rejected", label: "Rejected" }, { value: "inactive", label: "Inactive" }];
 const dummyCartoonTypes = [{ id: "Master Cartoon", name: "Master Cartoon" }, { id: "Non Masster Cartoon", name: "Non Masster Cartoon" }];
 const deviceConditionRadioOptions = [{ value: "New", label: "New" }, { value: "Old", label: "Old" }];
-const visibilityOptions = [{ value: 'Public', label: 'Public' }, { value: 'Internal', label: 'Internal' }];
-const priorityOptions = [{ value: 'High', label: 'High' }, { value: 'Medium', label: 'Medium' }, { value: 'Low', label: 'Low' }];
-const listingTypeOptions = [{ value: 'Featured', label: 'Featured' }, { value: 'Regular', label: 'Regular' }];
-const dispatchModeOptions = [{ value: 'courier', label: 'Courier' }, { value: 'pickup', label: 'Pickup' }];
-const adminStatusOptions = [{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }, { value: 'Rejected', label: 'Rejected' }];
+
+// Default values for a single item form
+const defaultItem: SingleWallItemFormData = {
+  status: "Pending",
+  productId: 0,
+  member_id: 0,
+  qty: 1,
+  intent: "Sell",
+  productStatus: "Active",
+  activeHours: "",
+  productSpecId: null,
+  price: null,
+  color: "",
+  cartoonTypeId: null,
+  dispatchStatus: "",
+  paymentTermId: null,
+  eta: null,
+  location: "",
+  deviceCondition: null,
+  assignedTeamId: null,
+  remarks: "",
+};
+
 
 // --- REFINED ---
-// Helper function to transform API data TO form data structure (for setting/resetting the form)
-const transformApiDataToFormData = (apiData: any): WallItemFormData => {
+// Helper function to transform API data TO a single form item structure (for setting/resetting the form)
+const transformApiDataToSingleFormItem = (apiData: any): SingleWallItemFormData => {
   return {
+    status: apiData?.status || "Pending",
     productId: Number(apiData?.product_id),
     member_id: Number(apiData?.customer_id),
     qty: Number(apiData?.qty) || 1,
-    price: apiData?.price ? Number(apiData.price) : null,
     intent: apiData?.want_to || "Sell",
     productStatus: apiData?.product_status || "Active",
+    activeHours: apiData?.active_hrs || "",
     productSpecId: apiData?.product_spec_id ? Number(apiData.product_spec_id) : null,
-    deviceCondition: apiData?.device_condition || null,
+    price: apiData?.price ? Number(apiData.price) : null,
     color: apiData?.color || null,
     cartoonTypeId: apiData?.cartoon_type || null,
     dispatchStatus: apiData?.dispatch_status || null,
-    dispatchMode: apiData?.dispatch_mode || null,
     paymentTermId: apiData?.payment_term ? Number(apiData.payment_term) : null,
     eta: apiData?.eta_details ? dayjs(apiData.eta_details).toDate() : null,
     location: apiData?.location || null,
-    listingType: apiData?.listing_type || "Regular",
-    visibility: apiData?.visibility || "Public",
-    priority: apiData?.priority || "Medium",
-    adminStatus: apiData?.admin_status || null,
-    status: apiData?.status || "Pending",
+    deviceCondition: apiData?.device_condition || null,
     assignedTeamId: apiData?.assigned_team_id ? Number(apiData.assigned_team_id) : null,
-    activeHours: apiData?.active_hrs || null,
-    productUrl: apiData?.product_url || null,
-    warrantyInfo: apiData?.warranty_info || null,
-    returnPolicy: apiData?.return_policy || null,
-    internalRemarks: apiData?.internal_remarks || null,
+    remarks: apiData?.warranty_info || apiData?.internal_remarks || null,
   };
 };
 
-// --- REFINED ---
-// Helper function to transform form data BACK TO API payload structure (for submitting the form)
-const transformFormDataToApiPayload = (formData: WallItemFormData, initialData: any) => {
-  return {
-    // These keys might not be editable but are often required by PUT/PATCH APIs
-    id: initialData?.id,
-    
-    // Map form state to API keys
+// --- MODIFIED as per request ---
+// Helper function to transform a single form item BACK TO API payload structure
+const transformSingleItemToApiPayload = (formData: SingleWallItemFormData, initialData: any | null) => {
+  // This is the base payload containing all fields from the form, mapped to API keys.
+  const payloadFromForm = {
+    status: formData.status,
     product_id: String(formData.productId),
     customer_id: String(formData.member_id),
-    want_to: formData.intent,
     qty: String(formData.qty),
-    price: formData.price !== null && formData.price !== undefined ? String(formData.price) : null,
+    want_to: formData.intent,
     product_status: formData.productStatus,
+    active_hrs: formData.activeHours,
     product_spec_id: formData.productSpecId ? String(formData.productSpecId) : null,
-    device_condition: formData.deviceCondition,
-    color: formData.color,
-    cartoon_type: formData.cartoonTypeId,
-    dispatch_status: formData.dispatchStatus,
-    dispatch_mode: formData.dispatchMode,
+    price: formData.price !== null && formData.price !== undefined ? String(formData.price) : null,
+    color: formData.color || null,
+    cartoon_type: formData.cartoonTypeId || null,
+    dispatch_status: formData.dispatchStatus || null,
     payment_term: formData.paymentTermId ? String(formData.paymentTermId) : null,
     eta_details: formData.eta ? dayjs(formData.eta).format("YYYY-MM-DD") : null,
-    location: formData.location,
-    listing_type: formData.listingType,
-    visibility: formData.visibility,
-    priority: formData.priority,
-    admin_status: formData.adminStatus,
-    status: formData.status,
+    location: formData.location || null,
+    device_condition: formData.deviceCondition || null,
     assigned_team_id: formData.assignedTeamId ? String(formData.assignedTeamId) : null,
-    active_hrs: formData.activeHours,
-    product_url: formData.productUrl,
-    warranty_info: formData.warrantyInfo,
-    return_policy: formData.returnPolicy,
-    internal_remarks: formData.internalRemarks,
+    warranty_info: formData.remarks || null,
   };
+
+  // For "Edit" mode, we add the item's ID. The Redux action will handle adding `_method: "PUT"`.
+  if (initialData) {
+    return {
+      ...payloadFromForm,
+      id: initialData.id,
+    };
+  }
+
+  // For "Add" mode, we send only the fields from the form, as requested.
+  return payloadFromForm;
 };
 
 const WallItemForm = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const itemId = location.state; // Assuming the ID is passed in state as { id: ... }
+  const itemId = location.state; 
   const isEditMode = !!itemId;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -180,44 +196,22 @@ const WallItemForm = () => {
     ProductSpecificationsData = [],
     PaymentTermsData = [],
     salesPerson = [],
-    getwallItemsData, // This will hold the single item data for editing
-    status: masterDataAccessStatus = 'idle',
+    getwallItemsData, 
   } = useSelector(masterSelector);
 
   const formMethods = useForm<WallItemFormData>({
     resolver: zodResolver(wallItemFormSchema),
     mode: 'onTouched',
     defaultValues: {
-      productId: 0,
-      member_id: 0,
-      qty: 1,
-      price: null,
-      intent: "Sell",
-      productStatus: "Active",
-      status: "Pending",
-      visibility: 'Public',
-      priority: 'Medium',
-      listingType: 'Regular',
-      adminStatus: 'Pending',
-      productSpecId: null,
-      deviceCondition: null,
-      color: "",
-      cartoonTypeId: null,
-      dispatchStatus: "",
-      dispatchMode: null,
-      paymentTermId: null,
-      eta: null,
-      location: "",
-      assignedTeamId: null,
-      activeHours: "",
-      productUrl: "",
-      warrantyInfo: "",
-      returnPolicy: "",
-      internalRemarks: "",
+      wallItems: [defaultItem],
     },
   });
 
-  // This useEffect fetches all necessary data on component mount.
+  const { fields, append, remove } = useFieldArray({
+    control: formMethods.control,
+    name: "wallItems",
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoadingPageData(true);
@@ -229,13 +223,10 @@ const WallItemForm = () => {
           dispatch(getPaymentTermAction()),
           dispatch(getSalesPersonAction()),
         ];
-
         if (isEditMode) {
           promises.push(dispatch(getWallItemById(itemId)));
         }
-
         await Promise.all(promises);
-
       } catch (error) {
         console.error("Failed to fetch page data:", error);
         toast.push(<Notification title="Data Load Error" type="danger">Could not load required data.</Notification>);
@@ -246,17 +237,14 @@ const WallItemForm = () => {
     fetchData();
   }, [dispatch, itemId, isEditMode]);
 
-  // This useEffect populates the form once data for the item is available for editing.
   useEffect(() => {
-    // Only populate if we are in EDIT mode and the specific item data has been fetched.
-    // The `getwallItemsData?.id` check ensures we have the data before calling reset.
     if (isEditMode && getwallItemsData?.id === itemId) {
-      const formDataForEdit = transformApiDataToFormData(getwallItemsData);
-      formMethods.reset(formDataForEdit);
+      const formItemForEdit = transformApiDataToSingleFormItem(getwallItemsData);
+      formMethods.reset({ wallItems: [formItemForEdit] });
     }
   }, [isEditMode, itemId, getwallItemsData, formMethods]);
 
-  // --- Dropdown options (useMemo hooks are more efficient) ---
+  // --- Dropdown options (memoized for efficiency) ---
   const productOptions: ProductOptionType[] = useMemo(() => {
     if (!Array.isArray(productsMasterData)) return [];
     return productsMasterData.map((product: any) => ({ value: product.id, label: product.name }));
@@ -283,70 +271,40 @@ const WallItemForm = () => {
     return salesPerson.map((person: any) => ({ value: person.id, label: person.name }));
   }, [salesPerson]);
 
-
-  // Form submission handler
   const onFormSubmit = async (formData: WallItemFormData) => {
     setIsSubmitting(true);
     try {
       if (isEditMode) {
-        // --- EDIT LOGIC ---
-        const payload = transformFormDataToApiPayload(formData, getwallItemsData);
+        const singleItemData = formData.wallItems[0];
+        const payload = transformSingleItemToApiPayload(singleItemData, getwallItemsData);
         await dispatch(editWallItemAction(payload)).unwrap();
-        toast.push(
-          <Notification title="Update Successful" type="success">
-            Wall item has been updated.
-          </Notification>
-        );
+        toast.push(<Notification title="Update Successful" type="success">Wall item has been updated.</Notification>);
       } else {
-        // --- ADD LOGIC ---
-        const payload = transformFormDataToApiPayload(formData, null);
-        const addPayload = {
-          ...payload,
-          created_from: "FormUI-Add",
-          source: "in",
-          is_wall_manual: "0",
-        };
-        await dispatch(addWallItemAction(addPayload)).unwrap();
-        toast.push(
-          <Notification title="Item Added" type="success">
-            New wall item has been created.
-          </Notification>
-        );
+        const addPromises = formData.wallItems.map(item => {
+          const payload = transformSingleItemToApiPayload(item, null);
+          return dispatch(addWallItemAction(payload)).unwrap();
+        });
+        await Promise.all(addPromises);
+        toast.push(<Notification title="Items Added" type="success">{formData.wallItems.length} new wall item(s) have been created.</Notification>);
       }
       navigate("/sales-leads/wall-listing");
-
     } catch (error: any) {
-      toast.push(
-        <Notification title={isEditMode ? "Update Failed" : "Add Failed"} type="danger">
-          {error.message || "An unexpected error occurred."}
-        </Notification>
-      );
+      toast.push(<Notification title={isEditMode ? "Update Failed" : "Add Failed"} type="danger">{error.message || "An unexpected error occurred."}</Notification>);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleCancel = () => {
-    navigate("/sales-leads/wall-listing");
-  };
+  const handleCancel = () => navigate("/sales-leads/wall-listing");
 
   if (isEditMode && isLoadingPageData) {
-    return (
-      <div className="flex justify-center items-center h-60">
-        <Spinner size="40px" />
-      </div>
-    );
+    return <div className="flex justify-center items-center h-60"><Spinner size="40px" /></div>;
   }
-  
-  // Get product name for display in toast/title
-  const getProductName = (productId: number) => productOptions.find(p => p.value === productId)?.label || 'the';
 
   return (
     <>
       <div className="flex gap-1 items-end mb-3 ">
-        <NavLink to="/sales-leads/wall-listing">
-          <h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">Wall Listing</h6>
-        </NavLink>
+        <NavLink to="/sales-leads/wall-listing"><h6 className="font-semibold hover:text-primary-600 dark:hover:text-primary-400">Wall Listing</h6></NavLink>
         <BiChevronRight size={22} className="text-gray-700 dark:text-gray-200" />
         <h6 className="font-semibold text-primary">{isEditMode ? 'Edit Wall Item' : 'Add New Wall Item'}</h6>
       </div>
@@ -357,323 +315,89 @@ const WallItemForm = () => {
             console.error("Form validation errors:", errors);
             toast.push(<Notification title="Validation Error" type="warning">Please fix the errors before submitting.</Notification>);
           })}
-          className="flex flex-col gap-y-4"
+          className="flex flex-col"
         >
-          <div className="grid md:grid-cols-3 gap-4 p-4">
-            {/* --- MODIFIED CONTROLLERS --- */}
-            <FormItem
-              label={<div>Product Name<span className="text-red-500"> * </span></div>}
-              invalid={!!formMethods.formState.errors.productId}
-              errorMessage={formMethods.formState.errors.productId?.message}
-            >
-              <Controller
-                name="productId"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isLoading={isLoadingPageData}
-                    options={productOptions}
-                    value={productOptions.find(opt => opt.value === field.value) || null}
-                    onChange={option => field.onChange(option ? option.value : 0)}
-                    placeholder="Select Product Name"
-                    isClearable
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label={<div>Member Name<span className="text-red-500"> * </span></div>}
-              invalid={!!formMethods.formState.errors.member_id}
-              errorMessage={formMethods.formState.errors.member_id?.message}
-            >
-              <Controller
-                name="member_id"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    isLoading={isLoadingPageData}
-                    options={memberOptions}
-                    value={memberOptions.find(opt => opt.value === field.value) || null}
-                    onChange={option => field.onChange(option ? option.value : 0)}
-                    placeholder="Select Member Name"
-                    isClearable
-                  />
-                )}
-              />
-            </FormItem>
-            {/* --- REMAINDER OF THE FORM IS LARGELY UNCHANGED, JUST BENEFITS FROM CLEANER STATE --- */}
-            <FormItem
-              label={<div>Quantity<span className="text-red-500"> * </span></div>}
-              invalid={!!formMethods.formState.errors.qty}
-              errorMessage={formMethods.formState.errors.qty?.message}
-            >
-              <Controller name="qty" control={formMethods.control} render={({ field }) => (<InputNumber {...field} placeholder="Enter Quantity" />)} />
-            </FormItem>
+          <div className="flex flex-col gap-y-6">
+            {fields.map((field, index) => (
+              <div key={field.id} className="p-4 border rounded-md relative flex flex-col gap-4">
+                {index > 0 && <hr className="absolute -top-3 left-0 w-full" />}
+                <div className="flex justify-between items-center">
+                  <h5 className="font-semibold">Item {index + 1}</h5>
+                  {index > 0 && ( <Button type="button" size="sm" variant="plain" onClick={() => remove(index)}> Remove </Button> )}
+                </div>
 
-            {/* Row 2 */}
-            <FormItem
-              label="Price"
-              invalid={!!formMethods.formState.errors.price}
-              errorMessage={formMethods.formState.errors.price?.message}
-            >
-              <Controller name="price" control={formMethods.control} render={({ field }) => (<InputNumber {...field} value={field.value ?? undefined} placeholder="Enter Price (Optional)" />)} />
-            </FormItem>
-            <FormItem
-              label={<div>Intent (Want to)<span className="text-red-500"> * </span></div>}
-              invalid={!!formMethods.formState.errors.intent}
-              errorMessage={formMethods.formState.errors.intent?.message}
-            >
-              <Controller name="intent" control={formMethods.control} render={({ field }) => (<UiSelect options={intentOptions} {...field}
-                value={intentOptions.find(opt => opt.value === field.value)}
-                onChange={opt => field.onChange(opt ? opt.value : null)}
-                placeholder="Select Intent" />)} />
-            </FormItem>
-            <FormItem
-              label={<div>Product Status<span className="text-red-500"> * </span></div>}
-              invalid={!!formMethods.formState.errors.productStatus}
-              errorMessage={formMethods.formState.errors.productStatus?.message}
-            >
-              <Controller name="productStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={productStatusOptions} {...field}
-                value={productStatusOptions.find(opt => opt.value === field.value)}
-                onChange={opt => field.onChange(opt ? opt.value : null)}
-                placeholder="Select Product Status" />)} />
-            </FormItem>
-
-            {/* Row 3 */}
-            <FormItem
-              label="Product Spec"
-              invalid={!!formMethods.formState.errors.productSpecId}
-              errorMessage={formMethods.formState.errors.productSpecId?.message}
-            >
-              <Controller name="productSpecId" control={formMethods.control} render={({ field }) => (
-                <UiSelect
-                  isLoading={isLoadingPageData}
-                  options={productSpecOptionsForSelect}
-                  value={productSpecOptionsForSelect.find(opt => opt.value === field.value) || null}
-                  onChange={(option) => field.onChange(option ? option.value : null)}
-                  placeholder="Select Product Spec (Optional)"
-                  isClearable
-                />
-              )} />
-            </FormItem>
-            <FormItem
-              label="Device Condition"
-              invalid={!!formMethods.formState.errors.deviceCondition}
-              errorMessage={formMethods.formState.errors.deviceCondition?.message}
-            >
-              <Controller name="deviceCondition" control={formMethods.control} render={({ field }) => (
-                <Radio.Group value={field.value} onChange={field.onChange}> {deviceConditionRadioOptions.map(opt => (<Radio key={opt.value} value={opt.value}>{opt.label}</Radio>))} </Radio.Group>
-              )} />
-            </FormItem>
-            <FormItem
-              label="Color"
-              invalid={!!formMethods.formState.errors.color}
-              errorMessage={formMethods.formState.errors.color?.message}
-            >
-              <Controller name="color" control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="Enter Color (Optional)" />)} />
-            </FormItem>
-
-            {/* Row 4 */}
-            <FormItem
-              label="Cartoon Type"
-              invalid={!!formMethods.formState.errors.cartoonTypeId}
-              errorMessage={formMethods.formState.errors.cartoonTypeId?.message}
-            >
-              <Controller name="cartoonTypeId" control={formMethods.control} render={({ field }) => (
-                <UiSelect options={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name, }))} {...field}
-                  value={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name })).find((opt) => opt.value === field.value) || null}
-                  onChange={(option) => field.onChange(option ? option.value : null)}
-                  placeholder="Select Cartoon Type (Optional)"
-                  isClearable
-                />
-              )} />
-            </FormItem>
-            <FormItem
-              label="Dispatch Status"
-              invalid={!!formMethods.formState.errors.dispatchStatus}
-              errorMessage={formMethods.formState.errors.dispatchStatus?.message}
-            >
-              <Controller name="dispatchStatus" control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="e.g., Ready to Ship (Optional)" />)} />
-            </FormItem>
-            <FormItem
-              label="Dispatch Mode"
-              invalid={!!formMethods.formState.errors.dispatchMode}
-              errorMessage={formMethods.formState.errors.dispatchMode?.message}
-            >
-              <Controller name="dispatchMode" control={formMethods.control} render={({ field }) => (<UiSelect options={dispatchModeOptions} {...field}
-                value={dispatchModeOptions.find(opt => opt.value === field.value) || null}
-                onChange={opt => field.onChange(opt ? opt.value : null)}
-                placeholder="Select Dispatch Mode (Optional)"
-                isClearable
-              />)} />
-            </FormItem>
-
-            {/* Row 5 */}
-            <FormItem
-              label="Payment Term"
-              invalid={!!formMethods.formState.errors.paymentTermId}
-              errorMessage={formMethods.formState.errors.paymentTermId?.message}
-            >
-              <Controller name="paymentTermId" control={formMethods.control} render={({ field }) => (
-                <UiSelect
-                  isLoading={isLoadingPageData}
-                  options={paymentTermsOption}
-                  value={paymentTermsOption.find(opt => opt.value === field.value) || null}
-                  onChange={(option) => field.onChange(option ? option.value : null)}
-                  placeholder="Select Payment Term (Optional)"
-                  isClearable
-                />
-              )} />
-            </FormItem>
-            <FormItem
-              label="ETA"
-              invalid={!!formMethods.formState.errors.eta}
-              errorMessage={formMethods.formState.errors.eta?.message}
-            >
-              <Controller name="eta" control={formMethods.control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={(date) => field.onChange(date)} placeholder="Select ETA (Optional)" inputFormat="YYYY-MM-DD" />)} />
-            </FormItem>
-            <FormItem
-              label="Location"
-              invalid={!!formMethods.formState.errors.location}
-              errorMessage={formMethods.formState.errors.location?.message}
-            >
-              <Controller name="location" control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="Enter Location (Optional)" />)} />
-            </FormItem>
-
-            {/* Row 6: Listing Configuration */}
-            <FormItem
-              label="Listing Type"
-              invalid={!!formMethods.formState.errors.listingType}
-              errorMessage={formMethods.formState.errors.listingType?.message}
-            >
-              <Controller name="listingType" control={formMethods.control} render={({ field }) => (<UiSelect options={listingTypeOptions} {...field}
-                value={listingTypeOptions.find(opt => opt.value === field.value) || null}
-                onChange={opt => field.onChange(opt ? opt.value : null)}
-                placeholder="Select Listing Type"
-                isClearable />)} />
-            </FormItem>
-            <FormItem
-              label={<div>Visibility<span className="text-red-500"> * </span></div>}
-              invalid={!!formMethods.formState.errors.visibility}
-              errorMessage={formMethods.formState.errors.visibility?.message}
-            >
-              <Controller name="visibility" control={formMethods.control} render={({ field }) => (<UiSelect options={visibilityOptions} {...field}
-                value={visibilityOptions.find(opt => opt.value === field.value)}
-                onChange={opt => field.onChange(opt ? opt.value : null)}
-                placeholder="Select Visibility" />)} />
-            </FormItem>
-            <FormItem
-              label="Priority"
-              invalid={!!formMethods.formState.errors.priority}
-              errorMessage={formMethods.formState.errors.priority?.message}
-            >
-              <Controller name="priority" control={formMethods.control} render={({ field }) => (<UiSelect options={priorityOptions} {...field}
-                value={priorityOptions.find(opt => opt.value === field.value) || null}
-                onChange={opt => field.onChange(opt ? opt.value : null)}
-                placeholder="Select Priority (Optional)"
-                isClearable
-              />)} />
-            </FormItem>
-
-            {/* Row 7: Admin & Active Hours */}
-            <FormItem
-              label="Admin Status"
-              invalid={!!formMethods.formState.errors.adminStatus}
-              errorMessage={formMethods.formState.errors.adminStatus?.message}
-            >
-              <Controller name="adminStatus" control={formMethods.control} render={({ field }) => (<UiSelect options={adminStatusOptions} {...field}
-                value={adminStatusOptions.find(opt => opt.value === field.value) || null}
-                onChange={opt => field.onChange(opt ? opt.value : null)}
-                placeholder="Select Admin Status"
-                isClearable />)} />
-            </FormItem>
-            <FormItem
-              label={<div>Status<span className="text-red-500"> * </span></div>}
-              invalid={!!formMethods.formState.errors.status}
-              errorMessage={formMethods.formState.errors.status?.message}
-            >
-              <Controller
-                name="status"
-                control={formMethods.control}
-                render={({ field }) => (
-                  <UiSelect
-                    {...field}
-                    options={statusOptions}
-                    value={statusOptions.find(opt => opt.value === field.value)}
-                    onChange={opt => field.onChange(opt ? opt.value : null)}
-                    placeholder="Select Status"
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Assigned Team"
-              invalid={!!formMethods.formState.errors.assignedTeamId}
-              errorMessage={formMethods.formState.errors.assignedTeamId?.message}
-            >
-              <Controller name="assignedTeamId" control={formMethods.control} render={({ field }) => (
-                <UiSelect
-                  isLoading={isLoadingPageData}
-                  options={salesPersonOptions} {...field}
-                  value={salesPersonOptions.find(opt => opt.value === field.value) || null}
-                  onChange={opt => field.onChange(opt ? opt.value : null)}
-                  placeholder="Select Assigned Team (Optional)"
-                  isClearable
-                />
-              )} />
-            </FormItem>
-
-            {/* Row 8 */}
-            <FormItem
-              label="Active Hours"
-              invalid={!!formMethods.formState.errors.activeHours}
-              errorMessage={formMethods.formState.errors.activeHours?.message}
-            >
-              <Controller name="activeHours" control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM, 24/7 (Optional)" />)} />
-            </FormItem>
-            <FormItem
-              label="Product URL"
-              className="md:col-span-1"
-              invalid={!!formMethods.formState.errors.productUrl}
-              errorMessage={formMethods.formState.errors.productUrl?.message}
-            >
-              <Controller name="productUrl" control={formMethods.control} render={({ field }) => (<Input type="url" {...field} value={field.value || ''} placeholder="https://example.com/product (Optional)" />)} />
-            </FormItem>
-            <FormItem
-              label="Warranty Info"
-              className="md:col-span-2"
-              invalid={!!formMethods.formState.errors.warrantyInfo}
-              errorMessage={formMethods.formState.errors.warrantyInfo?.message}
-            >
-              <Controller name="warrantyInfo" control={formMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value || ""} rows={2} placeholder="Enter warranty details (Optional)" />)} />
-            </FormItem>
-
-            <FormItem
-              label="Return Policy"
-              className="md:col-span-3"
-              invalid={!!formMethods.formState.errors.returnPolicy}
-              errorMessage={formMethods.formState.errors.returnPolicy?.message}
-            >
-              <Controller name="returnPolicy" control={formMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value || ""} rows={3} placeholder="Enter return policy (Optional)" />)} />
-            </FormItem>
-
-            <FormItem
-              label="Internal Remarks"
-              className="md:col-span-3"
-              invalid={!!formMethods.formState.errors.internalRemarks}
-              errorMessage={
-                formMethods.formState.errors.internalRemarks?.message
-              }
-            >
-              <Controller name="internalRemarks" control={formMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value || ""} rows={3} placeholder="Internal notes for this listing (Optional)" />)} />
-            </FormItem>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {/* --- NEW FIELD ORDER --- */}
+                  <FormItem label={<div>Status<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.wallItems?.[index]?.status} errorMessage={formMethods.formState.errors.wallItems?.[index]?.status?.message}>
+                    <Controller name={`wallItems.${index}.status`} control={formMethods.control} render={({ field }) => (<UiSelect options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : null)} placeholder="Select Status" />)} />
+                  </FormItem>
+                  <FormItem label={<div>Product Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.wallItems?.[index]?.productId} errorMessage={formMethods.formState.errors.wallItems?.[index]?.productId?.message}>
+                    <Controller name={`wallItems.${index}.productId`} control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={productOptions} value={productOptions.find(opt => opt.value === field.value) || null} onChange={option => field.onChange(option ? option.value : 0)} placeholder="Select Product Name" isClearable />)} />
+                  </FormItem>
+                  <FormItem label={<div>Member Name<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.wallItems?.[index]?.member_id} errorMessage={formMethods.formState.errors.wallItems?.[index]?.member_id?.message}>
+                    <Controller name={`wallItems.${index}.member_id`} control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={memberOptions} value={memberOptions.find(opt => opt.value === field.value) || null} onChange={option => field.onChange(option ? option.value : 0)} placeholder="Select Member Name" isClearable />)} />
+                  </FormItem>
+                  <FormItem label={<div>Quantity<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.wallItems?.[index]?.qty} errorMessage={formMethods.formState.errors.wallItems?.[index]?.qty?.message}>
+                    <Controller name={`wallItems.${index}.qty`} control={formMethods.control} render={({ field }) => (<InputNumber {...field} placeholder="Enter Quantity" />)} />
+                  </FormItem>
+                  <FormItem label={<div>Intent (Want to)<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.wallItems?.[index]?.intent} errorMessage={formMethods.formState.errors.wallItems?.[index]?.intent?.message}>
+                    <Controller name={`wallItems.${index}.intent`} control={formMethods.control} render={({ field }) => (<UiSelect options={intentOptions} value={intentOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : null)} placeholder="Select Intent" />)} />
+                  </FormItem>
+                  <FormItem label={<div>Product Status<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.wallItems?.[index]?.productStatus} errorMessage={formMethods.formState.errors.wallItems?.[index]?.productStatus?.message}>
+                    <Controller name={`wallItems.${index}.productStatus`} control={formMethods.control} render={({ field }) => (<UiSelect options={productStatusOptions} value={productStatusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt ? opt.value : null)} placeholder="Select Product Status" />)} />
+                  </FormItem>
+                  <FormItem label="Product Spec" invalid={!!formMethods.formState.errors.wallItems?.[index]?.productSpecId} errorMessage={formMethods.formState.errors.wallItems?.[index]?.productSpecId?.message}>
+                    <Controller name={`wallItems.${index}.productSpecId`} control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={productSpecOptionsForSelect} value={productSpecOptionsForSelect.find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Product Spec" isClearable />)} />
+                  </FormItem>
+                  <FormItem label="Price" invalid={!!formMethods.formState.errors.wallItems?.[index]?.price} errorMessage={formMethods.formState.errors.wallItems?.[index]?.price?.message}>
+                    <Controller name={`wallItems.${index}.price`} control={formMethods.control} render={({ field }) => (<InputNumber {...field} value={field.value ?? undefined} placeholder="Enter Price (Optional)" />)} />
+                  </FormItem>
+                  <FormItem label="Color" invalid={!!formMethods.formState.errors.wallItems?.[index]?.color} errorMessage={formMethods.formState.errors.wallItems?.[index]?.color?.message}>
+                    <Controller name={`wallItems.${index}.color`} control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="Enter Color (Optional)" />)} />
+                  </FormItem>
+                  <FormItem label={<div>Active Hours<span className="text-red-500"> * </span></div>} invalid={!!formMethods.formState.errors.wallItems?.[index]?.activeHours} errorMessage={formMethods.formState.errors.wallItems?.[index]?.activeHours?.message}>
+                    <Controller name={`wallItems.${index}.activeHours`} control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="e.g., 9 AM - 5 PM" />)} />
+                  </FormItem>
+                  <FormItem label="Cartoon Type" invalid={!!formMethods.formState.errors.wallItems?.[index]?.cartoonTypeId} errorMessage={formMethods.formState.errors.wallItems?.[index]?.cartoonTypeId?.message}>
+                    <Controller name={`wallItems.${index}.cartoonTypeId`} control={formMethods.control} render={({ field }) => (<UiSelect options={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name, }))} value={dummyCartoonTypes.map((ct) => ({ value: ct.id, label: ct.name })).find((opt) => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Cartoon Type" isClearable />)} />
+                  </FormItem>
+                  <FormItem label="Dispatch Status" invalid={!!formMethods.formState.errors.wallItems?.[index]?.dispatchStatus} errorMessage={formMethods.formState.errors.wallItems?.[index]?.dispatchStatus?.message}>
+                    <Controller name={`wallItems.${index}.dispatchStatus`} control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="e.g., Ready to Ship" />)} />
+                  </FormItem>
+                  <FormItem label="Payment Term" invalid={!!formMethods.formState.errors.wallItems?.[index]?.paymentTermId} errorMessage={formMethods.formState.errors.wallItems?.[index]?.paymentTermId?.message}>
+                    <Controller name={`wallItems.${index}.paymentTermId`} control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={paymentTermsOption} value={paymentTermsOption.find(opt => opt.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : null)} placeholder="Select Payment Term" isClearable />)} />
+                  </FormItem>
+                  <FormItem label="ETA" invalid={!!formMethods.formState.errors.wallItems?.[index]?.eta} errorMessage={formMethods.formState.errors.wallItems?.[index]?.eta?.message}>
+                    <Controller name={`wallItems.${index}.eta`} control={formMethods.control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={(date) => field.onChange(date)} placeholder="Select ETA" inputFormat="YYYY-MM-DD" />)} />
+                  </FormItem>
+                  <FormItem label="Location" invalid={!!formMethods.formState.errors.wallItems?.[index]?.location} errorMessage={formMethods.formState.errors.wallItems?.[index]?.location?.message}>
+                    <Controller name={`wallItems.${index}.location`} control={formMethods.control} render={({ field }) => (<Input {...field} value={field.value || ''} placeholder="Enter Location" />)} />
+                  </FormItem>
+                  <FormItem label="Device Condition" invalid={!!formMethods.formState.errors.wallItems?.[index]?.deviceCondition} errorMessage={formMethods.formState.errors.wallItems?.[index]?.deviceCondition?.message}>
+                    <Controller name={`wallItems.${index}.deviceCondition`} control={formMethods.control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}> {deviceConditionRadioOptions.map(opt => (<Radio key={opt.value} value={opt.value}>{opt.label}</Radio>))} </Radio.Group>)} />
+                  </FormItem>
+                  <FormItem label="Assigned Team" invalid={!!formMethods.formState.errors.wallItems?.[index]?.assignedTeamId} errorMessage={formMethods.formState.errors.wallItems?.[index]?.assignedTeamId?.message}>
+                    <Controller name={`wallItems.${index}.assignedTeamId`} control={formMethods.control} render={({ field }) => (<UiSelect isLoading={isLoadingPageData} options={salesPersonOptions} value={salesPersonOptions.find(opt => opt.value === field.value) || null} onChange={opt => field.onChange(opt ? opt.value : null)} placeholder="Select Assigned Team" isClearable />)} />
+                  </FormItem>
+                  <FormItem label="Remarks" className="md:col-span-3" invalid={!!formMethods.formState.errors.wallItems?.[index]?.remarks} errorMessage={formMethods.formState.errors.wallItems?.[index]?.remarks?.message}>
+                    <Controller name={`wallItems.${index}.remarks`} control={formMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value || ""} rows={3} placeholder="Enter remarks, warranty info, or other notes" />)} />
+                  </FormItem>
+                </div>
+              </div>
+            ))}
           </div>
+
+          {!isEditMode && (
+            <div className="p-4 mt-4 flex justify-end">
+              <Button type="button" onClick={() => append(defaultItem)}> Add New Form </Button>
+            </div>
+          )}
         </Form>
       </Card>
 
       <Card bodyClass="flex justify-end gap-2" className="mt-4">
-        <Button type="button" onClick={handleCancel} disabled={isSubmitting} > Cancel </Button>
-        <Button type="submit" form="wallItemAddForm" variant="solid" loading={isSubmitting} disabled={isSubmitting} >
+        <Button type="button" onClick={handleCancel} disabled={isSubmitting}> Cancel </Button>
+        <Button type="submit" form="wallItemAddForm" variant="solid" loading={isSubmitting} disabled={isSubmitting}>
           {isSubmitting ? 'Saving...' : (isEditMode ? 'Update' : 'Save')}
         </Button>
       </Card>

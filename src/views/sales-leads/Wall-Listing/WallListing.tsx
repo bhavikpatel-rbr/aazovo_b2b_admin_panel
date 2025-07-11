@@ -987,11 +987,11 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
         {
           header: "Company & Member", accessorKey: "company_name", size: 260, cell: ({ row }) => {
-            const { name, id, email, number } = row.original?.member || {};
+            const { name, member_code, email, number } = row.original?.member || {};
             return (
               <div className="flex flex-col gap-0.5 text-xs">
                 <div className="mt-1 pt-1 dark:border-gray-700 w-full">
-                  {id && (<span className="font-semibold text-gray-500 dark:text-gray-400">{id} | </span>)}
+                  {member_code && (<span className="font-semibold text-gray-500 dark:text-gray-400">{member_code} | </span>)}
                   {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
                   {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{email}</a>)}
                   {number && (<span className="block text-gray-600 dark:text-gray-300">{number}</span>)}
@@ -1007,11 +1007,11 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
             return (
               <div className="flex flex-col gap-0.5 text-xs">
-                <span><span className="font-semibold text-gray-700 dark:text-gray-300">Category:</span>{" "}{product_category || "N/A"}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
-                {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[250px]"><span className="font-semibold text-gray-700 dark:text-gray-300">Specs:</span>{" "}{product_specs.length > 30 ? product_specs.substring(0, 30) + "..." : product_specs}</span></Tooltip>)}
-                {product_status && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Avail. Status:</span>{" "}<Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)}
-                {cartoonTypeName && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Cartoon:</span>{" "}{cartoonTypeName}</span>)}
-                {deviceCondition && (<span><span className="font-semibold text-gray-700 dark:text-gray-300">Condition:</span>{" "}{deviceCondition}</span>)}
+                <span>{product_category || "N/A"}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
+                {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[250px]">{product_specs.length > 30 ? product_specs.substring(0, 30) + "..." : product_specs}</span></Tooltip>)}
+                {product_status && (<span><Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)}
+                {cartoonTypeName && (<span>{cartoonTypeName}</span>)}
+                {deviceCondition && (<span>{deviceCondition}</span>)}
               </div>
             );
           },
@@ -1021,7 +1021,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             const { price, quantity, inquiry_count, share_count, is_bookmarked, created_date, } = row.original;
             return (
               <div className="flex flex-col gap-1 text-xs">
-                <div className="flex items-center"><TbCurrencyDollar className="text-base text-emerald-500 dark:text-emerald-400" /><span className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">{price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2, }) ?? "N/A"}</span><TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span></div>
+                <div className="flex items-center"><TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span></div>
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
                   <Tooltip title="Inquiries"><span className="flex items-center gap-0.5"><TbMessageCircle className="text-gray-500 dark:text-gray-400" />{inquiry_count}</span></Tooltip>
                   <Tooltip title="Shares"><span className="flex items-center gap-0.5"><TbShare className="text-gray-500 dark:text-gray-400" />{share_count}</span></Tooltip>
@@ -1112,7 +1112,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           {!isDashboard && (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
               <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
-              <div className="flex gap-2"><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button><Button variant="solid" icon={<TbPlus />}>Add Multiple</Button></div>
+              <div className="flex gap-2"><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button></div>
             </div>
           )}
           {!isDashboard && (

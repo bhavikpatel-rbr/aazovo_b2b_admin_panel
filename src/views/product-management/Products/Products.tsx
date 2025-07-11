@@ -152,6 +152,8 @@ type ApiProductItem = {
   updated_at: string;
   icon_full_path?: string;
   thumb_image_full_path?: string;
+  supplier_product_code: string | null; // New field
+  product_keywords: string | null; // New field
   product_images_array?: {
     id?: number;
     image: string;
@@ -222,6 +224,8 @@ export type ProductItem = {
   updatedAt: string;
   subject: string | null;
   type: string | null;
+  supplierProductCode: string | null; // New field
+  productKeywords: string | null; // New field
 };
 type ImportType = "products" | "keywords";
 type ExportType = "products" | "keywords";
@@ -1007,11 +1011,8 @@ const ProductsModals: React.FC<ProductsModalsProps> = ({
 // ... (Rest of the file remains the same)
 // --- Form & Filter Schemas ---
 const productFormSchema = z.object({
-  name: z.string().min(1, "Product name is required.").max(255),
-  slug: z.string().min(1, "Slug is required.").max(255),
-  sku_code: z.string().max(50).optional().nullable(),
+  // Re-ordered and updated based on new requirements
   status: z.enum(["Active", "Inactive", "Pending", "Draft", "Rejected"]),
-  // domain_ids: z.array(z.number()).min(1, "Select at least one domain."),
   category_id: z
     .number({ invalid_type_error: "Category is required." })
     .positive("Category is required.")
@@ -1021,19 +1022,23 @@ const productFormSchema = z.object({
     .number({ invalid_type_error: "Brand is required." })
     .positive("Brand is required.")
     .nullable(),
-  unit_id: z
-    .number({ invalid_type_error: "Unit is required." })
-    .positive("Unit is required.")
-    .nullable(),
+  name: z.string().min(1, "Product name is required.").max(255),
+  slug: z.string().min(1, "Slug is required.").max(255),
+  sku_code: z.string().max(50).optional().nullable(),
+  hsn_code: z.string().max(50).optional().nullable(),
+  supplier_product_code: z.string().max(100).optional().nullable(), // New field
   country_id: z
     .number({ invalid_type_error: "Country is required." })
     .positive("Country is required.")
     .nullable(),
+  unit_id: z
+    .number({ invalid_type_error: "Unit is required." })
+    .positive("Unit is required.")
+    .nullable(),
   color: z.string().max(50).optional().nullable(),
-  hsn_code: z.string().max(50).optional().nullable(),
   shelf_life: z.string().max(50).optional().nullable(),
-  packaging_size: z.string().max(100).optional().nullable(),
   packaging_type: z.string().max(100).optional().nullable(),
+  packaging_size: z.string().max(100).optional().nullable(),
   tax_rate: z
     .string()
     .max(20)
@@ -1043,10 +1048,15 @@ const productFormSchema = z.object({
     .optional()
     .nullable(),
   procurement_lead_time: z.string().max(50).optional().nullable(),
+  product_keywords: z.string().min(1, "Product keywords are required.").max(500), // New mandatory field
+
+  // Media (handled via custom validation)
   thumb_image_input: z
     .union([z.instanceof(File), z.null()])
     .optional()
     .nullable(),
+
+  // Other fields
   description: z.string().optional().nullable(),
   short_description: z.string().optional().nullable(),
   payment_term: z.string().optional().nullable(),
@@ -2024,6 +2034,8 @@ const Products = () => {
         metaTitle: apiItem.meta_title,
         metaDescription: apiItem.meta_descr,
         metaKeyword: apiItem.meta_keyword,
+        supplierProductCode: apiItem.supplier_product_code, // New mapping
+        productKeywords: apiItem.product_keywords, // New mapping
         createdAt: apiItem.created_at,
         updatedAt: apiItem.updated_at,
       };
@@ -2148,23 +2160,24 @@ const Products = () => {
     isInitializingFormRef.current = true;
     setEditingProduct(null);
     resetForm({
-      name: "",
-      slug: "",
-      sku_code: "",
       status: "Draft",
-      domain_ids: [],
       category_id: null,
       sub_category_id: null,
       brand_id: null,
-      unit_id: null,
-      country_id: null,
-      color: "",
+      name: "",
+      slug: "",
+      sku_code: "",
       hsn_code: "",
+      supplier_product_code: "",
+      country_id: null,
+      unit_id: null,
+      color: "",
       shelf_life: "",
-      packaging_size: "",
       packaging_type: "",
+      packaging_size: "",
       tax_rate: "",
       procurement_lead_time: "",
+      product_keywords: "",
       thumb_image_input: null,
       description: "",
       short_description: "",
@@ -2205,26 +2218,27 @@ const Products = () => {
         setSubcategoryOptions([]);
       }
       resetForm({
-        name: product.name,
-        slug: product.slug,
-        sku_code: product.skuCode || "",
         status:
           apiProductStatusOptions.find(
             (s) => s.value.toLowerCase() === product.status
           )?.value || "Draft",
-        domain_ids: product.domainIds || [],
         category_id: product.categoryId,
         sub_category_id: product.subCategoryId,
         brand_id: product.brandId,
-        unit_id: product.unitId,
-        country_id: product.countryId,
-        color: product.color || "",
+        name: product.name,
+        slug: product.slug,
+        sku_code: product.skuCode || "",
         hsn_code: product.hsnCode || "",
+        supplier_product_code: product.supplierProductCode || "",
+        country_id: product.countryId,
+        unit_id: product.unitId,
+        color: product.color || "",
         shelf_life: product.shelfLife || "",
-        packaging_size: product.packagingSize || "",
         packaging_type: product.packagingType || "",
+        packaging_size: product.packagingSize || "",
         tax_rate: String(product.taxRate || ""),
         procurement_lead_time: product.procurementLeadTime || "",
+        product_keywords: product.productKeywords || "",
         thumb_image_input: null,
         description: product.description || "",
         short_description: product.shortDescription || "",
@@ -2263,9 +2277,31 @@ const Products = () => {
   }, [resetForm]);
 
   const onProductFormSubmit = useCallback(
-
     async (data: ProductFormData) => {
       setIsSubmittingForm(true);
+
+      // Custom validation for thumbnail image
+      if (!editingProduct && !newThumbImageFile) {
+        toast.push(
+          <Notification type="danger" title="Validation Error">
+            Thumbnail image is required.
+          </Notification>
+        );
+        setCurrentFormTab(FORM_TABS.MEDIA);
+        setIsSubmittingForm(false);
+        return;
+      }
+      if (editingProduct && !newThumbImageFile && !thumbImagePreviewUrl) {
+        toast.push(
+          <Notification type="danger" title="Validation Error">
+            Thumbnail image is required.
+          </Notification>
+        );
+        setCurrentFormTab(FORM_TABS.MEDIA);
+        setIsSubmittingForm(false);
+        return;
+      }
+
       const formData = new FormData();
       if (editingProduct) formData.append("_method", "PUT");
       (Object.keys(data) as Array<keyof ProductFormData>).forEach((key) => {
@@ -3092,58 +3128,13 @@ const Products = () => {
           <div className="flex-grow overflow-y-auto pt-4 px-4 pb-4">
             {currentFormTab === FORM_TABS.GENERAL && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0">
-                <FormItem
-                  label={
-                    <div>
-                      Product Name<span className="text-red-500"> * </span>
-                    </div>
-                  }
-                  isRequired
-                  invalid={!!formErrors.name}
-                  errorMessage={formErrors.name?.message}
-                >
-                  <Controller
-                    name="name"
-                    control={formControl}
-                    render={({ field }) => <Input {...field} />}
-                  />
-                </FormItem>
-                <FormItem
-                  label={
-                    <div>
-                      Slug/URL<span className="text-red-500"> * </span>
-                    </div>
-                  }
-                  isRequired
-                  invalid={!!formErrors.slug}
-                  errorMessage={formErrors.slug?.message}
-                >
-                  <Controller
-                    name="slug"
-                    control={formControl}
-                    render={({ field }) => <Input {...field} />}
-                  />
-                </FormItem>
-                <FormItem
-                  label="SKU Code"
-                  invalid={!!formErrors.sku_code}
-                  errorMessage={formErrors.sku_code?.message}
-                >
-                  <Controller
-                    name="sku_code"
-                    control={formControl}
-                    render={({ field }) => (
-                      <Input {...field} value={field.value ?? ""} />
-                    )}
-                  />
-                </FormItem>
+                {/* --- Field Order Changed --- */}
                 <FormItem
                   label={
                     <div>
                       Status<span className="text-red-500"> * </span>
                     </div>
                   }
-                  isRequired
                   invalid={!!formErrors.status}
                   errorMessage={formErrors.status?.message}
                 >
@@ -3161,18 +3152,12 @@ const Products = () => {
                     )}
                   />
                 </FormItem>
-                {/* <FormItem label={<div>Domains<span className="text-red-500"> * </span></div>} isRequired className="md:col-span-2" invalid={!!formErrors.domain_ids} errorMessage={formErrors.domain_ids?.message}>
-                  <Controller name="domain_ids" control={formControl} render={({ field }) => (
-                    <UiSelect isMulti options={domainOptions} value={domainOptions.filter((opt) => field.value?.includes(opt.value))} onChange={(opts) => field.onChange(opts ? opts.map((opt) => opt.value) : [])} />
-                  )} />
-                </FormItem> */}
                 <FormItem
                   label={
                     <div>
                       Category<span className="text-red-500"> * </span>
                     </div>
                   }
-                  isRequired
                   invalid={!!formErrors.category_id}
                   errorMessage={formErrors.category_id?.message}
                 >
@@ -3234,7 +3219,6 @@ const Products = () => {
                       Brand<span className="text-red-500"> * </span>
                     </div>
                   }
-                  isRequired
                   invalid={!!formErrors.brand_id}
                   errorMessage={formErrors.brand_id?.message}
                 >
@@ -3256,58 +3240,40 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Unit<span className="text-red-500"> * </span>
+                      Product Name<span className="text-red-500"> * </span>
                     </div>
                   }
-                  isRequired
-                  invalid={!!formErrors.unit_id}
-                  errorMessage={formErrors.unit_id?.message}
+                  invalid={!!formErrors.name}
+                  errorMessage={formErrors.name?.message}
                 >
                   <Controller
-                    name="unit_id"
+                    name="name"
                     control={formControl}
-                    render={({ field }) => (
-                      <UiSelect
-                        options={unitOptions}
-                        value={unitOptions.find((o) => o.value === field.value)}
-                        onChange={(opt) => field.onChange(opt?.value)}
-                        isClearable
-                      />
-                    )}
+                    render={({ field }) => <Input {...field} />}
                   />
                 </FormItem>
                 <FormItem
                   label={
                     <div>
-                      Country of Origin<span className="text-red-500"> * </span>
+                      Slug/URL<span className="text-red-500"> * </span>
                     </div>
                   }
-                  isRequired
-                  invalid={!!formErrors.country_id}
-                  errorMessage={formErrors.country_id?.message}
+                  invalid={!!formErrors.slug}
+                  errorMessage={formErrors.slug?.message}
                 >
                   <Controller
-                    name="country_id"
+                    name="slug"
                     control={formControl}
-                    render={({ field }) => (
-                      <UiSelect
-                        options={countryOptions}
-                        value={countryOptions.find(
-                          (o) => o.value === field.value
-                        )}
-                        onChange={(opt) => field.onChange(opt?.value)}
-                        isClearable
-                      />
-                    )}
+                    render={({ field }) => <Input {...field} />}
                   />
                 </FormItem>
                 <FormItem
-                  label="Color"
-                  invalid={!!formErrors.color}
-                  errorMessage={formErrors.color?.message}
+                  label="SKU Code"
+                  invalid={!!formErrors.sku_code}
+                  errorMessage={formErrors.sku_code?.message}
                 >
                   <Controller
-                    name="color"
+                    name="sku_code"
                     control={formControl}
                     render={({ field }) => (
                       <Input {...field} value={field.value ?? ""} />
@@ -3328,6 +3294,79 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
+                  label="Supplier Product Code (SPC)"
+                  invalid={!!formErrors.supplier_product_code}
+                  errorMessage={formErrors.supplier_product_code?.message}
+                >
+                  <Controller
+                    name="supplier_product_code"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Country of Origin
+                      <span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.country_id}
+                  errorMessage={formErrors.country_id?.message}
+                >
+                  <Controller
+                    name="country_id"
+                    control={formControl}
+                    render={({ field }) => (
+                      <UiSelect
+                        options={countryOptions}
+                        value={countryOptions.find(
+                          (o) => o.value === field.value
+                        )}
+                        onChange={(opt) => field.onChange(opt?.value)}
+                        isClearable
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Unit<span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.unit_id}
+                  errorMessage={formErrors.unit_id?.message}
+                >
+                  <Controller
+                    name="unit_id"
+                    control={formControl}
+                    render={({ field }) => (
+                      <UiSelect
+                        options={unitOptions}
+                        value={unitOptions.find((o) => o.value === field.value)}
+                        onChange={(opt) => field.onChange(opt?.value)}
+                        isClearable
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Colors Available"
+                  invalid={!!formErrors.color}
+                  errorMessage={formErrors.color?.message}
+                >
+                  <Controller
+                    name="color"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
                   label="Shelf Life"
                   invalid={!!formErrors.shelf_life}
                   errorMessage={formErrors.shelf_life?.message}
@@ -3341,12 +3380,12 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Packaging Size"
-                  invalid={!!formErrors.packaging_size}
-                  errorMessage={formErrors.packaging_size?.message}
+                  label="Packaging Type"
+                  invalid={!!formErrors.packaging_type}
+                  errorMessage={formErrors.packaging_type?.message}
                 >
                   <Controller
-                    name="packaging_size"
+                    name="packaging_type"
                     control={formControl}
                     render={({ field }) => (
                       <Input {...field} value={field.value ?? ""} />
@@ -3354,12 +3393,12 @@ const Products = () => {
                   />
                 </FormItem>
                 <FormItem
-                  label="Packaging Type"
-                  invalid={!!formErrors.packaging_type}
-                  errorMessage={formErrors.packaging_type?.message}
+                  label="Packaging Size"
+                  invalid={!!formErrors.packaging_size}
+                  errorMessage={formErrors.packaging_size?.message}
                 >
                   <Controller
-                    name="packaging_type"
+                    name="packaging_size"
                     control={formControl}
                     render={({ field }) => (
                       <Input {...field} value={field.value ?? ""} />
@@ -3389,6 +3428,31 @@ const Products = () => {
                     control={formControl}
                     render={({ field }) => (
                       <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Product Keywords (AutoListing)
+                      <span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.product_keywords}
+                  errorMessage={formErrors.product_keywords?.message}
+                  className="md:col-span-2"
+                >
+                  <Controller
+                    name="product_keywords"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input
+                        textArea
+                        {...field}
+                        rows={3}
+                        placeholder="e.g., keyword one, keyword two"
+                        value={field.value ?? ""}
+                      />
                     )}
                   />
                 </FormItem>
@@ -3491,7 +3555,12 @@ const Products = () => {
             {currentFormTab === FORM_TABS.MEDIA && (
               <div>
                 <FormItem
-                  label="Thumbnail Image (Max 1MB, 600x600 recommended)"
+                  label={
+                    <div>
+                      Thumbnail Image (Max 1MB, 600x600 recommended)
+                      <span className="text-red-500"> * </span>
+                    </div>
+                  }
                   className="mb-4"
                   invalid={!!formErrors.thumb_image_input}
                   errorMessage={
@@ -4031,6 +4100,10 @@ const Products = () => {
                     label="HSN Code"
                     value={productToView.hsnCode || "-"}
                   />
+                  <DialogDetailRow
+                    label="Supplier Product Code (SPC)"
+                    value={productToView.supplierProductCode || "-"}
+                  />
                 </div>
               </Card>
               <Card>
@@ -4090,6 +4163,12 @@ const Products = () => {
                   <DialogDetailRow
                     label="Procurement Lead Time"
                     value={productToView.procurementLeadTime || "-"}
+                  />
+                  <DialogDetailRow
+                    label="Product Keywords (AutoListing)"
+                    value={productToView.productKeywords || "-"}
+                    preWrap
+                    className="md:col-span-2 lg:col-span-3"
                   />
                 </div>
                 {productToView.productSpecification && (

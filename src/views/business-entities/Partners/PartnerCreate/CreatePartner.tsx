@@ -31,6 +31,7 @@ import {
   editpartnerAction,
   getCompanyAction,
   getContinentsAction,
+  getDocumentTypeAction,
   getCountriesAction,
   getpartnerAction,
   getpartnerByIdAction
@@ -86,7 +87,7 @@ interface BranchItemFE {
 
 interface OtherDocItemFE {
   id?: string;
-  document_name?: string;
+  document_name?: { label: string; value: any };
   document?: File | string | null;
 }
 
@@ -173,7 +174,7 @@ export interface CompanyFormSchema {
   USER_ACCESS?: boolean;
   BILLING_FIELD?: boolean;
   billing_cycle?: number | string;
-  other_documents?: OtherDocItemFE[];
+  billing_documents?: OtherDocItemFE[];
 
   member?: MemberItem[];
 
@@ -265,7 +266,7 @@ interface ApiSingleCompanyItem {
   office_info?: any[];
   partner_certificate?: any[];
   partner_references?: any[];
-  other_documents?: any[];
+  billing_documents?: any[];
 }
 
 
@@ -273,7 +274,8 @@ interface ApiSingleCompanyItem {
 const transformApiToFormSchema = (
   apiData: ApiSingleCompanyItem,
   partnerOptions: { label: string; value: any }[],
-  companyOptions: { label: string; value: any }[]
+  companyOptions: { label: string; value: any }[],
+  documentTypeOptions: { label: string; value: any }[]
 ): Partial<CompanyFormSchema> => {
   const toBoolean = (value: any): boolean => {
     if (typeof value === 'boolean') return value;
@@ -392,7 +394,11 @@ const transformApiToFormSchema = (
       designation: m.designation,
       number: m.number,
     })),
-    other_documents: apiData.other_documents,
+    billing_documents: apiData.billing_documents?.map((doc: any) => ({
+        id: doc.id,
+        document_name: documentTypeOptions.find(opt => String(opt.value) === String(doc.document_name)),
+        document: doc.document
+    })),
     partner_references: apiData.partner_references?.map((ref: any) => ({
       referenced_partner_id: partnerOptions.find(p => p.value === ref.referenced_partner_id),
       company_id: companyOptions.find(c => c.value === ref.company_id),
@@ -512,9 +518,12 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     append(`partner_references[${index}][remark]`, ref.remark);
   });
 
-  (data.other_documents || []).forEach((doc: any, index: number) => {
-    append(`other_documents[${index}][document_name]`, doc.document_name);
-    appendFileIfExists(`other_documents[${index}][document]`, doc.document);
+  (data.billing_documents || []).forEach((doc: any, index: number) => {
+    if (doc.id) {
+        append(`billing_documents[${index}][id]`, doc.id);
+    }
+    append(`billing_documents[${index}][document_name]`, doc.document_name);
+    appendFileIfExists(`billing_documents[${index}][document]`, doc.document);
   });
 
   (data.office_info || []).forEach((office: any, index: number) => {
@@ -540,7 +549,7 @@ const companyNavigationList = [
   { label: "KYC Documents", link: "kycDocuments" },
   { label: "Bank Details", link: "bankDetails" },
   { label: "Reference", link: "reference" },
-  { label: "Accessibility", link: "accessibility" },
+  { label: "Other Documents", link: "accessibility" },
   { label: "Team Management", link: "memberManagement" },
 ];
 type NavigatorComponentProps = {
@@ -582,6 +591,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
   const {
     CountriesData = [],
     ContinentsData = [],
+    DocumentTypeData = [],
   } = useSelector(masterSelector);
   const { watch } = formMethods;
   const countryOptions = CountriesData.map((value: any) => ({
@@ -607,10 +617,10 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
   ];
 
   const statusOptions = [
+    { value: "Pending", label: "Pending" },
     { value: "Active", label: "Active" },
     { value: "Disabled", label: "Disabled" },
     { value: "Blocked", label: "Blocked" },
-    { value: "Inactive", label: "Inactive" },
   ];
   const officeTypeOptions = [
     { label: "Head Office", value: "Head Office" },
@@ -827,14 +837,14 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           />
         </FormItem>
         <FormItem
-          label="ZIP / Postal Code"
+          label="Postal Code"
           invalid={!!errors.zip_code}
           errorMessage={errors.zip_code?.message as string}
         >
           <Controller
             name="zip_code"
             control={control}
-            render={({ field }) => <Input placeholder="ZIP Code" {...field} />}
+            render={({ field }) => <Input placeholder="Post Code" {...field} />}
           />
         </FormItem>
         <FormItem
@@ -1193,7 +1203,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               <FormItem label="Country"><Controller name={`office_info.${index}.country_id`} control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} /></FormItem>
               <FormItem label="State"><Controller name={`office_info.${index}.state`} control={control} render={({ field }) => <Input placeholder="Enter state" {...field} />} /></FormItem>
               <FormItem label="City"><Controller name={`office_info.${index}.city`} control={control} render={({ field }) => <Input placeholder="Enter city" {...field} />} /></FormItem>
-              <FormItem label="ZIP Code"><Controller name={`office_info.${index}.zip_code`} control={control} render={({ field }) => <Input placeholder="ZIP Code" {...field} />} /></FormItem>
+              <FormItem label="Post Code"><Controller name={`office_info.${index}.zip_code`} control={control} render={({ field }) => <Input placeholder="Post Code" {...field} />} /></FormItem>
               <FormItem label="Address" className="md:col-span-4"><Controller name={`office_info.${index}.address`} control={control} render={({ field }) => <Input placeholder="Full Address" {...field} />} /></FormItem>
             </div>
           </div>
@@ -1633,26 +1643,44 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
   const { watch } = formMethods;
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "other_documents",
+    name: "billing_documents",
   });
-  
+  const { DocumentTypeData = [] } = useSelector(masterSelector);
+
+  const documentTypes = useMemo(() => 
+      DocumentTypeData.map((c: any) => ({
+      value: c.id,
+      label: c.name,
+    })), [DocumentTypeData]);
+    
   return (
     <Card id="accessibility">
-      <h4 className="mb-6">Accessibility & Configuration</h4>
       <div className="grid grid-cols-1 gap-y-6">
-        <div className="flex items-center gap-x-8">
-          <FormItem label="User Access"><Controller name="USER_ACCESS" control={control} render={({ field }) => <Checkbox checked={!!field.value} onChange={field.onChange}>Enabled</Checkbox>} /></FormItem>
-        </div>
-        <hr />
         <div className="flex justify-between items-center">
           <h5 className="mb-0">Other Documents</h5>
-          <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: "", document: undefined })}>Add Document</Button>
+          <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: undefined, document: undefined })}>Add Document</Button>
         </div>
         {fields.map((item, index) => (
           <Card key={item.id} className="border-black rounded-md" bodyClass="p-4">
             <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-center">
-              <FormItem label="Document Name" className="md:col-span-4"><Controller name={`other_documents.${index}.document_name`} control={control} render={({ field }) => <Input placeholder="e.g., NDA" {...field} />} /></FormItem>
-              <FormItem label="Upload Document" className="md:col-span-4"><Controller name={`other_documents.${index}.document`} control={control} render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} />} /></FormItem>
+              <FormItem label="Document Name" className="md:col-span-4">
+                <Controller 
+                  name={`billing_documents.${index}.document_name`} 
+                  control={control} 
+                  render={({ field }) => <Select
+                    options={documentTypes}
+                    placeholder="Select Document Type"
+                    {...field}
+                  />} 
+                />
+              </FormItem>
+              <FormItem label="Upload Document" className="md:col-span-4">
+                <Controller 
+                  name={`billing_documents.${index}.document`} 
+                  control={control} 
+                  render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} />} 
+                />
+              </FormItem>
               <Button type="button" shape="circle" size="sm" className="mt-2" icon={<TbTrash />} onClick={() => remove(index)} />
             </div>
           </Card>
@@ -1724,11 +1752,11 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     primary_contact_number_code: selectObjectSchema.refine(val => val?.value, "Country code is required"),
     
     // Optional fields
-    gst_number: z.string().optional(),
-    pan_number: z.string().optional(),
-    state: z.string().optional(),
-    city: z.string().optional(),
-    partner_address: z.string().optional(),
+    // gst_number: z.string().optional(),
+    // pan_number: z.string().optional(),
+    // state: z.string().optional(),
+    // city: z.string().optional(),
+    // partner_address: z.string().optional(),
   }).passthrough();
 
   const formMethods = useForm<CompanyFormSchema>({
@@ -1800,7 +1828,7 @@ const CreatePartner = () => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { partnerData = {}, CompanyData = {} } = useSelector(masterSelector);
+  const { partnerData = {}, CompanyData = {}, DocumentTypeData = [] } = useSelector(masterSelector);
 
   const partnerOptions = useMemo(() => {
     const data = partnerData?.data || [];
@@ -1812,9 +1840,14 @@ const CreatePartner = () => {
     return Array.isArray(data) ? data.map((c: any) => ({ value: c.id, label: c.company_name })) : [];
   }, [CompanyData]);
 
+  const documentTypeOptions = useMemo(() => {
+    return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+  }, [DocumentTypeData]);
+
   useEffect(() => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
+    dispatch(getDocumentTypeAction());
     dispatch(getpartnerAction());
     dispatch(getCompanyAction());
   }, [dispatch]);
@@ -1826,7 +1859,7 @@ const CreatePartner = () => {
         try {
           const actionResult = await dispatch(getpartnerByIdAction(id)).unwrap();
           if (actionResult) {
-            setInitialData(transformApiToFormSchema(actionResult, partnerOptions, companyOptions));
+            setInitialData(transformApiToFormSchema(actionResult, partnerOptions, companyOptions, documentTypeOptions));
           } else {
             toast.push(<Notification type="danger" title="Fetch Error">Partner data not found.</Notification>);
             navigate("/business-entities/partner");
@@ -1838,12 +1871,15 @@ const CreatePartner = () => {
           setPageLoading(false);
         }
       };
-      fetchPartnerData();
+      // Ensure options are available before transforming
+      if(partnerOptions.length > 0 && companyOptions.length > 0 && documentTypeOptions.length > 0) {
+        fetchPartnerData();
+      }
     } else {
       setInitialData({});
       setPageLoading(false);
     }
-  }, [id, isEditMode, navigate, dispatch, partnerOptions, companyOptions]);
+  }, [id, isEditMode, navigate, dispatch, partnerOptions, companyOptions, documentTypeOptions]);
 
   const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
