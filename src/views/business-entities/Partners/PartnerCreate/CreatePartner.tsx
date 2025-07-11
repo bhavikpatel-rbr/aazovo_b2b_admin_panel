@@ -111,7 +111,7 @@ export interface CompanyFormSchema {
   primary_email_id?: string;
   alternate_email_id?: string;
   ownership_type?: { label: string; value: string };
-  owner_name?: string;
+  company_name?: string;
   partner_address?: string;
   city?: string;
   state?: string;
@@ -202,7 +202,7 @@ interface ApiSingleCompanyItem {
   primary_email_id?: string;
   alternate_email_id?: string;
   ownership_type?: string;
-  owner_name?: string;
+  company_name?: string;
   partner_address?: string;
   city?: string;
   state?: string;
@@ -297,7 +297,7 @@ const transformApiToFormSchema = (
   return {
     id: apiData.id,
     partner_name: apiData.partner_name,
-    owner_name: apiData.owner_name,
+    company_name: apiData.company_name,
     primary_email_id: apiData.primary_email_id,
     alternate_email_id: apiData.alternate_email_id,
     support_email: apiData.support_email,
@@ -442,7 +442,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
   }
 
   const simpleFields: (keyof CompanyFormSchema)[] = [
-    "partner_name", "owner_name", "partner_address", "support_email", "status",
+    "partner_name", "company_name", "partner_address", "support_email", "status",
     "gst_number", "pan_number", "country_id", "join_us_as", "continent_id",
     "industrial_expertise", "state", "city", "zip_code", "primary_email_id",
     "primary_contact_number", "primary_contact_number_code", "general_contact_number",
@@ -590,7 +590,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
   }));
   const countryCodeOptions = CountriesData.map((c: any) => ({
     value: `${c.phone_code}`,
-    label: `${c.phone_code} (${c.iso_code})`,
+    label: `${c.phone_code}`,
   }));
   const continentOptions = ContinentsData.map((value: any) => ({
     value: value.id,
@@ -607,8 +607,10 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
   ];
 
   const statusOptions = [
-    { value: "Verified", label: "Verified" },
-    { value: "Non Verified", label: "Non Verified" },
+    { value: "Active", label: "Active" },
+    { value: "Disabled", label: "Disabled" },
+    { value: "Blocked", label: "Blocked" },
+    { value: "Inactive", label: "Inactive" },
   ];
   const officeTypeOptions = [
     { label: "Head Office", value: "Head Office" },
@@ -672,17 +674,17 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
         </FormItem>
 
         <FormItem
-          label={<div>Owner/Director Name<span className="text-red-500"> * </span></div>}
-          invalid={!!errors.owner_name}
+          label={<div>Company Name<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.company_name}
           errorMessage={
-            errors.owner_name?.message as string
+            errors.company_name?.message as string
           }
         >
           <Controller
-            name="owner_name"
+            name="company_name"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Owner/Director Name" {...field} />
+              <Input placeholder="Company Name" {...field} />
             )}
           />
         </FormItem>
@@ -709,7 +711,9 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           />
         </FormItem>
         <FormItem
-          label="Industrial Expertise"
+          label={<div>Industrial Expertise<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.industrial_expertise}
+          errorMessage={(errors.industrial_expertise as any)?.message as string}
         >
           <Controller
             name="industrial_expertise"
@@ -738,7 +742,9 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           />
         </FormItem>
         <FormItem
-          label="Join Us As"
+          label={<div>Join Us As<span className="text-red-500"> * </span></div>}
+          invalid={!!errors.join_us_as}
+          errorMessage={(errors.join_us_as as any)?.message as string}
         >
           <Controller
             name="join_us_as"
@@ -795,7 +801,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           />
         </FormItem>
         <FormItem
-          label={<div>State<span className="text-red-500"> * </span></div>}
+          label="State"
           invalid={!!errors.state}
           errorMessage={errors.state?.message as string}
         >
@@ -808,7 +814,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           />
         </FormItem>
         <FormItem
-          label={<div>City<span className="text-red-500"> * </span></div>}
+          label="City"
           invalid={!!errors.city}
           errorMessage={errors.city?.message as string}
         >
@@ -849,7 +855,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
       <hr className="my-6" /> <h4 className="mb-4">Contact Information</h4>
       <div className="sm:grid md:grid-cols-12 gap-3">
         <FormItem
-          className="sm:col-span-6 lg:col-span-3"
+          className="sm:col-span-6 lg:col-span-4"
           label={<div>Primary Email ID<span className="text-red-500"> * </span></div>}
           invalid={!!errors.primary_email_id}
           errorMessage={errors.primary_email_id?.message as string}
@@ -863,7 +869,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           />
         </FormItem>
         <FormItem
-          className="sm:col-span-6 lg:col-span-3"
+          className="sm:col-span-6 lg:col-span-4"
           label="Alternate E-mail ID"
           invalid={!!errors.alternate_email_id}
           errorMessage={errors.alternate_email_id?.message as string}
@@ -876,37 +882,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
             )}
           />
         </FormItem>
-        <FormItem
-          className="sm:col-span-6 lg:col-span-3"
-          label="Support Email"
-          invalid={!!errors.support_email}
-          errorMessage={errors.support_email?.message as string}
-        >
-          <Controller
-            name="support_email"
-            control={control}
-            render={({ field }) => (
-              <Input
-                type="email"
-                placeholder="support@example.com"
-                {...field}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem label="Notification Email" className="sm:col-span-6 lg:col-span-3">
-          <Controller
-            name="notification_email"
-            control={control}
-            render={({ field }) => (
-              <Input
-                type="email"
-                placeholder="notifications@example.com"
-                {...field}
-              />
-            )}
-          />
-        </FormItem>
+        
         <FormItem
           className="sm:col-span-6 lg:col-span-4"
           label={<div>Primary Contact Number<span className="text-red-500"> * </span></div>}
@@ -959,27 +935,14 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           </div>
         </FormItem>
 
-        <FormItem className="sm:col-span-6 lg:col-span-4" label="General Mobile">
-          <div className="flex items-center gap-2">
-            <Controller
-              name="general_contact_number_code"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  options={countryCodeOptions}
-                  className="w-58"
-                  {...field}
-                />
-              )}
-            />
-            <Controller
-              name="general_contact_number"
-              control={control}
-              render={({ field }) => (
-                <Input placeholder="Company Mobile" {...field} />
-              )}
-            />
-          </div>
+        <FormItem className="sm:col-span-6 lg:col-span-4" label="Landline">
+          <Controller
+            name="general_contact_number"
+            control={control}
+            render={({ field }) => (
+              <Input placeholder="Landline Number" {...field} />
+            )}
+          />
         </FormItem>
 
       </div>
@@ -987,7 +950,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
       <hr className="my-6" /> <h4 className="mb-4">Trade Information</h4>
       <div className="grid md:grid-cols-4 gap-3">
         <FormItem
-          label={<div>GST Number<span className="text-red-500"> * </span></div>}
+          label="GST Number"
           invalid={!!errors.gst_number}
           errorMessage={errors.gst_number?.message as string}
         >
@@ -1000,7 +963,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           />
         </FormItem>
         <FormItem
-          label={<div>PAN Number<span className="text-red-500"> * </span></div>}
+          label="PAN Number"
           invalid={!!errors.pan_number}
           errorMessage={errors.pan_number?.message as string}
         >
@@ -1672,21 +1635,12 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
     control,
     name: "other_documents",
   });
-  const isBillingEnabled = watch("BILLING_FIELD");
-
+  
   return (
     <Card id="accessibility">
       <h4 className="mb-6">Accessibility & Configuration</h4>
       <div className="grid grid-cols-1 gap-y-6">
         <div className="flex items-center gap-x-8">
-          <FormItem label="Enable Billing">
-            <Controller name="BILLING_FIELD" control={control} render={({ field }) => <Checkbox checked={!!field.value} onChange={field.onChange}>Enabled</Checkbox>} />
-          </FormItem>
-          {isBillingEnabled && (
-            <FormItem label="Billing Cycle (Days)">
-              <Controller name="billing_cycle" control={control} render={({ field }) => <NumericInput placeholder="e.g., 30" {...field} />} />
-            </FormItem>
-          )}
           <FormItem label="User Access"><Controller name="USER_ACCESS" control={control} render={({ field }) => <Checkbox checked={!!field.value} onChange={field.onChange}>Enabled</Checkbox>} /></FormItem>
         </div>
         <hr />
@@ -1757,19 +1711,24 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
 
   const selectObjectSchema = z.object({ value: z.any(), label: z.any() }).nullable().optional();
   const companySchema = z.object({
+    // Required fields
     partner_name: z.string().trim().min(1, "Partner Name is required"),
-    owner_name: z.string().trim().min(1, "Owner/Director Name is required"),
+    company_name: z.string().trim().min(1, "Company Name is required"),
+    status: selectObjectSchema.refine(val => val?.value, "Status is required"),
     ownership_type: selectObjectSchema.refine(val => val?.value, "Ownership Type is required"),
+    industrial_expertise: selectObjectSchema.refine(val => val?.value, "Industrial Expertise is required"),
+    join_us_as: selectObjectSchema.refine(val => val?.value, "Join us as is required"),
+    country_id: selectObjectSchema.refine(val => val?.value, "Country is required"),
     primary_email_id: z.string().trim().min(1, "Primary Email is required").email("Invalid email format"),
     primary_contact_number: z.string().trim().min(1, "Primary contact number is required").regex(/^\d{7,15}$/, "Invalid contact number format"),
     primary_contact_number_code: selectObjectSchema.refine(val => val?.value, "Country code is required"),
-    gst_number: z.string().trim().min(1, "GST Number is required.").regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format."),
-    pan_number: z.string().trim().min(1, "PAN Number is required.").regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format."),
-    country_id: selectObjectSchema.refine(val => val?.value, "Country is required"),
-    state: z.string().trim().min(1, "State is required"),
-    city: z.string().trim().min(1, "City is required"),
-    partner_address: z.string().trim().min(1, "Partner Address is required"),
-    status: selectObjectSchema.refine(val => val?.value, "Status is required"),
+    
+    // Optional fields
+    gst_number: z.string().optional(),
+    pan_number: z.string().optional(),
+    state: z.string().optional(),
+    city: z.string().optional(),
+    partner_address: z.string().optional(),
   }).passthrough();
 
   const formMethods = useForm<CompanyFormSchema>({
