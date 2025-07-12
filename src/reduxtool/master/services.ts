@@ -3284,3 +3284,30 @@ export const getStartProcessAsync = async (id: object) => {
     return isAxiosError(err)
   }
 }
+
+export const getpendingbiling = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/get-pending-billing`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const setenablebilling = async (id: object) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/make-enable/${id}`)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const setsavedoc = async (id:any, data: object) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/save-docs/${id}`, { ...data })
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}

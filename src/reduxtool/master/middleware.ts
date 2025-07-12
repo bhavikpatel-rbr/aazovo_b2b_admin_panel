@@ -5396,6 +5396,50 @@ export const getStartProcessAction = createAsyncThunk(
     }
   }
 )
+export const setenablebillingAction = createAsyncThunk(
+  "auth/setenablebillingAction", async (id, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await setenablebilling(id)
+      if (response) {
+        return response?.data
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+export const setsavedocAction = createAsyncThunk(
+  "auth/setsavedocAction", async ({id, data}, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await setsavedoc(id, data)
+      if (response) {
+        return response?.data
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
+
+export const getPendingBillAction = createAsyncThunk(
+  "auth/getPendingBillAction",
+  async (data, { rejectWithValue, dispatch }) => {
+    try {
+      const response: AxiosResponse<any> = await getpendingbiling()
+      if (response) {
+        return response
+      }
+
+      return rejectWithValue(response)
+    } catch (error: unknown) {
+      return rejectWithValue(error as Error)
+    }
+  }
+)
 export const getAllCountAction = createAsyncThunk(
   "auth/getAllCountAction",
   async (id, { rejectWithValue, dispatch }) => {

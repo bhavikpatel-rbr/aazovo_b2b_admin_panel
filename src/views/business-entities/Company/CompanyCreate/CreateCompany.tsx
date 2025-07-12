@@ -38,6 +38,7 @@ import {
   getCountriesAction,
   getMemberAction,
   getDocumentTypeAction,
+  getDocumentListAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -533,15 +534,15 @@ const preparePayloadForApi = (
 
   appendField("kyc_verified", data.USER_ACCESS);
 
-  appendFileIfExists("company_logo", data.company_logo);
-  appendFileIfExists("primary_bank_verification_photo", data.primary_bank_verification_photo);
-  appendFileIfExists("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
+  appendField("company_logo", data.company_logo);
+  appendField("primary_bank_verification_photo", data.primary_bank_verification_photo);
+  appendField("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
 
   // Certificates
   data.company_certificate?.forEach((cert: CertificateItemFE, index: number) => {
     apiPayload.append(`company_certificate[${index}][certificate_id]`, cert.certificate_id || "");
     apiPayload.append(`company_certificate[${index}][certificate_name]`, cert.certificate_name || "");
-    appendFileIfExists(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
+    apiPayload.append(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
   });
 
   // Office Info
@@ -573,7 +574,7 @@ const preparePayloadForApi = (
     { feFileKey: "other_document_file", beFileKey: "other_document_file", feVerifyKey: "other_document_remark_enabled", beVerifyKey: "other_document_verified", feRemarkKey: "other_document_remark", beRemarkKey: "other_document_remark" },
   ];
   kycDocsConfig.forEach(doc => {
-    appendFileIfExists(doc.beFileKey, data[doc.feFileKey]);
+    apiPayload.append(doc.beFileKey, data[doc.feFileKey]);
     apiPayload.append(doc.beVerifyKey, data[doc.feVerifyKey] ? "1" : "0");
     apiPayload.append(doc.beRemarkKey, data[doc.feRemarkKey] || "");
   });
@@ -585,14 +586,14 @@ const preparePayloadForApi = (
     apiPayload.append(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code || '');
     apiPayload.append(`company_bank_details[${index}][swift_code]`, bank.swift_code || ''); // New
     apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
-    appendFileIfExists(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
+    apiPayload.append(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
   });
 
   // Billing Documents
   
   data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
     apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name?.value || "");
-    appendFileIfExists(`billing_documents[${index}][document]`, doc.document);
+    apiPayload.append(`billing_documents[${index}][document]`, doc.document);
   });
 
   // --- FIX STARTS HERE ---
@@ -601,7 +602,7 @@ const preparePayloadForApi = (
   // This was corrected from `enabled_billing_docs` to `enable_billing_documents`.
   data.enabled_billing_docs?.forEach((doc: EnabledBillingDocItemFE, index: number) => {
     appendField(`enable_billing_documents[${index}][document_name]`, doc.document_name?.value);
-    appendFileIfExists(`enable_billing_documents[${index}][document]`, doc.document);
+    appendField(`enable_billing_documents[${index}][document]`, doc.document);
     // It's crucial to send the item ID back in edit mode so the backend can correctly identify which record to update.
     if (isEditMode && doc.id) {
       appendField(`enable_billing_documents[${index}][id]`, doc.id);
@@ -629,7 +630,7 @@ const preparePayloadForApi = (
     apiPayload.append(`company_spot_verification[${index}][verified]`, item.verified ? "1" : "0");
     appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id); // Changed
     apiPayload.append(`company_spot_verification[${index}][remark]`, item.remark || "");
-    appendFileIfExists(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
+    apiPayload.append(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
   });
 
   // References
@@ -1198,10 +1199,8 @@ const ReferenceSection = ({ control, errors, formMethods }: FormSectionBaseProps
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    if (!CompanyData || !CompanyData.data || CompanyData.data.length === 0) {
       dispatch(getCompanyAction());
-    }
-  }, [dispatch, CompanyData]);
+   }, [dispatch]);
 
   const companyOptions = useMemo(() =>
     (CompanyData?.data || []).map((c: any) => ({
@@ -1247,14 +1246,14 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
   const dispatch = useAppDispatch();
   const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
   const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs" });
-  const { DocumentTypeData = [] } = useSelector(masterSelector);
+  const { DocumentListData = [] } = useSelector(masterSelector);
 
   const documentTypeOptions = useMemo(() => {
-    return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: d.id, label: d.name })) : [];
-  }, [DocumentTypeData]);
+    return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+  }, [DocumentListData]);
 
   useEffect(() => {
-    dispatch(getDocumentTypeAction());;
+    dispatch(getDocumentListAction());;
   }, [dispatch]);
   return (
     <Card id="accessibility">
@@ -1704,13 +1703,13 @@ const CompanyCreate = () => {
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList,DocumentTypeData } = useSelector(masterSelector);
+  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList,DocumentListData } = useSelector(masterSelector);
 
 
 
   const documentTypeOptions = useMemo(() => {
-    return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: d.id, label: d.name })) : [];
-  }, [DocumentTypeData]);
+    return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+  }, [DocumentListData]);
 
   const getEmptyFormValues = (): CompanyFormSchema => ({
     company_name: "", primary_contact_number: "", primary_contact_number_code: undefined,
@@ -1751,7 +1750,7 @@ const CompanyCreate = () => {
     dispatch(getCategoriesAction());
     dispatch(getMemberAction());
     dispatch(getCompanyAction());
-    dispatch(getDocumentTypeAction());
+    dispatch(getDocumentListAction());
   }, [dispatch]);
 
   useEffect(() => {
@@ -1800,7 +1799,7 @@ const CompanyCreate = () => {
       setInitialData(getEmptyFormValues());
       setPageLoading(false);
     }
-  }, [id, isEditMode, navigate, dispatch, CountriesData, ContinentsData, MemberData, AllCompaniesData, EmployeesList]);
+  }, [id, navigate, dispatch]);
 
 
   const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {

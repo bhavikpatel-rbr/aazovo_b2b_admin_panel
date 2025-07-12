@@ -104,6 +104,7 @@ import {
   getParentCategoriesAction,
   getpartnerAction,
   getPaymentTermAction,
+  getPendingBillAction,
   getPinnedTabAction,
   getPriceListAction,
   getProductsAction,
@@ -760,6 +761,10 @@ const masterSlice = createSlice({
     builder.addCase(getStartProcessAction.fulfilled, (state, { payload }) => ({
       ...state,
       startFormData: payload,
+    }));
+    builder.addCase(getPendingBillAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      PendingBillData: payload,
     }));
     builder.addCase(getAllCountAction.fulfilled, (state, { payload }) => ({
       ...state,

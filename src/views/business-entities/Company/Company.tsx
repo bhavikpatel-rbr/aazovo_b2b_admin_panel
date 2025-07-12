@@ -8,8 +8,8 @@ import React, {
     useMemo,
     useState,
 } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { useNavigate, useSearchParams } from 'react-router-dom'; // useSearchParams is not used in final solution but kept for context
+import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { useNavigate } from 'react-router-dom';
 import { z } from "zod";
 
 // UI Components
@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
-import RichTextEditor from '@/components/shared/RichTextEditor'; // Assuming this is the correct path
+import RichTextEditor from '@/components/shared/RichTextEditor';
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
     Button,
@@ -45,66 +45,32 @@ import Tooltip from "@/components/ui/Tooltip";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
-    TbAlarm,
-    TbBell,
-    TbBrandWhatsapp,
-    TbBriefcase,
-    TbBuilding,
-    TbBuildingBank,
-    TbBuildingCommunity,
+    TbAlarm, TbBell, TbBrandWhatsapp,
+    TbBuilding, TbBuildingBank,
     TbCalendarEvent,
     TbCancel,
-    TbCheck,
-    TbChecks,
-    TbCircleCheck,
-    TbCircleX,
-    TbCloudUpload,
-    TbColumns,
-    TbDownload,
-    TbEye,
-    TbFileDescription,
-    TbFilter,
-    TbMail,
-    TbPencil,
-    TbPlus,
-    TbReceipt,
-    TbReload,
-    TbSearch,
-    TbShieldCheck,
-    TbShieldX,
-    TbTagStarred,
-    TbUser,
-    TbUserCircle,
-    TbUserFilled,
-    TbUsersGroup,
-    TbX
+    TbCheck, TbChecks, TbCircleCheck, TbCircleX, TbCloudUpload, TbColumns, TbDownload, TbEye, TbFileDescription,
+    TbFilter, TbMail, TbPencil, TbPlus, TbReceipt, TbReload, TbSearch, TbShieldCheck, TbShieldX, TbTagStarred,
+    TbTrash,
+    TbUser, TbUserCircle, TbUsersGroup, TbX
 } from "react-icons/tb";
 
 // Types
 import type { TableQueries } from "@/@types/common";
-import type {
-    ColumnDef,
-    OnSortParam,
-    Row,
-} from "@/components/shared/DataTable";
+import type { ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-    addAllActionAction,
-    addNotificationAction,
-    addScheduleAction,
-    addTaskAction,
-    deleteAllcompanyAction,
-    getAllUsersAction,
-    getCompanyAction,
-    getContinentsAction,
-    getCountriesAction,
+    addAllActionAction, addNotificationAction, addScheduleAction, addTaskAction, deleteAllcompanyAction,
+    getAllUsersAction, getCompanyAction, getContinentsAction, getCountriesAction, getDocumentTypeAction, getPendingBillAction,
+    setenablebillingAction,
+    setsavedocAction,
     submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { useSelector } from "react-redux";
-import { authSelector } from "@/reduxtool/auth/authSlice";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
+import { BiNotification } from "react-icons/bi";
+import { useSelector } from "react-redux";
 
 // --- START: Detailed Type Definitions ---
 interface UserReference { id: number; name: string; profile_pic_path: string | null; }
@@ -120,7 +86,80 @@ interface CompanyMemberManagement { id: number; company_id: number; member_id: n
 interface TeamMember { id: number; company_id: number; team_name: string; designation: string; person_name: string; number: string; }
 
 export type CompanyItem = {
-    id: number; company_code: string | null; company_name: string; status: | "Verified" | "Non Verified" | "Active" | "Pending" | "Inactive" | "active" | "inactive"; primary_email_id: string; primary_contact_number: string; primary_contact_number_code: string; alternate_contact_number: string | null; alternate_contact_number_code: string | null; alternate_email_id: string | null; general_contact_number: string | null; general_contact_number_code: string | null; ownership_type: string; owner_name: string; company_address: string; continent_id: number; country_id: number; state: string; city: string; zip_code: string; gst_number: string | null; pan_number: string | null; trn_number: string | null; tan_number: string | null; establishment_year: string | null; no_of_employees: number | null; company_website: string | null; primary_business_type: string | null; support_email: string | null; general_mobile: string | null; notification_email: string | null; kyc_verified: boolean; enable_billing: boolean; facebook_url: string | null; instagram_url: string | null; linkedIn_url: string | null; youtube_url: string | null; twitter_url: string | null; company_logo: string | null; created_at: string; updated_at: string; created_by: number; updated_by: number; deleted_at: string | null; members_count: number; teams_count: number; due_after_3_months_date: string; created_by_user: UserReference | null; updated_by_user: UserReference | null; continent: ContinentReference; country: CountryReference; company_certificate: CompanyCertificate[]; company_bank_details: CompanyBankDetail[]; company_references: CompanyReference[]; office_info: OfficeInfo[]; company_spot_verification: CompanySpotVerification[]; billing_documents: BillingDocument[]; company_member_management: CompanyMemberManagement[]; company_team_members: TeamMember[]; profile_completion: number; "206AB_file": string | null; "206AB_remark": string | null; "206AB_verified": boolean | number; "ABCQ_file": string | null; "ABCQ_remark": string | null; "ABCQ_verified": boolean | number; office_photo_file: string | null; "office_photo_remark": string | null; "office_photo_verified": boolean | number; gst_certificate_file: string | null; "gst_certificate_remark": string | null; "gst_certificate_verified": boolean | number; authority_letter_file: string | null; "authority_letter_remark": string | null; "authority_letter_verified": boolean | number; visiting_card_file: string | null; "visiting_card_remark": string | null; "visiting_card_verified": boolean | number; cancel_cheque_file: string | null; "cancel_cheque_remark": string | null; "cancel_cheque_verified": boolean | number; aadhar_card_file: string | null; "aadhar_card_remark": string | null; "aadhar_card_verified": boolean | number; pan_card_file: string | null; "pan_card_remark": string | null; "pan_card_verified": boolean | number; other_document_file: string | null; "other_document_remark": string | null; "other_document_verified": boolean | number; wall: { buy: number; sell: number; total: number; }; opportunities: { offers: number; demands: number; total: number; }; leads: { total: number; };
+    id: number;
+    company_code: string | null;
+    company_name: string;
+    status: | "Verified" | "Non Verified" | "Active" | "Pending" | "Inactive" | "active" | "inactive";
+    primary_email_id: string;
+    primary_contact_number: string;
+    primary_contact_number_code: string;
+    alternate_contact_number: string | null;
+    alternate_contact_number_code: string | null;
+    alternate_email_id: string | null;
+    general_contact_number: string | null;
+    general_contact_number_code: string | null;
+    ownership_type: string;
+    owner_name: string;
+    company_address: string;
+    continent_id: number;
+    country_id: number;
+    state: string;
+    city: string;
+    zip_code: string;
+    gst_number: string | null;
+    pan_number: string | null;
+    trn_number: string | null;
+    tan_number: string | null;
+    establishment_year: string | null;
+    no_of_employees: number | null;
+    company_website: string | null;
+    primary_business_type: string | null;
+    support_email: string | null;
+    general_mobile: string | null;
+    notification_email: string | null;
+    kyc_verified: boolean;
+    enable_billing: boolean;
+    need_enable?: boolean; // Field to control the new dropdown option
+    facebook_url: string | null;
+    instagram_url: string | null;
+    linkedIn_url: string | null;
+    youtube_url: string | null;
+    twitter_url: string | null;
+    company_logo: string | null;
+    created_at: string;
+    updated_at: string;
+    created_by: number;
+    updated_by: number;
+    deleted_at: string | null;
+    members_count: number;
+    teams_count: number;
+    due_after_3_months_date: string;
+    created_by_user: UserReference | null;
+    updated_by_user: UserReference | null;
+    continent: ContinentReference;
+    country: CountryReference;
+    company_certificate: CompanyCertificate[];
+    company_bank_details: CompanyBankDetail[];
+    company_references: CompanyReference[];
+    office_info: OfficeInfo[];
+    company_spot_verification: CompanySpotVerification[];
+    billing_documents: BillingDocument[];
+    company_member_management: CompanyMemberManagement[];
+    company_team_members: TeamMember[];
+    profile_completion: number;
+    "206AB_file": string | null; "206AB_remark": string | null; "206AB_verified": boolean | number;
+    "ABCQ_file": string | null; "ABCQ_remark": string | null; "ABCQ_verified": boolean | number;
+    office_photo_file: string | null; "office_photo_remark": string | null; "office_photo_verified": boolean | number;
+    gst_certificate_file: string | null; "gst_certificate_remark": string | null; "gst_certificate_verified": boolean | number;
+    authority_letter_file: string | null; "authority_letter_remark": string | null; "authority_letter_verified": boolean | number;
+    visiting_card_file: string | null; "visiting_card_remark": string | null; "visiting_card_verified": boolean | number;
+    cancel_cheque_file: string | null; "cancel_cheque_remark": string | null; "cancel_cheque_verified": boolean | number;
+    aadhar_card_file: string | null; "aadhar_card_remark": string | null; "aadhar_card_verified": boolean | number;
+    pan_card_file: string | null; "pan_card_remark": string | null; "pan_card_verified": boolean | number;
+    other_document_file: string | null; "other_document_remark": string | null; "other_document_verified": boolean | number;
+    wall: { buy: number; sell: number; total: number; };
+    opportunities: { offers: number; demands: number; total: number; };
+    leads: { total: number; };
 };
 // --- END: Detailed Type Definitions ---
 
@@ -303,7 +342,6 @@ const SendWhatsAppAction: React.FC<{ company: CompanyItem; onClose: () => void; 
 const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
     const { type, data: company, isOpen } = modalState;
     const dispatch = useAppDispatch();
-
     const [userData, setUserData] = useState<any>(null);
 
     useEffect(() => {
@@ -311,7 +349,6 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getA
         try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
         catch (error) { console.error("Error getting UserData:", error); }
     }, []);
-
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleConfirmSchedule = async (data: ScheduleFormData) => {
@@ -362,10 +399,128 @@ const CompanyListProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [selectedCompanies, setSelectedCompanies] = useState<CompanyItem[]>([]);
     const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
     const dispatch = useAppDispatch();
-    useEffect(() => { dispatch(getCompanyAction()); dispatch(getCountriesAction()); dispatch(getContinentsAction()); dispatch(getAllUsersAction()) }, [dispatch]);
+    useEffect(() => { dispatch(getCompanyAction()); dispatch(getCountriesAction()); dispatch(getContinentsAction()); dispatch(getAllUsersAction()); dispatch(getDocumentTypeAction()) }, [dispatch]);
     return (<CompanyListContext.Provider value={{ companyList: CompanyData?.data ?? [], setSelectedCompanies, companyCount: CompanyData?.counts ?? {}, selectedCompanies, ContinentsData: Array.isArray(ContinentsData) ? ContinentsData : [], CountriesData: Array.isArray(CountriesData) ? CountriesData : [], getAllUserData: getAllUserDataOptions, }}>{children}</CompanyListContext.Provider>);
 };
-const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, }: { rowData: CompanyItem; onEdit: (id: number) => void; onOpenModal: (type: ModalType, data: CompanyItem) => void; }) => {
+
+// --- EnableBillingDialog Component ---
+const enableBillingSchema = z.object({
+    enable_billing_documents: z.array(z.object({
+        document_name: z.object({ value: z.string(), label: z.string() }, { required_error: "Document type is required" }),
+        document: z.any().refine(file => file instanceof File, "File is required"),
+    })).min(1, "At least one document is required.").max(4, "You can upload a maximum of 4 documents.")
+});
+type EnableBillingFormData = z.infer<typeof enableBillingSchema>;
+
+interface EnableBillingDialogProps {
+    company: CompanyItem;
+    onClose: () => void;
+    onSubmit: (data: EnableBillingFormData) => void;
+    isSubmitting: boolean;
+    documentTypeOptions: SelectOption[];
+}
+
+const EnableBillingDialog: React.FC<EnableBillingDialogProps> = ({ company, onClose, onSubmit, isSubmitting, documentTypeOptions }) => {
+    const { control, handleSubmit, formState: { errors } } = useForm<EnableBillingFormData>({
+        resolver: zodResolver(enableBillingSchema),
+        defaultValues: { enable_billing_documents: [{}] }
+    });
+
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: "enable_billing_documents"
+    });
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} width={600}>
+            <h5 className="mb-4">Enable Billing Documents for: {company.company_name}</h5>
+            <UiForm id="enableBillingForm" onSubmit={handleSubmit(onSubmit)}>
+                <div className="max-h-[50vh] overflow-y-auto pr-4">
+                    <div className="space-y-4">
+                        {fields.map((field, index) => (
+                            <Card key={field.id} className="p-4 border dark:border-gray-600 relative">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                                    <FormItem
+                                        label={`Document Type ${index + 1}`}
+                                        invalid={!!errors.enable_billing_documents?.[index]?.document_name}
+                                        errorMessage={errors.enable_billing_documents?.[index]?.document_name?.message as string}
+                                    >
+                                        <Controller
+                                            name={`enable_billing_documents.${index}.document_name`}
+                                            control={control}
+                                            render={({ field }) => (
+                                                <UiSelect
+                                                    placeholder="Select type..."
+                                                    options={documentTypeOptions}
+                                                    {...field}
+                                                    // --- FIX: These props make the dropdown render outside the modal's overflow context ---
+                                                    menuPortalTarget={document.body}
+                                                    styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                                                />
+                                            )}
+                                        />
+                                    </FormItem>
+                                    <FormItem
+                                        label={`Upload File ${index + 1}`}
+                                        invalid={!!errors.enable_billing_documents?.[index]?.document}
+                                        errorMessage={errors.enable_billing_documents?.[index]?.document?.message as string}
+                                    >
+                                        <Controller
+                                            name={`enable_billing_documents.${index}.document`}
+                                            control={control}
+                                            render={({ field: { onChange } }) => <Input type="file" onChange={e => onChange(e.target.files?.[0])} />}
+                                        />
+                                    </FormItem>
+                                </div>
+                                {fields.length > 1 && (
+                                    <Button
+                                        shape="circle"
+                                        size="sm"
+                                        variant="plain"
+                                        icon={<TbTrash />}
+                                        className="absolute top-2 right-2 text-red-500"
+                                        onClick={() => remove(index)}
+                                    />
+                                )}
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+
+                {fields.length < 4 && (
+                    <Button
+                        type="button"
+                        icon={<TbPlus />}
+                        onClick={() => append({ document_name: undefined, document: null })}
+                        size="sm"
+                        className="mt-4"
+                    >
+                        Add More
+                    </Button>
+                )}
+            </UiForm>
+            <div className="text-right mt-6">
+                <Button className="mr-2" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                <Button
+                    variant="solid"
+                    type="submit"
+                    form="enableBillingForm"
+                    loading={isSubmitting}
+                    disabled={isSubmitting}
+                >
+                    Submit
+                </Button>
+            </div>
+        </Dialog>
+    );
+};
+
+const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, onOpenEnableBillingModal }: {
+    rowData: CompanyItem;
+    onEdit: (id: number) => void;
+    onOpenModal: (type: ModalType, data: CompanyItem) => void;
+    onOpenEnableBillingModal: (data: CompanyItem) => void;
+}) => {
     const navigate = useNavigate();
     return (
         <div className="flex items-center justify-center gap-1">
@@ -374,13 +529,18 @@ const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, }: { rowData: Compa
             <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
                 <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
+                {rowData.need_enable && (
+                    <Dropdown.Item onClick={() => onOpenEnableBillingModal(rowData)} className="flex items-center gap-2">
+                        <TbShieldCheck /> Add Billing Document
+                    </Dropdown.Item>
+
+                )}
                 <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal('task', rowData)} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("members", rowData)} className="flex items-center gap-2"><TbUsersGroup /> View Members</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Activity</span></Dropdown.Item>
-
                 <Dropdown.Item onClick={() => onOpenModal("transaction", rowData)} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
             </Dropdown>
@@ -429,23 +589,28 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
     );
 };
 
-
-// --- START: MODIFIED COMPONENT ---
 const CompanyListTable = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const { companyList, setSelectedCompanies, companyCount, ContinentsData, CountriesData, getAllUserData } = useCompanyList();
-    const [isLoading] = useState(false);
-
-    // --- START: State Persistence & Search Logic ---
+    const { PendingBillData, DocumentTypeData } = useSelector(masterSelector);
+    const [isLoading, setIsLoading] = useState(false);
     const COMPANY_STATE_STORAGE_KEY = 'companyListStatePersistence';
+
+    // State for the new Enable Billing modal
+    const [isEnableBillingModalOpen, setEnableBillingModalOpen] = useState(false);
+    const [selectedCompanyForBilling, setSelectedCompanyForBilling] = useState<CompanyItem | null>(null);
+    const [isSubmittingBilling, setIsSubmittingBilling] = useState(false);
+
+    const documentTypeOptions = useMemo(() => {
+        return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: String(d.id), label: d.name })) : [];
+    }, [DocumentTypeData]);
 
     const getInitialState = () => {
         try {
             const savedStateJSON = sessionStorage.getItem(COMPANY_STATE_STORAGE_KEY);
             if (savedStateJSON) {
                 const savedState = JSON.parse(savedStateJSON);
-                // Re-hydrate Date objects from their string representation
                 if (savedState.filterCriteria?.filterCreatedDate) {
                     savedState.filterCriteria.filterCreatedDate = savedState.filterCriteria.filterCreatedDate.map((d: string | null) => d ? new Date(d) : null);
                 }
@@ -455,7 +620,6 @@ const CompanyListTable = () => {
             console.error("Failed to parse saved state, clearing it.", error);
             sessionStorage.removeItem(COMPANY_STATE_STORAGE_KEY);
         }
-        // Return default state if nothing is saved or if parsing fails
         return {
             tableData: { pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" },
             filterCriteria: { filterCreatedDate: [null, null] }
@@ -466,7 +630,6 @@ const CompanyListTable = () => {
     const [tableData, setTableData] = useState<TableQueries>(initialState.tableData);
     const [filterCriteria, setFilterCriteria] = useState<CompanyFilterFormData & { customFilter?: string }>(initialState.filterCriteria);
 
-    // Effect to save any changes in table or filter state to sessionStorage
     useEffect(() => {
         try {
             const stateToSave = { tableData, filterCriteria };
@@ -475,12 +638,17 @@ const CompanyListTable = () => {
             console.error("Could not save state to sessionStorage:", error);
         }
     }, [tableData, filterCriteria]);
-    // --- END: State Persistence & Search Logic ---
 
     const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null, });
+    const [isPendingRequestModalOpen, setPendingRequestModalOpen] = useState(false);
+
+    const handleOpenPendingRequestModal = () => {
+        dispatch(getPendingBillAction());
+        setPendingRequestModalOpen(true);
+    };
 
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange", });
     const filterFormMethods = useForm<CompanyFilterFormData>({ resolver: zodResolver(companyFilterFormSchema) });
@@ -488,6 +656,44 @@ const CompanyListTable = () => {
     const handleSetTableData = (d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d }));
     const handleOpenModal = (type: ModalType, companyData: CompanyItem) => setModalState({ isOpen: true, type, data: companyData });
     const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
+
+    // Handlers for the new modal
+    const handleOpenEnableBillingModal = (companyData: CompanyItem) => {
+        setSelectedCompanyForBilling(companyData);
+        setEnableBillingModalOpen(true);
+    };
+
+    const handleCloseEnableBillingModal = () => {
+        setSelectedCompanyForBilling(null);
+        setEnableBillingModalOpen(false);
+    };
+
+    const handleEnableBillingSubmit = async (formData: EnableBillingFormData) => {
+        if (!selectedCompanyForBilling) return;
+        setIsSubmittingBilling(true);
+
+        const payload = new FormData();
+        // payload.append('company_id', String(selectedCompanyForBilling.id));
+
+        formData.enable_billing_documents.forEach((doc, index) => {
+            if (doc.document_name?.value && doc.document) {
+                payload.append(`document_name[${index}]`, doc.document_name.value);
+                payload.append(`document[${index}]`, doc.document);
+            }
+        });
+
+        try {
+            await dispatch(setsavedocAction({ id: selectedCompanyForBilling.id, data: payload })).unwrap();
+            toast.push(<Notification type="success" title="Documents Submitted" duration={3000}>Billing documents saved successfully.</Notification>);
+            dispatch(getCompanyAction()); // Refresh the main company list
+            handleCloseEnableBillingModal();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Submission Failed" duration={3000}>{error?.message || 'Failed to submit documents.'}</Notification>);
+        } finally {
+            setIsSubmittingBilling(false);
+        }
+    };
+
     const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); };
     const onApplyFiltersSubmit = (data: CompanyFilterFormData) => { setFilterCriteria({ ...data, customFilter: undefined }); handleSetTableData({ pageIndex: 1 }); setFilterDrawerOpen(false); };
 
@@ -495,13 +701,27 @@ const CompanyListTable = () => {
         const defaultFilters = { customFilter: undefined, filterCreatedDate: [null, null] as [Date | null, Date | null], filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [], };
         setFilterCriteria(defaultFilters);
         handleSetTableData({ pageIndex: 1, query: "", sort: { order: "", key: "" } });
-        sessionStorage.removeItem(COMPANY_STATE_STORAGE_KEY); // Clear persisted state
+        sessionStorage.removeItem(COMPANY_STATE_STORAGE_KEY);
     };
 
-    const handleRemoveFilter = (key: keyof CompanyFilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev, customFilter: undefined }; if (key === 'filterCreatedDate') { (newCriteria as any)[key] = [null, null]; } else { const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove); (newCriteria as any)[key] = newFilterArray; } } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
+    const handleRemoveFilter = (key: keyof CompanyFilterFormData, valueToRemove: string) => {
+        setFilterCriteria(prev => {
+            const newCriteria = { ...prev, customFilter: undefined };
+            if (key === 'filterCreatedDate') {
+                (newCriteria as any)[key] = [null, null];
+            } else {
+                const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
+                if (currentFilterArray) {
+                    (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove);
+                }
+            }
+            return newCriteria;
+        });
+        handleSetTableData({ pageIndex: 1 });
+    };
 
     const onRefreshData = () => {
-        onClearFilters(); // This will also clear sessionStorage
+        onClearFilters();
         dispatch(getCompanyAction());
         toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />);
     };
@@ -543,25 +763,11 @@ const CompanyListTable = () => {
             if (filterCriteria.filterCreatedDate && filterCriteria.filterCreatedDate[0] && filterCriteria.filterCreatedDate[1]) { const [startDate, endDate] = filterCriteria.filterCreatedDate; const inclusiveEndDate = new Date(endDate as Date); inclusiveEndDate.setHours(23, 59, 59, 999); filteredData = filteredData.filter((company) => { const createdDate = new Date(company.created_at); return (createdDate >= (startDate as Date) && createdDate <= inclusiveEndDate); }); }
         }
 
-        // --- IMPROVED & EFFICIENT SEARCH LOGIC ---
         if (tableData.query) {
             const lowerCaseQuery = tableData.query?.toLowerCase();
             filteredData = filteredData.filter(company => {
-                const searchableFields = [
-                    company.company_name,
-                    company.company_code,
-                    company.owner_name,
-                    company.primary_email_id,
-                    company.primary_contact_number,
-                    company.gst_number,
-                    company.pan_number,
-                    company.city,
-                    company.state,
-                    company.country?.name,
-                ];
-                return searchableFields.some(field =>
-                    field && String(field).toLowerCase().includes(lowerCaseQuery)
-                );
+                const searchableFields = [company.company_name, company.company_code, company.owner_name, company.primary_email_id, company.primary_contact_number, company.gst_number, company.pan_number, company.city, company.state, company.country?.name];
+                return searchableFields.some(field => field && String(field).toLowerCase().includes(lowerCaseQuery));
             });
         }
 
@@ -584,7 +790,6 @@ const CompanyListTable = () => {
         return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
     }, [companyList, tableData, filterCriteria]);
 
-    const closeFilterDrawer = () => setFilterDrawerOpen(false);
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
         setIsSubmittingExportReason(true);
@@ -597,30 +802,38 @@ const CompanyListTable = () => {
     const handleSort = (s: OnSortParam) => handleSetTableData({ sort: s, pageIndex: 1 });
     const handleRowSelect = (c: boolean, r: CompanyItem) => setSelectedCompanies((p) => c ? [...p, r] : p.filter((i) => i.id !== r.id));
     const handleAllRowSelect = (c: boolean, r: Row<CompanyItem>[]) => setSelectedCompanies(c ? r.map((i) => i.original) : []);
-    const [isImageViewerOpen, setImageViewerOpen] = useState(false);
-    const [imageToView, setImageToView] = useState<string | null>(null);
-    const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
-    const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
+
+    const handleApprovePendingRequest = async (company: { id: number; company_name: string }) => {
+        try {
+            await dispatch(setenablebillingAction(company.id)).unwrap();
+            toast.push(<Notification title={`Billing approved for ${company.company_name}`} type="success" />);
+            dispatch(getPendingBillAction());
+        } catch (e: any) {
+            toast.push(<Notification title={`Failed to approve billing for ${company.company_name}`} type="danger" />);
+        }
+    };
+
+    const handleRejectPendingRequest = (companyData: any) => {
+        setPendingRequestModalOpen(false);
+        const companyForItem: Partial<CompanyItem> = {
+            id: companyData.id,
+            company_name: companyData.company_name,
+            company_code: companyData.company_code,
+        };
+        handleOpenModal('notification', companyForItem as CompanyItem);
+    };
 
     const columns: ColumnDef<CompanyItem>[] = useMemo(() => [
-        {
-            header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }: { row: Row<CompanyItem> }) => {
-                const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original; return (
-
-                    <div className="flex flex-col"> <div className="flex items-center gap-2">
-
-
-                        <div> <h6 className="text-xs font-semibold"><em className="text-blue-600">
-                            {company_code || "Company Code"}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || "N/A"}</span>  <div className="text-xs text-gray-500">{country?.name || "N/A"}</div> </div>);
-            },
-        },
+        { header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }: { row: Row<CompanyItem> }) => { const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original; return (<div className="flex flex-col"> <div className="flex items-center gap-2"> <div> <h6 className="text-xs font-semibold"><em className="text-blue-600"> {company_code || "Company Code"}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || "N/A"}</span>  <div className="text-xs text-gray-500">{country?.name || "N/A"}</div> </div>); }, },
         { header: "Contact", accessorKey: "owner_name", id: "contact", size: 180, cell: (props) => { const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original; return (<div className="text-xs flex flex-col gap-0.5"> {owner_name && (<span><b>Owner: </b> {owner_name}</span>)} {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)} {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)} {company_website && (<a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>)} </div>); }, },
         { header: "Legal IDs & Status", accessorKey: "status", id: "legal", size: 180, cell: ({ row }) => { const { gst_number, pan_number, status } = row.original; return (<div className="flex flex-col gap-0.5 text-[11px]"> {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>} {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>} <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{status}</Tag> </div>); }, },
         { header: "Profile & Scores", accessorKey: "profile_completion", id: "profile", size: 190, cell: ({ row }) => { const { members_count = 0, teams_count = 0, profile_completion = 0, kyc_verified, enable_billing, due_after_3_months_date } = row.original; const formattedDate = due_after_3_months_date ? dayjs(due_after_3_months_date).format('D MMM, YYYY') : "N/A"; return (<div className="flex flex-col gap-1 text-xs"> <span><b>Members:</b> {members_count}</span> <span><b>Teams:</b> {teams_count}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <div className="flex gap-1 items-center"><b>Enable Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <span><b>Enable Billing Due:</b> {formattedDate}</span> <Tooltip title={`Profile Completion ${profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"> <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div> </div> </Tooltip> </div>); }, },
-        { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <CompanyActionColumn rowData={props.row.original} onEdit={handleEditCompany} onOpenModal={handleOpenModal} /> },
-    ], [handleOpenModal, openImageViewer, navigate]);
+        { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <CompanyActionColumn rowData={props.row.original} onEdit={handleEditCompany} onOpenModal={handleOpenModal} onOpenEnableBillingModal={handleOpenEnableBillingModal} /> },
+    ], [handleOpenModal, navigate]);
 
     const [filteredColumns, setFilteredColumns] = useState(columns);
+    const closeFilterDrawer = () => setFilterDrawerOpen(false);
+
     const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
     const toggleColumn = (checked: boolean, colId: string) => { if (checked) { const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId); if (originalColumn) { setFilteredColumns(prev => { const newCols = [...prev, originalColumn]; newCols.sort((a, b) => { const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey)); const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey)); return indexA - indexB; }); return newCols; }); } } else { setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId)); } };
 
@@ -639,9 +852,9 @@ const CompanyListTable = () => {
         <>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <h5>Company</h5>
-                
+
                 <div className="flex flex-col md:flex-row gap-3">
-                    <Button icon={<TbUserFilled />} onClick={() => navigate('/hr-employees/job-post')} className="w-full sm:w-auto">Pending Request</Button>
+                    <Button icon={<TbUsersGroup />} onClick={handleOpenPendingRequestModal} className="w-full sm:w-auto">Pending Request</Button>
                     <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/company-create")}>Add New</Button></div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
@@ -654,7 +867,6 @@ const CompanyListTable = () => {
                 <Tooltip title="Click to show Non-KYC Verified companies"><div onClick={() => handleCardClick('non_verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.non_verified ?? 0}</b><span className="text-[9px] font-semibold">Non Verified</span></div></Card></div></Tooltip>
                 <Tooltip title="Click to show Eligible companies (KYC and Billing enabled)"><div onClick={() => handleCardClick('eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-violet-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbShieldCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.eligible ?? 0}</b><span className="text-[9px] font-semibold">Eligible</span></div></Card></div></Tooltip>
                 <Tooltip title="Click to show Not Eligible companies (KYC or Billing disabled)"><div onClick={() => handleCardClick('not_eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-red-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbShieldX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.not_eligible ?? 0}</b><span className="text-[9px] font-semibold">Not Eligible</span></div></Card></div></Tooltip>
-                {/* <Card bodyClass={cardBodyClass} className="rounded-md border border-orange-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbBuildingCommunity size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.members ?? 0}</b><span className="text-[9px] font-semibold">Members</span></div></Card> */}
             </div>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
                 <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(val) => handleSetTableData({ query: val.target.value, pageIndex: 1 })} value={tableData.query} />
@@ -688,6 +900,15 @@ const CompanyListTable = () => {
                 </UiForm>
             </Drawer>
             <CompanyModals modalState={modalState} onClose={handleCloseModal} getAllUserDataOptions={getAllUserData} />
+            {isEnableBillingModalOpen && selectedCompanyForBilling && (
+                <EnableBillingDialog
+                    company={selectedCompanyForBilling}
+                    onClose={handleCloseEnableBillingModal}
+                    onSubmit={handleEnableBillingSubmit}
+                    isSubmitting={isSubmittingBilling}
+                    documentTypeOptions={documentTypeOptions}
+                />
+            )}
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
                 <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
                     <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
@@ -695,15 +916,68 @@ const CompanyListTable = () => {
                     </UiFormItem>
                 </UiForm>
             </ConfirmDialog>
-            <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
-                <div className="flex justify-center items-center p-4">
-                    {imageToView ? (<img src={`${imageToView}`} alt="Company Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
+            <Dialog
+                isOpen={isPendingRequestModalOpen}
+                onClose={() => setPendingRequestModalOpen(false)}
+                width={800}
+            >
+                <h5 className="mb-4">Pending Billing Requests</h5>
+                <div className="max-h-[60vh] overflow-y-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                            <tr>
+                                <th className="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                                <th className="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Company Code</th>
+                                <th className="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Documents</th>
+                                <th className="py-2 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {PendingBillData?.data && PendingBillData.data.length > 0 ? (
+                                PendingBillData.data.map((item: any) => (
+                                    <tr key={item.id} className="border-b dark:border-gray-700">
+                                        <td className="py-3 px-4 text-sm font-medium">{item.company_name}</td>
+                                        <td className="py-3 px-4 text-sm text-blue-500">{item.company_code}</td>
+                                        <td className="py-3 px-4">
+                                            <div className="flex gap-1">
+                                                {item.enable_billing_documents?.map((doc: any, i: number) => (
+                                                    <a key={i} href={doc.document} target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center justify-between p-3">
+                                                        <span className="flex items-center gap-2">
+                                                            <TbFileDescription className="text-blue-500 text-xl" title={doc.document_name} />
+                                                        </span>
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td className="py-3 px-4 text-center">
+                                            <div className="flex justify-center gap-2">
+                                                <Tooltip title="Approve">
+                                                    <Button shape="circle" size="sm" variant="solid" color="emerald" icon={<TbCheck />} onClick={() => handleApprovePendingRequest(item)} />
+                                                </Tooltip>
+                                                <Tooltip title="Notification">
+                                                    <Button shape="circle" size="sm" variant="solid" color="red" icon={<BiNotification />} onClick={() => handleRejectPendingRequest(item)} />
+                                                </Tooltip>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={4} className="text-center py-8 text-gray-500">No pending requests found.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="text-right mt-6">
+                    <Button variant="solid" onClick={() => setPendingRequestModalOpen(false)}>Close</Button>
                 </div>
             </Dialog>
         </>
     );
 };
-// --- END: MODIFIED COMPONENT ---
 
 const CompanyListSelected = () => {
     const { selectedCompanies, setSelectedCompanies } = useCompanyList();
