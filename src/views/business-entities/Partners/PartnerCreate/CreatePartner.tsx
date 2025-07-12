@@ -829,7 +829,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
             name="partner_name"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Partner Name" {...field} />
+              <Input placeholder="Partner Name" {...field} onInput={(e)=>{if(e?.target?.value) e.target.value = e.target.value.toUpperCase()}} />
             )}
           />
         </FormItem>
