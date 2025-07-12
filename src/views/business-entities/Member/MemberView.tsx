@@ -1,19 +1,20 @@
 // src/views/members/MemberViewPage.tsx
 
 import React, { useEffect, useState } from 'react'
-import { Link, NavLink, useNavigate, useParams } from 'react-router-dom'
+import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import { useAppDispatch } from '@/reduxtool/store'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
-import { Button, Card, Tag, Avatar } from '@/components/ui'
+import { Avatar, Button, Card, Spinner, Tag } from '@/components/ui'
 import Notification from '@/components/ui/Notification'
-import toast from '@/components/ui/toast'
 import Tabs from '@/components/ui/Tabs'
+import toast from '@/components/ui/toast'
 const { TabNav, TabList, TabContent } = Tabs
 
 // Icons
+import { BiChevronRight } from 'react-icons/bi'
 import {
     TbArrowLeft,
     TbGlobe,
@@ -25,14 +26,9 @@ import {
 
 // Redux
 import { getMemberByIdAction } from '@/reduxtool/master/middleware'
-import { masterSelector } from '@/reduxtool/master/masterSlice'
-import { Spinner } from '@/components/ui'
-import { useSelector } from 'react-redux'
-import { BiChevronRight } from 'react-icons/bi'
 
-// --- Helper Functions & Components ---
+// --- Helper Functions & Components (Unchanged) ---
 
-// Renders a single label-value pair with consistent styling
 const DetailItem = ({
     label,
     value,
@@ -52,7 +48,6 @@ const DetailItem = ({
     </div>
 )
 
-// Renders an array of strings as a collection of Tags
 const ListAsTags = ({
     list,
 }: {
@@ -72,42 +67,43 @@ const ListAsTags = ({
     )
 }
 
-// Formats a date string for display
 const formatDate = (dateString?: string | null, includeTime = false) => {
     if (!dateString)
         return <span className="text-gray-400 dark:text-gray-500">N/A</span>
-    try {
-        const options: Intl.DateTimeFormatOptions = {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-        }
-        if (includeTime) {
-            options.hour = '2-digit'
-            options.minute = '2-digit'
-        }
-        return new Date(dateString).toLocaleDateString('en-GB', options)
-    } catch (error) {
-        return 'Invalid Date'
+    const options: Intl.DateTimeFormatOptions = {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
     }
+    if (includeTime) {
+        options.hour = '2-digit'
+        options.minute = '2-digit'
+    }
+    return new Date(dateString).toLocaleDateString('en-GB', options)
 }
 
-// Renders a boolean value as 'Yes' or 'No'
-const renderBoolean = (value?: boolean | null | string) => {
-    if (value === true || value === '1')
-        return <Tag className="bg-emerald-100 text-emerald-600">Yes</Tag>
-    if (value === false || value === '0')
+const renderPermission = (value?: boolean | null | string) => {
+    const valStr = String(value).toLowerCase()
+    if (valStr === 'true' || valStr === 'approved' || valStr === 'buy') {
+        return (
+            <Tag className="bg-emerald-100 text-emerald-600 capitalize">
+                {valStr}
+            </Tag>
+        )
+    }
+    if (valStr === 'false') {
         return <Tag className="bg-red-100 text-red-600">No</Tag>
+    }
+    if (value) {
+        return <span className="capitalize">{String(value)}</span>
+    }
     return <span className="text-gray-400 dark:text-gray-500">N/A</span>
 }
 
-// Renders a URL as a clickable link
 const renderLink = (url?: string | null, text?: string) => {
     if (!url)
         return <span className="text-gray-400 dark:text-gray-500">N/A</span>
-    const isUrl =
-        typeof url === 'string' &&
-        (url.startsWith('http://') || url.startsWith('https://'))
+    const isUrl = url.startsWith('http://') || url.startsWith('https://')
     if (isUrl) {
         return (
             <a
@@ -132,57 +128,41 @@ const MemberViewPage = () => {
     const [memberData, setMemberData] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(true)
 
-    const { status: masterLoadingStatus } = useSelector(masterSelector)
-
     useEffect(() => {
         if (!id) {
             toast.push(
                 <Notification type="danger" title="Error">
-                    No member ID provided.
+                    No member ID provided in the URL.
                 </Notification>,
             )
             navigate('/business-entities/member')
             return
         }
 
-        const fetchMember = async () => {
+        const fetchData = async () => {
             setIsLoading(true)
             try {
-                const response = await dispatch(
-                    getMemberByIdAction(id),
-                ).unwrap()
-                if (response) {
-                    setMemberData(response)
-                } else {
-                    toast.push(
-                        <Notification type="danger" title="Fetch Error">
-                            Failed to load member data.
-                        </Notification>,
-                    )
-                    navigate('/business-entities/member')
-                }
+                const response = await dispatch(getMemberByIdAction(id)).unwrap()
+                setMemberData(response)
             } catch (error: any) {
                 toast.push(
                     <Notification type="danger" title="Fetch Error">
-                        {error?.message || 'An error occurred.'}
+                        {error?.message || 'Failed to load member data.'}
                     </Notification>,
                 )
-                navigate('/business-entities/member')
             } finally {
                 setIsLoading(false)
             }
         }
 
-        fetchMember()
+        fetchData()
     }, [id, dispatch, navigate])
 
-    if (isLoading || masterLoadingStatus === 'loading') {
+    if (isLoading) {
         return (
-            <Container className="h-full">
-                <div className="flex justify-center items-center min-h-[500px]">
-                    <Spinner size={40} />
-                </div>
-            </Container>
+            <div className="flex justify-center items-center h-screen">
+                <Spinner size={40} />
+            </div>
         )
     }
 
@@ -190,7 +170,7 @@ const MemberViewPage = () => {
         return (
             <Container>
                 <Card className="text-center p-8">
-                    <p>Member not found.</p>
+                    <p>Member not found or failed to load.</p>
                     <Button
                         className="mt-4"
                         onClick={() => navigate('/business-entities/member')}
@@ -204,12 +184,10 @@ const MemberViewPage = () => {
 
     const statusColorMap: Record<string, string> = {
         active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-        disabled:
+        inactive:
             'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
-        unregistered:
-            'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
     }
-    const currentStatus = (memberData.status || 'unregistered').toLowerCase()
+    const currentStatus = (memberData.status || 'inactive').toLowerCase()
 
     return (
         <Container>
@@ -220,9 +198,7 @@ const MemberViewPage = () => {
                     </h6>
                 </NavLink>
                 <BiChevronRight size={22} />
-                <h6 className="font-semibold text-primary flex items-center gap-2">
-                    Member Profile
-                </h6>
+                <h6 className="font-semibold text-primary">Member Profile</h6>
             </div>
             <AdaptiveCard>
                 {/* Header */}
@@ -234,94 +210,70 @@ const MemberViewPage = () => {
                             src={memberData.full_profile_pic}
                             icon={<TbUserCircle />}
                         />
-                        <div className="text-xs">
+                        <div>
                             <h5 className="font-bold">
                                 {memberData.name || 'N/A'}
                             </h5>
-                            {/* <p className="text-gray-500">{memberData.email || 'No email'}</p> */}
-                            <div className="flex items-center gap-2 mb-1">
-                                <TbMail className="text-gray-400" />{' '}
-                                <p>{memberData.email}</p>
+                            <div className="flex items-center gap-2 mb-1 text-sm">
+                                <TbMail className="text-gray-400" />
+                                <p>{memberData.email || 'N/A'}</p>
                             </div>
-                            {memberData.number && (
-                                <div className="flex items-center gap-2 mb-1">
-                                    <TbPhone className="text-gray-400" />{' '}
-                                    <p>
-                                        {memberData.number_code}{' '}
-                                        {memberData.number}
-                                    </p>
-                                </div>
-                            )}
-                            <div className="flex items-center gap-2 m">
-                                <TbGlobe className="text-gray-400" />{' '}
-                                <p>{memberData.country?.name}</p>
+                            <div className="flex items-center gap-2 mb-1 text-sm">
+                                <TbPhone className="text-gray-400" />
+                                <p>
+                                    {memberData.number_code} {memberData.number}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                                <TbGlobe className="text-gray-400" />
+                                <p>{memberData.country?.name || 'N/A'}</p>
                             </div>
                             <Tag
-                                className={`mt-1 ${statusColorMap[currentStatus] || statusColorMap['unregistered']} capitalize`}
+                                className={`mt-2 ${statusColorMap[currentStatus] || ''} capitalize`}
                             >
-                                {memberData.status || 'N/A'}
+                                {memberData.status}
                             </Tag>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-1 text-xs">
-                        <div className="flex gap-1">
-                            <b className="font-semibold">Temp. Company: </b>
-                            <span>{memberData?.company_temp}</span>
-                        </div>
-                        <div className="flex gap-1">
-                            <b className="font-semibold">Actual Company: </b>
-                            <span>{memberData?.company_id_actual}</span>
-                        </div>
-                        <div className="flex gap-1">
-                            <b className="font-semibold">Business Type: </b>
-                            <span>{memberData?.business_type}</span>
-                        </div>
-                        <div className="flex gap-1">
-                            <b className="font-semibold text-nowrap">
-                                Business Opportunity:{' '}
-                            </b>
-                            {/* <span>{memberData?.business_opportunity}</span> */}
-                            <span className="text-wrap">
-                                {Array.isArray(memberData?.business_opportunity)
-                                    ? memberData?.business_opportunity.join(
-                                          ', ',
-                                      )
-                                    : ''}
-                            </span>
-                        </div>
+                    <div className="text-xs space-y-1">
+                        <p>
+                            <b>Temp. Company:</b> {memberData.company_temp}
+                        </p>
+                        <p>
+                            <b>Actual Company:</b> {memberData.company_actual}
+                        </p>
+                        <p>
+                            <b>Business Type:</b> {memberData.business_type}
+                        </p>
+                        <p>
+                            <b>Business Opportunity:</b>{' '}
+                            {memberData.business_opportunity?.join(', ') ||
+                                'N/A'}
+                        </p>
                     </div>
-                    <div className="flex flex-col gap-1 text-xs">
-                        <div className="flex gap-1">
-                            <b className="font-semibold">
-                                Relationship Manager:{' '}
-                            </b>
-                            <span>
-                                {memberData?.relationship_manager?.name}
-                            </span>
-                        </div>
-                        <div className="flex gap-1">
-                            <b className="font-semibold">
-                                Interested Category:{' '}
-                            </b>
-                            <span>{memberData?.interested_in}</span>
-                        </div>
-                        <div className="flex gap-1">
-                            <b className="font-semibold">Grade: </b>
-                            <span>{memberData?.member_grade}</span>
-                        </div>
-                        <div className="flex gap-1">
-                            <b className="font-semibold">Dealing in Bulk: </b>
-                            <span>{memberData?.dealing_in_bulk}</span>
-                        </div>
+                    <div className="text-xs space-y-1">
+                        <p>
+                            <b>Manager:</b>{' '}
+                            {memberData.relationship_manager?.name || 'N/A'}
+                        </p>
+                        <p>
+                            <b>Interested In:</b> {memberData.interested_in}
+                        </p>
+                        <p>
+                            <b>Grade:</b> {memberData.member_grade}
+                        </p>
+                        <p>
+                            <b>Dealing in Bulk:</b> {memberData.dealing_in_bulk}
+                        </p>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col md:flex-row lg:flex-col gap-2">
                         <Button
                             icon={<TbArrowLeft />}
                             onClick={() =>
                                 navigate('/business-entities/member')
                             }
                         >
-                            Back to List
+                            Back
                         </Button>
                         <Button
                             variant="solid"
@@ -336,260 +288,218 @@ const MemberViewPage = () => {
                 </div>
 
                 {/* Body Content */}
-                <Tabs className="mt-2">
+                <Tabs className="mt-4" defaultValue="details">
                     <TabList>
-                        <TabNav value="tab1">Member Details</TabNav>
-                        <TabNav value="tab2">Wall Inquiry</TabNav>
-                        <TabNav value="tab3">Offer & Demand</TabNav>
-                        <TabNav value="tab4">Leads</TabNav>
-                        <TabNav value="tab5">Favourite Products</TabNav>
-                        <TabNav value="tab6">Dynamic Profile</TabNav>
+                        <TabNav value="details">Member Details</TabNav>
+                        <TabNav value="favorites">Favourite Products</TabNav>
+                        <TabNav value="dynamic">Dynamic Profile</TabNav>
                     </TabList>
+                    <div className="mt-6">
+                        <TabContent value="details">
+                            <div className="flex flex-col gap-6">
+                                <Card bordered>
+                                    <h5 className="mb-4">
+                                        Basic Information
+                                    </h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                        <DetailItem
+                                            label="Member Code"
+                                            value={memberData.member_code}
+                                        />
+                                        <DetailItem
+                                            label="Joined Date"
+                                            value={formatDate(
+                                                memberData.created_at,
+                                            )}
+                                        />
+                                        <DetailItem
+                                            label="Last Updated"
+                                            value={formatDate(
+                                                memberData.updated_at,
+                                                true,
+                                            )}
+                                        />
+                                        <DetailItem
+                                            label="Profile Completion"
+                                            value={`${memberData.profile_completion}%`}
+                                        />
+                                    </div>
+                                </Card>
 
-                    <div className="mt-8 flex flex-col gap-6">
-                        <Card bordered>
-                            <h5 className="mb-4">Basic Information</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1">
-                                <DetailItem
-                                    label="Member ID"
-                                    value={memberData.id}
-                                />
-                                <DetailItem
-                                    label="Joined Date"
-                                    value={formatDate(memberData.created_at)}
-                                />
-                                <DetailItem
-                                    label="Last Updated"
-                                    value={formatDate(
-                                        memberData.updated_at,
-                                        true,
-                                    )}
-                                />
-                                <DetailItem
-                                    label="Interested In"
-                                    value={memberData.interested_in}
-                                />
+                                <Card bordered>
+                                    <h5 className="mb-4">
+                                        Contact & Socials
+                                    </h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                        <DetailItem
+                                            label="WhatsApp"
+                                            value={`${memberData.whatsapp_country_code || ''} ${memberData.whatsApp_no || ''}`}
+                                        />
+                                        <DetailItem
+                                            label="Alternate Email"
+                                            value={memberData.alternate_email}
+                                        />
+                                        <DetailItem
+                                            label="Website"
+                                            value={renderLink(
+                                                memberData.website,
+                                            )}
+                                        />
+                                        <DetailItem
+                                            label="LinkedIn"
+                                            value={renderLink(
+                                                memberData.linkedIn_profile,
+                                            )}
+                                        />
+                                    </div>
+                                </Card>
+
+                                <Card bordered>
+                                    <h5 className="mb-4">Address</h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                        <DetailItem
+                                            label="Address"
+                                            value={memberData.address}
+                                        />
+                                        <DetailItem
+                                            label="City"
+                                            value={memberData.city}
+                                        />
+                                        <DetailItem
+                                            label="State"
+                                            value={memberData.state}
+                                        />
+                                        <DetailItem
+                                            label="Country"
+                                            value={memberData.country?.name}
+                                        />
+                                    </div>
+                                </Card>
+
+                                <Card bordered>
+                                    <h5 className="mb-4">Permissions</h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                        <DetailItem
+                                            label="Product Upload"
+                                            value={renderPermission(
+                                                memberData.product_upload_permission,
+                                            )}
+                                        />
+                                        <DetailItem
+                                            label="Wall Enquiry"
+                                            value={renderPermission(
+                                                memberData.wall_enquiry_permission,
+                                            )}
+                                        />
+                                        <DetailItem
+                                            label="General Enquiry"
+                                            value={renderPermission(
+                                                memberData.enquiry_permission,
+                                            )}
+                                        />
+                                        <DetailItem
+                                            label="Trade Inquiry"
+                                            value={renderPermission(
+                                                memberData.trade_inquiry_allowed,
+                                            )}
+                                        />
+                                    </div>
+                                </Card>
                             </div>
-                        </Card>
+                        </TabContent>
 
-                        <Card bordered>
-                            <h5 className="mb-4">Contact Information</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1">
-                                <DetailItem
-                                    label="Primary Number"
-                                    value={`${memberData.number_code || ''} ${memberData.number || ''}`}
-                                />
-                                <DetailItem
-                                    label="WhatsApp Number"
-                                    value={memberData.whatsApp_no}
-                                />
-                                <DetailItem
-                                    label="Alternate Number"
-                                    value={`${memberData.alternate_contact_number_code || ''} ${memberData.alternate_contact_number || ''}`}
-                                />
-                                <DetailItem
-                                    label="Alternate Email"
-                                    value={memberData.alternate_email}
-                                />
-                                <DetailItem
-                                    label="Landline Number"
-                                    value={memberData.landline_number}
-                                />
-                                <DetailItem
-                                    label="Fax Number"
-                                    value={memberData.fax_number}
-                                />
-                            </div>
-                        </Card>
-
-                        <Card bordered>
-                            <h5 className="mb-4">Company & Business</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1">
-                                <DetailItem
-                                    label="Temp. Company Name"
-                                    value={memberData.company_temp}
-                                />
-                                <DetailItem
-                                    label="Actual Company Name"
-                                    value={memberData.company_actual}
-                                />
-                                <DetailItem
-                                    label="Business Type"
-                                    value={memberData.business_type}
-                                />
-                                <DetailItem
-                                    label="Business Opportunity"
-                                    value={memberData.business_opportunity}
-                                />
-                                <DetailItem
-                                    label="Member Grade"
-                                    value={memberData.member_grade}
-                                />
-                                <DetailItem
-                                    label="Dealing in Bulk"
-                                    value={memberData.dealing_in_bulk}
-                                />
-                                <DetailItem
-                                    label="Relationship Manager"
-                                    value={
-                                        memberData.relationship_manager?.name
-                                    }
-                                />
-                            </div>
-                        </Card>
-
-                        <Card bordered>
-                            <h5 className="mb-4">Address & Location</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1">
-                                <DetailItem
-                                    label="Address"
-                                    value={memberData.address}
-                                />
-                                <DetailItem
-                                    label="City"
-                                    value={memberData.city}
-                                />
-                                <DetailItem
-                                    label="State"
-                                    value={memberData.state}
-                                />
-                                <DetailItem
-                                    label="Pincode"
-                                    value={memberData.pincode}
-                                />
-                                <DetailItem
-                                    label="Country"
-                                    value={memberData.country?.name}
-                                />
-                                <DetailItem
-                                    label="Continent"
-                                    value={memberData.continent?.name}
-                                />
-                            </div>
-                        </Card>
-
-                        <Card bordered>
-                            <h5 className="mb-4">Social & Web Presence</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
-                                <DetailItem
-                                    label="Website"
-                                    value={renderLink(memberData.website)}
-                                />
-                                <DetailItem
-                                    label="LinkedIn"
-                                    value={renderLink(
-                                        memberData.linkedIn_profile,
-                                    )}
-                                />
-                                <DetailItem
-                                    label="Facebook"
-                                    value={renderLink(
-                                        memberData.facebook_profile,
-                                    )}
-                                />
-                                <DetailItem
-                                    label="Instagram"
-                                    value={renderLink(
-                                        memberData.instagram_handle,
-                                        `@${memberData.instagram_handle}`,
-                                    )}
-                                />
-                                <DetailItem
-                                    label="Skype ID"
-                                    value={memberData.skype_id}
-                                />
-                                <DetailItem
-                                    label="WeChat ID"
-                                    value={memberData.wechat_id}
-                                />
-                            </div>
-                        </Card>
-
-                        <Card bordered>
-                            <h5 className="mb-4">Permissions</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1">
-                                <DetailItem
-                                    label="Product Upload"
-                                    value={renderBoolean(
-                                        memberData.product_upload_permission,
-                                    )}
-                                />
-                                <DetailItem
-                                    label="Wall Enquiry"
-                                    value={renderBoolean(
-                                        memberData.wall_enquiry_permission,
-                                    )}
-                                />
-                                <DetailItem
-                                    label="Enquiry Permission"
-                                    value={renderBoolean(
-                                        memberData.enquiry_permission,
-                                    )}
-                                />
-                                <DetailItem
-                                    label="Trade Inquiry"
-                                    value={renderBoolean(
-                                        memberData.trade_inquiry_allowed,
-                                    )}
-                                />
-                            </div>
-                        </Card>
-
-                        {memberData.dynamic_member_profiles?.length > 0 && (
+                        <TabContent value="favorites">
+                            <Card bordered>
+                                <h5 className="mb-4">Favourite Products</h5>
+                                {memberData.favourite_products_list?.length >
+                                0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {memberData.favourite_products_list.map(
+                                            (product: any) => (
+                                                <Card
+                                                    key={product.id}
+                                                    className="p-3"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar
+                                                            shape="square"
+                                                            size={60}
+                                                            src={
+                                                                product.thumb_image_full_path
+                                                            }
+                                                        />
+                                                        <div>
+                                                            <p className="font-semibold">
+                                                                {product.name}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </Card>
+                                            ),
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500">
+                                        No favourite products listed.
+                                    </p>
+                                )}
+                            </Card>
+                        </TabContent>
+                        
+                        <TabContent value="dynamic">
                             <Card bordered>
                                 <h5 className="mb-4">
                                     Dynamic Member Profiles
                                 </h5>
-                                <div className="flex flex-col gap-6">
-                                    {memberData.dynamic_member_profiles.map(
-                                        (profile: any, index: number) => (
-                                            <div
-                                                key={profile.id || index}
-                                                className="p-4 border rounded-md dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"
-                                            >
-                                                <h6 className="font-semibold mb-3">
-                                                    {profile.member_type
-                                                        ?.name ||
-                                                        `Profile ${index + 1}`}
-                                                </h6>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                                                    <DetailItem
-                                                        label="Brands"
-                                                        value={
-                                                            <ListAsTags
-                                                                list={
-                                                                    profile.brand_names
-                                                                }
-                                                            />
-                                                        }
-                                                    />
-                                                    <DetailItem
-                                                        label="Categories"
-                                                        value={
-                                                            <ListAsTags
-                                                                list={
-                                                                    profile.category_names
-                                                                }
-                                                            />
-                                                        }
-                                                    />
-                                                    <DetailItem
-                                                        label="Sub-categories"
-                                                        value={
-                                                            <ListAsTags
-                                                                list={
-                                                                    profile.sub_category_names
-                                                                }
-                                                            />
-                                                        }
-                                                    />
+                                {memberData.dynamic_member_profiles?.length >
+                                0 ? (
+                                    <div className="flex flex-col gap-6">
+                                        {memberData.dynamic_member_profiles.map(
+                                            (profile: any, index: number) => (
+                                                <div
+                                                    key={profile.id || index}
+                                                    className="p-4 border rounded-md dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"
+                                                >
+                                                    <h6 className="font-semibold mb-3">
+                                                        {profile.member_type
+                                                            ?.name ||
+                                                            `Profile ${
+                                                                index + 1
+                                                            }`}
+                                                    </h6>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                                                        <DetailItem
+                                                            label="Brands"
+                                                            value={
+                                                                <ListAsTags
+                                                                    list={
+                                                                        profile.brand_names
+                                                                    }
+                                                                />
+                                                            }
+                                                        />
+                                                        <DetailItem
+                                                            label="Categories"
+                                                            value={
+                                                                <ListAsTags
+                                                                    list={
+                                                                        profile.category_names
+                                                                    }
+                                                                />
+                                                            }
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ),
-                                    )}
-                                </div>
+                                            ),
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500">
+                                        No dynamic profiles available.
+                                    </p>
+                                )}
                             </Card>
-                        )}
+                        </TabContent>
                     </div>
                 </Tabs>
             </AdaptiveCard>
