@@ -905,16 +905,28 @@ const PartnerListTable = () => {
     dispatch(getpartnerAction());
     toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />);
   };
+  
+  const statusOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [partnerList]);
+  const kycOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
 
-  const handleCardClick = (filterType: string, value: string) => {
+  const handleCardClick = (filterType: 'status' | 'kyc', value: string) => {
     onClearFilters(); // Start with a clean slate
-    const statusOption = statusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-    if (statusOption) {
-      setFilterCriteria(prev => ({ ...prev, filterStatus: [statusOption] }));
+  
+    if (filterType === 'status') {
+      const statusOption = statusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
+      if (statusOption) {
+        setFilterCriteria(prev => ({ ...prev, filterStatus: [statusOption] }));
+      }
+    } else if (filterType === 'kyc') {
+      const kycOption = kycOptions.find(opt => opt.value === value); // Find { value: 'Yes', ... } or { value: 'No', ... }
+      if (kycOption) {
+        setFilterCriteria(prev => ({ ...prev, filterKycVerified: [kycOption] }));
+      }
     }
+  
     handleSetTableData({ pageIndex: 1, query: "" });
   };
-
+  
   const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
     let filteredData = [...partnerList];
 
@@ -1076,13 +1088,11 @@ const PartnerListTable = () => {
     return filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   };
 
-  const statusOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [partnerList]);
   const ownershipTypeOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.ownership_type))).filter(Boolean).map((t) => ({ value: t, label: t })), [partnerList]);
   const continentOptions = useMemo(() => ContinentsData.map((co) => ({ value: co.name, label: co.name })), [ContinentsData]);
   const countryOptions = useMemo(() => CountriesData.map((ct) => ({ value: ct.name, label: ct.name })), [CountriesData]);
   const stateOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.state))).filter(Boolean).map((st) => ({ value: st, label: st })), [partnerList]);
   const cityOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.city))).filter(Boolean).map((ci) => ({ value: ci, label: ci })), [partnerList]);
-  const kycOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
   const { DatePickerRange } = DatePicker;
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-1";
@@ -1092,9 +1102,9 @@ const PartnerListTable = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 mb-4 gap-2">
         <Tooltip title="Click to show all partners"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBuilding size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.total ?? 0}</b><span className="text-[9px] font-semibold">Total</span></div></Card></div></Tooltip>
         <Tooltip title="Click to filter by Active status"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBuildingBank size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.active ?? 0}</b><span className="text-[9px] font-semibold">Active</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Inactive status"><div onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.disabled ?? 0}</b><span className="text-[9px] font-semibold">Disabled</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Verified status"><div onClick={() => handleCardClick('status', 'Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Unverified status"><div onClick={() => handleCardClick('status', 'Non Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.unverified ?? 0}</b><span className="text-[9px] font-semibold">Unverified</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Disable status"><div onClick={() => handleCardClick('status', 'Disabled')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.disabled ?? 0}</b><span className="text-[9px] font-semibold">Disabled</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by KYC Verified"><div onClick={() => handleCardClick('kyc', 'Yes')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by KYC Unverified"><div onClick={() => handleCardClick('kyc', 'No')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.non_verified ?? 0}</b><span className="text-[9px] font-semibold">Unverified</span></div></Card></div></Tooltip>
       </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <PartnerListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} value={tableData.query} />
@@ -1112,7 +1122,7 @@ const PartnerListTable = () => {
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-      <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+      <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} noData={pageData.length <= 0} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
 
       {/* The Drawer component with all props correctly bound */}
       <Drawer
@@ -1136,7 +1146,7 @@ const PartnerListTable = () => {
             <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Country" options={countryOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="State"><Controller name="filterState" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select State" options={stateOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="City"><Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select City" options={cityOptions} {...field} />} /></UiFormItem>
-            <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={kycOptions} {...field} />} /></UiFormItem>
+            <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => <UiSelect  placeholder="Select Status" options={kycOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedDate" control={filterFormMethods.control} render={({ field }) => <DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} /></UiFormItem>
           </div>
         </UiForm>
