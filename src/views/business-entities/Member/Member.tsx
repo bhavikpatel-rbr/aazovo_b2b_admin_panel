@@ -67,6 +67,7 @@ import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 import cloneDeep from "lodash/cloneDeep";
 import dayjs from "dayjs";
 import { useSelector } from "react-redux";
+import { isEmptyArray } from "formik";
 
 // --- START: Detailed Type Definitions (Matching API Response) ---
 interface UserReference { id: number; name: string; }
@@ -122,7 +123,7 @@ const filterFormSchema = z.object({
   memberGrade: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterRM: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterMemberType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
-  filterCreatedAt: z.array(z.date().nullable()).optional().default([null, null]),
+  filterCreatedAt: z.array(z.date().nullable()).optional().default([]),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -150,20 +151,20 @@ type NotificationFormData = { notification_title: string; send_users: number[]; 
 
 // --- Alert Note Types & Schema (Added) ---
 const alertNoteSchema = z.object({
-    newNote: z.string().min(1, "Note cannot be empty"),
+  newNote: z.string().min(1, "Note cannot be empty"),
 });
 type AlertNoteFormData = z.infer<typeof alertNoteSchema>;
 interface AlertNote {
-    id: string | number;
-    note: string;
-    created_at: string;
-    created_by_user?: {
-        name: string;
-    };
+  id: string | number;
+  note: string;
+  created_at: string;
+  created_by_user?: {
+    name: string;
+  };
 }
 
-const taskPriorityOptions: SelectOption[] = [ { value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' }, ];
-const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Other', label: 'Other' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'OnboardingSession', label: 'Onboarding Session' }];
+const taskPriorityOptions: SelectOption[] = [{ value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' },];
+const eventTypeOptions = [{ value: 'Meeting', label: 'Meeting' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Other', label: 'Other' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'OnboardingSession', label: 'Onboarding Session' }];
 
 // --- CSV Exporter Utility ---
 function exportToCsv(filename: string, rows: FormItem[]) {
@@ -172,7 +173,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   const preparedRows = rows.map(row => ({
     id: row.id, member_code: row.member_code, name: row.name, email: row.email, contact: `${row.number_code || ''} ${row.number || ''}`.trim(), status: row.status, company_temp: row.company_temp || 'N/A', company_actual: row.company_actual || 'N/A', business_type: row.business_type || 'N/A', business_opportunity: row.business_opportunity || 'N/A', member_grade: row.member_grade || 'N/A', interested_in: row.interested_in || 'N/A', country: row.country?.name || 'N/A', profile_completion: row.profile_completion, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A'
   }));
-  const csvContent = [ CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => { const key = header.toLowerCase().replace(/ \(.+\)/, '').replace(/ /g, '_') as keyof typeof row; const cell = row[key] ?? ''; const cellString = String(cell).replace(/"/g, '""'); return `"${cellString}"`; }).join(',')) ].join('\n');
+  const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => { const key = header.toLowerCase().replace(/ \(.+\)/, '').replace(/ /g, '_') as keyof typeof row; const cell = row[key] ?? ''; const cellString = String(cell).replace(/"/g, '""'); return `"${cellString}"`; }).join(','))].join('\n');
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
   if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>); return true; }
@@ -184,17 +185,17 @@ export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail
 export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
 
 const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
-    const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(z.object({ notification_title: z.string().min(3), send_users: z.array(z.number()).min(1), message: z.string().min(10) })), defaultValues: { notification_title: `Regarding Member: ${member.name}`, send_users: [], message: `This is a notification for member "${member.name}" (${member.member_code}). Please review their details.`, }, mode: 'onChange', });
-    const onSend = async (formData: any) => { setIsLoading(true); const payload = { ...formData, module_id: String(member.id), module_name: 'Member' }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed" children={error?.message} />); } finally { setIsLoading(false); } };
-    return ( <Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog> );
+  const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(z.object({ notification_title: z.string().min(3), send_users: z.array(z.number()).min(1), message: z.string().min(10) })), defaultValues: { notification_title: `Regarding Member: ${member.name}`, send_users: [], message: `This is a notification for member "${member.name}" (${member.member_code}). Please review their details.`, }, mode: 'onChange', });
+  const onSend = async (formData: any) => { setIsLoading(true); const payload = { ...formData, module_id: String(member.id), module_name: 'Member' }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed" children={error?.message} />); } finally { setIsLoading(false); } };
+  return (<Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog>);
 };
 
 const AssignTaskDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
-    const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({ resolver: zodResolver(taskValidationSchema), defaultValues: { task_title: `Follow up with ${member.name}`, assign_to: [], priority: 'Medium', }, mode: 'onChange' });
-    const onAssignTask = async (data: TaskFormData) => { setIsLoading(true); const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(member.id), module_name: 'Member', }; try { await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message} />); } finally { setIsLoading(false); } };
-    return ( <Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> </div> <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog> );
+  const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({ resolver: zodResolver(taskValidationSchema), defaultValues: { task_title: `Follow up with ${member.name}`, assign_to: [], priority: 'Medium', }, mode: 'onChange' });
+  const onAssignTask = async (data: TaskFormData) => { setIsLoading(true); const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(member.id), module_name: 'Member', }; try { await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message} />); } finally { setIsLoading(false); } };
+  return (<Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Assign Task for {member.name}</h5> <UiForm onSubmit={handleSubmit(onAssignTask)}> <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></UiFormItem> </div> <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem> <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Assign Task</Button></div> </UiForm> </Dialog>);
 };
 
 const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSubmit: (data: ScheduleFormData) => void; isLoading: boolean; }> = ({ member, onClose, onSubmit, isLoading }) => {
@@ -223,11 +224,11 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSub
           <Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select reminder date & time" value={field.value} onChange={field.onChange} />)} />
         </UiFormItem>
         <UiFormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-            <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} value={field.value ?? ""} />} />
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} value={field.value ?? ""} />} />
         </UiFormItem>
         <div className="text-right mt-6">
-            <Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button>
-            <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button>
+          <Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Save Event</Button>
         </div>
       </UiForm>
     </Dialog>
@@ -235,222 +236,222 @@ const AddScheduleDialog: React.FC<{ member: FormItem; onClose: () => void; onSub
 };
 
 const ViewMemberDetailDialog: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
-    const getDisplayValue = (value: any, fallback = "N/A") => (value !== null && value !== undefined && value !== '') ? value : fallback;
-    const renderDetailItem = (label: string, value: React.ReactNode) => (<div className="mb-3"><p className="text-xs text-gray-500 dark:text-gray-400">{label}</p><p className="text-sm font-semibold">{getDisplayValue(value)}</p></div>);
-    const renderListAsTags = (list: (string | number)[] | undefined | null) => !list || list.length === 0 ? "N/A" : <div className="flex flex-wrap gap-1">{list.map((item, idx) => (<Tag key={idx} className="text-xs">{getDisplayValue(item)}</Tag>))}</div>;
-    const formatDate = (dateString: string | undefined | null) => dateString ? dayjs(dateString).format('DD MMM YYYY') : "N/A";
-    const renderLink = (url: string | undefined | null, text?: string) => (url ? <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{text || url}</a> : "N/A");
-    
-    return (
-        <Dialog isOpen={true} onClose={onClose} width={800}>
-            <h5 className="mb-6">Member Details: {getDisplayValue(member.name)}</h5>
-            <div className="max-h-[70vh] overflow-y-auto pr-4">
-                <Card className="mb-4" bordered>
-                    <h6 className="mb-2 font-semibold">Basic Information</h6>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-                        {renderDetailItem("Member ID", getDisplayValue(member.id))}
-                        {renderDetailItem("Member Code", getDisplayValue(member.member_code))}
-                        {renderDetailItem("Name", getDisplayValue(member.name))}
-                        {renderDetailItem("Status", <Tag className="capitalize">{getDisplayValue(member.status)}</Tag>)}
-                        {renderDetailItem("Joined Date", formatDate(member.created_at))}
-                        {renderDetailItem("Profile Completion", `${getDisplayValue(member.profile_completion, 0)}%`)}
-                    </div>
-                </Card>
-                <Card className="mb-4" bordered>
-                    <h6 className="mb-2 font-semibold">Contact Information</h6>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-                        {renderDetailItem("Primary Number", `${getDisplayValue(member.number_code)} ${getDisplayValue(member.number)}`)}
-                        {renderDetailItem("Email", getDisplayValue(member.email))}
-                        {renderDetailItem("WhatsApp", `${getDisplayValue(member.whatsapp_country_code)} ${getDisplayValue(member.whatsApp_no)}`)}
-                        {renderDetailItem("Alternate Number", `${getDisplayValue(member.alternate_contact_number_code)} ${getDisplayValue(member.alternate_contact_number)}`)}
-                        {renderDetailItem("Alternate Email", getDisplayValue(member.alternate_email))}
-                        {renderDetailItem("Website", renderLink(member.website))}
-                    </div>
-                </Card>
-                <Card className="mb-4" bordered>
-                    <h6 className="mb-2 font-semibold">Company & Business</h6>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-                        {renderDetailItem("Temp Company Name", getDisplayValue(member.company_temp))}
-                        {renderDetailItem("Actual Company Name", getDisplayValue(member.company_actual))}
-                        {renderDetailItem("Business Type", getDisplayValue(member.business_type))}
-                        {renderDetailItem("Business Opportunity", getDisplayValue(member.business_opportunity))}
-                        {renderDetailItem("Interested In", getDisplayValue(member.interested_in))}
-                        {renderDetailItem("Member Grade", getDisplayValue(member.member_grade))}
-                        {renderDetailItem("Dealing in Bulk", getDisplayValue(member.dealing_in_bulk))}
-                    </div>
-                </Card>
-                {member.dynamic_member_profiles && member.dynamic_member_profiles.length > 0 && (
-                    <Card className="mb-4" bordered>
-                        <h6 className="mb-2 font-semibold">Dynamic Member Profiles</h6>
-                        {member.dynamic_member_profiles.map((profile, index) => (
-                            <div key={profile.id} className={`p-3 border rounded-md dark:border-gray-600 ${index > 0 ? 'mt-3' : ''}`}>
-                                <h5 className="text-sm font-semibold mb-2">{getDisplayValue(profile.member_type?.name)}</h5>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-                                    {renderDetailItem("Brands", renderListAsTags(profile.brand_names))}
-                                    {renderDetailItem("Categories", renderListAsTags(profile.category_names))}
-                                    {renderDetailItem("Sub-categories", renderListAsTags(profile.sub_category_names))}
-                                </div>
-                            </div>
-                        ))}
-                    </Card>
-                )}
-                <Card className="mb-4" bordered>
-                    <h6 className="mb-2 font-semibold">Administrative</h6>
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-                        {renderDetailItem("Relationship Manager", getDisplayValue(member.relationship_manager?.name))}
-                        {renderDetailItem("Created By", getDisplayValue(member.created_by_user?.name))}
-                        {renderDetailItem("Last Updated By", getDisplayValue(member.updated_by_user?.name))}
-                     </div>
-                </Card>
-            </div>
-            <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-        </Dialog>
-    );
+  const getDisplayValue = (value: any, fallback = "N/A") => (value !== null && value !== undefined && value !== '') ? value : fallback;
+  const renderDetailItem = (label: string, value: React.ReactNode) => (<div className="mb-3"><p className="text-xs text-gray-500 dark:text-gray-400">{label}</p><p className="text-sm font-semibold">{getDisplayValue(value)}</p></div>);
+  const renderListAsTags = (list: (string | number)[] | undefined | null) => !list || list.length === 0 ? "N/A" : <div className="flex flex-wrap gap-1">{list.map((item, idx) => (<Tag key={idx} className="text-xs">{getDisplayValue(item)}</Tag>))}</div>;
+  const formatDate = (dateString: string | undefined | null) => dateString ? dayjs(dateString).format('DD MMM YYYY') : "N/A";
+  const renderLink = (url: string | undefined | null, text?: string) => (url ? <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{text || url}</a> : "N/A");
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} width={800}>
+      <h5 className="mb-6">Member Details: {getDisplayValue(member.name)}</h5>
+      <div className="max-h-[70vh] overflow-y-auto pr-4">
+        <Card className="mb-4" bordered>
+          <h6 className="mb-2 font-semibold">Basic Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+            {renderDetailItem("Member ID", getDisplayValue(member.id))}
+            {renderDetailItem("Member Code", getDisplayValue(member.member_code))}
+            {renderDetailItem("Name", getDisplayValue(member.name))}
+            {renderDetailItem("Status", <Tag className="capitalize">{getDisplayValue(member.status)}</Tag>)}
+            {renderDetailItem("Joined Date", formatDate(member.created_at))}
+            {renderDetailItem("Profile Completion", `${getDisplayValue(member.profile_completion, 0)}%`)}
+          </div>
+        </Card>
+        <Card className="mb-4" bordered>
+          <h6 className="mb-2 font-semibold">Contact Information</h6>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+            {renderDetailItem("Primary Number", `${getDisplayValue(member.number_code)} ${getDisplayValue(member.number)}`)}
+            {renderDetailItem("Email", getDisplayValue(member.email))}
+            {renderDetailItem("WhatsApp", `${getDisplayValue(member.whatsapp_country_code)} ${getDisplayValue(member.whatsApp_no)}`)}
+            {renderDetailItem("Alternate Number", `${getDisplayValue(member.alternate_contact_number_code)} ${getDisplayValue(member.alternate_contact_number)}`)}
+            {renderDetailItem("Alternate Email", getDisplayValue(member.alternate_email))}
+            {renderDetailItem("Website", renderLink(member.website))}
+          </div>
+        </Card>
+        <Card className="mb-4" bordered>
+          <h6 className="mb-2 font-semibold">Company & Business</h6>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+            {renderDetailItem("Temp Company Name", getDisplayValue(member.company_temp))}
+            {renderDetailItem("Actual Company Name", getDisplayValue(member.company_actual))}
+            {renderDetailItem("Business Type", getDisplayValue(member.business_type))}
+            {renderDetailItem("Business Opportunity", getDisplayValue(member.business_opportunity))}
+            {renderDetailItem("Interested In", getDisplayValue(member.interested_in))}
+            {renderDetailItem("Member Grade", getDisplayValue(member.member_grade))}
+            {renderDetailItem("Dealing in Bulk", getDisplayValue(member.dealing_in_bulk))}
+          </div>
+        </Card>
+        {member.dynamic_member_profiles && member.dynamic_member_profiles.length > 0 && (
+          <Card className="mb-4" bordered>
+            <h6 className="mb-2 font-semibold">Dynamic Member Profiles</h6>
+            {member.dynamic_member_profiles.map((profile, index) => (
+              <div key={profile.id} className={`p-3 border rounded-md dark:border-gray-600 ${index > 0 ? 'mt-3' : ''}`}>
+                <h5 className="text-sm font-semibold mb-2">{getDisplayValue(profile.member_type?.name)}</h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+                  {renderDetailItem("Brands", renderListAsTags(profile.brand_names))}
+                  {renderDetailItem("Categories", renderListAsTags(profile.category_names))}
+                  {renderDetailItem("Sub-categories", renderListAsTags(profile.sub_category_names))}
+                </div>
+              </div>
+            ))}
+          </Card>
+        )}
+        <Card className="mb-4" bordered>
+          <h6 className="mb-2 font-semibold">Administrative</h6>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
+            {renderDetailItem("Relationship Manager", getDisplayValue(member.relationship_manager?.name))}
+            {renderDetailItem("Created By", getDisplayValue(member.created_by_user?.name))}
+            {renderDetailItem("Last Updated By", getDisplayValue(member.updated_by_user?.name))}
+          </div>
+        </Card>
+      </div>
+      <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+    </Dialog>
+  );
 };
 
 const GenericInfoDialog: React.FC<{ title: string; onClose: () => void; }> = ({ title, onClose }) => (
-    <Dialog isOpen={true} onClose={onClose}>
-        <h5 className="mb-4">{title}</h5>
-        <p>This feature is not yet implemented or no data is available for this member.</p>
-        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
+  <Dialog isOpen={true} onClose={onClose}>
+    <h5 className="mb-4">{title}</h5>
+    <p>This feature is not yet implemented or no data is available for this member.</p>
+    <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+  </Dialog>
 );
 
 const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
-    const [alerts, setAlerts] = useState<AlertNote[]>([]);
-    const [isFetching, setIsFetching] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const dispatch = useAppDispatch();
-    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
-        resolver: zodResolver(alertNoteSchema),
-        defaultValues: { newNote: '' },
-        mode: 'onChange'
-    });
+  const [alerts, setAlerts] = useState<AlertNote[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useAppDispatch();
+  const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+    resolver: zodResolver(alertNoteSchema),
+    defaultValues: { newNote: '' },
+    mode: 'onChange'
+  });
 
-    const stringToColor = (str: string) => {
-        let hash = 0;
-        if (!str) return '#cccccc';
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        let color = '#';
-        for (let i = 0; i < 3; i++) {
-            const value = (hash >> (i * 8)) & 0xFF;
-            color += ('00' + value.toString(16)).substr(-2);
-        }
-        return color;
-    };
+  const stringToColor = (str: string) => {
+    let hash = 0;
+    if (!str) return '#cccccc';
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+  };
 
-    const fetchAlerts = useCallback(() => {
-        dispatch(getAlertsAction({ module_id: member.id, module_name: 'Member' }))
-            .unwrap()
-            .then((data) => setAlerts(data.data || []))
-            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
-            .finally(() => setIsFetching(false));
-    }, [member.id, dispatch]);
+  const fetchAlerts = useCallback(() => {
+    dispatch(getAlertsAction({ module_id: member.id, module_name: 'Member' }))
+      .unwrap()
+      .then((data) => setAlerts(data.data || []))
+      .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+      .finally(() => setIsFetching(false));
+  }, [member.id, dispatch]);
 
-    useEffect(() => {
-        setIsFetching(true);
-        fetchAlerts();
-    }, [fetchAlerts]);
+  useEffect(() => {
+    setIsFetching(true);
+    fetchAlerts();
+  }, [fetchAlerts]);
 
-    const onAddNote = async (data: AlertNoteFormData) => {
-        setIsSubmitting(true);
-        try {
-            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: member.id, module_name: 'Member' })).unwrap();
-            toast.push(<Notification type="success" title="Alert Note Added" />);
-            reset({ newNote: '' });
-            fetchAlerts(); // Re-fetch alerts to show the new one
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+  const onAddNote = async (data: AlertNoteFormData) => {
+    setIsSubmitting(true);
+    try {
+      await dispatch(addAllAlertsAction({ note: data.newNote, module_id: member.id, module_name: 'Member' })).unwrap();
+      toast.push(<Notification type="success" title="Alert Note Added" />);
+      reset({ newNote: '' });
+      fetchAlerts(); // Re-fetch alerts to show the new one
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    return (
-        <Dialog
-            isOpen={true}
-            onClose={onClose}
-            onRequestClose={onClose}
-            width={1200}
-            contentClassName="p-0 flex flex-col max-h-[95vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
-        >
-            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <TbBellRinging className="text-2xl text-white" />
-                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{member.name}</h5>
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={1200}
+      contentClassName="p-0 flex flex-col max-h-[95vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+    >
+      <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TbBellRinging className="text-2xl text-white" />
+            <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{member.name}</h5>
+          </div>
+          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+            <TbX className="h-6 w-6" />
+          </button>
+        </div>
+      </header>
+      <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-y-auto">
+        <div className="flex flex-col lg:h-full overflow-hidden min-h-[400px]">
+          <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">Activity Timeline</h6>
+          <div className="space-y-8 lg:flex-grow lg:overflow-y-auto lg:pr-4 lg:-mr-4">
+            {isFetching ? (
+              <div className="flex justify-center items-center h-full"><p className="text-gray-500">Loading timeline...</p></div>
+            ) : alerts.length > 0 ? (
+              alerts.map((alert, index) => {
+                const userName = alert?.created_by_user?.name || 'N/A';
+                const userInitial = userName.charAt(0).toUpperCase();
+                return (
+                  <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                    <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                      <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>{userInitial}</Avatar>
+                      {index < alerts.length - 1 && (<div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>)}
                     </div>
-                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
-                        <TbX className="h-6 w-6" />
-                    </button>
-                </div>
-            </header>
-            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-y-auto">
-                <div className="flex flex-col lg:h-full overflow-hidden min-h-[400px]">
-                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">Activity Timeline</h6>
-                    <div className="space-y-8 lg:flex-grow lg:overflow-y-auto lg:pr-4 lg:-mr-4">
-                        {isFetching ? (
-                            <div className="flex justify-center items-center h-full"><p className="text-gray-500">Loading timeline...</p></div>
-                        ) : alerts.length > 0 ? (
-                            alerts.map((alert, index) => {
-                                const userName = alert?.created_by_user?.name || 'N/A';
-                                const userInitial = userName.charAt(0).toUpperCase();
-                                return (
-                                    <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
-                                        <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
-                                            <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>{userInitial}</Avatar>
-                                            {index < alerts.length - 1 && (<div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>)}
-                                        </div>
-                                        <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                            <div className="p-4">
-                                                <header className="flex justify-between items-center mb-2">
-                                                    <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
-                                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><TbCalendarTime /><span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span></div>
-                                                </header>
-                                                <div className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: alert.note }} />
-                                            </div>
-                                        </Card>
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
-                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
-                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div className="flex flex-col mt-8 lg:mt-0">
-                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
-                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
-                            <div className="flex items-center gap-2"><TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" /><h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6></div>
+                    <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                      <div className="p-4">
+                        <header className="flex justify-between items-center mb-2">
+                          <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><TbCalendarTime /><span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span></div>
                         </header>
-                        <UiForm onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
-                            <UiFormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
-                                <Controller
-                                    name="newNote"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
-                                            <RichTextEditor {...field} onChange={(val) => field.onChange(val.html)} className="flex-grow min-h-[150px] sm:min-h-[200px]" />
-                                        </div>
-                                    )}
-                                />
-                            </UiFormItem>
-                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
-                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-                                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>Submit Note</Button>
-                            </footer>
-                        </UiForm>
+                        <div className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: alert.note }} />
+                      </div>
                     </Card>
-                </div>
-            </main>
-        </Dialog>
-    );
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col mt-8 lg:mt-0">
+          <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+            <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+              <div className="flex items-center gap-2"><TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" /><h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6></div>
+            </header>
+            <UiForm onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+              <UiFormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                <Controller
+                  name="newNote"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                      <RichTextEditor {...field} onChange={(val) => field.onChange(val.html)} className="flex-grow min-h-[150px] sm:min-h-[200px]" />
+                    </div>
+                  )}
+                />
+              </UiFormItem>
+              <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>Submit Note</Button>
+              </footer>
+            </UiForm>
+          </Card>
+        </div>
+      </main>
+    </Dialog>
+  );
 };
 
 
@@ -463,22 +464,22 @@ const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void
     if (!member) return;
     setIsSubmitting(true);
     const payload = {
-        module_id: Number(member.id),
-        module_name: "Member",
-        event_title: data.event_title,
-        event_type: data.event_type,
-        date_time: dayjs(data.date_time).format("YYYY-MM-DDTHH:mm:ss"),
-        ...(data.remind_from && { remind_from: dayjs(data.remind_from).format("YYYY-MM-DDTHH:mm:ss") }),
-        notes: data.notes || ""
+      module_id: Number(member.id),
+      module_name: "Member",
+      event_title: data.event_title,
+      event_type: data.event_type,
+      date_time: dayjs(data.date_time).format("YYYY-MM-DDTHH:mm:ss"),
+      ...(data.remind_from && { remind_from: dayjs(data.remind_from).format("YYYY-MM-DDTHH:mm:ss") }),
+      notes: data.notes || ""
     };
     try {
-        await dispatch(addScheduleAction(payload)).unwrap();
-        toast.push(<Notification type="success" title="Event Scheduled" />);
-        onClose();
+      await dispatch(addScheduleAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Event Scheduled" />);
+      onClose();
     } catch (error: any) {
-        toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message} />);
+      toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message} />);
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -509,7 +510,7 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const dispatch = useAppDispatch();
   const [memberList, setMemberList] = useState<FormItem[]>(MemberData?.data ?? []);
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
-  
+
   useEffect(() => { if (MemberData?.data) setMemberList(MemberData.data); }, [MemberData?.data]);
   useEffect(() => { dispatch(getMemberAction()); dispatch(getAllUsersAction()); }, [dispatch]);
 
@@ -555,26 +556,26 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: FilterFormData; onRemoveFilter: (key: keyof FilterFormData, value: string) => void; onClearAll: () => void; }) => {
-    const filterKeyToLabelMap: Record<string, string> = { filterStatus: "Status", filterBusinessType: "Business Type", filterBusinessOpportunity: "Opportunity", filterCountry: "Country", filterInterestedFor: "Interest", memberGrade: "Grade", filterRM: "RM", filterMemberType: "Member Type" };
-    const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return [];
-        if (key === 'filterCreatedAt') {
-            const dateArray = value as [Date | null, Date | null];
-            if (dateArray[0] && dateArray[1]) {
-                return [{ key, value: 'date-range', label: `Created: ${dateArray[0].toLocaleDateString()} - ${dateArray[1].toLocaleDateString()}` }];
-            }
-            return [];
-        }
-        return (value as { value: string; label: string }[]).map((item: { value: string; label: string }) => ({ key, value: item.value, label: `${filterKeyToLabelMap[key] || "Filter"}: ${item.label}` }));
-    });
-    if (activeFiltersList.length === 0) return null;
-    return (
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-            {activeFiltersList.map(filter => (<Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">{filter.label}<TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof FilterFormData, filter.value)} /></Tag>))}
-            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-        </div>
-    );
+  const filterKeyToLabelMap: Record<string, string> = { filterStatus: "Status", filterBusinessType: "Business Type", filterBusinessOpportunity: "Opportunity", filterCountry: "Country", filterInterestedFor: "Interest", memberGrade: "Grade", filterRM: "RM", filterMemberType: "Member Type" };
+  const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
+    if (!value || (Array.isArray(value) && value.length === 0)) return [];
+    if (key === 'filterCreatedAt') {
+      const dateArray = value as [Date | null, Date | null];
+      if (dateArray[0] && dateArray[1]) {
+        return [{ key, value: 'date-range', label: `Created: ${dateArray[0].toLocaleDateString()} - ${dateArray[1].toLocaleDateString()}` }];
+      }
+      return [];
+    }
+    return (value as { value: string; label: string }[]).map((item: { value: string; label: string }) => ({ key, value: item.value, label: `${filterKeyToLabelMap[key] || "Filter"}: ${item.label}` }));
+  });
+  if (activeFiltersList.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {activeFiltersList.map(filter => (<Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">{filter.label}<TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof FilterFormData, filter.value)} /></Tag>))}
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+    </div>
+  );
 };
 
 const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: FilterFormData; setFilterCriteria: React.Dispatch<React.SetStateAction<FilterFormData>>; }) => {
@@ -593,26 +594,26 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
 
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); setFilterDrawerOpen(false); };
-  
+
   const onClearFilters = useCallback(() => {
     setFilterCriteria({});
-    filterFormMethods.reset({}); 
+    filterFormMethods.reset({});
     setTableData((prev) => ({ ...prev, query: '', pageIndex: 1 }));
     sessionStorage.removeItem('memberFilterState');
   }, [setFilterCriteria, filterFormMethods]);
-  
-  const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string) => { 
-    setFilterCriteria(prev => { 
-        const newCriteria = { ...prev }; 
-        if (key === 'filterCreatedAt') {
-            (newCriteria as any)[key] = [null, null];
-        } else {
-            const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; 
-            if (currentFilterArray) (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove); 
-        }
-        return newCriteria;
-    }); 
-    setTableData(prev => ({ ...prev, pageIndex: 1 })); 
+
+  const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string) => {
+    setFilterCriteria(prev => {
+      const newCriteria = { ...prev };
+      if (key === 'filterCreatedAt') {
+        (newCriteria as any)[key] = [];
+      } else {
+        const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
+        if (currentFilterArray) (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove);
+      }
+      return newCriteria;
+    });
+    setTableData(prev => ({ ...prev, pageIndex: 1 }));
   };
 
   const onRefreshData = () => {
@@ -620,119 +621,129 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     dispatch(getMemberAction());
     toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />);
   };
-  
+
   const columns: ColumnDef<FormItem>[] = useMemo(() => [
-    { header: "Member", accessorKey: "name", id: "member", size: 200, cell: ({ row }) => (
+    {
+      header: "Member", accessorKey: "name", id: "member", size: 200, cell: ({ row }) => (
         <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-                <Avatar src={row.original.full_profile_pic || undefined} shape="circle" size="sm" icon={<TbUserCircle/>}/>
-                <div className="text-xs">
-                    <b className="text-xs text-blue-500"><em>{row.original.member_code}</em></b> <br />
-                    <b className="text-sm">{row.original.name}</b>
-                </div>
+          <div className="flex items-center gap-2">
+            <Avatar src={row.original.full_profile_pic || undefined} shape="circle" size="sm" icon={<TbUserCircle />} />
+            <div className="text-xs">
+              <b className="text-xs text-blue-500"><em>{row.original.member_code}</em></b> <br />
+              <b className="text-sm">{row.original.name}</b>
             </div>
-            <div className="text-xs text-gray-500 pl-10">
-                <div>{row.original.email}</div>
-                <div>{row.original.number_code} {row.original.number}</div>
-                <div>{row.original.country?.name}</div>
-            </div>
+          </div>
+          <div className="text-xs text-gray-500 pl-10">
+            <div>{row.original.email}</div>
+            <div>{row.original.number_code} {row.original.number}</div>
+            <div>{row.original.country?.name}</div>
+          </div>
         </div>
-    )},
-    { header: "Company", accessorKey: 'company_actual', id: "company", size: 200, cell: ({ row }) => {
-        
-        const { company_actual, company_temp, company_code,  } = row.original;
-       
+      )
+    },
+    {
+      header: "Company", accessorKey: 'company_actual', id: "company", size: 200, cell: ({ row }) => {
+
+        const { company_actual, company_temp, company_code, } = row.original;
+
         return (
-             <div className="text-xs">
-                <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    <b>Actual: </b>{company_code} | {company_actual}
-                </div> 
-                <div className="font-semibold text-amber-600 dark:text-amber-400">
-                    <b>Temp: </b>{company_temp || "N/A"}
-                </div>
+          <div className="text-xs">
+            <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+              <b>Actual: </b>{company_code} | {company_actual}
             </div>
+            <div className="font-semibold text-amber-600 dark:text-amber-400">
+              <b>Temp: </b>{company_temp || "N/A"}
+            </div>
+          </div>
         );
-    }},
-    { header: "Status", accessorKey: "status", id: "status", size: 140, cell: ({ row }) => (
+      }
+    },
+    {
+      header: "Status", accessorKey: "status", id: "status", size: 140, cell: ({ row }) => (
         <div className="flex flex-col text-xs">
-            <Tag className={`${statusColor[row.original.status.toLowerCase()] || ''} inline capitalize`}>{row.original.status}</Tag>
-            <div className="text-[10px] text-gray-500 mt-1">Joined: {formatCustomDateTime(row.original.created_at)}</div>
+          <Tag className={`${statusColor[row.original.status.toLowerCase()] || ''} inline capitalize`}>{row.original.status}</Tag>
+          <div className="text-[10px] text-gray-500 mt-1">Joined: {formatCustomDateTime(row.original.created_at)}</div>
         </div>
-    )},
-    { header: "Profile", accessorKey: "profile_completion", id: "profile", size: 220, cell: ({ row }) => (
+      )
+    },
+    {
+      header: "Profile", accessorKey: "profile_completion", id: "profile", size: 220, cell: ({ row }) => (
         <div className="text-xs flex flex-col gap-0.5">
-            <span><b>RM: </b>{row.original.relationship_manager?.name || "N/A"}</span>
-            <span><b>Grade: </b>{row.original.member_grade || "N/A"}</span>
-            
-            <span className="truncate"><b>Opportunity: </b>{row.original.business_opportunity || "N/A"}</span>
-            <span><b></b>{row.original.category || "N/A"} / {row.original.subcategory || "N/A"}  </span>
-            <Tooltip title={`Profile: ${row.original.profile_completion}%`}>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${row.original.profile_completion}%` }}></div></div>
-            </Tooltip>
+          <span><b>RM: </b>{row.original.relationship_manager?.name || "N/A"}</span>
+          <span><b>Grade: </b>{row.original.member_grade || "N/A"}</span>
+
+          <span className="truncate"><b>Opportunity: </b>{row.original.business_opportunity || "N/A"}</span>
+          <span><b></b>{row.original.category || "N/A"} / {row.original.subcategory || "N/A"}  </span>
+          <Tooltip title={`Profile: ${row.original.profile_completion}%`}>
+            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${row.original.profile_completion}%` }}></div></div>
+          </Tooltip>
         </div>
-    )},
-    { header: "Preferences", accessorKey: 'interested_in', id: "preferences", size: 250, cell: ({ row }) => {
+      )
+    },
+    {
+      header: "Preferences", accessorKey: 'interested_in', id: "preferences", size: 250, cell: ({ row }) => {
         const [isOpen, setIsOpen] = useState(false);
         const { dynamic_member_profiles, brand_name, business_type, interested_in } = row.original;
         const brandDisplay = (dynamic_member_profiles?.[0]?.brand_names?.[0]) ? dynamic_member_profiles[0].brand_names.join(', ') : (brand_name || "N/A");
-        
+
         return (
-            <div className="flex flex-col gap-1 text-xs">
-                <span><b>Business Type: </b>{business_type || 'N/A'}</span>
-                <span className="flex items-center gap-1 truncate">
-                    <Tooltip title="View Dynamic Profiles"><TbInfoCircle size={16} className="text-blue-500 cursor-pointer flex-shrink-0" onClick={() => setIsOpen(true)} /></Tooltip>
-                    <b>Brands: </b><span className="truncate">{brandDisplay}</span>
-                </span>
-                <span><b>Interested: </b>{interested_in || 'N/A'}</span>
-                <Dialog width={620} isOpen={isOpen} onClose={() => setIsOpen(false)}>
-                    <h6>Dynamic Profiles for {row.original.name}</h6>
-                    <Table className="mt-4">
-                        <thead className="bg-gray-100 dark:bg-gray-700">
-                            <Tr><Td>Member Type</Td><Td>Brands</Td><Td>Sub Categories</Td></Tr>
-                        </thead>
-                        <tbody>
-                            {dynamic_member_profiles?.length > 0 ? (
-                                dynamic_member_profiles.map(p => (
-                                    <Tr key={p.id}><Td>{p.member_type?.name || 'N/A'}</Td><Td>{p.brand_names?.join(', ') || 'N/A'}</Td><Td>{p.category_names?.join(', ') || 'N/A'}</Td><Td>{p.sub_category_names?.join(', ') || 'N/A'}</Td></Tr>
-                                ))
-                            ) : <Tr><Td colSpan={4} className="text-center">No dynamic profiles available.</Td></Tr>}
-                        </tbody>
-                    </Table>
-                </Dialog>
-            </div>
+          <div className="flex flex-col gap-1 text-xs">
+            <span><b>Business Type: </b>{business_type || 'N/A'}</span>
+            <span className="flex items-center gap-1 truncate">
+              <Tooltip title="View Dynamic Profiles"><TbInfoCircle size={16} className="text-blue-500 cursor-pointer flex-shrink-0" onClick={() => setIsOpen(true)} /></Tooltip>
+              <b>Brands: </b><span className="truncate">{brandDisplay}</span>
+            </span>
+            <span><b>Interested: </b>{interested_in || 'N/A'}</span>
+            <Dialog width={620} isOpen={isOpen} onClose={() => setIsOpen(false)}>
+              <h6>Dynamic Profiles for {row.original.name}</h6>
+              <Table className="mt-4">
+                <thead className="bg-gray-100 dark:bg-gray-700">
+                  <Tr><Td>Member Type</Td><Td>Brands</Td><Td>Sub Categories</Td></Tr>
+                </thead>
+                <tbody>
+                  {dynamic_member_profiles?.length > 0 ? (
+                    dynamic_member_profiles.map(p => (
+                      <Tr key={p.id}><Td>{p.member_type?.name || 'N/A'}</Td><Td>{p.brand_names?.join(', ') || 'N/A'}</Td><Td>{p.category_names?.join(', ') || 'N/A'}</Td><Td>{p.sub_category_names?.join(', ') || 'N/A'}</Td></Tr>
+                    ))
+                  ) : <Tr><Td colSpan={4} className="text-center">No dynamic profiles available.</Td></Tr>}
+                </tbody>
+              </Table>
+            </Dialog>
+          </div>
         );
-    }},
+      }
+    },
     { header: "Actions", id: "action", size: 120, meta: { HeaderClass: "text-center" }, cell: props => <ActionColumn rowData={props.row.original} onOpenModal={(type, data) => setModalState({ isOpen: true, type, data })} /> },
   ], []);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<FormItem>[]>(columns);
   useEffect(() => setFilteredColumns(columns), [columns]);
-  
+
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
-  
+
   const toggleColumn = (checked: boolean, colId: string) => {
-      if (checked) {
-          const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
-          if (originalColumn) {
-              setFilteredColumns(prev => {
-                  const newCols = [...prev, originalColumn];
-                  newCols.sort((a, b) => {
-                      const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
-                      const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
-                      return indexA - indexB;
-                  });
-                  return newCols;
-              });
-          }
-      } else {
-          setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    if (checked) {
+      const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId);
+      if (originalColumn) {
+        setFilteredColumns(prev => {
+          const newCols = [...prev, originalColumn];
+          newCols.sort((a, b) => {
+            const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey));
+            return indexA - indexB;
+          });
+          return newCols;
+        });
       }
+    } else {
+      setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId));
+    }
   };
 
   const { activeFilterCount, pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: FormItem[] = forms ? cloneDeep(forms) : [];
     const { filterStatus, filterBusinessType, filterBusinessOpportunity, filterCountry, filterInterestedFor, memberGrade, filterRM, filterMemberType, filterCreatedAt } = filterCriteria;
-    
+
     if (filterStatus?.length) { const values = filterStatus.map(opt => opt.value); processedData = processedData.filter(item => values.includes(item.status)); }
     if (filterBusinessType?.length) { const values = filterBusinessType.map(opt => opt.value); processedData = processedData.filter(item => item.business_type && values.includes(item.business_type)); }
     if (filterBusinessOpportunity?.length) { const values = filterBusinessOpportunity.map(opt => opt.value); processedData = processedData.filter(item => item.business_opportunity && values.some(v => item.business_opportunity.includes(v))); }
@@ -742,12 +753,13 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     if (filterRM?.length) { const values = filterRM.map(opt => opt.value); processedData = processedData.filter(item => item.relationship_manager?.name && values.includes(item.relationship_manager.name)); }
     if (filterMemberType?.length) { const values = filterMemberType.map(opt => opt.value); processedData = processedData.filter(item => item.dynamic_member_profiles.some(p => p.member_type?.name && values.includes(p.member_type.name))); }
     if (filterCreatedAt?.[0] && filterCreatedAt?.[1]) { const [start, end] = filterCreatedAt; const inclusiveEnd = dayjs(end).endOf('day').toDate(); processedData = processedData.filter(item => { const createdAt = new Date(item.created_at); return createdAt >= start && createdAt <= inclusiveEnd; }); }
-    
+
     if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => item.name?.toLowerCase().includes(query) || item.email?.toLowerCase().includes(query) || item.company_temp?.toLowerCase().includes(query) || item.company_actual?.toLowerCase().includes(query) || String(item.id).includes(query)); }
 
     const activeFilterCountValue = Object.values(filterCriteria).reduce((count, value) => {
-        if (Array.isArray(value) && value.length > 0) return count + 1;
-        return count;
+      value = Array.isArray(value) ? value.filter(Boolean) : value;
+      if (Array.isArray(value) && value.length > 0) return count + 1;
+      return count;
     }, 0);
 
     const { order, key } = tableData.sort as OnSortParam;
@@ -776,15 +788,15 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const handleAllRowSelect = (c: boolean, r: Row<FormItem>[]) => setSelectedMembers(c ? r.map(i => i.original) : []);
 
   const { businessTypeOptions, businessOpportunityOptions, memberGradeOptions, countryOptions, rmOptions, memberTypeOptions } = useMemo(() => {
-        const unique = (arr: (string | null | undefined)[]) => [...new Set(arr.filter(Boolean))].map(item => ({ value: item as string, label: item as string }));
-        return {
-            businessTypeOptions: unique(forms.map(f => f.business_type)),
-            businessOpportunityOptions: unique(forms.flatMap(f => f.business_opportunity?.split(',').map(s => s.trim()))),
-            memberGradeOptions: unique(forms.map(f => f.member_grade)),
-            countryOptions: unique(forms.map(f => f.country?.name)),
-            rmOptions: unique(forms.map(f => f.relationship_manager?.name)),
-            memberTypeOptions: unique(forms.flatMap(f => f.dynamic_member_profiles.map(p => p.member_type?.name))),
-        }
+    const unique = (arr: (string | null | undefined)[]) => [...new Set(arr.filter(Boolean))].map(item => ({ value: item as string, label: item as string }));
+    return {
+      businessTypeOptions: unique(forms.map(f => f.business_type)),
+      businessOpportunityOptions: unique(forms.flatMap(f => f.business_opportunity?.split(',').map(s => s.trim()))),
+      memberGradeOptions: unique(forms.map(f => f.member_grade)),
+      countryOptions: unique(forms.map(f => f.country?.name)),
+      rmOptions: unique(forms.map(f => f.relationship_manager?.name)),
+      memberTypeOptions: unique(forms.flatMap(f => f.dynamic_member_profiles.map(p => p.member_type?.name))),
+    }
   }, [forms]);
 
   return (
@@ -792,25 +804,25 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <DebouceInput value={tableData.query} placeholder="Quick Search..." onChange={e => handleSetTableData({ query: e.target.value, pageIndex: 1 })} />
         <div className="flex gap-2">
-            <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
-                <div className="flex flex-col p-2">
-                    <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
-                    {columns.map((col) => {
-                        const id = col.id || col.accessorKey as string;
-                        if (!col.header || id === 'action') return null;
-                        return (
-                            <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
-                                <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
-                                    {col.header as string}
-                                </Checkbox>
-                            </div>
-                        );
-                    })}
-                </div>
-            </Dropdown>
-            <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
-            <Button icon={<TbFilter />} onClick={() => setFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-            <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
+          <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
+            <div className="flex flex-col p-2">
+              <div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>
+              {columns.map((col) => {
+                const id = col.id || col.accessorKey as string;
+                if (!col.header || id === 'action') return null;
+                return (
+                  <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>
+                      {col.header as string}
+                    </Checkbox>
+                  </div>
+                );
+              })}
+            </div>
+          </Dropdown>
+          <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
+          <Button icon={<TbFilter />} onClick={() => setFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
+          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
@@ -832,9 +844,9 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       </Drawer>
       <MemberModals modalState={modalState} onClose={() => setModalState({ isOpen: false, type: null, data: null })} userOptions={userOptions} />
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText="Submit & Export" >
-          <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
-              <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
-          </UiFormItem>
+        <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
+          <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+        </UiFormItem>
       </ConfirmDialog>
     </>
   );
@@ -871,15 +883,15 @@ const FormListSelected = () => {
       setSelectedMembers([]);
     }, 1000);
   };
-  
+
   if (selectedMembers.length === 0) return null;
 
   return (
     <>
       <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
         <div className="container mx-auto flex items-center justify-between">
-            <span><span className="flex items-center gap-2"><TbChecks className="text-lg text-primary-600" /><span className="font-semibold">{selectedMembers.length} Members selected</span></span></span>
-            <div className="flex items-center"><Button size="sm" className="ltr:mr-3 rtl:ml-3" color="red-600" onClick={() => setDeleteConfirmationOpen(true)}>Delete</Button><Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>Message</Button></div>
+          <span><span className="flex items-center gap-2"><TbChecks className="text-lg text-primary-600" /><span className="font-semibold">{selectedMembers.length} Members selected</span></span></span>
+          <div className="flex items-center"><Button size="sm" className="ltr:mr-3 rtl:ml-3" color="red-600" onClick={() => setDeleteConfirmationOpen(true)}>Delete</Button><Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>Message</Button></div>
         </div>
       </StickyFooter>
       <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title="Remove Members" onClose={() => setDeleteConfirmationOpen(false)} onConfirm={handleConfirmDelete}><p>Are you sure you want to remove these members?</p></ConfirmDialog>
@@ -896,22 +908,22 @@ const FormListSelected = () => {
 const Member = () => {
   const navigate = useNavigate();
   const { MemberData } = useSelector(masterSelector);
-  
+
   const MEMBER_FILTER_STORAGE_KEY = 'memberFilterState';
-  
+
   const getInitialState = (): FilterFormData => {
     try {
-        const savedStateJSON = sessionStorage.getItem(MEMBER_FILTER_STORAGE_KEY);
-        if (savedStateJSON) {
-            const savedState = JSON.parse(savedStateJSON);
-            if (savedState.filterCreatedAt) {
-                savedState.filterCreatedAt = savedState.filterCreatedAt.map((d: string | null) => d ? new Date(d) : null);
-            }
-            return savedState;
+      const savedStateJSON = sessionStorage.getItem(MEMBER_FILTER_STORAGE_KEY);
+      if (savedStateJSON) {
+        const savedState = JSON.parse(savedStateJSON);
+        if (savedState.filterCreatedAt) {
+          savedState.filterCreatedAt = savedState.filterCreatedAt.map((d: string | null) => d ? new Date(d) : null);
         }
+        return savedState;
+      }
     } catch (error) {
-        console.error("Failed to parse saved member filters, clearing it.", error);
-        sessionStorage.removeItem(MEMBER_FILTER_STORAGE_KEY);
+      console.error("Failed to parse saved member filters, clearing it.", error);
+      sessionStorage.removeItem(MEMBER_FILTER_STORAGE_KEY);
     }
     return {};
   };
@@ -920,16 +932,16 @@ const Member = () => {
 
   useEffect(() => {
     try {
-        sessionStorage.setItem(MEMBER_FILTER_STORAGE_KEY, JSON.stringify(filterCriteria));
+      sessionStorage.setItem(MEMBER_FILTER_STORAGE_KEY, JSON.stringify(filterCriteria));
     } catch (error) {
-        console.error("Could not save member filters to sessionStorage:", error);
+      console.error("Could not save member filters to sessionStorage:", error);
     }
   }, [filterCriteria]);
 
   const setAndPersistFilters = useCallback((filters: FilterFormData | ((prevState: FilterFormData) => FilterFormData)) => {
     setFilterCriteria(filters);
   }, []);
-  
+
   const counts = useMemo(() => {
     const list = MemberData?.data || [];
     return {
@@ -947,40 +959,40 @@ const Member = () => {
 
   return (
     <MemberListProvider>
-        <Container>
-          <AdaptiveCard>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <h5>Members</h5>
-                <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 mb-4 gap-3">
-                <Tooltip title="Click to show all members">
-                  <div onClick={() => handleCardClick("All")} className="cursor-pointer">
-                    <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div><div><h6>{counts.total}</h6><span className="text-xs font-semibold">Total</span></div></Card>
-                  </div>
-                </Tooltip>
-                <Tooltip title="Click to show active members">
-                  <div onClick={() => handleCardClick("Active")} className="cursor-pointer">
-                    <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserCheck size={24} /></div><div><h6>{counts.active}</h6><span className="text-xs font-semibold">Active</span></div></Card>
-                  </div>
-                </Tooltip>
-                <Tooltip title="Click to show disabled members">
-                  <div onClick={() => handleCardClick("Disabled")} className="cursor-pointer">
-                    <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserCancel size={24} /></div><div><h6>{counts.disabled}</h6><span className="text-xs font-semibold">Disabled</span></div></Card>
-                  </div>
-                </Tooltip>
-                <Tooltip title="Click to show unregistered members">
-                  <div onClick={() => handleCardClick("Unregistered")} className="cursor-pointer">
-                    <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserExclamation size={24} /></div><div><h6>{counts.unregistered}</h6><span className="text-xs font-semibold">Unregistered</span></div></Card>
-                  </div>
-                </Tooltip>
-              </div>
-              <FormListTable filterCriteria={filterCriteria} setFilterCriteria={setAndPersistFilters} />
+      <Container>
+        <AdaptiveCard>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <h5>Members</h5>
+              <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/business-entities/member-create")}>Add New</Button>
             </div>
-          </AdaptiveCard>
-        </Container>
-        <FormListSelected />
+            <div className="grid grid-cols-2 md:grid-cols-4 mb-4 gap-3">
+              <Tooltip title="Click to show all members">
+                <div onClick={() => handleCardClick("All")} className="cursor-pointer">
+                  <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div><div><h6>{counts.total}</h6><span className="text-xs font-semibold">Total</span></div></Card>
+                </div>
+              </Tooltip>
+              <Tooltip title="Click to show active members">
+                <div onClick={() => handleCardClick("Active")} className="cursor-pointer">
+                  <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserCheck size={24} /></div><div><h6>{counts.active}</h6><span className="text-xs font-semibold">Active</span></div></Card>
+                </div>
+              </Tooltip>
+              <Tooltip title="Click to show disabled members">
+                <div onClick={() => handleCardClick("Disabled")} className="cursor-pointer">
+                  <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserCancel size={24} /></div><div><h6>{counts.disabled}</h6><span className="text-xs font-semibold">Disabled</span></div></Card>
+                </div>
+              </Tooltip>
+              <Tooltip title="Click to show unregistered members">
+                <div onClick={() => handleCardClick("Unregistered")} className="cursor-pointer">
+                  <Card bodyClass="flex gap-2 p-2"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserExclamation size={24} /></div><div><h6>{counts.unregistered}</h6><span className="text-xs font-semibold">Unregistered</span></div></Card>
+                </div>
+              </Tooltip>
+            </div>
+            <FormListTable filterCriteria={filterCriteria} setFilterCriteria={setAndPersistFilters} />
+          </div>
+        </AdaptiveCard>
+      </Container>
+      <FormListSelected />
     </MemberListProvider>
   );
 };
