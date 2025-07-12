@@ -110,7 +110,7 @@ export type FormItem = {
 };
 // --- END: Detailed Type Definitions ---
 
-// --- Zod Schemas & Constants ---
+// --- MODIFICATION: Updated Zod Schema with new filters ---
 const filterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterBusinessType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -118,6 +118,9 @@ const filterFormSchema = z.object({
   filterCountry: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterInterestedFor: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   memberGrade: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterRM: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterMemberType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterCreatedAt: z.array(z.date().nullable()).optional().default([null, null]),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
@@ -397,19 +400,26 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
 };
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filterData: FilterFormData; onRemoveFilter: (key: keyof FilterFormData, value: string) => void; onClearAll: () => void; }) => {
-  const filterKeyToLabelMap: Record<string, string> = { filterStatus: "Status", filterBusinessType: "Business Type", filterBusinessOpportunity: "Opportunity", filterCountry: "Country", filterInterestedFor: "Interest", memberGrade: "Grade" };
-  const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
-    if (!value || (Array.isArray(value) && value.length === 0)) return [];
-    return (value as { value: string; label: string }[]).map((item: { value: string; label: string }) => ({ key, value: item.value, label: `${filterKeyToLabelMap[key] || "Filter"}: ${item.label}` }));
-  });
-  if (activeFiltersList.length === 0) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
-      {activeFiltersList.map(filter => (<Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">{filter.label}<TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof FilterFormData, filter.value)} /></Tag>))}
-      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
-    </div>
-  );
+    const filterKeyToLabelMap: Record<string, string> = { filterStatus: "Status", filterBusinessType: "Business Type", filterBusinessOpportunity: "Opportunity", filterCountry: "Country", filterInterestedFor: "Interest", memberGrade: "Grade", filterRM: "RM", filterMemberType: "Member Type" };
+    const activeFiltersList = Object.entries(filterData).flatMap(([key, value]) => {
+        if (!value || (Array.isArray(value) && value.length === 0)) return [];
+        if (key === 'filterCreatedAt') {
+            const dateArray = value as [Date | null, Date | null];
+            if (dateArray[0] && dateArray[1]) {
+                return [{ key, value: 'date-range', label: `Created: ${dateArray[0].toLocaleDateString()} - ${dateArray[1].toLocaleDateString()}` }];
+            }
+            return [];
+        }
+        return (value as { value: string; label: string }[]).map((item: { value: string; label: string }) => ({ key, value: item.value, label: `${filterKeyToLabelMap[key] || "Filter"}: ${item.label}` }));
+    });
+    if (activeFiltersList.length === 0) return null;
+    return (
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+            {activeFiltersList.map(filter => (<Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">{filter.label}<TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(filter.key as keyof FilterFormData, filter.value)} /></Tag>))}
+            <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
+        </div>
+    );
 };
 
 const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: FilterFormData; setFilterCriteria: React.Dispatch<React.SetStateAction<FilterFormData>>; }) => {
@@ -428,8 +438,28 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
 
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); setFilterDrawerOpen(false); };
-  const onClearFilters = () => { setFilterCriteria({}); setTableData(prev => ({ ...prev, query: "", pageIndex: 1 })); };
-  const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev }; const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove); return newCriteria; }); setTableData(prev => ({ ...prev, pageIndex: 1 })); };
+  
+  // FIX: Made onClearFilters more robust by explicitly resetting the form state.
+  const onClearFilters = useCallback(() => {
+    setFilterCriteria({});
+    filterFormMethods.reset({}); // Explicitly reset the form
+    setTableData((prev) => ({ ...prev, query: '', pageIndex: 1 }));
+    sessionStorage.removeItem('memberFilterState');
+  }, [setFilterCriteria, filterFormMethods]);
+  
+  const handleRemoveFilter = (key: keyof FilterFormData, valueToRemove: string) => { 
+    setFilterCriteria(prev => { 
+        const newCriteria = { ...prev }; 
+        if (key === 'filterCreatedAt') {
+            (newCriteria as any)[key] = [null, null];
+        } else {
+            const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; 
+            if (currentFilterArray) (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove); 
+        }
+        return newCriteria;
+    }); 
+    setTableData(prev => ({ ...prev, pageIndex: 1 })); 
+  };
 
   const onRefreshData = () => {
     onClearFilters();
@@ -538,7 +568,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
 
   const { activeFilterCount, pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: FormItem[] = forms ? cloneDeep(forms) : [];
-    const { filterStatus, filterBusinessType, filterBusinessOpportunity, filterCountry, filterInterestedFor, memberGrade } = filterCriteria;
+    const { filterStatus, filterBusinessType, filterBusinessOpportunity, filterCountry, filterInterestedFor, memberGrade, filterRM, filterMemberType, filterCreatedAt } = filterCriteria;
     
     if (filterStatus?.length) { const values = filterStatus.map(opt => opt.value); processedData = processedData.filter(item => values.includes(item.status)); }
     if (filterBusinessType?.length) { const values = filterBusinessType.map(opt => opt.value); processedData = processedData.filter(item => item.business_type && values.includes(item.business_type)); }
@@ -546,14 +576,29 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     if (filterCountry?.length) { const values = filterCountry.map(opt => opt.value); processedData = processedData.filter(item => item.country?.name && values.includes(item.country.name)); }
     if (filterInterestedFor?.length) { const values = filterInterestedFor.map(opt => opt.value); processedData = processedData.filter(item => item.interested_in && values.includes(item.interested_in)); }
     if (memberGrade?.length) { const values = memberGrade.map(opt => opt.value); processedData = processedData.filter(item => item.member_grade && values.includes(item.member_grade)); }
+    if (filterRM?.length) { const values = filterRM.map(opt => opt.value); processedData = processedData.filter(item => item.relationship_manager?.name && values.includes(item.relationship_manager.name)); }
+    if (filterMemberType?.length) { const values = filterMemberType.map(opt => opt.value); processedData = processedData.filter(item => item.dynamic_member_profiles.some(p => p.member_type?.name && values.includes(p.member_type.name))); }
+    if (filterCreatedAt?.[0] && filterCreatedAt?.[1]) { const [start, end] = filterCreatedAt; const inclusiveEnd = dayjs(end).endOf('day').toDate(); processedData = processedData.filter(item => { const createdAt = new Date(item.created_at); return createdAt >= start && createdAt <= inclusiveEnd; }); }
     
     if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => item.name?.toLowerCase().includes(query) || item.email?.toLowerCase().includes(query) || item.company_temp?.toLowerCase().includes(query) || item.company_actual?.toLowerCase().includes(query) || String(item.id).includes(query)); }
 
-    const count = Object.values(filterCriteria).filter(v => Array.isArray(v) && v.length > 0).length;
+    // FIX: Correctly calculates the number of active filters.
+    const activeFilterCount = Object.entries(filterCriteria).reduce((count, [key, value]) => {
+        if (key === 'filterCreatedAt') {
+            const dateArray = value as [Date | null, Date | null];
+            if (dateArray?.[0] && dateArray?.[1]) {
+                return count + 1; // A date range is one filter.
+            }
+        } else if (Array.isArray(value) && value.length > 0) {
+            return count + value.length; // For multi-selects, add the number of items.
+        }
+        return count;
+    }, 0);
+
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { processedData.sort((a, b) => { const aValue = a[key as keyof FormItem] ?? ""; const bValue = b[key as keyof FormItem] ?? ""; if (typeof aValue === 'string' && typeof bValue === 'string') return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue); if (typeof aValue === 'number' && typeof bValue === 'number') return order === 'asc' ? aValue - bValue : bValue - aValue; return 0; }); }
     const pageIndex = tableData.pageIndex as number, pageSize = tableData.pageSize as number, startIndex = (pageIndex - 1) * pageSize;
-    return { activeFilterCount: count, pageData: processedData.slice(startIndex, startIndex + pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
+    return { activeFilterCount, pageData: processedData.slice(startIndex, startIndex + pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
   }, [forms, tableData, filterCriteria]);
 
   const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info" />); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
@@ -575,20 +620,22 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const handleRowSelect = (c: boolean, r: FormItem) => setSelectedMembers(p => c ? [...p, r] : p.filter(i => i.id !== r.id));
   const handleAllRowSelect = (c: boolean, r: Row<FormItem>[]) => setSelectedMembers(c ? r.map(i => i.original) : []);
 
-  const { businessTypeOptions, businessOpportunityOptions, memberGradeOptions, countryOptions } = useMemo(() => {
+  const { businessTypeOptions, businessOpportunityOptions, memberGradeOptions, countryOptions, rmOptions, memberTypeOptions } = useMemo(() => {
         const unique = (arr: (string | null | undefined)[]) => [...new Set(arr.filter(Boolean))].map(item => ({ value: item as string, label: item as string }));
         return {
             businessTypeOptions: unique(forms.map(f => f.business_type)),
             businessOpportunityOptions: unique(forms.flatMap(f => f.business_opportunity?.split(',').map(s => s.trim()))),
             memberGradeOptions: unique(forms.map(f => f.member_grade)),
             countryOptions: unique(forms.map(f => f.country?.name)),
+            rmOptions: unique(forms.map(f => f.relationship_manager?.name)),
+            memberTypeOptions: unique(forms.flatMap(f => f.dynamic_member_profiles.map(p => p.member_type?.name))),
         }
   }, [forms]);
 
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <DebouceInput value={tableData.query} placeholder="Quick Search..." onChange={e => handleSetTableData({ query: e, pageIndex: 1 })} />
+        <DebouceInput value={tableData.query} placeholder="Quick Search..." onChange={e => handleSetTableData({ query: e.target.value, pageIndex: 1 })} />
         <div className="flex gap-2">
             <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
                 <div className="flex flex-col p-2">
@@ -613,15 +660,19 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
       <DataTable selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button></div>}>
+      {/* FIX: Simplified the "Clear" button's onClick handler as onClearFilters now handles resetting the form. */}
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} width={500} onClose={() => setFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button></div>}>
         <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
-          <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
             <UiFormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={[{ value: "Active", label: "Active" }, { value: "Disabled", label: "Disabled" }, { value: "Unregistered", label: "Unregistered" }]} {...field} />)} /></UiFormItem>
             <UiFormItem label="Business Type"><Controller name="filterBusinessType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Type" options={businessTypeOptions} {...field} />)} /></UiFormItem>
             <UiFormItem label="Business Opportunity"><Controller name="filterBusinessOpportunity" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Opportunity" options={businessOpportunityOptions} {...field} />)} /></UiFormItem>
             <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Country" options={countryOptions} {...field} />)} /></UiFormItem>
             <UiFormItem label="Interested In"><Controller name="filterInterestedFor" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Interest" options={[{ value: "For Sell", label: "For Sell" }, { value: "For Buy", label: "For Buy" }, { value: "Both", label: "Both" }]} {...field} />)} /></UiFormItem>
             <UiFormItem label="Grade"><Controller name="memberGrade" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Grade" options={memberGradeOptions} {...field} />)} /></UiFormItem>
+            <UiFormItem label="Relationship Manager"><Controller name="filterRM" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select RM" options={rmOptions} {...field} />)} /></UiFormItem>
+            <UiFormItem label="Member Type"><Controller name="filterMemberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type" options={memberTypeOptions} {...field} />)} /></UiFormItem>
+            <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedAt" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></UiFormItem>
           </div>
         </UiForm>
       </Drawer>
@@ -691,7 +742,41 @@ const FormListSelected = () => {
 const Member = () => {
   const navigate = useNavigate();
   const { MemberData } = useSelector(masterSelector);
-  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({});
+  
+  // --- MODIFICATION: Logic for persistent state ---
+  const MEMBER_FILTER_STORAGE_KEY = 'memberFilterState';
+  
+  const getInitialState = (): FilterFormData => {
+    try {
+        const savedStateJSON = sessionStorage.getItem(MEMBER_FILTER_STORAGE_KEY);
+        if (savedStateJSON) {
+            const savedState = JSON.parse(savedStateJSON);
+            // Re-hydrate Date objects
+            if (savedState.filterCreatedAt) {
+                savedState.filterCreatedAt = savedState.filterCreatedAt.map((d: string | null) => d ? new Date(d) : null);
+            }
+            return savedState;
+        }
+    } catch (error) {
+        console.error("Failed to parse saved member filters, clearing it.", error);
+        sessionStorage.removeItem(MEMBER_FILTER_STORAGE_KEY);
+    }
+    return {};
+  };
+
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(getInitialState());
+
+  useEffect(() => {
+    try {
+        sessionStorage.setItem(MEMBER_FILTER_STORAGE_KEY, JSON.stringify(filterCriteria));
+    } catch (error) {
+        console.error("Could not save member filters to sessionStorage:", error);
+    }
+  }, [filterCriteria]);
+
+  const setAndPersistFilters = useCallback((filters: FilterFormData | ((prevState: FilterFormData) => FilterFormData)) => {
+    setFilterCriteria(filters);
+  }, []);
   
   const counts = useMemo(() => {
     const list = MemberData?.data || [];
@@ -704,8 +789,9 @@ const Member = () => {
   }, [MemberData?.data]);
 
   const handleCardClick = useCallback((status: "Active" | "Disabled" | "Unregistered" | "All") => {
-    setFilterCriteria(status === "All" ? {} : { filterStatus: [{ value: status, label: status }] });
-  }, []);
+    const newFilters = status === "All" ? {} : { filterStatus: [{ value: status, label: status }] };
+    setAndPersistFilters(newFilters);
+  }, [setAndPersistFilters]);
 
   return (
     <MemberListProvider>
@@ -738,7 +824,7 @@ const Member = () => {
                   </div>
                 </Tooltip>
               </div>
-              <FormListTable filterCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
+              <FormListTable filterCriteria={filterCriteria} setFilterCriteria={setAndPersistFilters} />
             </div>
           </AdaptiveCard>
         </Container>
