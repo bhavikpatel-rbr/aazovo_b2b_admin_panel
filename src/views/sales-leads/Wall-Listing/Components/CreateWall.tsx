@@ -1,6 +1,7 @@
 // src/views/your-path/business-entities/WallItemForm.tsx
 // MODIFIED: This file is now fully equipped to handle both Add and Edit operations.
 // It also supports adding multiple items at once in "Add" mode.
+// It now pre-fills new items based on the previous entry and has a cleaner UI.
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
@@ -270,6 +271,33 @@ const WallItemForm = () => {
     if (!Array.isArray(salesPerson)) return [];
     return salesPerson.map((person: any) => ({ value: person.id, label: person.name }));
   }, [salesPerson]);
+  
+  // --- NEW --- Handles adding a new form, pre-filled from the last one
+  const handleAddNewForm = () => {
+    const allItems = formMethods.getValues("wallItems");
+    const lastItem = allItems[allItems.length - 1];
+
+    if (!lastItem) {
+      append(defaultItem);
+      return;
+    }
+
+    // Create a new item, inheriting fields that are likely to be the same for a batch-add.
+    // Start with the base defaults, then overwrite with values from the previous item.
+    const newItemToAppend: SingleWallItemFormData = {
+      ...defaultItem, // Resets product-specific fields like productId, qty, price, remarks, etc.
+      // Carry over context-specific fields from the last item
+      status: lastItem.status,
+      member_id: lastItem.member_id,
+      intent: lastItem.intent,
+      productStatus: lastItem.productStatus,
+      activeHours: lastItem.activeHours,
+      paymentTermId: lastItem.paymentTermId,
+      assignedTeamId: lastItem.assignedTeamId,
+    };
+
+    append(newItemToAppend);
+  };
 
   const onFormSubmit = async (formData: WallItemFormData) => {
     setIsSubmitting(true);
@@ -319,7 +347,8 @@ const WallItemForm = () => {
         >
           <div className="flex flex-col gap-y-6">
             {fields.map((field, index) => (
-              <div key={field.id} className="p-4 border rounded-md relative flex flex-col gap-4">
+              // --- MODIFIED --- Removed 'border' and 'rounded-md' for a cleaner look
+              <div key={field.id} className="p-4 relative flex flex-col gap-4">
                 {index > 0 && <hr className="absolute -top-3 left-0 w-full" />}
                 <div className="flex justify-between items-center">
                   <h5 className="font-semibold">Item {index + 1}</h5>
@@ -389,7 +418,8 @@ const WallItemForm = () => {
 
           {!isEditMode && (
             <div className="p-4 mt-4 flex justify-end">
-              <Button type="button" onClick={() => append(defaultItem)}> Add New Form </Button>
+              {/* --- MODIFIED --- Uses the new handler to pre-fill the next form */}
+              <Button type="button" onClick={handleAddNewForm}> Add New Form </Button>
             </div>
           )}
         </Form>
