@@ -484,14 +484,39 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
             </div>
         </div>
     )},
-    { header: "Company", accessorKey: "company_actual", id: "company", size: 200, cell: ({ row }) => (
-        <div className="text-xs">
-            {row.original.company_actual ? 
-                <div><b>Actual: </b>{row.original.company_code} | {row.original.company_actual}</div> :
-                <div><b>Temp: </b>{row.original.company_temp || "N/A"}</div>
-            }
+  //  { header: "Company", accessorKey: "company_actual", id: "company", size: 200, cell: ({ row }) => (
+  //       <div className="text-xs">
+  //           {row.original.company_actual ? 
+  //               <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+  //                   <b>Actual: </b>{row.original.company_code} | {row.original.company_actual}
+  //               </div> :
+  //               <div className="font-semibold text-amber-600 dark:text-amber-400">
+  //                   <b>Temp: </b>{row.original.company_temp || "N/A"}
+  //               </div>
+  //           }
+            
+  //       </div>
+  //   )},
+    { header: "Company", accessorKey: 'company_actual', id: "company", size: 200, cell: ({ row }) => {
+        
+        const { company_actual, company_temp, company_code,  } = row.original;
+       
+        console.log("company_temp",company_temp);
+        
+        return (
+             <div className="text-xs">
+            
+                <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    <b>Actual: </b>{company_code} | {company_actual}
+                </div> 
+                <div className="font-semibold text-amber-600 dark:text-amber-400">
+                    <b>Temp: </b>{company_temp || "N/A"}
+                </div>
+           
+            
         </div>
-    )},
+        );
+    }},
     { header: "Status", accessorKey: "status", id: "status", size: 140, cell: ({ row }) => (
         <div className="flex flex-col text-xs">
             <Tag className={`${statusColor[row.original.status.toLowerCase()] || ''} inline capitalize`}>{row.original.status}</Tag>
@@ -525,7 +550,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
                     <h6>Dynamic Profiles for {row.original.name}</h6>
                     <Table className="mt-4">
                         <thead className="bg-gray-100 dark:bg-gray-700">
-                            <Tr><Td>Member Type</Td><Td>Brands</Td><Td>Categories</Td><Td>Sub Categories</Td></Tr>
+                            <Tr><Td>Member Type</Td><Td>Brands</Td><Td>Sub Categories</Td></Tr>
                         </thead>
                         <tbody>
                             {dynamic_member_profiles?.length > 0 ? (
