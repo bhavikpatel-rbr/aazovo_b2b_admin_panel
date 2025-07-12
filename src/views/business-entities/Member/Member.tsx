@@ -44,7 +44,7 @@ import Tr from "@/components/ui/Table/Tr";
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlarm, TbBell, TbBrandWhatsapp, TbCalendarEvent, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbPencil, TbPlus, TbReceipt, TbReload, TbSearch, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
+  TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp, TbCalendarEvent, TbCalendarTime, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbNotesOff, TbPencil, TbPencilPlus, TbPlus, TbReceipt, TbReload, TbSearch, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
 } from "react-icons/tb";
 
 // Types & Utils
@@ -52,11 +52,13 @@ import type { TableQueries } from "@/@types/common";
 import type { ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addAllAlertsAction,
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
   deleteAllMemberAction,
   getAllUsersAction,
+  getAlertsAction,
   getMemberAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
@@ -110,7 +112,7 @@ export type FormItem = {
 };
 // --- END: Detailed Type Definitions ---
 
-// --- MODIFICATION: Updated Zod Schema with new filters ---
+// --- Zod Schemas ---
 const filterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterBusinessType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -145,6 +147,21 @@ const taskValidationSchema = z.object({
 });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
 type NotificationFormData = { notification_title: string; send_users: number[]; message: string; }
+
+// --- Alert Note Types & Schema (Added) ---
+const alertNoteSchema = z.object({
+    newNote: z.string().min(1, "Note cannot be empty"),
+});
+type AlertNoteFormData = z.infer<typeof alertNoteSchema>;
+interface AlertNote {
+    id: string | number;
+    note: string;
+    created_at: string;
+    created_by_user?: {
+        name: string;
+    };
+}
+
 const taskPriorityOptions: SelectOption[] = [ { value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' }, ];
 const eventTypeOptions = [ { value: 'Meeting', label: 'Meeting' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Other', label: 'Other' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'OnboardingSession', label: 'Onboarding Session' }];
 
@@ -299,6 +316,144 @@ const GenericInfoDialog: React.FC<{ title: string; onClose: () => void; }> = ({ 
     </Dialog>
 );
 
+const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void; }> = ({ member, onClose }) => {
+    const [alerts, setAlerts] = useState<AlertNote[]>([]);
+    const [isFetching, setIsFetching] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const dispatch = useAppDispatch();
+    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+        resolver: zodResolver(alertNoteSchema),
+        defaultValues: { newNote: '' },
+        mode: 'onChange'
+    });
+
+    const stringToColor = (str: string) => {
+        let hash = 0;
+        if (!str) return '#cccccc';
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i++) {
+            const value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+        }
+        return color;
+    };
+
+    const fetchAlerts = useCallback(() => {
+        dispatch(getAlertsAction({ module_id: member.id, module_name: 'Member' }))
+            .unwrap()
+            .then((data) => setAlerts(data.data || []))
+            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+            .finally(() => setIsFetching(false));
+    }, [member.id, dispatch]);
+
+    useEffect(() => {
+        setIsFetching(true);
+        fetchAlerts();
+    }, [fetchAlerts]);
+
+    const onAddNote = async (data: AlertNoteFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: member.id, module_name: 'Member' })).unwrap();
+            toast.push(<Notification type="success" title="Alert Note Added" />);
+            reset({ newNote: '' });
+            fetchAlerts(); // Re-fetch alerts to show the new one
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog
+            isOpen={true}
+            onClose={onClose}
+            onRequestClose={onClose}
+            width={1200}
+            contentClassName="p-0 flex flex-col max-h-[95vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+        >
+            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <TbBellRinging className="text-2xl text-white" />
+                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{member.name}</h5>
+                    </div>
+                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+                        <TbX className="h-6 w-6" />
+                    </button>
+                </div>
+            </header>
+            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-y-auto">
+                <div className="flex flex-col lg:h-full overflow-hidden min-h-[400px]">
+                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">Activity Timeline</h6>
+                    <div className="space-y-8 lg:flex-grow lg:overflow-y-auto lg:pr-4 lg:-mr-4">
+                        {isFetching ? (
+                            <div className="flex justify-center items-center h-full"><p className="text-gray-500">Loading timeline...</p></div>
+                        ) : alerts.length > 0 ? (
+                            alerts.map((alert, index) => {
+                                const userName = alert?.created_by_user?.name || 'N/A';
+                                const userInitial = userName.charAt(0).toUpperCase();
+                                return (
+                                    <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                                        <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                                            <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>{userInitial}</Avatar>
+                                            {index < alerts.length - 1 && (<div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>)}
+                                        </div>
+                                        <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                            <div className="p-4">
+                                                <header className="flex justify-between items-center mb-2">
+                                                    <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"><TbCalendarTime /><span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span></div>
+                                                </header>
+                                                <div className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: alert.note }} />
+                                            </div>
+                                        </Card>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="flex flex-col mt-8 lg:mt-0">
+                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+                            <div className="flex items-center gap-2"><TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" /><h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6></div>
+                        </header>
+                        <UiForm onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+                            <UiFormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                                <Controller
+                                    name="newNote"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                                            <RichTextEditor {...field} onChange={(val) => field.onChange(val.html)} className="flex-grow min-h-[150px] sm:min-h-[200px]" />
+                                        </div>
+                                    )}
+                                />
+                            </UiFormItem>
+                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>Submit Note</Button>
+                            </footer>
+                        </UiForm>
+                    </Card>
+                </div>
+            </main>
+        </Dialog>
+    );
+};
+
+
 const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void; userOptions: SelectOption[]; }> = ({ modalState, onClose, userOptions }) => {
   const { type, data: member, isOpen } = modalState;
   const dispatch = useAppDispatch();
@@ -334,7 +489,7 @@ const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void
     case "task": return <AssignTaskDialog member={member} onClose={onClose} userOptions={userOptions} />;
     case "notification": return <AddNotificationDialog member={member} onClose={onClose} userOptions={userOptions} />;
     case "viewDetail": return <ViewMemberDetailDialog member={member} onClose={onClose} />;
-    case "alert": return <GenericInfoDialog title={`Alerts for ${member.name}`} onClose={onClose} />;
+    case "alert": return <MemberAlertModal member={member} onClose={onClose} />;
     case "transaction": return <GenericInfoDialog title={`Transactions for ${member.name}`} onClose={onClose} />;
     default: return null;
   }
@@ -439,10 +594,9 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
 
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); setFilterDrawerOpen(false); };
   
-  // FIX: Made onClearFilters more robust by explicitly resetting the form state.
   const onClearFilters = useCallback(() => {
     setFilterCriteria({});
-    filterFormMethods.reset({}); // Explicitly reset the form
+    filterFormMethods.reset({}); 
     setTableData((prev) => ({ ...prev, query: '', pageIndex: 1 }));
     sessionStorage.removeItem('memberFilterState');
   }, [setFilterCriteria, filterFormMethods]);
@@ -484,37 +638,19 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
             </div>
         </div>
     )},
-  //  { header: "Company", accessorKey: "company_actual", id: "company", size: 200, cell: ({ row }) => (
-  //       <div className="text-xs">
-  //           {row.original.company_actual ? 
-  //               <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-  //                   <b>Actual: </b>{row.original.company_code} | {row.original.company_actual}
-  //               </div> :
-  //               <div className="font-semibold text-amber-600 dark:text-amber-400">
-  //                   <b>Temp: </b>{row.original.company_temp || "N/A"}
-  //               </div>
-  //           }
-            
-  //       </div>
-  //   )},
     { header: "Company", accessorKey: 'company_actual', id: "company", size: 200, cell: ({ row }) => {
         
         const { company_actual, company_temp, company_code,  } = row.original;
        
-        console.log("company_temp",company_temp);
-        
         return (
              <div className="text-xs">
-            
                 <div className="font-semibold text-emerald-600 dark:text-emerald-400">
                     <b>Actual: </b>{company_code} | {company_actual}
                 </div> 
                 <div className="font-semibold text-amber-600 dark:text-amber-400">
                     <b>Temp: </b>{company_temp || "N/A"}
                 </div>
-           
-            
-        </div>
+            </div>
         );
     }},
     { header: "Status", accessorKey: "status", id: "status", size: 140, cell: ({ row }) => (
@@ -609,23 +745,15 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     
     if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => item.name?.toLowerCase().includes(query) || item.email?.toLowerCase().includes(query) || item.company_temp?.toLowerCase().includes(query) || item.company_actual?.toLowerCase().includes(query) || String(item.id).includes(query)); }
 
-    // FIX: Correctly calculates the number of active filters.
-    const activeFilterCount = Object.entries(filterCriteria).reduce((count, [key, value]) => {
-        if (key === 'filterCreatedAt') {
-            const dateArray = value as [Date | null, Date | null];
-            if (dateArray?.[0] && dateArray?.[1]) {
-                return count + 1; // A date range is one filter.
-            }
-        } else if (Array.isArray(value) && value.length > 0) {
-            return count + value.length; // For multi-selects, add the number of items.
-        }
+    const activeFilterCountValue = Object.values(filterCriteria).reduce((count, value) => {
+        if (Array.isArray(value) && value.length > 0) return count + 1;
         return count;
     }, 0);
 
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { processedData.sort((a, b) => { const aValue = a[key as keyof FormItem] ?? ""; const bValue = b[key as keyof FormItem] ?? ""; if (typeof aValue === 'string' && typeof bValue === 'string') return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue); if (typeof aValue === 'number' && typeof bValue === 'number') return order === 'asc' ? aValue - bValue : bValue - aValue; return 0; }); }
     const pageIndex = tableData.pageIndex as number, pageSize = tableData.pageSize as number, startIndex = (pageIndex - 1) * pageSize;
-    return { activeFilterCount, pageData: processedData.slice(startIndex, startIndex + pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
+    return { activeFilterCount: activeFilterCountValue, pageData: processedData.slice(startIndex, startIndex + pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
   }, [forms, tableData, filterCriteria]);
 
   const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info" />); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
@@ -687,7 +815,6 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
       <DataTable selectable columns={filteredColumns} data={pageData} noData={!isLoading && pageData.length === 0} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
-      {/* FIX: Simplified the "Clear" button's onClick handler as onClearFilters now handles resetting the form. */}
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} width={500} onClose={() => setFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterMemberForm" type="submit">Apply</Button></div>}>
         <UiForm id="filterMemberForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
@@ -770,7 +897,6 @@ const Member = () => {
   const navigate = useNavigate();
   const { MemberData } = useSelector(masterSelector);
   
-  // --- MODIFICATION: Logic for persistent state ---
   const MEMBER_FILTER_STORAGE_KEY = 'memberFilterState';
   
   const getInitialState = (): FilterFormData => {
@@ -778,7 +904,6 @@ const Member = () => {
         const savedStateJSON = sessionStorage.getItem(MEMBER_FILTER_STORAGE_KEY);
         if (savedStateJSON) {
             const savedState = JSON.parse(savedStateJSON);
-            // Re-hydrate Date objects
             if (savedState.filterCreatedAt) {
                 savedState.filterCreatedAt = savedState.filterCreatedAt.map((d: string | null) => d ? new Date(d) : null);
             }
