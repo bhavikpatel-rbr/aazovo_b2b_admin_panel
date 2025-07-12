@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, {
+  createContext,
   useCallback,
   useContext,
   useEffect,
@@ -17,6 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
+import RichTextEditor from '@/components/shared/RichTextEditor';
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Button,
@@ -45,8 +47,14 @@ import {
   TbAlarm,
   TbBell,
   TbBrandWhatsapp,
+  TbBuilding,
+  TbBuildingBank,
   TbCalendarEvent,
+  TbCancel,
+  TbCheck,
   TbChecks,
+  TbCircleCheck,
+  TbCircleX,
   TbCloudUpload,
   TbColumns,
   TbDownload,
@@ -59,17 +67,17 @@ import {
   TbReceipt,
   TbReload,
   TbSearch,
+  TbTagStarred,
   TbUser,
   TbUserCancel,
   TbUserCheck,
   TbUserCircle,
   TbUserMinus,
   TbUsersGroup,
-  TbUserX,
   TbX,
 } from "react-icons/tb";
 
-// Types
+// Types & Redux
 import type { TableQueries } from "@/@types/common";
 import type {
   ColumnDef,
@@ -78,6 +86,7 @@ import type {
 } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addAllActionAction,
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
@@ -91,6 +100,9 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import dayjs from "dayjs";
 import { useSelector } from "react-redux";
+import { config } from "localforage";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+
 
 // --- PartnerItem Type (Data Structure) ---
 export type PartnerItem = {
@@ -117,20 +129,21 @@ export type PartnerItem = {
   due_after_3_months_date: string;
   created_at: string;
   partner_team_members: {
-      id: number;
-      person_name: string;
-      designation: string;
-      number: string;
+    id: number;
+    person_name: string;
+    designation: string;
+    number: string;
   }[];
   partner_certificate: {
-      id: number;
-      certificate_name: string;
-      upload_certificate_path: string;
+    id: number;
+    certificate_name: string;
+    upload_certificate_path: string;
   }[];
   [key: string]: any;
 };
 export type SelectOption = { value: any; label: string; };
-// --- Zod Schema for Partner Filter Form ---
+
+// --- Zod Schemas ---
 const partnerFilterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   filterOwnershipType: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -143,13 +156,11 @@ const partnerFilterFormSchema = z.object({
 });
 type PartnerFilterFormData = z.infer<typeof partnerFilterFormSchema>;
 
-// --- Zod Schema for Export Reason ---
 const exportReasonSchema = z.object({
   reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- Zod Schema for Schedule Form (ADDED) ---
 const scheduleSchema = z.object({
   event_title: z.string().min(3, "Title must be at least 3 characters."),
   event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
@@ -159,28 +170,32 @@ const scheduleSchema = z.object({
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
-// --- Zod Schema for Task Form ---
 const taskValidationSchema = z.object({
-    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
-    assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
-    priority: z.string().min(1, 'Please select a priority.'),
-    due_date: z.date().nullable().optional(),
-    description: z.string().optional(),
+  task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+  assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+  priority: z.string().min(1, 'Please select a priority.'),
+  due_date: z.date().nullable().optional(),
+  description: z.string().optional(),
 });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
 
-// --- Zod Schema for Notification ---
 const notificationSchema = z.object({
-    notification_title: z.string().min(3, 'Title must be at least 3 characters long.'),
-    send_users: z.array(z.number()).min(1, 'Please select at least one user.'),
-    message: z.string().min(10, 'Message must be at least 10 characters long.'),
+  notification_title: z.string().min(3, 'Title must be at least 3 characters long.'),
+  send_users: z.array(z.number()).min(1, 'Please select at least one user.'),
+  message: z.string().min(10, 'Message must be at least 10 characters long.'),
 });
 type NotificationFormData = z.infer<typeof notificationSchema>;
 
+const activitySchema = z.object({
+  item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+  notes: z.string().optional(),
+});
+type ActivityFormData = z.infer<typeof activitySchema>;
+
 const taskPriorityOptions: SelectOption[] = [
-    { value: 'Low', label: 'Low' },
-    { value: 'Medium', label: 'Medium' },
-    { value: 'High', label: 'High' },
+  { value: 'Low', label: 'Low' },
+  { value: 'Medium', label: 'Medium' },
+  { value: 'High', label: 'High' },
 ];
 
 // --- CSV Exporter Utility ---
@@ -244,11 +259,11 @@ export const getPartnerStatusClass = (statusValue?: PartnerItem["status"]): stri
   if (!statusValue) return "bg-gray-200 text-gray-600";
   const lowerCaseStatus = statusValue.toLowerCase();
   const partnerStatusColors: Record<string, string> = {
-    active: "bg-green-200 text-green-600 dark:bg-green-500/20 dark:text-green-300",
-    verified: "bg-blue-200 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
-    pending: "bg-orange-200 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
-    inactive: "bg-red-200 text-red-600 dark:bg-red-500/20 dark:text-red-300",
-    "non verified": "bg-yellow-200 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
+    active: "border border-green-300 bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+    verified: "border border-blue-300 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
+    pending: "border border-orange-300 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300",
+    inactive: "border border-red-300 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300",
+    "non verified": "border border-yellow-300 bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-300",
   };
   return partnerStatusColors[lowerCaseStatus] || "bg-gray-200 text-gray-600";
 };
@@ -260,10 +275,8 @@ interface PartnerListStore {
   CountriesData: any[];
   ContinentsData: any[];
   getAllUserData: SelectOption[];
-  partnerListTotal: number;
   setPartnerList: React.Dispatch<React.SetStateAction<PartnerItem[]>>;
   setSelectedPartners: React.Dispatch<React.SetStateAction<PartnerItem[]>>;
-  setPartnerListTotal: React.Dispatch<React.SetStateAction<number>>;
 }
 const PartnerListContext = React.createContext<PartnerListStore | undefined>(undefined);
 const usePartnerList = (): PartnerListStore => {
@@ -278,30 +291,24 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [partnerList, setPartnerList] = useState<PartnerItem[]>(partnerData?.data ?? []);
   const [selectedPartners, setSelectedPartners] = useState<PartnerItem[]>([]);
   const [partnerCount, setPartnerCount] = useState(partnerData?.counts ?? {});
-  const [partnerListTotal, setPartnerListTotal] = useState<number>(partnerData?.data?.length ?? 0);
   const getAllUserDataOptionsData = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
 
   useEffect(() => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
     dispatch(getAllUsersAction());
+    dispatch(getpartnerAction());
   }, [dispatch]);
 
   useEffect(() => {
     setPartnerList(partnerData?.data ?? []);
-    setPartnerListTotal(partnerData?.data?.length ?? 0);
     setPartnerCount(partnerData?.counts ?? {});
   }, [partnerData]);
-
-  useEffect(() => {
-    dispatch(getpartnerAction());
-  }, [dispatch]);
 
   return (
     <PartnerListContext.Provider value={{
       partnerList, setPartnerList,
       selectedPartners, setSelectedPartners,
-      partnerListTotal, setPartnerListTotal,
       partnerCount,
       ContinentsData: Array.isArray(ContinentsData) ? ContinentsData : [],
       CountriesData: Array.isArray(CountriesData) ? CountriesData : [],
@@ -313,9 +320,150 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+
 // --- MODALS SECTION ---
-export type ModalType = 'email' | 'whatsapp' | 'schedule' | 'notification' | 'task' | 'members' | 'alert' | 'transaction' | 'document';
+export type ModalType = 'email' | 'whatsapp' | 'schedule' | 'notification' | 'task' | 'members' | 'alert' | 'transaction' | 'document' | 'activity' | 'viewDetail';
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: PartnerItem | null; }
+
+const ViewPartnerDetailDialog: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
+  const renderDetailItem = (label: string, value: any, isLink = false) => {
+    if (value === null || value === undefined || value === "") return null;
+    return (
+      <div className="mb-3">
+        <span className="font-semibold text-gray-700 dark:text-gray-200">{label}: </span>
+        {isLink ? (
+          <a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{String(value)}</a>
+        ) : (
+          <span className="text-gray-600 dark:text-gray-400">{String(value)}</span>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={800}>
+      <div className="max-h-[80vh] overflow-y-auto pr-4">
+        <h4 className="mb-6">Partner Details: {partner.partner_name}</h4>
+        <Card className="mb-4" bordered>
+          <h5 className="mb-2">Basic Information</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            {renderDetailItem("Partner Code", partner.partner_code)}
+            {renderDetailItem("Ownership Type", partner.ownership_type)}
+            {renderDetailItem("Owner Name", partner.owner_name)}
+            <div className="mb-3">
+              <span className="font-semibold text-gray-700 dark:text-gray-200">Status: </span>
+              <span className="text-gray-600 dark:text-gray-400"><Tag className={`${getPartnerStatusClass(partner.status)} capitalize`}>{partner.status}</Tag></span>
+            </div>
+            {renderDetailItem("Profile Completion", `${partner.profile_completion}%`)}
+          </div>
+        </Card>
+        <Card className="mb-4" bordered>
+          <h5 className="mb-2">Contact Information</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            {renderDetailItem("Primary Email", partner.primary_email_id)}
+            {renderDetailItem("Primary Contact", `${partner.primary_contact_number_code} ${partner.primary_contact_number}`)}
+            {renderDetailItem("Website", partner.partner_website, true)}
+          </div>
+        </Card>
+        <Card className="mb-4" bordered>
+          <h5 className="mb-2">Address</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            {renderDetailItem("City", partner.city)}
+            {renderDetailItem("State", partner.state)}
+            {renderDetailItem("Country", partner.country?.name)}
+            {renderDetailItem("Continent", partner.continent?.name)}
+          </div>
+        </Card>
+        <Card className="mb-4" bordered>
+          <h5 className="mb-2">Legal & Financial</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+            {renderDetailItem("GST Number", partner.gst_number)}
+            {renderDetailItem("PAN Number", partner.pan_number)}
+            <div className="mb-3">
+              <span className="font-semibold text-gray-700 dark:text-gray-200">KYC Verified: </span>
+              <span className="text-gray-600 dark:text-gray-400">{partner.kyc_verified ? <MdCheckCircle className="text-green-500 text-xl inline-block" /> : <MdCancel className="text-red-500 text-xl inline-block" />}</span>
+            </div>
+          </div>
+        </Card>
+        {partner.partner_team_members?.length > 0 && (
+          <Card className="mb-4" bordered>
+            <h5 className="mb-2">Team Members</h5>
+            {partner.partner_team_members.map((member) => (
+              <div key={member.id} className="mb-3 p-2 border rounded-md dark:border-gray-600">
+                {renderDetailItem("Name", member.person_name)}
+                {renderDetailItem("Designation", member.designation)}
+                {renderDetailItem("Contact", member.number)}
+              </div>
+            ))}
+          </Card>
+        )}
+        {partner.partner_certificate?.length > 0 && (
+          <Card className="mb-4" bordered>
+            <h5 className="mb-2">Certificates</h5>
+            {partner.partner_certificate.map((cert) => (
+              <div key={cert.id} className="mb-2 flex justify-between items-center">
+                <span>{cert.certificate_name}</span>
+                {cert.upload_certificate_path && (
+                  <a href={cert.upload_certificate_path} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Certificate</a>
+                )}
+              </div>
+            ))}
+          </Card>
+        )}
+      </div>
+      <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+    </Dialog>
+  );
+};
+
+const AddPartnerActivityDialog: React.FC<{ partner: PartnerItem; onClose: () => void; user: any; }> = ({ partner, onClose, user }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
+    resolver: zodResolver(activitySchema),
+    defaultValues: { item: `Follow up on ${partner.partner_name}`, notes: '' },
+    mode: 'onChange',
+  });
+
+  const onAddActivity = async (data: ActivityFormData) => {
+    setIsLoading(true);
+    const payload = {
+      item: data.item,
+      notes: data.notes || '',
+      module_id: String(partner.id),
+      module_name: 'Partner',
+      user_id: user.id,
+    };
+    try {
+      await dispatch(addAllActionAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Activity Added" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Activity Log for "{partner.partner_name}"</h5>
+      <UiForm onSubmit={handleSubmit(onAddActivity)}>
+        <UiFormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
+          <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with partner" />} />
+        </UiFormItem>
+        <UiFormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
+};
+
 
 const AddPartnerScheduleDialog: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
   const dispatch = useAppDispatch();
@@ -384,195 +532,205 @@ const AddPartnerScheduleDialog: React.FC<{ partner: PartnerItem; onClose: () => 
 };
 
 const AddPartnerNotificationDialog: React.FC<{ partner: PartnerItem; onClose: () => void; userOptions: SelectOption[]; }> = ({ partner, onClose, userOptions }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
-        resolver: zodResolver(notificationSchema),
-        defaultValues: {
-            notification_title: `Regarding Partner: ${partner.partner_name}`,
-            send_users: [],
-            message: `This is a notification regarding partner "${partner.partner_name}" (${partner.partner_code}). Please review their details.`,
-        },
-        mode: 'onChange',
-    });
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+    resolver: zodResolver(notificationSchema),
+    defaultValues: {
+      notification_title: `Regarding Partner: ${partner.partner_name}`,
+      send_users: [],
+      message: `This is a notification regarding partner "${partner.partner_name}" (${partner.partner_code}). Please review their details.`,
+    },
+    mode: 'onChange',
+  });
 
-    const onSend = async (formData: NotificationFormData) => {
-        setIsLoading(true);
-        const payload = { ...formData, module_id: String(partner.id), module_name: 'Partner' };
-        try {
-            await dispatch(addNotificationAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Notification Sent!" />);
-            onClose();
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Send" children={error?.message || 'An error occurred.'} />);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Notify User about: {partner.partner_name}</h5>
-            <UiForm onSubmit={handleSubmit(onSend)}>
-                <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem>
-                <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
-                <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
-                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
-            </UiForm>
-        </Dialog>
-    );
+  const onSend = async (formData: NotificationFormData) => {
+    setIsLoading(true);
+    const payload = { ...formData, module_id: String(partner.id), module_name: 'Partner' };
+    try {
+      await dispatch(addNotificationAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Notification Sent!" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Send" children={error?.message || 'An error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Notify User about: {partner.partner_name}</h5>
+      <UiForm onSubmit={handleSubmit(onSend)}>
+        <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></UiFormItem>
+        <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
+        <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
+        <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send</Button></div>
+      </UiForm>
+    </Dialog>
+  );
 };
 
 const AssignPartnerTaskDialog: React.FC<{ partner: PartnerItem; onClose: () => void; userOptions: SelectOption[] }> = ({ partner, onClose, userOptions }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
-        resolver: zodResolver(taskValidationSchema),
-        defaultValues: { task_title: `Follow up with ${partner.partner_name}`, assign_to: [], priority: 'Medium', due_date: null, description: `Follow up with partner ${partner.partner_name} (${partner.primary_email_id}).` },
-        mode: 'onChange',
-    });
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
+    resolver: zodResolver(taskValidationSchema),
+    defaultValues: { task_title: `Follow up with ${partner.partner_name}`, assign_to: [], priority: 'Medium', due_date: null, description: `Follow up with partner ${partner.partner_name} (${partner.primary_email_id}).` },
+    mode: 'onChange',
+  });
 
-    const onAssignTask = async (data: TaskFormData) => {
-        setIsLoading(true);
-        const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(partner.id), module_name: 'Partner' };
-        try {
-            await dispatch(addTaskAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Task Assigned!" />);
-            onClose();
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An error occurred.'} />);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const onAssignTask = async (data: TaskFormData) => {
+    setIsLoading(true);
+    const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(partner.id), module_name: 'Partner' };
+    try {
+      await dispatch(addTaskAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Task Assigned!" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Assign Task for {partner.partner_name}</h5>
-            <UiForm onSubmit={handleSubmit(onAssignTask)}>
-                <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
-                    <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} /></UiFormItem>
-                </div>
-                <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem>
-                <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
-                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button></div>
-            </UiForm>
-        </Dialog>
-    );
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for {partner.partner_name}</h5>
+      <UiForm onSubmit={handleSubmit(onAssignTask)}>
+        <UiFormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}><Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UiFormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}><Controller name="assign_to" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter(o => field.value?.includes(o.value))} onChange={opts => field.onChange(opts?.map(o => o.value) || [])} />)} /></UiFormItem>
+          <UiFormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}><Controller name="priority" control={control} render={({ field }) => (<UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} /></UiFormItem>
+        </div>
+        <UiFormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}><Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} /></UiFormItem>
+        <UiFormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}><Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem>
+        <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button></div>
+      </UiForm>
+    </Dialog>
+  );
 };
 
 const ViewPartnerMembersDialog: React.FC<{ partner: PartnerItem; onClose: () => void; }> = ({ partner, onClose }) => (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-        <h5 className="mb-4">Team Members of {partner.partner_name}</h5>
-        <div className="max-h-96 overflow-y-auto">
-            {partner.partner_team_members && partner.partner_team_members.length > 0 ? (
-                <div className="space-y-3">
-                    {partner.partner_team_members.map(member => (
-                        <div key={member.id} className="p-3 border rounded-md dark:border-gray-600">
-                            <p className="font-semibold">{member.person_name}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">{member.designation}</p>
-                            <p className="text-xs text-gray-500">{member.number}</p>
-                        </div>
-                    ))}
-                </div>
-            ) : <p>No team members found for this partner.</p>}
+  <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
+    <h5 className="mb-4">Team Members of {partner.partner_name}</h5>
+    <div className="max-h-96 overflow-y-auto">
+      {partner.partner_team_members && partner.partner_team_members.length > 0 ? (
+        <div className="space-y-3">
+          {partner.partner_team_members.map(member => (
+            <div key={member.id} className="p-3 border rounded-md dark:border-gray-600">
+              <p className="font-semibold">{member.person_name}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{member.designation}</p>
+              <p className="text-xs text-gray-500">{member.number}</p>
+            </div>
+          ))}
         </div>
-        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
+      ) : <p>No team members found for this partner.</p>}
+    </div>
+    <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+  </Dialog>
 );
 
 const DownloadPartnerDocumentDialog: React.FC<{ partner: PartnerItem; onClose: () => void; }> = ({ partner, onClose }) => {
-    const documents = useMemo(() => {
-        return partner.partner_certificate?.map(cert => ({
-            name: cert.certificate_name,
-            url: cert.upload_certificate_path,
-        })) || [];
-    }, [partner]);
+  const documents = useMemo(() => {
+    return partner.partner_certificate?.map(cert => ({
+      name: cert.certificate_name,
+      url: cert.upload_certificate_path,
+    })) || [];
+  }, [partner]);
 
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-            <h5 className="mb-4">Download Documents for {partner.partner_name}</h5>
-            <div className="max-h-96 overflow-y-auto">
-                {documents.length > 0 ? (
-                    <div className="space-y-2">
-                        {documents.map((doc, index) => (
-                            <a key={index} href={doc.url!} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600">
-                                <span className="flex items-center gap-2"><TbFileDescription className="text-lg" />{doc.name}</span>
-                                <TbDownload className="text-lg text-blue-500" />
-                            </a>
-                        ))}
-                    </div>
-                ) : <p>No documents available for download.</p>}
-            </div>
-            <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-        </Dialog>
-    );
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
+      <h5 className="mb-4">Download Documents for {partner.partner_name}</h5>
+      <div className="max-h-96 overflow-y-auto">
+        {documents.length > 0 ? (
+          <div className="space-y-2">
+            {documents.map((doc, index) => (
+              <a key={index} href={doc.url!} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600">
+                <span className="flex items-center gap-2"><TbFileDescription className="text-lg" />{doc.name}</span>
+                <TbDownload className="text-lg text-blue-500" />
+              </a>
+            ))}
+          </div>
+        ) : <p>No documents available for download.</p>}
+      </div>
+      <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+    </Dialog>
+  );
 };
 
 const ViewPartnerDataDialog: React.FC<{ title: string; message: string; onClose: () => void; }> = ({ title, message, onClose }) => (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-        <h5 className="mb-4">{title}</h5><p>{message}</p>
-        <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
+  <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+    <h5 className="mb-4">{title}</h5><p>{message}</p>
+    <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
+  </Dialog>
 );
 
 
 const SendPartnerEmailAction: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
-    useEffect(() => {
-        if (!partner.primary_email_id) {
-            toast.push(<Notification type="warning" title="Missing Email" children="Primary email is not available for this partner." />);
-            onClose();
-            return;
-        }
-        const subject = `Regarding Your Partnership: ${partner.partner_name}`;
-        const body = `Hello ${partner.owner_name || partner.partner_name},\n\nWe are contacting you regarding your partnership profile (ID: ${partner.partner_code}).\n\nThank you.`;
-        
-        window.open(`mailto:${partner.primary_email_id}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-        onClose();
-    }, [partner, onClose]);
+  useEffect(() => {
+    if (!partner.primary_email_id) {
+      toast.push(<Notification type="warning" title="Missing Email" children="Primary email is not available for this partner." />);
+      onClose();
+      return;
+    }
+    const subject = `Regarding Your Partnership: ${partner.partner_name}`;
+    const body = `Hello ${partner.owner_name || partner.partner_name},\n\nWe are contacting you regarding your partnership profile (ID: ${partner.partner_code}).\n\nThank you.`;
 
-    return null; 
+    window.open(`mailto:${partner.primary_email_id}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    onClose();
+  }, [partner, onClose]);
+
+  return null;
 };
 
 const SendPartnerWhatsAppAction: React.FC<{ partner: PartnerItem; onClose: () => void }> = ({ partner, onClose }) => {
-    useEffect(() => {
-        const phone = partner.primary_contact_number?.replace(/\D/g, '');
-        const countryCode = partner.primary_contact_number_code?.replace(/\D/g, '');
+  useEffect(() => {
+    const phone = partner.primary_contact_number?.replace(/\D/g, '');
+    const countryCode = partner.primary_contact_number_code?.replace(/\D/g, '');
 
-        if (!phone || !countryCode) {
-            toast.push(<Notification type="warning" title="Missing Number" children="Primary contact number is not available for this partner." />);
-            onClose();
-            return;
-        }
-        
-        const fullPhoneNumber = `${countryCode}${phone}`;
-        const message = `Hello ${partner.owner_name || partner.partner_name},\nThis is a message regarding your partnership with us.`;
-        
-        window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
-        onClose();
-    }, [partner, onClose]);
+    if (!phone || !countryCode) {
+      toast.push(<Notification type="warning" title="Missing Number" children="Primary contact number is not available for this partner." />);
+      onClose();
+      return;
+    }
 
-    return null; 
+    const fullPhoneNumber = `${countryCode}${phone}`;
+    const message = `Hello ${partner.owner_name || partner.partner_name},\nThis is a message regarding your partnership with us.`;
+
+    window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+    onClose();
+  }, [partner, onClose]);
+
+  return null;
 };
 
 const PartnerModals: React.FC<{ modalState: ModalState; onClose: () => void; userOptions: SelectOption[] }> = ({ modalState, onClose, userOptions }) => {
-    const { type, data: partner, isOpen } = modalState;
-    if (!isOpen || !partner) return null;
+  const { type, data: partner, isOpen } = modalState;
+  const [userData, setUserData] = useState<any>(null);
 
-    switch (type) {
-        case 'email': return <SendPartnerEmailAction partner={partner} onClose={onClose} />;
-        case 'whatsapp': return <SendPartnerWhatsAppAction partner={partner} onClose={onClose} />;
-        case 'schedule': return <AddPartnerScheduleDialog partner={partner} onClose={onClose} />;
-        case 'notification': return <AddPartnerNotificationDialog partner={partner} onClose={onClose} userOptions={userOptions} />;
-        case 'task': return <AssignPartnerTaskDialog partner={partner} onClose={onClose} userOptions={userOptions} />;
-        case 'members': return <ViewPartnerMembersDialog partner={partner} onClose={onClose} />;
-        case 'alert': return <ViewPartnerDataDialog title={`Alerts for ${partner.partner_name}`} message="No alerts found for this partner." onClose={onClose} />;
-        case 'transaction': return <ViewPartnerDataDialog title={`Transactions for ${partner.partner_name}`} message="No transactions found for this partner." onClose={onClose} />;
-        case 'document': return <DownloadPartnerDocumentDialog partner={partner} onClose={onClose} />;
-        default: console.warn(`Unhandled modal type: ${type}`); return null;
-    }
+  useEffect(() => {
+    const { useEncryptApplicationStorage } = config;
+    try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+    catch (error) { console.error("Error getting UserData:", error); }
+  }, []);
+
+  if (!isOpen || !partner) return null;
+
+  switch (type) {
+    case 'email': return <SendPartnerEmailAction partner={partner} onClose={onClose} />;
+    case 'whatsapp': return <SendPartnerWhatsAppAction partner={partner} onClose={onClose} />;
+    case 'schedule': return <AddPartnerScheduleDialog partner={partner} onClose={onClose} />;
+    case 'notification': return <AddPartnerNotificationDialog partner={partner} onClose={onClose} userOptions={userOptions} />;
+    case 'task': return <AssignPartnerTaskDialog partner={partner} onClose={onClose} userOptions={userOptions} />;
+    case 'members': return <ViewPartnerMembersDialog partner={partner} onClose={onClose} />;
+    case 'alert': return <ViewPartnerDataDialog title={`Alerts for ${partner.partner_name}`} message="No alerts found for this partner." onClose={onClose} />;
+    case 'transaction': return <ViewPartnerDataDialog title={`Transactions for ${partner.partner_name}`} message="No transactions found for this partner." onClose={onClose} />;
+    case 'document': return <DownloadPartnerDocumentDialog partner={partner} onClose={onClose} />;
+    case 'activity': return <AddPartnerActivityDialog partner={partner} onClose={onClose} user={userData} />;
+    case 'viewDetail': return <ViewPartnerDetailDialog partner={partner} onClose={onClose} />;
+    default: console.warn(`Unhandled modal type: ${type}`); return null;
+  }
 };
 
 // --- Child Components ---
@@ -580,16 +738,6 @@ const PartnerListSearch: React.FC<{ onInputChange: (value: string) => void; valu
   return <DebouceInput placeholder="Quick Search..." value={value} suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />;
 };
 
-const PartnerListActionTools = () => {
-  const navigate = useNavigate();
-  return (
-    <div className="flex flex-col md:flex-row gap-3">
-      <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/create-partner")}>
-        Add New Partner
-      </Button>
-    </div>
-  );
-};
 
 const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
   rowData: PartnerItem;
@@ -609,6 +757,7 @@ const PartnerActionColumn = ({ rowData, onEdit, onOpenModal }: {
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('notification', rowData))} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('schedule', rowData))} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('task', rowData))} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
+        <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('activity', rowData))} className="flex items-center gap-2"><TbTagStarred size={18} /> Add Activity</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('members', rowData))} className="flex items-center gap-2"><TbUsersGroup /> View Members</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('alert', rowData))} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
         <Dropdown.Item onClick={(e) => handleAction(e, () => onOpenModal('transaction', rowData))} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item>
@@ -665,9 +814,42 @@ const PartnerListTable = () => {
   const dispatch = useAppDispatch();
   const { partnerList, setSelectedPartners, partnerCount, ContinentsData, CountriesData, getAllUserData } = usePartnerList();
   const [isLoading, setIsLoading] = useState(false);
-  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
+  const PARTNER_STATE_STORAGE_KEY = 'partnerListStatePersistence';
+
+  const getInitialState = () => {
+    try {
+      const savedStateJSON = sessionStorage.getItem(PARTNER_STATE_STORAGE_KEY);
+      if (savedStateJSON) {
+        const savedState = JSON.parse(savedStateJSON);
+        if (savedState.filterCriteria?.filterCreatedDate) {
+          savedState.filterCriteria.filterCreatedDate = savedState.filterCriteria.filterCreatedDate.map((d: string | null) => d ? new Date(d) : null);
+        }
+        return savedState;
+      }
+    } catch (error) {
+      console.error("Failed to parse saved state, clearing it.", error);
+      sessionStorage.removeItem(PARTNER_STATE_STORAGE_KEY);
+    }
+    return {
+      tableData: { pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" },
+      filterCriteria: { filterCreatedDate: [null, null] }
+    };
+  };
+
+  const initialState = getInitialState();
+  const [tableData, setTableData] = useState<TableQueries>(initialState.tableData);
+  const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>(initialState.filterCriteria);
+
+  useEffect(() => {
+    try {
+      const stateToSave = { tableData, filterCriteria };
+      sessionStorage.setItem(PARTNER_STATE_STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error("Could not save state to sessionStorage:", error);
+    }
+  }, [tableData, filterCriteria]);
+
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [filterCriteria, setFilterCriteria] = useState<PartnerFilterFormData>({ filterCreatedDate: [null, null] });
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
   const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
@@ -678,21 +860,27 @@ const PartnerListTable = () => {
   const handleOpenModal = (type: ModalType, partnerData: PartnerItem) => setModalState({ isOpen: true, type, data: partnerData });
   const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
 
+  // --- START: Filter Drawer Handlers ---
   const openFilterDrawer = () => {
-    filterFormMethods.reset(filterCriteria);
-    setFilterDrawerOpen(true);
+    filterFormMethods.reset(filterCriteria); // Load current filters into the form
+    setIsFilterDrawerOpen(true);
+  };
+
+  const closeFilterDrawer = () => {
+    setIsFilterDrawerOpen(false);
   };
 
   const onApplyFiltersSubmit = (data: PartnerFilterFormData) => {
     setFilterCriteria(data);
-    handleSetTableData({ pageIndex: 1 });
-    setFilterDrawerOpen(false);
+    handleSetTableData({ pageIndex: 1 }); // Reset to page 1 on new filter
+    closeFilterDrawer();
   };
 
   const onClearFilters = () => {
     const defaultFilters: PartnerFilterFormData = { filterCreatedDate: [null, null], filterStatus: [], filterOwnershipType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [] };
     setFilterCriteria(defaultFilters);
-    handleSetTableData({ pageIndex: 1, query: "" });
+    handleSetTableData({ pageIndex: 1, query: "", sort: { order: "", key: "" } });
+    sessionStorage.removeItem(PARTNER_STATE_STORAGE_KEY);
   };
 
   const handleRemoveFilter = (key: keyof PartnerFilterFormData, valueToRemove: string) => {
@@ -703,14 +891,14 @@ const PartnerListTable = () => {
       } else {
         const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
         if (currentFilterArray) {
-          const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove);
-          (newCriteria as any)[key] = newFilterArray;
+          (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove);
         }
       }
       return newCriteria;
     });
-    handleSetTableData({ pageIndex: 1 });
+    handleSetTableData({ pageIndex: 1 }); // Reset to page 1 when a filter is removed
   };
+  // --- END: Filter Drawer Handlers ---
 
   const onRefreshData = () => {
     onClearFilters();
@@ -719,18 +907,18 @@ const PartnerListTable = () => {
   };
 
   const handleCardClick = (filterType: string, value: string) => {
-    onClearFilters();
-    if (filterType === 'status') {
-      const statusOption = statusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-      if (statusOption) {
-        setFilterCriteria(prev => ({ ...prev, filterStatus: [statusOption] }));
-      }
+    onClearFilters(); // Start with a clean slate
+    const statusOption = statusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
+    if (statusOption) {
+      setFilterCriteria(prev => ({ ...prev, filterStatus: [statusOption] }));
     }
     handleSetTableData({ pageIndex: 1, query: "" });
   };
 
   const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
     let filteredData = [...partnerList];
+
+    // --- Apply all active filters ---
     if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selected = filterCriteria.filterStatus.map(s => s.value.toLowerCase()); filteredData = filteredData.filter(p => p.status && selected.includes(p.status.toLowerCase())); }
     if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) { const selected = filterCriteria.filterOwnershipType.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.ownership_type)); }
     if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) { const selected = filterCriteria.filterContinent.map(s => s.value); filteredData = filteredData.filter(p => p.continent && selected.includes(p.continent.name)); }
@@ -739,22 +927,31 @@ const PartnerListTable = () => {
     if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) { const selected = filterCriteria.filterCity.map(s => s.value); filteredData = filteredData.filter(p => selected.includes(p.city)); }
     if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) { const selected = filterCriteria.filterKycVerified.map(k => k.value === "Yes"); filteredData = filteredData.filter(p => selected.includes(p.kyc_verified)); }
     if (filterCriteria.filterCreatedDate?.[0] && filterCriteria.filterCreatedDate?.[1]) { const [start, end] = filterCriteria.filterCreatedDate; end.setHours(23, 59, 59, 999); filteredData = filteredData.filter(p => { const date = new Date(p.created_at); return date >= start && date <= end; }); }
-    if (tableData.query) { filteredData = filteredData.filter(i => Object.values(i).some(v => String(v).toLowerCase().includes(tableData.query.toLowerCase()))); }
 
+    // --- Apply search query ---
+    if (tableData.query) {
+      const lowerCaseQuery = tableData.query.toLowerCase();
+      filteredData = filteredData.filter(i =>
+        Object.values(i).some(v => String(v).toLowerCase().includes(lowerCaseQuery))
+      );
+    }
 
+    // --- Count active filters for the badge ---
     let count = 0;
+    count += (filterCriteria.filterStatus?.length ?? 0) > 0 ? 1 : 0;
+    count += (filterCriteria.filterOwnershipType?.length ?? 0) > 0 ? 1 : 0;
+    count += (filterCriteria.filterContinent?.length ?? 0) > 0 ? 1 : 0;
+    count += (filterCriteria.filterCountry?.length ?? 0) > 0 ? 1 : 0;
+    count += (filterCriteria.filterState?.length ?? 0) > 0 ? 1 : 0;
+    count += (filterCriteria.filterCity?.length ?? 0) > 0 ? 1 : 0;
+    count += (filterCriteria.filterKycVerified?.length ?? 0) > 0 ? 1 : 0;
+    count += (filterCriteria.filterCreatedDate?.[0] && filterCriteria.filterCreatedDate?.[1]) ? 1 : 0;
 
-    if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) count++;
-    if (filterCriteria.filterOwnershipType && filterCriteria.filterOwnershipType.length > 0) count++;
-    if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) count++;
-    if (filterCriteria.filterCountry && filterCriteria.filterCountry.length > 0) count++;
-    if (filterCriteria.filterState && filterCriteria.filterState.length > 0) count++;
-    if (filterCriteria.filterCity && filterCriteria.filterCity.length > 0) count++;
-    if (filterCriteria.filterKycVerified && filterCriteria.filterKycVerified.length > 0) count++;
-
-
+    // --- Apply sorting ---
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) { filteredData.sort((a, b) => { const av = a[key as keyof PartnerItem] ?? ""; const bv = b[key as keyof PartnerItem] ?? ""; if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); return 0; }); }
+
+    // --- Paginate the final data ---
     const pI = tableData.pageIndex as number, pS = tableData.pageSize as number;
     return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
   }, [partnerList, tableData, filterCriteria]);
@@ -763,16 +960,13 @@ const PartnerListTable = () => {
   const handlePaginationChange = useCallback((p: number) => handleSetTableData({ pageIndex: p }), [handleSetTableData]);
   const handleSelectChange = useCallback((v: number) => handleSetTableData({ pageSize: v, pageIndex: 1 }), [handleSetTableData]);
   const handleSort = useCallback((s: OnSortParam) => handleSetTableData({ sort: s, pageIndex: 1 }), [handleSetTableData]);
-  const handleRowSelect = useCallback((c: boolean, r: PartnerItem) => setSelectedPartners(p => c ? [...p, r] : p.filter(i => i.id !== r.id)), [setSelectedPartners]);
-  const handleAllRowSelect = useCallback((c: boolean, r: Row<PartnerItem>[]) => {
-    const originalRows = r.map(i => i.original);
-    if (c) {
-      setSelectedPartners(prev => [...prev, ...originalRows.filter(o => !prev.some(p => p.id === o.id))]);
-    } else {
-      const currentIds = new Set(originalRows.map(o => o.id));
-      setSelectedPartners(prev => prev.filter(p => !currentIds.has(p.id)));
-    }
-  }, [setSelectedPartners]);
+
+  const handleRowSelect = (checked: boolean, row: PartnerItem) => {
+    setSelectedPartners(prev => checked ? [...prev, row] : prev.filter(p => p.id !== row.id));
+  };
+  const handleAllRowSelect = (checked: boolean, rows: Row<PartnerItem>[]) => {
+    setSelectedPartners(checked ? rows.map(r => r.original) : []);
+  };
 
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData.length) {
@@ -806,36 +1000,41 @@ const PartnerListTable = () => {
 
   const columns: ColumnDef<PartnerItem>[] = useMemo(() => [
     {
-      header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => (
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <Avatar src={row.original.partner_logo ? row.original.partner_logo : ''} size="md" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.original.partner_logo || null)} icon={<TbUserCircle />} />
-            <div>
-              <h6 className="text-xs font-semibold">{row.original.partner_code}</h6>
-              <span className="text-xs font-semibold">{row.original.partner_name}</span>
+      header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => {
+        const { partner_name, id, ownership_type, country } = row.original;
+        return (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <div>
+                <h6 className="text-xs font-semibold"><em className="text-blue-600">{String(id).padStart(5, '0') || "Partner Code"}</em></h6>
+                <span className="text-xs font-semibold leading-1">{partner_name}</span>
+              </div>
             </div>
+            <span className="text-xs mt-1"><b>Type:</b> {ownership_type || "N/A"}</span>
+            <div className="text-xs text-gray-500">{country?.name || "N/A"}</div>
           </div>
-          <span className="text-xs mt-1"><b>Type:</b> {row.original.ownership_type}</span>
-          <div className="text-xs text-gray-500">{row.original.city}, {row.original.state}, {row.original.country?.name}</div>
-        </div>
-      ),
+        )
+      },
     },
     {
-      header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }) => (
-        <div className="text-xs flex flex-col gap-0.5">
-          {row.original.owner_name && <span><b>Owner:</b> {row.original.owner_name}</span>}
-          {row.original.primary_contact_number && <span>{row.original.primary_contact_number_code} {row.original.primary_contact_number}</span>}
-          {row.original.primary_email_id && <a href={`mailto:${row.original.primary_email_id}`} className="text-blue-600 hover:underline">{row.original.primary_email_id}</a>}
-          {row.original.partner_website && <a href={row.original.partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{row.original.partner_website}</a>}
-        </div>
-      )
+      header: "Contact", accessorKey: "owner_name", id: 'contact', size: 180, cell: ({ row }) => {
+        const { owner_name, primary_contact_number, primary_email_id, partner_website, primary_contact_number_code } = row.original;
+        return (
+          <div className="text-xs flex flex-col gap-0.5">
+            {owner_name && (<span><b>Owner: </b> {owner_name}</span>)}
+            {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)}
+            {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)}
+            {partner_website && (<a href={partner_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{partner_website}</a>)}
+          </div>
+        )
+      },
     },
     {
       header: "Legal IDs & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => (
-        <div className="flex flex-col gap-1 text-[10px]">
+        <div className="flex flex-col gap-1 text-[11px]">
           {row.original.gst_number && <div><b>GST:</b> <span className="break-all">{row.original.gst_number}</span></div>}
           {row.original.pan_number && <div><b>PAN:</b> <span className="break-all">{row.original.pan_number}</span></div>}
-          <Tag className={`${getPartnerStatusClass(row.original.status)} capitalize mt-1 self-start !text-[10px] px-1.5 py-0.5`}>{row.original.status}</Tag>
+          <Tag className={`${getPartnerStatusClass(row.original.status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{row.original.status}</Tag>
         </div>
       )
     },
@@ -886,16 +1085,16 @@ const PartnerListTable = () => {
   const kycOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
   const { DatePickerRange } = DatePicker;
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
-  const cardBodyClass = "flex gap-2 p-2";
+  const cardBodyClass = "flex gap-2 p-1";
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-4 gap-2">
-        <Tooltip title="Click to show all partners"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsersGroup size={24} /></div><div><h6>{partnerCount?.total ?? 0}</h6><span className="text-xs font-semibold">Total</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Active status"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUser size={24} /></div><div><h6>{partnerCount?.active ?? 0}</h6><span className="text-xs font-semibold">Active</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Inactive status"><div onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserCancel size={24} /></div><div><h6>{partnerCount?.disabled ?? 0}</h6><span className="text-xs font-semibold">Disabled</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Verified status"><div onClick={() => handleCardClick('status', 'Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbUserCheck size={24} /></div><div><h6>{partnerCount?.verified ?? 0}</h6><span className="text-xs font-semibold">Verified</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Unverified status"><div onClick={() => handleCardClick('status', 'Non Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserMinus size={24} /></div><div><h6>{partnerCount?.unverified ?? 0}</h6><span className="text-xs font-semibold">Unverified</span></div></Card></div></Tooltip>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 mb-4 gap-2">
+        <Tooltip title="Click to show all partners"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBuilding size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.total ?? 0}</b><span className="text-[9px] font-semibold">Total</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Active status"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBuildingBank size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.active ?? 0}</b><span className="text-[9px] font-semibold">Active</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Inactive status"><div onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.disabled ?? 0}</b><span className="text-[9px] font-semibold">Disabled</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Verified status"><div onClick={() => handleCardClick('status', 'Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Unverified status"><div onClick={() => handleCardClick('status', 'Non Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.unverified ?? 0}</b><span className="text-[9px] font-semibold">Unverified</span></div></Card></div></Tooltip>
       </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <PartnerListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} value={tableData.query} />
@@ -904,13 +1103,31 @@ const PartnerListTable = () => {
             <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}</div>
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
-          <Button icon={<TbFilter />} onClick={openFilterDrawer}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
+          {/* This button now correctly opens the filter drawer */}
+          <Button icon={<TbFilter />} onClick={openFilterDrawer}>
+            Filter
+            {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
+          </Button>
           <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
       <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
-      <Drawer title="Partner Filters" isOpen={isFilterDrawerOpen} onClose={() => setFilterDrawerOpen(false)} onRequestClose={() => setFilterDrawerOpen(false)} width={480} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear All</Button><Button size="sm" variant="solid" form="filterPartnerForm" type="submit">Apply</Button></div>}>
+
+      {/* The Drawer component with all props correctly bound */}
+      <Drawer
+        title="Partner Filters"
+        isOpen={isFilterDrawerOpen}
+        onClose={closeFilterDrawer}
+        onRequestClose={closeFilterDrawer}
+        width={480}
+        footer={
+          <div className="text-right w-full">
+            <Button size="sm" className="mr-2" onClick={() => { onClearFilters(); closeFilterDrawer(); }}>Clear All</Button>
+            <Button size="sm" variant="solid" form="filterPartnerForm" type="submit">Apply</Button>
+          </div>
+        }
+      >
         <UiForm id="filterPartnerForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}>
           <div className="sm:grid grid-cols-2 gap-x-4 gap-y-2">
             <UiFormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={statusOptions} {...field} />} /></UiFormItem>
@@ -924,6 +1141,7 @@ const PartnerListTable = () => {
           </div>
         </UiForm>
       </Drawer>
+
       <PartnerModals modalState={modalState} onClose={handleCloseModal} userOptions={getAllUserData} />
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
         <UiForm id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
@@ -946,6 +1164,8 @@ const PartnerListSelected = () => {
   const { selectedPartners, setSelectedPartners } = usePartnerList();
   const dispatch = useAppDispatch();
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [sendMessageDialogOpen, setSendMessageDialogOpen] = useState(false);
+  const [sendMessageLoading, setSendMessageLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = () => setDeleteConfirmationOpen(true);
@@ -966,23 +1186,57 @@ const PartnerListSelected = () => {
     }
   };
 
+  const handleSend = () => {
+    setSendMessageLoading(true);
+    // This is a mock send action
+    setTimeout(() => {
+      toast.push(<Notification type="success" title="Message Sent" />);
+      setSendMessageLoading(false);
+      setSendMessageDialogOpen(false);
+      setSelectedPartners([]);
+    }, 1000);
+  };
+
+
   if (selectedPartners.length === 0) return null;
   return (
     <>
       <StickyFooter className="flex items-center justify-between py-4" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
         <div className="container mx-auto flex items-center justify-between">
-          <span><span className="flex items-center gap-2"><TbChecks className="text-lg text-primary-600" /><span className="font-semibold">{selectedPartners.length} Partners selected</span></span></span>
-          <div className="flex items-center"><Button size="sm" className="ltr:mr-3 rtl:ml-3" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50"} onClick={handleDelete}>Delete</Button></div>
+          <span>
+            <span className="flex items-center gap-2">
+              <TbChecks className="text-lg text-primary-600" />
+              <span className="font-semibold">{selectedPartners.length} Partners selected</span>
+            </span>
+          </span>
+          <div className="flex items-center">
+            <Button size="sm" className="ltr:mr-3 rtl:ml-3" customColorClass={() => "border-red-500 ring-1 ring-red-500 text-red-500 hover:bg-red-50"} onClick={handleDelete}>Delete</Button>
+            <Button size="sm" variant="solid" onClick={() => setSendMessageDialogOpen(true)}>Message</Button>
+          </div>
         </div>
       </StickyFooter>
       <ConfirmDialog isOpen={deleteConfirmationOpen} type="danger" title="Remove Partners" onClose={() => setDeleteConfirmationOpen(false)} onConfirm={handleConfirmDelete} loading={isDeleting}>
         <p>Are you sure you want to remove these partners? This action can't be undone.</p>
       </ConfirmDialog>
+      <Dialog isOpen={sendMessageDialogOpen} onClose={() => setSendMessageDialogOpen(false)}>
+        <h5 className="mb-2">Send Message</h5>
+        <div className="my-4">
+          <Avatar.Group chained omittedAvatarTooltip className="mt-4" maxCount={4}>
+            {selectedPartners.map((p) => (<Tooltip key={p.id} title={p.partner_name}><Avatar src={p.partner_logo || undefined} icon={<TbUserCircle />} /></Tooltip>))}
+          </Avatar.Group>
+        </div>
+        <div className="my-4"><RichTextEditor /></div>
+        <div className="text-right flex items-center gap-2">
+          <Button size="sm" onClick={() => setSendMessageDialogOpen(false)}>Cancel</Button>
+          <Button size="sm" variant="solid" loading={sendMessageLoading} onClick={handleSend}>Send</Button>
+        </div>
+      </Dialog>
     </>
   );
 };
 
 const Partner = () => {
+  const navigate = useNavigate();
   return (
     <PartnerListProvider>
       <Container>
@@ -990,7 +1244,11 @@ const Partner = () => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
               <h5>Partner</h5>
-              <PartnerListActionTools />
+              <div className="flex flex-col md:flex-row gap-3">
+                <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/create-partner")}>
+                  Add New Partner
+                </Button>
+              </div>
             </div>
             <PartnerListTable />
           </div>
