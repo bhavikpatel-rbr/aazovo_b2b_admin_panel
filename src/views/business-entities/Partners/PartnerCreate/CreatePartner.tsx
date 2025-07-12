@@ -1457,7 +1457,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                                     control={control}
                                     render={({ field }) => (
                                         <Checkbox checked={!!field.value} onChange={field.onChange}>
-                                            {doc.label} (Verified)
+                                            {doc.label} (Verified) {doc.indiaOnly && <span className="text-red-500">*</span>}
                                         </Checkbox>
                                     )}
                                 />
