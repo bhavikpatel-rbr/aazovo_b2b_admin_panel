@@ -3135,6 +3135,25 @@ export const getAllDocumentsAsync = async () => {
   }
 }
 
+export const getAlertsActionAsync = async (data: object) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/alerts`,data)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+export const addAlertsActionAsync = async (data: object) => {
+  try {
+    // const getUserIDFromLocalStorage = JSON.parse(localStorage.getItem("@secure:UserData"))?.id;
+    const response = await axiosInstance.post(`${config.apiURL}/alert`, data)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+
 export const getAllActionActionAsync = async () => {
   try {
     const getUserIDFromLocalStorage = JSON.parse(localStorage.getItem("@secure:UserData"))?.id;
