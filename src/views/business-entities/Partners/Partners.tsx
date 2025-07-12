@@ -809,7 +809,7 @@ const PartnerListTable = () => {
       header: "Partner Info", accessorKey: "partner_name", id: 'partnerInfo', size: 220, cell: ({ row }) => (
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <Avatar src={row.original.partner_logo ? `https://aazovo.codefriend.in/${row.original.partner_logo}` : ''} size="md" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.original.partner_logo || null)} icon={<TbUserCircle />} />
+            <Avatar src={row.original.partner_logo ? row.original.partner_logo : ''} size="md" shape="circle" className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(row.original.partner_logo || null)} icon={<TbUserCircle />} />
             <div>
               <h6 className="text-xs font-semibold">{row.original.partner_code}</h6>
               <span className="text-xs font-semibold">{row.original.partner_name}</span>

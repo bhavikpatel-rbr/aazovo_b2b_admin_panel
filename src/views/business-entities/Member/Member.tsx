@@ -385,7 +385,6 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
       <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600" role="button" onClick={() => navigate(`/business-entities/member-edit/${rowData.id}`)}><TbPencil /></div></Tooltip>
       <Tooltip title="View Page"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/member-view/${rowData.id}`)}><TbEye /></div></Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item onClick={() => onOpenModal("viewDetail", rowData)} className="flex items-center gap-2"><TbFileSearch /> View Details</Dropdown.Item>
         <Dropdown.Item onClick={() => handleSendEmail(rowData)} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
         <Dropdown.Item onClick={() => handleSendWhatsapp(rowData)} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
