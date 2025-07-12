@@ -1000,9 +1000,13 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                     <div className="text-xs">
                       {typeof fileValue === "string" ? (
                         <a href={`${fileValue}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline"> View Document </a>
-                      ) : (
-                        <p className="text-gray-600 dark:text-gray-300">{(fileValue as File).name}</p>
-                      )}
+                      ) : 
+                      (
+                        <a href={`${URL.createObjectURL(fileValue)}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline"> View Document </a>
+                        
+                        // <p className="text-gray-600 dark:text-gray-300">{(fileValue as File).name}</p>
+                      )
+                      }
                     </div>
                   )}
                 </div>
