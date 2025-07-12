@@ -2058,7 +2058,7 @@ const CreatePartner = () => {
       setInitialData({});
       setPageLoading(false);
     }
-  }, [id, isEditMode, navigate, dispatch, partnerOptions, companyOptions, documentTypeOptions]);
+  }, [isEditMode, navigate, dispatch]);
 
   const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
