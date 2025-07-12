@@ -18,7 +18,8 @@ import { BiChevronRight } from 'react-icons/bi';
 import {
   TbUserCircle, TbMail, TbPhone, TbBuilding, TbBriefcase, TbCalendar, TbPencil, TbDownload,
   TbUser, TbFileText, TbBuildingBank, TbReportMoney, TbArrowLeft, TbUsersGroup, TbLicense,
-  TbWorld, TbCheck, TbX, TbFileDescription, TbUserSearch, TbMessage2, TbNotes
+  TbWorld, TbCheck, TbX, TbFileDescription, TbUserSearch, TbMessage2, TbNotes,
+  TbCoinRupee
 } from 'react-icons/tb';
 
 // Types, Redux and Helpers
@@ -83,7 +84,7 @@ const companyViewNavigationList = [
   { label: "Teams", link: "teams", icon: <TbUsersGroup /> },
   { label: "Offices", link: "offices", icon: <TbBuilding /> },
   { label: "Verification", link: "verification", icon: <TbLicense /> },
-  { label: "References", link: "references", icon: <TbUserSearch /> },
+  { label: "Transactions", link: "transactions", icon: <TbCoinRupee /> },
 ];
 
 const CompanyViewNavigator = ({ activeSection, onNavigate }: { activeSection: string; onNavigate: (s: string) => void; }) => (
@@ -409,7 +410,7 @@ const CompanyView = () => {
       case "teams": return <TeamsTabView company={company} />;
       case "offices": return <OfficesTabView company={company} />;
       case "verification": return <VerificationTabView company={company} />;
-      case "references": return <ReferencesTabView company={company} />;
+      case "transactions": return <NoDataMessage message="Transactions tab is under development." />;
       default: return <DetailsTabView company={company} />;
     }
   };
