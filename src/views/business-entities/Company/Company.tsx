@@ -541,7 +541,7 @@ const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, onOpenEnableBilling
                 <Dropdown.Item onClick={() => onOpenModal("members", rowData)} className="flex items-center gap-2"><TbUsersGroup /> View Members</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Activity</span></Dropdown.Item>
-                <Dropdown.Item onClick={() => onOpenModal("transaction", rowData)} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item>
+                {/* <Dropdown.Item onClick={() => onOpenModal("transaction", rowData)} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item> */}
                 <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
             </Dropdown>
 
@@ -921,7 +921,7 @@ const CompanyListTable = () => {
                 onClose={() => setPendingRequestModalOpen(false)}
                 width={800}
             >
-                <h5 className="mb-4">Pending Billing Requests</h5>
+                <h5 className="mb-4">Pending Enable Billing Requests</h5>
                 <div className="max-h-[60vh] overflow-y-auto">
                     <table className="w-full">
                         <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
