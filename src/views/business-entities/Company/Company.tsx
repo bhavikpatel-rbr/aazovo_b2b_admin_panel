@@ -9,7 +9,7 @@ import React, {
     useState,
 } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate, useSearchParams } from 'react-router-dom'; // useSearchParams is not used in final solution but kept for context
+import { useNavigate } from 'react-router-dom';
 import { z } from "zod";
 
 // UI Components
@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
-import RichTextEditor from '@/components/shared/RichTextEditor'; // Assuming this is the correct path
+import RichTextEditor from '@/components/shared/RichTextEditor';
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
     Button,
@@ -40,71 +40,34 @@ import Avatar from "@/components/ui/Avatar";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
+import Tr from "@/components/ui/Table/Tr";
+import Td from "@/components/ui/Table/Td";
 
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
-    TbAlarm,
-    TbBell,
-    TbBrandWhatsapp,
-    TbBriefcase,
-    TbBuilding,
-    TbBuildingBank,
-    TbBuildingCommunity,
-    TbCalendarEvent,
+    TbAlarm, TbBell, TbBrandWhatsapp, TbBriefcase, TbBuilding, TbBuildingBank, TbBuildingCommunity, TbCalendarEvent,
     TbCancel,
-    TbCheck,
-    TbChecks,
-    TbCircleCheck,
-    TbCircleX,
-    TbCloudUpload,
-    TbColumns,
-    TbDownload,
-    TbEye,
-    TbFileDescription,
-    TbFilter,
-    TbMail,
-    TbPencil,
-    TbPlus,
-    TbReceipt,
-    TbReload,
-    TbSearch,
-    TbShieldCheck,
-    TbShieldX,
-    TbTagStarred,
-    TbUser,
-    TbUserCircle,
-    TbUserFilled,
-    TbUsersGroup,
-    TbX
+    TbCheck, TbChecks, TbCircleCheck, TbCircleX, TbCloudUpload, TbColumns, TbDownload, TbEye, TbFileDescription,
+    TbFilter, TbMail, TbPencil, TbPlus, TbReceipt, TbReload, TbSearch, TbShieldCheck, TbShieldX, TbTagStarred,
+    TbUser, TbUserCircle, TbUsersGroup, TbX
 } from "react-icons/tb";
 
 // Types
 import type { TableQueries } from "@/@types/common";
-import type {
-    ColumnDef,
-    OnSortParam,
-    Row,
-} from "@/components/shared/DataTable";
+import type { ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-    addAllActionAction,
-    addNotificationAction,
-    addScheduleAction,
-    addTaskAction,
-    deleteAllcompanyAction,
-    getAllUsersAction,
-    getCompanyAction,
-    getContinentsAction,
-    getCountriesAction,
+    addAllActionAction, addNotificationAction, addScheduleAction, addTaskAction, deleteAllcompanyAction,
+    getAllUsersAction, getCompanyAction, getContinentsAction, getCountriesAction, getPendingBillAction,
+    setenablebillingAction,
     submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 import { authSelector } from "@/reduxtool/auth/authSlice";
-import { encryptStorage } from "@/utils/secureLocalStorage";
-import { config } from "localforage";
+import { BiNotification } from "react-icons/bi";
 
 // --- START: Detailed Type Definitions ---
 interface UserReference { id: number; name: string; profile_pic_path: string | null; }
@@ -303,14 +266,7 @@ const SendWhatsAppAction: React.FC<{ company: CompanyItem; onClose: () => void; 
 const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
     const { type, data: company, isOpen } = modalState;
     const dispatch = useAppDispatch();
-
-    const [userData, setUserData] = useState<any>(null);
-
-    useEffect(() => {
-        const { useEncryptApplicationStorage } = config;
-        try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
-        catch (error) { console.error("Error getting UserData:", error); }
-    }, []);
+    const { user } = useSelector(authSelector)
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -347,7 +303,7 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getA
         case 'task': return <AssignCompanyTaskDialog company={company} onClose={onClose} userOptions={getAllUserDataOptions} />;
         case 'members': return <ViewCompanyMembersDialog company={company} onClose={onClose} />;
         case 'alert': return <ViewCompanyDataDialog title={`Alerts for ${company.company_name}`} message="No alerts found for this company." onClose={onClose} />;
-        case "activity": return <AddActivityDialog company={company} onClose={onClose} user={userData} />;
+        case "activity": return <AddActivityDialog company={company} onClose={onClose} user={user} />;
         case 'transaction': return <ViewCompanyDataDialog title={`Transactions for ${company.company_name}`} message="No transactions found for this company." onClose={onClose} />;
         case 'document': return <DownloadDocumentDialog company={company} onClose={onClose} />;
         default: return null;
@@ -429,15 +385,12 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
     );
 };
 
-
-// --- START: MODIFIED COMPONENT ---
 const CompanyListTable = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const { companyList, setSelectedCompanies, companyCount, ContinentsData, CountriesData, getAllUserData } = useCompanyList();
+    const { PendingBillData } = useSelector(masterSelector);
     const [isLoading] = useState(false);
-
-    // --- START: State Persistence & Search Logic ---
     const COMPANY_STATE_STORAGE_KEY = 'companyListStatePersistence';
 
     const getInitialState = () => {
@@ -445,7 +398,6 @@ const CompanyListTable = () => {
             const savedStateJSON = sessionStorage.getItem(COMPANY_STATE_STORAGE_KEY);
             if (savedStateJSON) {
                 const savedState = JSON.parse(savedStateJSON);
-                // Re-hydrate Date objects from their string representation
                 if (savedState.filterCriteria?.filterCreatedDate) {
                     savedState.filterCriteria.filterCreatedDate = savedState.filterCriteria.filterCreatedDate.map((d: string | null) => d ? new Date(d) : null);
                 }
@@ -455,7 +407,6 @@ const CompanyListTable = () => {
             console.error("Failed to parse saved state, clearing it.", error);
             sessionStorage.removeItem(COMPANY_STATE_STORAGE_KEY);
         }
-        // Return default state if nothing is saved or if parsing fails
         return {
             tableData: { pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" },
             filterCriteria: { filterCreatedDate: [null, null] }
@@ -466,7 +417,6 @@ const CompanyListTable = () => {
     const [tableData, setTableData] = useState<TableQueries>(initialState.tableData);
     const [filterCriteria, setFilterCriteria] = useState<CompanyFilterFormData & { customFilter?: string }>(initialState.filterCriteria);
 
-    // Effect to save any changes in table or filter state to sessionStorage
     useEffect(() => {
         try {
             const stateToSave = { tableData, filterCriteria };
@@ -475,12 +425,17 @@ const CompanyListTable = () => {
             console.error("Could not save state to sessionStorage:", error);
         }
     }, [tableData, filterCriteria]);
-    // --- END: State Persistence & Search Logic ---
 
     const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null, });
+    const [isPendingRequestModalOpen, setPendingRequestModalOpen] = useState(false);
+
+    const handleOpenPendingRequestModal = () => {
+        dispatch(getPendingBillAction());
+        setPendingRequestModalOpen(true);
+    };
 
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange", });
     const filterFormMethods = useForm<CompanyFilterFormData>({ resolver: zodResolver(companyFilterFormSchema) });
@@ -495,13 +450,27 @@ const CompanyListTable = () => {
         const defaultFilters = { customFilter: undefined, filterCreatedDate: [null, null] as [Date | null, Date | null], filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [], };
         setFilterCriteria(defaultFilters);
         handleSetTableData({ pageIndex: 1, query: "", sort: { order: "", key: "" } });
-        sessionStorage.removeItem(COMPANY_STATE_STORAGE_KEY); // Clear persisted state
+        sessionStorage.removeItem(COMPANY_STATE_STORAGE_KEY);
     };
 
-    const handleRemoveFilter = (key: keyof CompanyFilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev, customFilter: undefined }; if (key === 'filterCreatedDate') { (newCriteria as any)[key] = [null, null]; } else { const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove); (newCriteria as any)[key] = newFilterArray; } } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
+    const handleRemoveFilter = (key: keyof CompanyFilterFormData, valueToRemove: string) => {
+        setFilterCriteria(prev => {
+            const newCriteria = { ...prev, customFilter: undefined };
+            if (key === 'filterCreatedDate') {
+                (newCriteria as any)[key] = [null, null];
+            } else {
+                const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined;
+                if (currentFilterArray) {
+                    (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove);
+                }
+            }
+            return newCriteria;
+        });
+        handleSetTableData({ pageIndex: 1 });
+    };
 
     const onRefreshData = () => {
-        onClearFilters(); // This will also clear sessionStorage
+        onClearFilters();
         dispatch(getCompanyAction());
         toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />);
     };
@@ -543,25 +512,11 @@ const CompanyListTable = () => {
             if (filterCriteria.filterCreatedDate && filterCriteria.filterCreatedDate[0] && filterCriteria.filterCreatedDate[1]) { const [startDate, endDate] = filterCriteria.filterCreatedDate; const inclusiveEndDate = new Date(endDate as Date); inclusiveEndDate.setHours(23, 59, 59, 999); filteredData = filteredData.filter((company) => { const createdDate = new Date(company.created_at); return (createdDate >= (startDate as Date) && createdDate <= inclusiveEndDate); }); }
         }
 
-        // --- IMPROVED & EFFICIENT SEARCH LOGIC ---
         if (tableData.query) {
             const lowerCaseQuery = tableData.query?.toLowerCase();
             filteredData = filteredData.filter(company => {
-                const searchableFields = [
-                    company.company_name,
-                    company.company_code,
-                    company.owner_name,
-                    company.primary_email_id,
-                    company.primary_contact_number,
-                    company.gst_number,
-                    company.pan_number,
-                    company.city,
-                    company.state,
-                    company.country?.name,
-                ];
-                return searchableFields.some(field =>
-                    field && String(field).toLowerCase().includes(lowerCaseQuery)
-                );
+                const searchableFields = [company.company_name, company.company_code, company.owner_name, company.primary_email_id, company.primary_contact_number, company.gst_number, company.pan_number, company.city, company.state, company.country?.name];
+                return searchableFields.some(field => field && String(field).toLowerCase().includes(lowerCaseQuery));
             });
         }
 
@@ -584,7 +539,6 @@ const CompanyListTable = () => {
         return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
     }, [companyList, tableData, filterCriteria]);
 
-    const closeFilterDrawer = () => setFilterDrawerOpen(false);
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
         setIsSubmittingExportReason(true);
@@ -602,25 +556,42 @@ const CompanyListTable = () => {
     const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
     const openImageViewer = (imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
 
+    const handleApprovePendingRequest = async (company: { id: number; company_name: string }) => {
+        // This function simulates the approval action as the specific Redux action `setenablebillingAction` is not available in the provided code.
+        // In a real application, you would dispatch the actual action here.
+        const response = await dispatch(setenablebillingAction(company.id)).unwrap();
+
+        console.log(response, 'response');
+
+        toast.push(<Notification title={`Billing approved for ${company.company_name}`} type="success" />);
+        // Refresh the pending list to reflect the change
+        dispatch(getPendingBillAction());
+    };
+
+    const handleRejectPendingRequest = (companyData: any) => {
+        // Close the current "Pending Request" modal
+        setPendingRequestModalOpen(false);
+        // Coerce the pending item data into a shape the notification modal expects
+        const companyForItem: Partial<CompanyItem> = {
+            id: companyData.id,
+            company_name: companyData.company_name,
+            company_code: companyData.company_code,
+        };
+        // Open the "Add Notification" modal
+        handleOpenModal('notification', companyForItem as CompanyItem);
+    };
+
     const columns: ColumnDef<CompanyItem>[] = useMemo(() => [
-        {
-            header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }: { row: Row<CompanyItem> }) => {
-                const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original; return (
-
-                    <div className="flex flex-col"> <div className="flex items-center gap-2">
-
-
-                        <div> <h6 className="text-xs font-semibold"><em className="text-blue-600">
-                            {company_code || "Company Code"}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || "N/A"}</span>  <div className="text-xs text-gray-500">{country?.name || "N/A"}</div> </div>);
-            },
-        },
+        { header: "Company Info", accessorKey: "company_name", id: "companyInfo", size: 220, cell: ({ row }: { row: Row<CompanyItem> }) => { const { company_name, ownership_type, primary_business_type, country, city, state, company_logo, company_code } = row.original; return (<div className="flex flex-col"> <div className="flex items-center gap-2"> <div> <h6 className="text-xs font-semibold"><em className="text-blue-600"> {company_code || "Company Code"}</em></h6> <span className="text-xs font-semibold leading-1">{company_name}</span> </div> </div> <span className="text-xs mt-1"><b>Ownership Type:</b> {ownership_type || "N/A"}</span>  <div className="text-xs text-gray-500">{country?.name || "N/A"}</div> </div>); }, },
         { header: "Contact", accessorKey: "owner_name", id: "contact", size: 180, cell: (props) => { const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original; return (<div className="text-xs flex flex-col gap-0.5"> {owner_name && (<span><b>Owner: </b> {owner_name}</span>)} {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)} {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)} {company_website && (<a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>)} </div>); }, },
         { header: "Legal IDs & Status", accessorKey: "status", id: "legal", size: 180, cell: ({ row }) => { const { gst_number, pan_number, status } = row.original; return (<div className="flex flex-col gap-0.5 text-[11px]"> {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>} {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>} <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{status}</Tag> </div>); }, },
         { header: "Profile & Scores", accessorKey: "profile_completion", id: "profile", size: 190, cell: ({ row }) => { const { members_count = 0, teams_count = 0, profile_completion = 0, kyc_verified, enable_billing, due_after_3_months_date } = row.original; const formattedDate = due_after_3_months_date ? dayjs(due_after_3_months_date).format('D MMM, YYYY') : "N/A"; return (<div className="flex flex-col gap-1 text-xs"> <span><b>Members:</b> {members_count}</span> <span><b>Teams:</b> {teams_count}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <div className="flex gap-1 items-center"><b>Enable Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <span><b>Enable Billing Due:</b> {formattedDate}</span> <Tooltip title={`Profile Completion ${profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"> <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div> </div> </Tooltip> </div>); }, },
         { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <CompanyActionColumn rowData={props.row.original} onEdit={handleEditCompany} onOpenModal={handleOpenModal} /> },
-    ], [handleOpenModal, openImageViewer, navigate]);
+    ], [handleOpenModal, navigate]);
 
     const [filteredColumns, setFilteredColumns] = useState(columns);
+    const closeFilterDrawer = () => setFilterDrawerOpen(false);
+
     const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
     const toggleColumn = (checked: boolean, colId: string) => { if (checked) { const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId); if (originalColumn) { setFilteredColumns(prev => { const newCols = [...prev, originalColumn]; newCols.sort((a, b) => { const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey)); const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey)); return indexA - indexB; }); return newCols; }); } } else { setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId)); } };
 
@@ -639,9 +610,9 @@ const CompanyListTable = () => {
         <>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <h5>Company</h5>
-                
+
                 <div className="flex flex-col md:flex-row gap-3">
-                    <Button icon={<TbUserFilled />} onClick={() => navigate('/hr-employees/job-post')} className="w-full sm:w-auto">Pending Request</Button>
+                    <Button icon={<TbUsersGroup />} onClick={handleOpenPendingRequestModal} className="w-full sm:w-auto">Pending Request</Button>
                     <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/company-create")}>Add New</Button></div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
@@ -654,7 +625,6 @@ const CompanyListTable = () => {
                 <Tooltip title="Click to show Non-KYC Verified companies"><div onClick={() => handleCardClick('non_verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.non_verified ?? 0}</b><span className="text-[9px] font-semibold">Non Verified</span></div></Card></div></Tooltip>
                 <Tooltip title="Click to show Eligible companies (KYC and Billing enabled)"><div onClick={() => handleCardClick('eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-violet-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbShieldCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.eligible ?? 0}</b><span className="text-[9px] font-semibold">Eligible</span></div></Card></div></Tooltip>
                 <Tooltip title="Click to show Not Eligible companies (KYC or Billing disabled)"><div onClick={() => handleCardClick('not_eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-red-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbShieldX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.not_eligible ?? 0}</b><span className="text-[9px] font-semibold">Not Eligible</span></div></Card></div></Tooltip>
-                {/* <Card bodyClass={cardBodyClass} className="rounded-md border border-orange-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbBuildingCommunity size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.members ?? 0}</b><span className="text-[9px] font-semibold">Members</span></div></Card> */}
             </div>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
                 <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(val) => handleSetTableData({ query: val.target.value, pageIndex: 1 })} value={tableData.query} />
@@ -695,15 +665,68 @@ const CompanyListTable = () => {
                     </UiFormItem>
                 </UiForm>
             </ConfirmDialog>
-            <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
-                <div className="flex justify-center items-center p-4">
-                    {imageToView ? (<img src={`${imageToView}`} alt="Company Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
+            <Dialog
+                isOpen={isPendingRequestModalOpen}
+                onClose={() => setPendingRequestModalOpen(false)}
+                width={800}
+            >
+                <h5 className="mb-4">Pending Billing Requests</h5>
+                <div className="max-h-[60vh] overflow-y-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                            <tr>
+                                <th className="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                                <th className="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Company Code</th>
+                                <th className="py-2 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Documents</th>
+                                <th className="py-2 px-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {PendingBillData?.data && PendingBillData.data.length > 0 ? (
+                                PendingBillData.data.map((item: any) => (
+                                    <tr key={item.id} className="border-b dark:border-gray-700">
+                                        <td className="py-3 px-4 text-sm font-medium">{item.company_name}</td>
+                                        <td className="py-3 px-4 text-sm text-blue-500">{item.company_code}</td>
+                                        <td className="py-3 px-4">
+                                            <div className="flex gap-1">
+                                                {item.enable_billing_documents?.map((doc, i) => (
+                                                    <a key={i} href={doc.document} target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center justify-between p-3">
+                                                        <span className="flex items-center gap-2">
+                                                            <TbFileDescription className="text-blue-500 text-xl" title={doc.document_name} />
+                                                        </span>
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td className="py-3 px-4 text-center">
+                                            <div className="flex justify-center gap-2">
+                                                <Tooltip title="Approve">
+                                                    <Button shape="circle" size="sm" variant="solid" color="emerald" icon={<TbCheck />} onClick={() => handleApprovePendingRequest(item)} />
+                                                </Tooltip>
+                                                <Tooltip title="Notification">
+                                                    <Button shape="circle" size="sm" variant="solid" color="red" icon={<BiNotification />} onClick={() => handleRejectPendingRequest(item)} />
+                                                </Tooltip>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={4} className="text-center py-8 text-gray-500">No pending requests found.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="text-right mt-6">
+                    <Button variant="solid" onClick={() => setPendingRequestModalOpen(false)}>Close</Button>
                 </div>
             </Dialog>
         </>
     );
 };
-// --- END: MODIFIED COMPONENT ---
 
 const CompanyListSelected = () => {
     const { selectedCompanies, setSelectedCompanies } = useCompanyList();
