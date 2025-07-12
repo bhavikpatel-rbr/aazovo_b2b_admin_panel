@@ -37,6 +37,7 @@ import {
   getContinentsAction,
   getCountriesAction,
   getMemberAction,
+  getDocumentTypeAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -105,14 +106,14 @@ interface BranchItemFE {
 
 interface BillingDocItemFE {
   id?: string;
-  document_name?: string;
+  document_name?: { label: string; value: string };
   document?: File | string | null;
 }
 
 // New type for Enable Billing Docs
 interface EnabledBillingDocItemFE {
   id?: string;
-  document_name?: string;
+  document_name?: { label: string; value: string };
   document?: File | string | null;
 }
 
@@ -293,8 +294,8 @@ interface ApiSingleCompanyItem {
   secondary_swift_code?: string | null;
   secondary_bank_verification_photo?: string | null;
   company_bank_details?: Array<{ id: number; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; }>;
-  billing_documents?: Array<{ id: number; document_name: string; document: string | null; }>;
-  enable_billing_documents?: Array<{ id: number; document_name: string; document: string | null; }>;
+  billing_documents?: Array<{ id: number; document_name: { label: string; value: string }; document: string | null; }>;
+  enable_billing_documents?: Array<{ id: number; document_name: { label: string; value: string }; document: string | null; }>;
   company_member_management?: Array<{ member_id: string; designation: string; person_name: string; number: string; }>;
   company_team_members?: Array<{ team_name: string; designation: string; person_name: string; number: string; }>;
   company_spot_verification?: Array<{ id: number; verified_by_id?: string | number; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; }>;
@@ -308,7 +309,8 @@ const transformApiToFormSchema = (
   allContinents: Array<{ id: string | number; name: string }>,
   allMembers: Array<{ value: string; label: string }>,
   allEmployees: Array<{ value: string; label: string }>,
-  allCompaniesForRef: Array<{ value: string; label: string }>
+  allCompaniesForRef: Array<{ value: string; label: string }>,
+  documentTypeOptions: Array<{ value: string; label: string }>
 ): Partial<CompanyFormSchema> => {
   const stringToBoolean = (value: boolean | string | undefined | null): boolean => {
     if (typeof value === 'boolean') return value;
@@ -331,7 +333,7 @@ const transformApiToFormSchema = (
 
   const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
   const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
-
+  
   return {
     id: apiData.id,
     company_name: apiData.company_name || '',
@@ -440,12 +442,12 @@ const transformApiToFormSchema = (
     USER_ACCESS: stringToBoolean(apiData.kyc_verified),
     billing_documents: apiData.billing_documents?.map(doc => ({
       id: String(doc.id), // Important for FieldArray key
-      document_name: doc.document_name || '',
+      document_name: findOptionByValue(documentTypeOptions, doc.document_name),
       document: doc.document || null,
     })) || [],
     enabled_billing_docs: apiData.enable_billing_documents?.map(doc => ({
       id: String(doc.id), // Important for FieldArray key
-      document_name: doc.document_name,
+      document_name: findOptionByValue(documentTypeOptions, doc.document_name),
       document: doc.document || null
     })) || [],
 
@@ -587,8 +589,9 @@ const preparePayloadForApi = (
   });
 
   // Billing Documents
+  
   data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
-    apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name || "");
+    apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name?.value || "");
     appendFileIfExists(`billing_documents[${index}][document]`, doc.document);
   });
 
@@ -597,7 +600,7 @@ const preparePayloadForApi = (
   // Note: The API key is `enable_billing_documents`, while the form state uses `enabled_billing_docs`.
   // This was corrected from `enabled_billing_docs` to `enable_billing_documents`.
   data.enabled_billing_docs?.forEach((doc: EnabledBillingDocItemFE, index: number) => {
-    appendField(`enable_billing_documents[${index}][document_name]`, doc.document_name);
+    appendField(`enable_billing_documents[${index}][document_name]`, doc.document_name?.value);
     appendFileIfExists(`enable_billing_documents[${index}][document]`, doc.document);
     // It's crucial to send the item ID back in edit mode so the backend can correctly identify which record to update.
     if (isEditMode && doc.id) {
@@ -1000,12 +1003,12 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                     <div className="text-xs">
                       {typeof fileValue === "string" ? (
                         <a href={`${fileValue}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline"> View Document </a>
-                      ) : 
-                      (
-                        <a href={`${URL.createObjectURL(fileValue)}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline"> View Document </a>
-                        
-                        // <p className="text-gray-600 dark:text-gray-300">{(fileValue as File).name}</p>
-                      )
+                      ) :
+                        (
+                          <a href={`${URL.createObjectURL(fileValue)}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline"> View Document </a>
+
+                          // <p className="text-gray-600 dark:text-gray-300">{(fileValue as File).name}</p>
+                        )
                       }
                     </div>
                   )}
@@ -1169,7 +1172,7 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
                 <Controller name={`company_spot_verification.${index}.photo_upload`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
                 {photoValue && (
                   <div className="mt-1">
-                    {photoValue instanceof File ? (<span className="text-sm text-gray-500">{photoValue.name}</span>)
+                    {photoValue instanceof File ? (<a href={`${URL.createObjectURL(photoValue)}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
                       : typeof photoValue === 'string' ? (<a href={`${photoValue}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline"> View Uploaded </a>)
                         : null}
                   </div>
@@ -1237,9 +1240,19 @@ const ReferenceSection = ({ control, errors, formMethods }: FormSectionBaseProps
 // --- AccessibilitySection ---
 const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
+
+  const dispatch = useAppDispatch();
   const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
   const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs" });
+  const { DocumentTypeData = [] } = useSelector(masterSelector);
 
+  const documentTypeOptions = useMemo(() => {
+    return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+  }, [DocumentTypeData]);
+
+  useEffect(() => {
+    dispatch(getDocumentTypeAction());;
+  }, [dispatch]);
   return (
     <Card id="accessibility">
       <h4 className="mb-6">Accessibility & Configuration</h4>
@@ -1253,8 +1266,8 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
         <div className="flex justify-between items-center">
           <h5 className="mb-0">Billing Documents</h5>
           <div className="flex gap-2">
-            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: "", document: null })}> Add Billing Doc </Button>
-            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_name: '', document: null })}> Add Enable Billing Documents </Button>
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: null, document: null })}> Add Billing Doc </Button>
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_name: null, document: null })}> Add Enable Billing Documents </Button>
           </div>
         </div>
 
@@ -1265,7 +1278,16 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
             <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
                 <FormItem label={`Doc Name ${index + 1}`} className="md:col-span-4" invalid={!!errors.billing_documents?.[index]?.document_name} errorMessage={errors.billing_documents?.[index]?.document_name?.message as string}>
-                  <Controller name={`billing_documents.${index}.document_name`} control={control} render={({ field }) => (<Input placeholder="Document Name" {...field} />)} />
+                  <Controller name={`billing_documents.${index}.document_name`} control={control} render={({ field }) => (
+                    <Select
+                      placeholder="Document Name"
+                      options={documentTypeOptions}
+                      value={field.value}
+                      onChange={(selectedOption) => {
+                        field.onChange(selectedOption)
+                      }}
+                    />
+                  )} />
                 </FormItem>
                 <FormItem label={`Upload Doc ${index + 1}`} className="md:col-span-4">
                   <Controller name={`billing_documents.${index}.document`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
@@ -1291,7 +1313,16 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
             <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
                 <FormItem label={`Document Type ${index + 1}`} className="md:col-span-4" invalid={!!errors.enabled_billing_docs?.[index]?.document_name} errorMessage={(errors.enabled_billing_docs?.[index]?.document_name as any)?.message as string}>
-                  <Controller name={`enabled_billing_docs.${index}.document_name`} control={control} render={({ field }) => <Input placeholder="Document Name" {...field} />} />
+                  <Controller name={`enabled_billing_docs.${index}.document_name`} control={control} render={({ field }) => (
+                    <Select
+                      placeholder="Document Name"
+                      options={documentTypeOptions}
+                      value={field.value}
+                      onChange={(selectedOption) => {
+                        field.onChange(selectedOption)
+                      }}
+                    />
+                  )} />
                 </FormItem>
                 <FormItem label={`Upload File ${index + 1}`} className="md:col-span-4">
                   <Controller name={`enabled_billing_docs.${index}.document`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
@@ -1325,7 +1356,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
     return Array.isArray(data)
       ? data.map((m: any) => ({
         value: String(m.id),
-        label: `${m.name || 'N/A'} (ID:${m.id})`,
+        label: `(Code: ${m.member_code}) - ${m.name || 'N/A'}`,
         status: m.status,
       }))
       : [];
@@ -1520,11 +1551,11 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
 
     USER_ACCESS: z.boolean({ required_error: "User Access selection is required" }),
     billing_documents: z.array(z.object({
-      document_name: z.string().trim().min(1, "Document name is required."),
+      document_name: z.object({ label: z.string(), value: z.number() }, { required_error: "Document type is required." }),
       document: z.any().optional().nullable(),
     })).optional(),
     enabled_billing_docs: z.array(z.object({
-      document_name: z.string().trim().min(1, "Document type is required."),
+      document_name: z.object({ label: z.string(), value: z.number() }, { required_error: "Document type is required." }),
       document: z.any().optional().nullable()
     })).optional(),
 
@@ -1670,8 +1701,13 @@ const CompanyCreate = () => {
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList } = useSelector(masterSelector);
+  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList,DocumentTypeData } = useSelector(masterSelector);
 
+
+
+  const documentTypeOptions = useMemo(() => {
+    return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+  }, [DocumentTypeData]);
 
   const getEmptyFormValues = (): CompanyFormSchema => ({
     company_name: "", primary_contact_number: "", primary_contact_number_code: undefined,
@@ -1712,6 +1748,7 @@ const CompanyCreate = () => {
     dispatch(getCategoriesAction());
     dispatch(getMemberAction());
     dispatch(getCompanyAction());
+    dispatch(getDocumentTypeAction());
   }, [dispatch]);
 
   useEffect(() => {
@@ -1740,7 +1777,8 @@ const CompanyCreate = () => {
               ContinentsData,
               allMembersForSelect,
               allEmployeesForSelect,
-              allCompaniesForRefSelect
+              allCompaniesForRefSelect,
+              documentTypeOptions,
             );
             setInitialData({ ...getEmptyFormValues(), ...transformed });
           } else {
