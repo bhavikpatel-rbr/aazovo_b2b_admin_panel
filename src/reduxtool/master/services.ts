@@ -3305,7 +3305,11 @@ export const setenablebilling = async (id: object) => {
 
 export const setsavedoc = async (id:any, data: object) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/save-docs/${id}`, { ...data })
+    const response = await axiosInstance.post(`${config.apiURL}/save-docs/${id}`, { ...data },{
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
     return response?.data
   } catch (err) {
     return isAxiosError(err)

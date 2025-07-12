@@ -554,7 +554,7 @@ const FillUpForm = () => {
                             {previewEntries.length > 0 ? (
                                 <div className="w-full h-full flex flex-col gap-4">
                                     <div 
-                                        className="flex-grow relative w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md flex justify-center items-center overflow-hidden p-2 cursor-pointer"
+                                        className="flex-grow relative w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md flex justify-center items-center overflow-hidden cursor-pointer"
                                         onClick={openFullScreen}
                                     >
                                         {/* This wrapper constrains the image's maximum size */}
