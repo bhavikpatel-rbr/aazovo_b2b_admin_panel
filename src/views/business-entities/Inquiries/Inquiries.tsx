@@ -949,8 +949,8 @@ const InquiryListTable = () => {
   }, [inquiryList, tableData, filterCriteria]);
 
   const handleViewDetails = (id: string) => { 
-    const inquiry = allFilteredAndSortedData.find(item => item.id === id);
-    if (inquiry) {
+    // const inquiry = allFilteredAndSortedData.find(item => item.id == id);
+    if (id) {
       navigate(`/business-entities/inquiry-view/${id}`);
     } else {
       toast.push(<Notification type="danger" title="Error">Inquiry details not found.</Notification>);

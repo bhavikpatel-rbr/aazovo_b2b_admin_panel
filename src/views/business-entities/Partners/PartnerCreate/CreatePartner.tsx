@@ -193,6 +193,9 @@ const DocumentPlaceholder = ({ fileName, fileUrl }: { fileName: string; fileUrl:
 };
 // --- END: New DocumentPlaceholder Component ---
 
+const isImageUrl = (url: unknown): url is string => 
+    typeof url === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
+
 
 // --- Type Definitions ---
 
@@ -344,6 +347,7 @@ export interface FormSectionBaseProps {
 interface ApiSingleCompanyItem {
   id: number;
   partner_name?: string;
+  company_name?: string;
   status?: string;
   primary_contact_number?: string;
   primary_contact_number_code?: string;
@@ -354,7 +358,6 @@ interface ApiSingleCompanyItem {
   primary_email_id?: string;
   alternate_email_id?: string;
   ownership_type?: string;
-  company_name?: string;
   partner_address?: string;
   city?: string;
   state?: string;
@@ -544,7 +547,9 @@ const transformApiToFormSchema = (
       office_email: b.office_email,
       office_phone: b.office_phone
     })),
+    // FIX: Correctly map team member data in edit mode.
     member: apiData.partner_team_members?.map((m: any) => ({
+      id: m.id, // Ensure ID is passed for keying
       person_name: m.person_name,
       company_name: m.company_name,
       email: m.email,
@@ -556,9 +561,11 @@ const transformApiToFormSchema = (
         document_name: documentTypeOptions.find(opt => String(opt.value) === String(doc.document_name)),
         document: doc.document
     })),
+    // FIX: Correctly map reference data, ensuring company_id is an object for the Select component.
     partner_references: apiData.partner_references?.map((ref: any) => ({
-      referenced_partner_id: partnerOptions.find(p => p.value === ref.referenced_partner_id),
-      company_id: companyOptions.find(c => c.value === ref.company_id),
+      id: ref.id,
+      referenced_partner_id: partnerOptions.find(p => String(p.value) === String(ref.referenced_partner_id)),
+      company_id: companyOptions.find(c => String(c.value) === String(ref.company_id)),
       email: ref.email,
       number: ref.number,
       remark: ref.remark,
@@ -591,14 +598,6 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     }
   };
 
-  const appendFileIfExists = (key: string, value: any) => {
-    if (value instanceof File) {
-      apiPayload.append(key, value);
-    } else if (value === null) {
-      apiPayload.append(key, '');
-    }
-  };
-
   if (isEditMode && data.id) {
     apiPayload.append("id", String(data.id));
     apiPayload.append("_method", "PUT");
@@ -620,9 +619,9 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
 
   append("kyc_verified", data.USER_ACCESS);
   append("enable_billing", data.BILLING_FIELD);
-  appendFileIfExists("partner_logo", data.partner_logo);
-  appendFileIfExists("primary_bank_verification_photo", data.primary_bank_verification_photo);
-  appendFileIfExists("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
+  append("partner_logo", data.partner_logo);
+  append("primary_bank_verification_photo", data.primary_bank_verification_photo);
+  append("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
 
   const kycDocsConfig = [
     { feFile: "agreement_file", beFile: "agreement_file", feVerify: "agreement_verified", beVerify: "agreement_verified", feRemark: "agreement_remark", beRemark: "agreement_remark" },
@@ -636,7 +635,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     { feFile: "other_document_file", beFile: "other_document_file", feVerify: "other_document_verified", beVerify: "other_document_verified", feRemark: "other_document_remark", beRemark: "other_document_remark" },
   ];
   kycDocsConfig.forEach((doc: any) => {
-    appendFileIfExists(doc.beFile, data[doc.feFile]);
+    append(doc.beFile, data[doc.feFile]);
     append(doc.beVerify, data[doc.feVerify]);
     append(doc.beRemark, data[doc.feRemark]);
   });
@@ -647,7 +646,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
       append(`partner_bank_details[${index}][bank_name]`, bank.bank_name);
       append(`partner_bank_details[${index}][ifsc_code]`, bank.ifsc_code);
       append(`partner_bank_details[${index}][type]`, bank.type);
-      appendFileIfExists(`partner_bank_details[${index}][verification_photo]`, bank.verification_photo);
+      append(`partner_bank_details[${index}][verification_photo]`, bank.verification_photo);
     }
   });
 
@@ -655,7 +654,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     if (cert.certificate_id) {
       append(`partner_certificate[${index}][certificate_id]`, cert.certificate_id);
       append(`partner_certificate[${index}][certificate_name]`, cert.certificate_name);
-      appendFileIfExists(`partner_certificate[${index}][upload_certificate]`, cert.upload_certificate);
+      append(`partner_certificate[${index}][upload_certificate]`, cert.upload_certificate);
     }
   });
 
@@ -669,6 +668,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
 
   (data.partner_references || []).forEach((ref: any, index: number) => {
     append(`partner_references[${index}][referenced_partner_id]`, ref.referenced_partner_id?.value);
+    append(`partner_references[${index}][person_name]`, ref.referenced_partner_id?.label);
     append(`partner_references[${index}][company_id]`, ref.company_id?.value);
     append(`partner_references[${index}][email]`, ref.email);
     append(`partner_references[${index}][number]`, ref.number);
@@ -680,21 +680,21 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
         append(`billing_documents[${index}][id]`, doc.id);
     }
     append(`billing_documents[${index}][document_name]`, doc.document_name);
-    appendFileIfExists(`billing_documents[${index}][document]`, doc.document);
+    append(`billing_documents[${index}][document]`, doc.document);
   });
 
   (data.office_info || []).forEach((office: any, index: number) => {
-    append(`office_info[${index}][office_type]`, office.office_type)
-    append(`office_info[${index}][office_name]`, office.office_name);
-    append(`office_info[${index}][country_id]`, office.country_id);
-    append(`office_info[${index}][state]`, office.state);
-    append(`office_info[${index}][city]`, office.city);
-    append(`office_info[${index}][zip_code]`, office.zip_code);
-    append(`office_info[${index}][gst_number]`, office.gst_number);
-    append(`office_info[${index}][address]`, office.address);
-    append(`office_info[${index}][contact_person]`, office.contact_person);
-    append(`office_info[${index}][office_email]`, office.office_email);
-    append(`office_info[${index}][office_phone]`, office.office_phone);
+    append(`office_info.${index}.office_type`, office.office_type)
+    append(`office_info.${index}.office_name`, office.office_name);
+    append(`office_info.${index}.country_id`, office.country_id);
+    append(`office_info.${index}.state`, office.state);
+    append(`office_info.${index}.city`, office.city);
+    append(`office_info.${index}.zip_code`, office.zip_code);
+    append(`office_info.${index}.gst_number`, office.gst_number);
+    append(`office_info.${index}.address`, office.address);
+    append(`office_info.${index}.contact_person`, office.contact_person);
+    append(`office_info.${index}.office_email`, office.office_email);
+    append(`office_info.${index}.office_phone`, office.office_phone);
   });
 
   return apiPayload;
@@ -1082,7 +1082,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
             />
           </div>
         </FormItem>
-        <FormItem className="sm:col-span-6 lg:col-span-4" label="Alternate Contact Number">
+        <FormItem className="sm:col-span-6 lg:col-span-4" label="Alternate Contact Number" invalid={!!errors.alternate_contact_number}>
           <div className="flex items-center gap-2">
             <Controller
               name="alternate_contact_number_code"
@@ -1105,7 +1105,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           </div>
         </FormItem>
 
-        <FormItem className="sm:col-span-6 lg:col-span-4" label="Landline">
+        <FormItem className="sm:col-span-6 lg:col-span-4" label="Landline" invalid={!!errors.general_contact_number}>
           <Controller
             name="general_contact_number"
             control={control}
@@ -1217,14 +1217,16 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               />
             )}
           />
-          {typeof companyLogoBrochureValue === "string" &&
-            companyLogoBrochureValue && (
-              <img
-                src={`${companyLogoBrochureValue}`}
-                alt="logo preview"
-                className="mt-2 h-16 w-auto"
-              />
-            )}
+           {/* FIX: Show preview for newly uploaded logo or existing logo */}
+          {companyLogoBrochureValue && (
+            <div className="mt-2 h-20 w-20">
+                <img
+                  src={typeof companyLogoBrochureValue === 'string' ? companyLogoBrochureValue : URL.createObjectURL(companyLogoBrochureValue)}
+                  alt="logo preview"
+                  className="h-full w-full object-contain"
+                />
+            </div>
+          )}
         </FormItem>
         <FormItem
           label="No. of Employees"
@@ -1297,17 +1299,12 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
                     />
                   )}
                 />
-                {typeof uploadCertificateValue === "string" &&
-                  uploadCertificateValue && (
-                    <a
-                      href={`${uploadCertificateValue}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-500 hover:underline mt-1 inline-block"
-                    >
-                      View Uploaded
-                    </a>
-                  )}
+                {/* FIX: Show preview for new or existing certificate */}
+                {uploadCertificateValue && (
+                    <div className="mt-2">
+                        <a href={typeof uploadCertificateValue === 'string' ? uploadCertificateValue : URL.createObjectURL(uploadCertificateValue)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">View Uploaded Document</a>
+                    </div>
+                )}
               </FormItem>
               <div className="text-right">
                 <Button
@@ -1357,7 +1354,9 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
             <FormItem label="Office Name"><Controller name={`office_info.${index}.office_name`} control={control} render={({ field }) => <Input placeholder="e.g. Main Office" {...field} />} /></FormItem>
             <FormItem label="Contact Person"><Controller name={`office_info.${index}.contact_person`} control={control} render={({ field }) => <Input placeholder="Contact Person Name" {...field} />} /></FormItem>
             <FormItem label="Office Email"><Controller name={`office_info.${index}.office_email`} control={control} render={({ field }) => <Input type="email" placeholder="office@example.com" {...field} />} /></FormItem>
-            <FormItem label="Office Phone"><Controller name={`office_info.${index}.office_phone`} control={control} render={({ field }) => <Input type="tel" placeholder="Office Phone" {...field} />} /></FormItem>
+            <FormItem label="Office Phone" invalid={!!errors.office_info?.[index]?.office_phone}>
+                <Controller name={`office_info.${index}.office_phone`} control={control} render={({ field }) => <Input type="tel" placeholder="Office Phone" {...field} />} />
+            </FormItem>
             <FormItem label="GST/REG Number"><Controller name={`office_info.${index}.gst_number`} control={control} render={({ field }) => <Input placeholder="GST or Registration Number" {...field} />} /></FormItem>
             <div className="col-span-4 grid md:grid-cols-4 gap-4 border-t pt-4 mt-2">
               <FormItem label="Country"><Controller name={`office_info.${index}.country_id`} control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} /></FormItem>
@@ -1410,23 +1409,18 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
 
     }, [watchedCountry]);
     
+    // FIX: Ensure the image viewer can generate URLs for both string paths and new File objects.
     const imageDocsForViewer = useMemo(() => {
         return kycDocs
             .map(doc => ({ ...doc, fileValue: watch(doc.name) }))
-            .filter(doc => {
-                const url = doc.fileValue;
-                if (typeof url === 'string') {
-                    return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
-                }
-                if (url instanceof File) {
-                    return url.type.startsWith('image/');
-                }
-                return false;
+            .filter(doc => doc.fileValue) // Ensure there's a file
+            .map(doc => {
+                 const isFileObject = doc.fileValue instanceof File;
+                 const src = isFileObject ? URL.createObjectURL(doc.fileValue) : String(doc.fileValue);
+                 // Only include if it's a valid image
+                 return isImageUrl(isFileObject ? doc.fileValue.name : src) ? { src, alt: doc.label } : null;
             })
-            .map(doc => ({
-                src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
-                alt: doc.label
-            }));
+            .filter(Boolean) as { src: string; alt: string }[];
     }, [kycDocs, watch]);
 
     const openViewer = (docLabel: string) => {
@@ -1445,10 +1439,8 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
                 {kycDocs.map((doc) => {
                     const fileValue = watch(doc.name);
-                    const isImageFile = (file: unknown): file is File => file instanceof File && file.type.startsWith("image/");
-                    const isImageUrl = (url: unknown): url is string => typeof url === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
-                    const isViewableImage = isImageFile(fileValue) || isImageUrl(fileValue);
-
+                    const isFileObject = fileValue instanceof File;
+                    
                     return (
                         <div key={doc.name}>
                             <label className="flex items-center gap-2 mb-1">
@@ -1478,20 +1470,21 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                                     )}
                                 />
                             </FormItem>
+                             {/* FIX: Show preview immediately for both new and existing files. */}
                             {fileValue && (
                                 <div className="mt-2">
-                                    {isViewableImage ? (
+                                    {(isImageUrl(fileValue) || (isFileObject && fileValue.type.startsWith('image/'))) ? (
                                         <button type="button" onClick={() => openViewer(doc.label)} className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                                             <img
-                                                src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                                                src={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)}
                                                 alt={doc.label}
                                                 className="max-h-full max-w-full object-contain"
                                             />
                                         </button>
                                     ) : (
                                         <DocumentPlaceholder
-                                            fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
-                                            fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : fileValue}
+                                            fileName={isFileObject ? fileValue.name : String(fileValue).split('/').pop() || 'Document'}
+                                            fileUrl={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)}
                                         />
                                     )}
                                 </div>
@@ -1594,14 +1587,16 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               />
             )}
           />
-          {typeof primaryBankPhotoValue === "string" &&
-            primaryBankPhotoValue && (
-              <img
-                src={`${primaryBankPhotoValue}`}
-                alt="Primary bank photo"
-                className="mt-2 h-16 w-auto"
-              />
-            )}
+         {/* FIX: Show preview for new or existing bank photo */}
+          {primaryBankPhotoValue && (
+            <div className="mt-2 h-20">
+                { isImageUrl(primaryBankPhotoValue) ? (
+                    <img src={typeof primaryBankPhotoValue === 'string' ? primaryBankPhotoValue : URL.createObjectURL(primaryBankPhotoValue)} alt="Primary bank photo" className="h-full w-auto" />
+                ) : (
+                    <DocumentPlaceholder fileName={primaryBankPhotoValue instanceof File ? primaryBankPhotoValue.name : 'document'} fileUrl={typeof primaryBankPhotoValue === 'string' ? primaryBankPhotoValue : URL.createObjectURL(primaryBankPhotoValue)} />
+                )}
+            </div>
+          )}
         </FormItem>
       </div>
       <hr className="my-3" /> <h4 className="mb-6">Bank Details (Secondary)</h4>
@@ -1649,14 +1644,16 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               />
             )}
           />
-          {typeof secondaryBankPhotoValue === "string" &&
-            secondaryBankPhotoValue && (
-              <img
-                src={`${secondaryBankPhotoValue}`}
-                alt="Secondary bank photo"
-                className="mt-2 h-16 w-auto"
-              />
-            )}
+          {/* FIX: Show preview for new or existing bank photo */}
+          {secondaryBankPhotoValue && (
+            <div className="mt-2 h-20">
+                { isImageUrl(secondaryBankPhotoValue) ? (
+                    <img src={typeof secondaryBankPhotoValue === 'string' ? secondaryBankPhotoValue : URL.createObjectURL(secondaryBankPhotoValue)} alt="Secondary bank photo" className="h-full w-auto" />
+                ) : (
+                     <DocumentPlaceholder fileName={secondaryBankPhotoValue instanceof File ? secondaryBankPhotoValue.name : 'document'} fileUrl={typeof secondaryBankPhotoValue === 'string' ? secondaryBankPhotoValue : URL.createObjectURL(secondaryBankPhotoValue)} />
+                )}
+            </div>
+          )}
         </FormItem>
       </div>
       <hr className="my-6" />
@@ -1742,12 +1739,15 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                     />
                   )}
                 />
-                {typeof bankPhotoValue === "string" && bankPhotoValue && (
-                  <img
-                    src={`${bankPhotoValue}`}
-                    alt={`Bank ${index + 1} photo`}
-                    className="mt-2 h-16 w-auto"
-                  />
+                 {/* FIX: Show preview for new or existing bank photo */}
+                {bankPhotoValue && (
+                    <div className="mt-2 h-20">
+                    { isImageUrl(bankPhotoValue) ? (
+                        <img src={typeof bankPhotoValue === 'string' ? bankPhotoValue : URL.createObjectURL(bankPhotoValue)} alt={`Bank ${index + 1} photo`} className="h-full w-auto" />
+                    ) : (
+                        <DocumentPlaceholder fileName={bankPhotoValue instanceof File ? bankPhotoValue.name : 'document'} fileUrl={typeof bankPhotoValue === 'string' ? bankPhotoValue : URL.createObjectURL(bankPhotoValue)} />
+                    )}
+                    </div>
                 )}
               </FormItem>
               <div className="flex absolute justify-center right-0 top-2">
@@ -1771,9 +1771,10 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 
 
 // --- ReferenceSection ---
-const ReferenceSection = ({ control }: FormSectionBaseProps) => {
+const ReferenceSection = ({ control, formMethods }: FormSectionBaseProps) => {
   const dispatch = useAppDispatch();
   const { partnerData, CompanyData } = useSelector(masterSelector);
+  const { setValue } = formMethods;
 
   useEffect(() => {
     if (!partnerData?.data || partnerData.data.length === 0) {
@@ -1815,7 +1816,33 @@ const ReferenceSection = ({ control }: FormSectionBaseProps) => {
         <Card key={item.id} className="mb-4 border-black relative rounded-md">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 p-4">
             <FormItem label="Person Name">
-              <Controller name={`partner_references.${index}.referenced_partner_id`} control={control} render={({ field }) => <Select placeholder="Select Partner" options={partnerOptions} {...field} />} />
+                <Controller
+                    name={`partner_references.${index}.referenced_partner_id`}
+                    control={control}
+                    render={({ field }) => {
+                        // FIX: Ensure related fields are populated correctly when a partner is selected.
+                        const handlePartnerChange = (selectedOption: { value: any; label: string } | null) => {
+                            field.onChange(selectedOption);
+                            if (selectedOption) {
+                                const fullPartnerList = partnerData?.data || [];
+                                const selectedPartner = fullPartnerList.find((p: ApiSingleCompanyItem) => String(p.id) === String(selectedOption.value));
+                                if (selectedPartner) {
+                                    // Find the company in the options list to get the full {label, value} object
+                                    const companyToSet = companyOptions.find(c => c.label === selectedPartner.company_name);
+                                    setValue(`partner_references.${index}.email`, selectedPartner.primary_email_id || '');
+                                    setValue(`partner_references.${index}.number`, selectedPartner.primary_contact_number || '');
+                                    // Set the full object for the react-select component
+                                    setValue(`partner_references.${index}.company_id`, companyToSet, { shouldValidate: true });
+                                }
+                            } else {
+                                setValue(`partner_references.${index}.email`, '');
+                                setValue(`partner_references.${index}.number`, '');
+                                setValue(`partner_references.${index}.company_id`, undefined);
+                            }
+                        };
+                        return <Select placeholder="Select Partner" options={partnerOptions} value={field.value} onChange={handlePartnerChange} />;
+                    }}
+                />
             </FormItem>
             <FormItem label="Company Name">
               <Controller name={`partner_references.${index}.company_id`} control={control} render={({ field }) => <Select placeholder="Select Company" options={companyOptions} {...field} />} />
@@ -1835,6 +1862,7 @@ const ReferenceSection = ({ control }: FormSectionBaseProps) => {
 
 // --- AccessibilitySection ---
 const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) => {
+  const { watch } = formMethods;
   const { fields, append, remove } = useFieldArray({
     control,
     name: "billing_documents",
@@ -1854,32 +1882,57 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
           <h5 className="mb-0">Other Documents</h5>
           <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: undefined, document: undefined })}>Add Document</Button>
         </div>
-        {fields.map((item, index) => (
-          <Card key={item.id} className="border-black rounded-md" bodyClass="p-4">
-            <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-center">
-              <FormItem label="Document Name" className="md:col-span-4">
-                <Controller 
-                  name={`billing_documents.${index}.document_name`} 
-                  control={control} 
-                  render={({ field }) => <Select
-                    options={documentTypes}
-                    placeholder="Select Document Type"
-                    {...field}
-                  />} 
-                />
-              </FormItem>
-              <FormItem label="Upload Document" className="md:col-span-4">
-                <Controller 
-                  name={`billing_documents.${index}.document`} 
-                  control={control} 
-                  render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} />} 
-                />
-              </FormItem>
-              <Button type="button" shape="circle" size="sm" className="mt-2" icon={<TbTrash />} onClick={() => remove(index)} />
-            </div>
-          </Card>
-        )
-        )}
+        {fields.map((item, index) => {
+          const documentValue = watch(`billing_documents.${index}.document`);
+          const isFileObject = documentValue instanceof File;
+          return (
+            // FIX: Improved UI for the "Other Documents" section.
+            <Card key={item.id} className="border-black rounded-md" bodyClass="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                <FormItem label="Document Name" className="md:col-span-1">
+                  <Controller 
+                    name={`billing_documents.${index}.document_name`} 
+                    control={control} 
+                    render={({ field }) => <Select
+                      options={documentTypes}
+                      placeholder="Select Document Type"
+                      {...field}
+                    />} 
+                  />
+                </FormItem>
+                <div className="md:col-span-2 grid grid-cols-2 gap-4 items-start">
+                    <FormItem label="Upload Document" className="col-span-1">
+                        <Controller 
+                            name={`billing_documents.${index}.document`} 
+                            control={control} 
+                            render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => onChange(e.target.files?.[0])} />} 
+                        />
+                    </FormItem>
+                    {/* FIX: Show preview immediately after upload. */}
+                    {documentValue && (
+                        <div className="mt-2 w-32 h-24 col-span-1">
+                            {isImageUrl(documentValue) || (isFileObject && documentValue.type.startsWith('image/')) ? (
+                                <img
+                                    src={isFileObject ? URL.createObjectURL(documentValue) : String(documentValue)}
+                                    alt="Document Preview"
+                                    className="max-h-full max-w-full object-contain border rounded-md"
+                                />
+                            ) : (
+                                <DocumentPlaceholder
+                                    fileName={isFileObject ? documentValue.name : String(documentValue).split('/').pop() || 'Document'}
+                                    fileUrl={isFileObject ? URL.createObjectURL(documentValue) : String(documentValue)}
+                                />
+                            )}
+                        </div>
+                    )}
+                </div>
+                <div className="md:col-span-3 flex justify-end">
+                    <Button type="button" shape="circle" size="sm" icon={<TbTrash />} onClick={() => remove(index)} />
+                </div>
+              </div>
+            </Card>
+          )
+        })}
       </div>
     </Card>
   );
@@ -1931,8 +1984,9 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const { onFormSubmit, defaultValues, isEditMode, onDelete, isSubmitting } = props;
   const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
 
+  const phoneRegex = /^\d{10}$/;
+  const optionalPhoneValidation = z.string().optional().or(z.literal('')).refine(val => !val || phoneRegex.test(val), { message: "Must be exactly 10 digits if provided" });
   const selectObjectSchema = z.object({ value: z.any(), label: z.any() }).nullable().optional();
-  const fileSchema = z.any().refine(file => file, "File is required.").nullable().optional();
 
   const baseCompanySchema = z.object({
     partner_name: z.string().trim().min(1, "Partner Name is required"),
@@ -1943,13 +1997,14 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     join_us_as: selectObjectSchema.refine(val => val?.value, "Join us as is required"),
     country_id: selectObjectSchema.refine(val => val?.value, "Country is required"),
     primary_email_id: z.string().trim().min(1, "Primary Email is required").email("Invalid email format"),
-    primary_contact_number: z.string().trim().min(1, "Primary contact number is required").regex(/^\d{7,15}$/, "Invalid contact number format"),
+    primary_contact_number: z.string().trim().min(1, "Primary contact is required").regex(phoneRegex, "Must be exactly 10 digits"),
     primary_contact_number_code: selectObjectSchema.refine(val => val?.value, "Country code is required"),
+    alternate_contact_number: optionalPhoneValidation,
+    general_contact_number: optionalPhoneValidation,
   }).passthrough();
 
   const companySchema = baseCompanySchema.superRefine((data, ctx) => {
       const isIndia = String(data.country_id?.value) === '101';
-
       if(isIndia) {
           if(!data.gst_number || data.gst_number.trim() === '') {
               ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India", path: ["gst_number"] });
@@ -2084,7 +2139,7 @@ const CreatePartner = () => {
           setPageLoading(false);
         }
       };
-      // Ensure options are available before transforming
+      
       if(partnerOptions.length > 0 && companyOptions.length > 0 && documentTypeOptions.length > 0 && countryOptions.length > 0) {
         fetchPartnerData();
       }

@@ -19,7 +19,7 @@ import Spinner from "@/components/ui/Spinner";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
-import { HiOutlineTrash } from "react-icons/hi"; // Icon for remove button
+import { HiOutlineTrash } from "react-icons/hi"; 
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
@@ -63,7 +63,7 @@ const inquiryFormSchema = z.object({
   inquiry_description: z.string().trim().optional().nullable(),
   inquiry_status: z.string().min(1, "Status is required."),
   assigned_to: z.union([z.string(), z.number()]).nullable().optional(),
-  department: z.union([z.string(), z.number(), z.array(z.union([z.string(), z.number()]))]).nullable().optional(),
+  department: z.array(z.union([z.string(), z.number()])).nullable().optional(), 
   inquiry_date: z.date({ required_error: "Inquiry date is required." }).nullable(),
   response_date: z.date().optional().nullable(),
   resolution_date: z.date().optional().nullable(),
@@ -71,7 +71,7 @@ const inquiryFormSchema = z.object({
   inquiry_resolution: z.string().trim().optional().nullable(),
   feedback_status: z.string().optional().nullable(),
   inquiry_from: z.string().optional().nullable(),
-  inquiry_attachments: z.any().optional(), // For new File objects
+  inquiry_attachments: z.any().optional(), 
 });
 type InquiryFormData = z.infer<typeof inquiryFormSchema>;
 
@@ -88,7 +88,7 @@ const formDefaultValues: InquiryFormData = {
   inquiry_description: null,
   inquiry_status: "Open",
   assigned_to: null,
-  department: null,
+  department: [], 
   inquiry_date: new Date(),
   response_date: null,
   resolution_date: null,
@@ -96,7 +96,7 @@ const formDefaultValues: InquiryFormData = {
   inquiry_resolution: null,
   feedback_status: null,
   inquiry_from: null,
-  inquiry_attachments: [], // Initialize for new files
+  inquiry_attachments: [], 
 };
 
 // --- Transform API data to Form Data ---
@@ -106,6 +106,21 @@ const transformApiDataToForm = (apiData: any): InquiryFormData => {
     const date = new Date(dateStr);
     return isNaN(date.getTime()) ? null : date;
   };
+
+  const rawDept = apiData.department_id || apiData.inquiry_department || apiData.department;
+  let departmentIds: string[] = [];
+
+  if (rawDept) {
+    if (typeof rawDept === 'string') {
+      departmentIds = rawDept.split(',').map(id => id.trim()).filter(Boolean);
+    } else if (Array.isArray(rawDept)) {
+      departmentIds = rawDept.map(item => String(item?.id || item)).filter(Boolean);
+    } else if (typeof rawDept === 'object' && rawDept !== null) {
+      departmentIds = rawDept.id ? [String(rawDept.id)] : [];
+    } else if (typeof rawDept === 'number' || typeof rawDept === 'string') {
+      departmentIds = [String(rawDept)];
+    }
+  }
 
   return {
     id: apiData.id || null,
@@ -119,7 +134,7 @@ const transformApiDataToForm = (apiData: any): InquiryFormData => {
     inquiry_description: apiData.inquiry_description || null,
     inquiry_status: apiData.status || apiData.inquiry_status || "Open",
     assigned_to: apiData.assigned_to !== undefined && apiData.assigned_to !== null ? String(apiData.assigned_to) : null,
-    department: apiData.department_id || apiData.inquiry_department || null,
+    department: departmentIds,
     inquiry_date: safeNewDate(apiData.inquiry_date) || new Date(),
     response_date: safeNewDate(apiData.response_date),
     resolution_date: safeNewDate(apiData.resolution_date),
@@ -127,12 +142,12 @@ const transformApiDataToForm = (apiData: any): InquiryFormData => {
     inquiry_resolution: apiData.resolution_notes || apiData.inquiry_resolution || null,
     feedback_status: apiData.feedback_status || null,
     inquiry_from: apiData.inquiry_from || null,
-    inquiry_attachments: [], // This form field is for NEW uploads, existing are handled separately
+    inquiry_attachments: [], 
   };
 };
 
 type ApiLookupItem = { id: string | number; name: string;[key: string]: any; };
-type ExistingAttachment = { name: string; url: string; originalName?: string; /* for removal by original name if needed */ };
+type ExistingAttachment = { name: string; url: string; originalName: string; };
 
 const CreateInquiry = () => {
   const dispatch = useAppDispatch();
@@ -146,7 +161,7 @@ const CreateInquiry = () => {
   const [initialDataFetched, setInitialDataFetched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
-  const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]); // Store original names of files to remove
+  const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]);
 
   const { departmentsData, salesPerson = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
 
@@ -203,9 +218,8 @@ const CreateInquiry = () => {
           if (response.data?.status === true && response.data.data) {
             const apiData = response.data.data;
             reset(transformApiDataToForm(apiData));
-            setAttachmentsToRemove([]); // Reset removal list on new fetch
+            setAttachmentsToRemove([]);
 
-            // Populate existing attachments from inquiry_attachments (JSON string) and inquiry_attachments_array (URLs)
             let originalFileNames: string[] = [];
             if (apiData.inquiry_attachments && typeof apiData.inquiry_attachments === 'string') {
               try {
@@ -218,9 +232,6 @@ const CreateInquiry = () => {
             if (apiData.inquiry_attachments_array && Array.isArray(apiData.inquiry_attachments_array)) {
               const formattedAttachments = apiData.inquiry_attachments_array.map((url: string, index: number) => {
                 const nameFromUrl = url.substring(url.lastIndexOf('/') + 1);
-                // Try to find the original uploaded name from the parsed JSON string if available and matches
-                const originalName = originalFileNames.find(ofn => nameFromUrl.includes(ofn.substring(ofn.lastIndexOf('_') + 1, ofn.lastIndexOf('.')))) || nameFromUrl;
-
                 return { name: nameFromUrl, url, originalName: originalFileNames[index] || nameFromUrl };
               });
               setExistingAttachments(formattedAttachments);
@@ -244,12 +255,11 @@ const CreateInquiry = () => {
     }
   }, [inquiryIDFromState, isEditMode, reset, navigate, initialDataFetched, dispatch]);
 
-  // This useEffect handles the "unsaved changes" dialog for browser navigation
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (isDirty && !isSubmitting) {
         event.preventDefault();
-        event.returnValue = ''; // Standard for most browsers
+        event.returnValue = ''; 
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -259,17 +269,16 @@ const CreateInquiry = () => {
   }, [isDirty, isSubmitting]);
 
 
-  const handleRemoveExistingAttachment = (attachmentOriginalName: string) => {
-    setExistingAttachments(prev => prev.filter(att => att.originalName !== attachmentOriginalName));
-    setAttachmentsToRemove(prev => [...prev, attachmentOriginalName]);
-    // Mark form as dirty if not already, as attachments state has changed
+  const handleRemoveExistingAttachment = (attachment: ExistingAttachment) => {
+    setExistingAttachments(prev => prev.filter(att => att.url !== attachment.url));
+    setAttachmentsToRemove(prev => [...prev, attachment.name]); // Add the server-side file name to the removal list
     if (!isDirty) {
-      setValue("company_name", control._formValues.company_name, { shouldDirty: true }); // Trigger dirty state
+      setValue("company_name", control._formValues.company_name, { shouldDirty: true }); 
     }
   };
 
   const handleCancel = () => {
-    if (isDirty || attachmentsToRemove.length > 0) { // Also consider if attachments were marked for removal
+    if (isDirty || attachmentsToRemove.length > 0) {
       setIsConfirmCancelDialogOpen(true);
     } else {
       resetStatesAndNavigate();
@@ -293,7 +302,7 @@ const CreateInquiry = () => {
 
     const apiPayloadObject: any = {
       company_id: 1,
-      company_name: data.company_name, // Include company_name from form
+      company_name: data.company_name,
       contact_person_name: data.name,
       contact_person_email: data.email,
       contact_person: data.mobile_no,
@@ -303,9 +312,6 @@ const CreateInquiry = () => {
       inquiry_description: data.inquiry_description?.trim() || null,
       status: data.inquiry_status,
       assigned_to: data.assigned_to ? Number(data.assigned_to) : null,
-      department_id: Array.isArray(data.department)
-        ? (data.department.length > 0 ? Number(data.department[0]) : null)
-        : (data.department ? Number(data.department) : null),
       inquiry_date: formatDateForApi(data.inquiry_date),
       response_date: formatDateForApi(data.response_date),
       resolution_date: formatDateForApi(data.resolution_date),
@@ -325,8 +331,12 @@ const CreateInquiry = () => {
         }
       }
     }
+    
+    // **FIX**: Send department IDs as a comma-separated string, a more robust method.
+    if (Array.isArray(data.department) && data.department.length > 0) {
+        formDataPayload.append('department_id', data.department.join(','));
+    }
 
-    // Handle NEW attachments for upload
     if (Array.isArray(data.inquiry_attachments) && data.inquiry_attachments.length > 0) {
       data.inquiry_attachments.forEach((file: any) => {
         if (file instanceof File) {
@@ -335,7 +345,6 @@ const CreateInquiry = () => {
       });
     }
 
-    // Handle attachments to REMOVE (send their original names/identifiers)
     if (isEditMode && attachmentsToRemove.length > 0) {
       attachmentsToRemove.forEach(fileName => {
         formDataPayload.append('attachments_to_remove[]', fileName);
@@ -344,15 +353,15 @@ const CreateInquiry = () => {
 
     try {
       if (isEditMode && data.id) {
-        formDataPayload.append('id', String(data.id)); // For some APIs that expect ID in body for POST _method PUT
-        formDataPayload.append('_method', 'PUT'); // If your API uses this for method overriding
+        formDataPayload.append('id', String(data.id));
+        formDataPayload.append('_method', 'PUT');
         await dispatch(editInquiriesAction({ id: data.id, data: formDataPayload })).unwrap();
         toast.push(<Notification type="success" title="Inquiry Updated" duration={3000}>Inquiry updated successfully.</Notification>);
       } else {
         await dispatch(addInquiriesAction(formDataPayload)).unwrap();
         toast.push(<Notification type="success" title="Inquiry Created" duration={3000}>New Inquiry created successfully.</Notification>);
       }
-      resetStatesAndNavigate(); // Resets form, existing attachments, and attachments to remove, then navigates
+      resetStatesAndNavigate();
     } catch (error: any) {
       const rejectedValue = error?.payload || error;
       let errorMessage = `Failed to ${isEditMode ? "update" : "create"} inquiry.`;
@@ -391,7 +400,7 @@ const CreateInquiry = () => {
             <div className="flex justify-center items-center py-10"> <Spinner size="lg" /></div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-6">
-              {/* Row 1: Dates and Types */}
+              {/* Rows 1-3 ... no changes here */}
               <FormItem label={<>Inquiry Date <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_date} errorMessage={errors.inquiry_date?.message as string} >
                 <Controller name="inquiry_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Inquiry Date" />)} />
               </FormItem>
@@ -405,19 +414,30 @@ const CreateInquiry = () => {
                 <Controller name="inquiry_type" control={control} render={({ field }) => (<Select placeholder="Select Inquiry Type" options={inquiryTypeOptions} value={inquiryTypeOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
               </FormItem>
 
-              {/* Row 2: Assignment and Priority */}
               <FormItem label="Department" invalid={!!errors.department} errorMessage={errors.department?.message as string} >
-                <Controller name="department" control={control} render={({ field }) => (
-                  <Select
-                    isMulti
-                    placeholder="Select Department(s)"
-                    options={departmentOptions}
-                    isLoading={masterLoadingStatus === "loading" && departmentOptions.length === 0}
-                    value={Array.isArray(field.value) ? departmentOptions.filter(opt => field.value.includes(opt.value)) : departmentOptions.find(opt => opt.value === field.value) || null}
-                    onChange={(selectedOptions) => field.onChange(Array.isArray(selectedOptions) ? selectedOptions.map(opt => opt.value) : selectedOptions?.value || null)}
-                    isClearable
-                  />
-                )} />
+                <Controller
+                  name="department"
+                  control={control}
+                  render={({ field }) => {
+                    const selectedValue = departmentOptions.filter(
+                      (option) => field.value?.includes(String(option.value))
+                    );
+                    return (
+                      <Select
+                        isMulti
+                        placeholder="Select Department(s)"
+                        options={departmentOptions}
+                        isLoading={masterLoadingStatus === 'loading'}
+                        value={selectedValue}
+                        onChange={(selected) => {
+                          const newIds = Array.isArray(selected) ? selected.map((opt) => opt.value) : [];
+                          field.onChange(newIds);
+                        }}
+                        isClearable
+                      />
+                    );
+                  }}
+                />
               </FormItem>
               <FormItem label="Assigned To" invalid={!!errors.assigned_to} errorMessage={errors.assigned_to?.message as string} >
                 <Controller name="assigned_to" control={control} render={({ field }) => (
@@ -438,7 +458,6 @@ const CreateInquiry = () => {
                 <Controller name="response_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Response Date" />)} />
               </FormItem>
 
-              {/* Row 3: Company & Contact Info */}
               <FormItem label={<>Company Name <span className="text-red-500">*</span></>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message} >
                 <Controller name="company_name" control={control} render={({ field }) => <Input {...field} placeholder="Enter Company Name" />} />
               </FormItem>
@@ -452,12 +471,11 @@ const CreateInquiry = () => {
                 <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} placeholder="Enter Phone Number (e.g. +1...)" />} />
               </FormItem>
 
-              {/* Row 4: Inquiry Subject (Full Width) */}
+              {/* Row 4 (Subject) & 5 (Resolution & Attachments) */}
               <FormItem label={<>Inquiry Subject <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_subject} errorMessage={errors.inquiry_subject?.message} className="lg:col-span-4" >
                 <Controller name="inquiry_subject" control={control} render={({ field }) => <Input {...field} placeholder="Enter Subject of Inquiry" />} />
               </FormItem>
 
-              {/* Row 5: Resolution Notes & Attachments */}
               <FormItem label="Resolution (Notes)" invalid={!!errors.inquiry_resolution} errorMessage={errors.inquiry_resolution?.message} className="md:col-span-2 lg:col-span-3" >
                 <Controller name="inquiry_resolution" control={control} render={({ field }) => <Input textArea rows={3} {...field} value={field.value || ''} placeholder="Enter Resolution Notes" />} />
               </FormItem>
@@ -468,8 +486,8 @@ const CreateInquiry = () => {
                     <ul className="mt-1 text-xs text-gray-500 dark:text-gray-400 list-none p-0">
                       {existingAttachments.map((file, index) => (
                         <li key={index} className="flex items-center justify-between py-1">
-                          <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate" title={`View ${file.name}`}>
-                            {file.name}
+                          <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate" title={`View ${file.originalName}`}>
+                            {file.originalName}
                           </a>
                           <Button
                             type="button"
@@ -478,8 +496,8 @@ const CreateInquiry = () => {
                             icon={<HiOutlineTrash />}
                             variant="plain"
                             className="text-red-500 hover:text-red-700 ml-2"
-                            onClick={() => handleRemoveExistingAttachment(file.originalName || file.name)}
-                            title={`Remove ${file.name}`}
+                            onClick={() => handleRemoveExistingAttachment(file)} // **FIX**: Pass the whole file object
+                            title={`Remove ${file.originalName}`}
                           />
                         </li>
                       ))}
@@ -487,7 +505,7 @@ const CreateInquiry = () => {
                   </div>
                 )}
                 <Controller
-                  name="inquiry_attachments" // This RHF field is for NEW files
+                  name="inquiry_attachments"
                   control={control}
                   render={({ field: { onChange, value, name, ref } }) => (
                     <>
@@ -517,7 +535,6 @@ const CreateInquiry = () => {
                 />
               </FormItem>
 
-              {/* Row 6: Inquiry Description (Full Width) */}
               <FormItem label="Inquiry Description" invalid={!!errors.inquiry_description} errorMessage={errors.inquiry_description?.message} className="lg:col-span-4" >
                 <Controller name="inquiry_description" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Detailed Description of the Inquiry" />} />
               </FormItem>

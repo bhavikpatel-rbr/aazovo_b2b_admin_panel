@@ -144,7 +144,6 @@ const partnerViewNavigationList = [
   { label: "Bank & Billing", link: "bank", icon: <TbBuildingBank /> },
   { label: "Teams", link: "teams", icon: <TbUsersGroup /> },
   { label: "Expertise", link: "expertise", icon: <TbStar /> },
-  { label: "Verification", link: "verification", icon: <TbUserCheck /> },
 ];
 
 const PartnerViewNavigator = ({ activeSection, onNavigate }: { activeSection: string; onNavigate: (s: string) => void; }) => (

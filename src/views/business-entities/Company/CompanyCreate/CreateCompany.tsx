@@ -55,141 +55,141 @@ interface ImageViewerProps {
 }
 
 const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
-    const [currentIndex, setCurrentIndex] = useState(startIndex);
+  const [currentIndex, setCurrentIndex] = useState(startIndex);
 
-    const handleNext = () => {
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+  const handleNext = () => {
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+  };
+
+  const handlePrev = () => {
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'Escape') onClose();
     };
-
-    const handlePrev = () => {
-        setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
     };
+  }, []);
 
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowRight') handleNext();
-            if (e.key === 'ArrowLeft') handlePrev();
-            if (e.key === 'Escape') onClose();
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, []);
+  if (!images || images.length === 0) {
+    return null;
+  }
 
-    if (!images || images.length === 0) {
-        return null;
-    }
+  const currentImage = images[currentIndex];
 
-    const currentImage = images[currentIndex];
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4"
+      onClick={onClose}
+    >
+      <Button
+        type="button"
+        shape="circle"
+        variant="solid"
+        icon={<TbX />}
+        className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
+        onClick={onClose}
+      />
 
-    return (
-        <div 
-            className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4" 
-            onClick={onClose}
-        >
-            <Button
-                type="button"
-                shape="circle"
-                variant="solid"
-                icon={<TbX />}
-                className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
-                onClick={onClose}
+      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
+          <Button
+            type="button"
+            shape="circle"
+            variant="solid"
+            size="lg"
+            icon={<TbChevronLeft />}
+            className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
+            onClick={handlePrev}
+          />
+
+          <div className="flex flex-col items-center justify-center h-full">
+            <img
+              src={currentImage.src}
+              alt={currentImage.alt}
+              className="max-h-[calc(100%-4rem)] max-w-full object-contain select-none transition-transform duration-300"
             />
-            
-            <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-                <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
-                    <Button
-                        type="button"
-                        shape="circle"
-                        variant="solid"
-                        size="lg"
-                        icon={<TbChevronLeft />}
-                        className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
-                        onClick={handlePrev}
-                    />
-                    
-                    <div className="flex flex-col items-center justify-center h-full">
-                        <img
-                            src={currentImage.src}
-                            alt={currentImage.alt}
-                            className="max-h-[calc(100%-4rem)] max-w-full object-contain select-none transition-transform duration-300"
-                        />
-                         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">
-                            {currentImage.alt} ({currentIndex + 1} / {images.length})
-                        </div>
-                    </div>
-
-                    <Button
-                        type="button"
-                        shape="circle"
-                        variant="solid"
-                        size="lg"
-                        icon={<TbChevronRight />}
-                        className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
-                        onClick={handleNext}
-                    />
-                </div>
-                
-                <div className="w-full max-w-5xl flex-shrink-0 mt-4">
-                    <div className="flex justify-center p-2">
-                        <div className="flex gap-3 overflow-x-auto pb-2">
-                            {images.map((image, index) => (
-                                <button
-                                    type="button"
-                                    key={index}
-                                    onClick={() => setCurrentIndex(index)}
-                                    className={classNames(
-                                        "w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white",
-                                        {
-                                            'border-white opacity-100 scale-105': currentIndex === index,
-                                            'border-transparent opacity-60 hover:opacity-100': currentIndex !== index
-                                        }
-                                    )}
-                                >
-                                    <img
-                                        src={image.src}
-                                        alt={image.alt}
-                                        className="w-full h-full object-cover rounded-sm"
-                                    />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">
+              {currentImage.alt} ({currentIndex + 1} / {images.length})
             </div>
+          </div>
+
+          <Button
+            type="button"
+            shape="circle"
+            variant="solid"
+            size="lg"
+            icon={<TbChevronRight />}
+            className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
+            onClick={handleNext}
+          />
         </div>
-    );
+
+        <div className="w-full max-w-5xl flex-shrink-0 mt-4">
+          <div className="flex justify-center p-2">
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {images.map((image, index) => (
+                <button
+                  type="button"
+                  key={index}
+                  onClick={() => setCurrentIndex(index)}
+                  className={classNames(
+                    "w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white",
+                    {
+                      'border-white opacity-100 scale-105': currentIndex === index,
+                      'border-transparent opacity-60 hover:opacity-100': currentIndex !== index
+                    }
+                  )}
+                >
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    className="w-full h-full object-cover rounded-sm"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const DocumentPlaceholder = ({ fileName, fileUrl }: { fileName: string; fileUrl: string; }) => {
-    const getFileIcon = () => {
-        const extension = fileName.split('.').pop()?.toLowerCase();
-        switch (extension) {
-            case 'pdf':
-                return <TbFileTypePdf className="text-red-500" size={32} />;
-            case 'xls':
-            case 'xlsx':
-            case 'csv':
-                return <TbFileSpreadsheet className="text-green-500" size={32} />;
-            default:
-                return <TbFile className="text-gray-500" size={32} />;
-        }
-    };
+  const getFileIcon = () => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return <TbFileTypePdf className="text-red-500" size={32} />;
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        return <TbFileSpreadsheet className="text-green-500" size={32} />;
+      default:
+        return <TbFile className="text-gray-500" size={32} />;
+    }
+  };
 
-    return (
-        <a 
-            href={fileUrl} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="w-full h-24 border rounded-md p-2 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
-        >
-            {getFileIcon()}
-            <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all truncate">
-                {fileName}
-            </p>
-        </a>
-    );
+  return (
+    <a
+      href={fileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="w-full h-24 border rounded-md p-2 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+    >
+      {getFileIcon()}
+      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all truncate">
+        {fileName}
+      </p>
+    </a>
+  );
 };
 // --- END: Helper Components ---
 
@@ -230,7 +230,7 @@ interface CompanyBankDetailItemFE {
   bank_account_number?: string;
   bank_name?: string;
   ifsc_code?: string;
-  swift_code?: string; 
+  swift_code?: string;
   verification_photo?: File | string | null;
   type?: { label: string; value: string };
 }
@@ -482,7 +482,7 @@ const transformApiToFormSchema = (
 
   const mapCountries = allCountries.map(c => ({ value: String(c.id), label: c.name }));
   const mapContinents = allContinents.map(c => ({ value: String(c.id), label: c.name }));
-  
+
   return {
     id: apiData.id,
     company_name: apiData.company_name || '',
@@ -728,7 +728,7 @@ const preparePayloadForApi = (
     apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
     apiPayload.append(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
   });
-  
+
   data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
     apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name?.value || "");
     apiPayload.append(`billing_documents[${index}][document]`, doc.document);
@@ -897,7 +897,7 @@ const CompanyDetailsSection = ({
           <Controller name="status" control={control} render={({ field }) => (<Select options={statusOptions} placeholder="Select Status" {...field} />)} />
         </FormItem>
         <FormItem label={<div>Company Name<span className="text-red-500"> * </span></div>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message as string}>
-          <Controller name="company_name" control={control} render={({ field }) => (<Input placeholder="Company Name" {...field} onInput={(e:any)=> {if(e.target.value)e.target.value = e.target.value.toUpperCase()}} />)} />
+          <Controller name="company_name" control={control} render={({ field }) => (<Input placeholder="Company Name" {...field} onInput={(e: any) => { if (e.target.value) e.target.value = e.target.value.toUpperCase() }} />)} />
         </FormItem>
         <FormItem label={<div>Ownership Type<span className="text-red-500"> * </span></div>} invalid={!!errors.ownership_type} errorMessage={errors.ownership_type?.message as string}>
           <Controller name="ownership_type" control={control} render={({ field }) => (<Select placeholder="Select Ownership" options={ownershipTypeOptions} {...field} />)} />
@@ -1086,107 +1086,107 @@ const CompanyDetailsSection = ({
 
 // --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
-    const { watch } = formMethods;
-    const selectedCountry = watch("country_id");
-    const isIndiaSelected = selectedCountry?.value === '101';
-    
-    const [viewerIsOpen, setViewerIsOpen] = useState(false);
-    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const { watch } = formMethods;
+  const selectedCountry = watch("country_id");
+  const isIndiaSelected = selectedCountry?.value === '101';
 
-    const kycDocs = useMemo(() => [
-        { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: isIndiaSelected },
-        { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const, required: isIndiaSelected },
-        { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const, required: true },
-        { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_remark_enabled" as const },
-        { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: true },
-        { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_remark_enabled" as const },
-        { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: true },
-        { label: "194Q Declaration", name: "ABCQ_file" as const, remarkName: "ABCQ_remark" as const, enabledName: "ABCQ_remark_enabled" as const },
-        { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
-    ], [isIndiaSelected]);
+  const [viewerIsOpen, setViewerIsOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-    const imageDocsForViewer = useMemo(() => {
-        return kycDocs
-            .map(doc => ({ ...doc, fileValue: watch(doc.name) }))
-            .filter(doc => {
-                const url = doc.fileValue;
-                if (typeof url === 'string') {
-                    return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
-                }
-                if (url instanceof File) {
-                    return url.type.startsWith('image/');
-                }
-                return false;
-            })
-            .map(doc => ({
-                src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
-                alt: doc.label
-            }));
-    }, [kycDocs, watch]);
+  const kycDocs = useMemo(() => [
+    { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: isIndiaSelected },
+    { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const, required: isIndiaSelected },
+    { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const, required: true },
+    { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_remark_enabled" as const },
+    { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: true },
+    { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_remark_enabled" as const },
+    { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: true },
+    { label: "194Q Declaration", name: "ABCQ_file" as const, remarkName: "ABCQ_remark" as const, enabledName: "ABCQ_remark_enabled" as const },
+    { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
+  ], [isIndiaSelected]);
 
-    const openViewer = (docLabel: string) => {
-        const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
-        if (index > -1) {
-            setSelectedImageIndex(index);
-            setViewerIsOpen(true);
+  const imageDocsForViewer = useMemo(() => {
+    return kycDocs
+      .map(doc => ({ ...doc, fileValue: watch(doc.name) }))
+      .filter(doc => {
+        const url = doc.fileValue;
+        if (typeof url === 'string') {
+          return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
         }
-    };
+        if (url instanceof File) {
+          return url.type.startsWith('image/');
+        }
+        return false;
+      })
+      .map(doc => ({
+        src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
+        alt: doc.label
+      }));
+  }, [kycDocs, watch]);
 
-    const closeViewer = () => setViewerIsOpen(false);
+  const openViewer = (docLabel: string) => {
+    const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
+    if (index > -1) {
+      setSelectedImageIndex(index);
+      setViewerIsOpen(true);
+    }
+  };
 
-    return (
-        <Card id="kycDocuments">
-            <h5 className="mb-4">KYC Documents</h5>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
-                {kycDocs.map((doc) => {
-                    const fileValue = watch(doc.name);
-                    const isImageFile = (file: unknown): file is File => file instanceof File && file.type.startsWith("image/");
-                    const isImageUrl = (url: unknown): url is string => typeof url === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
-                    const isViewableImage = isImageFile(fileValue) || isImageUrl(fileValue);
+  const closeViewer = () => setViewerIsOpen(false);
 
-                    return (
-                        <div key={doc.name}>
-                            <label className="flex items-center gap-2 mb-1">
-                                <Controller name={doc.enabledName} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
-                                {doc.label} {doc.required && <span className="text-red-500">*</span>}
-                            </label>
-                            <FormItem invalid={!!(errors as any)[doc.name]} errorMessage={(errors as any)[doc.name]?.message as string} >
-                                <Controller name={doc.name} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-                            </FormItem>
-                            {fileValue && (
-                                <div className="mt-2">
-                                    {isViewableImage ? (
-                                        <button type="button" onClick={() => openViewer(doc.label)} className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-                                            <img
-                                                src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
-                                                alt={doc.label}
-                                                className="max-h-full max-w-full object-contain"
-                                            />
-                                        </button>
-                                    ) : (
-                                        <DocumentPlaceholder
-                                            fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
-                                            fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : fileValue}
-                                        />
-                                    )}
-                                </div>
-                            )}
-                            <FormItem className="mt-2" invalid={!!(errors as any)[doc.remarkName]} errorMessage={(errors as any)[doc.remarkName]?.message as string} >
-                                <Controller name={doc.remarkName} control={control} render={({ field }) => (<Input placeholder={`Remark for ${doc.label}`} {...field} />)} />
-                            </FormItem>
-                        </div>
-                    );
-                })}
+  return (
+    <Card id="kycDocuments">
+      <h5 className="mb-4">KYC Documents</h5>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
+        {kycDocs.map((doc) => {
+          const fileValue = watch(doc.name);
+          const isImageFile = (file: unknown): file is File => file instanceof File && file.type.startsWith("image/");
+          const isImageUrl = (url: unknown): url is string => typeof url === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
+          const isViewableImage = isImageFile(fileValue) || isImageUrl(fileValue);
+
+          return (
+            <div key={doc.name}>
+              <label className="flex items-center gap-2 mb-1">
+                <Controller name={doc.enabledName} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
+                {doc.label} {doc.required && <span className="text-red-500">*</span>}
+              </label>
+              <FormItem invalid={!!(errors as any)[doc.name]} errorMessage={(errors as any)[doc.name]?.message as string} >
+                <Controller name={doc.name} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+              </FormItem>
+              {fileValue && (
+                <div className="mt-2">
+                  {isViewableImage ? (
+                    <button type="button" onClick={() => openViewer(doc.label)} className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <img
+                        src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                        alt={doc.label}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </button>
+                  ) : (
+                    <DocumentPlaceholder
+                      fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+                      fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : fileValue}
+                    />
+                  )}
+                </div>
+              )}
+              <FormItem className="mt-2" invalid={!!(errors as any)[doc.remarkName]} errorMessage={(errors as any)[doc.remarkName]?.message as string} >
+                <Controller name={doc.remarkName} control={control} render={({ field }) => (<Input placeholder={`Remark for ${doc.label}`} {...field} />)} />
+              </FormItem>
             </div>
-            {viewerIsOpen && (
-                <ImageViewer
-                    images={imageDocsForViewer}
-                    startIndex={selectedImageIndex}
-                    onClose={closeViewer}
-                />
-            )}
-        </Card>
-    );
+          );
+        })}
+      </div>
+      {viewerIsOpen && (
+        <ImageViewer
+          images={imageDocsForViewer}
+          startIndex={selectedImageIndex}
+          onClose={closeViewer}
+        />
+      )}
+    </Card>
+  );
 };
 
 // --- BankDetailsSection ---
@@ -1359,13 +1359,13 @@ const ReferenceSection = ({ control, errors, formMethods }: FormSectionBaseProps
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-      dispatch(getCompanyAction());
-   }, [dispatch]);
+    dispatch(getCompanyAction());
+  }, [dispatch]);
 
   const companyOptions = useMemo(() =>
     (CompanyData?.data || []).map((c: any) => ({
       value: String(c.id),
-      label: c.company_name || `Company ID: ${c.id}`,
+      label: `(${c.company_code}) - ${c.company_name}`,
     })), [CompanyData]);
 
   const { fields, append, remove } = useFieldArray({ control, name: "company_references" });
@@ -1863,7 +1863,7 @@ const CompanyCreate = () => {
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList,DocumentListData } = useSelector(masterSelector);
+  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList, DocumentListData } = useSelector(masterSelector);
 
 
 
@@ -1932,7 +1932,7 @@ const CompanyCreate = () => {
               label: `(${m.employee_id}) - ${m.name || 'N/A'}`,
             }));
 
-            const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: c.company_name }));
+            const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: `(${c.company_code}) - ${c.company_name}` }));
             const transformed = transformApiToFormSchema(
               actionResult,
               CountriesData,
