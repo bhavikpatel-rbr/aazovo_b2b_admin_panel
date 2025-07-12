@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button';
 import Notification from '@/components/ui/Notification';
 import Spinner from '@/components/ui/Spinner';
 import toast from '@/components/ui/toast';
+import { DatePicker } from '@/components/ui';
 
 // Icons
 import { BiChevronRight } from 'react-icons/bi';
@@ -19,34 +20,46 @@ import {
   TbUserCircle, TbMail, TbPhone, TbBuilding, TbBriefcase, TbCalendar, TbPencil, TbDownload,
   TbUser, TbFileText, TbBuildingBank, TbReportMoney, TbArrowLeft, TbUsersGroup, TbLicense,
   TbWorld, TbCheck, TbX, TbFileDescription, TbUserSearch, TbMessage2,
-  TbCoinRupee
+  TbCoinRupee, TbFileInvoice
 } from 'react-icons/tb';
 
 // Types, Redux and Helpers
 import { getCompanyByIdAction } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
 
-// --- Type Definitions (Reflecting the provided JSON) ---
+// --- Corrected Type Definitions (Matching the provided JSON) ---
+interface OfficeInfo {
+    id: number;
+    office_type: string;
+    office_name: string;
+    state: string;
+    city: string;
+    zip_code: string;
+    gst_number: string;
+    address: string;
+    office_email: string;
+    contact_person: string | null;
+    office_phone: string | null;
+}
+
+interface FilledForm {
+    id: number;
+    accountdoc_id: number;
+    created_at: string;
+    form_data?: {
+      uploads_doc_s?: {
+        [key: string]: string | undefined;
+      }
+    }
+}
+
 interface TransactionDoc {
   id: number;
   company_document: string;
   invoice_number: string;
   status: string;
   created_at: string;
-  filled_form?: {
-    form_data?: {
-      uploads_doc_s?: {
-        pi_upload?: string;
-        invoice_upload?: string;
-        scen_imei_upload?: string;
-        imei_excel_sheet_miracle?: string;
-        e_way_bill?: string;
-        stamp_signature_docate?: string;
-        vehicle_photo?: string;
-        [key: string]: string | undefined; // For any other potential docs
-      }
-    }
-  }
+  filled_form?: FilledForm;
 }
 
 interface ApiSingleCompanyItem {
@@ -114,11 +127,10 @@ interface ApiSingleCompanyItem {
   company_bank_details?: Array<{ id: number; type: string; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string }>;
   company_member_management?: Array<{ id: number; person_name: string; member_id: string; designation: string; number: string; }>;
   company_team_members?: Array<{ id: number; person_name: string; team_name: string; designation: string; number: string; }>;
-  office_info?: Array<{ id: number; office_name: string; office_type: string; address: string; city: string; state: string; contact_person: string; }>;
+  office_info?: OfficeInfo[];
   company_spot_verification?: Array<{ id: number; verified_by_name?: string; verified: boolean; remark: string | null; photo_upload: string | null; }>;
   transaction_docs?: TransactionDoc[];
 }
-
 
 // --- Reusable Helper Components ---
 
@@ -338,66 +350,112 @@ const VerificationTabView = ({ company }: { company: ApiSingleCompanyItem }) => 
 };
 
 const TransactionsTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
-  const transactions = company.transaction_docs || [];
-  if (transactions.length === 0) return <NoDataMessage message="No transaction documents found." />;
+    const allTransactions = useMemo(() => company.transaction_docs || [], [company]);
+    const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
 
-  const formatDocKey = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const filteredTransactions = useMemo(() => {
+        const [startDate, endDate] = dateRange;
+        if (!startDate || !endDate) {
+            return allTransactions;
+        }
+        return allTransactions.filter(transaction => {
+            const transactionDate = dayjs(transaction.created_at);
+            return transactionDate.isAfter(dayjs(startDate).startOf('day')) && transactionDate.isBefore(dayjs(endDate).endOf('day'));
+        });
+    }, [allTransactions, dateRange]);
 
-  const documentSections = [
-    { title: 'PI Documents', docKey: 'pi_upload' },
-    { title: 'Invoice Documents', docKey: 'invoice_upload' },
-    { title: 'IMEI Scans', docKey: 'scen_imei_upload' },
-    { title: 'IMEI Miracle Sheet', docKey: 'imei_excel_sheet_miracle' },
-    { title: 'E-Way Bill', docKey: 'e_way_bill' },
-    { title: 'Docate', docKey: 'stamp_signature_docate' },
-    { title: 'Vehicle Photo', docKey: 'vehicle_photo' },
-  ];
+    const handleResetFilter = () => {
+        setDateRange([null, null]);
+    };
 
-  return (
-    <div className="space-y-6">
-      {transactions.map(transaction => {
-        const uploadedDocs = transaction.filled_form?.form_data?.uploads_doc_s;
-        if (!uploadedDocs) return null;
+    const formatDocTitle = (key: string) => {
+        const customTitles: Record<string, string> = {
+            pi_upload: "PO",
+            imei_excel_sheet_miracle: "IMEI Sheet",
+            invoice_upload: "Purchase Invoice",
+            e_way_bill: "E-Way Bill"
+        };
+        return customTitles[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+    
+    const formatTransactionId = (id: number | undefined | null): string => {
+        if (id === null || id === undefined) {
+            return 'N/A';
+        }
+        return String(id).padStart(5, '0');
+    };
 
-        return (
-          <Card key={transaction.id}>
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h6 className="font-semibold">{transaction.company_document}</h6>
-                <p className="text-sm text-gray-500">Invoice #: {transaction.invoice_number || 'N/A'} | Created: {dayjs(transaction.created_at).format('D MMM YYYY, h:mm A')}</p>
-              </div>
-              <Tag className={`${getCompanyStatusClass(transaction.status)} capitalize`}>{transaction.status}</Tag>
-            </div>
+    const documentOrder: string[] = ['pi_upload', 'imei_excel_sheet_miracle', 'invoice_upload', 'e_way_bill'];
 
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
-              {documentSections.map(section => {
-                const docUrl = uploadedDocs[section.docKey];
-                if (!docUrl) return null;
+    if (allTransactions.length === 0) {
+        return <NoDataMessage message="No transaction documents found." />;
+    }
+
+    return (
+        <div className='space-y-6'>
+            <Card>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className='flex items-center gap-2'>
+                        <label className='font-semibold'>Date:</label>
+                        <DatePicker.DatePickerRange
+                            value={dateRange}
+                            onChange={setDateRange}
+                            placeholder="Pick date range"
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <Button onClick={handleResetFilter}>Reset</Button>
+                    </div>
+                </div>
+            </Card>
+
+            {filteredTransactions.length > 0 ? filteredTransactions.map(transaction => {
+                const uploadedDocs = transaction.filled_form?.form_data?.uploads_doc_s;
+                
+                // Ensure there is a filled_form and documents to display
+                if (!transaction.filled_form || !uploadedDocs) return null;
+
+                const sortedDocs = Object.entries(uploadedDocs)
+                    .filter(([_, url]) => !!url)
+                    .sort(([keyA], [keyB]) => {
+                        const indexA = documentOrder.indexOf(keyA);
+                        const indexB = documentOrder.indexOf(keyB);
+                        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                        if (indexA !== -1) return -1;
+                        if (indexB !== -1) return 1;
+                        return keyA.localeCompare(keyB);
+                    });
 
                 return (
-                  <div key={section.docKey}>
-                    <h6 className="text-sm font-semibold mb-2">{section.title}</h6>
-                    <div className="flex items-center justify-between p-3 border rounded-md bg-gray-50 dark:bg-gray-700/60">
-                      <span className="text-sm font-medium">{formatDocKey(section.docKey)}</span>
-                      <a
-                        href={docUrl}
-                        download="Example-PDF-document"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Button onClick={() => { window.open(docUrl, '_blank') }} size="sm" shape="circle" icon={<TbDownload />} />
-                      </a>
-
-                    </div>
-                  </div>
+                    <Card key={transaction.id} bodyClass="p-0">
+                        <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/60 p-3 rounded-t-lg">
+                            <h5 className="font-semibold">
+                                Form ID: {formatTransactionId(transaction.filled_form?.accountdoc_id)}
+                            </h5>
+                            <span className="text-sm text-gray-500">
+                                {dayjs(transaction.filled_form.created_at).format('DD MMM YYYY, hh:mm A')}
+                            </span>
+                        </div>
+                        <div className="p-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                {sortedDocs.map(([docKey, docUrl]) => (
+                                    <a href={docUrl} target="_blank" rel="noopener noreferrer" key={docKey}>
+                                        <Card clickable className="h-full">
+                                            <div className="flex flex-col items-center justify-center text-center gap-2 py-4">
+                                                <TbFileInvoice size={36} className='text-gray-400' />
+                                                <h6 className="font-semibold uppercase">{formatDocTitle(docKey)}</h6>
+                                                <p className="text-xs text-gray-500">{dayjs(transaction.created_at).format('DD-MM-YYYY HH:mm:ss')}</p>
+                                            </div>
+                                        </Card>
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    </Card>
                 )
-              })}
-            </div>
-          </Card>
-        )
-      })}
-    </div>
-  );
+            }) : <NoDataMessage message="No transactions found for the selected date range." />}
+        </div>
+    );
 };
 
 

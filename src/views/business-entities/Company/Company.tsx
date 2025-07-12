@@ -40,14 +40,14 @@ import Avatar from "@/components/ui/Avatar";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
-import Tr from "@/components/ui/Table/Tr";
-import Td from "@/components/ui/Table/Td";
 
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
-    TbAlarm, TbBell, TbBrandWhatsapp, TbBriefcase, TbBuilding, TbBuildingBank, TbBuildingCommunity, TbCalendarEvent,
+    TbAlarm, TbBell, TbBrandWhatsapp,
+    TbBuilding, TbBuildingBank,
+    TbCalendarEvent,
     TbCancel,
     TbCheck, TbChecks, TbCircleCheck, TbCircleX, TbCloudUpload, TbColumns, TbDownload, TbEye, TbFileDescription,
     TbFilter, TbMail, TbPencil, TbPlus, TbReceipt, TbReload, TbSearch, TbShieldCheck, TbShieldX, TbTagStarred,
@@ -65,9 +65,10 @@ import {
     submitExportReasonAction
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { useSelector } from "react-redux";
-import { authSelector } from "@/reduxtool/auth/authSlice";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import { config } from "localforage";
 import { BiNotification } from "react-icons/bi";
+import { useSelector } from "react-redux";
 
 // --- START: Detailed Type Definitions ---
 interface UserReference { id: number; name: string; profile_pic_path: string | null; }
@@ -266,8 +267,13 @@ const SendWhatsAppAction: React.FC<{ company: CompanyItem; onClose: () => void; 
 const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getAllUserDataOptions }) => {
     const { type, data: company, isOpen } = modalState;
     const dispatch = useAppDispatch();
-    const { user } = useSelector(authSelector)
-
+ const [userData, setUserData] = useState<any>(null);
+    
+        useEffect(() => {
+            const { useEncryptApplicationStorage } = config;
+            try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); } 
+            catch (error) { console.error("Error getting UserData:", error); }
+        }, []);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleConfirmSchedule = async (data: ScheduleFormData) => {
@@ -303,7 +309,7 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getA
         case 'task': return <AssignCompanyTaskDialog company={company} onClose={onClose} userOptions={getAllUserDataOptions} />;
         case 'members': return <ViewCompanyMembersDialog company={company} onClose={onClose} />;
         case 'alert': return <ViewCompanyDataDialog title={`Alerts for ${company.company_name}`} message="No alerts found for this company." onClose={onClose} />;
-        case "activity": return <AddActivityDialog company={company} onClose={onClose} user={user} />;
+        case "activity": return <AddActivityDialog company={company} onClose={onClose} user={userData} />;
         case 'transaction': return <ViewCompanyDataDialog title={`Transactions for ${company.company_name}`} message="No transactions found for this company." onClose={onClose} />;
         case 'document': return <DownloadDocumentDialog company={company} onClose={onClose} />;
         default: return null;
