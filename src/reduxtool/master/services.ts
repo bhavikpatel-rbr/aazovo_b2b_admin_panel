@@ -533,7 +533,7 @@ export const deleteAllBrandListAsync = async (unitData: any) => {
 }
 export const getProductAsync = async () => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/master/product/get?page=1`)
+    const response = await axiosInstance.post(`${config.apiURL}/master/product/get`)
     return response
   } catch (err) {
     return isAxiosError(err)

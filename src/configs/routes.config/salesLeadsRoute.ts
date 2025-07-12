@@ -36,6 +36,17 @@ const salesLeadsRoute: Routes = [
     },
   },
   {
+    key: "salesLeads.wallListing",
+    path: `${SALES_LEADS_PREFIX_PATH}/wall-item/:id`,
+    component: lazy(
+      () => import("@/views/sales-Leads/Wall-Listing/Components/WallEnquiryView")
+    ),
+    authority: [ADMIN, USER],
+    meta: {
+      pageContainerType: "contained",
+    },
+  },
+  {
     key: "salesLeads.opportunities",
     path: `${SALES_LEADS_PREFIX_PATH}/opportunities`,
     component: lazy(() => import("@/views/sales-Leads/Opportunities")),

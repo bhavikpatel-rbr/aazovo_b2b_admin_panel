@@ -867,7 +867,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const openAddDrawer = useCallback(() => navigate("/sales-leads/wall-item/add"), [navigate]);
   const openEditDrawer = useCallback((item: WallItem) => navigate("/sales-leads/wall-item/add", { state: item?.id }), [navigate]);
-  const openViewDrawer = useCallback((item: WallItem) => { setEditingItem(item); setIsViewDrawerOpen(true); }, []);
+  const openViewDrawer = useCallback((item: WallItem) => { navigate(`/sales-leads/wall-item/${item.id}`)}, []);
   const closeViewDrawer = useCallback(() => { setIsViewDrawerOpen(false); setEditingItem(null); }, []);
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
@@ -973,14 +973,28 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       const baseColumns: ColumnDef<WallItem>[] = [
         {
           header: "Overview", accessorKey: "product_name", size: 280, cell: ({ row }) => {
-            const { product_images, product_name, id, want_to } = row?.original || {}; const intent = want_to as WallIntent;
+            const { product_images, product_name, id, want_to, recordStatus } = row?.original || {}; const intent = want_to as WallIntent;
             return (
               <div className="flex flex-col">
-                <div className="flex items-center gap-2"><Avatar size={33} shape="circle" src={product_images?.[0]} icon={!product_images?.[0] && (<TbPhoto className="text-gray-400" />)} />
+                <div className="flex items-center gap-2 mb-2">
                   <div className="font-semibold leading-normal text-xs text-gray-800 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">{product_name}</div>
                 </div>
-                <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {id || "N/A"}</span>
-                <span className="text-xs">{want_to && (<span><b>Want To: </b><Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>{want_to}</Tag></span>)}</span>
+                {/* <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {id || "N/A"}</span> */}
+                <div className="flex flex-col gap-1 text-xs">
+                  {recordStatus && (
+                  <div className="flex items-center gap-2">
+                    <Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>
+                    {recordStatus}
+                    </Tag>
+                    {want_to && (
+                    <Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>
+                      {want_to}
+                    </Tag>
+                    )}
+                  </div>
+                  )}
+                </div>
+                {/* <span className="text-xs"></span> */}
               </div>
             );
           },
@@ -1002,11 +1016,12 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
         {
           header: "Details", accessorKey: "product_category", size: 280, cell: ({ row }) => {
-            const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition, } = row?.original || {};
+            const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition, quantity} = row?.original || {};
             const currentProductApiStatus = product_status?.toLowerCase() || "default";
             const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
             return (
               <div className="flex flex-col gap-0.5 text-xs">
+                <div className="flex items-center"><TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span></div>
                 <span>{product_category || "N/A"}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
                 {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[250px]">{product_specs.length > 30 ? product_specs.substring(0, 30) + "..." : product_specs}</span></Tooltip>)}
                 {product_status && (<span><Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)}
@@ -1016,55 +1031,48 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             );
           },
         },
-        {
-          header: "Engagement", accessorKey: "price", size: 220, cell: ({ row }) => {
-            const { price, quantity, inquiry_count, share_count, is_bookmarked, created_date, } = row.original;
-            return (
-              <div className="flex flex-col gap-1 text-xs">
-                <div className="flex items-center"><TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span></div>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
-                  <Tooltip title="Inquiries"><span className="flex items-center gap-0.5"><TbMessageCircle className="text-gray-500 dark:text-gray-400" />{inquiry_count}</span></Tooltip>
-                  <Tooltip title="Shares"><span className="flex items-center gap-0.5"><TbShare className="text-gray-500 dark:text-gray-400" />{share_count}</span></Tooltip>
-                  <BookmarkButton is_bookmarked={is_bookmarked} />
-                </div>
-                {created_date && (<span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1"><TbCalendarEvent />{dayjs(created_date).format("MMM D, YYYY")}</span>)}
-              </div>
-            );
-          },
-        },
-        {
-          header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220,
-          cell: (props) => {
-            const { updated_at, updated_by_user } = props.row.original;
-            return (
-              <div className="flex items-center gap-2">
-                <Tooltip title="View Profile Picture">
-                    <Avatar
-                        src={updated_by_user?.profile_pic_path}
-                        shape="circle"
-                        size="sm"
-                        icon={<TbUserCircle />}
-                        className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                        onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
-                    />
-                </Tooltip>
-                <div>
-                  <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
-                  <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
-                  <div className="text-xs text-gray-500">
-                    {updated_at ? dayjs(updated_at).format("D MMM YYYY, h:mm A") : 'N/A'}
-                  </div>
-                </div>
-              </div>
-            );
-          },
-        },
-        {
-          header: "Workflow Status", accessorKey: "recordStatus", enableSorting: true, size: 180, cell: ({ row }) => {
-            const { recordStatus } = row.original;
-            return (<div className="flex flex-col gap-1 text-xs">{recordStatus && (<div><Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>{recordStatus}</Tag></div>)}</div>);
-          },
-        },
+        // {
+        //   header: "Engagement", accessorKey: "price", size: 220, cell: ({ row }) => {
+        //     const { price, quantity, inquiry_count, share_count, is_bookmarked, created_date, } = row.original;
+        //     return (
+        //       <div className="flex flex-col gap-1 text-xs">
+        //         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
+        //           <Tooltip title="Inquiries"><span className="flex items-center gap-0.5"><TbMessageCircle className="text-gray-500 dark:text-gray-400" />{inquiry_count}</span></Tooltip>
+        //           <Tooltip title="Shares"><span className="flex items-center gap-0.5"><TbShare className="text-gray-500 dark:text-gray-400" />{share_count}</span></Tooltip>
+        //           <BookmarkButton is_bookmarked={is_bookmarked} />
+        //         </div>
+        //         {created_date && (<span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1"><TbCalendarEvent />{dayjs(created_date).format("MMM D, YYYY")}</span>)}
+        //       </div>
+        //     );
+        //   },
+        // },
+        // {
+        //   header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220,
+        //   cell: (props) => {
+        //     const { updated_at, updated_by_user } = props.row.original;
+        //     return (
+        //       <div className="flex items-center gap-2">
+        //         <Tooltip title="View Profile Picture">
+        //             <Avatar
+        //                 src={updated_by_user?.profile_pic_path}
+        //                 shape="circle"
+        //                 size="sm"
+        //                 icon={<TbUserCircle />}
+        //                 className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+        //                 onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
+        //             />
+        //         </Tooltip>
+        //         <div>
+        //           <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
+        //           <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
+        //           <div className="text-xs text-gray-500">
+        //             {updated_at ? dayjs(updated_at).format("D MMM YYYY, h:mm A") : 'N/A'}
+        //           </div>
+        //         </div>
+        //       </div>
+        //     );
+        //   },
+        // },
       ];
 
       if (!isDashboard) {

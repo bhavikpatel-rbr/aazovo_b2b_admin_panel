@@ -4139,7 +4139,7 @@ const Products = () => {
               </Card>
               <Card>
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
-                  Logistics & Specifications
+                  Product Specification
                 </h6>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
                   <DialogDetailRow
