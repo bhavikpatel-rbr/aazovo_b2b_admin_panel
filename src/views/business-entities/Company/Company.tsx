@@ -677,10 +677,17 @@ const CompanyListTable = () => {
 
         formData.enable_billing_documents.forEach((doc, index) => {
             if (doc.document_name?.value && doc.document) {
-                payload.append(`document_name[${index}]`, doc.document_name.value);
-                payload.append(`document[${index}]`, doc.document);
+
+                // This line sends 'enable_billing_documents[0][document_name]' with the value '1'
+                payload.append(`enable_billing_documents[${index}][document_name]`, doc.document_name.value);
+
+                // This line sends 'enable_billing_documents[0][document]' with the actual file data
+                payload.append(`enable_billing_documents[${index}][document]`, doc.document);
             }
         });
+
+
+
 
         try {
             await dispatch(setsavedocAction({ id: selectedCompanyForBilling.id, data: payload })).unwrap();
