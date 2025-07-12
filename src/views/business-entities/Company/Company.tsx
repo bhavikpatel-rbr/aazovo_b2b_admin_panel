@@ -593,7 +593,7 @@ const CompanyListTable = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const { companyList, setSelectedCompanies, companyCount, ContinentsData, CountriesData, getAllUserData } = useCompanyList();
-    const { PendingBillData, DocumentTypeData } = useSelector(masterSelector);
+    const { PendingBillData = [], DocumentTypeData } = useSelector(masterSelector);
     const [isLoading, setIsLoading] = useState(false);
     const COMPANY_STATE_STORAGE_KEY = 'companyListStatePersistence';
 
