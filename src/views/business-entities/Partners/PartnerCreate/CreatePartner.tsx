@@ -39,9 +39,127 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BiChevronRight } from "react-icons/bi";
-import { TbPlus, TbTrash } from "react-icons/tb";
+import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight } from "react-icons/tb";
 import { useSelector } from "react-redux";
 import { z } from "zod";
+
+// --- START: New ImageViewer Component ---
+interface ImageViewerProps {
+  images: { src: string; alt: string }[];
+  startIndex: number;
+  onClose: () => void;
+}
+
+const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
+    const [currentIndex, setCurrentIndex] = useState(startIndex);
+
+    const handleNext = () => {
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+    };
+
+    const handlePrev = () => {
+        setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+    };
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight') handleNext();
+            if (e.key === 'ArrowLeft') handlePrev();
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []); // Runs once on mount
+
+    if (!images || images.length === 0) {
+        return null;
+    }
+
+    const currentImage = images[currentIndex];
+
+    return (
+        <div 
+            className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4" 
+            onClick={onClose}
+        >
+            <Button
+                shape="circle"
+                variant="solid"
+                icon={<TbX />}
+                className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
+                onClick={onClose}
+            />
+            
+            <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+                {/* Main Image & Navigation */}
+                <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
+                    <Button
+                        type="button"
+                        shape="circle"
+                        variant="solid"
+                        size="lg"
+                        icon={<TbChevronLeft />}
+                        className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
+                        onClick={handlePrev}
+                    />
+                    
+                    <div className="flex flex-col items-center justify-center h-full">
+                        <img
+                            src={currentImage.src}
+                            alt={currentImage.alt}
+                            className="max-h-[calc(100%-4rem)] max-w-full object-contain select-none transition-transform duration-300"
+                        />
+                         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">
+                            {currentImage.alt} ({currentIndex + 1} / {images.length})
+                        </div>
+                    </div>
+
+                    <Button
+                        type="button"
+                        shape="circle"
+                        variant="solid"
+                        size="lg"
+                        icon={<TbChevronRight />}
+                        className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
+                        onClick={handleNext}
+                    />
+                </div>
+                
+                {/* Thumbnail Strip */}
+                <div className="w-full max-w-5xl flex-shrink-0 mt-4">
+                    <div className="flex justify-center p-2">
+                        <div className="flex gap-3 overflow-x-auto pb-2">
+                            {images.map((image, index) => (
+                                <button
+                                    type="button"
+                                    key={index}
+                                    onClick={() => setCurrentIndex(index)}
+                                    className={classNames(
+                                        "w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white",
+                                        {
+                                            'border-white opacity-100 scale-105': currentIndex === index,
+                                            'border-transparent opacity-60 hover:opacity-100': currentIndex !== index
+                                        }
+                                    )}
+                                >
+                                    <img
+                                        src={image.src}
+                                        alt={image.alt}
+                                        className="w-full h-full object-cover rounded-sm"
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+// --- END: Enhanced ImageViewer Component ---
+
 
 // --- Type Definitions ---
 
@@ -1226,116 +1344,151 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
 
 // --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
-  const { watch } = formMethods;
-  const kycDocs = [
-    { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_verified" as const, },
-    { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_verified" as const, },
-    { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_verified" as const, },
-    { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_verified" as const, },
-    { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_verified" as const, },
-    { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_verified" as const, },
-    { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_verified" as const, },
-    { label: "agreement/Quotation", name: "agreement_file" as const, remarkName: "agreement_remark" as const, enabledName: "agreement_verified" as const, },
-    { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_verified" as const, },
-  ];
-  return (
-    <Card id="kycDocuments">
-      <h5 className="mb-4">Current Documents</h5>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
-        {kycDocs.map((doc) => {
-          const fileValue = watch(doc.name);
-          const isImageFile = (file: unknown): file is File => file instanceof File && file.type.startsWith("image/");
-          const isImageUrl = (url: unknown): url is string => typeof url === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
-          return (
-          <div key={doc.name}>
-              <label className="flex items-center gap-2 mb-1">
-                <Controller
-                  name={doc.enabledName}
-                  control={control}
-                  render={({ field }) => (
-                    <Checkbox checked={!!field.value} onChange={field.onChange}>
-                      {doc.label} (Verified)
-                    </Checkbox>
-                  )}
-                />
-              </label>
-              <FormItem
-                invalid={!!errors[doc.name]}
-                errorMessage={(errors[doc.name] as any)?.message as string}
-              >
-                <Controller
-                  name={doc.name}
-                  control={control}
-                  render={({ field: { onChange, ref } }) => (
-                    <Input
-                      type="file"
-                      ref={ref}
-                      onChange={(e) => onChange(e.target.files?.[0])}
-                    />
-                  )}
-                />
-              </FormItem>
-              {fileValue && (
-                <div className="mt-2">
-                  {isImageFile(fileValue) ? (
-                    <img
-                      src={URL.createObjectURL(fileValue)}
-                      alt="Preview"
-                      className="h-24 w-auto object-contain border rounded p-1"
-                    />
-                  ) : isImageUrl(fileValue) ? (
-                    <img
-                      src={`${fileValue}`}
-                      alt="Preview"
-                      className="h-24 w-auto object-contain border rounded p-1"
-                    />
-                  ) : (
-                    <div className="text-sm">
-                      {typeof fileValue === "string" ? (
-                        <a
-                          href={`${fileValue}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:underline"
-                        >
-                          View Uploaded Document
-                        </a>
-                      ) : (
-                        <p className="text-gray-600 dark:text-gray-300">
-                          {(fileValue as File).name}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              <FormItem
-                className="mt-2"
-                invalid={!!errors[doc.remarkName]}
-                errorMessage={(errors[doc.remarkName] as any)?.message as string}
-              >
-                <Controller
-                  name={doc.remarkName}
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder={`Remark for ${doc.label}`}
-                      {...field}
-                    />
-                  )}
-                />
-              </FormItem>
+    const { watch } = formMethods;
+    const [viewerIsOpen, setViewerIsOpen] = useState(false);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+    const kycDocs = useMemo(() => [
+        { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_verified" as const },
+        { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_verified" as const },
+        { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_verified" as const },
+        { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_verified" as const },
+        { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_verified" as const },
+        { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_verified" as const },
+        { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_verified" as const },
+        { label: "Agreement/Quotation", name: "agreement_file" as const, remarkName: "agreement_remark" as const, enabledName: "agreement_verified" as const },
+        { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_verified" as const },
+    ], []);
+    
+    const imageDocsForViewer = useMemo(() => {
+        return kycDocs
+            .map(doc => ({ ...doc, fileValue: watch(doc.name) }))
+            .filter(doc => {
+                const url = doc.fileValue;
+                if (typeof url === 'string') {
+                    return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
+                }
+                if (url instanceof File) {
+                    return url.type.startsWith('image/');
+                }
+                return false;
+            })
+            .map(doc => ({
+                src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
+                alt: doc.label
+            }));
+    }, [kycDocs, watch]);
+
+    const openViewer = (docLabel: string) => {
+        const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
+        if (index > -1) {
+            setSelectedImageIndex(index);
+            setViewerIsOpen(true);
+        }
+    };
+
+    const closeViewer = () => setViewerIsOpen(false);
+  
+    return (
+        <Card id="kycDocuments">
+            <h5 className="mb-4">Current Documents</h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
+                {kycDocs.map((doc) => {
+                    const fileValue = watch(doc.name);
+                    const isImageFile = (file: unknown): file is File => file instanceof File && file.type.startsWith("image/");
+                    const isImageUrl = (url: unknown): url is string => typeof url === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
+                    const isViewableImage = isImageFile(fileValue) || isImageUrl(fileValue);
+
+                    return (
+                        <div key={doc.name}>
+                            <label className="flex items-center gap-2 mb-1">
+                                <Controller
+                                    name={doc.enabledName}
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Checkbox checked={!!field.value} onChange={field.onChange}>
+                                            {doc.label} (Verified)
+                                        </Checkbox>
+                                    )}
+                                />
+                            </label>
+                            <FormItem
+                                invalid={!!errors[doc.name]}
+                                errorMessage={(errors[doc.name] as any)?.message as string}
+                            >
+                                <Controller
+                                    name={doc.name}
+                                    control={control}
+                                    render={({ field: { onChange, ref } }) => (
+                                        <Input
+                                            type="file"
+                                            ref={ref}
+                                            onChange={(e) => onChange(e.target.files?.[0])}
+                                        />
+                                    )}
+                                />
+                            </FormItem>
+                            {fileValue && (
+                                <div className="mt-2">
+                                    {isViewableImage ? (
+                                        <button type="button" onClick={() => openViewer(doc.label)} className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <img
+                                                src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                                                alt={doc.label}
+                                                className="max-h-full max-w-full object-contain"
+                                            />
+                                        </button>
+                                    ) : (
+                                        <div className="text-xs p-2 border rounded-md">
+                                            {typeof fileValue === "string" ? (
+                                                <a href={fileValue} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                                    View Document
+                                                </a>
+                                            ) : (fileValue as File).name ? (
+                                                <p className="text-gray-600 dark:text-gray-300">
+                                                    {(fileValue as File).name}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            <FormItem
+                                className="mt-2"
+                                invalid={!!errors[doc.remarkName]}
+                                errorMessage={(errors[doc.remarkName] as any)?.message as string}
+                            >
+                                <Controller
+                                    name={doc.remarkName}
+                                    control={control}
+                                    render={({ field }) => (
+                                        <Input
+                                            placeholder={`Remark for ${doc.label}`}
+                                            {...field}
+                                        />
+                                    )}
+                                />
+                            </FormItem>
+                        </div>
+                    );
+                })}
             </div>
-          );
-        })}
-      </div>
-      <hr className="my-6" /> <h5 className="mb-4">Past Documents</h5>
-      <p className="text-gray-500">
-        Section for past documents can be built here if needed.
-      </p>
-    </Card>
-  );
+            {viewerIsOpen && (
+                <ImageViewer
+                    images={imageDocsForViewer}
+                    startIndex={selectedImageIndex}
+                    onClose={closeViewer}
+                />
+            )}
+            <hr className="my-6" />
+            <h5 className="mb-4">Past Documents</h5>
+            <p className="text-gray-500">
+                Section for past documents can be built here if needed.
+            </p>
+        </Card>
+    );
 };
+
 
 // --- BankDetailsSection ---
 const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
