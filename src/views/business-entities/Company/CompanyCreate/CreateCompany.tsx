@@ -38,6 +38,7 @@ import {
   getCountriesAction,
   getMemberAction,
   getDocumentTypeAction,
+  getDocumentListAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -1245,14 +1246,14 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
   const dispatch = useAppDispatch();
   const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
   const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs" });
-  const { DocumentTypeData = [] } = useSelector(masterSelector);
+  const { DocumentListData = [] } = useSelector(masterSelector);
 
   const documentTypeOptions = useMemo(() => {
-    return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: d.id, label: d.name })) : [];
-  }, [DocumentTypeData]);
+    return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+  }, [DocumentListData]);
 
   useEffect(() => {
-    dispatch(getDocumentTypeAction());;
+    dispatch(getDocumentListAction());;
   }, [dispatch]);
   return (
     <Card id="accessibility">
@@ -1702,13 +1703,13 @@ const CompanyCreate = () => {
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList,DocumentTypeData } = useSelector(masterSelector);
+  const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList,DocumentListData } = useSelector(masterSelector);
 
 
 
   const documentTypeOptions = useMemo(() => {
-    return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: d.id, label: d.name })) : [];
-  }, [DocumentTypeData]);
+    return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+  }, [DocumentListData]);
 
   const getEmptyFormValues = (): CompanyFormSchema => ({
     company_name: "", primary_contact_number: "", primary_contact_number_code: undefined,
@@ -1749,7 +1750,7 @@ const CompanyCreate = () => {
     dispatch(getCategoriesAction());
     dispatch(getMemberAction());
     dispatch(getCompanyAction());
-    dispatch(getDocumentTypeAction());
+    dispatch(getDocumentListAction());
   }, [dispatch]);
 
   useEffect(() => {

@@ -275,17 +275,96 @@ const DetailsTabView = ({ company }: { company: ApiSingleCompanyItem }) => (
 );
 
 const DocumentsTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
-  const kycDocs = [
-    { name: "Aadhar Card", fileKey: "aadhar_card_file", verifiedKey: "aadhar_card_verified" }, { name: "PAN Card", fileKey: "pan_card_file", verifiedKey: "pan_card_verified" }, { name: "GST Certificate", fileKey: "gst_certificate_file", verifiedKey: "gst_certificate_verified" }, { name: "Office Photo", fileKey: "office_photo_file", verifiedKey: "office_photo_verified" }, { name: "Cancel Cheque", fileKey: "cancel_cheque_file", verifiedKey: "cancel_cheque_verified" }, { name: "Visiting Card", fileKey: "visiting_card_file", verifiedKey: "visiting_card_verified" }, { name: "Authority Letter", fileKey: "authority_letter_file", verifiedKey: "authority_letter_verified" }, { name: "194Q Declaration", fileKey: "ABCQ_file", verifiedKey: "ABCQ_verified" }, { name: "Other Document", fileKey: "other_document_file", verifiedKey: "other_document_verified" },
-  ].filter(doc => company[doc.fileKey as keyof ApiSingleCompanyItem]);
-  const companyCertificates = company.company_certificate || [];
-  if (kycDocs.length === 0 && companyCertificates.length === 0) return <NoDataMessage message="No KYC or company certificates are available." />;
-  return (
-    <div className='space-y-4'>
-      {kycDocs.map(doc => (<DocumentCard key={doc.fileKey} name={doc.name} url={company[doc.fileKey as keyof ApiSingleCompanyItem] as string | null} verified={company[doc.verifiedKey as keyof ApiSingleCompanyItem]} />))}
-      {companyCertificates.map(cert => (<DocumentCard key={cert.id} name={cert.certificate_name} url={cert.upload_certificate_path || null} />))}
-    </div>
-  );
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    const kycDocsList = useMemo(() => [
+        { name: "Aadhar Card", fileKey: "aadhar_card_file", verifiedKey: "aadhar_card_verified" },
+        { name: "PAN Card", fileKey: "pan_card_file", verifiedKey: "pan_card_verified" },
+        { name: "GST Certificate", fileKey: "gst_certificate_file", verifiedKey: "gst_certificate_verified" },
+        { name: "Office Photo", fileKey: "office_photo_file", verifiedKey: "office_photo_verified" },
+        { name: "Cancel Cheque", fileKey: "cancel_cheque_file", verifiedKey: "cancel_cheque_verified" },
+        { name: "Visiting Card", fileKey: "visiting_card_file", verifiedKey: "visiting_card_verified" },
+        { name: "Authority Letter", fileKey: "authority_letter_file", verifiedKey: "authority_letter_verified" },
+        { name: "194Q Declaration", fileKey: "ABCQ_file", verifiedKey: "ABCQ_verified" },
+        { name: "Other Document", fileKey: "other_document_file", verifiedKey: "other_document_verified" },
+    ], []);
+
+    const allDocumentUrls = useMemo(() => {
+        const urls: { url: string; name: string }[] = [];
+        
+        kycDocsList.forEach(doc => {
+            const url = company[doc.fileKey as keyof ApiSingleCompanyItem] as string | null;
+            if (url) {
+                urls.push({ url, name: doc.name });
+            }
+        });
+
+        (company.company_certificate || []).forEach(cert => {
+            if (cert.upload_certificate_path) {
+                urls.push({ url: cert.upload_certificate_path, name: cert.certificate_name });
+            }
+        });
+
+        return urls;
+    }, [company, kycDocsList]);
+    
+    const handleDownloadAll = async () => {
+        if (allDocumentUrls.length === 0) {
+            toast.push(<Notification type="info" title="No Documents">There are no documents to download.</Notification>);
+            return;
+        }
+
+        setIsDownloading(true);
+        toast.push(<Notification type="success" title="Download Started" duration={3000}>Your documents will be downloaded shortly.</Notification>);
+        
+        const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+        for (const doc of allDocumentUrls) {
+            try {
+                const link = document.createElement('a');
+                link.href = doc.url;
+                const fileName = doc.url.substring(doc.url.lastIndexOf('/') + 1) || `${doc.name.replace(/\s+/g, '_')}.file`;
+                link.setAttribute('download', fileName);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                await delay(300);
+            } catch (error) {
+                console.error(`Failed to download ${doc.name}:`, error);
+                toast.push(<Notification type="danger" title="Download Error">{`Could not download ${doc.name}`}</Notification>);
+            }
+        }
+        setIsDownloading(false);
+    };
+
+    const visibleKycDocs = kycDocsList.filter(doc => company[doc.fileKey as keyof ApiSingleCompanyItem]);
+    const companyCertificates = company.company_certificate || [];
+
+    return (
+        <div className='space-y-4'>
+           {(visibleKycDocs.length === 0 && companyCertificates.length === 0) ? (
+                <NoDataMessage message="No KYC or company certificates are available." />
+            ) : (
+                <>
+                    {visibleKycDocs.map(doc => (
+                        <DocumentCard
+                            key={doc.fileKey}
+                            name={doc.name}
+                            url={company[doc.fileKey as keyof ApiSingleCompanyItem] as string | null}
+                            verified={company[doc.verifiedKey as keyof ApiSingleCompanyItem]}
+                        />
+                    ))}
+                    {companyCertificates.map(cert => (
+                        <DocumentCard
+                            key={cert.id}
+                            name={cert.certificate_name}
+                            url={cert.upload_certificate_path}
+                        />
+                    ))}
+                </>
+            )}
+        </div>
+    );
 };
 
 const BankAndBillingTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
@@ -412,7 +491,6 @@ const TransactionsTabView = ({ company }: { company: ApiSingleCompanyItem }) => 
             {filteredTransactions.length > 0 ? filteredTransactions.map(transaction => {
                 const uploadedDocs = transaction.filled_form?.form_data?.uploads_doc_s;
                 
-                // Ensure there is a filled_form and documents to display
                 if (!transaction.filled_form || !uploadedDocs) return null;
 
                 const sortedDocs = Object.entries(uploadedDocs)
@@ -430,7 +508,7 @@ const TransactionsTabView = ({ company }: { company: ApiSingleCompanyItem }) => 
                     <Card key={transaction.id} bodyClass="p-0">
                         <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/60 p-3 rounded-t-lg">
                             <h5 className="font-semibold">
-                                Form ID: {formatTransactionId(transaction.filled_form?.accountdoc_id)}
+                                Form ID: #{formatTransactionId(transaction.filled_form?.accountdoc_id)}
                             </h5>
                             <span className="text-sm text-gray-500">
                                 {dayjs(transaction.filled_form.created_at).format('DD MMM YYYY, hh:mm A')}
