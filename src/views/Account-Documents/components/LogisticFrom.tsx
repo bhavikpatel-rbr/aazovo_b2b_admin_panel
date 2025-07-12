@@ -319,7 +319,7 @@ const FillUpForm = () => {
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isFullScreen, currentPreviewIndex, previewEntries.length]); // Re-bind if index or length changes
+    }, [isFullScreen, currentPreviewIndex, previewEntries.length]);
 
     // --- Data fetching and initialization ---
     useEffect(() => {
@@ -554,14 +554,17 @@ const FillUpForm = () => {
                             {previewEntries.length > 0 ? (
                                 <div className="w-full h-full flex flex-col gap-4">
                                     <div 
-                                        className="flex-grow relative w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md flex justify-center items-center overflow-hidden p-2 cursor-pointer"
+                                        className="flex-grow relative w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md flex justify-center items-center overflow-hidden cursor-pointer"
                                         onClick={openFullScreen}
                                     >
-                                        <img
-                                            src={previewEntries[currentPreviewIndex][1]}
-                                            alt={`Preview for ${previewEntries[currentPreviewIndex][0]}`}
-                                            className="max-w-full max-h-full object-contain"
-                                        />
+                                        {/* This wrapper constrains the image's maximum size */}
+                                        <div className="relative w-full h-full max-h-[500px]">
+                                            <img
+                                                src={previewEntries[currentPreviewIndex][1]}
+                                                alt={`Preview for ${previewEntries[currentPreviewIndex][0]}`}
+                                                className="absolute top-0 left-0 w-full h-full object-contain"
+                                            />
+                                        </div>
                                     </div>
                                     <div>
                                         <p className="text-center font-semibold text-gray-700 dark:text-gray-200 truncate" title={previewEntries[currentPreviewIndex][0]}>
@@ -681,7 +684,10 @@ const FillUpForm = () => {
                             src={previewEntries[currentPreviewIndex][1]}
                             alt="Full-screen preview"
                             className="object-contain"
-                            style={{ maxHeight: '90vh', maxWidth: '90vw' }}
+                            style={{ 
+                                maxHeight: '90vh', 
+                                maxWidth: 'min(90vw, 1400px)' // Cap the width on large screens
+                            }}
                         />
                     </div>
                     
@@ -701,16 +707,5 @@ const FillUpForm = () => {
         </div>
     )
 }
-
-// Add a simple fade-in animation for the modal in your global CSS file if you wish:
-/*
-@keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-.animate-fade-in {
-    animation: fade-in 0.2s ease-out;
-}
-*/
 
 export default FillUpForm;

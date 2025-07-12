@@ -46,10 +46,12 @@ import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
   TbAlarm,
   TbBell,
+  TbBellRinging, // Added for Alert Modal
   TbBrandWhatsapp,
   TbBuilding,
   TbBuildingBank,
   TbCalendarEvent,
+  TbCalendarTime, // Added for Alert Modal
   TbCancel,
   TbCheck,
   TbChecks,
@@ -62,7 +64,9 @@ import {
   TbFileDescription,
   TbFilter,
   TbMail,
+  TbNotesOff, // Added for Alert Modal
   TbPencil,
+  TbPencilPlus, // Added for Alert Modal
   TbPlus,
   TbReceipt,
   TbReload,
@@ -87,11 +91,13 @@ import type {
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addAllActionAction,
+  addAllAlertsAction, // Added for Alert Modal
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
   deleteAllpartnerAction,
   getAllUsersAction,
+  getAlertsAction, // Added for Alert Modal
   getContinentsAction,
   getCountriesAction,
   getpartnerAction,
@@ -191,6 +197,21 @@ const activitySchema = z.object({
   notes: z.string().optional(),
 });
 type ActivityFormData = z.infer<typeof activitySchema>;
+
+// --- Alert Note Types & Schema (Added) ---
+const alertNoteSchema = z.object({
+    newNote: z.string().min(1, "Note cannot be empty"),
+});
+type AlertNoteFormData = z.infer<typeof alertNoteSchema>;
+interface AlertNote {
+    id: string | number;
+    note: string;
+    created_at: string;
+    created_by_user?: {
+        name: string;
+    };
+}
+
 
 const taskPriorityOptions: SelectOption[] = [
   { value: 'Low', label: 'Low' },
@@ -705,6 +726,170 @@ const SendPartnerWhatsAppAction: React.FC<{ partner: PartnerItem; onClose: () =>
   return null;
 };
 
+const PartnerAlertModal: React.FC<{ partner: PartnerItem; onClose: () => void; }> = ({ partner, onClose }) => {
+    // --- State and Hooks ---
+    const [alerts, setAlerts] = useState<AlertNote[]>([]);
+    const [isFetching, setIsFetching] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const dispatch = useAppDispatch();
+    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+        resolver: zodResolver(alertNoteSchema),
+        defaultValues: { newNote: '' },
+        mode: 'onChange'
+    });
+
+    // --- Helper functions and API calls ---
+    const stringToColor = (str: string) => {
+        let hash = 0;
+        if (!str) return '#cccccc';
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i++) {
+            const value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+        }
+        return color;
+    };
+
+    useEffect(() => {
+        setIsFetching(true);
+        dispatch(getAlertsAction({ module_id: partner.id, module_name: 'Partner' }))
+            .unwrap()
+            .then((data) => setAlerts(data.data || []))
+            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+            .finally(() => setIsFetching(false));
+    }, [partner.id, dispatch]);
+
+    const onAddNote = async (data: AlertNoteFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: partner.id, module_name: 'Partner' })).unwrap();
+            toast.push(<Notification type="success" title="Alert Note Added" />);
+            reset({ newNote: '' });
+            dispatch(getAlertsAction({ module_id: partner.id, module_name: 'Partner' }))
+                .unwrap()
+                .then((data) => setAlerts(data.data || []));
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog
+            isOpen={true}
+            onClose={onClose}
+            onRequestClose={onClose}
+            width={1200}
+            contentClassName="p-0 flex flex-col max-h-[95vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+        >
+            {/* --- Header --- */}
+            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <TbBellRinging className="text-2xl text-white" />
+                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{partner.partner_name}</h5>
+                    </div>
+                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </header>
+            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-y-auto">
+                <div className="flex flex-col lg:h-full overflow-hidden min-h-[400px]">
+                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+                        Activity Timeline
+                    </h6>
+                    <div className="space-y-8 lg:flex-grow lg:overflow-y-auto lg:pr-4 lg:-mr-4">
+                        {isFetching ? (
+                            <div className="flex justify-center items-center h-full"><p className="text-gray-500">Loading timeline...</p></div>
+                        ) : alerts.length > 0 ? (
+                            alerts.map((alert, index) => {
+                                const userName = alert?.created_by_user?.name || 'N/A';
+                                const userInitial = userName.charAt(0).toUpperCase();
+                                return (
+                                    <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                                        <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                                            <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                                                {userInitial}
+                                            </Avatar>
+                                            {index < alerts.length - 1 && (
+                                                <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                                            )}
+                                        </div>
+                                        <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                            <div className="p-4">
+                                                <header className="flex justify-between items-center mb-2">
+                                                    <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                        <TbCalendarTime />
+                                                        <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
+                                                    </div>
+                                                </header>
+                                                <div
+                                                    className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                                                    dangerouslySetInnerHTML={{ __html: alert.note }}
+                                                />
+                                            </div>
+                                        </Card>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="flex flex-col mt-8 lg:mt-0">
+                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" />
+                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+                            </div>
+                        </header>
+                        <UiForm onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+                            <UiFormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                                <Controller
+                                    name="newNote"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                                            <RichTextEditor
+                                                {...field}
+                                                onChange={(val) => field.onChange(val.html)}
+                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                                            />
+                                        </div>
+                                    )}
+                                />
+                            </UiFormItem>
+                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>
+                                    Cancel
+                                </Button>
+                                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
+                                    Submit Note
+                                </Button>
+                            </footer>
+                        </UiForm>
+                    </Card>
+                </div>
+            </main>
+        </Dialog>
+    );
+};
+
+
 const PartnerModals: React.FC<{ modalState: ModalState; onClose: () => void; userOptions: SelectOption[] }> = ({ modalState, onClose, userOptions }) => {
   const { type, data: partner, isOpen } = modalState;
   const [userData, setUserData] = useState<any>(null);
@@ -724,7 +909,7 @@ const PartnerModals: React.FC<{ modalState: ModalState; onClose: () => void; use
     case 'notification': return <AddPartnerNotificationDialog partner={partner} onClose={onClose} userOptions={userOptions} />;
     case 'task': return <AssignPartnerTaskDialog partner={partner} onClose={onClose} userOptions={userOptions} />;
     case 'members': return <ViewPartnerMembersDialog partner={partner} onClose={onClose} />;
-    case 'alert': return <ViewPartnerDataDialog title={`Alerts for ${partner.partner_name}`} message="No alerts found for this partner." onClose={onClose} />;
+    case 'alert': return <PartnerAlertModal partner={partner} onClose={onClose} />;
     case 'transaction': return <ViewPartnerDataDialog title={`Transactions for ${partner.partner_name}`} message="No transactions found for this partner." onClose={onClose} />;
     case 'document': return <DownloadPartnerDocumentDialog partner={partner} onClose={onClose} />;
     case 'activity': return <AddPartnerActivityDialog partner={partner} onClose={onClose} user={userData} />;
@@ -905,16 +1090,28 @@ const PartnerListTable = () => {
     dispatch(getpartnerAction());
     toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />);
   };
+  
+  const statusOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [partnerList]);
+  const kycOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
 
-  const handleCardClick = (filterType: string, value: string) => {
+  const handleCardClick = (filterType: 'status' | 'kyc', value: string) => {
     onClearFilters(); // Start with a clean slate
-    const statusOption = statusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-    if (statusOption) {
-      setFilterCriteria(prev => ({ ...prev, filterStatus: [statusOption] }));
+  
+    if (filterType === 'status') {
+      const statusOption = statusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
+      if (statusOption) {
+        setFilterCriteria(prev => ({ ...prev, filterStatus: [statusOption] }));
+      }
+    } else if (filterType === 'kyc') {
+      const kycOption = kycOptions.find(opt => opt.value === value); // Find { value: 'Yes', ... } or { value: 'No', ... }
+      if (kycOption) {
+        setFilterCriteria(prev => ({ ...prev, filterKycVerified: [kycOption] }));
+      }
     }
+  
     handleSetTableData({ pageIndex: 1, query: "" });
   };
-
+  
   const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
     let filteredData = [...partnerList];
 
@@ -1076,13 +1273,11 @@ const PartnerListTable = () => {
     return filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   };
 
-  const statusOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.status))).filter(Boolean).map((s) => ({ value: s, label: s })), [partnerList]);
   const ownershipTypeOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.ownership_type))).filter(Boolean).map((t) => ({ value: t, label: t })), [partnerList]);
   const continentOptions = useMemo(() => ContinentsData.map((co) => ({ value: co.name, label: co.name })), [ContinentsData]);
   const countryOptions = useMemo(() => CountriesData.map((ct) => ({ value: ct.name, label: ct.name })), [CountriesData]);
   const stateOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.state))).filter(Boolean).map((st) => ({ value: st, label: st })), [partnerList]);
   const cityOptions = useMemo(() => Array.from(new Set(partnerList.map((c) => c.city))).filter(Boolean).map((ci) => ({ value: ci, label: ci })), [partnerList]);
-  const kycOptions = [{ value: "Yes", label: "Yes" }, { value: "No", label: "No" }];
   const { DatePickerRange } = DatePicker;
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-1";
@@ -1092,9 +1287,9 @@ const PartnerListTable = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 mb-4 gap-2">
         <Tooltip title="Click to show all partners"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBuilding size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.total ?? 0}</b><span className="text-[9px] font-semibold">Total</span></div></Card></div></Tooltip>
         <Tooltip title="Click to filter by Active status"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBuildingBank size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.active ?? 0}</b><span className="text-[9px] font-semibold">Active</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Inactive status"><div onClick={() => handleCardClick('status', 'Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.disabled ?? 0}</b><span className="text-[9px] font-semibold">Disabled</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Verified status"><div onClick={() => handleCardClick('status', 'Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to filter by Unverified status"><div onClick={() => handleCardClick('status', 'Non Verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.unverified ?? 0}</b><span className="text-[9px] font-semibold">Unverified</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by Disable status"><div onClick={() => handleCardClick('status', 'Disabled')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.disabled ?? 0}</b><span className="text-[9px] font-semibold">Disabled</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by KYC Verified"><div onClick={() => handleCardClick('kyc', 'Yes')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to filter by KYC Unverified"><div onClick={() => handleCardClick('kyc', 'No')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm">{partnerCount?.non_verified ?? 0}</b><span className="text-[9px] font-semibold">Unverified</span></div></Card></div></Tooltip>
       </div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <PartnerListSearch onInputChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} value={tableData.query} />
@@ -1112,7 +1307,7 @@ const PartnerListTable = () => {
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-      <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+      <DataTable selectable columns={filteredColumns} data={pageData} loading={isLoading} noData={pageData.length <= 0} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
 
       {/* The Drawer component with all props correctly bound */}
       <Drawer
@@ -1136,7 +1331,7 @@ const PartnerListTable = () => {
             <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Country" options={countryOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="State"><Controller name="filterState" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select State" options={stateOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="City"><Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select City" options={cityOptions} {...field} />} /></UiFormItem>
-            <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => <UiSelect isMulti placeholder="Select Status" options={kycOptions} {...field} />} /></UiFormItem>
+            <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => <UiSelect  placeholder="Select Status" options={kycOptions} {...field} />} /></UiFormItem>
             <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedDate" control={filterFormMethods.control} render={({ field }) => <DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />} /></UiFormItem>
           </div>
         </UiForm>

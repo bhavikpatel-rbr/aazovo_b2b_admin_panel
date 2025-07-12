@@ -72,7 +72,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, []); // Runs once on mount
+    }, []); 
 
     if (!images || images.length === 0) {
         return null;
@@ -226,7 +226,7 @@ interface BranchItemFE {
   office_type?: { label: string; value: string };
   office_name?: string;
   address?: string;
-  country_id?: { label: string; value: string };
+  country_id?: { label: string; value: any };
   state?: string;
   city?: string;
   zip_code?: string;
@@ -268,8 +268,8 @@ export interface CompanyFormSchema {
   city?: string;
   state?: string;
   zip_code?: string;
-  country_id?: { label: string; value: string };
-  continent_id?: { label: string; value: string };
+  country_id?: { label: string; value: any };
+  continent_id?: { label: string; value: any };
   join_us_as?: { label: string; value: string },
   industrial_expertise?: { label: string; value: string },
   gst_number?: string;
@@ -426,7 +426,8 @@ const transformApiToFormSchema = (
   apiData: ApiSingleCompanyItem,
   partnerOptions: { label: string; value: any }[],
   companyOptions: { label: string; value: any }[],
-  documentTypeOptions: { label: string; value: any }[]
+  documentTypeOptions: { label: string; value: any }[],
+  countryOptions: {label: string; value: any }[]
 ): Partial<CompanyFormSchema> => {
   const toBoolean = (value: any): boolean => {
     if (typeof value === 'boolean') return value;
@@ -447,6 +448,11 @@ const transformApiToFormSchema = (
     return { label: name || id, value: id };
   };
 
+  const findCountryById = (id?: string) => {
+    if(!id) return undefined;
+    return countryOptions.find(c => String(c.value) === String(id));
+  }
+  
   return {
     id: apiData.id,
     partner_name: apiData.partner_name,
@@ -466,7 +472,7 @@ const transformApiToFormSchema = (
     city: apiData.city,
     state: apiData.state,
     zip_code: apiData.zip_code,
-    country_id: toSelectObject(apiData.country_id),
+    country_id: findCountryById(apiData.country_id),
     continent_id: toSelectObjectFromId(apiData.continent_id, apiData.continent?.name),
     join_us_as: toSelectObject(apiData.join_us_as),
     industrial_expertise: toSelectObject(apiData.industrial_expertise),
@@ -529,7 +535,7 @@ const transformApiToFormSchema = (
       office_type: toSelectObject(b.office_type),
       office_name: b.office_name,
       address: b.address,
-      country_id: toSelectObject(b.country_id),
+      country_id: findCountryById(b.country_id),
       state: b.state,
       city: b.city,
       zip_code: b.zip_code,
@@ -742,9 +748,12 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
   const {
     CountriesData = [],
     ContinentsData = [],
-    DocumentTypeData = [],
   } = useSelector(masterSelector);
   const { watch } = formMethods;
+  
+  const watchedCountry = watch("country_id");
+  const isIndiaSelected = String(watchedCountry?.value) === '101';
+
   const countryOptions = CountriesData.map((value: any) => ({
     value: value.id,
     label: value.name,
@@ -829,7 +838,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
             name="partner_name"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Partner Name" {...field} />
+              <Input placeholder="Partner Name" {...field} onInput={(e: React.ChangeEvent<HTMLInputElement>)=>{if(e?.target?.value) e.target.value = e.target.value.toUpperCase()}} />
             )}
           />
         </FormItem>
@@ -1111,7 +1120,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
       <hr className="my-6" /> <h4 className="mb-4">Trade Information</h4>
       <div className="grid md:grid-cols-4 gap-3">
         <FormItem
-          label="GST Number"
+          label={<div>GST Number{isIndiaSelected && <span className="text-red-500"> * </span>}</div>}
           invalid={!!errors.gst_number}
           errorMessage={errors.gst_number?.message as string}
         >
@@ -1124,7 +1133,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
           />
         </FormItem>
         <FormItem
-          label="PAN Number"
+          label={<div>PAN Number{isIndiaSelected && <span className="text-red-500"> * </span>}</div>}
           invalid={!!errors.pan_number}
           errorMessage={errors.pan_number?.message as string}
         >
@@ -1381,17 +1390,25 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
     const [viewerIsOpen, setViewerIsOpen] = useState(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-    const kycDocs = useMemo(() => [
-        { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_verified" as const },
-        { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_verified" as const },
-        { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_verified" as const },
-        { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_verified" as const },
-        { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_verified" as const },
-        { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_verified" as const },
-        { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_verified" as const },
-        { label: "Agreement/Quotation", name: "agreement_file" as const, remarkName: "agreement_remark" as const, enabledName: "agreement_verified" as const },
-        { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_verified" as const },
-    ], []);
+    const watchedCountry = watch("country_id");
+
+    const kycDocs = useMemo(() => {
+        const allDocs = [
+            { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_verified" as const, indiaOnly: true },
+            { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_verified" as const, indiaOnly: true },
+            { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_verified" as const, indiaOnly: false },
+            { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_verified" as const, indiaOnly: false },
+            { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_verified" as const, indiaOnly: false },
+            { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_verified" as const, indiaOnly: false },
+            { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_verified" as const, indiaOnly: false },
+            { label: "Agreement/Quotation", name: "agreement_file" as const, remarkName: "agreement_remark" as const, enabledName: "agreement_verified" as const, indiaOnly: false },
+            { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_verified" as const, indiaOnly: false },
+        ];
+        
+        const isIndia = String(watchedCountry?.value) === '101';
+        return allDocs.filter(doc => !doc.indiaOnly || isIndia);
+
+    }, [watchedCountry]);
     
     const imageDocsForViewer = useMemo(() => {
         return kycDocs
@@ -1440,7 +1457,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                                     control={control}
                                     render={({ field }) => (
                                         <Checkbox checked={!!field.value} onChange={field.onChange}>
-                                            {doc.label} (Verified)
+                                            {doc.label} (Verified) {doc.indiaOnly && <span className="text-red-500">*</span>}
                                         </Checkbox>
                                     )}
                                 />
@@ -1758,7 +1775,6 @@ const ReferenceSection = ({ control }: FormSectionBaseProps) => {
   const dispatch = useAppDispatch();
   const { partnerData, CompanyData } = useSelector(masterSelector);
 
-  // FIX: Removed `dispatch` from dependency array and added conditional fetch
   useEffect(() => {
     if (!partnerData?.data || partnerData.data.length === 0) {
       dispatch(getpartnerAction());
@@ -1766,7 +1782,7 @@ const ReferenceSection = ({ control }: FormSectionBaseProps) => {
     if (!CompanyData?.data || CompanyData.data.length === 0) {
       dispatch(getCompanyAction());
     }
-  }, [partnerData, CompanyData]); // Dependency on data, not dispatch
+  }, [partnerData, CompanyData, dispatch]);
 
   const partnerOptions = useMemo(() => {
     const data = partnerData?.data || [];
@@ -1819,7 +1835,6 @@ const ReferenceSection = ({ control }: FormSectionBaseProps) => {
 
 // --- AccessibilitySection ---
 const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) => {
-  const { watch } = formMethods;
   const { fields, append, remove } = useFieldArray({
     control,
     name: "billing_documents",
@@ -1917,8 +1932,9 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
 
   const selectObjectSchema = z.object({ value: z.any(), label: z.any() }).nullable().optional();
-  const companySchema = z.object({
-    // Required fields
+  const fileSchema = z.any().refine(file => file, "File is required.").nullable().optional();
+
+  const baseCompanySchema = z.object({
     partner_name: z.string().trim().min(1, "Partner Name is required"),
     company_name: z.string().trim().min(1, "Company Name is required"),
     status: selectObjectSchema.refine(val => val?.value, "Status is required"),
@@ -1929,14 +1945,27 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     primary_email_id: z.string().trim().min(1, "Primary Email is required").email("Invalid email format"),
     primary_contact_number: z.string().trim().min(1, "Primary contact number is required").regex(/^\d{7,15}$/, "Invalid contact number format"),
     primary_contact_number_code: selectObjectSchema.refine(val => val?.value, "Country code is required"),
-    
-    // Optional fields
-    // gst_number: z.string().optional(),
-    // pan_number: z.string().optional(),
-    // state: z.string().optional(),
-    // city: z.string().optional(),
-    // partner_address: z.string().optional(),
   }).passthrough();
+
+  const companySchema = baseCompanySchema.superRefine((data, ctx) => {
+      const isIndia = String(data.country_id?.value) === '101';
+
+      if(isIndia) {
+          if(!data.gst_number || data.gst_number.trim() === '') {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India", path: ["gst_number"] });
+          }
+          if(!data.pan_number || data.pan_number.trim() === '') {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India", path: ["pan_number"] });
+          }
+          if(!data.aadhar_card_file) {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Aadhar Card is required for India", path: ["aadhar_card_file"] });
+          }
+          if(!data.pan_card_file) {
+              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Card is required for India", path: ["pan_card_file"] });
+          }
+      }
+  });
+
 
   const formMethods = useForm<CompanyFormSchema>({
     resolver: zodResolver(companySchema),
@@ -2007,7 +2036,7 @@ const CreatePartner = () => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { partnerData = {}, CompanyData = {}, DocumentTypeData = [] } = useSelector(masterSelector);
+  const { partnerData = {}, CompanyData = {}, DocumentTypeData = [], CountriesData = [] } = useSelector(masterSelector);
 
   const partnerOptions = useMemo(() => {
     const data = partnerData?.data || [];
@@ -2022,6 +2051,11 @@ const CreatePartner = () => {
   const documentTypeOptions = useMemo(() => {
     return Array.isArray(DocumentTypeData) ? DocumentTypeData.map((d: any) => ({ value: d.id, label: d.name })) : [];
   }, [DocumentTypeData]);
+  
+  const countryOptions = useMemo(() => {
+    return Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: c.id, label: c.name })) : [];
+  }, [CountriesData]);
+
 
   useEffect(() => {
     dispatch(getCountriesAction());
@@ -2038,7 +2072,7 @@ const CreatePartner = () => {
         try {
           const actionResult = await dispatch(getpartnerByIdAction(id)).unwrap();
           if (actionResult) {
-            setInitialData(transformApiToFormSchema(actionResult, partnerOptions, companyOptions, documentTypeOptions));
+            setInitialData(transformApiToFormSchema(actionResult, partnerOptions, companyOptions, documentTypeOptions, countryOptions));
           } else {
             toast.push(<Notification type="danger" title="Fetch Error">Partner data not found.</Notification>);
             navigate("/business-entities/partner");
@@ -2051,14 +2085,14 @@ const CreatePartner = () => {
         }
       };
       // Ensure options are available before transforming
-      if(partnerOptions.length > 0 && companyOptions.length > 0 && documentTypeOptions.length > 0) {
+      if(partnerOptions.length > 0 && companyOptions.length > 0 && documentTypeOptions.length > 0 && countryOptions.length > 0) {
         fetchPartnerData();
       }
     } else {
       setInitialData({});
       setPageLoading(false);
     }
-  }, [id, isEditMode, navigate, dispatch, partnerOptions, companyOptions, documentTypeOptions]);
+  }, [isEditMode, navigate, dispatch, id, partnerOptions.length, companyOptions.length, documentTypeOptions.length, countryOptions.length]);
 
   const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);

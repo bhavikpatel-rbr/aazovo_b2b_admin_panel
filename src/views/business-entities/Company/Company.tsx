@@ -45,12 +45,13 @@ import Tooltip from "@/components/ui/Tooltip";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { MdCancel, MdCheckCircle } from "react-icons/md";
 import {
-    TbAlarm, TbBell, TbBrandWhatsapp,
+    TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp,
     TbBuilding, TbBuildingBank,
     TbCalendarEvent,
+    TbCalendarTime,
     TbCancel,
     TbCheck, TbChecks, TbCircleCheck, TbCircleX, TbCloudUpload, TbColumns, TbDownload, TbEye, TbFileDescription,
-    TbFilter, TbMail, TbPencil, TbPlus, TbReceipt, TbReload, TbSearch, TbShieldCheck, TbShieldX, TbTagStarred,
+    TbFilter, TbMail, TbMessageCircle, TbNotesOff, TbPencil, TbPencilPlus, TbPlus, TbReceipt, TbReload, TbSearch, TbShieldCheck, TbShieldX, TbTagStarred,
     TbTrash,
     TbUser, TbUserCircle, TbUsersGroup, TbX
 } from "react-icons/tb";
@@ -60,7 +61,8 @@ import type { TableQueries } from "@/@types/common";
 import type { ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-    addAllActionAction, addNotificationAction, addScheduleAction, addTaskAction, deleteAllcompanyAction,
+    addAllActionAction, addAllAlertsAction, addNotificationAction, addScheduleAction, addTaskAction, deleteAllcompanyAction,
+    getAlertsAction,
     getAllUsersAction, getCompanyAction, getContinentsAction, getCountriesAction, getDocumentTypeAction, getPendingBillAction,
     setenablebillingAction,
     setsavedocAction,
@@ -84,6 +86,15 @@ interface CompanySpotVerification { id: number; company_id: number; verified_by_
 interface BillingDocument { id: number; company_id: number; document_name: string; document: string | null; }
 interface CompanyMemberManagement { id: number; company_id: number; member_id: number; designation: string; person_name: string; number: string; }
 interface TeamMember { id: number; company_id: number; team_name: string; designation: string; person_name: string; number: string; }
+
+// START: Alert Note Type Definition
+interface AlertNote {
+    id: number;
+    note: string; // HTML content from RichTextEditor
+    created_by: string;
+    created_at: string; // ISO date string
+}
+// END: Alert Note Type Definition
 
 export type CompanyItem = {
     id: number;
@@ -173,6 +184,12 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 const taskValidationSchema = z.object({ task_title: z.string().min(3, 'Task title must be at least 3 characters.'), assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'), priority: z.string().min(1, 'Please select a priority.'), due_date: z.date().nullable().optional(), description: z.string().optional(), });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
 type NotificationFormData = { notification_title: string; send_users: number[]; message: string; } // Added for notification form
+// START: Zod Schema for Alert Note
+const alertNoteSchema = z.object({
+    newNote: z.string().min(10, "Note must contain at least 10 characters."),
+});
+type AlertNoteFormData = z.infer<typeof alertNoteSchema>;
+// END: Zod Schema for Alert Note
 const taskPriorityOptions: SelectOption[] = [{ value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' },];
 
 // --- Utility Functions & Constants ---
@@ -195,6 +212,172 @@ export type SelectOption = { value: any; label: string };
 export type ModalType = | "email" | "whatsapp" | "notification" | "task" | "schedule" | "members" | "alert" | "activity" | "transaction" | "document" | "viewDetail";
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: CompanyItem | null; }
 interface CompanyModalsProps { modalState: ModalState; onClose: () => void; getAllUserDataOptions: SelectOption[]; }
+
+
+
+const CompanyAlertModal: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
+    // --- State and Hooks (no changes needed) ---
+    const [alerts, setAlerts] = useState<AlertNote[]>([]);
+    const [isFetching, setIsFetching] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const dispatch = useAppDispatch();
+    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+        resolver: zodResolver(alertNoteSchema),
+        defaultValues: { newNote: '' },
+        mode: 'onChange'
+    });
+
+    // --- Helper functions and API calls (no changes needed) ---
+    const stringToColor = (str: string) => {
+        let hash = 0;
+        if (!str) return '#cccccc';
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i++) {
+            const value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+        }
+        return color;
+    };
+
+    useEffect(() => {
+        setIsFetching(true);
+        dispatch(getAlertsAction({ module_id: company.id, module_name: 'Company' }))
+            .unwrap()
+            .then((data) => setAlerts(data.data || []))
+            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+            .finally(() => setIsFetching(false));
+    }, [company.id, dispatch]);
+
+    const onAddNote = async (data: AlertNoteFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: company.id, module_name: 'Company' })).unwrap();
+            toast.push(<Notification type="success" title="Alert Note Added" />);
+            reset({ newNote: '' });
+            dispatch(getAlertsAction({ module_id: company.id, module_name: 'Company' }))
+                .unwrap()
+                .then((data) => setAlerts(data.data || []));
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog
+            isOpen={true}
+            onClose={onClose}
+            onRequestClose={onClose}
+            width={1200}
+            contentClassName="p-0 flex flex-col max-h-[95vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+        >
+            {/* --- Header --- */}
+            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <TbBellRinging className="text-2xl text-white" />
+                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{company.company_name}</h5>
+                    </div>
+                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </header>
+            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-y-auto">
+                <div className="flex flex-col lg:h-full overflow-hidden min-h-[400px]">
+                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+                        Activity Timeline
+                    </h6>
+                    <div className="space-y-8 lg:flex-grow lg:overflow-y-auto lg:pr-4 lg:-mr-4">
+                        {/* Alert mapping JSX... no changes here */}
+                        {isFetching ? (
+                            <div className="flex justify-center items-center h-full"><p className="text-gray-500">Loading timeline...</p></div>
+                        ) : alerts.length > 0 ? (
+                            alerts.map((alert, index) => {
+                                const userName = alert?.created_by_user?.name || 'N/A';
+                                const userInitial = userName.charAt(0).toUpperCase();
+                                return (
+                                    <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                                        <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                                            <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                                                {userInitial}
+                                            </Avatar>
+                                            {index < alerts.length - 1 && (
+                                                <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                                            )}
+                                        </div>
+                                        <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                            <div className="p-4">
+                                                <header className="flex justify-between items-center mb-2">
+                                                    <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                        <TbCalendarTime />
+                                                        <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
+                                                    </div>
+                                                </header>
+                                                <div
+                                                    className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                                                    dangerouslySetInnerHTML={{ __html: alert.note }}
+                                                />
+                                            </div>
+                                        </Card>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="flex flex-col mt-8 lg:mt-0">
+                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" />
+                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+                            </div>
+                        </header>
+                        <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+                            <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                                <Controller
+                                    name="newNote"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                                            <RichTextEditor
+                                                {...field}
+                                                onChange={(val) => field.onChange(val.html)}
+                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                                            />
+                                        </div>
+                                    )}
+                                />
+                            </FormItem>
+                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>
+                                    Cancel
+                                </Button>
+                                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
+                                    Submit Note
+                                </Button>
+                            </footer>
+                        </Form>
+                    </Card>
+                </div>
+            </main>
+        </Dialog>
+    );
+};
 
 const ViewCompanyDetailDialog: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
     const renderDetailItem = (label: string, value: any, isLink = false) => {
@@ -383,7 +566,7 @@ const CompanyModals: React.FC<CompanyModalsProps> = ({ modalState, onClose, getA
         case 'schedule': return <AddCompanyScheduleDialog company={company} onClose={onClose} onSubmit={handleConfirmSchedule} isLoading={isSubmitting} />;
         case 'task': return <AssignCompanyTaskDialog company={company} onClose={onClose} userOptions={getAllUserDataOptions} />;
         case 'members': return <ViewCompanyMembersDialog company={company} onClose={onClose} />;
-        case 'alert': return <ViewCompanyDataDialog title={`Alerts for ${company.company_name}`} message="No alerts found for this company." onClose={onClose} />;
+        case 'alert': return <CompanyAlertModal company={company} onClose={onClose} user={userData} />;
         case "activity": return <AddActivityDialog company={company} onClose={onClose} user={userData} />;
         case 'transaction': return <ViewCompanyDataDialog title={`Transactions for ${company.company_name}`} message="No transactions found for this company." onClose={onClose} />;
         case 'document': return <DownloadDocumentDialog company={company} onClose={onClose} />;
@@ -541,7 +724,7 @@ const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, onOpenEnableBilling
                 <Dropdown.Item onClick={() => onOpenModal("members", rowData)} className="flex items-center gap-2"><TbUsersGroup /> View Members</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Activity</span></Dropdown.Item>
-                <Dropdown.Item onClick={() => onOpenModal("transaction", rowData)} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item>
+                {/* <Dropdown.Item onClick={() => onOpenModal("transaction", rowData)} className="flex items-center gap-2"><TbReceipt /> View Transaction</Dropdown.Item> */}
                 <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload /> Download Document</Dropdown.Item>
             </Dropdown>
 
@@ -593,7 +776,7 @@ const CompanyListTable = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const { companyList, setSelectedCompanies, companyCount, ContinentsData, CountriesData, getAllUserData } = useCompanyList();
-    const { PendingBillData, DocumentTypeData } = useSelector(masterSelector);
+    const { PendingBillData = [], DocumentTypeData } = useSelector(masterSelector);
     const [isLoading, setIsLoading] = useState(false);
     const COMPANY_STATE_STORAGE_KEY = 'companyListStatePersistence';
 
@@ -677,10 +860,17 @@ const CompanyListTable = () => {
 
         formData.enable_billing_documents.forEach((doc, index) => {
             if (doc.document_name?.value && doc.document) {
-                payload.append(`document_name[${index}]`, doc.document_name.value);
-                payload.append(`document[${index}]`, doc.document);
+
+                // This line sends 'enable_billing_documents[0][document_name]' with the value '1'
+                payload.append(`enable_billing_documents[${index}][document_name]`, doc.document_name.value);
+
+                // This line sends 'enable_billing_documents[0][document]' with the actual file data
+                payload.append(`enable_billing_documents[${index}][document]`, doc.document);
             }
         });
+
+
+
 
         try {
             await dispatch(setsavedocAction({ id: selectedCompanyForBilling.id, data: payload })).unwrap();
@@ -921,7 +1111,7 @@ const CompanyListTable = () => {
                 onClose={() => setPendingRequestModalOpen(false)}
                 width={800}
             >
-                <h5 className="mb-4">Pending Billing Requests</h5>
+                <h5 className="mb-4">Pending Enable Billing Requests</h5>
                 <div className="max-h-[60vh] overflow-y-auto">
                     <table className="w-full">
                         <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
