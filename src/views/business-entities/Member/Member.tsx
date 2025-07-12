@@ -527,7 +527,9 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
         <div className="text-xs flex flex-col gap-0.5">
             <span><b>RM: </b>{row.original.relationship_manager?.name || "N/A"}</span>
             <span><b>Grade: </b>{row.original.member_grade || "N/A"}</span>
+            
             <span className="truncate"><b>Opportunity: </b>{row.original.business_opportunity || "N/A"}</span>
+            <span><b></b>{row.original.category || "N/A"} / {row.original.subcategory || "N/A"}  </span>
             <Tooltip title={`Profile: ${row.original.profile_completion}%`}>
                 <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${row.original.profile_completion}%` }}></div></div>
             </Tooltip>
