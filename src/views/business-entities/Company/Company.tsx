@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom'; // useSearchParams is not used in final solution but kept for context
 import { z } from "zod";
 
 // UI Components
@@ -129,8 +129,8 @@ const taskPriorityOptions: SelectOption[] = [ { value: 'Low', label: 'Low' }, { 
 // --- Utility Functions & Constants ---
 function exportToCsv(filename: string, rows: CompanyItem[]) {
     if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
-    const CSV_HEADERS = ["ID", "Company Name", "Owner Name", "Ownership Type", "Status", "Contact", "Email", "Country", "State", "City", "KYC Verified", "Created Date"];
-    const preparedRows = rows.map(row => ({ id: row.id, company_name: row.company_name, owner_name: row.owner_name, ownership_type: row.ownership_type, status: row.status, primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`, primary_email_id: row.primary_email_id, country: row.country?.name || 'N/A', state: row.state, city: row.city, kyc_verified: row.kyc_verified ? 'Yes' : 'No', created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A' }));
+    const CSV_HEADERS = ["ID", "Company Code","Company Name", "Owner Name", "Ownership Type", "Status", "Contact", "Email", "Country", "State", "City", "KYC Verified","gst_number","pan_number", "Created Date" ];
+    const preparedRows = rows.map(row => ({ id: row.id, company_code: row.company_code, company_name: row.company_name, owner_name: row.owner_name, ownership_type: row.ownership_type, status: row.status, primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`, primary_email_id: row.primary_email_id, country: row.country?.name || 'N/A', state: row.state, city: row.city, kyc_verified: row.kyc_verified ? 'Yes' : 'No', gst_number:row.gst_number ,pan_number:row.pan_number, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A' }));
     const csvContent = [ CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => JSON.stringify(row[header.toLowerCase().replace(/ /g, '_') as keyof typeof row] ?? '', (key, value) => value === null ? '' : value) ).join(',')) ].join('\n');
     const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -294,14 +294,55 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   );
 };
 
+
+// --- START: MODIFIED COMPONENT ---
 const CompanyListTable = () => {
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const { companyList, setSelectedCompanies, companyCount, ContinentsData, CountriesData, getAllUserData } = useCompanyList();
     const [isLoading] = useState(false);
-    const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "", });
+    
+    // --- START: State Persistence & Search Logic ---
+    const COMPANY_STATE_STORAGE_KEY = 'companyListStatePersistence';
+
+    const getInitialState = () => {
+        try {
+            const savedStateJSON = sessionStorage.getItem(COMPANY_STATE_STORAGE_KEY);
+            if (savedStateJSON) {
+                const savedState = JSON.parse(savedStateJSON);
+                // Re-hydrate Date objects from their string representation
+                if (savedState.filterCriteria?.filterCreatedDate) {
+                    savedState.filterCriteria.filterCreatedDate = savedState.filterCriteria.filterCreatedDate.map((d: string | null) => d ? new Date(d) : null);
+                }
+                return savedState;
+            }
+        } catch (error) {
+            console.error("Failed to parse saved state, clearing it.", error);
+            sessionStorage.removeItem(COMPANY_STATE_STORAGE_KEY);
+        }
+        // Return default state if nothing is saved or if parsing fails
+        return {
+            tableData: { pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" },
+            filterCriteria: { filterCreatedDate: [null, null] }
+        };
+    };
+
+    const initialState = getInitialState();
+    const [tableData, setTableData] = useState<TableQueries>(initialState.tableData);
+    const [filterCriteria, setFilterCriteria] = useState<CompanyFilterFormData & { customFilter?: string }>(initialState.filterCriteria);
+    
+    // Effect to save any changes in table or filter state to sessionStorage
+    useEffect(() => {
+        try {
+            const stateToSave = { tableData, filterCriteria };
+            sessionStorage.setItem(COMPANY_STATE_STORAGE_KEY, JSON.stringify(stateToSave));
+        } catch (error) {
+            console.error("Could not save state to sessionStorage:", error);
+        }
+    }, [tableData, filterCriteria]);
+    // --- END: State Persistence & Search Logic ---
+
     const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
-    const [filterCriteria, setFilterCriteria] = useState<CompanyFilterFormData & { customFilter?: string }>({ filterCreatedDate: [null, null], });
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null, });
@@ -309,64 +350,53 @@ const CompanyListTable = () => {
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange", });
     const filterFormMethods = useForm<CompanyFilterFormData>({ resolver: zodResolver(companyFilterFormSchema) });
 
+    const handleSetTableData = (d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d }));
     const handleOpenModal = (type: ModalType, companyData: CompanyItem) => setModalState({ isOpen: true, type, data: companyData });
     const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
     const openFilterDrawer = () => { filterFormMethods.reset(filterCriteria); setFilterDrawerOpen(true); };
     const onApplyFiltersSubmit = (data: CompanyFilterFormData) => { setFilterCriteria({ ...data, customFilter: undefined }); handleSetTableData({ pageIndex: 1 }); setFilterDrawerOpen(false); };
-    const onClearFilters = () => { const defaultFilters = { customFilter: undefined, filterCreatedDate: [null, null] as [Date | null, Date | null], filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [], }; setFilterCriteria(defaultFilters); handleSetTableData({ pageIndex: 1, query: "" }); };
-    const handleRemoveFilter = (key: keyof CompanyFilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev, customFilter: undefined }; if (key === 'filterCreatedDate') { (newCriteria as any)[key] = [null, null]; } else { const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove); (newCriteria as any)[key] = newFilterArray; } } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
-    const onRefreshData = () => { onClearFilters(); dispatch(getCompanyAction()); toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />); };
     
-    // --- START: MODIFIED LOGIC ---
-    const handleCardClick = (cardType: 'active' | 'inactive' | 'verified' | 'non_verified' | 'eligible' | 'not_eligible') => {
-        const defaultFilters = {
-            filterCreatedDate: [null, null] as [Date | null, Date | null],
-            filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [],
-            filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [],
-            customFilter: undefined,
-        };
+    const onClearFilters = () => { 
+        const defaultFilters = { customFilter: undefined, filterCreatedDate: [null, null] as [Date | null, Date | null], filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [], }; 
+        setFilterCriteria(defaultFilters); 
+        handleSetTableData({ pageIndex: 1, query: "", sort: { order: "", key: "" } });
+        sessionStorage.removeItem(COMPANY_STATE_STORAGE_KEY); // Clear persisted state
+    };
 
+    const handleRemoveFilter = (key: keyof CompanyFilterFormData, valueToRemove: string) => { setFilterCriteria(prev => { const newCriteria = { ...prev, customFilter: undefined }; if (key === 'filterCreatedDate') { (newCriteria as any)[key] = [null, null]; } else { const currentFilterArray = newCriteria[key] as { value: string; label: string }[] | undefined; if (currentFilterArray) { const newFilterArray = currentFilterArray.filter(item => item.value !== valueToRemove); (newCriteria as any)[key] = newFilterArray; } } return newCriteria; }); handleSetTableData({ pageIndex: 1 }); };
+    
+    const onRefreshData = () => { 
+        onClearFilters(); // This will also clear sessionStorage
+        dispatch(getCompanyAction()); 
+        toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />); 
+    };
+    
+    const handleCardClick = (cardType: 'active' | 'inactive' | 'disabled' | 'verified' | 'non_verified' | 'eligible' | 'not_eligible') => {
+        const defaultFilters = { filterCreatedDate: [null, null] as [Date | null, Date | null], filterStatus: [], filterCompanyType: [], filterContinent: [], filterCountry: [], filterState: [], filterCity: [], filterKycVerified: [], filterEnableBilling: [], customFilter: undefined, };
         let newCriteria: CompanyFilterFormData & { customFilter?: string } = { ...defaultFilters };
 
         switch (cardType) {
-            case 'active':
-                newCriteria.filterStatus = [{ value: 'Active', label: 'Active' }];
-                break;
-            case 'inactive':
-                newCriteria.filterStatus = [{ value: 'Inactive', label: 'Inactive' }];
-                break;
-            case 'verified':
-                // As requested: filters by kyc_verified boolean, not status string
-                newCriteria.filterKycVerified = [{ value: 'Yes', label: 'Yes' }];
-                break;
-            case 'non_verified':
-                 // As requested: filters by kyc_verified boolean, not status string
-                newCriteria.filterKycVerified = [{ value: 'No', label: 'No' }];
-                break;
+            case 'active': newCriteria.filterStatus = [{ value: 'Active', label: 'Active' }]; break;
+            case 'inactive': newCriteria.filterStatus = [{ value: 'Inactive', label: 'Inactive' }]; break;
+            case 'disabled': newCriteria.filterStatus = [{ value: 'disabled', label: 'Disabled' }]; break;
+            case 'verified': newCriteria.filterKycVerified = [{ value: 'Yes', label: 'Yes' }]; break;
+            case 'non_verified': newCriteria.filterKycVerified = [{ value: 'No', label: 'No' }]; break;
             case 'eligible':
-                // kyc_verified IS true AND enable_billing IS true
                 newCriteria.filterKycVerified = [{ value: 'Yes', label: 'Yes' }];
                 newCriteria.filterEnableBilling = [{ value: 'Yes', label: 'Yes' }];
                 break;
-            case 'not_eligible':
-                // kyc_verified IS false OR enable_billing IS false
-                // This requires a special filter path because it's an OR condition
-                newCriteria.customFilter = 'not_eligible';
-                break;
+            case 'not_eligible': newCriteria.customFilter = 'not_eligible'; break;
         }
-
         setFilterCriteria(newCriteria);
-        handleSetTableData({ pageIndex: 1, query: "" }); // Reset pagination and search
+        handleSetTableData({ pageIndex: 1, query: "" });
     };
 
     const { pageData, total, allFilteredAndSortedData, activeFilterCount } = useMemo(() => {
         let filteredData = [...companyList];
 
-        // Handle special 'OR' filter from card click first
         if (filterCriteria.customFilter === 'not_eligible') {
             filteredData = filteredData.filter(company => !company.kyc_verified || !company.enable_billing);
         } else {
-            // Apply standard 'AND' filters from cards or the filter drawer
             if (filterCriteria.filterStatus && filterCriteria.filterStatus.length > 0) { const selectedStatuses = filterCriteria.filterStatus.map((s) => s.value.toLowerCase()); filteredData = filteredData.filter((company) => company.status && selectedStatuses.includes(company.status.toLowerCase())); }
             if (filterCriteria.filterCompanyType && filterCriteria.filterCompanyType.length > 0) { const selectedTypes = filterCriteria.filterCompanyType.map((t) => t.value); filteredData = filteredData.filter((company) => selectedTypes.includes(company.ownership_type)); }
             if (filterCriteria.filterContinent && filterCriteria.filterContinent.length > 0) { const selectedContinents = filterCriteria.filterContinent.map((c) => c.value); filteredData = filteredData.filter((company) => company.continent && selectedContinents.includes(company.continent.name)); }
@@ -378,19 +408,39 @@ const CompanyListTable = () => {
             if (filterCriteria.filterCreatedDate && filterCriteria.filterCreatedDate[0] && filterCriteria.filterCreatedDate[1]) { const [startDate, endDate] = filterCriteria.filterCreatedDate; const inclusiveEndDate = new Date(endDate as Date); inclusiveEndDate.setHours(23, 59, 59, 999); filteredData = filteredData.filter((company) => { const createdDate = new Date(company.created_at); return (createdDate >= (startDate as Date) && createdDate <= inclusiveEndDate); }); }
         }
 
-        // Apply global search query
-        if (tableData.query) { filteredData = filteredData.filter((i) => Object.values(i).some((v) => { if (typeof v === "object" && v !== null) { return Object.values(v).some((nestedV) => String(nestedV).toLowerCase().includes(tableData.query.toLowerCase())); } return String(v).toLowerCase().includes(tableData.query.toLowerCase()); })); }
-
+        // --- IMPROVED & EFFICIENT SEARCH LOGIC ---
+        if (tableData.query) {
+            const lowerCaseQuery = tableData.query?.toLowerCase();
+            filteredData = filteredData.filter(company => {
+                const searchableFields = [
+                    company.company_name,
+                    company.company_code,
+                    company.owner_name,
+                    company.primary_email_id,
+                    company.primary_contact_number,
+                    company.gst_number,
+                    company.pan_number,
+                    company.city,
+                    company.state,
+                    company.country?.name,
+                ];
+                return searchableFields.some(field =>
+                    field && String(field).toLowerCase().includes(lowerCaseQuery)
+                );
+            });
+        }
+        
         let count = 0; 
         if(filterCriteria.customFilter) count++;
-        if (filterCriteria.filterStatus?.length) count++;
-        if (filterCriteria.filterCompanyType?.length) count++;
-        if (filterCriteria.filterContinent?.length) count++;
-        if (filterCriteria.filterCountry?.length) count++;
-        if (filterCriteria.filterState?.length) count++;
-        if (filterCriteria.filterCity?.length) count++;
-        if (filterCriteria.filterKycVerified?.length) count++;
-        if (filterCriteria.filterEnableBilling?.length) count++;
+        count += (filterCriteria.filterStatus?.length ?? 0) > 0 ? 1 : 0;
+        count += (filterCriteria.filterCompanyType?.length ?? 0) > 0 ? 1 : 0;
+        count += (filterCriteria.filterContinent?.length ?? 0) > 0 ? 1 : 0;
+        count += (filterCriteria.filterCountry?.length ?? 0) > 0 ? 1 : 0;
+        count += (filterCriteria.filterState?.length ?? 0) > 0 ? 1 : 0;
+        count += (filterCriteria.filterCity?.length ?? 0) > 0 ? 1 : 0;
+        count += (filterCriteria.filterKycVerified?.length ?? 0) > 0 ? 1 : 0;
+        count += (filterCriteria.filterEnableBilling?.length ?? 0) > 0 ? 1 : 0;
+        count += (filterCriteria.filterCreatedDate?.[0] && filterCriteria.filterCreatedDate?.[1]) ? 1 : 0;
         
         const { order, key } = tableData.sort as OnSortParam;
         if (order && key) { filteredData.sort((a, b) => { let av = a[key as keyof CompanyItem] as any; let bv = b[key as keyof CompanyItem] as any; if (key.includes(".")) { const keys = key.split("."); av = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), a); bv = keys.reduce((obj, k) => (obj && obj[k] !== undefined ? obj[k] : undefined), b); } av = av ?? ""; bv = bv ?? ""; if (typeof av === "string" && typeof bv === "string") return order === "asc" ? av.localeCompare(bv) : bv.localeCompare(av); if (typeof av === "number" && typeof bv === "number") return order === "asc" ? av - bv : bv - av; if (typeof av === "boolean" && typeof bv === "boolean") return order === "asc" ? (av === bv ? 0 : av ? -1 : 1) : (av === bv ? 0 : av ? 1 : -1); return 0; }); }
@@ -398,7 +448,6 @@ const CompanyListTable = () => {
         const pI = tableData.pageIndex as number; const pS = tableData.pageSize as number; 
         return { pageData: filteredData.slice((pI - 1) * pS, pI * pS), total: filteredData.length, allFilteredAndSortedData: filteredData, activeFilterCount: count };
     }, [companyList, tableData, filterCriteria]);
-    // --- END: MODIFIED LOGIC ---
 
     const closeFilterDrawer = () => setFilterDrawerOpen(false);
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
@@ -408,7 +457,6 @@ const CompanyListTable = () => {
         try { await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Company', file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); const exportSuccess = exportToCsv(fileName, allFilteredAndSortedData); if (exportSuccess) setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>); } finally { setIsSubmittingExportReason(false); }
     };
     const handleEditCompany = (id: number) => navigate(`/business-entities/company-edit/${id}`);
-    const handleSetTableData = (d: Partial<TableQueries>) => setTableData((p) => ({ ...p, ...d }));
     const handlePaginationChange = (p: number) => handleSetTableData({ pageIndex: p });
     const handleSelectChange = (v: number) => handleSetTableData({ pageSize: v, pageIndex: 1 });
     const handleSort = (s: OnSortParam) => handleSetTableData({ sort: s, pageIndex: 1 });
@@ -424,7 +472,6 @@ const CompanyListTable = () => {
         { header: "Contact", accessorKey: "owner_name", id: "contact", size: 180, cell: (props) => { const { owner_name, primary_contact_number, primary_email_id, company_website, primary_contact_number_code } = props.row.original; return ( <div className="text-xs flex flex-col gap-0.5"> {owner_name && (<span><b>Owner: </b> {owner_name}</span>)} {primary_contact_number && (<span>{primary_contact_number_code} {primary_contact_number}</span>)} {primary_email_id && (<a href={`mailto:${primary_email_id}`} className="text-blue-600 hover:underline">{primary_email_id}</a>)} {company_website && (<a href={company_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">{company_website}</a>)} </div> ); }, },
         { header: "Legal IDs & Status", accessorKey: "status", id: "legal", size: 180, cell: ({ row }) => { const { gst_number, pan_number, status } = row.original; return ( <div className="flex flex-col gap-0.5 text-[11px]"> {gst_number && <div><b>GST:</b> <span className="break-all">{gst_number}</span></div>} {pan_number && <div><b>PAN:</b> <span className="break-all">{pan_number}</span></div>} <Tag className={`${getCompanyStatusClass(status)} capitalize mt-1 self-start !text-[11px] px-2 py-1`}>{status}</Tag> </div> ); }, },
         { header: "Profile & Scores", accessorKey: "profile_completion", id: "profile", size: 190, cell: ({ row }) => { const { members_count = 0, teams_count = 0, profile_completion = 0, kyc_verified, enable_billing, due_after_3_months_date } = row.original; const formattedDate = due_after_3_months_date ? dayjs(due_after_3_months_date).format('D MMM, YYYY') : "N/A"; return ( <div className="flex flex-col gap-1 text-xs"> <span><b>Members:</b> {members_count}</span> <span><b>Teams:</b> {teams_count}</span> <div className="flex gap-1 items-center"><b>KYC Verified:</b><Tooltip title={`KYC: ${kyc_verified ? "Yes" : "No"}`}>{kyc_verified ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <div className="flex gap-1 items-center"><b>Billing:</b><Tooltip title={`Billing: ${enable_billing ? "Yes" : "No"}`}>{enable_billing ? (<MdCheckCircle className="text-green-500 text-lg" />) : (<MdCancel className="text-red-500 text-lg" />)}</Tooltip></div> <span><b>Billing Due:</b> {formattedDate}</span> <Tooltip title={`Profile Completion ${profile_completion}%`}> <div className="h-2.5 w-full rounded-full bg-gray-300"> <div className="rounded-full h-2.5 bg-blue-500" style={{ width: `${profile_completion}%` }}></div> </div> </Tooltip> </div> ); }, },
-        // { header: "Business", accessorKey: "wall.total", size: 180, meta: { HeaderClass: "text-center" }, cell: (props: { row: Row<CompanyItem> }) => ( <div className='flex flex-col gap-2 text-center items-center '> <Tooltip title={`Buy: ${props.row.original.wall.buy} | Sell: ${props.row.original.wall.sell} | Total: ${props.row.original.wall.total}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props.row.original.wall.buy} | {props.row.original.wall.sell} | {props.row.original.wall.total} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original.opportunities.offers} | Demands: ${props.row.original.opportunities.demands} | Total: ${props.row.original.opportunities.total}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props.row.original.opportunities.offers} | {props.row.original.opportunities.demands} | {props.row.original.opportunities.total} </div> </Tooltip> <Tooltip title={`Total: ${props.row.original.leads.total}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props.row.original.leads.total} </div> </Tooltip> </div> ) },
         { header: "Actions", id: "action", meta: { HeaderClass: "text-center" }, size: 80, cell: (props) => <CompanyActionColumn rowData={props.row.original} onEdit={handleEditCompany} onOpenModal={handleOpenModal} /> },
     ], [handleOpenModal, openImageViewer, navigate]);
 
@@ -449,19 +496,18 @@ const CompanyListTable = () => {
                 <h5>Company</h5>
                 <div className="flex flex-col md:flex-row gap-3"><Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/company-create")}>Add New</Button></div>
             </div>
-            {/* --- START: MODIFIED CARDS JSX --- */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
                 <Tooltip title="Click to show all companies"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBuilding size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm ">{companyCount?.total ?? 0}</b><span className="text-[9px] font-semibold">Total</span></div></Card></div></Tooltip>
                 <Tooltip title="Click to show Active companies"><div onClick={() => handleCardClick('active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBuildingBank size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.active ?? 0}</b><span className="text-[9px] font-semibold">Active</span></div></Card></div></Tooltip>
                 <Tooltip title="Click to show Inactive companies"><div onClick={() => handleCardClick('inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.inactive ?? 0}</b><span className="text-[9px] font-semibold">Inactive</span></div></Card></div></Tooltip>
+                <Tooltip title="Click to show Disabled companies"><div onClick={() => handleCardClick('disabled')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.disabled ?? 0}</b><span className="text-[9px] font-semibold">Disabled</span></div></Card></div></Tooltip>
+                
                 <Tooltip title="Click to show KYC Verified companies"><div onClick={() => handleCardClick('verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCircleCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.verified ?? 0}</b><span className="text-[9px] font-semibold">Verified</span></div></Card></div></Tooltip>
                 <Tooltip title="Click to show Non-KYC Verified companies"><div onClick={() => handleCardClick('non_verified')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><TbCircleX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.non_verified ?? 0}</b><span className="text-[9px] font-semibold">Non Verified</span></div></Card></div></Tooltip>
                 <Tooltip title="Click to show Eligible companies (KYC and Billing enabled)"><div onClick={() => handleCardClick('eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-violet-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbShieldCheck size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.eligible ?? 0}</b><span className="text-[9px] font-semibold">Eligible</span></div></Card></div></Tooltip>
                 <Tooltip title="Click to show Not Eligible companies (KYC or Billing disabled)"><div onClick={() => handleCardClick('not_eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-red-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbShieldX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.not_eligible ?? 0}</b><span className="text-[9px] font-semibold">Not Eligible</span></div></Card></div></Tooltip>
-                {/* <Tooltip title="Click to show Not Eligible companies (KYC or Billing disabled)"><div onClick={() => handleCardClick('not_eligible')}><Card bodyClass={cardBodyClass} className="rounded-md border border-red-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbShieldX size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.not_eligible ?? 0}</b><span className="text-[9px] font-semibold">Not Eligible</span></div></Card></div></Tooltip> */}
-            <Card bodyClass={cardBodyClass} className="rounded-md border border-orange-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbBuildingCommunity size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.members ?? 0}</b><span className="text-[9px] font-semibold">Members</span></div></Card>
+                {/* <Card bodyClass={cardBodyClass} className="rounded-md border border-orange-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbBuildingCommunity size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.members ?? 0}</b><span className="text-[9px] font-semibold">Members</span></div></Card> */}
             </div>
-            {/* --- END: MODIFIED CARDS JSX --- */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
                 <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} value={tableData.query} />
                 <div className="flex gap-2">
@@ -487,8 +533,8 @@ const CompanyListTable = () => {
                         <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Country" options={countryOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
                         <UiFormItem label="State"><Controller name="filterState" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select State" options={stateOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
                         <UiFormItem label="City"><Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select City" options={cityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
-                        <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={kycOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
-                        <UiFormItem label="Enable Billing"><Controller name="filterEnableBilling" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={billingOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+                        <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => (<UiSelect placeholder="Select Status" options={kycOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+                        <UiFormItem label="Enable Billing"><Controller name="filterEnableBilling" control={filterFormMethods.control} render={({ field }) => (<UiSelect placeholder="Select Status" options={billingOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
                         <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedDate" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></UiFormItem>
                     </div>
                 </UiForm>
@@ -503,12 +549,14 @@ const CompanyListTable = () => {
             </ConfirmDialog>
             <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} width={600}>
                 <div className="flex justify-center items-center p-4">
-                    {imageToView ? (<img src={`https://aazovo.codefriend.in/${imageToView}`} alt="Company Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
+                    {imageToView ? (<img src={`${imageToView}`} alt="Company Logo Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />) : (<p>No image to display.</p>)}
                 </div>
             </Dialog>
         </>
     );
 };
+// --- END: MODIFIED COMPONENT ---
+
 const CompanyListSelected = () => {
     const { selectedCompanies, setSelectedCompanies } = useCompanyList();
     const dispatch = useAppDispatch();
@@ -562,7 +610,7 @@ const CompanyListSelected = () => {
             <Dialog isOpen={sendMessageDialogOpen} onClose={() => setSendMessageDialogOpen(false)}>
         <h5 className="mb-2">Send Message</h5>
         <Avatar.Group chained omittedAvatarTooltip className="mt-4" maxCount={4}>
-          {selectedCompanies.map((c) => (<Tooltip key={c.id} title={c.company_name}><Avatar src={c.company_logo ? `https://aazovo.codefriend.in/${c.company_logo}` : undefined} icon={<TbUserCircle />} /></Tooltip>))}
+          {selectedCompanies.map((c) => (<Tooltip key={c.id} title={c.company_name}><Avatar src={c.company_logo ? c.company_logo : undefined} icon={<TbUserCircle />} /></Tooltip>))}
         </Avatar.Group>
         <div className="my-4"><RichTextEditor /></div>
         <div className="text-right flex items-center gap-2">
