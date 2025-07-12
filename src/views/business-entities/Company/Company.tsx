@@ -128,9 +128,12 @@ const taskPriorityOptions: SelectOption[] = [ { value: 'Low', label: 'Low' }, { 
 
 // --- Utility Functions & Constants ---
 function exportToCsv(filename: string, rows: CompanyItem[]) {
+
+  console.log("company_code",rows);
+  
     if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
-    const CSV_HEADERS = ["ID", "Company Name", "Owner Name", "Ownership Type", "Status", "Contact", "Email", "Country", "State", "City", "KYC Verified", "Created Date"];
-    const preparedRows = rows.map(row => ({ id: row.id, company_name: row.company_name, owner_name: row.owner_name, ownership_type: row.ownership_type, status: row.status, primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`, primary_email_id: row.primary_email_id, country: row.country?.name || 'N/A', state: row.state, city: row.city, kyc_verified: row.kyc_verified ? 'Yes' : 'No', created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A' }));
+    const CSV_HEADERS = ["ID", "Company Code","Company Name", "Owner Name", "Ownership Type", "Status", "Contact", "Email", "Country", "State", "City", "KYC Verified","gst_number","pan_number", "Created Date" ];
+    const preparedRows = rows.map(row => ({ id: row.id, company_code: row.company_code, company_name: row.company_name, owner_name: row.owner_name, ownership_type: row.ownership_type, status: row.status, primary_contact_number: `${row.primary_contact_number_code} ${row.primary_contact_number}`, primary_email_id: row.primary_email_id, country: row.country?.name || 'N/A', state: row.state, city: row.city, kyc_verified: row.kyc_verified ? 'Yes' : 'No', gst_number:row.gst_number ,pan_number:row.pan_number, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A' }));
     const csvContent = [ CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => JSON.stringify(row[header.toLowerCase().replace(/ /g, '_') as keyof typeof row] ?? '', (key, value) => value === null ? '' : value) ).join(',')) ].join('\n');
     const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -487,8 +490,8 @@ const CompanyListTable = () => {
                         <UiFormItem label="Country"><Controller name="filterCountry" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Country" options={countryOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
                         <UiFormItem label="State"><Controller name="filterState" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select State" options={stateOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
                         <UiFormItem label="City"><Controller name="filterCity" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select City" options={cityOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
-                        <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={kycOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
-                        <UiFormItem label="Enable Billing"><Controller name="filterEnableBilling" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status" options={billingOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+                        <UiFormItem label="KYC Verified"><Controller name="filterKycVerified" control={filterFormMethods.control} render={({ field }) => (<UiSelect  placeholder="Select Status" options={kycOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
+                        <UiFormItem label="Enable Billing"><Controller name="filterEnableBilling" control={filterFormMethods.control} render={({ field }) => (<UiSelect  placeholder="Select Status" options={billingOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></UiFormItem>
                         <UiFormItem label="Created Date" className="col-span-2"><Controller name="filterCreatedDate" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange placeholder="Select Date Range" value={field.value as [Date | null, Date | null]} onChange={field.onChange} />)} /></UiFormItem>
                     </div>
                 </UiForm>
