@@ -3297,7 +3297,7 @@ export const getpendingbiling = async () => {
 export const setenablebilling = async (id: object) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/make-enable/${id}`)
-    return response?.data
+    return response
   } catch (err) {
     return isAxiosError(err)
   }

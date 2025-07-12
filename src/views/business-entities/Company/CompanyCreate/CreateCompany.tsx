@@ -43,12 +43,11 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BiChevronRight } from "react-icons/bi";
-import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight } from "react-icons/tb";
+import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf } from "react-icons/tb";
 import { useSelector } from "react-redux";
 import { z } from "zod";
 
-
-// --- START: Enhanced ImageViewer Component with Thumbnails ---
+// --- START: Helper Components for Document Viewing ---
 interface ImageViewerProps {
   images: { src: string; alt: string }[];
   startIndex: number;
@@ -76,7 +75,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, []); // Runs once on mount
+    }, []);
 
     if (!images || images.length === 0) {
         return null;
@@ -90,22 +89,21 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
             onClick={onClose}
         >
             <Button
+                type="button"
                 shape="circle"
                 variant="solid"
                 icon={<TbX />}
-                type="button"
                 className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
                 onClick={onClose}
             />
             
             <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-                {/* Main Image & Navigation */}
                 <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
                     <Button
+                        type="button"
                         shape="circle"
                         variant="solid"
                         size="lg"
-                         type="button"
                         icon={<TbChevronLeft />}
                         className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
                         onClick={handlePrev}
@@ -123,24 +121,23 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
                     </div>
 
                     <Button
+                        type="button"
                         shape="circle"
                         variant="solid"
                         size="lg"
-                         type="button"
                         icon={<TbChevronRight />}
                         className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80"
                         onClick={handleNext}
                     />
                 </div>
                 
-                {/* Thumbnail Strip */}
                 <div className="w-full max-w-5xl flex-shrink-0 mt-4">
                     <div className="flex justify-center p-2">
                         <div className="flex gap-3 overflow-x-auto pb-2">
                             {images.map((image, index) => (
                                 <button
+                                    type="button"
                                     key={index}
-                                     type="button"
                                     onClick={() => setCurrentIndex(index)}
                                     className={classNames(
                                         "w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white",
@@ -164,11 +161,46 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
         </div>
     );
 };
-// --- END: Enhanced ImageViewer Component ---
 
+const DocumentPlaceholder = ({ fileName, fileUrl }: { fileName: string; fileUrl: string; }) => {
+    const getFileIcon = () => {
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        switch (extension) {
+            case 'pdf':
+                return <TbFileTypePdf className="text-red-500" size={32} />;
+            case 'xls':
+            case 'xlsx':
+            case 'csv':
+                return <TbFileSpreadsheet className="text-green-500" size={32} />;
+            default:
+                return <TbFile className="text-gray-500" size={32} />;
+        }
+    };
+
+    return (
+        <a 
+            href={fileUrl} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="w-full h-24 border rounded-md p-2 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+        >
+            {getFileIcon()}
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all truncate">
+                {fileName}
+            </p>
+        </a>
+    );
+};
+// --- END: Helper Components ---
 
 // --- Type Definitions ---
-
+interface ReferenceItemFE {
+  id?: string;
+  person_name?: string;
+  company_id?: { label: string; value: string };
+  number?: string;
+  remark?: string;
+}
 interface CompanyMemberItemFE {
   id?: string;
   member_id?: { label: string; value: string };
@@ -188,7 +220,7 @@ interface CompanyTeamItemFE {
 interface SpotVerificationItemFE {
   id?: string;
   verified?: boolean;
-  verified_by_id?: { label: string; value: string }; // Changed from verified_by_name
+  verified_by_id?: { label: string; value: string };
   photo_upload?: File | string | null;
   remark?: string;
 }
@@ -198,7 +230,7 @@ interface CompanyBankDetailItemFE {
   bank_account_number?: string;
   bank_name?: string;
   ifsc_code?: string;
-  swift_code?: string; // New
+  swift_code?: string; 
   verification_photo?: File | string | null;
   type?: { label: string; value: string };
 }
@@ -231,7 +263,6 @@ interface BillingDocItemFE {
   document?: File | string | null;
 }
 
-// New type for Enable Billing Docs
 interface EnabledBillingDocItemFE {
   id?: string;
   document_name?: { label: string; value: string };
@@ -240,7 +271,6 @@ interface EnabledBillingDocItemFE {
 
 export interface CompanyFormSchema {
   id?: string | number;
-
   company_name?: string;
   primary_contact_number?: string;
   primary_contact_number_code?: { label: string; value: string };
@@ -308,18 +338,18 @@ export interface CompanyFormSchema {
   primary_account_number?: string;
   primary_bank_name?: string;
   primary_ifsc_code?: string;
-  primary_swift_code?: string; // New
+  primary_swift_code?: string;
   primary_bank_verification_photo?: File | string | null;
   secondary_account_number?: string;
   secondary_bank_name?: string;
   secondary_ifsc_code?: string;
-  secondary_swift_code?: string; // New
+  secondary_swift_code?: string;
   secondary_bank_verification_photo?: File | string | null;
   company_bank_details?: CompanyBankDetailItemFE[];
 
   USER_ACCESS?: boolean;
   billing_documents?: BillingDocItemFE[];
-  enabled_billing_docs?: EnabledBillingDocItemFE[]; // New
+  enabled_billing_docs?: EnabledBillingDocItemFE[];
 
   company_members?: CompanyMemberItemFE[];
   company_teams?: CompanyTeamItemFE[];
@@ -371,7 +401,6 @@ interface ApiSingleCompanyItem {
   company_certificate?: Array<{ id: number; certificate_id: string; certificate_name: string; upload_certificate: string | null; upload_certificate_path?: string; }>;
   office_info?: Array<{ id: number; office_type: string; office_name: string; address: string; country_id: string; state: string; city: string; zip_code: string; gst_number: string | null; contact_person?: string; office_email?: string; office_phone?: string; }>;
 
-  // --- CORRECTED KYC DOCUMENT KEYS START HERE ---
   ['206AB_file']?: string | null;
   ['206AB_verified']?: boolean | string;
   ['206AB_remark']?: string | null;
@@ -402,7 +431,6 @@ interface ApiSingleCompanyItem {
   other_document_file?: string | null;
   other_document_verified?: boolean | string;
   other_document_remark?: string | null;
-  // --- CORRECTED KYC DOCUMENT KEYS END HERE ---
 
   primary_account_number?: string | null;
   primary_bank_name?: string | null;
@@ -488,13 +516,13 @@ const transformApiToFormSchema = (
     notification_email: apiData.notification_email || '',
 
     company_certificate: apiData.company_certificate?.map(cert => ({
-      id: String(cert.id), // Important for FieldArray key
+      id: String(cert.id),
       certificate_id: cert.certificate_id,
       certificate_name: cert.certificate_name || '',
       upload_certificate: cert.upload_certificate_path || cert.upload_certificate || null,
     })) || [],
     office_info: apiData.office_info?.map(office => ({
-      id: String(office.id), // Important for FieldArray key
+      id: String(office.id),
       office_type: office.office_type ? { label: office.office_type, value: office.office_type } : undefined,
       office_name: office.office_name || '',
       address: office.address || '',
@@ -508,7 +536,6 @@ const transformApiToFormSchema = (
       office_phone: office.office_phone || '',
     })) || [],
 
-    // --- USING CORRECTED KEYS TO POPULATE FORM STATE ---
     declaration_206ab: apiData["206AB_file"] || null,
     declaration_206ab_remark: apiData["206AB_remark"] || '',
     declaration_206ab_remark_enabled: stringToBoolean(apiData["206AB_verified"]),
@@ -551,7 +578,7 @@ const transformApiToFormSchema = (
     secondary_swift_code: apiData.secondary_swift_code || '',
     secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
     company_bank_details: apiData.company_bank_details?.map(bank => ({
-      id: String(bank.id), // Important for FieldArray key
+      id: String(bank.id),
       bank_account_number: bank.bank_account_number || '',
       bank_name: bank.bank_name || undefined,
       ifsc_code: bank.ifsc_code || '',
@@ -562,12 +589,12 @@ const transformApiToFormSchema = (
 
     USER_ACCESS: stringToBoolean(apiData.kyc_verified),
     billing_documents: apiData.billing_documents?.map(doc => ({
-      id: String(doc.id), // Important for FieldArray key
+      id: String(doc.id),
       document_name: findOptionByValue(documentTypeOptions, doc.document_name),
       document: doc.document || null,
     })) || [],
     enabled_billing_docs: apiData.enable_billing_documents?.map(doc => ({
-      id: String(doc.id), // Important for FieldArray key
+      id: String(doc.id),
       document_name: findOptionByValue(documentTypeOptions, doc.document_name),
       document: doc.document || null
     })) || [],
@@ -586,14 +613,14 @@ const transformApiToFormSchema = (
     })) || [],
 
     company_spot_verification: apiData.company_spot_verification?.map(item => ({
-      id: String(item.id), // Important for FieldArray key
+      id: String(item.id),
       verified: stringToBoolean(item.verified),
       verified_by_id: findOptionByValue(allEmployees, item.verified_by_id) || findOptionByLabel(allEmployees, item.verified_by_name),
       photo_upload: item.photo_upload || null,
       remark: item.remark || '',
     })) || [],
     company_references: apiData.company_references?.map(ref => ({
-      id: String(ref.id), // Important for FieldArray key
+      id: String(ref.id),
       person_name: ref.person_name || '',
       company_id: findOptionByValue(allCompaniesForRef, ref.company_id),
       number: ref.number || '',
@@ -624,11 +651,6 @@ const preparePayloadForApi = (
     }
   };
 
-  // This helper function correctly handles three states for a file input in edit mode:
-  // 1. New File (instanceof File): Appends the file to be uploaded.
-  // 2. Cleared/Null File: Appends an empty string, signaling to the backend to delete the file.
-  // 3. Existing File (string URL): Does nothing, so the key is omitted from the payload.
-  //    The backend should interpret the absence of the key as "no change, keep the existing file".
   const appendFileIfExists = (key: string, value: any) => {
     if (value instanceof File) {
       apiPayload.append(key, value);
@@ -680,7 +702,6 @@ const preparePayloadForApi = (
     appendField(`office_info[${index}][office_phone]`, office.office_phone);
   });
 
-  // KYC Documents
   const kycDocsConfig = [
     { feFileKey: "declaration_206ab", beFileKey: "declaration_206AB_file", feVerifyKey: "declaration_206ab_remark_enabled", beVerifyKey: "declaration_206AB_verify", feRemarkKey: "declaration_206ab_remark", beRemarkKey: "declaration_206AB_remark" },
     { feFileKey: "ABCQ_file", beFileKey: "ABCQ_file", feVerifyKey: "ABCQ_remark_enabled", beVerifyKey: "ABCQ_verified", feRemarkKey: "ABCQ_remark", beRemarkKey: "ABCQ_remark" },
@@ -699,45 +720,35 @@ const preparePayloadForApi = (
     apiPayload.append(doc.beRemarkKey, data[doc.feRemarkKey] || "");
   });
 
-  // Bank Details
   data.company_bank_details?.forEach((bank: CompanyBankDetailItemFE, index: number) => {
     apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
     apiPayload.append(`company_bank_details[${index}][bank_name]`, bank.bank_name || '');
     apiPayload.append(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code || '');
-    apiPayload.append(`company_bank_details[${index}][swift_code]`, bank.swift_code || ''); // New
+    apiPayload.append(`company_bank_details[${index}][swift_code]`, bank.swift_code || '');
     apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
     apiPayload.append(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
   });
-
-  // Billing Documents
   
   data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
     apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name?.value || "");
     apiPayload.append(`billing_documents[${index}][document]`, doc.document);
   });
 
-  // --- FIX STARTS HERE ---
-  // Enabled Billing Documents
-  // Note: The API key is `enable_billing_documents`, while the form state uses `enabled_billing_docs`.
-  // This was corrected from `enabled_billing_docs` to `enable_billing_documents`.
   data.enabled_billing_docs?.forEach((doc: EnabledBillingDocItemFE, index: number) => {
     appendField(`enable_billing_documents[${index}][document_name]`, doc.document_name?.value);
     appendField(`enable_billing_documents[${index}][document]`, doc.document);
-    // It's crucial to send the item ID back in edit mode so the backend can correctly identify which record to update.
     if (isEditMode && doc.id) {
       appendField(`enable_billing_documents[${index}][id]`, doc.id);
     }
   });
-  // --- FIX ENDS HERE ---
 
-  // Member Management
   data.company_members?.forEach((member: CompanyMemberItemFE, index: number) => {
     apiPayload.append(`company_member_management[${index}][member_id]`, member.member_id?.value || '');
     apiPayload.append(`company_member_management[${index}][designation]`, member.designation || '');
     apiPayload.append(`company_member_management[${index}][person_name]`, member.person_name || '');
     apiPayload.append(`company_member_management[${index}][number]`, member.number || '');
   });
-  // Team Management
+
   data.company_teams?.forEach((member: CompanyTeamItemFE, index: number) => {
     apiPayload.append(`company_team_members[${index}][team_name]`, member.team_name || '');
     apiPayload.append(`company_team_members[${index}][designation]`, member.designation || '');
@@ -745,15 +756,13 @@ const preparePayloadForApi = (
     apiPayload.append(`company_team_members[${index}][number]`, member.number || '');
   });
 
-  // Spot Verifications
   data.company_spot_verification?.forEach((item: SpotVerificationItemFE, index: number) => {
     apiPayload.append(`company_spot_verification[${index}][verified]`, item.verified ? "1" : "0");
-    appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id); // Changed
+    appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id);
     apiPayload.append(`company_spot_verification[${index}][remark]`, item.remark || "");
     apiPayload.append(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
   });
 
-  // References
   data.company_references?.forEach((ref: ReferenceItemFE, index: number) => {
     apiPayload.append(`company_references[${index}][person_name]`, ref.person_name || "");
     apiPayload.append(`company_references[${index}][company_id]`, ref.company_id?.value || "");
@@ -955,12 +964,6 @@ const CompanyDetailsSection = ({
         <FormItem label={<div>GST Number{isIndiaSelected && <span className="text-red-500"> *</span>}</div>} invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}><Controller name="gst_number" control={control} render={({ field }) => (<Input placeholder="GST Number" {...field} />)} /></FormItem>
         <FormItem label={<div>PAN Number{isIndiaSelected && <span className="text-red-500"> *</span>}</div>} invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}><Controller name="pan_number" control={control} render={({ field }) => (<Input placeholder="PAN Number" {...field} />)} /></FormItem>
 
-        {/* <FormItem label={<div>GST Number<span className="text-red-500"> * </span></div>} invalid={!!errors.gst_number} errorMessage={errors.gst_number?.message as string}>
-          <Controller name="gst_number" control={control} render={({ field }) => (<Input placeholder="GST Number" {...field} />)} />
-        </FormItem>
-        <FormItem label={<div>PAN Number<span className="text-red-500"> * </span></div>} invalid={!!errors.pan_number} errorMessage={errors.pan_number?.message as string}>
-          <Controller name="pan_number" control={control} render={({ field }) => (<Input placeholder="PAN Number" {...field} />)} />
-        </FormItem> */}
         <FormItem label={<div>TRN Number</div>} invalid={!!errors.trn_number} errorMessage={errors.trn_number?.message as string}>
           <Controller name="trn_number" control={control} render={({ field }) => (<Input placeholder="TRN Number" {...field} />)} />
         </FormItem>
@@ -1102,7 +1105,6 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
         { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
     ], [isIndiaSelected]);
 
-    // Create a memoized list of only the image documents for the viewer
     const imageDocsForViewer = useMemo(() => {
         return kycDocs
             .map(doc => ({ ...doc, fileValue: watch(doc.name) }))
@@ -1162,13 +1164,10 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                                             />
                                         </button>
                                     ) : (
-                                        <div className="text-xs p-2 border rounded-md">
-                                            {typeof fileValue === "string" ? (
-                                                <a href={fileValue} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline"> View Document </a>
-                                            ) : (fileValue as File).name ? (
-                                                <p className="text-gray-600 dark:text-gray-300">{(fileValue as File).name}</p>
-                                            ) : null}
-                                        </div>
+                                        <DocumentPlaceholder
+                                            fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+                                            fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : fileValue}
+                                        />
                                     )}
                                 </div>
                             )}

@@ -39,11 +39,12 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BiChevronRight } from "react-icons/bi";
-import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight } from "react-icons/tb";
+import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf } from "react-icons/tb";
 import { useSelector } from "react-redux";
 import { z } from "zod";
 
-// --- START: New ImageViewer Component ---
+
+// --- START: Enhanced ImageViewer Component with Thumbnails ---
 interface ImageViewerProps {
   images: { src: string; alt: string }[];
   startIndex: number;
@@ -159,6 +160,38 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
     );
 };
 // --- END: Enhanced ImageViewer Component ---
+
+// --- START: New DocumentPlaceholder Component ---
+const DocumentPlaceholder = ({ fileName, fileUrl }: { fileName: string; fileUrl: string; }) => {
+    const getFileIcon = () => {
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        switch (extension) {
+            case 'pdf':
+                return <TbFileTypePdf className="text-red-500" size={32} />;
+            case 'xls':
+            case 'xlsx':
+            case 'csv':
+                return <TbFileSpreadsheet className="text-green-500" size={32} />;
+            default:
+                return <TbFile className="text-gray-500" size={32} />;
+        }
+    };
+
+    return (
+        <a 
+            href={fileUrl} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="w-full h-24 border rounded-md p-2 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+        >
+            {getFileIcon()}
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all truncate">
+                {fileName}
+            </p>
+        </a>
+    );
+};
+// --- END: New DocumentPlaceholder Component ---
 
 
 // --- Type Definitions ---
@@ -1439,17 +1472,10 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                                             />
                                         </button>
                                     ) : (
-                                        <div className="text-xs p-2 border rounded-md">
-                                            {typeof fileValue === "string" ? (
-                                                <a href={fileValue} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                                    View Document
-                                                </a>
-                                            ) : (fileValue as File).name ? (
-                                                <p className="text-gray-600 dark:text-gray-300">
-                                                    {(fileValue as File).name}
-                                                </p>
-                                            ) : null}
-                                        </div>
+                                        <DocumentPlaceholder
+                                            fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+                                            fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : fileValue}
+                                        />
                                     )}
                                 </div>
                             )}

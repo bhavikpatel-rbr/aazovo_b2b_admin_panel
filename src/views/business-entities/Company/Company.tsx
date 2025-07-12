@@ -806,8 +806,8 @@ const CompanyListTable = () => {
     const handleApprovePendingRequest = async (company: { id: number; company_name: string }) => {
         try {
             await dispatch(setenablebillingAction(company.id)).unwrap();
+
             toast.push(<Notification title={`Billing approved for ${company.company_name}`} type="success" />);
-            dispatch(getPendingBillAction());
         } catch (e: any) {
             toast.push(<Notification title={`Failed to approve billing for ${company.company_name}`} type="danger" />);
         }
