@@ -1310,7 +1310,7 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
 
     return actualList.map((m: any) => ({
       value: String(m.id),
-      label: `${m.name || 'N/A'} (ID:${m.id})`,
+      label: `(${m.employee_id}) - ${m.name || 'N/A'}`,
     }));
   }, [EmployeesList]);
 
@@ -1923,13 +1923,13 @@ const CompanyCreate = () => {
         try {
           const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
           if (actionResult) {
-            const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `${m.name} (ID:${m.id})` }));
+            const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.member_code}) - ${m.name}` }));
 
             const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
             const employeeList = Array.isArray(employeeDataSource) ? employeeDataSource : [];
             const allEmployeesForSelect = employeeList.map((m: any) => ({
               value: String(m.id),
-              label: `${m.name || 'N/A'} (ID:${m.id})`,
+              label: `(${m.employee_id}) - ${m.name || 'N/A'}`,
             }));
 
             const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: c.company_name }));
