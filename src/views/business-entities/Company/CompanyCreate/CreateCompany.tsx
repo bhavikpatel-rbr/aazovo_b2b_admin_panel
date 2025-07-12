@@ -767,7 +767,7 @@ const CompanyDetailsSection = ({
           <Controller name="status" control={control} render={({ field }) => (<Select options={statusOptions} placeholder="Select Status" {...field} />)} />
         </FormItem>
         <FormItem label={<div>Company Name<span className="text-red-500"> * </span></div>} invalid={!!errors.company_name} errorMessage={errors.company_name?.message as string}>
-          <Controller name="company_name" control={control} render={({ field }) => (<Input placeholder="Company Name" {...field} />)} />
+          <Controller name="company_name" control={control} render={({ field }) => (<Input placeholder="Company Name" {...field} onInput={(e:any)=> {if(e.target.value)e.target.value = e.target.value.toUpperCase()}} />)} />
         </FormItem>
         <FormItem label={<div>Ownership Type<span className="text-red-500"> * </span></div>} invalid={!!errors.ownership_type} errorMessage={errors.ownership_type?.message as string}>
           <Controller name="ownership_type" control={control} render={({ field }) => (<Select placeholder="Select Ownership" options={ownershipTypeOptions} {...field} />)} />
@@ -963,9 +963,12 @@ const CompanyDetailsSection = ({
 // --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
+    const selectedCountry = watch("country_id");
+  const isIndiaSelected = selectedCountry?.value === '101';
+
   const kycDocs = [
-    { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: true },
-    { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const, required: true },
+    { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: isIndiaSelected },
+    { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const, required: isIndiaSelected },
     { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const, required: true },
     { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_remark_enabled" as const },
     { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: true },
@@ -1356,7 +1359,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
     return Array.isArray(data)
       ? data.map((m: any) => ({
         value: String(m.id),
-        label: `(Code: ${m.member_code}) - ${m.name || 'N/A'}`,
+        label: `(${m.member_code}) - ${m.name || 'N/A'}`,
         status: m.status,
       }))
       : [];
@@ -1410,10 +1413,10 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
             <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_members?.[index]?.designation} errorMessage={errors.company_members?.[index]?.designation?.message as string}>
               <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="Designation in this company" {...field} />)} />
             </FormItem>
-            <FormItem label={`Person Name (Override) ${index + 1}`} invalid={!!errors.company_members?.[index]?.person_name} errorMessage={errors.company_members?.[index]?.person_name?.message as string}>
+            <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_members?.[index]?.person_name} errorMessage={errors.company_members?.[index]?.person_name?.message as string}>
               <Controller name={`company_members.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Display Name" {...field} />)} />
             </FormItem>
-            <FormItem label={`Contact No. (Override) ${index + 1}`} invalid={!!errors.company_members?.[index]?.number} errorMessage={errors.company_members?.[index]?.number?.message as string}>
+            <FormItem label={`Contact No. ${index + 1}`} invalid={!!errors.company_members?.[index]?.number} errorMessage={errors.company_members?.[index]?.number?.message as string}>
               <Controller name={`company_members.${index}.number`} control={control} render={({ field }) => (<Input type="tel" placeholder="Contact Number" {...field} />)} />
             </FormItem>
           </div>

@@ -42,9 +42,9 @@ const CompanyProfileHeader = ({ company }: { company: ApiSingleCompanyItem }) =>
   return (
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <Avatar size={90} shape="circle" src={company.company_logo || undefined} icon={<TbBuilding />} />
         <div>
-          <h4 className="font-bold">{company.company_name}</h4>
+          <h4 className="font-bold">({company.company_code}) - {company.company_name}</h4>
+
           <div className="flex items-center gap-2 mb-1 text-sm">
             <TbMail className="text-gray-400" /> <p>{company.primary_email_id}</p>
           </div>
@@ -60,8 +60,12 @@ const CompanyProfileHeader = ({ company }: { company: ApiSingleCompanyItem }) =>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm">
         <div className="flex items-center gap-2"><TbUserCircle className="text-gray-400" /><span className="font-semibold">Owner:</span><span>{company.owner_name}</span></div>
-        <div className="flex items-center gap-2"><TbBriefcase className="text-gray-400" /><span className="font-semibold">Business Type:</span><span>{company.primary_business_type || 'N/A'}</span></div>
-        <div className="flex items-center gap-2"><TbCalendar className="text-gray-400" /><span className="font-semibold">Established:</span><span>{company.establishment_year || 'N/A'}</span></div>
+        <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">GST:</span><span>{company.gst_number || 'N/A'}</span></div>
+        <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">PAN NO:</span><span>{company.pan_number || 'N/A'}</span></div>
+        <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TRN No:</span><span>{company.trn_number || 'N/A'}</span></div>
+        <div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TAN No:</span><span>{company.tan_number || 'N/A'}</span></div>
+
+
       </div>
       <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
         <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/business-entities/company-edit/${company.id}`)}>Edit Company</Button>
@@ -73,7 +77,7 @@ const CompanyProfileHeader = ({ company }: { company: ApiSingleCompanyItem }) =>
 
 const companyViewNavigationList = [
   { label: "Details", link: "details", icon: <TbUser /> },
-  { label: "Documents", link: "documents", icon: <TbFileText /> },
+  { label: "Kyc Documents", link: "documents", icon: <TbFileText /> },
   { label: "Bank Details", link: "bank", icon: <TbBuildingBank /> },
   { label: "Members", link: "members", icon: <TbUsersGroup /> },
   { label: "Teams", link: "teams", icon: <TbUsersGroup /> },
@@ -154,213 +158,213 @@ const DetailsTabView = ({ company }: { company: ApiSingleCompanyItem }) => (
         <InfoPair label="Continent" value={company.continent?.name} />
       </div>
     </DetailSection>
-    <DetailSection title="Legal & Financial IDs" icon={<TbLicense />}>
+    {/* <DetailSection title="Legal & Financial IDs" icon={<TbLicense />}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8">
         <InfoPair label="GST Number" value={company.gst_number} />
         <InfoPair label="PAN Number" value={company.pan_number} />
         <InfoPair label="TRN Number" value={company.trn_number} />
         <InfoPair label="TAN Number" value={company.tan_number} />
       </div>
-    </DetailSection>
+    </DetailSection> */}
   </div>
 );
 
 const DocumentCard = ({ name, url, verified }: { name: string, url: string | null, verified?: boolean | number | string | null }) => (
-    <Card bodyClass="p-4" className="flex items-center justify-between">
-        <div className='flex items-center gap-3'>
-            <TbFileDescription size={24} className='text-gray-400'/>
-            <p className="font-semibold">{name}</p>
-        </div>
-        <div className='flex items-center gap-3'>
-            {verified ? 
-                <Tag className="bg-emerald-100 text-emerald-700"><TbCheck className='mr-1'/>Verified</Tag> :
-                <Tag className="bg-red-100 text-red-700"><TbX className='mr-1'/>Not Verified</Tag>
-            }
-            <Button size="sm" shape="circle" icon={<TbDownload />} disabled={!url} onClick={() => window.open(url || '', '_blank')} />
-        </div>
-    </Card>
+  <Card bodyClass="p-4" className="flex items-center justify-between">
+    <div className='flex items-center gap-3'>
+      <TbFileDescription size={24} className='text-gray-400' />
+      <p className="font-semibold">{name}</p>
+    </div>
+    <div className='flex items-center gap-3'>
+      {verified ?
+        <Tag className="bg-emerald-100 text-emerald-700"><TbCheck className='mr-1' />Verified</Tag> :
+        <Tag className="bg-red-100 text-red-700"><TbX className='mr-1' />Not Verified</Tag>
+      }
+      <Button size="sm" shape="circle" icon={<TbDownload />} disabled={!url} onClick={() => window.open(url || '', '_blank')} />
+    </div>
+  </Card>
 );
 
 const DocumentsTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
-    const kycDocs = [
-        { name: "Aadhar Card", fileKey: "aadhar_card_file", verifiedKey: "aadhar_card_verified" },
-        { name: "PAN Card", fileKey: "pan_card_file", verifiedKey: "pan_card_verified" },
-        { name: "GST Certificate", fileKey: "gst_certificate_file", verifiedKey: "gst_certificate_verified" },
-        { name: "Office Photo", fileKey: "office_photo_file", verifiedKey: "office_photo_verified" },
-        { name: "Cancel Cheque", fileKey: "cancel_cheque_file", verifiedKey: "cancel_cheque_verified" },
-        { name: "Visiting Card", fileKey: "visiting_card_file", verifiedKey: "visiting_card_verified" },
-        { name: "Authority Letter", fileKey: "authority_letter_file", verifiedKey: "authority_letter_verified" },
-        { name: "194Q Declaration", fileKey: "ABCQ_file", verifiedKey: "ABCQ_verified" },
-        { name: "Other Document", fileKey: "other_document_file", verifiedKey: "other_document_verified" },
-    ].filter(doc => company[doc.fileKey as keyof ApiSingleCompanyItem]);
+  const kycDocs = [
+    { name: "Aadhar Card", fileKey: "aadhar_card_file", verifiedKey: "aadhar_card_verified" },
+    { name: "PAN Card", fileKey: "pan_card_file", verifiedKey: "pan_card_verified" },
+    { name: "GST Certificate", fileKey: "gst_certificate_file", verifiedKey: "gst_certificate_verified" },
+    { name: "Office Photo", fileKey: "office_photo_file", verifiedKey: "office_photo_verified" },
+    { name: "Cancel Cheque", fileKey: "cancel_cheque_file", verifiedKey: "cancel_cheque_verified" },
+    { name: "Visiting Card", fileKey: "visiting_card_file", verifiedKey: "visiting_card_verified" },
+    { name: "Authority Letter", fileKey: "authority_letter_file", verifiedKey: "authority_letter_verified" },
+    { name: "194Q Declaration", fileKey: "ABCQ_file", verifiedKey: "ABCQ_verified" },
+    { name: "Other Document", fileKey: "other_document_file", verifiedKey: "other_document_verified" },
+  ].filter(doc => company[doc.fileKey as keyof ApiSingleCompanyItem]);
 
-    const companyCertificates = company.company_certificate || [];
+  const companyCertificates = company.company_certificate || [];
 
-    if (kycDocs.length === 0 && companyCertificates.length === 0) {
-        return <NoDataMessage message="No documents are available for this company." />;
-    }
+  if (kycDocs.length === 0 && companyCertificates.length === 0) {
+    return <NoDataMessage message="No documents are available for this company." />;
+  }
 
-    return (
-        <div className='space-y-4'>
-            {kycDocs.map(doc => (
-                <DocumentCard 
-                    key={doc.fileKey} 
-                    name={doc.name} 
-                    url={company[doc.fileKey as keyof ApiSingleCompanyItem] as string | null} 
-                    verified={company[doc.verifiedKey as keyof ApiSingleCompanyItem]} 
-                />
-            ))}
-            {companyCertificates.map(cert => (
-                 <DocumentCard 
-                    key={cert.id} 
-                    name={cert.certificate_name} 
-                    url={cert.upload_certificate_path || null}
-                />
-            ))}
-        </div>
-    );
+  return (
+    <div className='space-y-4'>
+      {kycDocs.map(doc => (
+        <DocumentCard
+          key={doc.fileKey}
+          name={doc.name}
+          url={company[doc.fileKey as keyof ApiSingleCompanyItem] as string | null}
+          verified={company[doc.verifiedKey as keyof ApiSingleCompanyItem]}
+        />
+      ))}
+      {companyCertificates.map(cert => (
+        <DocumentCard
+          key={cert.id}
+          name={cert.certificate_name}
+          url={cert.upload_certificate_path || null}
+        />
+      ))}
+    </div>
+  );
 };
 
 const InfoCard = ({ title, data }: { title: string, data: { label: string, value?: React.ReactNode }[] }) => (
-    <Card>
-        <h6 className="font-semibold mb-2">{title}</h6>
-        <div className="text-sm space-y-1.5">
-            {data.map(item => (
-                <div key={item.label} className="flex justify-between">
-                    <span className="text-gray-500">{item.label}:</span>
-                    <span className="font-semibold text-right break-all">{item.value || 'N/A'}</span>
-                </div>
-            ))}
+  <Card>
+    <h6 className="font-semibold mb-2">{title}</h6>
+    <div className="text-sm space-y-1.5">
+      {data.map(item => (
+        <div key={item.label} className="flex justify-between">
+          <span className="text-gray-500">{item.label}:</span>
+          <span className="font-semibold text-right break-all">{item.value || 'N/A'}</span>
         </div>
-    </Card>
+      ))}
+    </div>
+  </Card>
 );
 
 const BankAndBillingTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
-    const allBanks = [
-        {...company.company_bank_details?.[0], type: company.company_bank_details?.[0]?.type || 'Other'},
-    ];
-    if (company.primary_account_number) {
-        allBanks.unshift({ id: -1, type: 'Primary', bank_account_number: company.primary_account_number, bank_name: company.primary_bank_name, ifsc_code: company.primary_ifsc_code, swift_code: company.primary_swift_code, verification_photo: company.primary_bank_verification_photo });
-    }
-     if (company.secondary_account_number) {
-        allBanks.unshift({ id: -2, type: 'Secondary', bank_account_number: company.secondary_account_number, bank_name: company.secondary_bank_name, ifsc_code: company.secondary_ifsc_code, swift_code: company.secondary_swift_code, verification_photo: company.secondary_bank_verification_photo });
-    }
-    const filteredBanks = allBanks.filter(b => b && b.bank_account_number);
+  const allBanks = [
+    { ...company.company_bank_details?.[0], type: company.company_bank_details?.[0]?.type || 'Other' },
+  ];
+  if (company.primary_account_number) {
+    allBanks.unshift({ id: -1, type: 'Primary', bank_account_number: company.primary_account_number, bank_name: company.primary_bank_name, ifsc_code: company.primary_ifsc_code, swift_code: company.primary_swift_code, verification_photo: company.primary_bank_verification_photo });
+  }
+  if (company.secondary_account_number) {
+    allBanks.unshift({ id: -2, type: 'Secondary', bank_account_number: company.secondary_account_number, bank_name: company.secondary_bank_name, ifsc_code: company.secondary_ifsc_code, swift_code: company.secondary_swift_code, verification_photo: company.secondary_bank_verification_photo });
+  }
+  const filteredBanks = allBanks.filter(b => b && b.bank_account_number);
 
-    return (
-        <div>
-            <DetailSection title="Billing Status" icon={<TbReportMoney />}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8">
-                    <InfoPair label="KYC Verified" value={company.kyc_verified ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} />
-                    <InfoPair label="Billing Enabled" value={company.billing_enabled ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} />
-                    <InfoPair label="Billing Due Date" value={company.due_after_3_months_date ? dayjs(company.due_after_3_months_date).format('D MMM YYYY') : 'N/A'} />
-                </div>
-            </DetailSection>
-            <DetailSection title="Bank Details" icon={<TbBuildingBank />}>
-                {filteredBanks.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {filteredBanks.map(bank => (
-                            <InfoCard 
-                                key={bank.id}
-                                title={`${bank.type} Bank Details`}
-                                data={[
-                                    { label: "Account No.", value: bank.bank_account_number },
-                                    { label: "Bank Name", value: bank.bank_name },
-                                    { label: "IFSC Code", value: bank.ifsc_code },
-                                    { label: "Swift Code", value: bank.swift_code },
-                                ]}
-                            />
-                        ))}
-                    </div>
-                ) : <NoDataMessage message="No bank details found." />}
-            </DetailSection>
+  return (
+    <div>
+      <DetailSection title="Billing Status" icon={<TbReportMoney />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8">
+          <InfoPair label="KYC Verified" value={company.kyc_verified ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} />
+          <InfoPair label="Enabled Billing" value={company.enable_billing ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} />
+          <InfoPair label="Enabled Billing Due Date" value={company.billing_due ? dayjs(company.billing_due).format('D MMM YYYY, h:mm A') : 'N/A'} />
         </div>
-    );
+      </DetailSection>
+      <DetailSection title="Bank Details" icon={<TbBuildingBank />}>
+        {filteredBanks.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredBanks.map(bank => (
+              <InfoCard
+                key={bank.id}
+                title={`${bank.type} Bank Details`}
+                data={[
+                  { label: "Account No.", value: bank.bank_account_number },
+                  { label: "Bank Name", value: bank.bank_name },
+                  { label: "IFSC Code", value: bank.ifsc_code },
+                  { label: "Swift Code", value: bank.swift_code },
+                ]}
+              />
+            ))}
+          </div>
+        ) : <NoDataMessage message="No bank details found." />}
+      </DetailSection>
+    </div>
+  );
 };
 
 const MembersTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
-    const members = company.company_member_management || [];
-    if (members.length === 0) return <NoDataMessage message="No members are assigned to this company." />;
+  const members = company.company_member_management || [];
+  if (members.length === 0) return <NoDataMessage message="No members are assigned to this company." />;
 
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {members.map(m => (
-                <InfoCard key={m.id} title={m.person_name} data={[
-                    { label: 'Designation', value: m.designation },
-                    { label: 'Member ID', value: m.member_id },
-                    { label: 'Contact', value: m.number },
-                ]}/>
-            ))}
-        </div>
-    );
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {members.map(m => (
+        <InfoCard key={m.id} title={m.person_name} data={[
+          { label: 'Designation', value: m.designation },
+          { label: 'Member ID', value: m.member_id },
+          { label: 'Contact', value: m.number },
+        ]} />
+      ))}
+    </div>
+  );
 };
 
 const TeamsTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
-    const teams = company.company_team_members || [];
-    if (teams.length === 0) return <NoDataMessage message="No team members found." />;
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {teams.map((t, i) => (
-                <InfoCard key={i} title={t.person_name} data={[
-                    { label: 'Team', value: t.team_name },
-                    { label: 'Designation', value: t.designation },
-                    { label: 'Contact', value: t.number },
-                ]}/>
-            ))}
-        </div>
-    );
+  const teams = company.company_team_members || [];
+  if (teams.length === 0) return <NoDataMessage message="No team members found." />;
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {teams.map((t, i) => (
+        <InfoCard key={i} title={t.person_name} data={[
+          { label: 'Team', value: t.team_name },
+          { label: 'Designation', value: t.designation },
+          { label: 'Contact', value: t.number },
+        ]} />
+      ))}
+    </div>
+  );
 };
 
 const OfficesTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
-    const offices = company.office_info || [];
-    if (offices.length === 0) return <NoDataMessage message="No office locations found." />;
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {offices.map(o => (
-                <InfoCard key={o.id} title={o.office_name} data={[
-                    { label: 'Type', value: o.office_type },
-                    { label: 'Address', value: o.address },
-                    { label: 'Location', value: `${o.city}, ${o.state}` },
-                    { label: 'Contact Person', value: o.contact_person },
-                ]}/>
-            ))}
-        </div>
-    );
+  const offices = company.office_info || [];
+  if (offices.length === 0) return <NoDataMessage message="No office locations found." />;
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {offices.map(o => (
+        <InfoCard key={o.id} title={o.office_name} data={[
+          { label: 'Type', value: o.office_type },
+          { label: 'Address', value: o.address },
+          { label: 'Location', value: `${o.city}, ${o.state}` },
+          { label: 'Contact Person', value: o.contact_person },
+        ]} />
+      ))}
+    </div>
+  );
 };
 
 const VerificationTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
-    const verifications = company.company_spot_verification || [];
-    if (verifications.length === 0) return <NoDataMessage message="No spot verifications found." />;
-    return (
-        <div className="space-y-4">
-            {verifications.map(v => (
-                <Card key={v.id} bodyClass='p-4'>
-                    <div className="flex justify-between items-center">
-                        <h6 className="font-semibold">Verified by {v.verified_by_name || 'Unknown'}</h6>
-                        {v.verified ? <Tag className='bg-emerald-100 text-emerald-700'>Verified</Tag> : <Tag className='bg-red-100 text-red-700'>Not Verified</Tag>}
-                    </div>
-                    {v.remark && <p className="text-sm mt-2 text-gray-600"><TbMessage2 className='inline-block mr-2'/>{v.remark}</p>}
-                    {v.photo_upload && <Button size='sm' className='mt-2' onClick={() => window.open(v.photo_upload || '', '_blank')}>View Photo</Button>}
-                </Card>
-            ))}
-        </div>
-    );
+  const verifications = company.company_spot_verification || [];
+  if (verifications.length === 0) return <NoDataMessage message="No spot verifications found." />;
+  return (
+    <div className="space-y-4">
+      {verifications.map(v => (
+        <Card key={v.id} bodyClass='p-4'>
+          <div className="flex justify-between items-center">
+            <h6 className="font-semibold">Verified by {v.verified_by_name || 'Unknown'}</h6>
+            {v.verified ? <Tag className='bg-emerald-100 text-emerald-700'>Verified</Tag> : <Tag className='bg-red-100 text-red-700'>Not Verified</Tag>}
+          </div>
+          {v.remark && <p className="text-sm mt-2 text-gray-600"><TbMessage2 className='inline-block mr-2' />{v.remark}</p>}
+          {v.photo_upload_path && <Button size='sm' className='mt-2' onClick={() => window.open(v.photo_upload_path || '', '_blank')}>View Photo</Button>}
+        </Card>
+      ))}
+    </div>
+  );
 };
 
 const ReferencesTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
-    const references = company.company_references || [];
-    if (references.length === 0) return <NoDataMessage message="No references found." />;
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {references.map(r => (
-                <InfoCard key={r.id} title={r.person_name} data={[
-                    { label: 'Company ID', value: r.company_id },
-                    { label: 'Contact', value: r.number },
-                    { label: 'Remark', value: r.remark },
-                ]}/>
-            ))}
-        </div>
-    );
+  const references = company.company_references || [];
+  if (references.length === 0) return <NoDataMessage message="No references found." />;
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {references.map(r => (
+        <InfoCard key={r.id} title={r.person_name} data={[
+          { label: 'Company ID', value: r.company_id },
+          { label: 'Contact', value: r.number },
+          { label: 'Remark', value: r.remark },
+        ]} />
+      ))}
+    </div>
+  );
 };
 
 // --- MAIN COMPANY VIEW PAGE ---
@@ -393,7 +397,7 @@ const CompanyView = () => {
     };
     fetchCompany();
   }, [id, dispatch, navigate]);
-  
+
   const renderActiveSection = () => {
     if (!company) return <NoDataMessage message="Company data is not available." />;
 

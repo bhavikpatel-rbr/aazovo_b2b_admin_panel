@@ -515,7 +515,7 @@ const CompanyListTable = () => {
                 {/* <Card bodyClass={cardBodyClass} className="rounded-md border border-orange-200"><div className="h-8 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbBuildingCommunity size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm pb-0 mb-0">{companyCount?.members ?? 0}</b><span className="text-[9px] font-semibold">Members</span></div></Card> */}
             </div>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-                <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(val) => handleSetTableData({ query: val, pageIndex: 1 })} value={tableData.query} />
+                <DebouceInput placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(val) => handleSetTableData({ query: val.target.value, pageIndex: 1 })} value={tableData.query} />
                 <div className="flex gap-2">
                     <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
                         <div className="flex flex-col p-2">
