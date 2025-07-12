@@ -23,6 +23,8 @@ import {
   getAllProductAction,
   getDemandById,
   getMembersAction,
+  // MODIFICATION: Import the new action to fetch product price
+  getProductPriceAction,
   getProductsAction,
   getProductSpecificationsAction,
   getUsersAction,
@@ -30,18 +32,19 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 
-// --- Zod Schema Definitions for Form Validation ---
+// --- Zod Schema Definitions (Aligned with Offer component) ---
 const priceListItemSchema = z.object({
   color: z.string(),
   qty: z.number().optional(),
-  price: z.number().optional(),
+  price: z.number().optional(), // Price is now populated programmatically
 });
 
 const productDataSchema = z.object({
   product_id: z.number({ required_error: "Product is required." }).nullable(),
   seller_ids: z.array(z.number()).min(1, "At least one seller is required."),
   buyer_ids: z.array(z.number()).min(1, "At least one buyer is required."),
-  status: z.enum(["active", "non-active"]).default("active"),
+  // MODIFICATION: Renamed from 'status' to 'product_status' for consistency
+  product_status: z.enum(["active", "non-active"]).default("active"),
   spec_id: z.number().nullable().default(null),
   items: z.array(priceListItemSchema).default([]),
 });
@@ -58,28 +61,25 @@ const demandFormSchema = z.object({
 type DemandFormData = z.infer<typeof demandFormSchema>;
 type OptionType = { value: number | string; label: string };
 
-
 const CreateDemand = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
 
-  // Determine if it's an edit operation based on navigation state
+  // Determine if it's an edit operation
   const id = location.state?.originalApiItem?.id;
   const isEdit = !!id;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- Data Fetching and State Management ---
+  // Data Fetching for Create and Edit
   useEffect(() => {
-    // Fetch all necessary master data on component mount
     dispatch(getUsersAction());
     dispatch(getAllProductAction());
     dispatch(getMembersAction());
     dispatch(getProductsAction());
     dispatch(getProductSpecificationsAction());
 
-    // If in edit mode, fetch the specific demand's data
     if (isEdit) {
       dispatch(getDemandById(id));
     }
@@ -94,14 +94,14 @@ const CreateDemand = () => {
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector);
 
-  // --- Memoized Select Options ---
+  // Memoized Select Options
   const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: u.name })) : [], [usersData]);
   const productOptions: OptionType[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
   const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label: m.name })) : [], [memberData]);
-  const statusOptions: OptionType[] = [{ value: "active", label: "Active" }, { value: "non-active", label: "Non-Active" }];
+  const statusOptions: OptionType[] = [{ value: "active", label: "active" }, { value: "non-active", label: "Non active" }];
   const productSpecOptions: OptionType[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((spec: any) => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
 
-  // --- Form Initialization ---
+  // Form Initialization
   const {
     control,
     handleSubmit,
@@ -115,7 +115,7 @@ const CreateDemand = () => {
       name: "",
       assign_user: null,
       product_data: [
-        { product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] }
+        { product_id: null, seller_ids: [], buyer_ids: [], product_status: 'active', spec_id: null, items: [] }
       ],
       groupA: "",
       groupB: "",
@@ -125,32 +125,14 @@ const CreateDemand = () => {
   const { fields, append, remove } = useFieldArray({ control, name: "product_data" });
   const watchedProductGroups = watch("product_data");
 
-  // --- Populate Form When Editing ---
+  // Populate Form When Editing
   useEffect(() => {
     const demandDataFromState = location.state?.originalApiItem;
-    const masterDataIsReady = ProductSpecificationsData.length > 0;
 
-    if (isEdit && demandDataFromState && masterDataIsReady) {
-        // Step 1: Parse the `groupA` text block to extract structured details
+    if (isEdit && demandDataFromState) {
         const groupAText = demandDataFromState.groupA || "";
-        
-        let status: "active" | "non-active" = 'active';
-        let specName = '';
         const items = [];
-
-        const statusMatch = groupAText.match(/Status:\s*(.*)/i);
-        if (statusMatch) {
-            const parsedStatus = statusMatch[1].trim().toLowerCase();
-            if (parsedStatus === 'active' || parsedStatus === 'non-active') {
-                status = parsedStatus;
-            }
-        }
-
-        const specMatch = groupAText.match(/Specification:\s*(.*)/i);
-        if (specMatch) {
-            specName = specMatch[1].trim();
-        }
-        
+        // Use regex to parse items from the notes, matching the format from Offer
         const itemRegex = /-\s*Color:\s*(.+?),\s*Qty:\s*([\d.]+),\s*Price:\s*\$([\d.]+)/g;
         let match;
         while ((match = itemRegex.exec(groupAText)) !== null) {
@@ -161,21 +143,15 @@ const CreateDemand = () => {
             });
         }
 
-        // Step 2: Convert parsed specification name (e.g., "India") to its ID
-        const specObject = ProductSpecificationsData.find(spec => spec.name === specName);
-        const spec_id = specObject ? specObject.id : null;
-
-        // Step 3: Reconstruct the `product_data` array for the form
         const reconstructedProductData = (demandDataFromState.demand_products || []).map((productInfo: any) => ({
             product_id: productInfo.product_id,
             seller_ids: productInfo.seller_ids || [],
             buyer_ids: productInfo.buyer_ids || [],
-            status: status,
-            spec_id: spec_id,
-            items: items,
+            product_status: productInfo.product_status?.toLowerCase() === 'non-active' ? 'non-active' : 'active',
+            spec_id: productInfo.product_spec || null,
+            items: items, // Use parsed items
         }));
 
-        // Step 4: Call `reset` to populate the entire form with the prepared data
         reset({
             name: demandDataFromState.name || "",
             assign_user: demandDataFromState.assign_user ? Number(demandDataFromState.assign_user) : null,
@@ -183,13 +159,13 @@ const CreateDemand = () => {
             groupB: demandDataFromState.groupB || "",
             product_data: reconstructedProductData.length > 0
                 ? reconstructedProductData
-                : [{ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] }],
+                : [{ product_id: null, seller_ids: [], buyer_ids: [], product_status: 'active', spec_id: null, items: [] }],
         });
     }
-  }, [isEdit, location.state, reset, ProductSpecificationsData]);
+  }, [isEdit, location.state, reset]);
 
-  // --- Event Handlers ---
-  const handleProductChange = (groupIndex: number, productId: number | null) => {
+  // --- MODIFICATION: Handle product change, fetch price, and update form state ---
+  const handleProductChange = useCallback(async (groupIndex: number, productId: number | null) => {
     setValue(`product_data.${groupIndex}.product_id`, productId);
     
     if (!productId) {
@@ -200,27 +176,32 @@ const CreateDemand = () => {
     const productDetails = ProductsData.find((p: any) => parseInt(p.id) === productId);
     const colors = productDetails?.color?.split(',') || [];
     
+    let productPrice: number | undefined = undefined;
+    try {
+      const result = await dispatch(getProductPriceAction(productId)).unwrap();
+      if (result.status && result.sales_price) {
+        productPrice = parseFloat(result.sales_price);
+      } else {
+        toast.push(<Notification title="Warning" type="warning">Could not fetch price for the selected product. It will not be included in calculations.</Notification>);
+      }
+    } catch (error) {
+       toast.push(<Notification title="Price Error" type="danger">Failed to fetch product price.</Notification>);
+       console.error("Failed to fetch product price:", error);
+    }
+    
     const newItems = colors
       .map((c: string) => c.trim())
       .filter(Boolean)
-      .map((color: string) => ({ color, qty: undefined, price: undefined }));
+      .map((color: string) => ({ 
+        color, 
+        qty: undefined, 
+        price: productPrice // Set the fetched price for each color variant
+      }));
 
     setValue(`product_data.${groupIndex}.items`, newItems, { shouldValidate: true });
-  };
+  }, [dispatch, setValue, ProductsData]);
 
-  const totals = useMemo(() => {
-    let totalQty = 0;
-    let totalPrice = 0;
-    watchedProductGroups.forEach(group => {
-      group.items.forEach(item => {
-        totalQty += item.qty || 0;
-        totalPrice += (item.qty || 0) * (item.price || 0);
-      });
-    });
-    return { totalQty, totalPrice };
-  }, [watchedProductGroups]);
-
-
+  // MODIFICATION: Corrected note generation for Demand (WTB)
   const handleGenerateAndCopyNotes = () => {
     const relevantGroups = watchedProductGroups.filter(
         g => g.product_id && g.items.some(i => i.qty && i.qty > 0)
@@ -231,44 +212,49 @@ const CreateDemand = () => {
       return;
     }
 
-    let messageA = ""; // With prices
-    let messageB = ""; // Without prices
+    let messageA = "";
+    let messageB = "";
 
     relevantGroups.forEach(group => {
         const productName = productOptions.find(p => p.value === group.product_id)?.label || "Unknown Product";
         const selectedSpec = productSpecOptions.find(s => s.value === group.spec_id);
+        const specLabel = selectedSpec ? selectedSpec.label : '';
+        const productStatus = group.product_status === 'active' ? 'active' : 'non-active';
 
-        messageA += `Product: ${productName}\n`;
-        messageB += `Product: ${productName}\n`;
-        
-        if (selectedSpec) {
-          messageA += `Specification: ${selectedSpec.label}\n`;
-          messageB += `Specification: ${selectedSpec.label}\n`;
-        }
-        messageA += `Status: ${group.status.toUpperCase()}\n\n`;
-        messageB += `Status: ${group.status.toUpperCase()}\n\n`;
-        
-        group.items.forEach(item => {
-            if (item.qty && item.qty > 0) {
-                const price = item.price || 0;
-                messageA += `  - Color: ${item.color}, Qty: ${item.qty}, Price: $${price.toFixed(2)}\n`;
-                messageB += `  - Color: ${item.color}, Qty: ${item.qty}\n`;
+        const itemsWithQty = group.items.filter(item => item.qty && item.qty > 0);
+
+        if (itemsWithQty.length > 0) {
+            let groupAMessage = `WTB\n${productName}\n`; // WTB for Demand
+            itemsWithQty.forEach(item => {
+              groupAMessage += `${item.qty}\n`;
+              groupAMessage += `${item.color}\n`;
+            });
+            if (specLabel) groupAMessage += `${specLabel}\n`;
+            groupAMessage += `${productStatus}\n`;
+            messageA += groupAMessage + '\n';
+
+            let groupBMessage = 'WTB\n'; // WTB for Demand
+            if (itemsWithQty.length > 0) {
+              const price = itemsWithQty[0].price || 0;
+              groupBMessage += `${productName} @$${price.toFixed(2)}\n`;
+              itemsWithQty.forEach(item => {
+                  groupBMessage += `${item.qty}\n`;
+                  groupBMessage += `${item.color}\n`;
+              });
             }
-        });
-        messageA += "--------------------------------\n\n";
-        messageB += "--------------------------------\n\n";
+            if (specLabel) groupBMessage += `${specLabel}\n`;
+            groupBMessage += `${productStatus}\n`;
+            messageB += groupBMessage + '\n';
+        }
     });
 
-    messageA += `\nGrand Total Qty: ${totals.totalQty}\n`;
-    messageA += `Grand Total Price: $${totals.totalPrice.toFixed(2)}`;
-    
-    messageB += `\nTotal Qty: ${totals.totalQty}`;
-
-    setValue("groupA", messageA, { shouldDirty: true });
-    setValue("groupB", messageB, { shouldDirty: true });
+    setValue("groupA", messageA.trim(), { shouldDirty: true });
+    setValue("groupB", messageB.trim(), { shouldDirty: true });
     toast.push(<Notification title="Success" type="info">Notes generated and copied below.</Notification>);
   };
 
+
+  // --- MODIFICATION: Updated form submission logic to map spec_id to product_spec ---
   const onFormSubmit = useCallback(async (data: DemandFormData) => {
     setIsSubmitting(true);
     const apiPayload = {
@@ -278,11 +264,16 @@ const CreateDemand = () => {
       groupB: data.groupB,
       assign_user: data.assign_user,
       product_data: data.product_data
-          .filter(p => p.product_id)
-          .map(group => ({
-              ...group,
-              items: group.items.filter(item => item.qty && item.qty > 0)
-          })),
+          .filter(p => p.product_id) // Ensure product is selected
+          .map(group => {
+              // Map the form's 'spec_id' to the API's 'product_spec'
+              const { spec_id, ...restOfGroup } = group;
+              return {
+                  ...restOfGroup,
+                  product_spec: spec_id, // Send spec_id as product_spec
+                  items: group.items.filter(item => item.qty && item.qty > 0)
+              }
+          }),
     };
 
     try {
@@ -335,7 +326,7 @@ const CreateDemand = () => {
       {fields.map((field, index) => (
         <Card key={field.id} className="mb-2">
             <div className="flex justify-end mb-2">
-              <Button size="sm" type="button" icon={<TbPlus />} onClick={() => append({ product_id: null, seller_ids: [], buyer_ids: [], status: 'active', spec_id: null, items: [] })}>
+              <Button size="sm" type="button" icon={<TbPlus />} onClick={() => append({ product_id: null, seller_ids: [], buyer_ids: [], product_status: 'active', spec_id: null, items: [] })}>
                   Add Product Group
               </Button>
             </div>
@@ -373,8 +364,8 @@ const CreateDemand = () => {
             {watchedProductGroups[index]?.product_id && (
                 <>
                     <div className="grid lg:grid-cols-2 gap-4 mb-4">
-                        <FormItem label="Status">
-                            <Controller name={`product_data.${index}.status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={String(option.value)} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
+                        <FormItem label="Product Status">
+                            <Controller name={`product_data.${index}.product_status`} control={control} render={({ field }) => <Radio.Group value={field.value} onChange={field.onChange}>{statusOptions.map(option => <Radio key={String(option.value)} value={option.value}>{option.label}</Radio>)}</Radio.Group>} />
                         </FormItem>
                         <FormItem label="Product Spec Options">
                             <Controller name={`product_data.${index}.spec_id`} control={control} render={({ field }) => <UiSelect placeholder="Select a Spec" options={productSpecOptions} value={productSpecOptions.find(o => o.value === field.value)} onChange={(option) => field.onChange(option ? option.value : null)} />} />
@@ -386,7 +377,6 @@ const CreateDemand = () => {
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Qty</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Price</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -395,9 +385,6 @@ const CreateDemand = () => {
                                     <td className="px-4 py-3 whitespace-nowrap font-semibold">{item.color}</td>
                                     <td className="px-2 py-1 whitespace-nowrap">
                                       <Controller name={`product_data.${index}.items.${itemIndex}.qty`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0" />} />
-                                    </td>
-                                    <td className="px-2 py-1 whitespace-nowrap">
-                                      <Controller name={`product_data.${index}.items.${itemIndex}.price`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" step="0.01" prefix="$" placeholder="0.00" />} />
                                     </td>
                                 </tr>
                                 ))}
@@ -412,12 +399,8 @@ const CreateDemand = () => {
       <Card className="mb-2">
         <div className="flex justify-between items-center gap-4">
             <Button type="button" variant="outline" icon={<TbFileText />} onClick={handleGenerateAndCopyNotes}>
-                Generate & Copy Notes
+                Generate Notes
             </Button>
-            <div className="flex items-center gap-4">
-                <Input readOnly value={totals.totalQty} prefix="Total Qty:" className="w-48" />
-                <Input readOnly value={`$${totals.totalPrice.toFixed(2)}`} prefix="Total Price:" className="w-56" />
-            </div>
         </div>
       </Card>
 
@@ -425,13 +408,13 @@ const CreateDemand = () => {
         <Card>
           <h5 className="mb-4">Group A Notes</h5>
           <FormItem invalid={!!errors.groupA} errorMessage={errors.groupA?.message}>
-            <Controller name="groupA" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate & Copy Notes' to populate..." rows={12} />} />
+            <Controller name="groupA" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate Notes' to populate..." rows={12} />} />
           </FormItem>
         </Card>
         <Card>
           <h5 className="mb-4">Group B Notes</h5>
           <FormItem invalid={!!errors.groupB} errorMessage={errors.groupB?.message}>
-            <Controller name="groupB" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate & Copy Notes' to populate..." rows={12} />} />
+            <Controller name="groupB" control={control} render={({ field }) => <Input {...field} value={field.value ?? ""} textArea placeholder="Click 'Generate Notes' to populate..." rows={12} />} />
           </FormItem>
         </Card>
       </div>

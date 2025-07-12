@@ -2622,6 +2622,15 @@ export const addDemandAsync = async (demandData: any) => {
   }
 }
 
+export const getProductPriceAsync = async (id: string | number) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/other/get-price/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
+
 export const getOfferByIdAsync = async (id: string | number) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/offer/${id}`);
