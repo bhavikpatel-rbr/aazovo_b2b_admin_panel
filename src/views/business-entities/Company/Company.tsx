@@ -48,6 +48,7 @@ import {
     TbAlarm,
     TbBell,
     TbBrandWhatsapp,
+    TbBriefcase,
     TbBuilding,
     TbBuildingBank,
     TbBuildingCommunity,
@@ -74,6 +75,7 @@ import {
     TbTagStarred,
     TbUser,
     TbUserCircle,
+    TbUserFilled,
     TbUsersGroup,
     TbX
 } from "react-icons/tb";
@@ -637,7 +639,10 @@ const CompanyListTable = () => {
         <>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <h5>Company</h5>
-                <div className="flex flex-col md:flex-row gap-3"><Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/company-create")}>Add New</Button></div>
+                
+                <div className="flex flex-col md:flex-row gap-3">
+                    <Button icon={<TbUserFilled />} onClick={() => navigate('/hr-employees/job-post')} className="w-full sm:w-auto">Pending Request</Button>
+                    <Button variant="solid" icon={<TbPlus className="text-lg" />} onClick={() => navigate("/business-entities/company-create")}>Add New</Button></div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 mb-4 gap-2">
                 <Tooltip title="Click to show all companies"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-8 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBuilding size={16} /></div><div className="flex flex-col gap-0"><b className="text-sm ">{companyCount?.total ?? 0}</b><span className="text-[9px] font-semibold">Total</span></div></Card></div></Tooltip>
