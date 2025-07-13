@@ -407,7 +407,7 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
 };
 
 const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) => {
-    const { Roles, departmentsData, designationsData, BrandData, CategoriesData, AllProducts, memberData, reportingTo, CountriesData } = useSelector(masterSelector);
+    const { Roles, departmentsData, designationsData, BrandData, CategoriesData, AllProducts, MemberData, EmployeesList, CountriesData } = useSelector(masterSelector);
 
     const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
@@ -417,8 +417,8 @@ const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) =>
     const categoryOptions = useMemo(() => toOptions(CategoriesData), [CategoriesData]);
     const brandOptions = useMemo(() => toOptions(BrandData), [BrandData]);
     const productOptions = useMemo(() => toOptions(AllProducts), [AllProducts]);
-    const reportingHrOptions = useMemo(() => toOptions(reportingTo?.data), [reportingTo]);
-    const reportingHeadOptions = useMemo(() => toOptions(memberData), [memberData]);
+    const reportingHrOptions = useMemo(() => toOptions(EmployeesList?.data?.data), [EmployeesList]);
+    const reportingHeadOptions = useMemo(() => toOptions(MemberData.data), [MemberData]);
     return (
         <Card id="roleResponsibility"><h4 className="mb-6">Role & Responsibility</h4><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
             <FormItem label={<>Role <span className="text-red-500">*</span></>} invalid={!!errors.roleResponsibility?.roleId} errorMessage={(errors.roleResponsibility?.roleId as any)?.message}><Controller name="roleResponsibility.roleId" control={control} render={({ field }) => <Select placeholder="Select Role" options={roleOptions} {...field} />} /></FormItem>
@@ -727,7 +727,7 @@ const EmployeeFormPage = () => {
         const brandOptions = toOptions(lookups.BrandData || []);
         const productOptions = toOptions(lookups.AllProducts || []);
         const reportingHrOptions = toOptions(lookups.EmployeesList?.data?.data);
-        const reportingHeadOptions = toOptions(lookups.memberData);
+        const reportingHeadOptions = toOptions(lookups.MemberData?.data);
 
         return {
             id: String(apiData.id),
@@ -819,7 +819,7 @@ const EmployeeFormPage = () => {
             setIsLoading(false);
             if (initialData === null) setInitialData({});
         }
-    }, [employeeId, isEditMode, dispatch, navigate, apiToForm, initialData]);
+    }, [employeeId, isEditMode, dispatch, navigate, apiToForm, initialData, lookups]);
 
     const handleFormSubmit = (formData: FormData, id?: string) => {
         setIsSubmitting(true);
