@@ -109,6 +109,7 @@ import {
   deleteLeadAction,
   getAllUsersAction,
   getLeadAction,
+  getLeadOpportunitiesAction,
   getStartProcessAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
@@ -614,11 +615,18 @@ const ConvertLeadToDealDialog: React.FC<{
     </Dialog>
   );
 };
+const intentTagColor = {
+  Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
+  Exchange:
+    "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
+};
 const ViewOpportunitiesDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
 }> = ({ lead, onClose }) => {
-  const [opportunities, setOpportunities] = useState<LeadOpportunityItem[]>([]);
+  const dispatch = useAppDispatch();
+  const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -630,13 +638,28 @@ const ViewOpportunitiesDialog: React.FC<{
       setIsLoading(true);
       try {
         // In a real application, you would dispatch an action here:
-        // const actionResult = await dispatch(getLeadOpportunitiesAction(lead.id)).unwrap();
-        // setOpportunities(actionResult.data);
-
-        // Simulating API call with a delay
-        console.log(`Fetching opportunities for lead ID: ${lead.id}...`);
+        const actionResult = await dispatch(getLeadOpportunitiesAction({ id: lead.id, key: lead.lead_intent })).unwrap();
+        if (actionResult?.data) {
+          const formattedData = actionResult.data.map((item: any) => ({
+            id: item.id,
+            want_to: item.want_to,
+            product_name: item.product_name,
+            brand_name: item.brand_name,
+            qty: item.qty,
+            price: item.price,
+            device_condition: item.device_condition,
+            color: item.color,
+            member_name: item.member_name,
+            member_code: item.member_code,
+            country_name: item.country_name,
+            leads_count: item.leads_count,
+          }));
+          setData(formattedData);
+        } else {
+          setData([]); // Ensure data is cleared if API returns nothing
+        }
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        setOpportunities(dummyOpportunities); // Using dummy data as the simulated response
+        // setOpportunities(dummyOpportunities); // Using dummy data as the simulated response
       } catch (error) {
         console.error("Failed to fetch opportunities:", error);
         toast.push(
@@ -644,7 +667,6 @@ const ViewOpportunitiesDialog: React.FC<{
             Could not load opportunities.
           </Notification>
         );
-        setOpportunities([]);
       } finally {
         setIsLoading(false);
       }
@@ -652,65 +674,102 @@ const ViewOpportunitiesDialog: React.FC<{
 
     fetchOpportunities();
   }, [lead.id]);
-
+  const columns = useMemo(() => [
+    {
+      header: 'Listing',
+      accessorKey: 'product_name',
+      cell: ({ row }) => {
+        const { want_to, product_name, brand_name, color, device_condition } = row.original;
+        const intent = want_to as WallIntent;
+        return (
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{product_name}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">{brand_name}</p>
+            <div className="flex items-center flex-wrap gap-1 mt-2">
+              <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[intent] || ''}`}>{want_to}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{device_condition}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{color}</Tag>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Member',
+      accessorKey: 'member_name',
+      cell: ({ row }) => {
+        const { member_name, member_code, country_name } = row.original;
+        return (
+          <div>
+            <p className="font-semibold">{member_name}</p>
+            <p className="text-xs text-gray-500">{member_code}</p>
+            <p className="text-xs text-gray-500">{country_name}</p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Details',
+      accessorKey: 'qty',
+      cell: ({ row }) => {
+        const { qty, price } = row.original;
+        return (
+          <div>
+            <p>Qty: <span className="font-semibold">{qty}</span></p>
+            <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Leads',
+      accessorKey: 'leads_count',
+      cell: ({ row }) => <span className="font-semibold">{row.original.leads_count}</span>
+    },
+  ], []);
   return (
+
     <Dialog
       isOpen={true}
       onClose={onClose}
       onRequestClose={onClose}
-      width={700}
+      width={1000}
+      bodyOpenClassName="overflow-hidden"
     >
-      <h5 className="mb-4">Opportunities for {lead.lead_number}</h5>
-      <div className="max-h-[400px] overflow-y-auto">
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <Spinner size={40} />
+      <div className="flex flex-col h-full max-h-[80vh]">
+        {/* Dialog Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <TbBulb className="text-2xl text-amber-500" />
+            <h5 className="mb-0">Opportunities for {lead.lead_number}</h5>
           </div>
-        ) : opportunities.length > 0 ? (
-          <Table>
-            <Table.THead>
-              <Table.Tr>
-                <Table.Th>ID</Table.Th>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Stage</Table.Th>
-                <Table.Th>Value</Table.Th>
-                <Table.Th>Close Date</Table.Th>
-              </Table.Tr>
-            </Table.THead>
-            <Table.TBody>
-              {opportunities.map((op) => (
-                <Table.Tr key={op.id}>
-                  <Table.Td>{op.id}</Table.Td>
-                  <Table.Td>{op.name}</Table.Td>
-                  <Table.Td>
-                    <Tag className="bg-purple-100 text-purple-700">
-                      {op.stage}
-                    </Tag>
-                  </Table.Td>
-                  <Table.Td>${op.value.toLocaleString()}</Table.Td>
-                  <Table.Td>
-                    {dayjs(op.closeDate).format("DD MMM, YYYY")}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.TBody>
-          </Table>
-        ) : (
-          <div className="text-center p-10">
-            <TbInfoCircle
-              size={32}
-              className="mx-auto text-gray-400 mb-2"
+        </div>
+
+        {/* Dialog Body */}
+        <div className="flex-grow overflow-y-auto px-6 py-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Spinner size={40} />
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={data}
+              noData={data.length === 0}
+
             />
-            <p>No matching opportunities found for this lead.</p>
-          </div>
-        )}
-      </div>
-      <div className="text-right mt-6">
-        <Button variant="solid" onClick={onClose}>
-          Close
-        </Button>
+          )}
+        </div>
+
+        {/* Dialog Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+          <Button variant="solid" onClick={onClose}>Close</Button>
+        </div>
       </div>
     </Dialog>
+
+
+
   );
 };
 const ViewLeadFormDialog: React.FC<{
