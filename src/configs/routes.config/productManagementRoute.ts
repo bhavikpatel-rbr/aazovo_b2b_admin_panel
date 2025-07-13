@@ -30,6 +30,15 @@ const productManagementRoute: Routes = [
         meta: {
             pageContainerType: 'contained',
         },
+    },
+    {
+        key: 'productManagement.products',
+        path: `${PRODUCT_MANAGEMENT_PREFIX_PATH}/product/:id`,
+        component: lazy(() => import('@/views/product-management/Products/components/ProductView')),
+        authority: [ADMIN, USER],
+        meta: {
+            pageContainerType: 'contained',
+        },
     }
 ];
 

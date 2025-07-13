@@ -2275,6 +2275,14 @@ export const getpartnerAsync = async () => {
     return isAxiosError(err)
   }
 }
+export const getProductByIdAsync = async (id: string | number) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/product/${id}`);
+    return response;
+  } catch (err) {
+    return isAxiosError(err);
+  }
+}
 export const getpartnerByIdAsync = async (id: string | number) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/partner/${id}`);
