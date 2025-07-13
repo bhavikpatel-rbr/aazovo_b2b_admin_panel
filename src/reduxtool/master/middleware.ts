@@ -3619,11 +3619,11 @@ export const addcompanyAction = createAsyncThunk<any, any>("auth/addcompany",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addCompanyAsync(data)
-      console.log("response?.data?.status", response?.data?.status);
+      console.log("response?.data?.status", response?.status);
 
-      if (response?.status === true) {
+      if (response?.status === true || response?.status === 200) {
         dispatch(getCompanyAction())
-        return response?.data?.data
+        return response?.data
       } else {
         return rejectWithValue({
           message: response?.message || 'Failed to edit company.'
@@ -3641,11 +3641,13 @@ export const editCompanyAction = createAsyncThunk<any, { id: string | number; pa
     try {
       const response: AxiosResponse<any> = await editCompanyAsync(id, payload);
       // console.log("response?.data?.status", response?.errors[0]);
-      console.log("response?.message", response?.message);
 
-      if (response?.status === true) {
+      console.log("response?.data?.status", response?.data?.status);
+
+
+      if (response?.status === true || response?.status === 200) {
         dispatch(getCompanyAction());
-        return response?.data?.data;
+        return response?.data
       } else {
         return rejectWithValue({
           message: response?.message || 'Failed to edit company.'
