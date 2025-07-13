@@ -3,7 +3,7 @@ import { NavLink, useParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import classNames from 'classnames';
 
-// UI Components
+// --- UI Components ---
 import Container from '@/components/shared/Container';
 import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
@@ -13,98 +13,140 @@ import Notification from '@/components/ui/Notification';
 import Spinner from '@/components/ui/Spinner';
 import toast from '@/components/ui/toast';
 import { DatePicker } from '@/components/ui';
+import Dialog from '@/components/ui/Dialog';
+import Tooltip from '@/components/ui/Tooltip';
 
-// Icons
+
+// --- Icons ---
 import { BiChevronRight } from 'react-icons/bi';
 import {
     TbUserCircle, TbMail, TbPhone, TbBuilding, TbBriefcase, TbCalendar, TbPencil, TbDownload,
     TbUser, TbFileText, TbBuildingBank, TbReportMoney, TbArrowLeft, TbUsersGroup, TbLicense,
-    TbWorld, TbCheck, TbX, TbFileDescription, TbMessage2, TbStar, TbUserCheck,
+    TbWorld, TbCheck, TbX, TbFileDescription, TbMessage2, TbStar, TbUserCheck, TbEye,
     TbFile, TbFileSpreadsheet, TbFileTypePdf, TbPhoto, TbChevronLeft, TbChevronRight
 } from 'react-icons/tb';
 
-// Types, Redux and Helpers
+// --- Types, Redux and Helpers ---
 import { getpartnerByIdAction } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
 
 
-// --- START: Full-Screen Viewer Helper Components ---
-interface ImageViewerProps {
-  images: { src: string; alt: string }[];
-  startIndex: number;
-  onClose: () => void;
+// --- VIEWER & CARD COMPONENTS ---
+interface DocumentRecord {
+    name: string;
+    type: 'image' | 'pdf' | 'other';
+    url: string;
+    verified?: boolean;
 }
 
-const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
-  const [currentIndex, setCurrentIndex] = useState(startIndex);
-  const handleNext = () => setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-  const handlePrev = () => setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
+const DocumentViewer: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    documents: DocumentRecord[];
+    currentIndex: number;
+    onNext: () => void;
+    onPrev: () => void;
+}> = ({ isOpen, onClose, documents, currentIndex, onNext, onPrev }) => {
+    const [isContentLoaded, setIsContentLoaded] = useState(false);
+    const document = documents[currentIndex];
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') handleNext();
-      if (e.key === 'ArrowLeft') handlePrev();
-      if (e.key === 'Escape') onClose();
+    useEffect(() => {
+        setIsContentLoaded(false);
+    }, [currentIndex]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight') onNext();
+            if (e.key === 'ArrowLeft') onPrev();
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onNext, onPrev, onClose]);
+
+    if (!document) return null;
+
+    const renderContent = () => {
+        switch (document.type) {
+            case 'image':
+                return <img src={document.url} alt={document.name} className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${isContentLoaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setIsContentLoaded(true)} />;
+            case 'pdf':
+                return <iframe src={document.url} title={document.name} className={`w-full h-full border-0 transition-opacity duration-300 ${isContentLoaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setIsContentLoaded(true)}></iframe>;
+            default:
+                if (!isContentLoaded) setIsContentLoaded(true);
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-center p-10 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                        <TbFile size={60} className="mx-auto mb-4 text-gray-500" />
+                        <h5 className="mb-2">{document.name}</h5>
+                        <p className="mb-4 text-gray-600 dark:text-gray-300">Preview is not available for this file type.</p>
+                        <a href={document.url} download target="_blank" rel="noopener noreferrer"><Button variant="solid" icon={<TbDownload />}>Download File</Button></a>
+                    </div>
+                );
+        }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
 
-  if (!images || images.length === 0) return null;
-  const currentImage = images[currentIndex];
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-[100] transition-opacity duration-300 p-4" onClick={onClose}>
-      <Button type="button" shape="circle" variant="solid" icon={<TbX />} className="absolute top-4 right-4 z-[102] bg-black/50 hover:bg-black/80" onClick={onClose} />
-      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-        <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
-          <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronLeft />} className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[101] bg-black/50 hover:bg-black/80" onClick={handlePrev} />
-          <div className="flex flex-col items-center justify-center h-full">
-            <img src={currentImage.src} alt={currentImage.alt} className="max-h-[calc(100%-4rem)] max-w-full object-contain select-none transition-transform duration-300" />
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">{currentImage.alt} ({currentIndex + 1} / {images.length})</div>
-          </div>
-          <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronRight />} className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[101] bg-black/50 hover:bg-black/80" onClick={handleNext} />
-        </div>
-        <div className="w-full max-w-5xl flex-shrink-0 mt-4">
-          <div className="flex justify-center p-2"><div className="flex gap-3 overflow-x-auto pb-2">{images.map((image, index) => (<button type="button" key={index} onClick={() => setCurrentIndex(index)} className={classNames("w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white", currentIndex === index ? 'border-white opacity-100 scale-105' : 'border-transparent opacity-60 hover:opacity-100')}><img src={image.src} alt={image.alt} className="w-full h-full object-cover rounded-sm" /></button>))}</div></div>
-        </div>
-      </div>
-    </div>
-  );
+    return (
+        <Dialog isOpen={isOpen} onClose={onClose} width="auto" height="85vh" closable={false} bodyOpenClassName="overflow-hidden" contentClassName="top-0 p-0 bg-transparent">
+            <div className="w-full h-full bg-black/80 backdrop-blur-sm flex flex-col">
+                <header className="flex-shrink-0 h-16 bg-gray-800/50 text-white flex items-center justify-between px-4">
+                    <div className="flex items-center gap-4">
+                        <h6 className="font-semibold truncate" title={document.name}>{document.name}</h6>
+                        <span className="text-sm text-gray-400">{currentIndex + 1} / {documents.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <a href={document.url} download target="_blank" rel="noopener noreferrer"><Button shape="circle" variant="subtle" size="sm" icon={<TbDownload />} /></a>
+                        <Button shape="circle" variant="subtle" size="sm" icon={<TbX />} onClick={onClose} />
+                    </div>
+                </header>
+                <main className="relative flex-grow flex items-center justify-center overflow-hidden">
+                    {!isContentLoaded && <Spinner size={40} className="absolute" />}
+                    {renderContent()}
+                </main>
+                {documents.length > 1 && (
+                    <>
+                        <Button shape="circle" size="lg" icon={<TbChevronLeft />} className="!absolute left-4 top-1/2 -translate-y-1/2" onClick={onPrev} disabled={currentIndex === 0} />
+                        <Button shape="circle" size="lg" icon={<TbChevronRight />} className="!absolute right-4 top-1/2 -translate-y-1/2" onClick={onNext} disabled={currentIndex === documents.length - 1} />
+                    </>
+                )}
+            </div>
+        </Dialog>
+    );
 };
 
-const GenericFileViewer = ({ fileUrl, fileName, onClose }: { fileUrl: string; fileName: string; onClose: () => void; }) => {
-  const fileExtension = useMemo(() => fileName.split('.').pop()?.toLowerCase(), [fileName]);
-  const isPdf = fileExtension === 'pdf';
+const DocumentCard: React.FC<{ document: DocumentRecord; onPreview: () => void }> = ({ document, onPreview }) => {
+    const renderPreviewIcon = () => {
+        switch (document.type) {
+            case 'image':
+                return <img src={document.url} alt={document.name} className="w-full h-full object-cover" />;
+            case 'pdf':
+                return <TbFileTypePdf className="w-12 h-12 text-red-500" />;
+            default:
+                return <TbFile className="w-12 h-12 text-gray-500" />;
+        }
+    };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  const getFileIcon = () => {
-    switch (fileExtension) {
-      case 'pdf': return <TbFileTypePdf className="text-red-500" size={64} />;
-      case 'xls': case 'xlsx': return <TbFileSpreadsheet className="text-green-500" size={64} />;
-      default: return <TbFile className="text-gray-500" size={64} />;
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-[100] transition-opacity duration-300 p-4" onClick={onClose}>
-      <Button type="button" shape="circle" variant="solid" icon={<TbX />} className="absolute top-4 right-4 z-[102] bg-black/50 hover:bg-black/80" onClick={onClose} />
-      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-        {isPdf ? <iframe src={fileUrl} title={fileName} className="w-full h-full border-none rounded-lg bg-white" /> : <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center flex flex-col items-center justify-center max-w-md">{getFileIcon()}<h4 className="mb-2 mt-4">Preview not available</h4><p className="text-gray-600 dark:text-gray-300 mb-6 max-w-xs">You can open this file in a new tab to view or download it.</p><Button variant="solid" onClick={() => window.open(fileUrl, '_blank')}>Open '{fileName}'</Button></div>}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">{fileName}</div>
-      </div>
-    </div>
-  );
+    return (
+        <Card bodyClass="p-0" className="hover:shadow-lg transition-shadow flex flex-col">
+            <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden cursor-pointer" onClick={onPreview}>{renderPreviewIcon()}</div>
+            <div className="p-4 flex flex-col flex-grow">
+                <p className="font-semibold truncate flex-grow" title={document.name}>{document.name}</p>
+                <div className="flex justify-between items-center mt-3">
+                   {document.verified ?
+                        <Tag className="bg-emerald-100 text-emerald-700"><TbCheck className='mr-1' />Verified</Tag> :
+                        <Tag className="bg-red-100 text-red-700"><TbX className='mr-1' />Not Verified</Tag>
+                    }
+                    <div className="flex gap-2">
+                        <Tooltip title="Preview"><Button shape="circle" size="sm" icon={<TbEye />} onClick={onPreview} /></Tooltip>
+                        <Tooltip title="Download"><a href={document.url} download target="_blank" rel="noopener noreferrer"><Button shape="circle" size="sm" icon={<TbDownload />} /></a></Tooltip>
+                    </div>
+                </div>
+            </div>
+        </Card>
+    );
 };
-// --- END: Full-Screen Viewer Helper Components ---
 
-
-// --- Type Definitions for a Single Partner ---
+// --- TYPE DEFINITIONS for a Single Partner ---
 interface CountryReference { id: number; name: string; }
 interface ContinentReference { id: number; name: string; }
 interface PartnerCertificate { id: number; certificate_name: string; upload_certificate_path: string | null; }
@@ -173,10 +215,10 @@ interface ApiSinglePartnerItem {
   partner_spot_verification?: PartnerSpotVerification[];
 }
 
-// --- Reusable Helper Components ---
+// --- REUSABLE HELPER COMPONENTS ---
 const getPartnerStatusClass = (status?: string) => { const s = status?.toLowerCase() || ''; switch (s) { case 'active': case 'approved': case 'verified': return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'; case 'inactive': return 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100'; case 'non verified': return 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100'; case 'pending': return 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100'; default: return 'bg-gray-100 text-gray-500'; } };
 const PartnerProfileHeader = ({ partner }: { partner: ApiSinglePartnerItem }) => { const navigate = useNavigate(); return <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4"><div className="flex items-center gap-4"><div><h4 className="font-bold">({String(partner.id).padStart(5, '0') || 'N/A'}) - {partner.partner_name}</h4><div className="flex items-center gap-2 mb-1 text-sm"><TbMail className="text-gray-400" /> <p>{partner.primary_email_id}</p></div>{partner.primary_contact_number && (<div className="flex items-center gap-2 text-sm"><TbPhone className="text-gray-400" /> <p>{partner.primary_contact_number_code} {partner.primary_contact_number}</p></div>)}<div className="mt-2"><Tag className={`${getPartnerStatusClass(partner.status)} capitalize`}>{partner.status || 'N/A'}</Tag></div></div></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm"><div className="flex items-center gap-2"><TbUser className="text-gray-400" /><span className="font-semibold">Associated Co:</span><span>{partner.company_name}</span></div><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">GST:</span><span>{partner.gst_number || 'N/A'}</span></div><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">PAN NO:</span><span>{partner.pan_number || 'N/A'}</span></div></div><div className="flex flex-col sm:flex-row lg:flex-col gap-2"><Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/business-entities/partner-edit/${partner.id}`)}>Edit Partner</Button><Button icon={<TbArrowLeft />} onClick={() => navigate('/business-entities/partner')}>Back to List</Button></div></div> };
-const partnerViewNavigationList = [{ label: "Details", link: "details", icon: <TbUser /> },{ label: "Kyc Documents", link: "documents", icon: <TbFileText /> },{ label: "Bank & Billing", link: "bank", icon: <TbBuildingBank /> },{ label: "Teams", link: "teams", icon: <TbUsersGroup /> },{ label: "Expertise", link: "expertise", icon: <TbStar /> },];
+const partnerViewNavigationList = [{ label: "Details", link: "details", icon: <TbUser /> },{ label: "Kyc Documents", link: "documents", icon: <TbFileText /> },{ label: "Bank & Billing", link: "bank", icon: <TbBuildingBank /> },{ label: "Teams", link: "teams", icon: <TbUsersGroup /> },{ label: "Expertise", link: "expertise", icon: <TbStar /> },{ label: "Verification", link: "verification", icon: <TbUserCheck /> }];
 const PartnerViewNavigator = ({ activeSection, onNavigate }: { activeSection: string; onNavigate: (s: string) => void; }) => <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">{partnerViewNavigationList.map((nav) => <button type="button" key={nav.link} className={classNames("cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max flex items-center justify-center gap-2", "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none", activeSection === nav.link ? "bg-indigo-50 dark:bg-indigo-700/60 text-indigo-600 dark:text-indigo-200 font-semibold" : "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200")} onClick={() => onNavigate(nav.link)} title={nav.label}>{nav.icon}<span className="font-medium text-xs sm:text-sm truncate">{nav.label}</span></button>)}</div>;
 const DetailSection = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode; }) => <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-600 last:mb-0 last:pb-0 last:border-b-0"><div className="flex items-center gap-2 mb-4">{React.cloneElement(icon as React.ReactElement, { size: 22 })}<h5 className="mb-0">{title}</h5></div><div>{children}</div></div>;
 const InfoPair = ({ label, value }: { label: string; value?: React.ReactNode; }) => <div className="grid grid-cols-2 py-1.5"><span className="font-semibold text-gray-700 dark:text-gray-300">{label}</span><span className="break-words">{value || <span className="text-gray-400">N/A</span>}</span></div>;
@@ -190,64 +232,66 @@ const TeamsTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => { const
 const ExpertiseTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => <DetailSection title="Area of Expertise" icon={<TbStar />}><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8"><InfoPair label="Joining As" value={partner.join_us_as} /><InfoPair label="Industrial Expertise" value={partner.industrial_expertise} /></div></DetailSection>;
 const VerificationTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => { const verifications = partner.partner_spot_verification || []; if (verifications.length === 0) return <NoDataMessage message="No spot verifications found." />; return <div className="space-y-4">{verifications.map(v => <Card key={v.id} bodyClass='p-4'><div className="flex justify-between items-center"><h6 className="font-semibold">Verified by {v.verified_by_name || 'Unknown'}</h6>{v.verified ? <Tag className='bg-emerald-100 text-emerald-700'>Verified</Tag> : <Tag className='bg-red-100 text-red-700'>Not Verified</Tag>}</div>{v.remark && <p className="text-sm mt-2 text-gray-600"><TbMessage2 className='inline-block mr-2' />{v.remark}</p>}{v.photo_upload && <Button size='sm' className='mt-2' onClick={() => window.open(v.photo_upload || '', '_blank')}>View Photo</Button>}</Card>)}</div> };
 
-const DocumentsTabView = ({ partner, onPreviewClick }: { partner: ApiSinglePartnerItem; onPreviewClick: (doc: { name: string; url: string | null }) => void; }) => {
-    const allDocs = useMemo(() => {
-        const kycDocsList = [
-            { name: "Aadhar Card", url: partner.aadhar_card_file, verified: partner.aadhar_card_verified },
-            { name: "PAN Card", url: partner.pan_card_file, verified: partner.pan_card_verified },
-            { name: "GST Certificate", url: partner.gst_certificate_file, verified: partner.gst_certificate_verified },
-            { name: "Office Photo", url: partner.office_photo_file, verified: partner.office_photo_verified },
-            { name: "Cancel Cheque", url: partner.cancel_cheque_file, verified: partner.cancel_cheque_verified },
-            { name: "Visiting Card", url: partner.visiting_card_file, verified: partner.visiting_card_verified },
-            { name: "Authority Letter", url: partner.authority_letter_file, verified: partner.authority_letter_verified },
-            { name: "Agreement", url: partner.agreement_file, verified: partner.agreement_verified },
-            { name: "Other Document", url: partner.other_document_file, verified: partner.other_document_verified },
-        ];
-        const partnerCerts = (partner.partner_certificate || []).map(cert => ({
-            name: cert.certificate_name,
-            url: cert.upload_certificate_path,
-            verified: true
-        }));
-        return [...kycDocsList, ...partnerCerts].filter(doc => doc.url);
+const DocumentsTabView = ({ partner }: { partner: ApiSinglePartnerItem }) => {
+    const [viewerState, setViewerState] = useState({ isOpen: false, index: 0 });
+
+    const documentList = useMemo((): DocumentRecord[] => {
+        const docs: DocumentRecord[] = [];
+        const getFileType = (url: string | null): 'image' | 'pdf' | 'other' => {
+            if (!url) return 'other';
+            const extension = url.split('.').pop()?.toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image';
+            if (extension === 'pdf') return 'pdf';
+            return 'other';
+        };
+
+        const addDoc = (name: string, url: string | null, verified?: boolean) => {
+            if (url) {
+                docs.push({ name, url, type: getFileType(url), verified });
+            }
+        };
+
+        addDoc("Aadhar Card", partner.aadhar_card_file, partner.aadhar_card_verified);
+        addDoc("PAN Card", partner.pan_card_file, partner.pan_card_verified);
+        addDoc("GST Certificate", partner.gst_certificate_file, partner.gst_certificate_verified);
+        addDoc("Office Photo", partner.office_photo_file, partner.office_photo_verified);
+        addDoc("Cancel Cheque", partner.cancel_cheque_file, partner.cancel_cheque_verified);
+        addDoc("Visiting Card", partner.visiting_card_file, partner.visiting_card_verified);
+        addDoc("Authority Letter", partner.authority_letter_file, partner.authority_letter_verified);
+        addDoc("Agreement", partner.agreement_file, partner.agreement_verified);
+        addDoc("Other Document", partner.other_document_file, partner.other_document_verified);
+        
+        (partner.partner_certificate || []).forEach(cert => {
+            addDoc(cert.certificate_name, cert.upload_certificate_path, true);
+        });
+
+        return docs;
     }, [partner]);
 
-    const isImageUrl = (url: string | null): boolean => !!url && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
-
-    if (allDocs.length === 0) {
+    if (documentList.length === 0) {
         return <NoDataMessage message="No KYC documents or certificates are available." />;
     }
 
+    const handlePreview = (index: number) => setViewerState({ isOpen: true, index });
+    const handleCloseViewer = () => setViewerState({ isOpen: false, index: 0 });
+    const handleNext = () => setViewerState(prev => ({ ...prev, index: Math.min(prev.index + 1, documentList.length - 1) }));
+    const handlePrev = () => setViewerState(prev => ({ ...prev, index: Math.max(prev.index - 1, 0) }));
+
     return (
-        <div className='space-y-6'>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {allDocs.map((doc, index) => (
-                    <Card key={index} clickable className="h-full" onClick={() => onPreviewClick(doc)}>
-                        <div className="flex flex-col items-center justify-center text-center gap-3 py-4 h-full">
-                            {isImageUrl(doc.url) ? (
-                                <img src={doc.url!} alt={doc.name} className="w-16 h-16 object-cover rounded-md bg-gray-100" />
-                            ) : (
-                                <TbFileDescription size={36} className='text-gray-400' />
-                            )}
-                            <h6 className="font-semibold uppercase text-sm">{doc.name}</h6>
-                            {doc.verified ? 
-                                <Tag className="bg-emerald-100 text-emerald-700"><TbCheck className='mr-1' />Verified</Tag> : 
-                                <Tag className="bg-red-100 text-red-700"><TbX className='mr-1' />Not Verified</Tag>
-                            }
-                             <Button
-                                size="xs"
-                                variant="outline"
-                                icon={<TbDownload />}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(doc.url || '', '_blank');
-                                }}
-                            >
-                                Download
-                            </Button>
-                        </div>
-                    </Card>
+        <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {documentList.map((doc, index) => (
+                    <DocumentCard key={index} document={doc} onPreview={() => handlePreview(index)} />
                 ))}
             </div>
+            <DocumentViewer
+                isOpen={viewerState.isOpen}
+                onClose={handleCloseViewer}
+                documents={documentList}
+                currentIndex={viewerState.index}
+                onNext={handleNext}
+                onPrev={handlePrev}
+            />
         </div>
     );
 };
@@ -262,11 +306,6 @@ const PartnerView = () => {
     const [partner, setPartner] = useState<ApiSinglePartnerItem | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState<string>(partnerViewNavigationList[0].link);
-  
-    // --- STATE LIFTED UP FOR VIEWERS ---
-    const [viewerIsOpen, setViewerIsOpen] = useState(false);
-    const [viewingFile, setViewingFile] = useState<{ url: string, name: string } | null>(null);
-    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
     useEffect(() => {
         if (!id) {
@@ -289,51 +328,12 @@ const PartnerView = () => {
         fetchPartner();
     }, [id, dispatch, navigate]);
   
-    const allDocs = useMemo(() => {
-        if (!partner) return [];
-        const kycDocsList = [
-            { name: "Aadhar Card", url: partner.aadhar_card_file },
-            { name: "PAN Card", url: partner.pan_card_file },
-            { name: "GST Certificate", url: partner.gst_certificate_file },
-            { name: "Office Photo", url: partner.office_photo_file },
-            { name: "Cancel Cheque", url: partner.cancel_cheque_file },
-            { name: "Visiting Card", url: partner.visiting_card_file },
-            { name: "Authority Letter", url: partner.authority_letter_file },
-            { name: "Agreement", url: partner.agreement_file },
-            { name: "Other Document", url: partner.other_document_file },
-        ];
-        const partnerCerts = (partner.partner_certificate || []).map(cert => ({
-            name: cert.certificate_name,
-            url: cert.upload_certificate_path,
-        }));
-        return [...kycDocsList, ...partnerCerts].filter(doc => doc.url);
-    }, [partner]);
-    
-    const imageDocsForViewer = useMemo(() => allDocs
-        .filter(doc => doc.url && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(doc.url))
-        .map(doc => ({ src: doc.url!, alt: doc.name })),
-        [allDocs]
-    );
-    
-    const handlePreviewClick = (doc: { name: string; url: string | null }) => {
-        if (!doc.url) return;
-        if (/\.(jpeg|jpg|gif|png|svg|webp)$/i.test(doc.url)) {
-            const index = imageDocsForViewer.findIndex(img => img.src === doc.url);
-            if (index > -1) {
-                setSelectedImageIndex(index);
-                setViewerIsOpen(true);
-            }
-        } else {
-            setViewingFile({ url: doc.url, name: doc.name });
-        }
-    };
-  
     const renderActiveSection = () => {
         if (!partner) return <NoDataMessage message="Partner data is not available." />;
   
         switch (activeSection) {
             case "details": return <DetailsTabView partner={partner} />;
-            case "documents": return <DocumentsTabView partner={partner} onPreviewClick={handlePreviewClick} />;
+            case "documents": return <DocumentsTabView partner={partner} />;
             case "bank": return <BankAndBillingTabView partner={partner} />;
             case "teams": return <TeamsTabView partner={partner} />;
             case "expertise": return <ExpertiseTabView partner={partner} />;
@@ -370,22 +370,6 @@ const PartnerView = () => {
                 <div className="px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700"><PartnerViewNavigator activeSection={activeSection} onNavigate={setActiveSection} /></div>
                 <div className="p-4 sm:p-6">{renderActiveSection()}</div>
             </Card>
-            
-            {/* Viewers are now rendered at the top level */}
-            {viewerIsOpen && (
-                <ImageViewer
-                    images={imageDocsForViewer}
-                    startIndex={selectedImageIndex}
-                    onClose={() => setViewerIsOpen(false)}
-                />
-            )}
-            {viewingFile && (
-                <GenericFileViewer
-                    fileUrl={viewingFile.url}
-                    fileName={viewingFile.name}
-                    onClose={() => setViewingFile(null)}
-                />
-            )}
         </Container>
     );
 };

@@ -1047,13 +1047,13 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   } = useSelector(masterSelector);
 
   const DocumentTypeDataOptions =
-    DocumentTypeData.map((p: any) => ({
+   DocumentTypeData.length > 0 && DocumentTypeData.map((p: any) => ({
       value: p.id,
       label: p.name,
     }));
 
   const tokenFormDataOptions =
-    tokenForm.map((p: any) => ({
+    tokenForm.length > 0 && tokenForm?.map((p: any) => ({
       value: p.id,
       label: p.form_title,
     }));
