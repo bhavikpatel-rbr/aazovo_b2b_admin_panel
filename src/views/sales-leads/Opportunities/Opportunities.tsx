@@ -38,6 +38,7 @@ import {
   Pagination,
   Progress,
   Select,
+  Spinner,
   Table,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
@@ -56,6 +57,7 @@ import {
   TbAlarm,
   TbAlertTriangle,
   TbBell,
+  TbBellRinging,
   TbBox,
   TbBrandWhatsapp,
   TbBriefcase,
@@ -72,13 +74,17 @@ import {
   TbDiscount,
   TbExchange,
   TbEye,
+  TbFileDescription,
   TbFilter,
+  TbFlag,
   TbIdBadge2,
   TbInfoCircle,
   TbLink as TbLinkIcon,
   TbMail,
   TbMinus,
+  TbNotesOff,
   TbNotebook,
+  TbPencilPlus,
   TbPhone,
   TbPlus,
   TbProgressCheck,
@@ -91,11 +97,9 @@ import {
   TbTrash,
   TbUser,
   TbUserCheck,
+  TbUserCircle,
   TbUsers,
   TbX,
-  TbFlag,
-  TbUserCircle,
-  TbFileDescription,
 } from "react-icons/tb";
 
 // Types
@@ -124,9 +128,11 @@ import { authSelector } from "@/reduxtool/auth/authSlice";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addAllActionAction,
+  addAllAlertsAction,
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
+  getAlertsAction,
   getAllUsersAction,
   getAutoMatchDataAction,
   getOpportunitiesAction,
@@ -330,6 +336,22 @@ const activitySchema = z.object({
   notes: z.string().optional(),
 });
 type ActivityFormData = z.infer<typeof activitySchema>;
+
+// START: Alert-related types and schemas
+interface AlertNote {
+    id: number;
+    note: string; // HTML content from RichTextEditor
+    created_by: string;
+    created_at: string; // ISO date string
+    created_by_user?: {
+        name: string;
+    } | null;
+}
+const alertNoteSchema = z.object({
+    newNote: z.string().min(10, "Note must contain at least 10 characters."),
+});
+type AlertNoteFormData = z.infer<typeof alertNoteSchema>;
+// END: Alert-related types and schemas
 
 // ============================================================================
 // --- MODALS SECTION ---
@@ -838,6 +860,171 @@ const AddActivityDialog: React.FC<{
     </Dialog>
   );
 };
+
+const OpportunityAlertModal: React.FC<{ opportunity: OpportunityItem; onClose: () => void }> = ({ opportunity, onClose }) => {
+    const [alerts, setAlerts] = useState<AlertNote[]>([]);
+    const [isFetching, setIsFetching] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const dispatch = useAppDispatch();
+    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+        resolver: zodResolver(alertNoteSchema),
+        defaultValues: { newNote: '' },
+        mode: 'onChange'
+    });
+
+    const stringToColor = (str: string) => {
+        let hash = 0;
+        if (!str) return '#cccccc';
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i++) {
+            const value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+        }
+        return color;
+    };
+
+    useEffect(() => {
+        setIsFetching(true);
+        dispatch(getAlertsAction({ module_id: opportunity.id, module_name: 'Opportunity' }))
+            .unwrap()
+            .then((data) => setAlerts(data.data || []))
+            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+            .finally(() => setIsFetching(false));
+            reset({ newNote: '' })
+    }, [opportunity.id, dispatch, reset]);
+
+    const onAddNote = async (data: AlertNoteFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: opportunity.id, module_name: 'Opportunity' })).unwrap();
+            toast.push(<Notification type="success" title="Alert Note Added" />);
+            reset({ newNote: '' });
+            // Refetch alerts
+            dispatch(getAlertsAction({ module_id: opportunity.id, module_name: 'Opportunity' }))
+                .unwrap()
+                .then((data) => setAlerts(data.data || []));
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog
+            isOpen={true}
+            onClose={onClose}
+            onRequestClose={onClose}
+            width={1200}
+            contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+        >
+            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 flex-shrink-0 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <TbBellRinging className="text-2xl text-white" />
+                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">Alerts for: {opportunity.opportunity_id}</h5>
+                    </div>
+                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+                        <TbX className="h-6 w-6" />
+                    </button>
+                </div>
+            </header>
+
+            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
+                <div className="relative flex flex-col h-full overflow-hidden">
+                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+                        Activity Timeline
+                    </h6>
+                    <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
+                        {isFetching ? (
+                            <div className="flex justify-center items-center h-full"><Spinner size="lg"/></div>
+                        ) : alerts.length > 0 ? (
+                            <div className="space-y-8">
+                                {alerts.map((alert, index) => {
+                                    const userName = alert?.created_by_user?.name || 'System';
+                                    const userInitial = userName.charAt(0).toUpperCase();
+                                    return (
+                                        <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                                            <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                                                <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                                                    {userInitial}
+                                                </Avatar>
+                                                {index < alerts.length - 1 && (
+                                                    <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                                                )}
+                                            </div>
+                                            <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                <div className="p-4">
+                                                    <header className="flex justify-between items-center mb-2">
+                                                        <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                            <TbCalendarEvent />
+                                                            <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
+                                                        </div>
+                                                    </header>
+                                                    <div
+                                                        className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                                                        dangerouslySetInnerHTML={{ __html: alert.note }}
+                                                    />
+                                                </div>
+                                            </Card>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Alerts Found</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-col mt-8 lg:mt-0 h-full">
+                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <TbPencilPlus className="text-xl text-red-600 dark:text-red-400" />
+                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+                            </div>
+                        </header>
+                        <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+                            <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                                <Controller
+                                    name="newNote"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                                            <RichTextEditor
+                                                {...field}
+                                                onChange={(val) => field.onChange(val.html)}
+                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                                            />
+                                        </div>
+                                    )}
+                                />
+                            </FormItem>
+                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>
+                                    Cancel
+                                </Button>
+                                <Button variant="solid" color="red" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
+                                    Submit Note
+                                </Button>
+                            </footer>
+                        </Form>
+                    </Card>
+                </div>
+            </main>
+        </Dialog>
+    );
+};
+
 const OpportunityModals: React.FC<OpportunityModalsProps> = ({
   modalState,
   onClose,
@@ -1005,6 +1192,13 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
             onSubmit={handleConfirmActivity}
             isLoading={isSubmittingAction}
           />
+        );
+       case "alert":
+        return (
+            <OpportunityAlertModal
+                opportunity={item}
+                onClose={onClose}
+            />
         );
       default:
         return null;
@@ -2161,7 +2355,7 @@ const MainRowActionColumn = ({
           <TbAlarm size={18} /> <span className="text-xs">View Alert</span>{" "}
         </Dropdown.Item>{" "}
         <Dropdown.Item
-          onClick={() => onOpenModal("alert", item)}
+          onClick={handleViewDetails}
           className="flex items-center gap-2"
         >
           {" "}

@@ -1,8 +1,11 @@
+// src/views/your-path/AddLeadPage.tsx
+
 import React, { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, NavLink } from "react-router-dom";
 import dayjs from "dayjs";
+import { z } from "zod";
 
 // UI Components
 import Input from "@/components/ui/Input";
@@ -11,7 +14,6 @@ import {
   Select as UiSelect,
   DatePicker,
   Button,
-  Table,
   Tooltip,
 } from "@/components/ui";
 import InputNumber from "@/components/ui/Input/InputNumber";
@@ -24,16 +26,15 @@ import Spinner from "@/components/ui/Spinner";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
+import { TbRefresh } from "react-icons/tb";
 
 // Types and Schema
-import type { LeadFormData } from "../types"; // Ensure this path is correct
 import {
-  leadFormSchema,
   leadStatusOptions,
   enquiryTypeOptions,
   leadIntentOptions,
   deviceConditionOptions as baseDeviceConditionOptions,
-} from "../types"; // Ensure this path is correct
+} from "../types";
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
@@ -51,6 +52,37 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
+// --- Form Validation Schema using Zod ---
+export const leadFormSchema = z.object({
+  lead_intent: z.string({ required_error: "Lead Intent is required." }).min(1, "Lead Intent is required."),
+  member_id: z.number({ required_error: "Lead Member is required." }).nullable().refine((val) => val !== null, "Lead Member is required."),
+  source_supplier_id: z.number({ required_error: "Source Member is required." }).nullable().refine((val) => val !== null, "Source Member is required."),
+  product_id: z.number({ required_error: "Product Name is required." }).nullable().refine((val) => val !== null, "Product Name is required."),
+  qty: z.number({ required_error: "Quantity is required." }).min(1, "Quantity must be at least 1.").nullable().refine((val) => val !== null, "Quantity is required."),
+  target_price: z.number().nullable(),
+  product_spec_id: z.number().nullable(),
+  source_product_status: z.string().nullable(),
+  source_device_type: z.string().nullable(),
+  source_device_condition: z.string().nullable(),
+  source_color: z.string().nullable(),
+  source_cartoon_type_id: z.number().nullable(),
+  source_dispatch_status: z.string().nullable(),
+  source_payment_term_id: z.number().nullable(),
+  source_eta: z.date().nullable(),
+  source_location: z.string().nullable(),
+  source_internal_remarks: z.string().nullable(),
+
+  // Fields not in the new UI but required for payload/logic
+  lead_status: z.string(),
+  enquiry_type: z.string().optional(), 
+  lead_date: z.date().nullable(),
+  assigned_sales_person_id: z.number().nullable(),
+  source_qty: z.number().nullable(),
+  source_price: z.number().nullable(),
+});
+
+export type LeadFormData = z.infer<typeof leadFormSchema>;
+
 type ApiLookupItem = {
   id: string | number;
   name: string;
@@ -66,7 +98,6 @@ const productStatusOptions = [
 const cartoonTypeOptions = [
   { value: 1, label: "Master Carton" },
   { value: 2, label: "Non - Master Carton" },
-
 ];
 
 const deviceConditionOptions = [
@@ -74,11 +105,19 @@ const deviceConditionOptions = [
   { value: "Old", label: "Old" },
 ];
 
+const RequiredLabel = ({ children }: { children: React.ReactNode }) => (
+  <div>
+    {children}
+    <span className="text-red-500"> *</span>
+  </div>
+);
+
 const AddLeadPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [initialDataFetched, setInitialDataFetched] = useState(false);
 
   const {
@@ -91,6 +130,32 @@ const AddLeadPage = () => {
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
+  const defaultFormValues: LeadFormData = {
+    member_id: null,
+    enquiry_type: "Manual", // Default value for hidden field
+    lead_intent: null,
+    product_id: null,
+    product_spec_id: null,
+    qty: null,
+    target_price: null,
+    lead_status: "New", // Default value for hidden field
+    lead_date: null,
+    assigned_sales_person_id: null,
+    source_supplier_id: null,
+    source_qty: null,
+    source_price: null,
+    source_product_status: null,
+    source_device_condition: null,
+    source_device_type: null,
+    source_color: null,
+    source_cartoon_type_id: null,
+    source_dispatch_status: null,
+    source_payment_term_id: null,
+    source_eta: null,
+    source_location: null,
+    source_internal_remarks: null,
+  };
+
   const {
     control,
     handleSubmit,
@@ -99,45 +164,26 @@ const AddLeadPage = () => {
     formState: { errors, isDirty },
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadFormSchema),
-    defaultValues: {
-      member_id: null,
-      enquiry_type: "",
-      lead_intent: null,
-      product_id: null,
-      product_spec_id: null,
-      qty: null,
-      target_price: null,
-      lead_status: "New",
-      assigned_sales_person_id: null,
-      source_supplier_id: null,
-      source_qty: null,
-      source_price: null,
-      source_product_status: null,
-      source_device_condition: null,
-      source_device_type: null,
-      source_color: null,
-      source_cartoon_type_id: null,
-      source_dispatch_status: null,
-      source_payment_term_id: null,
-      source_eta: null,
-      source_location: null,
-      source_internal_remarks: null,
-    },
+    defaultValues: defaultFormValues,
     mode: "onChange",
   });
 
   const leadIntentValue = watch("lead_intent");
 
   const leadMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return <div>Lead Member (Buyer)<span className="text-red-500"> * </span></div>;
-    if (leadIntentValue === "Sell") return <div>Lead Member (Supplier)<span className="text-red-500"> * </span></div>;
-    return <div>Lead Member (Supplier/Buyer)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Buy")
+      return <RequiredLabel>Lead Member (Buyer)</RequiredLabel>;
+    if (leadIntentValue === "Sell")
+      return <RequiredLabel>Lead Member (Supplier)</RequiredLabel>;
+    return <RequiredLabel>Lead Member (Supplier/Buyer)</RequiredLabel>;
   }, [leadIntentValue]);
 
   const sourceMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
-    if (leadIntentValue === "Sell") return <div>Source Member (Buyer)<span className="text-red-500"> * </span></div>;
-    return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Buy")
+      return <RequiredLabel>Source Member (Supplier)</RequiredLabel>;
+    if (leadIntentValue === "Sell")
+      return <RequiredLabel>Source Member (Buyer)</RequiredLabel>;
+    return <RequiredLabel>Source Member (Supplier)</RequiredLabel>;
   }, [leadIntentValue]);
 
   useEffect(() => {
@@ -158,10 +204,7 @@ const AddLeadPage = () => {
           dispatch(getPaymentTermAction()),
         ]);
       } catch (error) {
-        console.error(
-          "Failed to fetch dropdown data for Add Lead page:",
-          error
-        );
+        console.error("Failed to fetch dropdown data:", error);
         toast.push(
           <Notification title="Data Load Error" type="danger">
             Could not load selection options.
@@ -202,55 +245,38 @@ const AddLeadPage = () => {
     if (!Array.isArray(memberData)) return [];
     return memberData.map((member: ApiLookupItem) => ({
       value: member.id,
-      label: `(${member.member_code}) - ${member.name || 'N/A'}`,
+      label: `(${member.member_code}) - ${member.name || "N/A"}`,
     }));
   }, [memberData]);
-
-  const salesPersonOption = useMemo(() => {
-    if (!Array.isArray(salesPerson)) return [];
-    return salesPerson.map((product: ApiLookupItem) => ({
-      value: product.id,
-      label: `(${product.member_code}) - ${product.name || 'N/A'}`,
-      // label: product.name,
-    }));
-  }, [salesPerson]);
 
   const onSubmit = async (data: LeadFormData) => {
     setIsSubmitting(true);
 
-    // Find the label for the cartoon type ID
-    const cartoonTypeLabel =
-      cartoonTypeOptions.find(
-        (option) => option.value === data.source_cartoon_type_id
-      )?.label || null;
-
-    // --- START: PAYLOAD TRANSFORMATION ---
-    // Transform the form data to match the required API payload structure
     const apiPayload = {
       lead_intent: data.lead_intent,
-      lead_member: data.member_id,
+      member_id: data.member_id,
       enquiry_type: data.enquiry_type,
       product_id: data.product_id,
       qty: data.qty,
       target_price: data.target_price,
       lead_status: data.lead_status,
-      assigned_saled_id: data.assigned_sales_person_id,
+      lead_date: data.lead_date ? dayjs(data.lead_date).format("YYYY-MM-DD") : null,
+      assigned_sales_person_id: data.assigned_sales_person_id,
       product_spec_id: data.product_spec_id,
-      source_member_id: data.source_supplier_id,
+      source_supplier_id: data.source_supplier_id,
       source_qty: data.source_qty,
-      sourced_price: data.source_price,
-      product_status: data.source_product_status,
-      device_condition: data.source_device_condition,
-      device_type: data.source_device_type,
-      color: data.source_color,
-      cartoon_type: cartoonTypeLabel,
-      dispatch_status: data.source_dispatch_status,
-      payment_term_id: data.source_payment_term_id,
-      eta: data.source_eta ? dayjs(data.source_eta).format("YYYY-MM-DD") : null,
-      location: data.source_location,
-      internal_remark: data.source_internal_remarks,
+      source_price: data.source_price,
+      source_product_status: data.source_product_status,
+      source_device_condition: data.source_device_condition,
+      source_device_type: data.source_device_type,
+      source_color: data.source_color,
+      source_cartoon_type_id: data.source_cartoon_type_id,
+      source_dispatch_status: data.source_dispatch_status,
+      source_payment_term_id: data.source_payment_term_id,
+      source_eta: data.source_eta ? dayjs(data.source_eta).format("YYYY-MM-DD") : null,
+      source_location: data.source_location,
+      source_internal_remarks: data.source_internal_remarks,
     };
-    // --- END: PAYLOAD TRANSFORMATION ---
 
     try {
       await dispatch(addLeadAction(apiPayload)).unwrap();
@@ -277,8 +303,16 @@ const AddLeadPage = () => {
     else navigate("/sales/leads");
   };
 
-  const isLoadingInitialData =
-    masterLoadingStatus === "loading" && !initialDataFetched;
+  const handleReset = () => {
+    setResetConfirmOpen(true);
+  };
+
+  const onResetConfirm = () => {
+    reset(defaultFormValues);
+    setResetConfirmOpen(false);
+  };
+
+  const isLoadingInitialData = masterLoadingStatus === "loading" && !initialDataFetched;
 
   if (isLoadingInitialData) {
     return (
@@ -299,11 +333,11 @@ const AddLeadPage = () => {
       </div>
       <FormContainer>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <AdaptableCard className="mb-4">
-           
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
-                            <FormItem
-                label="Lead Intent"
+          <AdaptableCard>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-4">
+              {/* Row 1 */}
+              <FormItem
+                label={<RequiredLabel>Lead Intent</RequiredLabel>}
                 invalid={!!errors.lead_intent}
                 errorMessage={errors.lead_intent?.message}
               >
@@ -314,11 +348,8 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Intent"
                       options={leadIntentOptions}
-                      value={leadIntentOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={leadIntentOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
                     />
                   )}
                 />
@@ -335,17 +366,13 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Member"
                       options={leadMemberOptions}
-                      value={leadMemberOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={leadMemberOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={false}
                     />
                   )}
                 />
               </FormItem>
-
-               <FormItem
+              <FormItem
                 label={sourceMemberLabel}
                 invalid={!!errors.source_supplier_id}
                 errorMessage={errors.source_supplier_id?.message}
@@ -357,39 +384,14 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Supplier"
                       options={leadMemberOptions}
-                      value={leadMemberOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={leadMemberOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={false}
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
-              {/* <FormItem
-                label={<div>Enquiry Type<span className="text-red-500"> * </span></div>}
-                invalid={!!errors.enquiry_type}
-                errorMessage={errors.enquiry_type?.message}
-              >
-                <Controller
-                  name="enquiry_type"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Enquiry Type"
-                      options={enquiryTypeOptions}
-                      value={enquiryTypeOptions.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                    />
-                  )}
-                />
-              </FormItem> */}
-
               <FormItem
-                label={<div>Product Name<span className="text-red-500"> * </span></div>}
+                label={<RequiredLabel>Product Name</RequiredLabel>}
                 invalid={!!errors.product_id}
                 errorMessage={errors.product_id?.message}
               >
@@ -400,21 +402,16 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Product"
                       options={productOptions}
-                      value={productOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={productOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={
-                        masterLoadingStatus === "loading" &&
-                        productOptions.length === 0
-                      }
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
+
+              {/* Row 2 */}
               <FormItem
-                label={<div>Quantity<span className="text-red-500"> * </span></div>}
+                label={<RequiredLabel>Quantity</RequiredLabel>}
                 invalid={!!errors.qty}
                 errorMessage={errors.qty?.message}
               >
@@ -426,7 +423,7 @@ const AddLeadPage = () => {
                       placeholder="Enter quantity"
                       {...field}
                       value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
+                      onChange={(val) => field.onChange(val)}
                     />
                   )}
                 />
@@ -444,59 +441,12 @@ const AddLeadPage = () => {
                       placeholder="Enter target price"
                       {...field}
                       value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
-                      step={0.01}
+                      onChange={(val) => field.onChange(val)}
                     />
                   )}
                 />
               </FormItem>
-              {/* <FormItem
-                label={<div>Lead Status<span className="text-red-500"> * </span></div>}
-                invalid={!!errors.lead_status}
-                errorMessage={errors.lead_status?.message}
-              >
-                <Controller
-                  name="lead_status"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Status"
-                      options={leadStatusOptions}
-                      value={leadStatusOptions.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                    />
-                  )}
-                />
-              </FormItem> */}
-              {/* <FormItem
-                label="Assigned Sales Person"
-                invalid={!!errors.assigned_sales_person_id}
-                errorMessage={errors.assigned_sales_person_id?.message}
-              >
-                <Controller
-                  name="assigned_sales_person_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Sales Person"
-                      options={salesPersonOption}
-                      value={salesPersonOption.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={false}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem> */}
-                <FormItem
-                label="Product Status "
-                invalid={!!errors.source_product_status}
-                errorMessage={errors.source_product_status?.message}
-              >
+              <FormItem label="Product Status">
                 <Controller
                   name="source_product_status"
                   control={control}
@@ -504,20 +454,13 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Product Status"
                       options={productStatusOptions}
-                      value={productStatusOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={productStatusOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Product Spec"
-                invalid={!!errors.product_spec_id}
-                errorMessage={errors.product_spec_id?.message}
-              >
+              <FormItem label="Product Spec">
                 <Controller
                   name="product_spec_id"
                   control={control}
@@ -525,44 +468,22 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Specification"
                       options={productSpecOptions}
-                      value={productSpecOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={productSpecOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={
-                        masterLoadingStatus === "loading" &&
-                        productSpecOptions.length === 0
-                      }
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
 
-                <FormItem
-                label="Device Type"
-                invalid={!!errors.source_device_type}
-                errorMessage={errors.source_device_type?.message}
-              >
+              {/* Row 3 */}
+              <FormItem label="Device Type">
                 <Controller
                   name="source_device_type"
                   control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Mobile Phone, Laptop"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} placeholder="e.g., Mobile Phone" value={field.value ?? ""} />}
                 />
               </FormItem>
-           
-            
-              <FormItem
-                label="Device Condition"
-                invalid={!!errors.source_device_condition}
-                errorMessage={errors.source_device_condition?.message}
-              >
+              <FormItem label="Device Condition">
                 <Controller
                   name="source_device_condition"
                   control={control}
@@ -570,38 +491,20 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Condition"
                       options={deviceConditionOptions}
-                      value={deviceConditionOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={deviceConditionOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
-           
-              <FormItem
-                label="Color"
-                invalid={!!errors.source_color}
-                errorMessage={errors.source_color?.message}
-              >
+              <FormItem label="Color">
                 <Controller
                   name="source_color"
                   control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Space Gray"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} placeholder="e.g., Space Gray" value={field.value ?? ""} />}
                 />
               </FormItem>
-              <FormItem
-                label="Cartoon Type"
-                invalid={!!errors.source_cartoon_type_id}
-                errorMessage={errors.source_cartoon_type_id?.message}
-              >
+              <FormItem label="Cartoon Type">
                 <Controller
                   name="source_cartoon_type_id"
                   control={control}
@@ -609,38 +512,22 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Cartoon Type"
                       options={cartoonTypeOptions}
-                      value={cartoonTypeOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={cartoonTypeOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={false}
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Dispatch Status"
-                invalid={!!errors.source_dispatch_status}
-                errorMessage={errors.source_dispatch_status?.message}
-              >
+
+              {/* Row 4 */}
+              <FormItem label="Dispatch Status">
                 <Controller
                   name="source_dispatch_status"
                   control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Ready to Ship"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} placeholder="e.g., Ready to Ship" value={field.value ?? ""} />}
                 />
               </FormItem>
-              <FormItem
-                label="Payment Term"
-                invalid={!!errors.source_payment_term_id}
-                errorMessage={errors.source_payment_term_id?.message}
-              >
+              <FormItem label="Payment Term">
                 <Controller
                   name="source_payment_term_id"
                   control={control}
@@ -648,65 +535,35 @@ const AddLeadPage = () => {
                     <UiSelect
                       placeholder="Select Payment Term"
                       options={paymentTermOptions}
-                      value={paymentTermOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={paymentTermOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={
-                        masterLoadingStatus === "loading" &&
-                        paymentTermOptions.length === 0
-                      }
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="ETA"
-                invalid={!!errors.source_eta}
-                errorMessage={errors.source_eta?.message as string}
-              >
+              <FormItem label="ETA">
                 <Controller
                   name="source_eta"
                   control={control}
                   render={({ field }) => (
                     <DatePicker
                       placeholder="Select ETA"
-                      value={
-                        field.value
-                          ? dayjs(field.value).isValid()
-                            ? dayjs(field.value).toDate()
-                            : null
-                          : null
-                      }
+                      value={field.value}
                       onChange={(date) => field.onChange(date)}
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Location"
-                invalid={!!errors.source_location}
-                errorMessage={errors.source_location?.message}
-              >
+              <FormItem label="Location">
                 <Controller
                   name="source_location"
                   control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Warehouse A"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} placeholder="e.g., Warehouse A" value={field.value ?? ""} />}
                 />
               </FormItem>
-              <FormItem
-                label="Internal Remarks"
-                invalid={!!errors.source_internal_remarks}
-                errorMessage={errors.source_internal_remarks?.message}
-                className="md:col-span-2 lg:col-span-4"
-              >
+
+              {/* Row 5 */}
+              <FormItem label="Internal Remarks" className="lg:col-span-4">
                 <Controller
                   name="source_internal_remarks"
                   control={control}
@@ -724,24 +581,16 @@ const AddLeadPage = () => {
             </div>
           </AdaptableCard>
 
-        
-              
-            
-
           <div className="mt-6 flex justify-end gap-2">
-            <Button
-              type="button"
-              onClick={handleCancel}
-              disabled={isSubmitting}
-            >
+            <Button type="button" onClick={handleCancel} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="solid"
-              loading={isSubmitting}
-              disabled={isSubmitting || isLoadingInitialData}
-            >
+            <Tooltip title="Reset all fields to default">
+              <Button type="button" icon={<TbRefresh />} onClick={handleReset} disabled={isSubmitting}>
+                Clear All
+              </Button>
+            </Tooltip>
+            <Button type="submit" variant="solid" loading={isSubmitting} disabled={isSubmitting || isLoadingInitialData}>
               Save
             </Button>
           </div>
@@ -752,15 +601,23 @@ const AddLeadPage = () => {
         type="warning"
         title="Discard Changes?"
         onClose={() => setCancelConfirmOpen(false)}
-        onConfirm={() => {
-          setCancelConfirmOpen(false);
-          navigate("/sales/leads");
-        }}
+        onConfirm={() => { setCancelConfirmOpen(false); navigate("/sales-leads/lead"); }}
         onCancel={() => setCancelConfirmOpen(false)}
       >
         <p>Unsaved changes will be lost.</p>
       </ConfirmDialog>
+      <ConfirmDialog
+        isOpen={resetConfirmOpen}
+        type="warning"
+        title="Clear Form?"
+        onClose={() => setResetConfirmOpen(false)}
+        onConfirm={onResetConfirm}
+        onCancel={() => setResetConfirmOpen(false)}
+      >
+        <p>Are you sure you want to clear all fields in the form?</p>
+      </ConfirmDialog>
     </Container>
   );
 };
+
 export default AddLeadPage;
