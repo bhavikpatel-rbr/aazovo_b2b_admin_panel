@@ -73,6 +73,7 @@ import cloneDeep from "lodash/cloneDeep";
 import dayjs from "dayjs";
 import { useSelector } from "react-redux";
 import { isEmptyArray } from "formik";
+import { config } from "localforage";
 
 
 // --- START: Detailed Type Definitions (Matching API Response) ---
@@ -171,8 +172,8 @@ interface AlertNote {
 
 // START: Activity Schema
 const activitySchema = z.object({
-    item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
-    notes: z.string().optional(),
+  item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+  notes: z.string().optional(),
 });
 type ActivityFormData = z.infer<typeof activitySchema>;
 // END: Activity Schema
@@ -332,219 +333,219 @@ const GenericInfoDialog: React.FC<{ title: string; onClose: () => void; }> = ({ 
 );
 
 const AddActivityDialog: React.FC<{ member: FormItem; onClose: () => void; user: any; }> = ({ member, onClose, user }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
-        resolver: zodResolver(activitySchema),
-        defaultValues: { item: `Follow up with ${member.name}`, notes: '' },
-        mode: 'onChange',
-    });
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
+    resolver: zodResolver(activitySchema),
+    defaultValues: { item: `Follow up with ${member.name}`, notes: '' },
+    mode: 'onChange',
+  });
 
-    const onAddActivity = async (data: ActivityFormData) => {
-        setIsLoading(true);
-        const payload = {
-            item: data.item,
-            notes: data.notes || '',
-            module_id: String(member.id),
-            module_name: 'Member',
-            user_id: user.id,
-        };
-        try {
-            await dispatch(addAllActionAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Activity Added" />);
-            onClose();
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
-        } finally {
-            setIsLoading(false);
-        }
+  const onAddActivity = async (data: ActivityFormData) => {
+    setIsLoading(true);
+    const payload = {
+      item: data.item,
+      notes: data.notes || '',
+      module_id: String(member.id),
+      module_name: 'Member',
+      user_id: user.id,
     };
+    try {
+      await dispatch(addAllActionAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Activity Added" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Add Activity Log for "{member.name}"</h5>
-            <Form onSubmit={handleSubmit(onAddActivity)}>
-                <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
-                    <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} />
-                </FormItem>
-                <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-                    <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} />
-                </FormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Activity</Button>
-                </div>
-            </Form>
-        </Dialog>
-    );
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Activity Log for "{member.name}"</h5>
+      <Form onSubmit={handleSubmit(onAddActivity)}>
+        <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
+          <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} />
+        </FormItem>
+        <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Activity</Button>
+        </div>
+      </Form>
+    </Dialog>
+  );
 };
 
 const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({ member, onClose }) => {
-    const [alerts, setAlerts] = useState<AlertNote[]>([]);
-    const [isFetching, setIsFetching] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const dispatch = useAppDispatch();
-    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
-        resolver: zodResolver(alertNoteSchema),
-        defaultValues: { newNote: '' },
-        mode: 'onChange'
-    });
+  const [alerts, setAlerts] = useState<AlertNote[]>([]);
+  const [isFetching, setIsFetching] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useAppDispatch();
+  const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+    resolver: zodResolver(alertNoteSchema),
+    defaultValues: { newNote: '' },
+    mode: 'onChange'
+  });
 
-    const stringToColor = (str: string) => {
-        let hash = 0;
-        if (!str) return '#cccccc';
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        let color = '#';
-        for (let i = 0; i < 3; i++) {
-            const value = (hash >> (i * 8)) & 0xFF;
-            color += ('00' + value.toString(16)).substr(-2);
-        }
-        return color;
-    };
+  const stringToColor = (str: string) => {
+    let hash = 0;
+    if (!str) return '#cccccc';
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+  };
 
-    const fetchAlerts = useCallback(() => {
-        setIsFetching(true);
-        dispatch(getAlertsAction({ module_id: member.id, module_name: 'Member' }))
-            .unwrap()
-            .then((data) => setAlerts(data.data || []))
-            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
-            .finally(() => setIsFetching(false));
-    }, [member.id, dispatch]);
+  const fetchAlerts = useCallback(() => {
+    setIsFetching(true);
+    dispatch(getAlertsAction({ module_id: member.id, module_name: 'Member' }))
+      .unwrap()
+      .then((data) => setAlerts(data.data || []))
+      .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+      .finally(() => setIsFetching(false));
+  }, [member.id, dispatch]);
 
-    useEffect(() => {
-        fetchAlerts();
-        reset({ newNote: '' });
-    }, [fetchAlerts, reset]);
+  useEffect(() => {
+    fetchAlerts();
+    reset({ newNote: '' });
+  }, [fetchAlerts, reset]);
 
-    const onAddNote = async (data: AlertNoteFormData) => {
-        setIsSubmitting(true);
-        try {
-            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: member.id, module_name: 'Member' })).unwrap();
-            toast.push(<Notification type="success" title="Alert Note Added" />);
-            reset({ newNote: '' });
-            fetchAlerts(); // Re-fetch alerts to show the new one
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+  const onAddNote = async (data: AlertNoteFormData) => {
+    setIsSubmitting(true);
+    try {
+      await dispatch(addAllAlertsAction({ note: data.newNote, module_id: member.id, module_name: 'Member' })).unwrap();
+      toast.push(<Notification type="success" title="Alert Note Added" />);
+      reset({ newNote: '' });
+      fetchAlerts(); // Re-fetch alerts to show the new one
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    return (
-        <Dialog
-            isOpen={true}
-            onClose={onClose}
-            onRequestClose={onClose}
-            width={1200}
-            contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
-        >
-            {/* --- Header --- */}
-            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <TbBellRinging className="text-2xl text-white" />
-                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{member.name}</h5>
-                    </div>
-                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
-                        <TbX className="h-6 w-6" />
-                    </button>
-                </div>
-            </header>
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={1200}
+      contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+    >
+      {/* --- Header --- */}
+      <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TbBellRinging className="text-2xl text-white" />
+            <h5 className="mb-0 text-white font-bold text-base sm:text-xl">{member.name}</h5>
+          </div>
+          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+            <TbX className="h-6 w-6" />
+          </button>
+        </div>
+      </header>
 
-            {/* --- Main Content: Grid for two columns --- */}
-            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
+      {/* --- Main Content: Grid for two columns --- */}
+      <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
 
-                {/* --- Left Column: Activity Timeline (This column scrolls internally) --- */}
-                <div className="relative flex flex-col h-full overflow-hidden">
-                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
-                        Activity Timeline
-                    </h6>
-                    
-                    {/* The scrollable container for the timeline */}
-                    <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
-                        {isFetching ? (
-                            <div className="flex justify-center items-center h-full"><Spinner size="lg"/></div>
-                        ) : alerts.length > 0 ? (
-                            <div className="space-y-8">
-                                {alerts.map((alert, index) => {
-                                    const userName = alert?.created_by_user?.name || 'N/A';
-                                    const userInitial = userName.charAt(0).toUpperCase();
-                                    return (
-                                        <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
-                                            <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
-                                                <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
-                                                    {userInitial}
-                                                </Avatar>
-                                                {index < alerts.length - 1 && (
-                                                    <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                                                )}
-                                            </div>
-                                            <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                                <div className="p-4">
-                                                    <header className="flex justify-between items-center mb-2">
-                                                        <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                                            <TbCalendarTime />
-                                                            <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
-                                                        </div>
-                                                    </header>
-                                                    <div
-                                                        className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
-                                                        dangerouslySetInnerHTML={{ __html: alert.note }}
-                                                    />
-                                                </div>
-                                            </Card>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
-                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
-                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
-                            </div>
+        {/* --- Left Column: Activity Timeline (This column scrolls internally) --- */}
+        <div className="relative flex flex-col h-full overflow-hidden">
+          <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+            Activity Timeline
+          </h6>
+
+          {/* The scrollable container for the timeline */}
+          <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
+            {isFetching ? (
+              <div className="flex justify-center items-center h-full"><Spinner size="lg" /></div>
+            ) : alerts.length > 0 ? (
+              <div className="space-y-8">
+                {alerts.map((alert, index) => {
+                  const userName = alert?.created_by_user?.name || 'N/A';
+                  const userInitial = userName.charAt(0).toUpperCase();
+                  return (
+                    <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                      <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                        <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                          {userInitial}
+                        </Avatar>
+                        {index < alerts.length - 1 && (
+                          <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
                         )}
-                    </div>
-                </div>
-
-                {/* --- Right Column: Add New Note (Stays in place) --- */}
-                <div className="flex flex-col mt-8 lg:mt-0 h-full">
-                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
-                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                                <TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" />
-                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+                      </div>
+                      <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        <div className="p-4">
+                          <header className="flex justify-between items-center mb-2">
+                            <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              <TbCalendarTime />
+                              <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
                             </div>
-                        </header>
-                        <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
-                            <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
-                                <Controller
-                                    name="newNote"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
-                                            <RichTextEditor
-                                                {...field}
-                                                onChange={(val) => field.onChange(val.html)}
-                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
-                                            />
-                                        </div>
-                                    )}
-                                />
-                            </FormItem>
-                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
-                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-                                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>Submit Note</Button>
-                            </footer>
-                        </Form>
-                    </Card>
-                </div>
-            </main>
-        </Dialog>
-    );
+                          </header>
+                          <div
+                            className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                            dangerouslySetInnerHTML={{ __html: alert.note }}
+                          />
+                        </div>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Activity Yet</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* --- Right Column: Add New Note (Stays in place) --- */}
+        <div className="flex flex-col mt-8 lg:mt-0 h-full">
+          <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+            <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <TbPencilPlus className="text-xl text-blue-600 dark:text-blue-400" />
+                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+              </div>
+            </header>
+            <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+              <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                <Controller
+                  name="newNote"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                      <RichTextEditor
+                        {...field}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                      />
+                    </div>
+                  )}
+                />
+              </FormItem>
+              <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+                <Button variant="solid" color="blue" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>Submit Note</Button>
+              </footer>
+            </Form>
+          </Card>
+        </div>
+      </main>
+    </Dialog>
+  );
 };
 
 
@@ -553,13 +554,17 @@ const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void
   const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userData, setUserData] = useState<any>(null);
-
+  const { useEncryptApplicationStorage } = config;
   useEffect(() => {
+    const getUserData = () => {
       try {
-          setUserData(encryptStorage.getItem("UserData"));
+        return encryptStorage.getItem("UserData", !useEncryptApplicationStorage);
       } catch (error) {
-          console.error("Error getting UserData from storage:", error);
+        console.error("Error getting UserData:", error);
+        return null;
       }
+    };
+    setUserData(getUserData());
   }, []);
 
   const handleConfirmSchedule = async (data: ScheduleFormData) => {
