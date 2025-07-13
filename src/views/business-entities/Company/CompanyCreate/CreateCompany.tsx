@@ -1674,6 +1674,10 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
     mode: 'onChange',
   });
 
+
+  useEffect(() => {
+    dispatch(getParentCategoriesAction());;
+  }, [dispatch]);
   const countryOptions = useMemo(() =>
     CountriesData?.map((country: any) => ({ value: String(country.id), label: country.name }))
     , [CountriesData]);
