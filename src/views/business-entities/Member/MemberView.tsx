@@ -1,17 +1,26 @@
 // src/views/members/MemberViewPage.tsx
 
-import React, { useEffect, useState } from 'react'
+import React, { useMemo, useEffect, useState, useCallback } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
-import { useAppDispatch } from '@/reduxtool/store'
+import { useAppDispatch, useSelector } from '@/reduxtool/store'
+import {
+    flexRender,
+    getCoreRowModel,
+    getSortedRowModel,
+    useReactTable,
+    SortingState,
+} from '@tanstack/react-table'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
-import { Avatar, Button, Card, Spinner, Tag } from '@/components/ui'
+import { Avatar, Button, Card, Spinner, Tag, Input, Select } from '@/components/ui'
+import { DatePicker, Table, Pagination } from '@/components/ui'
 import Notification from '@/components/ui/Notification'
 import Tabs from '@/components/ui/Tabs'
 import toast from '@/components/ui/toast'
 const { TabNav, TabList, TabContent } = Tabs
+const { Tr, Th, Td, THead, TBody } = Table
 
 // Icons
 import { BiChevronRight } from 'react-icons/bi'
@@ -22,13 +31,468 @@ import {
     TbPencil,
     TbPhone,
     TbUserCircle,
+    TbArrowUp,
+    TbArrowDown,
 } from 'react-icons/tb'
 
 // Redux
-import { getMemberByIdAction } from '@/reduxtool/master/middleware'
+import {
+    getMemberByIdAction,
+    getLeadsAction, // Assumed Action
+    getWallInquiriesAction, // Assumed Action
+    getProductsAction, // Assumed Action for filters
+} from '@/reduxtool/master/middleware'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
+
+// --- START: Reusable and Placeholder Components ---
+
+// A placeholder DataTable component to match the required functionality
+const DataTable = ({
+    columns,
+    data,
+    loading,
+    onSort,
+    pageCount,
+    currentPage,
+    onPageChange,
+    onPageSizeChange,
+    pageSize,
+}: {
+    columns: any[]
+    data: any[]
+    loading: boolean
+    onSort: (sorting: SortingState) => void
+    pageCount: number
+    currentPage: number
+    onPageChange: (page: number) => void
+    onPageSizeChange: (size: number) => void
+    pageSize: number
+}) => {
+    const [sorting, setSorting] = useState<SortingState>([])
+
+    const table = useReactTable({
+        data,
+        columns,
+        state: { sorting },
+        onSortingChange: (newSorting) => {
+            setSorting(newSorting)
+            onSort(newSorting)
+        },
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+    })
+
+    const handlePageSizeChange = (size: number) => {
+        onPageSizeChange(size)
+    }
+
+    return (
+        <div>
+            <Table>
+                <THead>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                        <Tr key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => (
+                                <Th
+                                    key={header.id}
+                                    colSpan={header.colSpan}
+                                    className="cursor-pointer"
+                                    onClick={header.column.getToggleSortingHandler()}
+                                >
+                                    <div className="flex items-center">
+                                        {flexRender(
+                                            header.column.columnDef.header,
+                                            header.getContext(),
+                                        )}
+                                        {header.column.getIsSorted() ===
+                                        'asc' ? (
+                                            <TbArrowUp className="ml-2" />
+                                        ) : header.column.getIsSorted() ===
+                                          'desc' ? (
+                                            <TbArrowDown className="ml-2" />
+                                        ) : null}
+                                    </div>
+                                </Th>
+                            ))}
+                        </Tr>
+                    ))}
+                </THead>
+                <TBody>
+                    {loading ? (
+                        <Tr>
+                            <Td colSpan={columns.length}>
+                                <div className="flex justify-center p-5">
+                                    <Spinner />
+                                </div>
+                            </Td>
+                        </Tr>
+                    ) : data.length > 0 ? (
+                        table.getRowModel().rows.map((row) => (
+                            <Tr key={row.id}>
+                                {row.getVisibleCells().map((cell) => (
+                                    <Td key={cell.id}>
+                                        {flexRender(
+                                            cell.column.columnDef.cell,
+                                            cell.getContext(),
+                                        )}
+                                    </Td>
+                                ))}
+                            </Tr>
+                        ))
+                    ) : (
+                        <Tr>
+                            <Td
+                                colSpan={columns.length}
+                                className="text-center"
+                            >
+                                No data available in table
+                            </Td>
+                        </Tr>
+                    )}
+                </TBody>
+            </Table>
+            <div className="flex items-center justify-between mt-4">
+                <Pagination
+                    currentPage={currentPage}
+                    total={pageCount * pageSize}
+                    pageSize={pageSize}
+                    onChange={onPageChange}
+                />
+                <div style={{ minWidth: 130 }}>
+                    <Select
+                        size="sm"
+                        isSearchable={false}
+                        value={{
+                            value: pageSize,
+                            label: `${pageSize} / page`,
+                        }}
+                        options={[
+                            { value: 10, label: '10 / page' },
+                            { value: 20, label: '20 / page' },
+                            { value: 50, label: '50 / page' },
+                        ]}
+                        onChange={(option) =>
+                            handlePageSizeChange(option?.value || pageSize)
+                        }
+                    />
+                </div>
+            </div>
+        </div>
+    )
+}
+// --- END: Reusable and Placeholder Components ---
+
+// --- START: Leads Tab Component ---
+const LeadsTab = ({ memberId }: { memberId: string }) => {
+    const dispatch = useAppDispatch();
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [pageCount, setPageCount] = useState(0);
+
+    const initialFilters = {
+        createdDate: null,
+        status: null,
+        type: null,
+        wantTo: null,
+        search: '',
+    };
+    const [filters, setFilters] = useState(initialFilters);
+
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [sort, setSort] = useState<SortingState>([]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const payload = {
+                    member_id: memberId,
+                    page,
+                    per_page: pageSize,
+                    sort_by: sort.length > 0 ? sort[0].id : '',
+                    sort_order: sort.length > 0 ? (sort[0].desc ? 'desc' : 'asc') : '',
+                    ...Object.entries(filters).reduce((acc, [key, value]) => {
+                        if (value) acc[key] = typeof value === 'object' ? value.value : value;
+                        return acc;
+                    }, {} as any),
+                };
+                const response = await dispatch(getLeadsAction(payload)).unwrap();
+                setData(response.data);
+                setPageCount(Math.ceil(response.total / pageSize));
+            } catch (error) {
+                toast.push(<Notification type="danger" title="Failed to fetch leads." />);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const timer = setTimeout(() => {
+            fetchData();
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [dispatch, memberId, page, pageSize, sort, filters]);
+
+    const handleFilterChange = (name: string, value: any) => {
+        setPage(1); // Reset to page 1 on any filter change
+        setFilters((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleReset = () => {
+        setFilters(initialFilters);
+        setPage(1);
+    };
+
+    const columns = useMemo(
+        () => [
+            { header: 'Status', accessorKey: 'status' },
+            { header: 'Enquiry Type', accessorKey: 'enquiryType' },
+            { header: 'Want To?', accessorKey: 'wantTo' },
+            { header: 'Qty', accessorKey: 'qty' },
+            { header: 'Target Price', accessorKey: 'targetPrice' },
+            {
+                header: 'Action',
+                id: 'action',
+                cell: () => (
+                    <Button size="xs" variant="solid">
+                        View
+                    </Button>
+                ),
+            },
+        ],
+        [],
+    );
+
+    return (
+        <Card bordered>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-end">
+                <DatePicker
+                    placeholder="Pick date range"
+                    value={filters.createdDate}
+                    onChange={(date) => handleFilterChange('createdDate', date)}
+                />
+                <Select
+                    placeholder="Select Status"
+                    options={[
+                        { label: 'Open', value: 'open' },
+                        { label: 'Closed', value: 'closed' },
+                    ]}
+                    value={filters.status}
+                    onChange={(option) => handleFilterChange('status', option)}
+                />
+                <Select
+                    placeholder="Select Type"
+                    options={[
+                        { label: 'Product', value: 'product' },
+                        { label: 'Service', value: 'service' },
+                    ]}
+                    value={filters.type}
+                    onChange={(option) => handleFilterChange('type', option)}
+                />
+                <Select
+                    placeholder="Select Option"
+                    options={[
+                        { label: 'Buy', value: 'buy' },
+                        { label: 'Sell', value: 'sell' },
+                    ]}
+                    value={filters.wantTo}
+                    onChange={(option) => handleFilterChange('wantTo', option)}
+                />
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-end">
+                <div className="md:col-span-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Search:
+                    </label>
+                    <Input
+                        placeholder="Search..."
+                        value={filters.search}
+                        onChange={(e) => handleFilterChange('search', e.target.value)}
+                    />
+                </div>
+                 <div className="flex justify-end">
+                    <Button onClick={handleReset}>Reset</Button>
+                </div>
+            </div>
+            <DataTable
+                columns={columns}
+                data={data}
+                loading={loading}
+                onSort={setSort}
+                pageCount={pageCount}
+                currentPage={page}
+                onPageChange={setPage}
+                pageSize={pageSize}
+                onPageSizeChange={setPageSize}
+            />
+        </Card>
+    )
+}
+// --- END: Leads Tab Component ---
+
+// --- START: Wall Inquiry Tab Component ---
+const WallInquiryTab = ({ memberId }: { memberId: string }) => {
+    const dispatch = useAppDispatch();
+    const { ProductData } = useSelector(masterSelector);
+    
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [pageCount, setPageCount] = useState(0);
+
+    const initialFilters = {
+        createdDate: null,
+        product: null,
+        status: null,
+        wantTo: null,
+        search: '',
+    };
+    const [filters, setFilters] = useState(initialFilters);
+
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [sort, setSort] = useState<SortingState>([]);
+
+    useEffect(() => {
+        dispatch(getProductsAction({}));
+    }, [dispatch]);
+
+    const productOptions = useMemo(() => 
+        (ProductData?.data || []).map((p: any) => ({ label: p.name, value: p.id })),
+        [ProductData]
+    );
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const payload = {
+                    member_id: memberId,
+                    page,
+                    per_page: pageSize,
+                    sort_by: sort.length > 0 ? sort[0].id : '',
+                    sort_order: sort.length > 0 ? (sort[0].desc ? 'desc' : 'asc') : '',
+                    ...Object.entries(filters).reduce((acc, [key, value]) => {
+                        if (value) acc[key] = typeof value === 'object' ? value.value : value;
+                        return acc;
+                    }, {} as any),
+                };
+                const response = await dispatch(getWallInquiriesAction(payload)).unwrap();
+                setData(response.data);
+                setPageCount(Math.ceil(response.total / pageSize));
+            } catch (error) {
+                toast.push(<Notification type="danger" title="Failed to fetch wall inquiries." />);
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        const timer = setTimeout(() => {
+            fetchData();
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [dispatch, memberId, page, pageSize, sort, filters]);
+
+    const handleFilterChange = (name: string, value: any) => {
+        setPage(1);
+        setFilters((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleReset = () => {
+        setFilters(initialFilters);
+        setPage(1);
+    };
+
+    const columns = useMemo(
+        () => [
+            { header: 'Status', accessorKey: 'status' },
+            { header: 'Product Name', accessorKey: 'productName' },
+            {
+                header: 'Created Date',
+                accessorKey: 'createdDate',
+                cell: (props: any) =>
+                    formatDate(props.row.original.createdDate),
+            },
+            { header: 'Qty', accessorKey: 'qty' },
+            { header: 'Product Status', accessorKey: 'productStatus' },
+            { header: 'Want To?', accessorKey: 'wantTo' },
+            {
+                header: 'Action',
+                id: 'action',
+                cell: () => (
+                    <Button size="xs" variant="solid">
+                        View
+                    </Button>
+                ),
+            },
+        ],
+        [],
+    );
+
+    return (
+        <Card bordered>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
+                <DatePicker
+                    placeholder="Pick date range"
+                    value={filters.createdDate}
+                    onChange={(date) => handleFilterChange('createdDate', date)}
+                />
+                <Select
+                    placeholder="Select Product Name"
+                    options={productOptions}
+                    value={filters.product}
+                    onChange={(option) => handleFilterChange('product', option)}
+                />
+                <Select
+                    placeholder="Select Status"
+                    options={[
+                        { label: 'Approved', value: 'approved' },
+                        { label: 'Pending', value: 'pending' },
+                    ]}
+                    value={filters.status}
+                    onChange={(option) => handleFilterChange('status', option)}
+                />
+                <Select
+                    placeholder="Select Option"
+                    options={[
+                        { label: 'Buy', value: 'buy' },
+                        { label: 'Sell', value: 'sell' },
+                    ]}
+                    value={filters.wantTo}
+                    onChange={(option) => handleFilterChange('wantTo', option)}
+                />
+                 <div className="md:col-span-2">
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Search:
+                    </label>
+                    <Input
+                        placeholder="Search..."
+                        value={filters.search}
+                        onChange={(e) => handleFilterChange('search', e.target.value)}
+                    />
+                </div>
+                 <div className="flex justify-end">
+                    <Button onClick={handleReset}>Reset</Button>
+                </div>
+            </div>
+            <DataTable
+                columns={columns}
+                data={data}
+                loading={loading}
+                onSort={setSort}
+                pageCount={pageCount}
+                currentPage={page}
+                onPageChange={setPage}
+                pageSize={pageSize}
+                onPageSizeChange={setPageSize}
+            />
+        </Card>
+    )
+}
+// --- END: Wall Inquiry Tab Component ---
 
 // --- Helper Functions & Components (Unchanged) ---
-
 const DetailItem = ({
     label,
     value,
@@ -141,7 +605,7 @@ const MemberViewPage = () => {
             return
         }
 
-        const fetchData = async () => {
+        const fetchMemberData = async () => {
             setIsLoading(true)
             try {
                 const response = await dispatch(getMemberByIdAction(id)).unwrap()
@@ -157,10 +621,10 @@ const MemberViewPage = () => {
             }
         }
 
-        fetchData()
+        fetchMemberData()
     }, [id, dispatch, navigate])
 
-    if (isLoading) {
+    if (isLoading || !id) {
         return (
             <div className="flex justify-center items-center h-screen">
                 <Spinner size={40} />
@@ -415,63 +879,11 @@ const MemberViewPage = () => {
                         </TabContent>
 
                         <TabContent value="wall-inquiry">
-                            <Card bordered>
-                                <h5 className="mb-4">
-                                    Wall Inquiry Permissions
-                                </h5>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
-                                    <DetailItem
-                                        label="Wall Enquiry Access"
-                                        value={renderPermission(
-                                            memberData.wall_enquiry_permission,
-                                        )}
-                                    />
-                                    <DetailItem
-                                        label="Wall Listing Access"
-                                        value={renderPermission(
-                                            memberData.wall_listing_permission,
-                                        )}
-                                    />
-                                </div>
-                                <p className="mt-4 text-sm text-gray-500">
-                                    Note: This section displays permissions
-                                    only. Actual inquiry data is not available
-                                    in this view.
-                                </p>
-                            </Card>
+                            <WallInquiryTab memberId={id} />
                         </TabContent>
 
                         <TabContent value="leads">
-                            <Card bordered>
-                                <h5 className="mb-4">
-                                    Lead & Inquiry Permissions
-                                </h5>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
-                                    <DetailItem
-                                        label="General Enquiry"
-                                        value={renderPermission(
-                                            memberData.enquiry_permission,
-                                        )}
-                                    />
-                                    <DetailItem
-                                        label="Trade Inquiry Allowed"
-                                        value={renderPermission(
-                                            memberData.trade_inquiry_allowed,
-                                        )}
-                                    />
-                                    <DetailItem
-                                        label="Trade Inquiry Permission"
-                                        value={renderPermission(
-                                            memberData.trade_inquiry_permission,
-                                        )}
-                                    />
-                                </div>
-                                <p className="mt-4 text-sm text-gray-500">
-                                    Note: This section displays permissions
-                                    only. Actual lead data is not available in
-                                    this view.
-                                </p>
-                            </Card>
+                            <LeadsTab memberId={id} />
                         </TabContent>
 
                         <TabContent value="favorite-products">

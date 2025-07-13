@@ -1084,6 +1084,71 @@ const CompanyDetailsSection = ({
   );
 };
 
+// --- START: New Helper Component for Generic File Viewing ---
+const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: () => void; }) => {
+  const fileUrl = useMemo(() => (file instanceof File ? URL.createObjectURL(file) : file), [file]);
+  const fileName = useMemo(() => (file instanceof File ? file.name : (file.split('/').pop() || 'file')), [file]);
+  const fileExtension = useMemo(() => fileName.split('.').pop()?.toLowerCase(), [fileName]);
+
+  const isPdf = fileExtension === 'pdf';
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const getFileIcon = () => {
+    switch (fileExtension) {
+      case 'pdf': return <TbFileTypePdf className="text-red-500" size={64} />;
+      case 'xls': case 'xlsx': case 'csv': return <TbFileSpreadsheet className="text-green-500" size={64} />;
+      default: return <TbFile className="text-gray-500" size={64} />;
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4"
+      onClick={onClose}
+    >
+      <Button
+        type="button"
+        shape="circle"
+        variant="solid"
+        icon={<TbX />}
+        className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
+        onClick={onClose}
+      />
+
+      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        {isPdf ? (
+          <iframe src={fileUrl} title={fileName} className="w-full h-full border-none rounded-lg bg-white" />
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center flex flex-col items-center justify-center max-w-md">
+            {getFileIcon()}
+            <h4 className="mb-2 mt-4">Preview not available</h4>
+            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-xs">
+              This file type can't be shown here. You can open it in a new tab to view or download it.
+            </p>
+            <Button
+              variant="solid"
+              onClick={() => window.open(fileUrl, '_blank')}
+            >
+              Open '{fileName}'
+            </Button>
+          </div>
+        )}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">
+          {fileName}
+        </div>
+      </div>
+    </div>
+  );
+};
+// --- END: New Helper Component ---
+// --- KYCDetailSection ---
 // --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
@@ -1092,6 +1157,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
 
   const [viewerIsOpen, setViewerIsOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [viewingFile, setViewingFile] = useState<File | string | null>(null);
 
   const kycDocs = useMemo(() => [
     { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: isIndiaSelected },
@@ -1105,34 +1171,55 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
     { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
   ], [isIndiaSelected]);
 
+  // ***** CORRECTED LOGIC *****
+  // Watch all file fields and include the result in the useMemo dependency array.
+  // This ensures `imageDocsForViewer` is recalculated whenever a file is uploaded or removed.
+  const watchedFileValues = watch(kycDocs.map(doc => doc.name));
+
   const imageDocsForViewer = useMemo(() => {
     return kycDocs
-      .map(doc => ({ ...doc, fileValue: watch(doc.name) }))
+      .map((doc, index) => ({
+        ...doc,
+        fileValue: watchedFileValues[index] // Use the fresh values from watch
+      }))
       .filter(doc => {
         const url = doc.fileValue;
-        if (typeof url === 'string') {
-          return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
-        }
-        if (url instanceof File) {
-          return url.type.startsWith('image/');
-        }
+        if (!url) return false;
+        if (url instanceof File) return url.type.startsWith('image/');
+        if (typeof url === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
         return false;
       })
       .map(doc => ({
         src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
         alt: doc.label
       }));
-  }, [kycDocs, watch]);
+  }, [kycDocs, watchedFileValues]); // Dependency on the actual values
 
-  const openViewer = (docLabel: string) => {
+  const openImageViewer = (docLabel: string) => {
     const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
     if (index > -1) {
       setSelectedImageIndex(index);
       setViewerIsOpen(true);
     }
   };
+  
+  const closeImageViewer = () => setViewerIsOpen(false);
 
-  const closeViewer = () => setViewerIsOpen(false);
+  const handlePreviewClick = (fileValue: File | string | null | undefined, docLabel: string) => {
+    if (!fileValue) return;
+
+    const isImage = (file: unknown): boolean => {
+      if (file instanceof File) return file.type.startsWith('image/');
+      if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+      return false;
+    }
+
+    if (isImage(fileValue)) {
+      openImageViewer(docLabel);
+    } else {
+      setViewingFile(fileValue);
+    }
+  };
 
   return (
     <Card id="kycDocuments">
@@ -1140,9 +1227,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
         {kycDocs.map((doc) => {
           const fileValue = watch(doc.name);
-          const isImageFile = (file: unknown): file is File => file instanceof File && file.type.startsWith("image/");
-          const isImageUrl = (url: unknown): url is string => typeof url === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
-          const isViewableImage = isImageFile(fileValue) || isImageUrl(fileValue);
+          const isViewableImage = (fileValue instanceof File && fileValue.type.startsWith("image/")) || (typeof fileValue === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(fileValue));
 
           return (
             <div key={doc.name}>
@@ -1151,24 +1236,39 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                 {doc.label} {doc.required && <span className="text-red-500">*</span>}
               </label>
               <FormItem invalid={!!(errors as any)[doc.name]} errorMessage={(errors as any)[doc.name]?.message as string} >
-                <Controller name={doc.name} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+                <Controller
+                  name={doc.name}
+                  control={control}
+                  render={({ field: { value, onChange, ...fieldProps } }) => (
+                    <Input
+                      {...fieldProps}
+                      type="file"
+                      onChange={(e) => onChange(e.target.files?.[0])}
+                    />
+                  )}
+                />
               </FormItem>
+
               {fileValue && (
                 <div className="mt-2">
-                  {isViewableImage ? (
-                    <button type="button" onClick={() => openViewer(doc.label)} className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => handlePreviewClick(fileValue, doc.label)}
+                    className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                  >
+                    {isViewableImage ? (
                       <img
                         src={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
                         alt={doc.label}
                         className="max-h-full max-w-full object-contain"
                       />
-                    </button>
-                  ) : (
-                    <DocumentPlaceholder
-                      fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
-                      fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : fileValue}
-                    />
-                  )}
+                    ) : (
+                      <DocumentPlaceholder
+                        fileName={fileValue instanceof File ? fileValue.name : fileValue.split('/').pop() || 'Document'}
+                        fileUrl={fileValue instanceof File ? URL.createObjectURL(fileValue) : String(fileValue)}
+                      />
+                    )}
+                  </button>
                 </div>
               )}
               <FormItem className="mt-2" invalid={!!(errors as any)[doc.remarkName]} errorMessage={(errors as any)[doc.remarkName]?.message as string} >
@@ -1178,12 +1278,17 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
           );
         })}
       </div>
+
       {viewerIsOpen && (
         <ImageViewer
           images={imageDocsForViewer}
           startIndex={selectedImageIndex}
-          onClose={closeViewer}
+          onClose={closeImageViewer}
         />
+      )}
+      
+      {viewingFile && (
+        <GenericFileViewer file={viewingFile} onClose={() => setViewingFile(null)} />
       )}
     </Card>
   );
@@ -1637,33 +1742,20 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const companySchema = z.object({
     id: z.union([z.string(), z.number()]).optional(),
     company_name: z.string().trim().min(1, "Company Name is required."),
-    // primary_contact_number: z.string().trim().min(1, "Primary Contact Number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
-    // primary_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
-    // general_contact_number: z.string().trim().min(1, "Landline number is required.").regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits)."),
-    // general_contact_number_code: z.object({ label: z.string(), value: z.string() }, { required_error: "Country code is required." }),
     alternate_contact_number: z.string().trim().regex(/^\d{7,15}$/, "Invalid contact number (7-15 digits).").optional().or(z.literal("")).nullable(),
     alternate_contact_number_code: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-    // primary_email_id: z.string().trim().min(1, "Primary Email is required.").email("Invalid email format."),
     alternate_email_id: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     ownership_type: z.object({ label: z.string(), value: z.string().min(1, "Ownership Type is required.") }, { required_error: "Ownership Type is required." }),
     owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
-    // company_address: z.string().trim().min(1, "Company Address is required."),
     city: z.string().trim(),
-    // state: z.string().trim().min(1, "State is required."),
-    // zip_code: z.string().trim().min(1, "ZIP/Postal Code is required.").regex(/^\d{3,10}$/, "Invalid ZIP code format."),
     country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
     continent_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
-    // gst_number: z.string().trim().min(1, "GST Number is required.").regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format."),
-    // pan_number: z.string().trim().min(1, "PAN Number is required.").regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format."),
-    // // trn_number: z.string().trim().min(1, "TRN Number is required."),
-    // tan_number: z.string().trim().min(1, "TAN Number is required."),
     establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
     no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d+$/).optional().nullable(), z.literal("")]).optional().nullable(),
     company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
     company_logo: z.any().optional().nullable(),
     primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
     status: z.object({ label: z.string(), value: z.string().min(1, "Status is required.") }, { required_error: "Status is required." }),
-    // support_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
 
     company_certificate: z.array(z.object({
@@ -1686,8 +1778,9 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     })).optional(),
 
     // KYC Docs
-    aadhar_card_file: fileValidation,
-    pan_card_file: fileValidation,
+    // CORRECTED: Aadhar and PAN are now optional by default. Validation is handled in .superRefine()
+    aadhar_card_file: z.any().optional().nullable(),
+    pan_card_file: z.any().optional().nullable(),
     gst_certificate_file: fileValidation,
     cancel_cheque_file: fileValidation,
     office_photo_file: fileValidation,
@@ -1748,10 +1841,11 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       remark: z.string().trim().optional().or(z.literal("")).nullable(),
     })).optional(),
 
+
     gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format.").optional().or(z.literal("")).nullable(),
     pan_number: z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format.").optional().or(z.literal("")).nullable(),
   }).passthrough().superRefine((data, ctx) => {
-    // If country is India (ID 101), GST and PAN are required
+    // CORRECTED: If country is India (ID 101), GST, PAN, Aadhar, and PAN Card files are required
     if (data.country_id?.value === '101') {
       if (!data.gst_number) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India.", path: ['gst_number'] });
@@ -1759,8 +1853,14 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       if (!data.pan_number) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ['pan_number'] });
       }
+      if (!data.aadhar_card_file) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Aadhar Card file is required for India.", path: ['aadhar_card_file'] });
+      }
+      if (!data.pan_card_file) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Card file is required for India.", path: ['pan_card_file'] });
+      }
     }
-  })
+  });
 
   const formMethods = useForm<CompanyFormSchema>({
     defaultValues: defaultValues || {},
