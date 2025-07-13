@@ -65,10 +65,8 @@ const productStatusOptions = [
 
 const cartoonTypeOptions = [
   { value: 1, label: "Master Carton" },
-  { value: 2, label: "Inner Carton" },
-  { value: 3, label: "Pallet" },
-  { value: 4, label: "Box" },
-  { value: 5, label: "Unit" },
+  { value: 2, label: "Non - Master Carton" },
+
 ];
 
 const deviceConditionOptions = [
@@ -204,7 +202,7 @@ const AddLeadPage = () => {
     if (!Array.isArray(memberData)) return [];
     return memberData.map((member: ApiLookupItem) => ({
       value: member.id,
-      label: member.name,
+      label: `(${member.member_code}) - ${member.name || 'N/A'}`,
     }));
   }, [memberData]);
 
@@ -212,7 +210,8 @@ const AddLeadPage = () => {
     if (!Array.isArray(salesPerson)) return [];
     return salesPerson.map((product: ApiLookupItem) => ({
       value: product.id,
-      label: product.name,
+      label: `(${product.member_code}) - ${product.name || 'N/A'}`,
+      // label: product.name,
     }));
   }, [salesPerson]);
 
@@ -301,8 +300,8 @@ const AddLeadPage = () => {
       <FormContainer>
         <form onSubmit={handleSubmit(onSubmit)}>
           <AdaptableCard className="mb-4">
-            <h5 className="mb-6 font-semibold">Lead Information</h5>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
+           
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
                             <FormItem
                 label="Lead Intent"
                 invalid={!!errors.lead_intent}
@@ -345,7 +344,30 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-              <FormItem
+
+               <FormItem
+                label={sourceMemberLabel}
+                invalid={!!errors.source_supplier_id}
+                errorMessage={errors.source_supplier_id?.message}
+              >
+                <Controller
+                  name="source_supplier_id"
+                  control={control}
+                  render={({ field }) => (
+                    <UiSelect
+                      placeholder="Select Supplier"
+                      options={leadMemberOptions}
+                      value={leadMemberOptions.find(
+                        (o) => o.value === field.value
+                      )}
+                      onChange={(opt) => field.onChange(opt?.value)}
+                      isLoading={false}
+                      isClearable
+                    />
+                  )}
+                />
+              </FormItem>
+              {/* <FormItem
                 label={<div>Enquiry Type<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.enquiry_type}
                 errorMessage={errors.enquiry_type?.message}
@@ -364,10 +386,10 @@ const AddLeadPage = () => {
                     />
                   )}
                 />
-              </FormItem>
+              </FormItem> */}
 
               <FormItem
-                label={<div>Product Name (Interest)<span className="text-red-500"> * </span></div>}
+                label={<div>Product Name<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.product_id}
                 errorMessage={errors.product_id?.message}
               >
@@ -428,7 +450,7 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-              <FormItem
+              {/* <FormItem
                 label={<div>Lead Status<span className="text-red-500"> * </span></div>}
                 invalid={!!errors.lead_status}
                 errorMessage={errors.lead_status?.message}
@@ -447,8 +469,8 @@ const AddLeadPage = () => {
                     />
                   )}
                 />
-              </FormItem>
-              <FormItem
+              </FormItem> */}
+              {/* <FormItem
                 label="Assigned Sales Person"
                 invalid={!!errors.assigned_sales_person_id}
                 errorMessage={errors.assigned_sales_person_id?.message}
@@ -465,6 +487,27 @@ const AddLeadPage = () => {
                       )}
                       onChange={(opt) => field.onChange(opt?.value)}
                       isLoading={false}
+                      isClearable
+                    />
+                  )}
+                />
+              </FormItem> */}
+                <FormItem
+                label="Product Status "
+                invalid={!!errors.source_product_status}
+                errorMessage={errors.source_product_status?.message}
+              >
+                <Controller
+                  name="source_product_status"
+                  control={control}
+                  render={({ field }) => (
+                    <UiSelect
+                      placeholder="Select Product Status"
+                      options={productStatusOptions}
+                      value={productStatusOptions.find(
+                        (o) => o.value === field.value
+                      )}
+                      onChange={(opt) => field.onChange(opt?.value)}
                       isClearable
                     />
                   )}
@@ -495,92 +538,26 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-            </div>
-          </AdaptableCard>
 
-          <AdaptableCard className="mb-4">
-            <h5 className="mb-6 font-semibold">Sourcing Details</h5>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
-              <FormItem
-                label={sourceMemberLabel}
-                invalid={!!errors.source_supplier_id}
-                errorMessage={errors.source_supplier_id?.message}
+                <FormItem
+                label="Device Type"
+                invalid={!!errors.source_device_type}
+                errorMessage={errors.source_device_type?.message}
               >
                 <Controller
-                  name="source_supplier_id"
+                  name="source_device_type"
                   control={control}
                   render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Supplier"
-                      options={leadMemberOptions}
-                      value={leadMemberOptions.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={false}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Sourced Quantity"
-                invalid={!!errors.source_qty}
-                errorMessage={errors.source_qty?.message}
-              >
-                <Controller
-                  name="source_qty"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      placeholder="Enter quantity"
+                    <Input
+                      placeholder="e.g., Mobile Phone, Laptop"
                       {...field}
-                      value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
+                      value={field.value ?? ""}
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Sourced Price ($)"
-                invalid={!!errors.source_price}
-                errorMessage={errors.source_price?.message}
-              >
-                <Controller
-                  name="source_price"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      placeholder="Enter price"
-                      {...field}
-                      value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
-                      step={0.01}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Product Status "
-                invalid={!!errors.source_product_status}
-                errorMessage={errors.source_product_status?.message}
-              >
-                <Controller
-                  name="source_product_status"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Product Status"
-                      options={productStatusOptions}
-                      value={productStatusOptions.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem>
+           
+            
               <FormItem
                 label="Device Condition"
                 invalid={!!errors.source_device_condition}
@@ -602,23 +579,7 @@ const AddLeadPage = () => {
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Device Type"
-                invalid={!!errors.source_device_type}
-                errorMessage={errors.source_device_type?.message}
-              >
-                <Controller
-                  name="source_device_type"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Mobile Phone, Laptop"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
-                />
-              </FormItem>
+           
               <FormItem
                 label="Color"
                 invalid={!!errors.source_color}
@@ -744,7 +705,7 @@ const AddLeadPage = () => {
                 label="Internal Remarks"
                 invalid={!!errors.source_internal_remarks}
                 errorMessage={errors.source_internal_remarks?.message}
-                className="md:col-span-2 lg:col-span-3"
+                className="md:col-span-2 lg:col-span-4"
               >
                 <Controller
                   name="source_internal_remarks"
@@ -762,6 +723,10 @@ const AddLeadPage = () => {
               </FormItem>
             </div>
           </AdaptableCard>
+
+        
+              
+            
 
           <div className="mt-6 flex justify-end gap-2">
             <Button

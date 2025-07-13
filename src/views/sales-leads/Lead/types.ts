@@ -113,6 +113,5 @@ export const leadIntentOptions: { value: LeadIntent, label: string }[] = [
 
 export const deviceConditionOptions: { value: ProductCondition, label: string }[] = [
   { value: "New", label: "New" },
-  { value: "Used", label: "Used" },
-  { value: "Refurbished", label: "Refurbished" },
+
 ];
