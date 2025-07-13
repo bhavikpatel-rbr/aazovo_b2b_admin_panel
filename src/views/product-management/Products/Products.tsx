@@ -114,6 +114,8 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import { config } from "localforage";
 
 // --- Type Definitions ---
 // ... (existing type definitions are correct)
@@ -845,8 +847,24 @@ const ProductsModals: React.FC<ProductsModalsProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   const { user } = useSelector(authSelector);
+
+  const { useEncryptApplicationStorage } = config;
+
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const { type, data: item, isOpen } = modalState;
+  const [userData, setuserData] = useState<any>(null);
+  useEffect(() => {
+    const getUserData = () => {
+      try {
+        return encryptStorage.getItem("UserData", !useEncryptApplicationStorage);
+      } catch (error) {
+        console.error("Error getting UserData:", error);
+        return null;
+      }
+    };
+    setuserData(getUserData());
+  }, []);
+
 
   if (!isOpen || !item) return null;
 
@@ -903,6 +921,7 @@ const ProductsModals: React.FC<ProductsModalsProps> = ({
       setIsSubmittingAction(false);
     }
   };
+
   const handleConfirmSchedule = async (data: ScheduleFormData) => {
     if (!item) return;
     setIsSubmittingAction(true);
@@ -934,14 +953,14 @@ const ProductsModals: React.FC<ProductsModalsProps> = ({
     }
   };
   const handleConfirmActivity = async (data: ActivityFormData) => {
-    if (!item || !user?.id) return;
+    if (!item || !userData?.id) return;
     setIsSubmittingAction(true);
     const payload = {
       item: data.item,
       notes: data.notes || "",
       module_id: String(item.id),
       module_name: "Product",
-      user_id: user.id,
+      user_id: userData.id,
     };
     try {
       await dispatch(addAllActionAction(payload)).unwrap();
@@ -1122,12 +1141,12 @@ const apiProductStatusOptions: {
   value: "Active" | "Inactive" | "Pending" | "Draft" | "Rejected";
   label: string;
 }[] = [
-  { value: "Active", label: "Active" },
-  { value: "Inactive", label: "Inactive" },
-  { value: "Pending", label: "Pending" },
-  { value: "Draft", label: "Draft" },
-  { value: "Rejected", label: "Rejected" },
-];
+    { value: "Active", label: "Active" },
+    { value: "Inactive", label: "Inactive" },
+    { value: "Pending", label: "Pending" },
+    { value: "Draft", label: "Draft" },
+    { value: "Rejected", label: "Rejected" },
+  ];
 
 // --- CSV Exporter Logic ---
 const downloadCsv = (filename: string, csvContent: string) => {
@@ -1546,9 +1565,8 @@ const ProductSelectedFooter = React.memo(
         <ConfirmDialog
           isOpen={deleteOpen}
           type="danger"
-          title={`Delete ${selectedItems.length} Product${
-            selectedItems.length > 1 ? "s" : ""
-          }`}
+          title={`Delete ${selectedItems.length} Product${selectedItems.length > 1 ? "s" : ""
+            }`}
           onClose={() => setDeleteOpen(false)}
           onRequestClose={() => setDeleteOpen(false)}
           onCancel={() => setDeleteOpen(false)}
@@ -1598,17 +1616,15 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = React.memo(
           }
           target="_blank"
           rel="noopener noreferrer"
-          className={`${valueClassName} hover:underline text-blue-600 dark:text-blue-400 ${
-            breakAll ? "break-all" : ""
-          } ${preWrap ? "whitespace-pre-wrap" : ""}`}
+          className={`${valueClassName} hover:underline text-blue-600 dark:text-blue-400 ${breakAll ? "break-all" : ""
+            } ${preWrap ? "whitespace-pre-wrap" : ""}`}
         >
           {value}
         </a>
       ) : (
         <div
-          className={`${valueClassName} ${breakAll ? "break-all" : ""} ${
-            preWrap ? "whitespace-pre-wrap" : ""
-          }`}
+          className={`${valueClassName} ${breakAll ? "break-all" : ""} ${preWrap ? "whitespace-pre-wrap" : ""
+            }`}
         >
           {value}
         </div>
@@ -1753,7 +1769,7 @@ const Products = () => {
     () =>
       Array.isArray(getAllUserData)
         ? getAllUserData?.map((u: any) => ({ value: u.id, label: u.name })) ||
-          []
+        []
         : [],
     [getAllUserData]
   );
@@ -1912,9 +1928,9 @@ const Products = () => {
         thumbImageFullPath = `${PRODUCT_THUMB_IMAGE_BASE_URL}${apiItem.thumb_image}`;
       const parsedDomainIds = apiItem.domain_ids
         ? apiItem.domain_ids
-            .split(",")
-            .map((id) => parseInt(id.trim(), 10))
-            .filter((id) => !isNaN(id))
+          .split(",")
+          .map((id) => parseInt(id.trim(), 10))
+          .filter((id) => !isNaN(id))
         : [];
       // const domainNames = parsedDomainIds
       //   .map((id) => domainOptions.find((d) => d.value === id)?.label)
@@ -2518,9 +2534,8 @@ const Products = () => {
       const moduleName =
         exportModalType === "products" ? "Products" : "Product Keywords";
       try {
-        const fileName = `products_export_${
-          new Date().toISOString().split("T")[0]
-        }.csv`;
+        const fileName = `products_export_${new Date().toISOString().split("T")[0]
+          }.csv`;
         await dispatch(
           submitExportReasonAction({
             reason: data.reason,
@@ -2571,7 +2586,7 @@ const Products = () => {
         file.name.endsWith(".csv") ||
         file.type === "application/vnd.ms-excel" ||
         file.type ===
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       ) {
         setSelectedFile(file);
       } else {
@@ -2781,9 +2796,8 @@ const Products = () => {
         accessorKey: "status",
         cell: (props: CellContext<ProductItem, any>) => (
           <Tag
-            className={`${
-              productStatusColor[props.row.original.status] || "bg-gray-200"
-            } capitalize font-semibold border-0`}
+            className={`${productStatusColor[props.row.original.status] || "bg-gray-200"
+              } capitalize font-semibold border-0`}
           >
             {props.row.original.status}
           </Tag>
@@ -3006,11 +3020,10 @@ const Products = () => {
                 <button
                   key={tab}
                   onClick={() => handleListTabChange(tab)}
-                  className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize ${
-                    currentListTab === tab
+                  className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize ${currentListTab === tab
                       ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
-                  }`}
+                    }`}
                 >
                   {tab.replace("_", " ")} Products
                 </button>
@@ -3111,11 +3124,10 @@ const Products = () => {
                   key={tab}
                   type="button"
                   onClick={() => handleFormTabChange(tab)}
-                  className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm capitalize flex items-center gap-2 ${
-                    currentFormTab === tab
+                  className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm capitalize flex items-center gap-2 ${currentFormTab === tab
                       ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
-                  }`}
+                    }`}
                 >
                   {tab === FORM_TABS.GENERAL && <TbSettings />}
                   {tab === FORM_TABS.DESCRIPTION && <TbFileText />}
@@ -3205,10 +3217,10 @@ const Products = () => {
                             ? "Select category first"
                             : masterLoadingStatus === "loading" &&
                               !subcategoryOptions.length
-                            ? "Loading subcategories..."
-                            : subcategoryOptions.length === 0
-                            ? "No subcategories"
-                            : "Select subcategory"
+                              ? "Loading subcategories..."
+                              : subcategoryOptions.length === 0
+                                ? "No subcategories"
+                                : "Select subcategory"
                         }
                       />
                     )}
@@ -3310,7 +3322,7 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Country of Origin
+                      Country
                       <span className="text-red-500"> * </span>
                     </div>
                   }
@@ -3789,12 +3801,12 @@ const Products = () => {
                   isMulti
                   placeholder={
                     !watchedFilterCategoryIds ||
-                    watchedFilterCategoryIds.length !== 1
+                      watchedFilterCategoryIds.length !== 1
                       ? "Select one category first"
                       : subcategoryOptions.length === 0 &&
                         masterLoadingStatus !== "loading"
-                      ? "No subcategories"
-                      : "Select Sub Categories"
+                        ? "No subcategories"
+                        : "Select Sub Categories"
                   }
                   options={subcategoryOptions}
                   value={subcategoryOptions.filter((o) =>
@@ -3988,9 +4000,8 @@ const Products = () => {
       <ConfirmDialog
         isOpen={exportModalType !== null}
         type="info"
-        title={`Reason for ${
-          exportModalType === "products" ? "Product" : "Keyword"
-        } Export`}
+        title={`Reason for ${exportModalType === "products" ? "Product" : "Keyword"
+          } Export`}
         onClose={() => setExportModalType(null)}
         onRequestClose={() => setExportModalType(null)}
         onCancel={() => setExportModalType(null)}
@@ -4079,9 +4090,8 @@ const Products = () => {
                     label="Status"
                     value={
                       <Tag
-                        className={`${
-                          productStatusColor[productToView.status]
-                        } capitalize font-semibold border-0`}
+                        className={`${productStatusColor[productToView.status]
+                          } capitalize font-semibold border-0`}
                       >
                         {productToView.status}
                       </Tag>
@@ -4185,40 +4195,40 @@ const Products = () => {
                 productToView.shortDescription ||
                 productToView.paymentTerm ||
                 productToView.deliveryDetails) && (
-                <Card>
-                  <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
-                    Descriptions & Terms
-                  </h6>
-                  {productToView.shortDescription && (
-                    <DialogDetailRow
-                      label="Short Description"
-                      value={productToView.shortDescription}
-                      preWrap
-                    />
-                  )}
-                  {productToView.description && (
-                    <DialogDetailRow
-                      label="Full Description"
-                      value={productToView.description}
-                      preWrap
-                    />
-                  )}
-                  {productToView.paymentTerm && (
-                    <DialogDetailRow
-                      label="Payment Term"
-                      value={productToView.paymentTerm}
-                      preWrap
-                    />
-                  )}
-                  {productToView.deliveryDetails && (
-                    <DialogDetailRow
-                      label="Delivery Details"
-                      value={productToView.deliveryDetails}
-                      preWrap
-                    />
-                  )}
-                </Card>
-              )}
+                  <Card>
+                    <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
+                      Descriptions & Terms
+                    </h6>
+                    {productToView.shortDescription && (
+                      <DialogDetailRow
+                        label="Short Description"
+                        value={productToView.shortDescription}
+                        preWrap
+                      />
+                    )}
+                    {productToView.description && (
+                      <DialogDetailRow
+                        label="Full Description"
+                        value={productToView.description}
+                        preWrap
+                      />
+                    )}
+                    {productToView.paymentTerm && (
+                      <DialogDetailRow
+                        label="Payment Term"
+                        value={productToView.paymentTerm}
+                        preWrap
+                      />
+                    )}
+                    {productToView.deliveryDetails && (
+                      <DialogDetailRow
+                        label="Delivery Details"
+                        value={productToView.deliveryDetails}
+                        preWrap
+                      />
+                    )}
+                  </Card>
+                )}
               {productToView.productImages &&
                 productToView.productImages.length > 0 && (
                   <Card>
@@ -4244,31 +4254,31 @@ const Products = () => {
               {(productToView.metaTitle ||
                 productToView.metaDescription ||
                 productToView.metaKeyword) && (
-                <Card>
-                  <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
-                    SEO Information
-                  </h6>
-                  {productToView.metaTitle && (
-                    <DialogDetailRow
-                      label="Meta Title"
-                      value={productToView.metaTitle}
-                    />
-                  )}
-                  {productToView.metaDescription && (
-                    <DialogDetailRow
-                      label="Meta Description"
-                      value={productToView.metaDescription}
-                      preWrap
-                    />
-                  )}
-                  {productToView.metaKeyword && (
-                    <DialogDetailRow
-                      label="Meta Keywords"
-                      value={productToView.metaKeyword}
-                    />
-                  )}
-                </Card>
-              )}
+                  <Card>
+                    <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
+                      SEO Information
+                    </h6>
+                    {productToView.metaTitle && (
+                      <DialogDetailRow
+                        label="Meta Title"
+                        value={productToView.metaTitle}
+                      />
+                    )}
+                    {productToView.metaDescription && (
+                      <DialogDetailRow
+                        label="Meta Description"
+                        value={productToView.metaDescription}
+                        preWrap
+                      />
+                    )}
+                    {productToView.metaKeyword && (
+                      <DialogDetailRow
+                        label="Meta Keywords"
+                        value={productToView.metaKeyword}
+                      />
+                    )}
+                  </Card>
+                )}
               <Card>
                 <h6 className="font-semibold mb-3 text-base text-slate-600 dark:text-slate-300">
                   Timestamps

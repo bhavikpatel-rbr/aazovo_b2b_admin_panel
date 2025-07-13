@@ -97,7 +97,7 @@ import {
   getAllCompany,
   getAllUsersAction,
   getBrandAction,
-  getCategoriesData,
+  getParentCategoriesAction,
   getEmployeesAction,
   getMemberTypeAction,
   getProductsDataAsync,
@@ -109,6 +109,8 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
 import { z } from "zod";
+import { config } from "localforage";
+import { encryptStorage } from "@/utils/secureLocalStorage";
 
 // --- Type Definitions ---
 export type ApiWallItemFromSource = any;
@@ -490,12 +492,20 @@ const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> 
 };
 const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; user: any; }> = ({ wallItem, onClose, user }) => {
     const dispatch = useAppDispatch();
+    const [userData, setUserData] = useState<any>(null);
+    
+        useEffect(() => {
+            const { useEncryptApplicationStorage } = config;
+            try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+            catch (error) { console.error("Error getting UserData:", error); }
+        }, []);
     const [isLoading, setIsLoading] = useState(false);
     const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
         resolver: zodResolver(activitySchema),
         defaultValues: { item: `Follow up on ${wallItem.product_name}`, notes: '' },
         mode: 'onChange',
     });
+
 
     const onAddActivity = async (data: ActivityFormData) => {
         setIsLoading(true);
@@ -504,7 +514,7 @@ const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; use
             notes: data.notes || '',
             module_id: String(wallItem.id),
             module_name: 'WallListing',
-            user_id: user.id,
+            user_id: userData.id,
         };
         try {
             await dispatch(addAllActionAction(payload)).unwrap();
@@ -755,7 +765,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const dispatch = useAppDispatch();
 
   const { user } = useSelector(authSelector);
-  const { wallListing, AllProductsData, AllCategorysData, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
+  const { wallListing, AllProductsData, ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WallItem | null>(null);
@@ -858,7 +868,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   useEffect(() => { dispatch(getWallListingAction(apiParams)); }, [dispatch, apiParams]);
   useEffect(() => {
-    dispatch(getProductsDataAsync()); dispatch(getCategoriesData()); dispatch(getSubcategoriesByCategoryIdAction(0)); dispatch(getBrandAction()); dispatch(getMemberTypeAction()); dispatch(getProductSpecificationsAction()); dispatch(getEmployeesAction()); dispatch(getAllCompany()); dispatch(getAllUsersAction());
+    dispatch(getProductsDataAsync()); dispatch(getParentCategoriesAction()); dispatch(getSubcategoriesByCategoryIdAction(0)); dispatch(getBrandAction()); dispatch(getMemberTypeAction()); dispatch(getProductSpecificationsAction()); dispatch(getEmployeesAction()); dispatch(getAllCompany()); dispatch(getAllUsersAction());
   }, [dispatch]);
 
   const pageData = useMemo(() => { return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : []; }, [wallListing, mapApiToWallItem]);
@@ -1164,7 +1174,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           </div>
         )}
       </Drawer>
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={500}
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={540}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear All</Button>
@@ -1179,12 +1189,12 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p: any) => ({ value: p.id, label: p.company_name }))} {...field} />)} /></FormItem>
               <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
               <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={AllCategorysData.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
-              <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Sub Categories..." options={subCategoriesForSelectedCategoryData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={ParentCategories.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Sub Cate..." options={subCategoriesForSelectedCategoryData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Availability Status"><Controller name="productStatus" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Availability..." options={Object.keys(productApiStatusColor).filter((k) => k !== "default").map((s) => ({ label: s.charAt(0).toUpperCase() + s.slice(1), value: s }))} {...field} />)} /></FormItem>
-              <FormItem label="Created Date Range" className="col-span-2"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
-              <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" }]} {...field} />)} /></FormItem>
+              <FormItem label="Created Date Range"><Controller name="dateRange" control={filterFormMethods.control} render={({ field }) => (<DatePicker.DatePickerRange value={field.value as [Date | null, Date | null] | null} onChange={field.onChange} placeholder="Select date range" />)} /></FormItem>
+              {/* <FormItem label="Source (Example)"><Controller name="source" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Source..." options={[{ label: "Web", value: "web" }, { label: "App", value: "app" }]} {...field} />)} /></FormItem> */}
               <FormItem label="Product Spec (Example)"><Controller name="productSpec" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Product Spec..." options={ProductSpecificationsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Member Type (Example)"><Controller name="memberType" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Member Type..." options={MemberTypeData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Created By (Example)"><Controller name="createdBy" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Employee..." options={Employees?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
