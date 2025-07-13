@@ -2303,17 +2303,23 @@ const ExpandedOpportunityDetails: React.FC<{
     </Card>
   );
 };
-const SpbSummaryViewModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  item: AutoSpbApiItem | null;
-  matchType: "Buy" | "Sell" | null;
-}> = ({ isOpen, onClose, item, matchType }) => {
+const SpbActionToolbar: React.FC<{
+  items: AutoSpbApiItem[];
+  matchType: "Buy" | "Sell";
+}> = ({ items, matchType }) => {
   const [selectedMessageOptions, setSelectedMessageOptions] = useState<string[]>([]);
   const [messageTemplate, setMessageTemplate] = useState<
     "default" | "master" | "wtb" | null
   >(null);
   const [customMessage, setCustomMessage] = useState("");
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setSelectedMessageOptions([]);
+      setMessageTemplate(null);
+      setCustomMessage("");
+    }
+  }, [items]);
 
   const messageOptionMap: Record<
     string,
@@ -2342,15 +2348,6 @@ const SpbSummaryViewModal: React.FC<{
     messageTemplateOptions.find((o) => o.value === messageTemplate)?.label ||
     "Select Template";
 
-  useEffect(() => {
-    // Reset state when a new item is passed to the modal
-    if (item) {
-      setSelectedMessageOptions([]);
-      setMessageTemplate(null);
-      setCustomMessage("");
-    }
-  }, [item]);
-
   const handleToggleOption = (optionKey: string) => {
     setSelectedMessageOptions((prev) =>
       prev.includes(optionKey)
@@ -2358,45 +2355,49 @@ const SpbSummaryViewModal: React.FC<{
         : [...prev, optionKey]
     );
   };
-
+  
   const generateMessage = () => {
-    if (!item) return "";
+    if (!items || items.length === 0) return "";
 
-    const prefix = matchType === "Buy" ? "WTB" : "WTS";
-    let messageParts: string[] = [
-      `${prefix} - ${item.product_name || "N/A"}(${item.color}) | ${
-        item.qty || "N/A"
-      } ${item.unit || ""}unit`,
-    ];
+    const individualMessages = items.map(item => {
+      const prefix = matchType === "Buy" ? "WTB" : "WTS";
+      let messageParts: string[] = [
+        `${prefix} - ${item.product_name || "N/A"}(${item.color}) | ${
+          item.qty || "N/A"
+        } ${item.unit || ""}unit`,
+      ];
 
-    selectedMessageOptions.forEach((key) => {
-      const option = messageOptionMap[key];
-      if (option) {
-        const value = item[option.key];
-        if (value !== null && value !== undefined && String(value).trim() !== "") {
-          messageParts.push(`${option.label}: ${value}`);
+      selectedMessageOptions.forEach((key) => {
+        const option = messageOptionMap[key];
+        if (option) {
+          const value = item[option.key];
+          if (value !== null && value !== undefined && String(value).trim() !== "") {
+            messageParts.push(`${option.label}: ${value}`);
+          }
         }
+      });
+
+      switch (messageTemplate) {
+        case "master":
+          messageParts.push(
+            "MASTER, LOOSE, ACTIVE, NON ACTIVE, READY, INDIAN SPEC, MIX COLOR"
+          );
+          break;
+        case "wtb":
+          messageParts.push(item.product_name || "N/A");
+          break;
+        case "default":
+          if (customMessage) {
+            messageParts.push(customMessage);
+          }
+          break;
+        default:
+          break;
       }
+      return messageParts.join("\n");
     });
-
-    switch (messageTemplate) {
-      case "master":
-        messageParts.push(
-          "MASTER, LOOSE, ACTIVE, NON ACTIVE, READY, INDIAN SPEC, MIX COLOR"
-        );
-        break;
-      case "wtb":
-        messageParts.push(item.product_name || "N/A");
-        break;
-      case "default":
-        if (customMessage) {
-          messageParts.push(customMessage);
-        }
-        break;
-      default:
-        break;
-    }
-    return messageParts.join("\n");
+    
+    return individualMessages.join("\n\n---\n\n");
   };
 
   const handleCopyDetails = () => {
@@ -2411,6 +2412,12 @@ const SpbSummaryViewModal: React.FC<{
   };
 
   const handleWhatsApp = () => {
+    if (items.length !== 1) {
+        toast.push(<Notification title="Action Not Available" type="info">Please select exactly one item to send via WhatsApp.</Notification>);
+        return;
+    }
+    const item = items[0];
+
     if (!item?.mobile_no) {
       toast.push(
         <Notification type="danger" title="No Phone Number">
@@ -2428,185 +2435,168 @@ const SpbSummaryViewModal: React.FC<{
     );
   };
 
-  if (!item) return null;
-
+  if (items.length === 0) {
+    return null;
+  }
+  
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} width={700}>
-      <h5 className="mb-5">Listing Summary</h5>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 shadow-sm border-gray-200 dark:border-gray-600">
-        <div className="flex items-start">
-          <TbInfoCircle className="text-xl mr-2 mt-1 text-gray-500 dark:text-gray-400" />
-          <p className="text-sm text-gray-800 dark:text-gray-100">
-            <span className="font-semibold text-gray-500 dark:text-gray-400">
-              Product:
-            </span>{" "}
-            {item.product_name}
-          </p>
-        </div>
-        <div className="flex items-start">
-          <TbUserCircle className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
-          <p className="text-sm text-gray-800 dark:text-gray-100">
-            <span className="font-semibold text-gray-500 dark:text-gray-400">
-              Brand:
-            </span>{" "}
-            {item.brand_name || "N/A"}
-          </p>
-        </div>
-        <div className="flex items-start">
-          <TbInfoCircle className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
-          <p className="text-sm text-gray-800 dark:text-gray-100">
-            <span className="font-semibold text-gray-500 dark:text-gray-400">
-              Qty:
-            </span>{" "}
-            {item.qty} {item.unit}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-6 border-t dark:border-gray-700 pt-4 space-y-4">
-        <h6 className="font-semibold text-sm text-gray-700 dark:text-gray-200">
-          Customize Message for Sharing
-        </h6>
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <Dropdown
-            renderTitle={
-              <Button variant="default" icon={<TbPlus />}>
-                Add Details
-              </Button>
-            }
-            placement="bottom-start"
-          >
-            <div className="p-2 w-56 max-h-60 overflow-y-auto">
-              {Object.entries(messageOptionMap).map(([key, { label }]) => (
-                <div key={key} className="px-1">
-                  <label className="flex items-center gap-2 cursor-pointer py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-2">
-                    <Checkbox
-                      checked={selectedMessageOptions.includes(key)}
-                      onChange={() => handleToggleOption(key)}
-                    />
-                    <span className="text-sm">{label}</span>
-                  </label>
+      <div className="p-3 mt-2 border-t bg-gray-100 dark:bg-gray-800/50 rounded-b-md space-y-4">
+        <h6 className="font-semibold text-xs text-gray-600 dark:text-gray-300">Actions for {items.length} selected item(s)</h6>
+        
+        <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <Dropdown
+                renderTitle={
+                  <Button variant="default" size="sm" icon={<TbPlus />} className="w-full sm:w-auto">
+                    Add Details
+                  </Button>
+                }
+                placement="bottom-start"
+              >
+                <div className="p-2 w-56 max-h-60 overflow-y-auto">
+                  {Object.entries(messageOptionMap).map(([key, { label }]) => (
+                    <div key={key} className="px-1">
+                      <label className="flex items-center gap-2 cursor-pointer py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-2">
+                        <Checkbox
+                          checked={selectedMessageOptions.includes(key)}
+                          onChange={() => handleToggleOption(key)}
+                        />
+                        <span className="text-sm">{label}</span>
+                      </label>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </Dropdown>
+               <Dropdown
+                renderTitle={
+                  <Button variant="default" size="sm" className="w-full sm:w-56 justify-start text-left">
+                    {selectedTemplateLabel}
+                  </Button>
+                }
+                placement="bottom-start"
+              >
+                 <div className="w-56">
+                    {messageTemplateOptions.map((option) => (
+                        <Dropdown.Item
+                            key={option.value}
+                            onClick={() => setMessageTemplate(option.value as any)}
+                            className={classNames('flex items-center justify-between', {
+                                'bg-gray-100 dark:bg-gray-700': messageTemplate === option.value,
+                            })}
+                        >
+                            <span>{option.label}</span>
+                            {messageTemplate === option.value && (
+                                <BsCheckCircleFill className="text-emerald-500" />
+                            )}
+                        </Dropdown.Item>
+                    ))}
+                 </div>
+              </Dropdown>
             </div>
-          </Dropdown>
-           <Dropdown
-            renderTitle={
-              <Button variant="default" className="w-full sm:w-56 justify-start">
-                {selectedTemplateLabel}
-              </Button>
-            }
-            placement="bottom-start"
-          >
-             <div className="w-56">
-                {messageTemplateOptions.map((option) => (
-                    <Dropdown.Item
-                        key={option.value}
-                        onClick={() => setMessageTemplate(option.value as any)}
-                        className={classNames('flex items-center justify-between', {
-                            'bg-gray-100 dark:bg-gray-700': messageTemplate === option.value,
-                        })}
-                    >
-                        <span>{option.label}</span>
-                        {messageTemplate === option.value && (
-                            <BsCheckCircleFill className="text-emerald-500" />
-                        )}
-                    </Dropdown.Item>
-                ))}
-             </div>
-          </Dropdown>
+
+            {messageTemplate === "default" && (
+              <FormItem label="Custom Message" className="mb-0">
+                <Input
+                  textArea
+                  size="sm"
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  placeholder="Enter your custom message here..."
+                />
+              </FormItem>
+            )}
         </div>
 
-        {messageTemplate === "default" && (
-          <FormItem label="Custom Message">
-            <Input
-              textArea
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              placeholder="Enter your custom message here..."
-            />
-          </FormItem>
-        )}
+        <div className="text-right">
+          <Button size="sm" className="mr-2" icon={<TbCopy />} onClick={handleCopyDetails}>
+            Copy Details
+          </Button>
+          <Button
+            size="sm"
+            className="mr-2"
+            icon={<TbBrandWhatsapp />}
+            onClick={handleWhatsApp}
+            disabled={items.length !== 1 || !items[0]?.mobile_no}
+          >
+            WhatsApp
+          </Button>
+        </div>
       </div>
-
-      <div className="text-right mt-6">
-        <Button className="mr-2" icon={<TbCopy />} onClick={handleCopyDetails}>
-          Copy Details
-        </Button>
-        <Button
-          className="mr-2"
-          icon={<TbBrandWhatsapp />}
-          onClick={handleWhatsApp}
-          disabled={!item.mobile_no}
-        >
-          WhatsApp
-        </Button>
-      </div>
-    </Dialog>
-  );
-};
+  )
+}
 interface SpbSummaryRowProps {
   item: AutoSpbApiItem;
-  onViewSummary: (item: AutoSpbApiItem) => void;
+  isSelected: boolean;
+  onToggleSelect: () => void;
 }
 const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
   item,
-  onViewSummary,
+  isSelected,
+  onToggleSelect,
 }) => {
   const memberName = `Member: ${item.member_code}` || `Member ID: ${item.id}`;
-  const memberPhone = `Phone: ${item.mobile_no}`;
-  const createDate = `Date: ${item.created_at}`;
+  const memberPhone = `Phone: ${item.mobile_no || 'N/A'}`;
+  const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
   const prodColor = `Color: ${item.color}`;
-  return (
-    <div className="flex justify-between items-center w-full py-3 text-xs border-b border-gray-200 dark:border-gray-700 last:border-b-0">
-      {" "}
-      <div className="flex-1 min-w-0 gap-4">
-        {" "}
-        <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
-          {" "}
-          {memberName}{" "}|{" "}
-          {memberPhone}{" "}|{" "}
-          {createDate}{" "}|{" "}
-          {prodColor}{" "}|{" "}
-          {item.qty}
-        </p>{" "}
-      </div>{" "}
-      <div className="flex-shrink-0 flex items-center gap-4">
-        {/* {" "}
-        <div>
-          {" "}
-          <span className="text-gray-500 dark:text-gray-400">Qty: </span>{" "}
-          <span className="font-bold text-gray-800 dark:text-gray-100">
-            {" "}
-            {" "}
-          </span>{" "}
-        </div>{" "} */}
 
-        <Tooltip title="View Summary">
-          {" "}
-          <Button
-            shape="circle"
-            size="sm"
-            variant="plain"
-            icon={<TbEye />}
-            onClick={() => onViewSummary(item)}
-            className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-          />{" "}
-        </Tooltip>{" "}
-      </div>{" "}
-    </div>
+  return (
+    <label
+      className={classNames(
+        "flex justify-between items-center w-full p-2 text-xs border-b border-gray-200 dark:border-gray-700 last:border-b-0 cursor-pointer rounded-md transition-colors",
+        isSelected
+          ? "bg-primary-50 dark:bg-primary-900/30"
+          : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
+      )}
+    >
+      <div className="flex items-center gap-3 w-full">
+        <Checkbox
+          checked={isSelected}
+          onChange={onToggleSelect}
+          onClick={(e) => e.stopPropagation()}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-xs text-gray-800 dark:text-gray-100 truncate">
+            {memberName} | {memberPhone} | {createDate} | {prodColor} | {item.qty}
+          </p>
+        </div>
+      </div>
+    </label>
   );
 };
 interface ExpandedAutoSpbDetailsProps {
   row: Row<OpportunityItem>;
-  onViewSummary: (item: AutoSpbApiItem, type: 'Buy' | 'Sell') => void;
 }
 const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
   row,
-  onViewSummary,
 }) => {
+  const [selectedBuyItems, setSelectedBuyItems] = useState<AutoSpbApiItem[]>([]);
+  const [selectedSellItems, setSelectedSellItems] = useState<AutoSpbApiItem[]>([]);
+
   const buyItems = row.original._rawSpbBuyItems || [];
   const sellItems = row.original._rawSpbSellItems || [];
+
+  const handleToggleBuyItem = (itemToToggle: AutoSpbApiItem) => {
+    setSelectedBuyItems((prev) =>
+      prev.some((item) => item.id === itemToToggle.id)
+        ? prev.filter((item) => item.id !== itemToToggle.id)
+        : [...prev, itemToToggle]
+    );
+  };
+  const handleToggleSellItem = (itemToToggle: AutoSpbApiItem) => {
+    setSelectedSellItems((prev) =>
+      prev.some((item) => item.id === itemToToggle.id)
+        ? prev.filter((item) => item.id !== itemToToggle.id)
+        : [...prev, itemToToggle]
+    );
+  };
+  const handleSelectAll = (type: 'Buy' | 'Sell', isChecked: boolean) => {
+      if (type === 'Buy') {
+          setSelectedBuyItems(isChecked ? buyItems : []);
+      } else {
+          setSelectedSellItems(isChecked ? sellItems : []);
+      }
+  }
+
   return (
     <Card
       bordered
@@ -2616,51 +2606,75 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
       <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
         {" "}
         <div>
-          {" "}
-          <h6 className="text-sm font-semibold text-purple-600 dark:text-purple-400 mb-2 flex items-center gap-2">
-            {" "}
-            <TbChecks /> Buyer ({buyItems.length}){" "}
-          </h6>{" "}
-          <div className="bg-white dark:bg-gray-800 rounded-md px-3 max-h-60 overflow-y-auto">
-            {" "}
+           <div className="flex justify-between items-center mb-2">
+            <h6 className="text-sm font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2">
+              <TbChecks /> Buyer ({buyItems.length})
+            </h6>
+             {buyItems.length > 0 && 
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <Checkbox
+                        checked={selectedBuyItems.length === buyItems.length}
+                        indeterminate={selectedBuyItems.length > 0 && selectedBuyItems.length < buyItems.length}
+                        onChange={(e) => handleSelectAll('Buy', e)}
+                    />
+                    <span>Select All</span>
+                </label>
+             }
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-md max-h-60 overflow-y-auto">
             {buyItems.length > 0 ? (
-              buyItems.map((item) => (
-                <SpbSummaryRow
-                  key={`buy-${item.id}`}
-                  item={item}
-                  onViewSummary={(item) => onViewSummary(item, 'Buy')}
-                />
-              ))
+                <div className="px-2">
+                  {buyItems.map((item) => (
+                    <SpbSummaryRow
+                      key={`buy-${item.id}`}
+                      item={item}
+                      isSelected={selectedBuyItems.some(i => i.id === item.id)}
+                      onToggleSelect={() => handleToggleBuyItem(item)}
+                    />
+                  ))}
+                </div>
             ) : (
               <p className="text-xs text-gray-500 py-4 text-center">
-                {" "}
-                No buy demand in this match.{" "}
+                No buy demand in this match.
               </p>
-            )}{" "}
+            )}
+            <SpbActionToolbar items={selectedBuyItems} matchType="Buy" />
           </div>{" "}
         </div>{" "}
         <div>
-          {" "}
-          <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-2">
-            {" "}
-            <TbBox /> Seller ({sellItems.length}){" "}
-          </h6>{" "}
-          <div className="bg-white dark:bg-gray-800 rounded-md px-3 max-h-60 overflow-y-auto">
-            {" "}
+          <div className="flex justify-between items-center mb-2">
+            <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+              <TbBox /> Seller ({sellItems.length})
+            </h6>
+             {sellItems.length > 0 && 
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <Checkbox
+                        checked={selectedSellItems.length === sellItems.length}
+                        indeterminate={selectedSellItems.length > 0 && selectedSellItems.length < sellItems.length}
+                        onChange={(e) => handleSelectAll('Sell', e)}
+                    />
+                    <span>Select All</span>
+                </label>
+             }
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-md max-h-60 overflow-y-auto">
             {sellItems.length > 0 ? (
-              sellItems.map((item) => (
-                <SpbSummaryRow
-                  key={`sell-${item.id}`}
-                  item={item}
-                  onViewSummary={(item) => onViewSummary(item, 'Sell')}
-                />
-              ))
+              <div className="px-2">
+                {sellItems.map((item) => (
+                  <SpbSummaryRow
+                    key={`sell-${item.id}`}
+                    item={item}
+                    isSelected={selectedSellItems.some(i => i.id === item.id)}
+                    onToggleSelect={() => handleToggleSellItem(item)}
+                  />
+                ))}
+              </div>
             ) : (
               <p className="text-xs text-gray-500 py-4 text-center">
-                {" "}
-                No sell offers in this match.{" "}
+                No sell offers in this match.
               </p>
-            )}{" "}
+            )}
+            <SpbActionToolbar items={selectedSellItems} matchType="Sell" />
           </div>{" "}
         </div>{" "}
       </div>{" "}
@@ -2739,19 +2753,6 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   const handleCloseModal = () =>
     setModalState({ isOpen: false, type: null, data: null });
 
-  const [summaryModalState, setSummaryModalState] = useState<{
-    isOpen: boolean;
-    item: AutoSpbApiItem | null;
-    matchType: 'Buy' | 'Sell' | null;
-  }>({ isOpen: false, item: null, matchType: null });
-
-  const handleOpenSummaryModal = (item: AutoSpbApiItem, type: 'Buy' | 'Sell') => {
-    setSummaryModalState({ isOpen: true, item, matchType: type });
-  };
-
-  const handleCloseSummaryModal = () => {
-    setSummaryModalState({ isOpen: false, item: null, matchType: null });
-  };
   const handleCopyClick = (textToCopy: string | undefined) => {
     if (!textToCopy) return;
     navigator.clipboard.writeText(textToCopy).then(() => {
@@ -3955,7 +3956,6 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                 currentTab === TABS.AUTO_MATCH ? (
                   <ExpandedAutoSpbDetails
                     row={row}
-                    onViewSummary={handleOpenSummaryModal}
                   />
                 ) : (
                   <ExpandedOpportunityDetails
@@ -3987,12 +3987,6 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
         modalState={modalState}
         onClose={handleCloseModal}
         getAllUserDataOptions={getAllUserDataOptions}
-      />
-      <SpbSummaryViewModal
-        isOpen={summaryModalState.isOpen}
-        onClose={handleCloseSummaryModal}
-        item={summaryModalState.item}
-        matchType={summaryModalState.matchType}
       />
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
