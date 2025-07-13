@@ -3,15 +3,12 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, NavLink, useParams } from "react-router-dom";
 import dayjs from "dayjs";
+import { z } from "zod";
 
 // UI Components
 import Input from "@/components/ui/Input";
 import { FormItem, FormContainer } from "@/components/ui/Form";
-import {
-  Select as UiSelect,
-  DatePicker,
-  Button,
-} from "@/components/ui";
+import { Select as UiSelect, DatePicker, Button } from "@/components/ui";
 import InputNumber from "@/components/ui/Input/InputNumber";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
@@ -25,40 +22,62 @@ import { BiChevronRight } from "react-icons/bi";
 import { TbInfoCircle } from "react-icons/tb";
 
 // Types and Schema
-import type { LeadFormData } from "../types";
-import {
-  leadFormSchema,
-  leadStatusOptions,
-  enquiryTypeOptions,
-  leadIntentOptions,
-  deviceConditionOptions as baseDeviceConditionOptions,
-} from "../types";
+import { leadIntentOptions } from "../types";
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual } from "react-redux";
 import { useSelector } from "react-redux";
-
 import {
   getAllProductAction,
   getProductSpecificationsAction,
   getPaymentTermAction,
-  getLeadMemberAction,
+  getMembersAction,
   getSalesPersonAction,
-  getSuppliersAction,
   editLeadAction,
   getLeadById,
+  getSuppliersAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
+
+// --- Form Validation Schema ---
+export const leadFormSchema = z.object({
+  lead_intent: z.string({ required_error: "Lead Intent is required." }).min(1, "Lead Intent is required."),
+  member_id: z.number({ required_error: "Lead Member is required." }).nullable().refine((val) => val !== null, "Lead Member is required."),
+  source_supplier_id: z.number({ required_error: "Source Member is required." }).nullable().refine((val) => val !== null, "Source Member is required."),
+  product_id: z.number({ required_error: "Product Name is required." }).nullable().refine((val) => val !== null, "Product Name is required."),
+  qty: z.number({ required_error: "Quantity is required." }).min(1, "Quantity must be at least 1.").nullable().refine((val) => val !== null, "Quantity is required."),
+  target_price: z.number().nullable(),
+  product_spec_id: z.number().nullable(),
+  source_product_status: z.string().nullable(),
+  source_device_type: z.string().nullable(),
+  source_device_condition: z.string().nullable(),
+  source_color: z.string().nullable(),
+  source_cartoon_type_id: z.number().nullable(),
+  source_dispatch_status: z.string().nullable(),
+  source_payment_term_id: z.number().nullable(),
+  source_eta: z.date().nullable(),
+  source_location: z.string().nullable(),
+  source_internal_remarks: z.string().nullable(),
+
+  // Fields not in the new UI but required for payload/logic
+  lead_status: z.string(),
+  enquiry_type: z.string().optional(),
+  assigned_sales_person_id: z.number().nullable(),
+  lead_date: z.date().nullable(), 
+  source_qty: z.number().nullable(),
+  source_price: z.number().nullable(),
+});
+export type LeadFormData = z.infer<typeof leadFormSchema>;
 
 type ApiLookupItem = {
   id: string | number;
   name: string;
   term_name?: string;
+  member_code?: string;
   [key: string]: any;
 };
 
-// --- Updated options, same as AddLeadPage ---
 const productStatusOptions = [
   { value: "Non-active", label: "Non-active" },
   { value: "Active", label: "Active" },
@@ -66,16 +85,23 @@ const productStatusOptions = [
 
 const cartoonTypeOptions = [
   { value: 1, label: "Master Carton" },
-  { value: 2, label: "Inner Carton" },
-  { value: 3, label: "Pallet" },
-  { value: 4, label: "Box" },
-  { value: 5, label: "Unit" },
+  { value: 2, label: "Non - Master Carton" },
 ];
 
 const deviceConditionOptions = [
-  ...baseDeviceConditionOptions,
-  { value: "Old", label: "Old" },
+    { value: 'New-Sealed', label: 'New-Sealed' },
+    { value: 'New-Open-Box', label: 'New-Open-Box' },
+    { value: 'Used', label: 'Used' },
+    { value: 'Refurbished', label: 'Refurbished' },
+    { value: "Old", label: "Old" },
 ];
+
+const RequiredLabel = ({ children }: { children: React.ReactNode }) => (
+  <div>
+    {children}
+    <span className="text-red-500"> *</span>
+  </div>
+);
 
 const EditLeadPage = () => {
   const navigate = useNavigate();
@@ -90,11 +116,8 @@ const EditLeadPage = () => {
     ProductSpecificationsData = [],
     PaymentTermsData = [],
     memberData = [],
-    salesPerson = [],
-    suppliers = [],
     currentLead,
     currentLeadStatus = "idle",
-    status: masterDataLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
   const {
@@ -106,112 +129,117 @@ const EditLeadPage = () => {
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadFormSchema),
     mode: "onChange",
-    defaultValues: {
-      member_id: null,
-      enquiry_type: '',
-      lead_intent: null,
-      product_id: null,
-      qty: null,
-    }
   });
 
   const leadIntentValue = watch("lead_intent");
 
   const leadMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return <div>Lead Member (Buyer)<span className="text-red-500"> * </span></div>;
-    if (leadIntentValue === "Sell") return <div>Lead Member (Supplier)<span className="text-red-500"> * </span></div>;
-    return <div>Lead Member (Supplier/Buyer)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Buy") return <RequiredLabel>Lead Member (Buyer)</RequiredLabel>;
+    if (leadIntentValue === "Sell") return <RequiredLabel>Lead Member (Supplier)</RequiredLabel>;
+    return <RequiredLabel>Lead Member (Supplier/Buyer)</RequiredLabel>;
   }, [leadIntentValue]);
 
   const sourceMemberLabel = useMemo(() => {
-    if (leadIntentValue === "Buy") return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
-    if (leadIntentValue === "Sell") return <div>Source Member (Buyer)<span className="text-red-500"> * </span></div>;
-    return <div>Source Member (Supplier)<span className="text-red-500"> * </span></div>;
+    if (leadIntentValue === "Buy") return <RequiredLabel>Source Member (Supplier)</RequiredLabel>;
+    if (leadIntentValue === "Sell") return <RequiredLabel>Source Member (Buyer)</RequiredLabel>;
+    return <RequiredLabel>Source Member (Supplier)</RequiredLabel>;
   }, [leadIntentValue]);
 
   useEffect(() => {
     if (!id) {
       toast.push(<Notification title="Error" type="danger">Lead ID missing.</Notification>);
-      navigate("/sales/leads");
+      navigate("/sales-leads/lead");
       return;
     }
+    // Dispatch all actions to fetch necessary data for the form dropdowns
     dispatch(getAllProductAction());
     dispatch(getProductSpecificationsAction());
     dispatch(getPaymentTermAction());
-    dispatch(getLeadMemberAction());
+    dispatch(getMembersAction());
     dispatch(getSalesPersonAction());
     dispatch(getSuppliersAction());
+    // Fetch the specific lead data to populate the form
     dispatch(getLeadById(id));
   }, [dispatch, id, navigate]);
 
+  // =========================================================================
+  // ====================== THIS IS THE CORRECTED SECTION ====================
+  // This useEffect now correctly maps the API response to the form fields.
+  // =========================================================================
   useEffect(() => {
-    if (currentLeadStatus === "idle" && currentLead) {
-      const toNumber = (val: any) => {
-        const num = parseFloat(val);
+    if (currentLeadStatus === "succeeded" && currentLead) {
+      // Helper to safely convert API values (which can be string/null) to numbers.
+      const toNumber = (val: any): number | null => {
+        if (val === null || val === undefined || val === "") return null;
+        const num = parseFloat(String(val));
         return isNaN(num) ? null : num;
       };
 
-      // Reverse lookup for cartoon type: API gives label ("Box"), form needs value (4)
+      // The API provides `cartoon_type` as a string label (e.g., "Master Carton").
+      // We need to find the corresponding numeric ID from our options for the Select component.
       const cartoonTypeId =
         cartoonTypeOptions.find(
           (option) => option.label === currentLead.cartoon_type
         )?.value ?? null;
       
-      reset({
-        // Lead Info
-        member_id: toNumber(currentLead.lead_member), // Map from API name
-        enquiry_type: currentLead.enquiry_type ?? "",
-        lead_intent: currentLead.lead_intent ?? null,
+      // Create a complete data object that matches the `LeadFormData` schema
+      const formDataToSet: LeadFormData = {
+        // --- Mappings where API key is DIFFERENT from form field name ---
+        member_id: toNumber(currentLead.lead_member),
+        source_supplier_id: toNumber(currentLead.source_member_id),
+        source_product_status: currentLead.product_status,
+        source_device_type: currentLead.device_type,
+        source_device_condition: currentLead.device_condition,
+        source_color: currentLead.color,
+        source_dispatch_status: currentLead.dispatch_status,
+        source_payment_term_id: toNumber(currentLead.payment_term_id),
+        source_location: currentLead.location,
+        source_internal_remarks: currentLead.internal_remark,
+        assigned_sales_person_id: toNumber(currentLead.assigned_saled_id),
+        source_price: toNumber(currentLead.sourced_price),
+
+        // --- Mappings with transformations ---
+        source_cartoon_type_id: cartoonTypeId,
+        source_eta: currentLead.eta ? new Date(currentLead.eta) : null, // Convert string to Date object
+
+        // --- Direct mappings (API key and form field name are the same) ---
+        lead_intent: currentLead.lead_intent,
         product_id: toNumber(currentLead.product_id),
-        product_spec_id: toNumber(currentLead.product_spec_id),
         qty: toNumber(currentLead.qty),
         target_price: toNumber(currentLead.target_price),
-        lead_status: currentLead.lead_status ?? "New",
-        assigned_sales_person_id: toNumber(currentLead.assigned_saled_id), // Map from API name
-
-        // Sourcing Details
-        source_supplier_id: toNumber(currentLead.source_member_id), // Map from API name
+        product_spec_id: toNumber(currentLead.product_spec_id),
         source_qty: toNumber(currentLead.source_qty),
-        source_price: toNumber(currentLead.sourced_price), // Map from API name
-        source_product_status: currentLead.product_status ?? null, // Map from API name
-        source_device_condition: currentLead.device_condition ?? null, // Map from API name
-        source_device_type: currentLead.device_type ?? null, // Map from API name
-        source_color: currentLead.color ?? null, // Map from API name
-        source_cartoon_type_id: cartoonTypeId, // Use the reverse-looked-up ID
-        source_dispatch_status: currentLead.dispatch_status ?? null, // Map from API name
-        source_payment_term_id: toNumber(currentLead.payment_term_id),
-        source_location: currentLead.location ?? null, // Map from API name
-        source_internal_remarks: currentLead.internal_remark ?? null, // Map from API name
-        
-        source_eta:
-          currentLead.eta && dayjs(currentLead.eta).isValid()
-            ? dayjs(currentLead.eta).toDate()
-            : null,
-      });
+        lead_status: currentLead.lead_status,
+        enquiry_type: currentLead.enquiry_type,
+
+        // --- Fields in schema but not in API response (set to default/null) ---
+        lead_date: null,
+      };
+
+      // Use the correctly mapped data to reset the form, populating all fields.
+      reset(formDataToSet);
     }
   }, [currentLead, currentLeadStatus, reset]);
 
-  // Memoized options from Redux store
+  // Map master data to options for Select components
   const productOptions = useMemo(() => productsMasterData.map((p: ApiLookupItem) => ({ value: p.id, label: p.name })), [productsMasterData]);
   const productSpecOptions = useMemo(() => ProductSpecificationsData.map((s: ApiLookupItem) => ({ value: s.id, label: s.name })), [ProductSpecificationsData]);
   const paymentTermOptions = useMemo(() => PaymentTermsData.map((pt: ApiLookupItem) => ({ value: pt.id, label: pt.term_name || pt.name })), [PaymentTermsData]);
-  const leadMemberOptions = useMemo(() => memberData.map((m: ApiLookupItem) => ({ value: m.id, label: m.name })), [memberData]);
-  const salesPersonOptions = useMemo(() => salesPerson.map((sp: ApiLookupItem) => ({ value: sp.id, label: sp.name })), [salesPerson]);
-
+  const leadMemberOptions = useMemo(() => memberData.map((m: ApiLookupItem) => ({ value: m.id, label: `(${m.member_code}) - ${m.name || "N/A"}` })), [memberData]);
+  
   const onSubmit = async (data: LeadFormData) => {
     if (!id) return;
     setIsSubmitting(true);
 
-    // Find the label for the cartoon type ID
+    // For submission, we need to convert the cartoon_type_id back to a string label for the API
     const cartoonTypeLabel =
       cartoonTypeOptions.find(
         (option) => option.value === data.source_cartoon_type_id
       )?.label || null;
 
-    // --- START: PAYLOAD TRANSFORMATION ---
-    // Transform the form data to match the required API payload structure for editing
+    // Construct the payload with keys the API expects
     const apiPayload = {
-      id: parseInt(id, 10), // Ensure ID is a number
+      id: parseInt(id, 10),
       lead_intent: data.lead_intent,
       lead_member: data.member_id,
       enquiry_type: data.enquiry_type,
@@ -235,22 +263,13 @@ const EditLeadPage = () => {
       location: data.source_location,
       internal_remark: data.source_internal_remarks,
     };
-    // --- END: PAYLOAD TRANSFORMATION ---
     
     try {
       await dispatch(editLeadAction(apiPayload)).unwrap();
-      toast.push(
-        <Notification title="Success" type="success">
-          Lead updated successfully.
-        </Notification>
-      );
+      toast.push(<Notification title="Success" type="success">Lead updated successfully.</Notification>);
       navigate("/sales-leads/lead");
     } catch (error: any) {
-      toast.push(
-        <Notification title="Error" type="danger">
-          {error.message || "Failed to update lead."}
-        </Notification>
-      );
+      toast.push(<Notification title="Error" type="danger">{error.message || "Failed to update lead."}</Notification>);
     } finally {
       setIsSubmitting(false);
     }
@@ -258,10 +277,8 @@ const EditLeadPage = () => {
 
   const handleCancel = () => {
     if (isDirty) setCancelConfirmOpen(true);
-    else navigate("/sales/leads");
+    else navigate("/sales-leads/lead");
   };
-
-  const isLoadingPage = masterDataLoadingStatus === 'loading' || currentLeadStatus === 'loading';
 
   if (currentLeadStatus === 'loading') {
     return (
@@ -287,21 +304,21 @@ const EditLeadPage = () => {
   return (
     <Container className="h-full">
       <div className="flex gap-1 items-end mb-3 ">
-        <NavLink to="/sales/leads">
+        <NavLink to="/sales-leads/lead">
           <h6 className="font-semibold hover:text-primary">Leads</h6>
         </NavLink>
         <BiChevronRight size={22} color="black" />
         <h6 className="font-semibold text-primary">
-          Edit Lead (ID: {currentLead?.lead_number || id})
+          Edit Lead (ID: {id})
         </h6>
       </div>
       <FormContainer>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <AdaptableCard className="mb-4">
-            <h5 className="mb-6 font-semibold">Lead Information</h5>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
-            <FormItem
-                label="Lead Intent"
+          <AdaptableCard>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-4">
+              {/* Row 1 */}
+              <FormItem
+                label={<RequiredLabel>Lead Intent</RequiredLabel>}
                 invalid={!!errors.lead_intent}
                 errorMessage={errors.lead_intent?.message}
               >
@@ -312,11 +329,8 @@ const EditLeadPage = () => {
                     <UiSelect
                       placeholder="Select Intent"
                       options={leadIntentOptions}
-                      value={leadIntentOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={leadIntentOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
                     />
                   )}
                 />
@@ -333,37 +347,32 @@ const EditLeadPage = () => {
                     <UiSelect
                       placeholder="Select Member"
                       options={leadMemberOptions}
-                      value={leadMemberOptions.find(
-                        (o: any) => o.value === field.value
-                      )}
+                      value={leadMemberOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={masterDataLoadingStatus === "loading"}
                     />
                   )}
                 />
               </FormItem>
               <FormItem
-                label={<div>Enquiry Type<span className="text-red-500"> * </span></div>}
-                invalid={!!errors.enquiry_type}
-                errorMessage={errors.enquiry_type?.message}
+                label={sourceMemberLabel}
+                invalid={!!errors.source_supplier_id}
+                errorMessage={errors.source_supplier_id?.message}
               >
                 <Controller
-                  name="enquiry_type"
+                  name="source_supplier_id"
                   control={control}
                   render={({ field }) => (
                     <UiSelect
-                      placeholder="Select Type"
-                      options={enquiryTypeOptions}
-                      value={enquiryTypeOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      placeholder="Select Supplier"
+                      options={leadMemberOptions}
+                      value={leadMemberOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
                     />
                   )}
                 />
               </FormItem>
               <FormItem
-                label={<div>Product Name (Interest)<span className="text-red-500"> * </span></div>}
+                label={<RequiredLabel>Product Name</RequiredLabel>}
                 invalid={!!errors.product_id}
                 errorMessage={errors.product_id?.message}
               >
@@ -374,18 +383,16 @@ const EditLeadPage = () => {
                     <UiSelect
                       placeholder="Select Product"
                       options={productOptions}
-                      value={productOptions.find(
-                        (o: any) => o.value === field.value
-                      )}
+                      value={productOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={masterDataLoadingStatus === "loading"}
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
+
+              {/* Row 2 */}
               <FormItem
-                label={<div>Quantity<span className="text-red-500"> * </span></div>}
+                label={<RequiredLabel>Quantity</RequiredLabel>}
                 invalid={!!errors.qty}
                 errorMessage={errors.qty?.message}
               >
@@ -397,7 +404,7 @@ const EditLeadPage = () => {
                       placeholder="Enter quantity"
                       {...field}
                       value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
+                      onChange={(val) => field.onChange(val)}
                     />
                   )}
                 />
@@ -412,149 +419,15 @@ const EditLeadPage = () => {
                   control={control}
                   render={({ field }) => (
                     <InputNumber
-                      placeholder="Enter price"
+                      placeholder="Enter target price"
                       {...field}
                       value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
-                      step={0.01}
+                      onChange={(val) => field.onChange(val)}
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label={<div>Lead Status<span className="text-red-500"> * </span></div>}
-                invalid={!!errors.lead_status}
-                errorMessage={errors.lead_status?.message}
-              >
-                <Controller
-                  name="lead_status"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Status"
-                      options={leadStatusOptions}
-                      value={leadStatusOptions.find(
-                        (o) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Assigned Sales Person"
-                invalid={!!errors.assigned_sales_person_id}
-                errorMessage={errors.assigned_sales_person_id?.message}
-              >
-                <Controller
-                  name="assigned_sales_person_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Sales Person"
-                      options={salesPersonOptions}
-                      value={salesPersonOptions.find(
-                        (o: any) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={masterDataLoadingStatus === "loading"}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Product Spec"
-                invalid={!!errors.product_spec_id}
-                errorMessage={errors.product_spec_id?.message}
-              >
-                <Controller
-                  name="product_spec_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Specification"
-                      options={productSpecOptions}
-                      value={productSpecOptions.find(
-                        (o: any) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={masterDataLoadingStatus === "loading"}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem>
-            </div>
-          </AdaptableCard>
-
-          <AdaptableCard className="mt-4 mb-4">
-            <h5 className="mb-6 font-semibold">Sourcing Details</h5>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
-            <FormItem
-                label={sourceMemberLabel}
-                invalid={!!errors.source_supplier_id}
-                errorMessage={errors.source_supplier_id?.message}
-              >
-                <Controller
-                  name="source_supplier_id"
-                  control={control}
-                  render={({ field }) => (
-                    <UiSelect
-                      placeholder="Select Supplier"
-                      options={leadMemberOptions}
-                      value={leadMemberOptions.find(
-                        (o: any) => o.value === field.value
-                      )}
-                      onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={masterDataLoadingStatus === "loading"}
-                      isClearable
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Sourced Quantity"
-                invalid={!!errors.source_qty}
-                errorMessage={errors.source_qty?.message}
-              >
-                <Controller
-                  name="source_qty"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      placeholder="Enter quantity"
-                      {...field}
-                      value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Sourced Price ($)"
-                invalid={!!errors.source_price}
-                errorMessage={errors.source_price?.message}
-              >
-                <Controller
-                  name="source_price"
-                  control={control}
-                  render={({ field }) => (
-                    <InputNumber
-                      placeholder="Enter price"
-                      {...field}
-                      value={field.value ?? undefined}
-                      onChange={(val) => field.onChange(val ?? null)}
-                      step={0.01}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Product Status"
-                invalid={!!errors.source_product_status}
-                errorMessage={errors.source_product_status?.message}
-              >
+              <FormItem label="Product Status">
                 <Controller
                   name="source_product_status"
                   control={control}
@@ -562,20 +435,36 @@ const EditLeadPage = () => {
                     <UiSelect
                       placeholder="Select Product Status"
                       options={productStatusOptions}
-                      value={productStatusOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={productStatusOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Device Condition"
-                invalid={!!errors.source_device_condition}
-                errorMessage={errors.source_device_condition?.message}
-              >
+              <FormItem label="Product Spec">
+                <Controller
+                  name="product_spec_id"
+                  control={control}
+                  render={({ field }) => (
+                    <UiSelect
+                      placeholder="Select Specification"
+                      options={productSpecOptions}
+                      value={productSpecOptions.find((o) => o.value === field.value)}
+                      onChange={(opt) => field.onChange(opt?.value)}
+                    />
+                  )}
+                />
+              </FormItem>
+
+              {/* Row 3 */}
+              <FormItem label="Device Type">
+                <Controller
+                  name="source_device_type"
+                  control={control}
+                  render={({ field }) => <Input {...field} placeholder="e.g., Mobile Phone" value={field.value ?? ""} />}
+                />
+              </FormItem>
+              <FormItem label="Device Condition">
                 <Controller
                   name="source_device_condition"
                   control={control}
@@ -583,54 +472,20 @@ const EditLeadPage = () => {
                     <UiSelect
                       placeholder="Select Condition"
                       options={deviceConditionOptions}
-                      value={deviceConditionOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={deviceConditionOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Device Type"
-                invalid={!!errors.source_device_type}
-                errorMessage={errors.source_device_type?.message}
-              >
-                <Controller
-                  name="source_device_type"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Mobile Phone"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
-                />
-              </FormItem>
-              <FormItem
-                label="Color"
-                invalid={!!errors.source_color}
-                errorMessage={errors.source_color?.message}
-              >
+              <FormItem label="Color">
                 <Controller
                   name="source_color"
                   control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Space Gray"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} placeholder="e.g., Space Gray" value={field.value ?? ""} />}
                 />
               </FormItem>
-              <FormItem
-                label="Cartoon Type"
-                invalid={!!errors.source_cartoon_type_id}
-                errorMessage={errors.source_cartoon_type_id?.message}
-              >
+              <FormItem label="Cartoon Type">
                 <Controller
                   name="source_cartoon_type_id"
                   control={control}
@@ -638,37 +493,22 @@ const EditLeadPage = () => {
                     <UiSelect
                       placeholder="Select Cartoon Type"
                       options={cartoonTypeOptions}
-                      value={cartoonTypeOptions.find(
-                        (o) => o.value === field.value
-                      )}
+                      value={cartoonTypeOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Dispatch Status"
-                invalid={!!errors.source_dispatch_status}
-                errorMessage={errors.source_dispatch_status?.message}
-              >
+
+              {/* Row 4 */}
+              <FormItem label="Dispatch Status">
                 <Controller
                   name="source_dispatch_status"
                   control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Ready to Ship"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} placeholder="e.g., Ready to Ship" value={field.value ?? ""} />}
                 />
               </FormItem>
-              <FormItem
-                label="Payment Term"
-                invalid={!!errors.source_payment_term_id}
-                errorMessage={errors.source_payment_term_id?.message}
-              >
+              <FormItem label="Payment Term">
                 <Controller
                   name="source_payment_term_id"
                   control={control}
@@ -676,62 +516,35 @@ const EditLeadPage = () => {
                     <UiSelect
                       placeholder="Select Payment Term"
                       options={paymentTermOptions}
-                      value={paymentTermOptions.find(
-                        (o: any) => o.value === field.value
-                      )}
+                      value={paymentTermOptions.find((o) => o.value === field.value)}
                       onChange={(opt) => field.onChange(opt?.value)}
-                      isLoading={masterDataLoadingStatus === "loading"}
-                      isClearable
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="ETA"
-                invalid={!!errors.source_eta}
-                errorMessage={errors.source_eta?.message as string}
-              >
+              <FormItem label="ETA">
                 <Controller
                   name="source_eta"
                   control={control}
                   render={({ field }) => (
                     <DatePicker
                       placeholder="Select ETA"
-                      value={
-                        field.value
-                          ? dayjs(field.value).isValid()
-                            ? dayjs(field.value).toDate()
-                            : null
-                          : null
-                      }
+                      value={field.value}
                       onChange={(date) => field.onChange(date)}
                     />
                   )}
                 />
               </FormItem>
-              <FormItem
-                label="Location"
-                invalid={!!errors.source_location}
-                errorMessage={errors.source_location?.message}
-              >
+              <FormItem label="Location">
                 <Controller
                   name="source_location"
                   control={control}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="e.g., Warehouse A"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  )}
+                  render={({ field }) => <Input {...field} placeholder="e.g., Warehouse A" value={field.value ?? ""} />}
                 />
               </FormItem>
-              <FormItem
-                label="Internal Remarks"
-                invalid={!!errors.source_internal_remarks}
-                errorMessage={errors.source_internal_remarks?.message}
-                className="md:col-span-2 lg:col-span-3"
-              >
+
+              {/* Row 5 */}
+              <FormItem label="Internal Remarks" className="lg:col-span-4">
                 <Controller
                   name="source_internal_remarks"
                   control={control}
@@ -761,7 +574,7 @@ const EditLeadPage = () => {
               type="submit"
               variant="solid"
               loading={isSubmitting}
-              disabled={isSubmitting || isLoadingPage}
+              disabled={isSubmitting || currentLeadStatus !== 'succeeded'}
             >
               Save Changes
             </Button>
@@ -775,7 +588,7 @@ const EditLeadPage = () => {
         onClose={() => setCancelConfirmOpen(false)}
         onConfirm={() => {
           setCancelConfirmOpen(false);
-          navigate("/sales/leads");
+          navigate("/sales-leads/lead");
         }}
         onCancel={() => setCancelConfirmOpen(false)}
       >
