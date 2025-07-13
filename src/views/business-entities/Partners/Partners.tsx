@@ -1235,7 +1235,7 @@ const PartnerListTable = () => {
       },
     },
     {
-      header: "Legal IDs & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => (
+      header: "Identity & Status", size: 180, accessorKey: 'status', id: 'legal', cell: ({ row }) => (
         <div className="flex flex-col gap-1 text-[11px]">
           {row.original.gst_number && <div><b>GST:</b> <span className="break-all">{row.original.gst_number}</span></div>}
           {row.original.pan_number && <div><b>PAN:</b> <span className="break-all">{row.original.pan_number}</span></div>}

@@ -743,7 +743,7 @@ const NavigatorComponent = (props: NavigatorComponentProps) => {
   );
 };
 
-// --- CompanyDetails Section ---
+// --- CompanyDetailsSection ---
 const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const {
     CountriesData = [],
@@ -1452,24 +1452,19 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
     const [viewingFile, setViewingFile] = useState<File | string | null>(null);
 
     const watchedCountry = watch("country_id");
+    const isIndiaSelected = String(watchedCountry?.value) === '101';
 
-    const kycDocs = useMemo(() => {
-        const allDocs = [
-            { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_verified" as const, indiaOnly: true, required: true },
-            { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_verified" as const, indiaOnly: true, required: true },
-            { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_verified" as const, indiaOnly: false, required: true },
-            { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_verified" as const, indiaOnly: false, required: false },
-            { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_verified" as const, indiaOnly: false, required: true },
-            { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_verified" as const, indiaOnly: false, required: false },
-            { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_verified" as const, indiaOnly: false, required: true },
-            { label: "Agreement/Quotation", name: "agreement_file" as const, remarkName: "agreement_remark" as const, enabledName: "agreement_verified" as const, indiaOnly: false, required: false },
-            { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_verified" as const, indiaOnly: false, required: false },
-        ];
-        
-        const isIndia = String(watchedCountry?.value) === '101';
-        return allDocs.filter(doc => !doc.indiaOnly || isIndia);
-
-    }, [watchedCountry]);
+    const kycDocs = useMemo(() => [
+        { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_verified" as const, isConditionallyRequired: isIndiaSelected },
+        { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_verified" as const, isConditionallyRequired: isIndiaSelected },
+        { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_verified" as const, isConditionallyRequired: true },
+        { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_verified" as const, isConditionallyRequired: false },
+        { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_verified" as const, isConditionallyRequired: true },
+        { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_verified" as const, isConditionallyRequired: false },
+        { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_verified" as const, isConditionallyRequired: true },
+        { label: "Agreement/Quotation", name: "agreement_file" as const, remarkName: "agreement_remark" as const, enabledName: "agreement_verified" as const, isConditionallyRequired: false },
+        { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_verified" as const, isConditionallyRequired: false },
+    ], [isIndiaSelected]);
     
     const watchedFileValues = watch(kycDocs.map(doc => doc.name));
 
@@ -1539,7 +1534,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                                     )}
                                 />
                                 {doc.label}
-                                {doc.required && <span className="text-red-500">*</span>}
+                                {doc.isConditionallyRequired && <span className="text-red-500">*</span>}
                             </label>
                             <FormItem
                                 invalid={!!(errors as any)[doc.name]}
@@ -2077,8 +2072,9 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const phoneRegex = /^\d{10}$/;
   const optionalPhoneValidation = z.string().optional().or(z.literal('')).refine(val => !val || phoneRegex.test(val), { message: "Must be exactly 10 digits if provided" });
   const selectObjectSchema = z.object({ value: z.any(), label: z.any() }).nullable().optional();
-
-  const baseCompanySchema = z.object({
+  
+  // Refined Zod Schema for perfect validation
+  const companySchema = z.object({
     partner_name: z.string().trim().min(1, "Partner Name is required"),
     company_name: z.string().trim().min(1, "Company Name is required"),
     status: selectObjectSchema.refine(val => val?.value, "Status is required"),
@@ -2089,25 +2085,29 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     primary_email_id: z.string().trim().min(1, "Primary Email is required").email("Invalid email format"),
     primary_contact_number: z.string().trim().min(1, "Primary contact is required").regex(phoneRegex, "Must be exactly 10 digits"),
     primary_contact_number_code: selectObjectSchema.refine(val => val?.value, "Country code is required"),
-    alternate_contact_number: optionalPhoneValidation,
-    general_contact_number: optionalPhoneValidation,
-  }).passthrough();
 
-  const companySchema = baseCompanySchema.superRefine((data, ctx) => {
+    
+    // Statically required documents
+    gst_certificate_file: z.any().refine(file => file, { message: "GST Certificate is required." }),
+    office_photo_file: z.any().refine(file => file, { message: "Office Photo is required." }),
+    cancel_cheque_file: z.any().refine(file => file, { message: "Cancel Cheque is required." }),
+  
+  }).passthrough().superRefine((data, ctx) => {
+      // Dynamic validation based on country
       const isIndia = String(data.country_id?.value) === '101';
       if(isIndia) {
-          if(!data.gst_number || data.gst_number.trim() === '') {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India", path: ["gst_number"] });
-          }
-          if(!data.pan_number || data.pan_number.trim() === '') {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India", path: ["pan_number"] });
-          }
-          if(!data.aadhar_card_file) {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Aadhar Card is required for India", path: ["aadhar_card_file"] });
-          }
-          if(!data.pan_card_file) {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Card is required for India", path: ["pan_card_file"] });
-          }
+          // if(!data.gst_number || data.gst_number.trim() === '') {
+          //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India.", path: ["gst_number"] });
+          // }
+          // if(!data.pan_number || data.pan_number.trim() === '') {
+          //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ["pan_number"] });
+          // }
+          // if(!data.aadhar_card_file) {
+          //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Aadhar Card is required for India.", path: ["aadhar_card_file"] });
+          // }
+          // if(!data.pan_card_file) {
+          //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Card is required for India.", path: ["pan_card_file"] });
+          // }
       }
   });
 
@@ -2117,7 +2117,21 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     mode: 'onTouched',
     defaultValues: defaultValues,
   });
-  const { handleSubmit, reset, formState: { errors }, control } = formMethods;
+  const { handleSubmit, reset, formState: { errors }, control, watch, trigger } = formMethods;
+
+  // --- FIX: Add useEffect to trigger validation when country changes ---
+  const watchedCountry = watch("country_id");
+  useEffect(() => {
+    // Only trigger if watchedCountry is not in its initial undefined state
+    if (watchedCountry !== undefined) {
+      trigger([
+        'gst_number',
+        'pan_number',
+        'aadhar_card_file',
+        'pan_card_file'
+      ]);
+    }
+  }, [watchedCountry, trigger]);
 
   useEffect(() => { reset(defaultValues); }, [defaultValues, reset]);
 

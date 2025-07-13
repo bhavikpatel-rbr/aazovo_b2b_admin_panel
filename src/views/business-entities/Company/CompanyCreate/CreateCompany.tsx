@@ -1,5 +1,7 @@
+// src/views/companies/CompanyForm.tsx (or your file name)
+
 import classNames from "classnames";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   Control,
   Controller,
@@ -17,17 +19,19 @@ import NumericInput from "@/components/shared/NumericInput";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Checkbox from "@/components/ui/Checkbox";
-import { FormItem } from "@/components/ui/Form";
+import { Form, FormItem } from "@/components/ui/Form";
 import Input from "@/components/ui/Input";
 import Notification from "@/components/ui/Notification";
 import Select from "@/components/ui/Select";
 import toast from "@/components/ui/toast";
+import { Dialog, Spinner } from "@/components/ui";
+
 
 // Icons & Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addcompanyAction,
-  deletecompanyAction,
+  addMemberAction, // Import the action to add a member
   getEmployeesListingAction,
   editCompanyAction,
   getBrandAction,
@@ -37,15 +41,16 @@ import {
   getContinentsAction,
   getCountriesAction,
   getMemberAction,
-  getDocumentTypeAction,
   getDocumentListAction,
+  getParentCategoriesAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BiChevronRight } from "react-icons/bi";
-import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf } from "react-icons/tb";
-import { useSelector } from "react-redux";
+import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf, TbUserCircle, TbPhone, TbMail, TbWorld, TbCategory } from "react-icons/tb";
 import { z } from "zod";
+import { useSelector } from "react-redux";
+
 
 // --- START: Helper Components for Document Viewing ---
 interface ImageViewerProps {
@@ -1083,7 +1088,6 @@ const CompanyDetailsSection = ({
     </Card>
   );
 };
-
 // --- START: New Helper Component for Generic File Viewing ---
 const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: () => void; }) => {
   const fileUrl = useMemo(() => (file instanceof File ? URL.createObjectURL(file) : file), [file]);
@@ -1149,7 +1153,6 @@ const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: ()
 };
 // --- END: New Helper Component ---
 // --- KYCDetailSection ---
-// --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
   const selectedCountry = watch("country_id");
@@ -1202,7 +1205,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
       setViewerIsOpen(true);
     }
   };
-  
+
   const closeImageViewer = () => setViewerIsOpen(false);
 
   const handlePreviewClick = (fileValue: File | string | null | undefined, docLabel: string) => {
@@ -1286,7 +1289,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
           onClose={closeImageViewer}
         />
       )}
-      
+
       {viewingFile && (
         <GenericFileViewer file={viewingFile} onClose={() => setViewingFile(null)} />
       )}
@@ -1611,11 +1614,158 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
   );
 };
 
+// --- START: New Member Add Form (for Modal) ---
+interface MemberAddFormSchema {
+  status: { label: string; value: string };
+  name: string;
+  mobile_no: string;
+  contact_country_code: { label: string; value: string };
+  email: string;
+  password?: string;
+  country_id: { label: string; value: string };
+  interested_category_ids: { label: string; value: string }[];
+}
+
+const memberAddSchema = z.object({
+  status: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Status is required.' }),
+  name: z.string().trim().min(1, { message: "Full Name is required." }),
+  mobile_no: z.string().trim().min(7, { message: "A valid mobile number is required." }),
+  contact_country_code: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Country code is required.' }),
+  email: z.string().trim().min(1, { message: "Email is required." }).email("Invalid email format."),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  country_id: z.object({ value: z.string().min(1), label: z.string() }, { required_error: 'Country is required.' }),
+  interested_category_ids: z.array(z.object({ value: z.string(), label: z.string() })).min(1, { message: "At least one category is required." }),
+});
+
+const preparePayloadForApiAdd = (formData: MemberAddFormSchema): any => {
+  const getValue = (field: any) => (typeof field === 'object' && field !== null ? field.value : field);
+
+  const payload = {
+    name: formData.name,
+    email: formData.email,
+    password: formData.password,
+    status: getValue(formData.status),
+    number: formData.mobile_no,
+    number_code: getValue(formData.contact_country_code),
+    country_id: getValue(formData.country_id),
+    interested_category_ids: formData.interested_category_ids.map(c => getValue(c)),
+    role_type: '0', // Assuming '0' corresponds to 'Member' role
+  };
+
+  return payload;
+};
+
+const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void; }) => {
+  const dispatch = useAppDispatch();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    CountriesData = [],
+    ParentCategories = [],
+    status: masterLoadingStatus
+  } = useSelector(masterSelector);
+
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<MemberAddFormSchema>({
+    resolver: zodResolver(memberAddSchema),
+    defaultValues: {
+      status: { label: "Active", value: "Active" },
+      name: '', mobile_no: '', contact_country_code: undefined, email: '', password: '', country_id: undefined, interested_category_ids: [],
+    },
+    mode: 'onChange',
+  });
+
+
+  useEffect(() => {
+    dispatch(getParentCategoriesAction());;
+  }, [dispatch]);
+  const countryOptions = useMemo(() =>
+    CountriesData?.map((country: any) => ({ value: String(country.id), label: country.name }))
+    , [CountriesData]);
+
+  const countryCodeOptions = useMemo(() =>
+    [...new Set(CountriesData?.map((c: any) => `+${c.phone_code}`))]
+      .filter(Boolean).sort((a, b) => a.localeCompare(b)).map(code => ({ value: code, label: code }))
+    , [CountriesData]);
+
+  const categoryOptions = useMemo(() =>
+    ParentCategories.map((c: any) => ({ value: String(c.id), label: c.name }))
+    , [ParentCategories]);
+
+  const statusOptions = [
+    { label: "Active", value: "Active" }, { label: "Unregistered", value: "Unregistered" }, { label: "Disabled", value: "Disabled" },
+  ];
+
+  const handleFormSubmit = async (data: MemberAddFormSchema) => {
+    setIsSubmitting(true);
+    const payload = preparePayloadForApiAdd(data);
+
+    try {
+      await dispatch(addMemberAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Member Created">New member added successfully.</Notification>);
+      onSuccess();
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to create member.";
+      toast.push(<Notification type="danger" title="Creation Failed">{errorMessage}</Notification>);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (masterLoadingStatus === 'loading') {
+    return <div className="p-8 flex justify-center"><Spinner /></div>;
+  }
+
+  return (
+    <form onSubmit={handleSubmit(handleFormSubmit)}>
+      <div className="grid md:grid-cols-2 gap-x-6 gap-y-4 p-4">
+        <FormItem label="Status" invalid={!!errors.status} errorMessage={errors.status?.message}>
+          <Controller name="status" control={control} render={({ field }) => (<Select {...field} placeholder="Select Status" options={statusOptions} />)} />
+        </FormItem>
+        <FormItem label="Full Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
+          <Controller name="name" control={control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle />} placeholder="Member’s full name" onInput={(e) => { if (e.target.value) e.target.value = e.target.value.toUpperCase() }} />)} />
+        </FormItem>
+        <FormItem label="Mobile Number" invalid={!!errors.mobile_no || !!errors.contact_country_code} errorMessage={errors.mobile_no?.message || errors.contact_country_code?.message}>
+          <div className="flex items-center gap-2">
+            <Controller name="contact_country_code" control={control} render={({ field }) => (<Select {...field} placeholder="Code" className="w-36" options={countryCodeOptions} />)} />
+            <Controller name="mobile_no" control={control} render={({ field }) => (<Input {...field} prefix={<TbPhone />} placeholder="Primary contact number" />)} />
+          </div>
+        </FormItem>
+        <FormItem label="Email" invalid={!!errors.email} errorMessage={errors.email?.message}>
+          <Controller name="email" control={control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail />} placeholder="example@domain.com" />)} />
+        </FormItem>
+        <FormItem label="Password" invalid={!!errors.password} errorMessage={errors.password?.message}>
+          <Controller name="password" control={control} render={({ field }) => (<Input {...field} type="password" placeholder="Enter new password" />)} />
+        </FormItem>
+        <FormItem label="Country" invalid={!!errors.country_id} errorMessage={errors.country_id?.message}>
+          <Controller name="country_id" control={control} render={({ field }) => (<Select {...field} prefix={<TbWorld />} placeholder="Select Country" options={countryOptions} />)} />
+        </FormItem>
+        <FormItem label="Interested Categories" className="md:col-span-2" invalid={!!errors.interested_category_ids} errorMessage={errors.interested_category_ids?.message}>
+          <Controller name="interested_category_ids" control={control} render={({ field }) => (<Select {...field} isMulti prefix={<TbCategory />} placeholder="Select interested categories" options={categoryOptions} />)} />
+        </FormItem>
+      </div>
+
+      <div className="flex justify-end gap-4 mt-6 p-4 border-t dark:border-gray-700">
+        <Button type="button" onClick={onCancel} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button variant="solid" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
+          Create Member
+        </Button>
+      </div>
+    </form>
+  );
+};
+// --- END: New Member Add Form ---
+
+
 // --- MemberManagementSection ---
 const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const dispatch = useAppDispatch();
   const { MemberData } = useSelector(masterSelector);
   const { fields, append, remove } = useFieldArray({ control, name: "company_members" });
+
+  // State to manage the modal visibility
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
   const memberOptions = useMemo(() => {
     const data = MemberData?.data || MemberData || [];
@@ -1635,60 +1785,97 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
     }
   }, [dispatch, MemberData]);
 
+  // Callback to handle successful member creation from the modal
+  const handleMemberAdded = () => {
+    setIsAddMemberModalOpen(false);
+    // Refetch the member list to ensure the new member is in the dropdown
+    dispatch(getMemberAction());
+  };
+
   return (
-    <Card id="memberManagement">
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <h4 className="mb-0">Member Management</h4>
-        <div className="flex gap-2">
-          <Button type="button" size="sm" icon={<TbPlus />} onClick={() => append({ member_id: undefined, designation: "", person_name: "", number: "" })}>Add Member</Button>
-          <Button as={NavLink} to="/business-entities/member-create" type="button" size="sm" icon={<TbPlus />}>Create New Member</Button>
-        </div>
-      </div>
-      {fields.map((item, index) => (
-        <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
-          <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10">Remove</Button>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
-            <FormItem label={`Member ${index + 1}`} invalid={!!errors.company_members?.[index]?.member_id} errorMessage={(errors.company_members?.[index]?.member_id as any)?.message as string}>
-              <Controller
-                name={`company_members.${index}.member_id`}
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    placeholder="Select Member"
-                    options={memberOptions}
-                    value={field.value}
-                    onChange={(selectedOption) => {
-                      field.onChange(selectedOption);
-
-                      const fullMember = memberOptions.find(opt => opt.value === selectedOption?.value);
-
-                      if (fullMember && fullMember.status?.toLowerCase() !== 'active') {
-                        toast.push(
-                          <Notification type="warning" title="Member Inactive" duration={4000}>
-                            The selected member '{fullMember.label}' is currently not active.
-                          </Notification>
-                        );
-                      }
-                    }}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_members?.[index]?.designation} errorMessage={errors.company_members?.[index]?.designation?.message as string}>
-              <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="Designation in this company" {...field} />)} />
-            </FormItem>
-            <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_members?.[index]?.person_name} errorMessage={errors.company_members?.[index]?.person_name?.message as string}>
-              <Controller name={`company_members.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Display Name" {...field} />)} />
-            </FormItem>
-            <FormItem label={`Contact No. ${index + 1}`} invalid={!!errors.company_members?.[index]?.number} errorMessage={errors.company_members?.[index]?.number?.message as string}>
-              <Controller name={`company_members.${index}.number`} control={control} render={({ field }) => (<Input type="tel" placeholder="Contact Number" {...field} />)} />
-            </FormItem>
+    <>
+      <Card id="memberManagement">
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+          <h4 className="mb-0">Member Management</h4>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" icon={<TbPlus />} onClick={() => append({ member_id: undefined, designation: "", person_name: "", number: "" })}>
+              Add Member to Company
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="solid"
+              icon={<TbPlus />}
+              onClick={() => setIsAddMemberModalOpen(true)}
+            >
+              Create New Member
+            </Button>
           </div>
-        </Card>
-      ))}
-    </Card>
+        </div>
+
+        {fields.map((item, index) => (
+          <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
+            <Button type="button" variant="plain" size="xs" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10">Remove</Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-start">
+              <FormItem label={`Member ${index + 1}`} invalid={!!errors.company_members?.[index]?.member_id} errorMessage={(errors.company_members?.[index]?.member_id as any)?.message as string}>
+                <Controller
+                  name={`company_members.${index}.member_id`}
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      placeholder="Select Member"
+                      options={memberOptions}
+                      value={field.value}
+                      onChange={(selectedOption) => {
+                        field.onChange(selectedOption);
+
+                        const fullMember = memberOptions.find(opt => opt.value === selectedOption?.value);
+
+                        if (fullMember && fullMember.status?.toLowerCase() !== 'active') {
+                          toast.push(
+                            <Notification type="warning" title="Member Inactive" duration={4000}>
+                              The selected member '{fullMember.label}' is currently not active.
+                            </Notification>
+                          );
+                        }
+                      }}
+                    />
+                  )}
+                />
+              </FormItem>
+              <FormItem label={`Designation ${index + 1}`} invalid={!!errors.company_members?.[index]?.designation} errorMessage={errors.company_members?.[index]?.designation?.message as string}>
+                <Controller name={`company_members.${index}.designation`} control={control} render={({ field }) => (<Input placeholder="Designation in this company" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Person Name ${index + 1}`} invalid={!!errors.company_members?.[index]?.person_name} errorMessage={errors.company_members?.[index]?.person_name?.message as string}>
+                <Controller name={`company_members.${index}.person_name`} control={control} render={({ field }) => (<Input placeholder="Display Name" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Contact No. ${index + 1}`} invalid={!!errors.company_members?.[index]?.number} errorMessage={errors.company_members?.[index]?.number?.message as string}>
+                <Controller name={`company_members.${index}.number`} control={control} render={({ field }) => (<Input type="tel" placeholder="Contact Number" {...field} />)} />
+              </FormItem>
+            </div>
+          </Card>
+        ))}
+      </Card>
+
+      {/* Modal Dialog for adding a new member */}
+      <Dialog
+        isOpen={isAddMemberModalOpen}
+        onClose={() => setIsAddMemberModalOpen(false)}
+        onRequestClose={() => setIsAddMemberModalOpen(false)}
+        width={900}
+        closable={false}
+      >
+        <h5 className="mb-4">Create a New Member</h5>
+        <p className="mb-6 text-sm">Create a new member record. Once created, it will be available in the 'Member' dropdown to add to this company.</p>
+        <MemberAddForm
+          onSuccess={handleMemberAdded}
+          onCancel={() => setIsAddMemberModalOpen(false)}
+        />
+      </Dialog>
+    </>
   );
 };
+
 
 // --- TeamManagementSection ---
 const TeamManagementSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {

@@ -793,39 +793,39 @@ const Categories = () => {
     setFilterCriteria(defaultFilters);
     handleSetTableData({ query: "", pageIndex: 1 });
   };
-  
+
   const handleCardClick = (type: 'active' | 'inactive' | 'main' | 'sub' | 'comingSoon' | 'all') => {
     onClearFilters(); // Clear all existing filters first
 
     if (type === 'all') return;
 
     if (type === 'active') {
-        setFilterCriteria({ filterStatuses: [{ value: 'active', label: 'Active' }] });
+      setFilterCriteria({ filterStatuses: [{ value: 'active', label: 'Active' }] });
     } else if (type === 'inactive') {
-        setFilterCriteria({ filterStatuses: [{ value: 'inactive', label: 'Inactive' }] });
+      setFilterCriteria({ filterStatuses: [{ value: 'inactive', label: 'Inactive' }] });
     } else if (type === 'main' || type === 'sub' || type === 'comingSoon') {
-        setFilterCriteria({ filterSpecial: type });
+      setFilterCriteria({ filterSpecial: type });
     }
     handleSetTableData({ pageIndex: 1 });
   };
 
   const handleRemoveFilter = useCallback((key: keyof FilterCriteria, value: any) => {
     setFilterCriteria(prev => {
-        const newFilters = { ...prev };
-        if (key === 'filterSpecial') {
-            newFilters.filterSpecial = null;
-        } else {
-            const currentValues = prev[key] as { value: any; label: string }[] | undefined;
-            if (currentValues) {
-                const newValues = currentValues.filter(item => item.value !== value);
-                if (newValues.length > 0) {
-                    (newFilters as any)[key] = newValues;
-                } else {
-                    delete newFilters[key];
-                }
-            }
+      const newFilters = { ...prev };
+      if (key === 'filterSpecial') {
+        newFilters.filterSpecial = null;
+      } else {
+        const currentValues = prev[key] as { value: any; label: string }[] | undefined;
+        if (currentValues) {
+          const newValues = currentValues.filter(item => item.value !== value);
+          if (newValues.length > 0) {
+            (newFilters as any)[key] = newValues;
+          } else {
+            delete newFilters[key];
+          }
         }
-        return newFilters;
+      }
+      return newFilters;
     });
     handleSetTableData({ pageIndex: 1 });
   }, [handleSetTableData]);
@@ -1310,150 +1310,137 @@ const Categories = () => {
         confirmButtonColor="red-600" onConfirm={onConfirmSingleDeleteCategory} loading={isProcessing}
       ><p>Are you sure you want to delete the category "<strong>{categoryToDelete?.name}</strong>"? This action cannot be undone.</p></ConfirmDialog>
 
-      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} title="Category Image" width={600}>
-        <div className="flex justify-center items-center p-4"> {imageToView ? <img src={imageToView} alt="Category Image Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image.</p>} </div>
-      </Dialog>
+
 
       <Dialog
         isOpen={isViewDetailModalOpen}
         onClose={closeViewDetailModal}
         onRequestClose={closeViewDetailModal}
-        size="md"
-        title=""
-        contentClassName="!p-0 bg-slate-50 dark:bg-slate-800 rounded-xl shadow-2xl"
+        width={600}
+        contentClassName="!p-0 bg-slate-50 dark:bg-gray-800 rounded-xl shadow-2xl"
       >
         {categoryToView ? (
           <div className="flex flex-col max-h-[90vh]">
-            <div className="p-4 space-y-3 overflow-y-auto">
-              <div className="p-3 bg-white dark:bg-slate-700/60 rounded-lg space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+            <div className="p-4 space-y-4 overflow-y-auto">
+              {/* --- Primary Info Card --- */}
+              <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
                     {categoryToView.webIconFullPath && (
                       <Avatar
                         size={48}
                         shape="rounded"
                         src={categoryToView.webIconFullPath}
                         icon={<TbCategory />}
-                        className="border-2 border-white dark:border-slate-500 shadow cursor-pointer"
+                        className="border dark:border-slate-600 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
                         onClick={() => openImageViewer(categoryToView.webIconFullPath)}
                       />
                     )}
                     <div>
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      <h5 className="font-bold text-lg text-slate-800 dark:text-slate-100">
                         {categoryToView.name}
+                      </h5>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        ID: {String(categoryToView.id).padStart(6, '0')}
                       </p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">ID: {categoryToView.id}</p>
                     </div>
+                      <Tag className={`${categoryStatusColor[categoryToView.status]} capitalize font-semibold border-0 text-[11px] px-2.5 py-1 rounded-full`}>
+                        {categoryToView.status}
+                      </Tag>
                   </div>
+
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
                   {categoryToView.mobileIconFullPath && (
-                    <div>
-                      <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Mobile Icon</p>
-                      <Avatar
-                        size={60}
-                        shape="rounded"
-                        src={categoryToView.mobileIconFullPath}
-                        icon={<TbPhoto />}
-                        className="border dark:border-slate-600 cursor-pointer"
-                        onClick={() => openImageViewer(categoryToView.mobileIconFullPath)}
-                      />
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Mobile Icon</p>
+                      <div className="flex justify-center items-center p-2 bg-slate-100 dark:bg-slate-800/50 rounded-md">
+                        <Avatar
+                          size={80}
+                          shape="rounded"
+                          src={categoryToView.mobileIconFullPath}
+                          icon={<TbPhoto />}
+                          className="border dark:border-slate-300 dark:border-slate-600 cursor-pointer"
+                          onClick={() => openImageViewer(categoryToView.mobileIconFullPath)}
+                        />
+                      </div>
                     </div>
                   )}
                   {categoryToView.bannerIconFullPath && (
-                    <div>
-                      <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Banner</p>
-                      <img
-                        src={categoryToView.bannerIconFullPath}
-                        alt="Category Banner"
-                        className="w-full h-auto max-h-28 object-contain rounded border dark:border-slate-600 cursor-pointer"
-                        onClick={() => openImageViewer(categoryToView.bannerIconFullPath)}
-                      />
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Banner Preview</p>
+                      <div className="flex justify-center items-center p-2 bg-slate-100 dark:bg-slate-800/50 rounded-md">
+                        <img
+                          src={categoryToView.bannerIconFullPath}
+                          alt="Category Banner"
+                          className="w-auto h-20 object-contain cursor-pointer"
+                          onClick={() => openImageViewer(categoryToView.bannerIconFullPath)}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 text-sm text-slate-700 dark:text-slate-200 pt-2">
-                  <DialogDetailRow
-                    label="Status"
-                    value={
-                      <Tag className={`${categoryStatusColor[categoryToView.status]} capitalize font-semibold border-0 text-[10px] px-2 py-0.5 rounded-full`}>
-                        {categoryToView.status}
-                      </Tag>
-                    }
-                  />
+              {/* --- Status & Settings Card --- */}
+              <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm">
+                <h6 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">Settings</h6>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <DialogDetailRow
                     label="Show in Header"
-                    value={categoryToView.showHeader === 1 ? 'Visible' : 'Hidden'}
-                    valueClassName={categoryToView.showHeader === 1 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400 font-medium'}
+                    value={categoryToView.showHeader === 1 ? 'Yes' : 'No'}
                   />
                   <DialogDetailRow
-                    label="Show Home Page"
+                    label="Show on Home"
                     value={categoryToView.showHomePage === 1 ? 'Yes' : 'No'}
-                    valueClassName={categoryToView.showHomePage === 1 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400 font-medium'}
                   />
                   <DialogDetailRow
                     label="Coming Soon"
                     value={categoryToView.comingSoon === 1 ? 'Yes' : 'No'}
-                    valueClassName={categoryToView.comingSoon === 1 ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-600 dark:text-slate-300'}
                   />
-                  <DialogDetailRow label="Parent Category" value={categoryToView.parentCategoryName || '-'} />
                   {categoryToView.showPageName && (
-                    <DialogDetailRow label="Display Page Name" value={categoryToView.showPageName} />
+                    <DialogDetailRow label="Display Page" value={categoryToView.showPageName} />
                   )}
-                  <DialogDetailRow label="Slug / URL" value={categoryToView.slug} isLink breakAll />
-                  <DialogDetailRow
-                    label="Created"
-                    value={new Date(categoryToView.createdAt).toLocaleString(undefined, {
-                      year: 'numeric', month: 'short', day: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
-                  />
-                  <DialogDetailRow
-                    label="Last Updated"
-                    value={new Date(categoryToView.updatedAt).toLocaleString(undefined, {
-                      year: 'numeric', month: 'short', day: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
-                  />
                 </div>
-
-                {(categoryToView.metaTitle || categoryToView.metaDescription || categoryToView.metaKeyword) && (
-                  <div className="pt-2">
-                    <h6 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
-                      SEO & Meta
-                    </h6>
-                    <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
-                      {categoryToView.metaTitle && (
-                        <p><span className="font-medium text-slate-500 dark:text-slate-400">Title:</span> {categoryToView.metaTitle}</p>
-                      )}
-                      {categoryToView.metaDescription && (
-                        <p className="whitespace-pre-wrap"><span className="font-medium text-slate-500 dark:text-slate-400">Description:</span> {categoryToView.metaDescription}</p>
-                      )}
-                      {categoryToView.metaKeyword && (
-                        <p><span className="font-medium text-slate-500 dark:text-slate-400">Keywords:</span> {categoryToView.metaKeyword}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {/* --- Details Card --- */}
+              <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm">
+                <h6 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">Details</h6>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DialogDetailRow label="Parent Category" value={categoryToView.parentCategoryName || '—'} />
+                  <DialogDetailRow label="Slug / URL" value={categoryToView.slug} isLink />
+                  <DialogDetailRow label="Created" value={new Date(categoryToView.createdAt).toLocaleString()} />
+                  <DialogDetailRow label="Last Updated" value={new Date(categoryToView.updatedAt).toLocaleString()} />
+                </div>
+              </div>
+
+              {/* --- SEO Card --- */}
+              {(categoryToView.metaTitle || categoryToView.metaDescription || categoryToView.metaKeyword) && (
+                <div className="p-4 bg-white dark:bg-slate-700/60 rounded-lg shadow-sm">
+                  <h6 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">SEO & Meta</h6>
+                  <div className="space-y-3">
+                    <DialogDetailRow label="Meta Title" value={categoryToView.metaTitle || '—'} />
+                    <DialogDetailRow label="Meta Description" value={categoryToView.metaDescription || '—'} />
+                    <DialogDetailRow label="Meta Keywords" value={categoryToView.metaKeyword || '—'} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="p-8 text-center flex flex-col items-center justify-center" style={{ minHeight: '200px' }}>
+          <div className="p-8 text-center flex flex-col items-center justify-center min-h-[200px]">
             <TbInfoCircle size={42} className="text-slate-400 dark:text-slate-500 mb-2" />
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400">No Category Information</p>
             <p className="text-xs text-slate-500 mt-1">Details for this category could not be loaded.</p>
-            <div className="mt-5">
-              <Button variant="solid" color="blue-600" onClick={closeViewDetailModal} size="sm">
-                Dismiss
-              </Button>
-            </div>
           </div>
         )}
       </Dialog>
 
+      <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} title="Category Image" width={600}>
+        <div className="flex justify-center items-center p-4"> {imageToView ? <img src={imageToView} alt="Category Image Full View" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} /> : <p>No image.</p>} </div>
+      </Dialog>
       {/* --- Export Reason Modal --- */}
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}

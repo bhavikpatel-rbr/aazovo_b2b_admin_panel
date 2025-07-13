@@ -38,7 +38,7 @@ const processSingleApiDataToInquiryItem = (apiItem: ApiInquiryItem): InquiryItem
       resolution_date: apiItem.resolution_date || 'N/A',
       follow_up_date: apiItem.follow_up_date || 'N/A',
       feedback_status: apiItem.feedback_status || 'N/A',
-      inquiry_resolution: apiItem.inquiry_resolution || 'N/A',
+      resolution_notes: apiItem.resolution_notes || 'N/A',
       inquiry_attachments: apiItem.inquiry_attachments_array || [],
       status: apiItem.deleted_at ? 'inactive' : 'active',
     };
@@ -147,13 +147,13 @@ const InquiryViewPage = () => {
 
                     <Card bordered>
                         <h5 className="mb-4">Inquiry Status & Assignment</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-1">
                             <DetailItem label="Type" value={<Tag>{inquiry.inquiry_type}</Tag>} />
                             <DetailItem label="Priority" value={<Tag className={`${priorityColors[inquiry.inquiry_priority] || priorityColors['N/A']}`}>{inquiry.inquiry_priority}</Tag>} />
                             <DetailItem label="Status" value={<Tag className={`${inquiryCurrentStatusColors[inquiry.inquiry_status] || inquiryCurrentStatusColors['N/A']}`}>{inquiry.inquiry_status}</Tag>} />
                             <DetailItem label="Assigned To" value={inquiry.assigned_to} />
                             <DetailItem label="Department" value={inquiry.department} />
-                            <DetailItem label="Feedback Status" value={inquiry.feedback_status} />
+                            {/* <DetailItem label="Feedback Status" value={inquiry.feedback_status} /> */}
                         </div>
                     </Card>
 
@@ -167,7 +167,7 @@ const InquiryViewPage = () => {
                         <Card bordered className="lg:col-span-1">
                             <h5 className="mb-4">Resolution Notes</h5>
                              <div className="text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md min-h-[100px] whitespace-pre-wrap overflow-y-auto">
-                                {inquiry.inquiry_resolution}
+                                {inquiry.resolution_notes}
                             </div>
                         </Card>
                     </div>
@@ -177,8 +177,8 @@ const InquiryViewPage = () => {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1">
                             {formatDate(inquiry.inquiry_date, 'Inquiry Date')}
                             {formatDate(inquiry.response_date, 'Response Date')}
-                            {formatDate(inquiry.resolution_date, 'Resolution Date')}
-                            {formatDate(inquiry.follow_up_date, 'Follow-up Date')}
+                            {/* {formatDate(inquiry.resolution_date, 'Resolution Date')}
+                            {formatDate(inquiry.follow_up_date, 'Follow-up Date')} */}
                         </div>
                     </Card>
 

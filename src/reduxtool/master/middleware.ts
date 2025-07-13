@@ -3619,11 +3619,11 @@ export const addcompanyAction = createAsyncThunk<any, any>("auth/addcompany",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addCompanyAsync(data)
-      console.log("response?.data?.status", response?.data?.status);
+      console.log("response?.data?.status", response?.status);
 
-      if (response?.status === true) {
+      if (response?.status === true || response?.status === 200) {
         dispatch(getCompanyAction())
-        return response?.data?.data
+        return response?.data
       } else {
         return rejectWithValue({
           message: response?.message || 'Failed to edit company.'
@@ -3641,11 +3641,13 @@ export const editCompanyAction = createAsyncThunk<any, { id: string | number; pa
     try {
       const response: AxiosResponse<any> = await editCompanyAsync(id, payload);
       // console.log("response?.data?.status", response?.errors[0]);
-      console.log("response?.message", response?.message);
 
-      if (response?.status === true) {
+      console.log("response?.data?.status", response?.data?.status);
+
+
+      if (response?.status === true || response?.status === 200) {
         dispatch(getCompanyAction());
-        return response?.data?.data;
+        return response?.data
       } else {
         return rejectWithValue({
           message: response?.message || 'Failed to edit company.'
@@ -3730,12 +3732,12 @@ export const addMemberAction = createAsyncThunk<any, any>("auth/addMember",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addMemberAsync(data)
-      if (response?.data?.status === true) {
+      if (response?.status === true || response?.status === 200) {
         dispatch(getMemberAction())
-        return response?.data?.data
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to add member.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
@@ -3748,12 +3750,12 @@ export const editMemberAction = createAsyncThunk<any, any>("auth/editMember",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editMemberAsync(data)
-      if (response?.data?.status === true) {
+      if (response?.status === true || response?.status === 200) {
         dispatch(getMemberAction())
-        return response?.data?.data
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to edit member.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
@@ -3849,12 +3851,12 @@ export const addpartnerAction = createAsyncThunk<any, any>("auth/addpartner",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addpartnerAsync(data)
-      if (response?.data?.status === true) {
+      if (response?.status === true || response?.status === 200) {
         dispatch(getpartnerAction())
-        return response?.data?.data
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to add partner.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
@@ -3867,12 +3869,12 @@ export const editpartnerAction = createAsyncThunk<any, { id: string | number; pa
   async ({ id, payload }, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editpartnerAsync(id, payload);
-      if (response?.data?.status === true) {
-        dispatch(getpartnerAction());
-        return response?.data?.data;
+      if (response?.status === true || response?.status === 200) {
+        dispatch(getpartnerAction())
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to edit partner.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
