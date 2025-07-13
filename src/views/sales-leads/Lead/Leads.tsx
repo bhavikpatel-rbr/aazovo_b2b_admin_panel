@@ -1734,19 +1734,7 @@ const LeadActionColumn = ({
           <TbEye />
         </div>
       </Tooltip>
-      <Tooltip title="Delete Lead">
-        <div
-          className={classNames(
-            iconButtonClass,
-            hoverBgClass,
-            "text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-          )}
-          role="button"
-          onClick={onDelete}
-        >
-          <TbTrash />
-        </div>
-      </Tooltip>
+      
       <Dropdown
         renderTitle={
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
@@ -2149,8 +2137,8 @@ const LeadsListing = ({ isDashboard }) => {
         source_supplier_id: apiLead.source_supplier_id,
         sourceSupplierName: apiLead.source_supplier?.name,
         rawApiData: apiLead,
-        buyer: apiLead.buyer,
-        supplier: apiLead.supplier,
+        buyer: apiLead.lead_member_detail,
+        supplier: apiLead.source_supplier,
         member_email: apiLead.customer?.email,
         member_phone: apiLead.customer?.mobile_no,
         formId: apiLead.form_id,
@@ -2288,6 +2276,8 @@ const LeadsListing = ({ isDashboard }) => {
 
   const handleStartProcess = useCallback(
     async (lead: LeadListItem) => {
+      console.log("lead",lead);
+      
       try {
         // Dispatch the action to fetch the form ID associated with the lead.
         // const resultAction = await dispatch(
@@ -2635,22 +2625,46 @@ const LeadsListing = ({ isDashboard }) => {
         ),
       },
       {
-        header: "Member",
-        accessorKey: "customerName",
-        size: 180,
-        cell: (props: CellContext<LeadListItem, any>) => {
-          const { buyer, supplier } = props.row.original;
-          const buyerInfo = buyer ? (
-            <>
-              <b>Buyer: {buyer.id}</b>
-              <span>{buyer.name}</span>
-            </>
-          ) : (
-            <span>Buyer: N/A</span>
-          );
-          return <div className="flex flex-col gap-1 text-xs">{buyerInfo}</div>;
-        },
-      },
+    header: "Member",
+    accessorKey: "customerName",
+    size: 200, // Increased size slightly for better readability
+    cell: (props) => { // Using props for simplicity, type is CellContext<LeadListItem, any>
+      const { buyer, supplier } = props.row.original;
+      
+      return (
+        <div className="flex flex-col gap-1.5">
+          {/* Buyer Section */}
+          <div>
+            {buyer ? (
+              <>
+                <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Buyer : {buyer.member_code}</div>
+                <div className="text-sm truncate">{buyer.name}</div>
+                {/* <div className="text-xs text-gray-500"> {buyer.member_code}</div> */}
+              </>
+            ) : (
+              <div className="text-xs text-gray-400 italic">No Buyer Info</div>
+            )}
+          </div>
+          
+          {/* Visual Separator */}
+          {buyer && supplier && <hr className="border-t border-dashed border-gray-200 dark:border-gray-600 my-1" />}
+
+          {/* Supplier Section */}
+          <div>
+            {supplier ? (
+              <>
+                <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Supplier : {supplier.member_code}</div>
+                <div className="text-sm truncate">{supplier.name}</div>
+                {/* <div className="text-xs text-gray-500">code: {supplier.member_code}</div> */}
+              </>
+            ) : (
+              <div className="text-xs text-gray-400 italic">No Supplier Info</div>
+            )}
+          </div>
+        </div>
+      );
+    },
+},
       {
         header: "Details",
         size: 220,
