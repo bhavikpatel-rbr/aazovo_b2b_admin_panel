@@ -264,7 +264,7 @@ const Navigator = ({ activeSection, onNavigate }: { activeSection: FormSectionKe
     ];
     return (
         <div className="flex overflow-x-auto sm:justify-center">
-            <div className="flex flex-nowrap gap-x-6 gap-y-2">
+            <div className="flex flex-nowrap gap-x-25 gap-y-2">
                 {sections.map(sec => (
                     <button
                         key={sec.key} type="button" onClick={() => onNavigate(sec.key)}
@@ -609,7 +609,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
             const equipmentDataForJson = values.equipmentsAssetsProvided.items.map(item => ({ name: item.name, serial_no: item.serial_no, remark: item.remark, provided: item.provided }));
             formData.append('equipments_assets_issued', JSON.stringify(equipmentDataForJson));
             values.equipmentsAssetsProvided.items.forEach((item, index) => {
-                if (item.attachment instanceof File) formData.append(`equipment_attachment_${index}`, item.attachment);
+                if (item.attachment instanceof File) formData.append(`equipments_assets_issued[${index}]`, item.attachment);
             });
         }
 
@@ -844,7 +844,7 @@ const EmployeeFormPage = () => {
             <Container className="h-full">
                 <div className="h-full flex flex-col items-center justify-center">
                     <Spinner size={40} />
-                    <h3 className="mt-4">Loading Employee Data...</h3>
+                    {/* <h3 className="mt-4">Loading Employee Data...</h3> */}
                 </div>
             </Container>
         );
