@@ -2096,18 +2096,18 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       // Dynamic validation based on country
       const isIndia = String(data.country_id?.value) === '101';
       if(isIndia) {
-          if(!data.gst_number || data.gst_number.trim() === '') {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India.", path: ["gst_number"] });
-          }
-          if(!data.pan_number || data.pan_number.trim() === '') {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ["pan_number"] });
-          }
-          if(!data.aadhar_card_file) {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Aadhar Card is required for India.", path: ["aadhar_card_file"] });
-          }
-          if(!data.pan_card_file) {
-              ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Card is required for India.", path: ["pan_card_file"] });
-          }
+          // if(!data.gst_number || data.gst_number.trim() === '') {
+          //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India.", path: ["gst_number"] });
+          // }
+          // if(!data.pan_number || data.pan_number.trim() === '') {
+          //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ["pan_number"] });
+          // }
+          // if(!data.aadhar_card_file) {
+          //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Aadhar Card is required for India.", path: ["aadhar_card_file"] });
+          // }
+          // if(!data.pan_card_file) {
+          //     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Card is required for India.", path: ["pan_card_file"] });
+          // }
       }
   });
 
