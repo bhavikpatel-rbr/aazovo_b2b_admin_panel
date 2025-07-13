@@ -3524,7 +3524,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           ),
         },
         {
-          header: "Company & Member",
+          header: "Member",
           accessorKey: "company_name",
           size: 350,
           cell: ({ row }) => {
@@ -3534,36 +3534,32 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                 {" "}
                 <div className="flex items-center gap-2">
                   {" "}
-                  <TbBuilding
+                  <TbUserCheck
                     size={14}
                     className="text-gray-400 dark:text-gray-500 flex-shrink-0"
                   />{" "}
                   <span className="font-semibold text-gray-800 dark:text-gray-100">
                     {" "}
-                    {item.company_name} ({item.company_code}){" "}
+                    {item.customer_name} ({item.member_code}){" "}
                   </span>{" "}
                   <Tooltip
                     title={item.company_verified ? "Verified" : "Not Verified"}
                   >
                     {" "}
-                    {item.company_verified ? (
-                      <BsCheckCircleFill className="text-emerald-500" />
-                    ) : (
-                      <BsXCircleFill className="text-red-500" />
-                    )}{" "}
+                    
                   </Tooltip>{" "}
                 </div>{" "}
                 <div className="pl-6 border-l ml-1.5 dark:border-gray-600 space-y-1.5">
                   {" "}
                   <div className="flex items-center gap-2">
                     {" "}
-                    <TbUserCheck
+                    <TbBuilding
                       size={14}
                       className="text-gray-400 dark:text-gray-500 flex-shrink-0"
                     />{" "}
                     <span className="font-medium text-gray-700 dark:text-gray-200">
                       {" "}
-                      {item.customer_name} ({item.member_code}){" "}
+                      {item.company_name}{" "}
                     </span>{" "}
                     <Tooltip
                       title={item.member_verified ? "Verified" : "Not Verified"}
@@ -3666,26 +3662,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                   </div>
                 </Tooltip>
               )}{" "}
-              {item.status && (
-                <Tooltip title="Record Status">
-                    <div className="flex items-center gap-1.5">
-                      {" "}
-                      <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                        <TbCircleCheck size={14} />
-                      </span>{" "}
-                      <Tag
-                        onClick={() => handleCardClick(item.status)}
-                        className={`${
-                          recordStatusTagColor[item.status] ||
-                          recordStatusTagColor.default
-                        } capitalize cursor-pointer`}
-                      >
-                        {" "}
-                        {item.status.replace("_", " ")}{" "}
-                      </Tag>{" "}
-                    </div>
-                </Tooltip>
-              )}{" "}
+              
               {item.opportunity_status && (
                 <Tooltip title="Opportunity Status">
                     <div className="flex items-center gap-1.5">
@@ -3831,11 +3808,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
             return (
               <div className="text-xs space-y-1">
                 {" "}
-                <InfoLine
-                  icon={<TbRadar2 size={13} />}
-                  label="Total Qty"
-                  text={item.qty ?? "N/A"}
-                />{" "}
+                
                 <InfoLine
                   icon={<TbTargetArrow size={13} />}
                   label="Score"
