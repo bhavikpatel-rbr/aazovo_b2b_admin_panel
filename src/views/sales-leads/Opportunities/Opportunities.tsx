@@ -134,6 +134,8 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import { config } from "localforage";
 
 // --- Type Definitions ---
 export type ApiOpportunityItem = {
@@ -845,7 +847,13 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
   const { user } = useSelector(authSelector);
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const { type, data: item, isOpen } = modalState;
+ const [userData, setUserData] = useState<any>(null);
 
+    useEffect(() => {
+        const { useEncryptApplicationStorage } = config;
+        try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+        catch (error) { console.error("Error getting UserData:", error); }
+    }, []);
   if (!isOpen || !item) return null;
 
   const handleConfirmNotification = async (formData: NotificationFormData) => {
@@ -932,14 +940,14 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
     }
   };
   const handleConfirmActivity = async (data: ActivityFormData) => {
-    if (!item || !user?.id) return;
+    if (!item || !userData.id) return;
     setIsSubmittingAction(true);
     const payload = {
       item: data.item,
       notes: data.notes || "",
       module_id: String(item.id),
       module_name: "Opportunity",
-      user_id: user.id,
+      user_id: userData.id,
     };
     try {
       await dispatch(addAllActionAction(payload)).unwrap();
@@ -1709,7 +1717,7 @@ const OpportunityFilterDrawer: React.FC<{
       }
     >
       <Form id="filterOpportunityForm" onSubmit={handleSubmit(onSubmit)}>
-        <div className="p-4 flex flex-col gap-6">
+        <div className=" flex flex-col gap-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <FormItem label="Seller/Buyer">
                     <Controller name="wantTo" control={control} render={({ field }) => (
@@ -1736,11 +1744,7 @@ const OpportunityFilterDrawer: React.FC<{
                     )} />
                 </FormItem>
             </div>
-            <FormItem label="Created Date Range">
-                <Controller name="dateRange" control={control} render={({ field }) => (
-                    <DatePicker.DateRangePicker placeholder="Select date range" value={field.value} onChange={field.onChange} />
-                )} />
-            </FormItem>
+           
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <FormItem label="Category">
                     <Controller name="categories" control={control} render={({ field }) => (
@@ -1959,10 +1963,7 @@ const ActiveFiltersDisplay = ({
             if (key === 'kycVerified') {
                 return renderTag(key, value as string);
             }
-             if (key === 'dateRange' && Array.isArray(value) && value[0] && value[1]) {
-                 const dateLabel = `${dayjs(value[0]).format('DD/MM/YY')} - ${dayjs(value[1]).format('DD/MM/YY')}`;
-                 return renderTag('Date Range', dateLabel);
-             }
+            
             return null;
         })}
       <Button
@@ -2106,7 +2107,7 @@ const MainRowActionColumn = ({
   };
   return (
     <div className="flex items-center justify-center">
-      <Tooltip title="Copy Details">
+      <Tooltip title="Copy Details p-2">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
           role="button"
@@ -2117,16 +2118,10 @@ const MainRowActionColumn = ({
       </Tooltip>
       <Dropdown
         renderTitle={
-          <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+          <BsThreeDotsVertical className="ml-3 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        <Dropdown.Item
-          onClick={handleViewDetails}
-          className="flex items-center gap-2"
-        >
-          <TbEye size={18} />
-          <span className="text-xs">View Details</span>
-        </Dropdown.Item>
+        
         <Dropdown.Item
           onClick={() => onOpenModal("notification", item)}
           className="flex items-center gap-2"
@@ -2180,13 +2175,7 @@ const MainRowActionColumn = ({
           <TbDiscount size={18} />{" "}
           <span className="text-xs">Create Offer/Demand</span>{" "}
         </Dropdown.Item>{" "}
-        <Dropdown.Item
-          onClick={() => onOpenModal("alert", item)}
-          className="flex items-center gap-2"
-        >
-          {" "}
-          <TbNotebook size={18} /> <span className="text-xs">Add Notes</span>{" "}
-        </Dropdown.Item>{" "}
+        
         <Dropdown.Item
           onClick={() => onOpenModal("email", item)}
           className="flex items-center gap-2"
@@ -2872,7 +2861,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   
   const initialFilterState = useMemo(() => ({
     statuses: [],
-    dateRange: [null, null] as [Date | null, Date | null],
+   
     assignedTo: [],
     memberTypes: [],
     continents: [],
@@ -3249,11 +3238,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
 
     // Apply filters from the drawer
     if (filters.statuses.length > 0) data = data.filter(item => filters.statuses.includes(item.status));
-    if (filters.dateRange[0] && filters.dateRange[1]) {
-        const start = dayjs(filters.dateRange[0]).startOf('day');
-        const end = dayjs(filters.dateRange[1]).endOf('day');
-        data = data.filter(item => dayjs(item.created_date).isAfter(start) && dayjs(item.created_date).isBefore(end));
-    }
+    
     if (filters.assignedTo.length > 0) data = data.filter(item => filters.assignedTo.includes(Number(item.assigned_to)));
     if (filters.memberTypes.length > 0) data = data.filter(item => filters.memberTypes.includes(item.member_type));
     if (filters.continents.length > 0) data = data.filter(item => item.continent && filters.continents.includes(item.continent));
