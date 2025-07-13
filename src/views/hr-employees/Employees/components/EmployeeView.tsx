@@ -145,7 +145,7 @@ const EmployeeProfileHeader: React.FC<{ employee: Employee }> = ({
     const status = employee.status || 'default'
     const statusClass = employeeStatusColor[status] || employeeStatusColor.default
     const roleName = employee.roles?.[0]?.display_name ?? 'N/A'
-
+    const navigate = useNavigate()
     return (
         <div className="flex flex-col xl:flex-row xl:items-center gap-4">
             <div className="flex items-center gap-4">
@@ -180,6 +180,8 @@ const EmployeeProfileHeader: React.FC<{ employee: Employee }> = ({
                 <p className="text-gray-500 text-xs mb-1 uppercase">Role</p>
                 <h6 className="font-bold mb-0">{roleName}</h6>
             </div>
+
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-2"><Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/hr-employees/employees/edit/${employee.id}`)}>Edit Employee</Button><Button icon={<TbArrowLeft />} onClick={() => navigate('/hr/employees')}>Back to List</Button></div>
         </div>
     )
 }
@@ -305,12 +307,12 @@ const DocumentViewer: React.FC<{
                     className="absolute top-2 right-2 z-20 bg-white/70 dark:bg-black/70"
                     onClick={onClose}
                 />
-                
+
                 {/* Content */}
                 <div className="relative w-full h-full flex-grow p-4 md:p-8">
                     {renderContent()}
                 </div>
-                
+
                 {/* Navigation */}
                 {documents.length > 1 && (
                     <>
@@ -379,7 +381,7 @@ const DocumentCard: React.FC<{
                             onClick={onPreview}
                         />
                     </Tooltip>
-                     <Tooltip title="Download">
+                    <Tooltip title="Download">
                         <a href={document.url} download target="_blank" rel="noopener noreferrer">
                             <Button shape="circle" size="sm" icon={<TbDownload />} />
                         </a>
@@ -422,23 +424,23 @@ const EmployeeDetailsTab: React.FC<{ employee: Employee }> = ({ employee }) => {
             </DetailSection>
 
             <DetailSection title="Reporting Structure" icon={<TbUserCheck size={20} />}>
-                 <InfoPair label="Reporting HR" value={employee.reporting_hr?.name} />
-                 <InfoPair label="Reporting Head" value={employee.reporting_head?.name} />
+                <InfoPair label="Reporting HR" value={employee.reporting_hr?.name} />
+                <InfoPair label="Reporting Head" value={employee.reporting_head?.name} />
             </DetailSection>
 
             <DetailSection title="Contact & Address" icon={<TbMapPin size={20} />}>
                 <div className="lg:col-span-3">
                     <InfoPair label="Permanent Address" value={employee.permanent_address} />
                 </div>
-                 <div className="lg:col-span-3">
+                <div className="lg:col-span-3">
                     <InfoPair label="Local Address" value={employee.local_address} />
                 </div>
             </DetailSection>
-            
+
             <DetailSection title="Training Details" icon={<TbCertificate size={20} />}>
                 <InfoPair label="General Training Completion" value={employee.training_date_of_completion ? dayjs(employee.training_date_of_completion).format('D MMM YYYY') : null} />
                 <InfoPair label="General Training Remark" value={employee.training_remark} />
-                 <InfoPair label="Specific Training Completion" value={employee.specific_training_date_of_completion ? dayjs(employee.specific_training_date_of_completion).format('D MMM YYYY') : null} />
+                <InfoPair label="Specific Training Completion" value={employee.specific_training_date_of_completion ? dayjs(employee.specific_training_date_of_completion).format('D MMM YYYY') : null} />
                 <InfoPair label="Specific Training Remark" value={employee.specific_training_remark} />
             </DetailSection>
         </>
@@ -467,7 +469,7 @@ const DocumentsTab: React.FC<{ employee: Employee }> = ({ employee }) => {
         const addDoc = (name: string, url: string | null) => {
             if (url) docs.push({ name, url, type: getFileType(url) })
         }
-        
+
         const parseAndAddDocs = (namePrefix: string, data: string | string[] | null) => {
             if (!data) return
             let relativeUrls: string[] = []
@@ -509,7 +511,7 @@ const DocumentsTab: React.FC<{ employee: Employee }> = ({ employee }) => {
         parseAndAddDocs('Salary Slip', employee.salary_slips)
         parseAndAddDocs('Educational Certificate', employee.educational_certificates)
         parseAndAddDocs('Experience Certificate', employee.experience_certificates)
-        
+
         return docs
     }, [employee])
 
@@ -530,14 +532,14 @@ const DocumentsTab: React.FC<{ employee: Employee }> = ({ employee }) => {
     const handleCloseViewer = () => {
         setViewerState({ isOpen: false, index: 0 })
     }
-    
+
     const handleNext = () => {
         setViewerState((prev) => ({
             ...prev,
             index: Math.min(prev.index + 1, documentList.length - 1)
         }))
     }
-    
+
     const handlePrev = () => {
         setViewerState((prev) => ({
             ...prev,
@@ -572,7 +574,7 @@ const AssetsTab: React.FC<{ assets: Asset[] }> = ({ assets }) => {
     if (!assets || assets.length === 0) {
         return <EmptyState icon={<TbDeviceLaptop size={28} />} title="No Assets Assigned" message="Company assets provided to this employee will appear here." />;
     }
-    
+
     const columns = useMemo<ColumnDef<Asset>[]>(() => [
         { header: 'Asset Name', accessorKey: 'name' },
         { header: 'Serial Number', accessorKey: 'serial_no' },
@@ -627,7 +629,7 @@ const EmployeeView: React.FC = () => {
                 console.error('API Error:', err)
                 setError(
                     err.message ||
-                        'An unexpected error occurred while fetching data.'
+                    'An unexpected error occurred while fetching data.'
                 )
                 setEmployee(null)
             } finally {
@@ -754,7 +756,6 @@ const EmployeeView: React.FC = () => {
         <Container className="h-full">
             <div className="flex items-center justify-between mb-4">
                 {PageTitle}
-               
             </div>
 
             <Card className="mb-6" bodyClass="p-4 sm:p-6">
