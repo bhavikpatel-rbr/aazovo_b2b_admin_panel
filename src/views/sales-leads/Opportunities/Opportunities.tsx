@@ -1738,7 +1738,7 @@ const OpportunityFilterDrawer: React.FC<{
             </div>
             <FormItem label="Created Date Range">
                 <Controller name="dateRange" control={control} render={({ field }) => (
-                    <DatePicker.DateTimepicker value={field.value} onChange={field.onChange} />
+                    <DatePicker.DateRangePicker placeholder="Select date range" value={field.value} onChange={field.onChange} />
                 )} />
             </FormItem>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2039,6 +2039,21 @@ const OpportunitySelectedFooter = ({
     </>
   );
 };
+
+const generateOpportunityMessage = (item: OpportunityItem): string => {
+    const parts = [
+        `Opportunity: ${item.opportunity_id}`,
+        `Product: ${item.product_name}`,
+        `Quantity: ${item.qty || 'N/A'}`,
+        `Type: ${item.want_to || 'N/A'}`,
+        `Company: ${item.company_name}`,
+        `Member: ${item.customer_name}`,
+        `Contact: ${item.mobile_no || item.email || 'Not Available'}`,
+        `Status: ${item.opportunity_status}`,
+    ];
+    return parts.join('\n');
+};
+
 const MainRowActionColumn = ({
   item,
   currentTab,
@@ -2049,6 +2064,19 @@ const MainRowActionColumn = ({
   onOpenModal: (type: OpportunityModalType, data: OpportunityItem) => void;
 }) => {
   const navigate = useNavigate();
+
+  const handleCopyDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const message = generateOpportunityMessage(item);
+    navigator.clipboard.writeText(message).then(() => {
+        toast.push(
+            <Notification title="Copied to clipboard" type="success" duration={2000}>
+                Opportunity details have been copied.
+            </Notification>
+        );
+    });
+  };
+
   const handleViewDetails = () => {
     if (item.id.startsWith("spb-match-")) {
       toast.push(
@@ -2077,35 +2105,28 @@ const MainRowActionColumn = ({
     navigate(path);
   };
   return (
-    <div className="flex items-center justify-end gap-1">
-      {" "}
-      <Tooltip title="Copy">
-        {" "}
+    <div className="flex items-center justify-center">
+      <Tooltip title="Copy Details">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
           role="button"
+          onClick={handleCopyDetails}
         >
-          {" "}
-          <TbCopy />{" "}
-        </div>{" "}
-      </Tooltip>{" "}
-      <Tooltip title="View">
-        {" "}
-        <div
-          className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-          role="button"
-          onClick={handleViewDetails}
-        >
-          {" "}
-          <TbEye />{" "}
-        </div>{" "}
-      </Tooltip>{" "}
+          <TbCopy />
+        </div>
+      </Tooltip>
       <Dropdown
         renderTitle={
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        {" "}
+        <Dropdown.Item
+          onClick={handleViewDetails}
+          className="flex items-center gap-2"
+        >
+          <TbEye size={18} />
+          <span className="text-xs">View Details</span>
+        </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("notification", item)}
           className="flex items-center gap-2"
@@ -2564,7 +2585,7 @@ const SpbActionToolbar: React.FC<{
   }
   
   return (
-      <div className="p-3 mt-2 border-t bg-gray-100 dark:bg-gray-800/50 rounded-b-md space-y-4">
+      <div className="p-3 border-t bg-gray-100 dark:bg-gray-800/50 rounded-b-md space-y-4">
         <h6 className="font-semibold text-xs text-gray-600 dark:text-gray-300">Actions for {items.length} selected item(s)</h6>
         
         <div className="space-y-3">
@@ -2617,6 +2638,25 @@ const SpbActionToolbar: React.FC<{
                  </div>
               </Dropdown>
             </div>
+            
+            {selectedMessageOptions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-2">Including:</span>
+                    {selectedMessageOptions.map((key) => (
+                        <Tag
+                            key={key}
+                            prefix
+                            className="capitalize"
+                        >
+                            {messageOptionMap[key]?.label || key}
+                            <TbX
+                                className="ml-1.5 h-3 w-3 cursor-pointer hover:text-red-500"
+                                onClick={() => handleToggleOption(key)}
+                            />
+                        </Tag>
+                    ))}
+                </div>
+            )}
 
             {messageTemplate === "default" && (
               <FormItem label="Custom Message" className="mb-0">
@@ -2660,7 +2700,7 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
 }) => {
   const memberName = `Member: ${item.member_code}` || `Member ID: ${item.id}`;
   const memberPhone = `Phone: ${item.mobile_no || 'N/A'}`;
-  const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
+  // const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
   const prodColor = `Color: ${item.color}`;
 
   return (
@@ -2680,7 +2720,7 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
         />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-xs text-gray-800 dark:text-gray-100 truncate">
-            {memberName} | {memberPhone} | {createDate} | {prodColor} | {item.qty}
+            {memberName} | {memberPhone} | {prodColor} | {item.qty}
           </p>
         </div>
       </div>
@@ -2726,9 +2766,7 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
       bordered
       className="m-1 my-2 rounded-lg bg-gray-50 dark:bg-gray-900/50"
     >
-      {" "}
       <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {" "}
         <div>
            <div className="flex justify-between items-center mb-2">
             <h6 className="text-sm font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2">
@@ -2745,26 +2783,28 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
                 </label>
              }
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-md max-h-60 overflow-y-auto">
-            {buyItems.length > 0 ? (
-                <div className="px-2">
-                  {buyItems.map((item) => (
-                    <SpbSummaryRow
-                      key={`buy-${item.id}`}
-                      item={item}
-                      isSelected={selectedBuyItems.some(i => i.id === item.id)}
-                      onToggleSelect={() => handleToggleBuyItem(item)}
-                    />
-                  ))}
-                </div>
-            ) : (
-              <p className="text-xs text-gray-500 py-4 text-center">
-                No buy demand in this match.
-              </p>
-            )}
+          <div className="bg-white dark:bg-gray-800 rounded-md">
+            <div className="max-h-60 overflow-y-auto">
+              {buyItems.length > 0 ? (
+                  <div className="px-2">
+                    {buyItems.map((item) => (
+                      <SpbSummaryRow
+                        key={`buy-${item.id}`}
+                        item={item}
+                        isSelected={selectedBuyItems.some(i => i.id === item.id)}
+                        onToggleSelect={() => handleToggleBuyItem(item)}
+                      />
+                    ))}
+                  </div>
+              ) : (
+                <p className="text-xs text-gray-500 py-4 text-center">
+                  No buy demand in this match.
+                </p>
+              )}
+            </div>
             <SpbActionToolbar items={selectedBuyItems} matchType="Buy" />
-          </div>{" "}
-        </div>{" "}
+          </div>
+        </div>
         <div>
           <div className="flex justify-between items-center mb-2">
             <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-2">
@@ -2781,27 +2821,29 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
                 </label>
              }
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-md max-h-60 overflow-y-auto">
-            {sellItems.length > 0 ? (
-              <div className="px-2">
-                {sellItems.map((item) => (
-                  <SpbSummaryRow
-                    key={`sell-${item.id}`}
-                    item={item}
-                    isSelected={selectedSellItems.some(i => i.id === item.id)}
-                    onToggleSelect={() => handleToggleSellItem(item)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-500 py-4 text-center">
-                No sell offers in this match.
-              </p>
-            )}
+          <div className="bg-white dark:bg-gray-800 rounded-md">
+            <div className="max-h-60 overflow-y-auto">
+              {sellItems.length > 0 ? (
+                <div className="px-2">
+                  {sellItems.map((item) => (
+                    <SpbSummaryRow
+                      key={`sell-${item.id}`}
+                      item={item}
+                      isSelected={selectedSellItems.some(i => i.id === item.id)}
+                      onToggleSelect={() => handleToggleSellItem(item)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 py-4 text-center">
+                  No sell offers in this match.
+                </p>
+              )}
+            </div>
             <SpbActionToolbar items={selectedSellItems} matchType="Sell" />
-          </div>{" "}
-        </div>{" "}
-      </div>{" "}
+          </div>
+        </div>
+      </div>
     </Card>
   );
 };
@@ -3508,11 +3550,11 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           accessorKey: "qty",
           size: 100,
           cell: ({ row: { original: item } }) => (
-            <div className="text-center">
+            <div className="flex items-center text-center gap-2">
               <span className="font-semibold text-base">{item.qty ?? "N/A"}</span>
               <Tag
                 className={classNames(
-                  "capitalize text-[10px] px-1.5 py-0.5 mt-1 block",
+                  "capitalize text-[15px] px-1.5 py-0.5",
                   item.want_to === "Buy"
                     ? "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-200"
                     : "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-200"
@@ -3526,7 +3568,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
         {
           header: "Member",
           accessorKey: "company_name",
-          size: 350,
+          size: 100,
           cell: ({ row }) => {
             const item = row.original;
             return (
@@ -3688,7 +3730,8 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
         {
           header: "Actions",
           id: "action_std",
-          size: 100,
+          size: 130,
+          meta: { HeaderClass: "text-center" },
           cell: (props) => (
             <MainRowActionColumn
               item={props.row.original}
