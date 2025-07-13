@@ -41,8 +41,8 @@ const priceListItemSchema = z.object({
 
 const productDataSchema = z.object({
   product_id: z.number({ required_error: "Product is required." }).nullable(),
-  seller_ids: z.array(z.number()).min(1, "At least one seller is required."),
-  buyer_ids: z.array(z.number()).min(1, "At least one buyer is required."),
+  seller_ids: z.array(z.number()).optional(),
+  buyer_ids: z.array(z.number()).optional(),
   // MODIFICATION: Renamed from 'status' to 'product_status' for consistency
   product_status: z.enum(["active", "non-active"]).default("active"),
   spec_id: z.number().nullable().default(null),
