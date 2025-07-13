@@ -87,7 +87,7 @@ const DocumentViewer: React.FC<{
     };
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} width="auto" height="85vh" closable={false} bodyOpenClassName="overflow-hidden" contentClassName="top-0 p-0 bg-transparent">
+        <Dialog isOpen={isOpen} onClose={onClose} width="auto" height="85vh" closable={false}  contentClassName="top-0 p-0 bg-transparent">
             <div className="w-full h-full bg-black/80 backdrop-blur-sm flex flex-col">
                 <header className="flex-shrink-0 h-16 bg-gray-800/50 text-white flex items-center justify-between px-4">
                     <div className="flex items-center gap-4">
@@ -99,7 +99,7 @@ const DocumentViewer: React.FC<{
                         <Button shape="circle" variant="subtle" size="sm" icon={<TbX />} onClick={onClose} />
                     </div>
                 </header>
-                <main className="relative flex-grow flex items-center justify-center overflow-hidden">
+                <main className="relative flex-grow flex items-center justify-center ">
                     {!isContentLoaded && <Spinner size={40} className="absolute" />}
                     {renderContent()}
                 </main>
@@ -128,7 +128,7 @@ const DocumentCard: React.FC<{ document: DocumentRecord; onPreview: () => void }
 
     return (
         <Card bodyClass="p-0" className="hover:shadow-lg transition-shadow flex flex-col">
-            <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden cursor-pointer" onClick={onPreview}>{renderPreviewIcon()}</div>
+            <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center  cursor-pointer" onClick={onPreview}>{renderPreviewIcon()}</div>
             <div className="p-4 flex flex-col flex-grow">
                 <p className="font-semibold truncate flex-grow" title={document.name}>{document.name}</p>
                 <div className="flex justify-between items-center mt-3">
