@@ -3732,12 +3732,12 @@ export const addMemberAction = createAsyncThunk<any, any>("auth/addMember",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addMemberAsync(data)
-      if (response?.data?.status === true) {
-        dispatch(getMemberAction())
-        return response?.data?.data
+      if (response?.status === true || response?.status === 200) {
+        dispatch(getCompanyAction())
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to add member.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
@@ -3750,12 +3750,12 @@ export const editMemberAction = createAsyncThunk<any, any>("auth/editMember",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editMemberAsync(data)
-      if (response?.data?.status === true) {
-        dispatch(getMemberAction())
-        return response?.data?.data
+      if (response?.status === true || response?.status === 200) {
+        dispatch(getCompanyAction())
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to edit member.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
