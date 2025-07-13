@@ -37,6 +37,7 @@ import {
   Table,
 } from "@/components/ui";
 import Notification from "@/components/ui/Notification";
+import Spinner from "@/components/ui/Spinner";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
@@ -51,6 +52,7 @@ import {
   TbBulb,
   TbCalendar,
   TbCalendarEvent,
+  TbCheck,
   TbCircleCheck,
   TbClipboardText,
   TbCloudUpload,
@@ -100,19 +102,23 @@ import {
 import { DataTable } from "@/components/shared";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addAllActionAction,
   addNotificationAction,
   addScheduleAction,
   deleteAllLeadsAction,
   deleteLeadAction,
   getAllUsersAction,
   getLeadAction,
+  getLeadOpportunitiesAction,
   getStartProcessAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import { config } from "localforage";
 
-interface TableQueries extends OnSortParam, CommonTableQueries {}
+interface TableQueries extends OnSortParam, CommonTableQueries { }
 
 // --- Form Schemas ---
 const exportReasonSchema = z.object({
@@ -147,6 +153,15 @@ const scheduleSchema = z.object({
   notes: z.string().optional(),
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
+
+// Zod Schema for Activity Form
+const activitySchema = z.object({
+  item: z
+    .string()
+    .min(3, "Activity item is required and must be at least 3 characters."),
+  notes: z.string().optional(),
+});
+type ActivityFormData = z.infer<typeof activitySchema>;
 
 // --- UI Constants ---
 const leadStatusColor: Record<LeadStatus | "default", string> = {
@@ -316,7 +331,17 @@ const dummyFeedback = [
     status: "Closed",
   },
 ];
-const dummyOpportunities = [
+
+// --- NEW Type Definition for Lead Opportunity ---
+type LeadOpportunityItem = {
+  id: string;
+  name: string;
+  stage: string;
+  value: number;
+  closeDate: string;
+};
+
+const dummyOpportunities: LeadOpportunityItem[] = [
   {
     id: "OPP-001",
     name: "Bulk Order for Product X",
@@ -442,7 +467,7 @@ type LeadListItem = {
   supplier: any;
   member_email?: string;
   member_phone?: string;
-  formId: any
+  formId: any;
 };
 
 export type SelectOption = { value: any; label: string };
@@ -455,7 +480,7 @@ export type LeadModalType =
   | "whatsapp"
   | "notification"
   | "task"
-  | "active"
+  | "activity"
   | "calendar"
   | "alert"
   | "document"
@@ -499,6 +524,8 @@ const LeadModals: React.FC<LeadModalsProps> = ({
         );
       case "task":
         return <AssignTaskDialog lead={lead} onClose={onClose} />;
+      case "activity":
+        return <AddActivityDialog lead={lead} onClose={onClose} />;
       case "calendar":
         return <AddScheduleDialog lead={lead} onClose={onClose} />;
       case "alert":
@@ -588,54 +615,161 @@ const ConvertLeadToDealDialog: React.FC<{
     </Dialog>
   );
 };
+const intentTagColor = {
+  Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
+  Exchange:
+    "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
+};
 const ViewOpportunitiesDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
 }> = ({ lead, onClose }) => {
+  const dispatch = useAppDispatch();
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOpportunities = async () => {
+      if (!lead.id) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        // In a real application, you would dispatch an action here:
+        const actionResult = await dispatch(getLeadOpportunitiesAction({ id: lead.id, key: lead.lead_intent })).unwrap();
+        if (actionResult?.data) {
+          const formattedData = actionResult.data.map((item: any) => ({
+            id: item.id,
+            want_to: item.want_to,
+            product_name: item.product_name,
+            brand_name: item.brand_name,
+            qty: item.qty,
+            price: item.price,
+            device_condition: item.device_condition,
+            color: item.color,
+            member_name: item.member_name,
+            member_code: item.member_code,
+            country_name: item.country_name,
+            leads_count: item.leads_count,
+          }));
+          setData(formattedData);
+        } else {
+          setData([]); // Ensure data is cleared if API returns nothing
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        // setOpportunities(dummyOpportunities); // Using dummy data as the simulated response
+      } catch (error) {
+        console.error("Failed to fetch opportunities:", error);
+        toast.push(
+          <Notification type="danger" title="Error">
+            Could not load opportunities.
+          </Notification>
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOpportunities();
+  }, [lead.id]);
+  const columns = useMemo(() => [
+    {
+      header: 'Listing',
+      accessorKey: 'product_name',
+      cell: ({ row }) => {
+        const { want_to, product_name, brand_name, color, device_condition } = row.original;
+        const intent = want_to as WallIntent;
+        return (
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{product_name}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">{brand_name}</p>
+            <div className="flex items-center flex-wrap gap-1 mt-2">
+              <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[intent] || ''}`}>{want_to}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{device_condition}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{color}</Tag>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Member',
+      accessorKey: 'member_name',
+      cell: ({ row }) => {
+        const { member_name, member_code, country_name } = row.original;
+        return (
+          <div>
+            <p className="font-semibold">{member_name}</p>
+            <p className="text-xs text-gray-500">{member_code}</p>
+            <p className="text-xs text-gray-500">{country_name}</p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Details',
+      accessorKey: 'qty',
+      cell: ({ row }) => {
+        const { qty, price } = row.original;
+        return (
+          <div>
+            <p>Qty: <span className="font-semibold">{qty}</span></p>
+            <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Leads',
+      accessorKey: 'leads_count',
+      cell: ({ row }) => <span className="font-semibold">{row.original.leads_count}</span>
+    },
+  ], []);
   return (
+
     <Dialog
       isOpen={true}
       onClose={onClose}
       onRequestClose={onClose}
-      width={700}
+      width={1000}
+      bodyOpenClassName="overflow-hidden"
     >
-      <h5 className="mb-4">Opportunities for {lead.lead_number}</h5>
-      <div className="max-h-[400px] overflow-y-auto">
-        <Table>
-          <Table.THead>
-            <Table.Tr>
-              <Table.Th>ID</Table.Th>
-              <Table.Th>Name</Table.Th>
-              <Table.Th>Stage</Table.Th>
-              <Table.Th>Value</Table.Th>
-              <Table.Th>Close Date</Table.Th>
-            </Table.Tr>
-          </Table.THead>
-          <Table.TBody>
-            {dummyOpportunities.map((op) => (
-              <Table.Tr key={op.id}>
-                <Table.Td>{op.id}</Table.Td>
-                <Table.Td>{op.name}</Table.Td>
-                <Table.Td>
-                  <Tag className="bg-purple-100 text-purple-700">
-                    {op.stage}
-                  </Tag>
-                </Table.Td>
-                <Table.Td>${op.value.toLocaleString()}</Table.Td>
-                <Table.Td>
-                  {dayjs(op.closeDate).format("DD MMM, YYYY")}
-                </Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.TBody>
-        </Table>
-      </div>
-      <div className="text-right mt-6">
-        <Button variant="solid" onClick={onClose}>
-          Close
-        </Button>
+      <div className="flex flex-col h-full max-h-[80vh]">
+        {/* Dialog Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <TbBulb className="text-2xl text-amber-500" />
+            <h5 className="mb-0">Opportunities for {lead.lead_number}</h5>
+          </div>
+        </div>
+
+        {/* Dialog Body */}
+        <div className="flex-grow overflow-y-auto px-6 py-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Spinner size={40} />
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={data}
+              noData={data.length === 0}
+
+            />
+          )}
+        </div>
+
+        {/* Dialog Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+          <Button variant="solid" onClick={onClose}>Close</Button>
+        </div>
       </div>
     </Dialog>
+
+
+
   );
 };
 const ViewLeadFormDialog: React.FC<{
@@ -1251,6 +1385,123 @@ const AddScheduleDialog: React.FC<{
     </Dialog>
   );
 };
+const AddActivityDialog: React.FC<{ lead: LeadListItem; onClose: () => void }> =
+  ({ lead, onClose }) => {
+    const dispatch = useAppDispatch();
+    const [userData, setUserData] = useState<any>(null);
+
+    useEffect(() => {
+      const { useEncryptApplicationStorage } = config;
+      try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+      catch (error) { console.error("Error getting UserData:", error); }
+    }, []);
+
+    const [isLoading, setIsLoading] = useState(false);
+    const {
+      control,
+      handleSubmit,
+      formState: { errors, isValid },
+    } = useForm<ActivityFormData>({
+      resolver: zodResolver(activitySchema),
+      defaultValues: { item: `Followed up on lead ${lead.lead_number}`, notes: "" },
+      mode: "onChange",
+    });
+
+    const onAddActivity = async (data: ActivityFormData) => {
+      setIsLoading(true);
+
+      if (!userData?.id) {
+        toast.push(
+          <Notification type="danger" title="Error">
+            Could not identify user. Please log in again.
+          </Notification>
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      const payload = {
+        item: data.item,
+        notes: data.notes || "",
+        module_id: String(lead.id),
+        module_name: "Lead",
+        user_id: userData.id,
+      };
+
+      try {
+        await dispatch(addAllActionAction(payload)).unwrap();
+        toast.push(<Notification type="success" title="Activity Added" />);
+        onClose();
+      } catch (error: any) {
+        toast.push(
+          <Notification
+            type="danger"
+            title="Failed to Add Activity"
+            children={error?.message || "An unknown error occurred."}
+          />
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    return (
+      <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+        <h5 className="mb-4">Add Activity Log for "{lead.lead_number}"</h5>
+        <Form onSubmit={handleSubmit(onAddActivity)}>
+          <FormItem
+            label="Activity"
+            invalid={!!errors.item}
+            errorMessage={errors.item?.message}
+          >
+            <Controller
+              name="item"
+              control={control}
+              render={({ field }) => (
+                <Input {...field} placeholder="e.g., Followed up with member" />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Notes (Optional)"
+            invalid={!!errors.notes}
+            errorMessage={errors.notes?.message}
+          >
+            <Controller
+              name="notes"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  textArea
+                  {...field}
+                  placeholder="Add relevant details..."
+                />
+              )}
+            />
+          </FormItem>
+          <div className="text-right mt-6">
+            <Button
+              type="button"
+              className="mr-2"
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="solid"
+              type="submit"
+              loading={isLoading}
+              disabled={!isValid || isLoading}
+              icon={<TbCheck />}
+            >
+              Save Activity
+            </Button>
+          </div>
+        </Form>
+      </Dialog>
+    );
+  };
 const ViewAlertDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
@@ -1273,11 +1524,9 @@ const ViewAlertDialog: React.FC<{
           dummyAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`p-3 rounded-lg border-l-4 border-${
-                alertColors[alert.severity]
-              }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${
-                alertColors[alert.severity]
-              }-500/10`}
+              className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]
+                }-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]
+                }-500/10`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
@@ -1540,10 +1789,10 @@ const LeadActionColumn = ({
           <TbCalendarEvent size={18} /> Add Schedule
         </Dropdown.Item>
         <Dropdown.Item
-          onClick={() => onOpenModal("active")}
+          onClick={() => onOpenModal("activity")}
           className="flex items-center gap-2 text-xs"
         >
-          <TbTagStarred size={18} /> Add Active
+          <TbTagStarred size={18} /> Add Activity
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("convertToDeal")}
@@ -1862,9 +2111,9 @@ const LeadsListing = ({ isDashboard }) => {
     () =>
       Array.isArray(getAllUserData)
         ? getAllUserData.map((user: any) => ({
-            value: user.id,
-            label: user.name,
-          }))
+          value: user.id,
+          label: user.name,
+        }))
         : [],
     [getAllUserData]
   );
@@ -1904,7 +2153,7 @@ const LeadsListing = ({ isDashboard }) => {
         supplier: apiLead.supplier,
         member_email: apiLead.customer?.email,
         member_phone: apiLead.customer?.mobile_no,
-        formId: apiLead.form_id
+        formId: apiLead.form_id,
       })
     );
   }, [LeadsData?.data?.data]);
@@ -2354,10 +2603,9 @@ const LeadsListing = ({ isDashboard }) => {
             <span>{props.getValue() as string}</span>
             <div>
               <Tag
-                className={`${
-                  enquiryTypeColor[props.row.original.enquiry_type] ||
+                className={`${enquiryTypeColor[props.row.original.enquiry_type] ||
                   enquiryTypeColor.default
-                } capitalize px-2 py-1 text-xs`}
+                  } capitalize px-2 py-1 text-xs`}
               >
                 {props.row.original.enquiry_type}
               </Tag>
@@ -2378,10 +2626,9 @@ const LeadsListing = ({ isDashboard }) => {
         size: 120,
         cell: (props: CellContext<LeadListItem, any>) => (
           <Tag
-            className={`${
-              leadStatusColor[props.row.original.lead_status] ||
+            className={`${leadStatusColor[props.row.original.lead_status] ||
               leadStatusColor.default
-            } capitalize px-2 py-1 text-xs`}
+              } capitalize px-2 py-1 text-xs`}
           >
             {props.row.original.lead_status}
           </Tag>
@@ -2410,16 +2657,16 @@ const LeadsListing = ({ isDashboard }) => {
         cell: (props: CellContext<LeadListItem, any>) => {
           const formattedDate = props.row.original.createdAt
             ? `${new Date(props.row.original.createdAt).getDate()} ${new Date(
-                props.row.original.createdAt
-              ).toLocaleString("en-US", { month: "short" })} ${new Date(
-                props.row.original.createdAt
-              ).getFullYear()}, ${new Date(
-                props.row.original.createdAt
-              ).toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
+              props.row.original.createdAt
+            ).toLocaleString("en-US", { month: "short" })} ${new Date(
+              props.row.original.createdAt
+            ).getFullYear()}, ${new Date(
+              props.row.original.createdAt
+            ).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })}`
             : "N/A";
           return (
             <div className="flex flex-col gap-0.5 text-xs">
@@ -2525,7 +2772,7 @@ const LeadsListing = ({ isDashboard }) => {
                 </div>
               </Tooltip>
               <Tooltip title="Click to show leads from today">
-                <div onClick={() => {}}>
+                <div onClick={() => { }}>
                   <Card
                     bodyClass={cardBodyClass}
                     className={classNames(cardClass, "border-violet-200")}

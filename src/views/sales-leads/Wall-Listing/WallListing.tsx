@@ -34,6 +34,8 @@ import Select from "@/components/ui/Select";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
+import Spinner from "@/components/ui/Spinner";
+
 
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
@@ -105,6 +107,7 @@ import {
   getSubcategoriesByCategoryIdAction,
   getWallListingAction,
   submitExportReasonAction,
+  getMatchingOpportunitiesAction, // Added new action
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
@@ -177,6 +180,22 @@ export type WallItem = {
   memberTypeId?: number;
   createdById?: number;
   member?: any;
+};
+
+// --- NEW Type Definition for Matching Opportunity ---
+type MatchingOpportunityItem = {
+    id: number;
+    want_to: 'Buy' | 'Sell' | string;
+    product_name: string;
+    brand_name: string;
+    qty: string;
+    price: number | null;
+    device_condition: string;
+    color: string;
+    member_name: string;
+    member_code: string;
+    country_name: string;
+    leads_count: number;
 };
 
 // --- Zod Schemas ---
@@ -282,7 +301,7 @@ export const dummyCartoonTypes = [{ id: 1, name: "Master Carton" }, { id: 2, nam
 // ============================================================================
 // --- MODALS SECTION ---
 // ============================================================================
-export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "activity" | "calendar" | "alert" | "share";
+export type WallModalType = "email" | "whatsapp" | "notification" | "task" | "activity" | "calendar" | "match_opportunity" | "share";
 export interface WallModalState { isOpen: boolean; type: WallModalType | null; data: WallItem | null; }
 interface WallModalsProps { modalState: WallModalState; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; user: any; }
 
@@ -319,52 +338,7 @@ const eventTypeOptions = [
   { value: 'Lunch', label: 'Lunch / Break' },
   { value: 'Appointment', label: 'Personal Appointment' },
   { value: 'Other', label: 'Other' },
-  { value: 'ProjectKickoff', label: 'Project Kick-off' },
-  { value: 'InternalSync', label: 'Internal Team Sync' },
-  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
-  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
-  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
-  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
-  { value: 'ProjectSignOff', label: 'Project Sign-off' },
-  { value: 'PrepareReport', label: 'Prepare Report' },
-  { value: 'PresentFindings', label: 'Present Findings' },
-  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
-  { value: 'BugReplication', label: 'Bug Replication Session' },
-  { value: 'IssueEscalation', label: 'Escalate Issue' },
-  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
-  { value: 'FeatureRequest', label: 'Log Feature Request' },
-  { value: 'IntegrationSupport', label: 'Integration Support Call' },
-  { value: 'DataMigration', label: 'Data Migration/Import Task' },
-  { value: 'ColdCall', label: 'Cold Call' },
-  { value: 'DiscoveryCall', label: 'Discovery Call' },
-  { value: 'QualificationCall', label: 'Qualification Call' },
-  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
-  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
-  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
-  { value: 'ContractSent', label: 'Contract Sent' },
-  { value: 'NegotiationCall', label: 'Negotiation Call' },
-  { value: 'TrialSetup', label: 'Product Trial Setup' },
-  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
-  { value: 'WelcomeCall', label: 'Welcome Call' },
-  { value: 'ImplementationSession', label: 'Implementation Session' },
-  { value: 'UserTraining', label: 'User Training Session' },
-  { value: 'AdminTraining', label: 'Admin Training Session' },
-  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-  { value: 'HealthCheck', label: 'Customer Health Check' },
-  { value: 'FeedbackSession', label: 'Feedback Session' },
-  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
-  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
-  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
-  { value: 'InvoiceDue', label: 'Invoice Due' },
-  { value: 'SendInvoice', label: 'Send Invoice' },
-  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
-  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
-  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
-  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
-  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
-  { value: 'SendQuote', label: 'Send Quote/Estimate' },
-]
+];
 const dummyAlerts = [{ id: 1, severity: "warning", message: "Listing will expire in 3 days.", time: "4 days ago", }, { id: 2, severity: "info", message: "New inquiry received from John Doe.", time: "2 hours ago", },];
 
 const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }> = ({ wallItem, onClose, getAllUserDataOptions }) => {
@@ -545,20 +519,160 @@ const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; use
         </Dialog>
     );
 };
-const ViewAlertDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-  const alertColors: Record<string, string> = { danger: "red", warning: "amber", info: "blue", };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose} width={600}>
-      <h5 className="mb-4">Alerts for "{wallItem.product_name}"</h5>
-      <div className="mt-4 flex flex-col gap-3">
-        {dummyAlerts.length > 0 ? (dummyAlerts.map((alert) => (<div key={alert.id} className={`p-3 rounded-lg border-l-4 border-${alertColors[alert.severity]}-500 bg-${alertColors[alert.severity]}-50 dark:bg-${alertColors[alert.severity]}-500/10`}>
-          <div className="flex justify-between items-start"><div className="flex items-start gap-2"><TbAlertTriangle className={`text-${alertColors[alert.severity]}-500 mt-1`} size={20} /><p className="text-sm">{alert.message}</p></div><span className="text-xs text-gray-400 whitespace-nowrap">{alert.time}</span></div>
-        </div>))) : (<p>No active alerts for this item.</p>)}
-      </div>
-      <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
-    </Dialog>
-  );
+
+// --- NEW DIALOG COMPONENT ---
+const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
+    const dispatch = useAppDispatch();
+    const [data, setData] = useState<MatchingOpportunityItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true); // Use a local loading state
+
+    useEffect(() => {
+        const fetchOpportunities = async () => {
+            if (!wallItem.id) {
+                setIsLoading(false);
+                return;
+            }
+            setIsLoading(true);
+            try {
+                // Correctly pass the payload as an object and unwrap the result
+                const actionResult = await dispatch(getMatchingOpportunitiesAction(wallItem.id)).unwrap();
+                
+                if (actionResult?.data) {
+                    const formattedData = actionResult.data.map((item: any) => ({
+                        id: item.id,
+                        want_to: item.want_to,
+                        product_name: item.product_name,
+                        brand_name: item.brand_name,
+                        qty: item.qty,
+                        price: item.price,
+                        device_condition: item.device_condition,
+                        color: item.color,
+                        member_name: item.member_name,
+                        member_code: item.member_code,
+                        country_name: item.country_name,
+                        leads_count: item.leads_count,
+                    }));
+                    setData(formattedData);
+                } else {
+                    setData([]); // Ensure data is cleared if API returns nothing
+                }
+            } catch (error) {
+                console.error("Failed to fetch matching opportunities:", error);
+                toast.push(<Notification type="danger" title="Error">Could not load opportunities.</Notification>);
+                setData([]); // Clear data on error
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchOpportunities();
+    }, [dispatch, wallItem.id]);
+
+   const columns: ColumnDef<MatchingOpportunityItem>[] = useMemo(() => [
+        {
+            header: 'Listing',
+            accessorKey: 'product_name',
+            cell: ({ row }) => {
+                const { want_to, product_name, brand_name, color, device_condition } = row.original;
+                const intent = want_to as WallIntent;
+                return (
+                    <div>
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">{product_name}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-300">{brand_name}</p>
+                        <div className="flex items-center flex-wrap gap-1 mt-2">
+                            <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[intent] || ''}`}>{want_to}</Tag>
+                            <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{device_condition}</Tag>
+                            <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{color}</Tag>
+                        </div>
+                    </div>
+                );
+            }
+        },
+        {
+            header: 'Member',
+            accessorKey: 'member_name',
+            cell: ({ row }) => {
+                const { member_name, member_code, country_name } = row.original;
+                return (
+                    <div>
+                        <p className="font-semibold">{member_name}</p>
+                        <p className="text-xs text-gray-500">{member_code}</p>
+                        <p className="text-xs text-gray-500">{country_name}</p>
+                    </div>
+                );
+            }
+        },
+        {
+            header: 'Details',
+            accessorKey: 'qty',
+            cell: ({ row }) => {
+                const { qty, price } = row.original;
+                return (
+                    <div>
+                        <p>Qty: <span className="font-semibold">{qty}</span></p>
+                        <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
+                    </div>
+                );
+            }
+        },
+        {
+            header: 'Leads',
+            accessorKey: 'leads_count',
+            cell: ({row}) => <span className="font-semibold">{row.original.leads_count}</span>
+        },
+        // {
+        //     header: 'Actions',
+        //     id: 'actions',
+        //     cell: () => (
+        //         <div className="flex justify-end">
+        //             <Button size="sm" variant="solid">Create Lead</Button>
+        //         </div>
+        //     )
+        // }
+    ], []);
+
+    return (
+        <Dialog
+            isOpen={true}
+            onClose={onClose}
+            onRequestClose={onClose}
+            width={1000}
+            bodyOpenClassName="overflow-hidden"
+        >
+            <div className="flex flex-col h-full max-h-[80vh]">
+                {/* Dialog Header */}
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                     <div className="flex items-center gap-2">
+                        <TbBulb className="text-2xl text-amber-500" />
+                        <h5 className="mb-0">Matching Opportunities for "{wallItem.product_name}"</h5>
+                    </div>
+                </div>
+
+                {/* Dialog Body */}
+                <div className="flex-grow overflow-y-auto px-6 py-4">
+                    {isLoading ? (
+                         <div className="flex justify-center items-center h-64">
+                            <Spinner size={40} />
+                         </div>
+                    ) : (
+                        <DataTable
+                            columns={columns}
+                            data={data}
+                            noData={data.length === 0}
+                                
+                        />
+                    )}
+                </div>
+
+                {/* Dialog Footer */}
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+                    <Button variant="solid" onClick={onClose}>Close</Button>
+                </div>
+            </div>
+        </Dialog>
+    );
 };
+
 const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const linkToShare = wallItem.listing_url || "No URL available for this item.";
   const handleCopy = () => { if (wallItem.listing_url) { navigator.clipboard.writeText(linkToShare).then(() => { toast.push(<Notification title="Copied to Clipboard" type="success" />); }); } };
@@ -577,12 +691,11 @@ const WallModals: React.FC<WallModalsProps> = ({ modalState, onClose, getAllUser
   if (!isOpen || !wallItem) return null;
   const renderModalContent = () => {
     switch (type) {
-      // Email and Whatsapp modals are no longer triggered from the dropdown, but are kept for potential other uses
       case "notification": return <AddNotificationDialog wallItem={wallItem} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
       case "task": return <AssignTaskDialog wallItem={wallItem} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
       case "calendar": return <AddScheduleDialog wallItem={wallItem} onClose={onClose} />;
       case "activity": return <AddActivityDialog wallItem={wallItem} onClose={onClose} user={user} />;
-      case "alert": return <ViewAlertDialog wallItem={wallItem} onClose={onClose} />;
+      case "match_opportunity": return <MatchingOpportunitiesDialog wallItem={wallItem} onClose={onClose} />;
       case "share": return <ShareWallLinkDialog wallItem={wallItem} onClose={onClose} />;
       default: return null;
     }
@@ -646,7 +759,7 @@ const StyledActionColumn = ({
       <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Activity</span></Dropdown.Item>
-      <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbBulb size={18} /> <span className="text-xs">Match Opportunity</span></Dropdown.Item>
+      <Dropdown.Item onClick={() => onOpenModal("match_opportunity", rowData)} className="flex items-center gap-2"><TbBulb size={18} /> <span className="text-xs">Match Opportunity</span></Dropdown.Item>
       <Dropdown.Item onClick={() => onOpenModal("share", rowData)} className="flex items-center gap-2"><TbShare size={18} /> <span className="text-xs">Share Wall Link</span></Dropdown.Item>
     </Dropdown>
   </div>
@@ -1041,48 +1154,6 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
             );
           },
         },
-        // {
-        //   header: "Engagement", accessorKey: "price", size: 220, cell: ({ row }) => {
-        //     const { price, quantity, inquiry_count, share_count, is_bookmarked, created_date, } = row.original;
-        //     return (
-        //       <div className="flex flex-col gap-1 text-xs">
-        //         <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 mt-1">
-        //           <Tooltip title="Inquiries"><span className="flex items-center gap-0.5"><TbMessageCircle className="text-gray-500 dark:text-gray-400" />{inquiry_count}</span></Tooltip>
-        //           <Tooltip title="Shares"><span className="flex items-center gap-0.5"><TbShare className="text-gray-500 dark:text-gray-400" />{share_count}</span></Tooltip>
-        //           <BookmarkButton is_bookmarked={is_bookmarked} />
-        //         </div>
-        //         {created_date && (<span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mt-1"><TbCalendarEvent />{dayjs(created_date).format("MMM D, YYYY")}</span>)}
-        //       </div>
-        //     );
-        //   },
-        // },
-        // {
-        //   header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220,
-        //   cell: (props) => {
-        //     const { updated_at, updated_by_user } = props.row.original;
-        //     return (
-        //       <div className="flex items-center gap-2">
-        //         <Tooltip title="View Profile Picture">
-        //             <Avatar
-        //                 src={updated_by_user?.profile_pic_path}
-        //                 shape="circle"
-        //                 size="sm"
-        //                 icon={<TbUserCircle />}
-        //                 className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-        //                 onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
-        //             />
-        //         </Tooltip>
-        //         <div>
-        //           <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
-        //           <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
-        //           <div className="text-xs text-gray-500">
-        //             {updated_at ? dayjs(updated_at).format("D MMM YYYY, h:mm A") : 'N/A'}
-        //           </div>
-        //         </div>
-        //       </div>
-        //     );
-        //   },
-        // },
       ];
 
       if (!isDashboard) {

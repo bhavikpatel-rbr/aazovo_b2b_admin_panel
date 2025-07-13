@@ -232,9 +232,9 @@ const ProductDetailsTabView = ({ product }: { product: ProductData }) => (
 
         <DetailSection title="Categorization" icon={<TbTag />}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
-                <InfoPair label="Category" value={product.category.name} />
-                <InfoPair label="Sub-Category" value={product.sub_category.name} />
-                <InfoPair label="Brand" value={product.brand.name} />
+                <InfoPair label="Category" value={product?.category.name} />
+                <InfoPair label="Sub-Category" value={product?.sub_category?.name || "N/A"} />
+                <InfoPair label="Brand" value={product?.brand.name} />
             </div>
         </DetailSection>
         
