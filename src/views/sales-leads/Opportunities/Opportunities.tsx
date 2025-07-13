@@ -38,6 +38,7 @@ import {
   Pagination,
   Progress,
   Select,
+  Spinner,
   Table,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
@@ -56,6 +57,7 @@ import {
   TbAlarm,
   TbAlertTriangle,
   TbBell,
+  TbBellRinging,
   TbBox,
   TbBrandWhatsapp,
   TbBriefcase,
@@ -72,13 +74,17 @@ import {
   TbDiscount,
   TbExchange,
   TbEye,
+  TbFileDescription,
   TbFilter,
+  TbFlag,
   TbIdBadge2,
   TbInfoCircle,
   TbLink as TbLinkIcon,
   TbMail,
   TbMinus,
+  TbNotesOff,
   TbNotebook,
+  TbPencilPlus,
   TbPhone,
   TbPlus,
   TbProgressCheck,
@@ -91,11 +97,9 @@ import {
   TbTrash,
   TbUser,
   TbUserCheck,
+  TbUserCircle,
   TbUsers,
   TbX,
-  TbFlag,
-  TbUserCircle,
-  TbFileDescription,
 } from "react-icons/tb";
 
 // Types
@@ -124,16 +128,22 @@ import { authSelector } from "@/reduxtool/auth/authSlice";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addAllActionAction,
+  addAllAlertsAction,
   addNotificationAction,
   addScheduleAction,
   addTaskAction,
+  getAlertsAction,
   getAllUsersAction,
   getAutoMatchDataAction,
+  getLeadOpportunitiesAction,
   getOpportunitiesAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import { config } from "localforage";
+import { DataTable } from "@/components/shared";
 
 // --- Type Definitions ---
 export type ApiOpportunityItem = {
@@ -329,6 +339,22 @@ const activitySchema = z.object({
 });
 type ActivityFormData = z.infer<typeof activitySchema>;
 
+// START: Alert-related types and schemas
+interface AlertNote {
+    id: number;
+    note: string; // HTML content from RichTextEditor
+    created_by: string;
+    created_at: string; // ISO date string
+    created_by_user?: {
+        name: string;
+    } | null;
+}
+const alertNoteSchema = z.object({
+    newNote: z.string().min(10, "Note must contain at least 10 characters."),
+});
+type AlertNoteFormData = z.infer<typeof alertNoteSchema>;
+// END: Alert-related types and schemas
+
 // ============================================================================
 // --- MODALS SECTION ---
 // ============================================================================
@@ -340,6 +366,7 @@ export type OpportunityModalType =
   | "task"
   | "active"
   | "calendar"
+  | "Opportunity"
   | "alert";
 export interface OpportunityModalState {
   isOpen: boolean;
@@ -836,6 +863,321 @@ const AddActivityDialog: React.FC<{
     </Dialog>
   );
 };
+const ViewOpportunitiesDialog: React.FC<{
+  opportunity:any,
+  onClose: () => void;
+}> = ({ opportunity:lead, onClose }) => {
+  const dispatch = useAppDispatch();
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchOpportunities = async () => {
+      if (!lead.product_id) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        // In a real application, you would dispatch an action here:
+        const actionResult = await dispatch(getLeadOpportunitiesAction({ id: lead.product_id, key: lead.want_to })).unwrap();
+        if (actionResult?.data) {
+          const formattedData = actionResult.data.map((item: any) => ({
+            id: item.id,
+            want_to: item.want_to,
+            product_name: item.product_name,
+            brand_name: item.brand_name,
+            qty: item.qty,
+            price: item.price,
+            device_condition: item.device_condition,
+            color: item.color,
+            member_name: item.member_name,
+            member_code: item.member_code,
+            country_name: item.country_name,
+            leads_count: item.leads_count,
+          }));
+          setData(formattedData);
+        } else {
+          setData([]); // Ensure data is cleared if API returns nothing
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        // setOpportunities(dummyOpportunities); // Using dummy data as the simulated response
+      } catch (error) {
+        console.error("Failed to fetch opportunities:", error);
+        toast.push(
+          <Notification type="danger" title="Error">
+            Could not load opportunities.
+          </Notification>
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOpportunities();
+  }, [lead.id]);
+  const columns = useMemo(() => [
+    {
+      header: 'Listing',
+      accessorKey: 'product_name',
+      cell: ({ row }) => {
+        const { want_to, product_name, brand_name, color, device_condition } = row.original;
+        const intent = want_to as WallIntent;
+        return (
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{product_name}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">{brand_name}</p>
+            <div className="flex items-center flex-wrap gap-1 mt-2">
+              <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[intent] || ''}`}>{want_to}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{device_condition}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{color}</Tag>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Member',
+      accessorKey: 'member_name',
+      cell: ({ row }) => {
+        const { member_name, member_code, country_name } = row.original;
+        return (
+          <div>
+            <p className="font-semibold">{member_name}</p>
+            <p className="text-xs text-gray-500">{member_code}</p>
+            <p className="text-xs text-gray-500">{country_name}</p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Details',
+      accessorKey: 'qty',
+      cell: ({ row }) => {
+        const { qty, price } = row.original;
+        return (
+          <div>
+            <p>Qty: <span className="font-semibold">{qty}</span></p>
+            <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Leads',
+      accessorKey: 'leads_count',
+      cell: ({ row }) => <span className="font-semibold">{row.original.leads_count}</span>
+    },
+  ], []);
+  return (
+
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={1000}
+      bodyOpenClassName="overflow-hidden"
+    >
+      <div className="flex flex-col h-full max-h-[80vh]">
+        {/* Dialog Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <TbBulb className="text-2xl text-amber-500" />
+            <h5 className="mb-0">Opportunities for {lead.lead_number}</h5>
+          </div>
+        </div>
+
+        {/* Dialog Body */}
+        <div className="flex-grow overflow-y-auto px-6 py-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Spinner size={40} />
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={data}
+              noData={data.length === 0}
+
+            />
+          )}
+        </div>
+
+        {/* Dialog Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+          <Button variant="solid" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </Dialog>
+
+
+
+  );
+};
+const OpportunityAlertModal: React.FC<{ opportunity: OpportunityItem; onClose: () => void }> = ({ opportunity, onClose }) => {
+    const [alerts, setAlerts] = useState<AlertNote[]>([]);
+    const [isFetching, setIsFetching] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const dispatch = useAppDispatch();
+    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+        resolver: zodResolver(alertNoteSchema),
+        defaultValues: { newNote: '' },
+        mode: 'onChange'
+    });
+
+    const stringToColor = (str: string) => {
+        let hash = 0;
+        if (!str) return '#cccccc';
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i++) {
+            const value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+        }
+        return color;
+    };
+
+    useEffect(() => {
+        setIsFetching(true);
+        dispatch(getAlertsAction({ module_id: opportunity.id, module_name: 'Opportunity' }))
+            .unwrap()
+            .then((data) => setAlerts(data.data || []))
+            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+            .finally(() => setIsFetching(false));
+            reset({ newNote: '' })
+    }, [opportunity.id, dispatch, reset]);
+
+    const onAddNote = async (data: AlertNoteFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: opportunity.id, module_name: 'Opportunity' })).unwrap();
+            toast.push(<Notification type="success" title="Alert Note Added" />);
+            reset({ newNote: '' });
+            // Refetch alerts
+            dispatch(getAlertsAction({ module_id: opportunity.id, module_name: 'Opportunity' }))
+                .unwrap()
+                .then((data) => setAlerts(data.data || []));
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog
+            isOpen={true}
+            onClose={onClose}
+            onRequestClose={onClose}
+            width={1200}
+            contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+        >
+            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 flex-shrink-0 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <TbBellRinging className="text-2xl text-white" />
+                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">Alerts for: {opportunity.opportunity_id}</h5>
+                    </div>
+                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+                        <TbX className="h-6 w-6" />
+                    </button>
+                </div>
+            </header>
+
+            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
+                <div className="relative flex flex-col h-full overflow-hidden">
+                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+                        Activity Timeline
+                    </h6>
+                    <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
+                        {isFetching ? (
+                            <div className="flex justify-center items-center h-full"><Spinner size="lg"/></div>
+                        ) : alerts.length > 0 ? (
+                            <div className="space-y-8">
+                                {alerts.map((alert, index) => {
+                                    const userName = alert?.created_by_user?.name || 'System';
+                                    const userInitial = userName.charAt(0).toUpperCase();
+                                    return (
+                                        <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                                            <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                                                <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                                                    {userInitial}
+                                                </Avatar>
+                                                {index < alerts.length - 1 && (
+                                                    <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                                                )}
+                                            </div>
+                                            <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                <div className="p-4">
+                                                    <header className="flex justify-between items-center mb-2">
+                                                        <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                            <TbCalendarEvent />
+                                                            <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
+                                                        </div>
+                                                    </header>
+                                                    <div
+                                                        className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                                                        dangerouslySetInnerHTML={{ __html: alert.note }}
+                                                    />
+                                                </div>
+                                            </Card>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Alerts Found</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-col mt-8 lg:mt-0 h-full">
+                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <TbPencilPlus className="text-xl text-red-600 dark:text-red-400" />
+                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Note</h6>
+                            </div>
+                        </header>
+                        <Form onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+                            <FormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                                <Controller
+                                    name="newNote"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                                            <RichTextEditor
+                                                {...field}
+                                                onChange={(val) => field.onChange(val.html)}
+                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                                            />
+                                        </div>
+                                    )}
+                                />
+                            </FormItem>
+                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>
+                                    Cancel
+                                </Button>
+                                <Button variant="solid" color="red" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
+                                    Submit Note
+                                </Button>
+                            </footer>
+                        </Form>
+                    </Card>
+                </div>
+            </main>
+        </Dialog>
+    );
+};
+
 const OpportunityModals: React.FC<OpportunityModalsProps> = ({
   modalState,
   onClose,
@@ -845,7 +1187,13 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
   const { user } = useSelector(authSelector);
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const { type, data: item, isOpen } = modalState;
+ const [userData, setUserData] = useState<any>(null);
 
+    useEffect(() => {
+        const { useEncryptApplicationStorage } = config;
+        try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+        catch (error) { console.error("Error getting UserData:", error); }
+    }, []);
   if (!isOpen || !item) return null;
 
   const handleConfirmNotification = async (formData: NotificationFormData) => {
@@ -932,14 +1280,14 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
     }
   };
   const handleConfirmActivity = async (data: ActivityFormData) => {
-    if (!item || !user?.id) return;
+    if (!item || !userData.id) return;
     setIsSubmittingAction(true);
     const payload = {
       item: data.item,
       notes: data.notes || "",
       module_id: String(item.id),
       module_name: "Opportunity",
-      user_id: user.id,
+      user_id: userData.id,
     };
     try {
       await dispatch(addAllActionAction(payload)).unwrap();
@@ -997,6 +1345,20 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
             onSubmit={handleConfirmActivity}
             isLoading={isSubmittingAction}
           />
+        );
+       case "alert":
+        return (
+            <OpportunityAlertModal
+                opportunity={item}
+                onClose={onClose}
+            />
+        );
+         case "Opportunity":
+        return (
+            <ViewOpportunitiesDialog
+                opportunity={item}
+                onClose={onClose}
+            />
         );
       default:
         return null;
@@ -1709,7 +2071,7 @@ const OpportunityFilterDrawer: React.FC<{
       }
     >
       <Form id="filterOpportunityForm" onSubmit={handleSubmit(onSubmit)}>
-        <div className="p-4 flex flex-col gap-6">
+        <div className=" flex flex-col gap-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <FormItem label="Seller/Buyer">
                     <Controller name="wantTo" control={control} render={({ field }) => (
@@ -1736,11 +2098,7 @@ const OpportunityFilterDrawer: React.FC<{
                     )} />
                 </FormItem>
             </div>
-            <FormItem label="Created Date Range">
-                <Controller name="dateRange" control={control} render={({ field }) => (
-                    <DatePicker.DateRangePicker placeholder="Select date range" value={field.value} onChange={field.onChange} />
-                )} />
-            </FormItem>
+           
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <FormItem label="Category">
                     <Controller name="categories" control={control} render={({ field }) => (
@@ -1959,10 +2317,7 @@ const ActiveFiltersDisplay = ({
             if (key === 'kycVerified') {
                 return renderTag(key, value as string);
             }
-             if (key === 'dateRange' && Array.isArray(value) && value[0] && value[1]) {
-                 const dateLabel = `${dayjs(value[0]).format('DD/MM/YY')} - ${dayjs(value[1]).format('DD/MM/YY')}`;
-                 return renderTag('Date Range', dateLabel);
-             }
+            
             return null;
         })}
       <Button
@@ -2106,7 +2461,7 @@ const MainRowActionColumn = ({
   };
   return (
     <div className="flex items-center justify-center">
-      <Tooltip title="Copy Details">
+      <Tooltip title="Copy Details p-2">
         <div
           className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
           role="button"
@@ -2117,16 +2472,10 @@ const MainRowActionColumn = ({
       </Tooltip>
       <Dropdown
         renderTitle={
-          <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
+          <BsThreeDotsVertical className="ml-3 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        <Dropdown.Item
-          onClick={handleViewDetails}
-          className="flex items-center gap-2"
-        >
-          <TbEye size={18} />
-          <span className="text-xs">View Details</span>
-        </Dropdown.Item>
+        
         <Dropdown.Item
           onClick={() => onOpenModal("notification", item)}
           className="flex items-center gap-2"
@@ -2166,7 +2515,7 @@ const MainRowActionColumn = ({
           <TbAlarm size={18} /> <span className="text-xs">View Alert</span>{" "}
         </Dropdown.Item>{" "}
         <Dropdown.Item
-          onClick={() => onOpenModal("alert", item)}
+          onClick={() => onOpenModal("Opportunity", item)}
           className="flex items-center gap-2"
         >
           {" "}
@@ -2180,13 +2529,7 @@ const MainRowActionColumn = ({
           <TbDiscount size={18} />{" "}
           <span className="text-xs">Create Offer/Demand</span>{" "}
         </Dropdown.Item>{" "}
-        <Dropdown.Item
-          onClick={() => onOpenModal("alert", item)}
-          className="flex items-center gap-2"
-        >
-          {" "}
-          <TbNotebook size={18} /> <span className="text-xs">Add Notes</span>{" "}
-        </Dropdown.Item>{" "}
+        
         <Dropdown.Item
           onClick={() => onOpenModal("email", item)}
           className="flex items-center gap-2"
@@ -2872,7 +3215,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   
   const initialFilterState = useMemo(() => ({
     statuses: [],
-    dateRange: [null, null] as [Date | null, Date | null],
+   
     assignedTo: [],
     memberTypes: [],
     continents: [],
@@ -3249,11 +3592,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
 
     // Apply filters from the drawer
     if (filters.statuses.length > 0) data = data.filter(item => filters.statuses.includes(item.status));
-    if (filters.dateRange[0] && filters.dateRange[1]) {
-        const start = dayjs(filters.dateRange[0]).startOf('day');
-        const end = dayjs(filters.dateRange[1]).endOf('day');
-        data = data.filter(item => dayjs(item.created_date).isAfter(start) && dayjs(item.created_date).isBefore(end));
-    }
+    
     if (filters.assignedTo.length > 0) data = data.filter(item => filters.assignedTo.includes(Number(item.assigned_to)));
     if (filters.memberTypes.length > 0) data = data.filter(item => filters.memberTypes.includes(item.member_type));
     if (filters.continents.length > 0) data = data.filter(item => item.continent && filters.continents.includes(item.continent));

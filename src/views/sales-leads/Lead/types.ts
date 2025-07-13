@@ -54,20 +54,19 @@ export type LeadListItem = {
 export const leadFormSchemaObject = {
   // Top-level lead details
   id: z.union([z.string(), z.number()]).optional(),
-  member_id: z.coerce.number().nullable().optional(), // Corresponds to customer/member
-  enquiry_type: z.string().min(1, "Enquiry type is required"),
+  member_id: z.coerce.number().min(1, "Lead Member is required"), // Corresponds to customer/member
+
   lead_intent: z.string().optional().nullable(),
   lead_status: z.string().min(1, "Lead status is required"),
-  assigned_sales_person_id: z.coerce.number().nullable().optional(),
 
   // Customer's product interest
-  product_id: z.coerce.number().nullable().optional(),
+  product_id: z.coerce.number().min(1, "Product is required"),
   product_spec_id: z.coerce.number().nullable().optional(),
   qty: z.coerce.number().min(1, "Quantity is required"),
   target_price: z.coerce.number().nullable().optional(),
 
   // Sourced product details
-  source_supplier_id: z.coerce.number().nullable().optional(),
+  source_supplier_id: z.coerce.number().min(1, "Source Member is required"),
   source_qty: z.coerce.number().nullable().optional(),
   source_price: z.coerce.number().nullable().optional(),
   source_product_status: z.string().nullable().optional(),
