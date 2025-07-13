@@ -169,6 +169,10 @@ export type ApiOpportunityItem = {
   phonecode?: string | null;
   member_type: string | null;
   country?: string | null;
+  state?: string | null;
+  city?: string | null;
+  pincode?: string | null;
+  continent?: string | null;
   country_flag?: string | null;
   member_verified?: boolean;
   member_business_type?: string | null;
@@ -185,6 +189,9 @@ export type ApiOpportunityItem = {
   updated_by_role?: string;
   device_condition?: string | null;
   device_type?: string | null;
+  member?: {
+      favourite_brands_list?: { name: string }[];
+  } | null;
 };
 export type AutoSpbApiItem = {
   id: number;
@@ -246,6 +253,10 @@ export type OpportunityItem = {
   mobile_no?: string;
   member_type: "Standard" | "Premium" | "INS-PREMIUM" | string;
   country?: string;
+  state?: string;
+  city?: string;
+  pincode?: string;
+  continent?: string;
   country_flag?: string;
   member_verified?: boolean;
   member_business_type?: string;
@@ -261,6 +272,7 @@ export type OpportunityItem = {
   updated_by_role?: string;
   device_condition?: string;
   device_type?: string;
+  favouriteBrands?: string[];
   _rawSpbBuyItems?: AutoSpbApiItem[];
   _rawSpbSellItems?: AutoSpbApiItem[];
 };
@@ -1609,6 +1621,7 @@ const OpportunitySearch = React.forwardRef<
   />
 ));
 OpportunitySearch.displayName = "OpportunitySearch";
+
 const OpportunityFilterDrawer: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -1616,21 +1629,62 @@ const OpportunityFilterDrawer: React.FC<{
   onClear: () => void;
   initialFilters: any;
   userOptions: SelectOption[];
-}> = ({ isOpen, onClose, onApply, onClear, initialFilters, userOptions }) => {
+  // Add new props for all the dropdown options
+  memberTypeOptions: SelectOption[];
+  continentOptions: SelectOption[];
+  countryOptions: SelectOption[];
+  kycVerifiedOptions: SelectOption[];
+  categoryOptions: SelectOption[];
+  subCategoryOptions: SelectOption[];
+  brandOptions: SelectOption[];
+  productOptions: SelectOption[];
+  productStatusOptions: SelectOption[];
+  productSpecOptions: SelectOption[];
+  wantToOptions: SelectOption[];
+}> = ({
+  isOpen,
+  onClose,
+  onApply,
+  onClear,
+  initialFilters,
+  userOptions,
+  memberTypeOptions,
+  continentOptions,
+  countryOptions,
+  kycVerifiedOptions,
+  categoryOptions,
+  subCategoryOptions,
+  brandOptions,
+  productOptions,
+  productStatusOptions,
+  productSpecOptions,
+  wantToOptions,
+}) => {
   const { control, handleSubmit, reset } = useForm({
     defaultValues: initialFilters,
   });
+
   useEffect(() => {
     reset(initialFilters);
   }, [initialFilters, reset]);
+
   const onSubmit = (data: any) => {
     onApply(data);
     onClose();
   };
+
   const handleClear = () => {
     onClear();
     onClose();
   };
+
+  const multiSelectProps = (field: any, options: SelectOption[]) => ({
+      isMulti: true,
+      options,
+      value: options.filter((option) => field.value?.includes(option.value)),
+      onChange: (options: any) => field.onChange(options.map((opt: any) => opt.value)),
+  });
+
   return (
     <Drawer
       title="Filters"
@@ -1640,86 +1694,129 @@ const OpportunityFilterDrawer: React.FC<{
       width={480}
       footer={
         <div className="text-right w-full">
-          {" "}
           <Button size="sm" className="mr-2" onClick={handleClear}>
-            {" "}
-            Clear All{" "}
-          </Button>{" "}
+            Clear All
+          </Button>
           <Button
             size="sm"
             variant="solid"
             form="filterOpportunityForm"
             type="submit"
           >
-            {" "}
-            Apply{" "}
-          </Button>{" "}
+            Apply
+          </Button>
         </div>
       }
     >
-      {" "}
       <Form id="filterOpportunityForm" onSubmit={handleSubmit(onSubmit)}>
-        {" "}
         <div className="p-4 flex flex-col gap-6">
-          {" "}
-          <FormItem label="Status">
-            {" "}
-            <Controller
-              name="statuses"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select status..."
-                  options={statusOptionsForFilter}
-                  value={statusOptionsForFilter.filter((option) =>
-                    field.value?.includes(option.value)
-                  )}
-                  onChange={(options) =>
-                    field.onChange(options.map((opt) => opt.value))
-                  }
-                />
-              )}
-            />{" "}
-          </FormItem>{" "}
-          <FormItem label="Created Date Range">
-            {" "}
-            <Controller
-              name="dateRange"
-              control={control}
-              render={({ field }) => (
-                <DatePicker.RangePicker
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
-            />{" "}
-          </FormItem>{" "}
-          <FormItem label="Assigned To">
-            {" "}
-            <Controller
-              name="assignedTo"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Select users..."
-                  options={userOptions}
-                  value={userOptions.filter((option) =>
-                    field.value?.includes(option.value)
-                  )}
-                  onChange={(options) =>
-                    field.onChange(options.map((opt) => opt.value))
-                  }
-                />
-              )}
-            />{" "}
-          </FormItem>{" "}
-        </div>{" "}
-      </Form>{" "}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormItem label="Seller/Buyer">
+                    <Controller name="wantTo" control={control} render={({ field }) => (
+                        <Select placeholder="Select..." {...multiSelectProps(field, wantToOptions)} />
+                    )} />
+                </FormItem>
+                 <FormItem label="Member Type">
+                    <Controller name="memberTypes" control={control} render={({ field }) => (
+                         <Select placeholder="Select..." {...multiSelectProps(field, memberTypeOptions)} />
+                    )} />
+                </FormItem>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormItem label="KYC Verified">
+                    <Controller name="kycVerified" control={control} render={({ field }) => (
+                         <Select placeholder="Select..." options={kycVerifiedOptions}
+                            value={kycVerifiedOptions.find(o => o.value === field.value)}
+                            onChange={(opt: any) => field.onChange(opt?.value)} isClearable />
+                    )} />
+                </FormItem>
+                 <FormItem label="Status">
+                    <Controller name="statuses" control={control} render={({ field }) => (
+                        <Select placeholder="Select status..." {...multiSelectProps(field, statusOptionsForFilter)} />
+                    )} />
+                </FormItem>
+            </div>
+            <FormItem label="Created Date Range">
+                <Controller name="dateRange" control={control} render={({ field }) => (
+                    <DatePicker.DateTimepicker value={field.value} onChange={field.onChange} />
+                )} />
+            </FormItem>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormItem label="Category">
+                    <Controller name="categories" control={control} render={({ field }) => (
+                        <Select placeholder="Select..." {...multiSelectProps(field, categoryOptions)} />
+                    )} />
+                </FormItem>
+                 <FormItem label="Sub Category">
+                    <Controller name="subCategories" control={control} render={({ field }) => (
+                        <Select placeholder="Select..." {...multiSelectProps(field, subCategoryOptions)} />
+                    )} />
+                </FormItem>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormItem label="Brand">
+                    <Controller name="brands" control={control} render={({ field }) => (
+                        <Select placeholder="Select..." {...multiSelectProps(field, brandOptions)} />
+                    )} />
+                </FormItem>
+                 <FormItem label="Product">
+                    <Controller name="products" control={control} render={({ field }) => (
+                        <Select placeholder="Select..." {...multiSelectProps(field, productOptions)} />
+                    )} />
+                </FormItem>
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormItem label="Product Spec">
+                    <Controller name="productSpecs" control={control} render={({ field }) => (
+                        <Select placeholder="Select..." {...multiSelectProps(field, productSpecOptions)} />
+                    )} />
+                </FormItem>
+                 <FormItem label="Product Status">
+                    <Controller name="productStatuses" control={control} render={({ field }) => (
+                        <Select placeholder="Select..." {...multiSelectProps(field, productStatusOptions)} />
+                    )} />
+                </FormItem>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormItem label="Continent">
+                    <Controller name="continents" control={control} render={({ field }) => (
+                        <Select placeholder="Select..." {...multiSelectProps(field, continentOptions)} />
+                    )} />
+                </FormItem>
+                 <FormItem label="Country">
+                    <Controller name="countries" control={control} render={({ field }) => (
+                        <Select placeholder="Select..." {...multiSelectProps(field, countryOptions)} />
+                    )} />
+                </FormItem>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormItem label="State">
+                    <Controller name="states" control={control} render={({ field }) => (
+                        <Input {...field} placeholder="Enter state..." />
+                    )} />
+                </FormItem>
+                 <FormItem label="City">
+                    <Controller name="cities" control={control} render={({ field }) => (
+                        <Input {...field} placeholder="Enter city..." />
+                    )} />
+                </FormItem>
+            </div>
+             <FormItem label="Pincode">
+                <Controller name="pincodes" control={control} render={({ field }) => (
+                    <Input {...field} placeholder="Enter pincode..." />
+                )} />
+            </FormItem>
+            <FormItem label="Assigned To">
+                <Controller name="assignedTo" control={control} render={({ field }) => (
+                    <Select placeholder="Select users..." {...multiSelectProps(field, userOptions)} />
+                )} />
+            </FormItem>
+        </div>
+      </Form>
     </Drawer>
   );
 };
+
 const ColumnToggler: React.FC<{ table: any }> = ({ table }) => (
   <Dropdown
     renderTitle={<Button icon={<TbColumns />}> </Button>}
@@ -1817,38 +1914,65 @@ const ActiveFiltersDisplay = ({
   onRemoveFilter: (key: string, value: any) => void;
   onClearAll: () => void;
 }) => {
-  const { statuses, dateRange, assignedTo } = filters;
-  const hasFilters =
-    (statuses && statuses.length > 0) ||
-    (dateRange && dateRange[0]) ||
-    (assignedTo && assignedTo.length > 0);
-  if (!hasFilters) return null;
+    const filterEntries = Object.entries(filters).filter(([, value]) => {
+        if (Array.isArray(value)) return value.length > 0;
+        if (typeof value === 'object' && value !== null) { // For dateRange
+            return (value as any[]).every(v => v !== null);
+        }
+        return Boolean(value);
+    });
+
+    if (filterEntries.length === 0) return null;
+
+    const renderTag = (key: string, value: any) => {
+        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+        return (
+            <Tag key={`${key}-${value}`} prefix className="capitalize">
+                {label}: {String(value).replace('_', ' ')}
+                <TbX
+                    className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+                    onClick={() => onRemoveFilter(key, value)}
+                />
+            </Tag>
+        );
+    };
+
+    const renderTextTag = (key: string, value: string) => (
+        <Tag key={key} prefix className="capitalize">
+             {key.replace(/s$/, '')}: {value}
+             <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter(key, value)} />
+        </Tag>
+    );
+
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-      {" "}
       <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">
-        {" "}
-        Active Filters:{" "}
-      </span>{" "}
-      {statuses?.map((item: string) => (
-        <Tag key={`status-${item}`} prefix className="capitalize">
-          {" "}
-          Status: {item.replace("_", " ")}{" "}
-          <TbX
-            className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
-            onClick={() => onRemoveFilter("statuses", item)}
-          />{" "}
-        </Tag>
-      ))}{" "}
+        Active Filters:
+      </span>
+        {filterEntries.map(([key, value]) => {
+            if (Array.isArray(value)) {
+                return value.map(item => renderTag(key, item));
+            }
+             if (['states', 'cities', 'pincodes'].includes(key)) {
+                return renderTextTag(key, value as string);
+            }
+            if (key === 'kycVerified') {
+                return renderTag(key, value as string);
+            }
+             if (key === 'dateRange' && Array.isArray(value) && value[0] && value[1]) {
+                 const dateLabel = `${dayjs(value[0]).format('DD/MM/YY')} - ${dayjs(value[1]).format('DD/MM/YY')}`;
+                 return renderTag('Date Range', dateLabel);
+             }
+            return null;
+        })}
       <Button
         size="xs"
         variant="plain"
         className="text-red-600 hover:text-red-500 hover:underline ml-auto"
         onClick={onClearAll}
       >
-        {" "}
-        Clear All{" "}
-      </Button>{" "}
+        Clear All
+      </Button>
     </div>
   );
 };
@@ -2703,11 +2827,27 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   const [expanded, setExpanded] = useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const initialFilterState = {
+  
+  const initialFilterState = useMemo(() => ({
     statuses: [],
     dateRange: [null, null] as [Date | null, Date | null],
     assignedTo: [],
-  };
+    memberTypes: [],
+    continents: [],
+    countries: [],
+    states: '',
+    cities: '',
+    pincodes: '',
+    kycVerified: null as 'yes' | 'no' | null,
+    categories: [],
+    subCategories: [],
+    brands: [],
+    products: [],
+    productStatuses: [],
+    productSpecs: [],
+    wantTo: [],
+  }), []);
+
   const [filters, setFilters] = useState(initialFilterState);
 
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
@@ -2877,10 +3017,15 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           company_billing_enabled:
             apiItem.company_billing_enabled ?? Math.random() > 0.7,
           member_code: apiItem.member_code || `M-${apiItem.member_id}`,
-          member_verified: apiItem.member_verified ?? Math.random() > 0.3,
+          member_verified: apiItem.member_verified ?? false,
           country: apiItem.country || "USA",
           country_flag: apiItem.country_flag || undefined,
           member_business_type: apiItem.member_business_type || "Wholesaler",
+          continent: apiItem.continent || undefined,
+          state: apiItem.state || undefined,
+          city: apiItem.city || undefined,
+          pincode: apiItem.pincode || undefined,
+          favouriteBrands: apiItem.member?.favourite_brands_list?.map(b => b.name) || [],
         };
       }
     );
@@ -2917,6 +3062,26 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       setExpanded({});
     }
   }, [currentTab, isDashboard]);
+  
+  const filterOptions = useMemo(() => {
+        const createUniqueOptions = (key: keyof OpportunityItem) =>
+            Array.from(new Set(opportunities.map((item) => item[key]).filter(Boolean)))
+                 .map(value => ({ value: String(value), label: String(value) }));
+
+        return {
+            memberTypeOptions: createUniqueOptions('member_type'),
+            continentOptions: createUniqueOptions('continent'),
+            countryOptions: createUniqueOptions('country'),
+            categoryOptions: createUniqueOptions('product_category'),
+            subCategoryOptions: createUniqueOptions('product_subcategory'),
+            brandOptions: createUniqueOptions('brand'),
+            productOptions: createUniqueOptions('product_name'),
+            productStatusOptions: createUniqueOptions('product_status_listing'),
+            productSpecOptions: createUniqueOptions('product_specs'),
+            kycVerifiedOptions: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }],
+            wantToOptions: [{ value: 'Buy', label: 'Buyer' }, { value: 'Sell', label: 'Seller' }],
+        };
+    }, [opportunities]);
 
   const statusCounts = useMemo(() => {
     return (opportunities || []).reduce(
@@ -2930,12 +3095,17 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       { total: 0, active: 0, pending: 0, on_hold: 0 }
     );
   }, [opportunities]);
+
   const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filters.statuses.length > 0) count++;
-    if (filters.dateRange[0] && filters.dateRange[1]) count++;
-    if (filters.assignedTo.length > 0) count++;
-    return count;
+    return Object.values(filters).reduce((count, value) => {
+        if (Array.isArray(value)) {
+            return value.length > 0 ? count + 1 : count;
+        }
+        if (typeof value === 'object' && value !== null) { // dateRange
+            return (value as (Date | null)[]).every(v => v !== null) ? count + 1 : count;
+        }
+        return value ? count + 1 : count;
+    }, 0);
   }, [filters]);
 
   const currentTableData = tableQueries[currentTab] || {
@@ -3019,47 +3189,48 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       }
       return data;
     }
+    
     let data = [...opportunities];
+
     if (currentTab === TABS.SELLER) {
-      data = data.filter(
-        (op) =>
-          op.spb_role === "Seller" ||
-          op.want_to === "Sell" ||
-          (op.sell_listing_id && !op.buy_listing_id)
-      );
+      data = data.filter((op) => op.want_to === "Sell");
     } else if (currentTab === TABS.BUYER) {
-      data = data.filter(
-        (op) =>
-          op.spb_role === "Buyer" ||
-          op.want_to === "Buy" ||
-          (op.buy_listing_id && !op.sell_listing_id)
-      );
+      data = data.filter((op) => op.want_to === "Buy");
     }
+
     if (currentTableData.query) {
       const query = currentTableData.query.toLowerCase();
       data = data.filter((item) =>
-        Object.values(item).some((value) => {
-          if (value === null || value === undefined) return false;
-          return String(value).toLowerCase().includes(query);
-        })
+        Object.values(item).some((value) => String(value).toLowerCase().includes(query))
       );
     }
-    if (filters.statuses.length > 0) {
-      data = data.filter((item) => filters.statuses.includes(item.status));
-    }
+
+    // Apply filters from the drawer
+    if (filters.statuses.length > 0) data = data.filter(item => filters.statuses.includes(item.status));
     if (filters.dateRange[0] && filters.dateRange[1]) {
-      const start = dayjs(filters.dateRange[0]).startOf("day");
-      const end = dayjs(filters.dateRange[1]).endOf("day");
-      data = data.filter((item) => {
-        const itemDate = dayjs(item.created_date);
-        return itemDate.isAfter(start) && itemDate.isBefore(end);
-      });
+        const start = dayjs(filters.dateRange[0]).startOf('day');
+        const end = dayjs(filters.dateRange[1]).endOf('day');
+        data = data.filter(item => dayjs(item.created_date).isAfter(start) && dayjs(item.created_date).isBefore(end));
     }
-    if (filters.assignedTo.length > 0) {
-      data = data.filter((item) =>
-        filters.assignedTo.includes(Number(item.assigned_to))
-      );
+    if (filters.assignedTo.length > 0) data = data.filter(item => filters.assignedTo.includes(Number(item.assigned_to)));
+    if (filters.memberTypes.length > 0) data = data.filter(item => filters.memberTypes.includes(item.member_type));
+    if (filters.continents.length > 0) data = data.filter(item => item.continent && filters.continents.includes(item.continent));
+    if (filters.countries.length > 0) data = data.filter(item => item.country && filters.countries.includes(item.country));
+    if (filters.states) data = data.filter(item => item.state?.toLowerCase().includes(filters.states.toLowerCase()));
+    if (filters.cities) data = data.filter(item => item.city?.toLowerCase().includes(filters.cities.toLowerCase()));
+    if (filters.pincodes) data = data.filter(item => item.pincode?.includes(filters.pincodes));
+    if (filters.kycVerified) {
+        const isVerified = filters.kycVerified === 'yes';
+        data = data.filter(item => item.member_verified === isVerified);
     }
+    if (filters.categories.length > 0) data = data.filter(item => item.product_category && filters.categories.includes(item.product_category));
+    if (filters.subCategories.length > 0) data = data.filter(item => item.product_subcategory && filters.subCategories.includes(item.product_subcategory));
+    if (filters.brands.length > 0) data = data.filter(item => item.brand && filters.brands.includes(item.brand));
+    if (filters.products.length > 0) data = data.filter(item => filters.products.includes(item.product_name));
+    if (filters.productStatuses.length > 0) data = data.filter(item => item.product_status_listing && filters.productStatuses.includes(item.product_status_listing));
+    if (filters.productSpecs.length > 0) data = data.filter(item => item.product_specs && filters.productSpecs.includes(item.product_specs));
+    if (filters.wantTo.length > 0) data = data.filter(item => item.want_to && filters.wantTo.includes(item.want_to));
+
     return data;
   }, [
     currentTab,
@@ -3353,7 +3524,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           ),
         },
         {
-          header: "Company & Member",
+          header: "Member",
           accessorKey: "company_name",
           size: 350,
           cell: ({ row }) => {
@@ -3363,36 +3534,32 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                 {" "}
                 <div className="flex items-center gap-2">
                   {" "}
-                  <TbBuilding
+                  <TbUserCheck
                     size={14}
                     className="text-gray-400 dark:text-gray-500 flex-shrink-0"
                   />{" "}
                   <span className="font-semibold text-gray-800 dark:text-gray-100">
                     {" "}
-                    {item.company_name} ({item.company_code}){" "}
+                    {item.customer_name} ({item.member_code}){" "}
                   </span>{" "}
                   <Tooltip
                     title={item.company_verified ? "Verified" : "Not Verified"}
                   >
                     {" "}
-                    {item.company_verified ? (
-                      <BsCheckCircleFill className="text-emerald-500" />
-                    ) : (
-                      <BsXCircleFill className="text-red-500" />
-                    )}{" "}
+                    
                   </Tooltip>{" "}
                 </div>{" "}
                 <div className="pl-6 border-l ml-1.5 dark:border-gray-600 space-y-1.5">
                   {" "}
                   <div className="flex items-center gap-2">
                     {" "}
-                    <TbUserCheck
+                    <TbBuilding
                       size={14}
                       className="text-gray-400 dark:text-gray-500 flex-shrink-0"
                     />{" "}
                     <span className="font-medium text-gray-700 dark:text-gray-200">
                       {" "}
-                      {item.customer_name} ({item.member_code}){" "}
+                      {item.company_name}{" "}
                     </span>{" "}
                     <Tooltip
                       title={item.member_verified ? "Verified" : "Not Verified"}
@@ -3495,26 +3662,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                   </div>
                 </Tooltip>
               )}{" "}
-              {item.status && (
-                <Tooltip title="Record Status">
-                    <div className="flex items-center gap-1.5">
-                      {" "}
-                      <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                        <TbCircleCheck size={14} />
-                      </span>{" "}
-                      <Tag
-                        onClick={() => handleCardClick(item.status)}
-                        className={`${
-                          recordStatusTagColor[item.status] ||
-                          recordStatusTagColor.default
-                        } capitalize cursor-pointer`}
-                      >
-                        {" "}
-                        {item.status.replace("_", " ")}{" "}
-                      </Tag>{" "}
-                    </div>
-                </Tooltip>
-              )}{" "}
+              
               {item.opportunity_status && (
                 <Tooltip title="Opportunity Status">
                     <div className="flex items-center gap-1.5">
@@ -3660,11 +3808,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
             return (
               <div className="text-xs space-y-1">
                 {" "}
-                <InfoLine
-                  icon={<TbRadar2 size={13} />}
-                  label="Total Qty"
-                  text={item.qty ?? "N/A"}
-                />{" "}
+                
                 <InfoLine
                   icon={<TbTargetArrow size={13} />}
                   label="Score"
@@ -3982,6 +4126,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
         onClear={handleClearFilters}
         initialFilters={filters}
         userOptions={getAllUserDataOptions}
+        {...filterOptions}
       />
       <OpportunityModals
         modalState={modalState}
