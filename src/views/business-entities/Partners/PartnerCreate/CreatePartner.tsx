@@ -2085,8 +2085,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     primary_email_id: z.string().trim().min(1, "Primary Email is required").email("Invalid email format"),
     primary_contact_number: z.string().trim().min(1, "Primary contact is required").regex(phoneRegex, "Must be exactly 10 digits"),
     primary_contact_number_code: selectObjectSchema.refine(val => val?.value, "Country code is required"),
-    alternate_contact_number: optionalPhoneValidation,
-    general_contact_number: optionalPhoneValidation,
+
     
     // Statically required documents
     gst_certificate_file: z.any().refine(file => file, { message: "GST Certificate is required." }),
