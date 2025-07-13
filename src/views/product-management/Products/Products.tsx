@@ -113,6 +113,7 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 // --- Type Definitions ---
 // ... (existing type definitions are correct)
@@ -1618,6 +1619,7 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = React.memo(
 
 const Products = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const {
     ProductsData = [],
     domainsData = [],
@@ -2481,8 +2483,7 @@ const Products = () => {
   }, [dispatch, productForStatusChange, selectedNewStatus]);
 
   const openViewDetailModal = useCallback((product: ProductItem) => {
-    setProductToView(product);
-    setIsViewDetailModalOpen(true);
+    navigate(`/product-management/product/${product.id}`);
   }, []);
   const closeViewDetailModal = useCallback(() => {
     setIsViewDetailModalOpen(false);
