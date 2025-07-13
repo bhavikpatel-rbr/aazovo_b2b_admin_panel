@@ -192,8 +192,8 @@ const ProductHeader = ({ product }: { product: ProductData }) => {
         <InfoPair label="Created At" value={dayjs(product.created_at).format('DD MMM YYYY')} />
       </div>
       <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
-        <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/product/edit/${product.id}`)}>Edit Product</Button>
-        <Button icon={<TbArrowLeft />} onClick={() => navigate('/products/list')}>Back to List</Button>
+        {/* <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/product-management/products`)}>Edit Product</Button> */}
+        <Button icon={<TbArrowLeft />} onClick={() => navigate('/product-management/products')}>Back to List</Button>
       </div>
     </div>
   );
