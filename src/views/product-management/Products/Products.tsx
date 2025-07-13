@@ -3310,7 +3310,7 @@ const Products = () => {
                 <FormItem
                   label={
                     <div>
-                      Country of Origin
+                      Country
                       <span className="text-red-500"> * </span>
                     </div>
                   }

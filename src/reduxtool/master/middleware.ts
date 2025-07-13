@@ -903,15 +903,23 @@ export const addProductAction = createAsyncThunk<any, any>(
   "auth/addProduct", // Corrected from "addBrand" for consistency with "Product" context
   async (data, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await addProductAsync(data) // Uses Brand service
-      if (response?.data?.status === true) {
-        dispatch(getProductsAction()) // Dispatches product action
-        return response?.data?.data
+      const response: AxiosResponse<any> = await addProductAsync(data)
+      if (response?.status === true || response?.status === 200) {
+        dispatch(getProductsAction())
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to add product.'
+          message: response?.message || 'Failed to edit company.'
         });
-      }
+      } // Uses Brand service
+      // if (response?.data?.status === true) {
+      //   dispatch(getProductsAction()) // Dispatches product action
+      //   return response?.data?.data
+      // } else {
+      //   return rejectWithValue({
+      //     message: response?.data?.message || 'Failed to add product.'
+      //   });
+      // }
     } catch (error: unknown) {
       return rejectWithValue(error as Error)
     }
@@ -926,12 +934,12 @@ export const editProductAction = createAsyncThunk<
   async (payload, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editProductListAsync(payload.id, payload.formData); // Uses Brand service
-      if (response?.data?.status === true) {
-        dispatch(getProductsAction()); // Dispatches Brand action
-        return response?.data?.data;
+      if (response?.status === true || response?.status === 200) {
+        dispatch(getProductsAction())
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to edit product.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
@@ -1777,6 +1785,7 @@ export const addProductSpecificationAction = createAsyncThunk<any, any>(
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addProductSepecificationAsync(data)
+
       if (response?.data?.status === true) {
         dispatch(getProductSpecificationsAction())
         return response?.data?.data
