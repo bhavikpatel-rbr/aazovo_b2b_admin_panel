@@ -3733,7 +3733,7 @@ export const addMemberAction = createAsyncThunk<any, any>("auth/addMember",
     try {
       const response: AxiosResponse<any> = await addMemberAsync(data)
       if (response?.status === true || response?.status === 200) {
-        dispatch(getCompanyAction())
+        dispatch(getMemberAction())
         return response?.data
       } else {
         return rejectWithValue({
@@ -3751,7 +3751,7 @@ export const editMemberAction = createAsyncThunk<any, any>("auth/editMember",
     try {
       const response: AxiosResponse<any> = await editMemberAsync(data)
       if (response?.status === true || response?.status === 200) {
-        dispatch(getCompanyAction())
+        dispatch(getMemberAction())
         return response?.data
       } else {
         return rejectWithValue({
@@ -3851,12 +3851,12 @@ export const addpartnerAction = createAsyncThunk<any, any>("auth/addpartner",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addpartnerAsync(data)
-      if (response?.data?.status === true) {
+      if (response?.status === true || response?.status === 200) {
         dispatch(getpartnerAction())
-        return response?.data?.data
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to add partner.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
@@ -3869,12 +3869,12 @@ export const editpartnerAction = createAsyncThunk<any, { id: string | number; pa
   async ({ id, payload }, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editpartnerAsync(id, payload);
-      if (response?.data?.status === true) {
-        dispatch(getpartnerAction());
-        return response?.data?.data;
+      if (response?.status === true || response?.status === 200) {
+        dispatch(getpartnerAction())
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to edit partner.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
