@@ -91,8 +91,10 @@ const renderPermission = (value?: boolean | null | string) => {
             </Tag>
         )
     }
-    if (valStr === 'false') {
-        return <Tag className="bg-red-100 text-red-600">No</Tag>
+    if (valStr === 'false' || valStr === 'disable' || valStr === 'disabled') {
+        return (
+            <Tag className="bg-red-100 text-red-600 capitalize">{valStr}</Tag>
+        )
     }
     if (value) {
         return <span className="capitalize">{String(value)}</span>
@@ -288,14 +290,18 @@ const MemberViewPage = () => {
                 </div>
 
                 {/* Body Content */}
-                <Tabs className="mt-4" defaultValue="details">
+                <Tabs className="mt-4" defaultValue="member-details">
                     <TabList>
-                        <TabNav value="details">Member Details</TabNav>
-                        <TabNav value="favorites">Favourite Products</TabNav>
-                        <TabNav value="dynamic">Dynamic Profile</TabNav>
+                        <TabNav value="member-details">Member details</TabNav>
+                        <TabNav value="wall-inquiry">Wall inquiry</TabNav>
+                        <TabNav value="leads">Leads</TabNav>
+                        <TabNav value="favorite-products">
+                            Favorite Products
+                        </TabNav>
+                        <TabNav value="assign-brand">Assign Brand</TabNav>
                     </TabList>
                     <div className="mt-6">
-                        <TabContent value="details">
+                        <TabContent value="member-details">
                             <div className="flex flex-col gap-6">
                                 <Card bordered>
                                     <h5 className="mb-4">
@@ -408,7 +414,67 @@ const MemberViewPage = () => {
                             </div>
                         </TabContent>
 
-                        <TabContent value="favorites">
+                        <TabContent value="wall-inquiry">
+                            <Card bordered>
+                                <h5 className="mb-4">
+                                    Wall Inquiry Permissions
+                                </h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                    <DetailItem
+                                        label="Wall Enquiry Access"
+                                        value={renderPermission(
+                                            memberData.wall_enquiry_permission,
+                                        )}
+                                    />
+                                    <DetailItem
+                                        label="Wall Listing Access"
+                                        value={renderPermission(
+                                            memberData.wall_listing_permission,
+                                        )}
+                                    />
+                                </div>
+                                <p className="mt-4 text-sm text-gray-500">
+                                    Note: This section displays permissions
+                                    only. Actual inquiry data is not available
+                                    in this view.
+                                </p>
+                            </Card>
+                        </TabContent>
+
+                        <TabContent value="leads">
+                            <Card bordered>
+                                <h5 className="mb-4">
+                                    Lead & Inquiry Permissions
+                                </h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                    <DetailItem
+                                        label="General Enquiry"
+                                        value={renderPermission(
+                                            memberData.enquiry_permission,
+                                        )}
+                                    />
+                                    <DetailItem
+                                        label="Trade Inquiry Allowed"
+                                        value={renderPermission(
+                                            memberData.trade_inquiry_allowed,
+                                        )}
+                                    />
+                                    <DetailItem
+                                        label="Trade Inquiry Permission"
+                                        value={renderPermission(
+                                            memberData.trade_inquiry_permission,
+                                        )}
+                                    />
+                                </div>
+                                <p className="mt-4 text-sm text-gray-500">
+                                    Note: This section displays permissions
+                                    only. Actual lead data is not available in
+                                    this view.
+                                </p>
+                            </Card>
+                        </TabContent>
+
+                        <TabContent value="favorite-products">
                             <Card bordered>
                                 <h5 className="mb-4">Favourite Products</h5>
                                 {memberData.favourite_products_list?.length >
@@ -445,17 +511,20 @@ const MemberViewPage = () => {
                                 )}
                             </Card>
                         </TabContent>
-                        
-                        <TabContent value="dynamic">
+
+                        <TabContent value="assign-brand">
                             <Card bordered>
                                 <h5 className="mb-4">
-                                    Dynamic Member Profiles
+                                    Assigned Brands & Categories
                                 </h5>
                                 {memberData.dynamic_member_profiles?.length >
                                 0 ? (
                                     <div className="flex flex-col gap-6">
                                         {memberData.dynamic_member_profiles.map(
-                                            (profile: any, index: number) => (
+                                            (
+                                                profile: any,
+                                                index: number,
+                                            ) => (
                                                 <div
                                                     key={profile.id || index}
                                                     className="p-4 border rounded-md dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"
@@ -467,17 +536,17 @@ const MemberViewPage = () => {
                                                                 index + 1
                                                             }`}
                                                     </h6>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                                                        <DetailItem
-                                                            label="Brands"
-                                                            value={
-                                                                <ListAsTags
-                                                                    list={
-                                                                        profile.brand_names
-                                                                    }
-                                                                />
-                                                            }
-                                                        />
+                                                    <DetailItem
+                                                        label="Brands"
+                                                        value={
+                                                            <ListAsTags
+                                                                list={
+                                                                    profile.brand_names
+                                                                }
+                                                            />
+                                                        }
+                                                    />
+                                                    <div className="mt-2">
                                                         <DetailItem
                                                             label="Categories"
                                                             value={
@@ -489,13 +558,26 @@ const MemberViewPage = () => {
                                                             }
                                                         />
                                                     </div>
+                                                    <div className="mt-2">
+                                                        <DetailItem
+                                                            label="Sub-Categories"
+                                                            value={
+                                                                <ListAsTags
+                                                                    list={
+                                                                        profile.sub_category_names
+                                                                    }
+                                                                />
+                                                            }
+                                                        />
+                                                    </div>
                                                 </div>
                                             ),
                                         )}
                                     </div>
                                 ) : (
                                     <p className="text-sm text-gray-500">
-                                        No dynamic profiles available.
+                                        No assigned brands or dynamic profiles
+                                        found for this member.
                                     </p>
                                 )}
                             </Card>
