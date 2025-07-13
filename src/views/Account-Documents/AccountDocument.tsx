@@ -453,13 +453,7 @@ const AccountDocumentActionColumn = ({
         >
           <TbTagStarred size={18} /> <span className="text-xs">Add Activity</span>
         </Dropdown.Item>
-        <Dropdown.Item
-          className="flex items-center gap-2"
-          onClick={() => onOpenModal("document", rowData)}
-        >
-          <TbCloudDownload size={18} />
-          <span className="text-xs">Download Document</span>
-        </Dropdown.Item>
+        
       </Dropdown>
     </div>
   );
@@ -1386,6 +1380,8 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
 
 const SendEmailAction = ({ document, onClose }: { document: any; onClose: () => void }) => {
   useEffect(() => {
+    console.log("document?.company?",document);
+    
     const email = document?.company?.primary_email_id || document?.member?.email;
     if (!email) {
       toast.push(
@@ -1735,7 +1731,7 @@ const AccountDocumentAlertModal = ({ document, onClose }: { document: any, onClo
             width={1200}
             contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
         >
-            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-red-500 to-orange-600 flex-shrink-0 rounded-t-lg">
+            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 flex-shrink-0 rounded-t-lg">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <TbBellRinging className="text-2xl text-white" />
@@ -1816,7 +1812,7 @@ const AccountDocumentAlertModal = ({ document, onClose }: { document: any, onClo
                                         <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
                                             <RichTextEditor
                                                 value={field.value}
-                                                onChange={field.onChange}
+                                                onChange={(val) => field.onChange(val.html)}
                                                 className="flex-grow min-h-[150px] sm:min-h-[200px]"
                                             />
                                         </div>
@@ -2191,9 +2187,7 @@ const AccountDocument = () => {
       const typesRequiringFullData: ModalType[] = ['view', 'email', 'whatsapp', 'task', 'alert', 'activity', 'document'];
       
       if (typesRequiringFullData.includes(type)) {
-          toast.push(<Notification title="Loading Details..." type="info" duration={1500}><Spinner /></Notification>, {
-            placement: 'top-center'
-          });
+        
           dispatch(getbyIDaccountdocAction(itemData.id))
               .unwrap()
               .then((result) => {
@@ -2571,7 +2565,7 @@ const AccountDocument = () => {
         },
       },
       {
-        header: "Member / Company",
+        header: "Company",
         accessorKey: "memberName",
         size: 220,
         cell: (props: CellContext<AccountDocumentListItem, any>) => {
