@@ -7,14 +7,16 @@ import {
     flexRender,
     getCoreRowModel,
     getSortedRowModel,
+    getPaginationRowModel,
     useReactTable,
     SortingState,
+    CellContext,
 } from '@tanstack/react-table'
 
 // UI Components
 import AdaptiveCard from '@/components/shared/AdaptiveCard'
 import Container from '@/components/shared/Container'
-import { Avatar, Button, Card, Spinner, Tag, Input, Select } from '@/components/ui'
+import { Avatar, Button, Card, Spinner, Tag, Input, Select, Dialog } from '@/components/ui'
 import { DatePicker, Table, Pagination } from '@/components/ui'
 import Notification from '@/components/ui/Notification'
 import Tabs from '@/components/ui/Tabs'
@@ -23,7 +25,9 @@ const { TabNav, TabList, TabContent } = Tabs
 const { Tr, Th, Td, THead, TBody } = Table
 
 // Icons
-import { BiChevronRight } from 'react-icons/bi'
+import {
+    BiChevronRight
+} from 'react-icons/bi'
 import {
     TbArrowLeft,
     TbGlobe,
@@ -33,10 +37,20 @@ import {
     TbUserCircle,
     TbArrowUp,
     TbArrowDown,
+    TbShoppingCart,
+    TbTag,
+    TbUsers,
+    TbBuildingStore,
 } from 'react-icons/tb'
 
 // Redux
-import { getMemberByIdAction } from '@/reduxtool/master/middleware'
+import {
+    getMemberByIdAction,
+    getDemandsAction,
+    getOffersAction,
+    getOfferByIdAction, // Assumed action, replace with your actual action
+    getDemandByIdAction, // Assumed action, replace with your actual action
+} from '@/reduxtool/master/middleware'
 
 // --- START: Reusable and Placeholder Components ---
 
@@ -52,28 +66,21 @@ const DataTable = ({
     onSort: (sorting: SortingState) => void
 }) => {
     const [sorting, setSorting] = useState<SortingState>([])
-    const [pageSize, setPageSize] = useState(10)
-    const [pageIndex, setPageIndex] = useState(0)
 
     const table = useReactTable({
         data,
         columns,
-        state: { sorting, pagination: { pageIndex, pageSize } },
+        state: { sorting },
         onSortingChange: (newSorting) => {
             setSorting(newSorting)
             onSort(newSorting)
         },
-        onPaginationChange: (updater) => {
-            if (typeof updater === 'function') {
-                const newPage = updater({ pageIndex, pageSize });
-                setPageIndex(newPage.pageIndex);
-                setPageSize(newPage.pageSize);
-            }
-        },
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
-        getPaginatedRowModel: getCoreRowModel(),
+        getPaginatedRowModel: getPaginationRowModel(),
     })
+
+    const { pageIndex, pageSize } = table.getState().pagination
 
     return (
         <div>
@@ -129,7 +136,7 @@ const DataTable = ({
                     ) : (
                         <Tr>
                             <Td colSpan={columns.length} className="text-center">
-                                No data available in table
+                                No data available
                             </Td>
                         </Tr>
                     )}
@@ -137,7 +144,7 @@ const DataTable = ({
             </Table>
             <div className="flex items-center justify-between mt-4">
                 <Pagination
-                    currentPage={table.getState().pagination.pageIndex + 1}
+                    currentPage={pageIndex + 1}
                     total={data.length}
                     pageSize={pageSize}
                     onChange={(page) => table.setPageIndex(page - 1)}
@@ -152,7 +159,7 @@ const DataTable = ({
                             { value: 20, label: '20 / page' },
                             { value: 50, label: '50 / page' },
                         ]}
-                        onChange={(option) => setPageSize(option?.value || pageSize)}
+                        onChange={(option) => table.setPageSize(option?.value || pageSize)}
                     />
                 </div>
             </div>
@@ -161,177 +168,9 @@ const DataTable = ({
 }
 // --- END: Reusable and Placeholder Components ---
 
-// --- START: Leads Tab Component ---
-const LeadsTab = ({ data, loading }: { data: any[], loading: boolean }) => {
-    const initialFilters = { status: null, type: null, wantTo: null, search: '' };
-    const [filters, setFilters] = useState(initialFilters);
-    const [sort, setSort] = useState<SortingState>([]);
-
-    const filteredData = useMemo(() => {
-        let leads = data;
-        if (filters.status) {
-            leads = leads.filter(d => d.status === filters.status.value);
-        }
-        if (filters.type) {
-            // Assuming 'business_type' maps to 'enquiryType'
-            leads = leads.filter(d => d.business_type === filters.type.value);
-        }
-        if (filters.wantTo) {
-            // Assuming 'interested_in' maps to 'wantTo'
-            leads = leads.filter(d => d.interested_in === filters.wantTo.value);
-        }
-        if (filters.search) {
-            const searchTerm = filters.search.toLowerCase();
-            leads = leads.filter(d =>
-                Object.values(d).some(val =>
-                    String(val).toLowerCase().includes(searchTerm)
-                )
-            );
-        }
-        return leads;
-    }, [data, filters]);
-
-    const handleFilterChange = (name: string, value: any) => {
-        setFilters((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleReset = () => setFilters(initialFilters);
-
-    const columns = useMemo(() => [
-        { header: 'Status', accessorKey: 'status' },
-        { header: 'Enquiry Type', accessorKey: 'business_type' }, // Mapped to business_type
-        { header: 'Want To?', accessorKey: 'interested_in' }, // Mapped to interested_in
-        { header: 'Qty', cell: () => 'N/A' }, // Not in lead_members object
-        { header: 'Target Price', cell: () => 'N/A' }, // Not in lead_members object
-        // { header: 'Action', id: 'action', cell: () => <Button size="xs" variant="solid">View</Button> },
-    ], []);
-
-    return (
-        <Card bordered>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-end">
-                <Select
-                    placeholder="Select Status"
-                    options={[{ label: 'Active', value: 'Active' }, { label: 'Inactive', value: 'Inactive' }]}
-                    value={filters.status}
-                    onChange={(option) => handleFilterChange('status', option)}
-                    isClearable
-                />
-                <Select
-                    placeholder="Select Type"
-                    options={[{ label: 'Wholesaler', value: 'Wholesaler' }]} // Example from data
-                    value={filters.type}
-                    onChange={(option) => handleFilterChange('type', option)}
-                    isClearable
-                />
-                <Select
-                    placeholder="Select Option"
-                    options={[{ label: 'For Buy', value: 'For Buy' }, { label: 'For Sell', value: 'For Sell' }]}
-                    value={filters.wantTo}
-                    onChange={(option) => handleFilterChange('wantTo', option)}
-                    isClearable
-                />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-end">
-                <div className="md:col-span-3">
-                    <label className="block text-sm font-medium mb-1">Search:</label>
-                    <Input placeholder="Search..." value={filters.search} onChange={(e) => handleFilterChange('search', e.target.value)} />
-                </div>
-                <div className="flex justify-end"><Button onClick={handleReset}>Reset</Button></div>
-            </div>
-            <DataTable columns={columns} data={filteredData} loading={loading} onSort={setSort} />
-        </Card>
-    );
-};
-// --- END: Leads Tab Component ---
-
-// --- START: Wall Inquiry Tab Component ---
-const WallInquiryTab = ({ data, products, loading }: { data: any[], products: any[], loading: boolean }) => {
-    const productMap = useMemo(() => {
-        return new Map(products.map(p => [p.id, p.name]));
-    }, [products]);
-
-    const initialFilters = { createdDate: null, product: null, status: null, wantTo: null, search: '' };
-    const [filters, setFilters] = useState(initialFilters);
-    const [sort, setSort] = useState<SortingState>([]);
-
-    const filteredData = useMemo(() => {
-        let wallItems = data.map(item => ({ ...item, productName: productMap.get(item.product_id) || `${item.product.name}` }));
-
-        if (filters.product) {
-            wallItems = wallItems.filter(item => item.product.name === filters.product.value);
-        }
-        if (filters.status) {
-            wallItems = wallItems.filter(item => item.status === filters.status.value);
-        }
-        if (filters.wantTo) {
-            wallItems = wallItems.filter(item => item.want_to === filters.wantTo.value);
-        }
-        if (filters.search) {
-            const searchTerm = filters.search.toLowerCase();
-            wallItems = wallItems.filter(item =>
-                Object.values(item).some(val => String(val).toLowerCase().includes(searchTerm))
-            );
-        }
-        return wallItems;
-    }, [data, filters, productMap]);
-
-    const productOptions = useMemo(() =>
-        products.map(p => ({ label: p.name, value: p.id })),
-        [products]
-    );
-
-    const handleFilterChange = (name: string, value: any) => {
-        setFilters((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleReset = () => setFilters(initialFilters);
-    const navigate = useNavigate();
-    const columns = useMemo(() => [
-        { header: 'Status', accessorKey: 'status' },
-        { header: 'Product Name', accessorKey: 'productName' },
-        { header: 'Created Date', accessorKey: 'created_at', cell: (props: any) => formatDate(props.getValue()) },
-        { header: 'Qty', accessorKey: 'qty' },
-        { header: 'Product Status', accessorKey: 'product_status' },
-        { header: 'Want To?', accessorKey: 'want_to' },
-        { header: 'Action', id: 'action', accessorKey: 'id', cell: (props: any) => <Button size="xs" onClick={() => navigate(`/sales-leads/wall-item/${props.getValue()}`)} variant="solid">View</Button> },
-    ], []);
-
-    return (
-        <Card bordered>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
-                <DatePicker placeholder="Pick date range" value={filters.createdDate} onChange={(date) => handleFilterChange('createdDate', date)} />
-                <Select placeholder="Select Product Name" options={productOptions} value={filters.product} onChange={(option) => handleFilterChange('product', option)} isClearable />
-                <Select
-                    placeholder="Select Status"
-                    options={[{ label: 'Active', value: 'Active' }, { label: 'Inactive', value: 'Inactive' }]}
-                    value={filters.status}
-                    onChange={(option) => handleFilterChange('status', option)}
-                    isClearable
-                />
-                <Select
-                    placeholder="Select Option"
-                    options={[{ label: 'Buy', value: 'Buy' }, { label: 'Sell', value: 'Sell' }]}
-                    value={filters.wantTo}
-                    onChange={(option) => handleFilterChange('wantTo', option)}
-                    isClearable
-                />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
-                <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-1">Search:</label>
-                    <Input placeholder="Search..." value={filters.search} onChange={(e) => handleFilterChange('search', e.target.value)} />
-                </div>
-                <div className="flex justify-end"><Button onClick={handleReset}>Reset</Button></div>
-            </div>
-            <DataTable columns={columns} data={filteredData} loading={loading} onSort={setSort} />
-        </Card>
-    );
-};
-// --- END: Wall Inquiry Tab Component ---
-
 // --- Helper Functions & Components ---
 const DetailItem = ({ label, value }: { label: string; value: React.ReactNode }) => (
-    <div className="mb-3">
+    <div>
         <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
         <div className="text-sm font-semibold">
             {(value === '' || value === undefined || value === null) ?
@@ -343,7 +182,6 @@ const DetailItem = ({ label, value }: { label: string; value: React.ReactNode })
 
 const ListAsTags = ({ list }: { list: (string | number)[] | undefined | null }) => {
     let items = list;
-    // Safely parse if the list is a JSON string
     if (typeof list === 'string') {
         try {
             items = JSON.parse(list);
@@ -399,6 +237,207 @@ const renderLink = (url?: string | null, text?: string) => {
     return <span className="break-all">{url}</span>;
 };
 
+// --- START: Tab Content Components ---
+const LeadsTab = ({ data, loading }: { data: any[], loading: boolean }) => {
+    // ... (This component remains unchanged)
+    const [filters, setFilters] = useState({ search: '' });
+    const [sort, setSort] = useState<SortingState>([]);
+    const filteredData = useMemo(() => {
+        let leads = data;
+        if (filters.search) {
+            const searchTerm = filters.search.toLowerCase();
+            leads = leads.filter(d => Object.values(d).some(val => String(val).toLowerCase().includes(searchTerm)));
+        }
+        return leads;
+    }, [data, filters]);
+    const columns = useMemo(() => [
+        { header: 'Status', accessorKey: 'status' },
+        { header: 'Enquiry Type', accessorKey: 'business_type' },
+        { header: 'Want To?', accessorKey: 'interested_in' },
+        { header: 'Company', accessorKey: 'company_actual' },
+    ], []);
+    return (
+        <Card bordered>
+            <Input className="mb-4 max-w-sm" placeholder="Search leads..." value={filters.search} onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))} />
+            <DataTable columns={columns} data={filteredData} loading={loading} onSort={setSort} />
+        </Card>
+    );
+};
+
+const WallInquiryTab = ({ data, loading }: { data: any[], loading: boolean }) => {
+    // ... (This component remains unchanged)
+    const [filters, setFilters] = useState({ search: '' });
+    const [sort, setSort] = useState<SortingState>([]);
+    const navigate = useNavigate();
+    const filteredData = useMemo(() => {
+        let wallItems = data;
+        if (filters.search) {
+            const searchTerm = filters.search.toLowerCase();
+            wallItems = wallItems.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(searchTerm)) || item.product?.name.toLowerCase().includes(searchTerm));
+        }
+        return wallItems;
+    }, [data, filters]);
+    const columns = useMemo(() => [
+        { header: 'Status', accessorKey: 'status' },
+        { header: 'Product Name', accessorKey: 'product.name' },
+        { header: 'Created Date', accessorKey: 'created_at', cell: (props: any) => formatDate(props.getValue()) },
+        { header: 'Qty', accessorKey: 'qty' },
+        { header: 'Type', accessorKey: 'want_to' },
+        { header: 'Action', id: 'action', accessorKey: 'id', cell: (props: any) => <Button size="xs" onClick={() => navigate(`/sales-leads/wall-item/${props.getValue()}`)} variant="solid">View</Button> },
+    ], [navigate]);
+    return (
+        <Card bordered>
+            <Input className="mb-4 max-w-sm" placeholder="Search wall inquiries..." value={filters.search} onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))} />
+            <DataTable columns={columns} data={filteredData} loading={loading} onSort={setSort} />
+        </Card>
+    );
+};
+
+const OfferDemandTab = ({ data, loading, onRowClick }: { data: any[], loading: boolean, onRowClick: (item: any) => void }) => {
+    const [sort, setSort] = useState<SortingState>([]);
+
+    const columns = useMemo(() => [
+        { header: 'Offer/Demand Name', accessorKey: 'offer_name' },
+        { header: 'Product Name', accessorKey: 'product' },
+        { header: 'Product ID', accessorKey: 'product_id' },
+        {
+            header: 'Action',
+            id: 'action',
+            cell: ({ row }: CellContext<any, any>) => (
+                <Button size="xs" onClick={() => onRowClick(row.original)} variant="solid">
+                    View Details
+                </Button>
+            )
+        },
+    ], [onRowClick]);
+
+    return (
+        <Card bordered>
+            <DataTable columns={columns} data={data} loading={loading} onSort={setSort} />
+        </Card>
+    );
+};
+
+const OfferDemandDetailDialog = ({ item, type, isOpen, onClose }: { item: any, type: 'Offer' | 'Demand', isOpen: boolean, onClose: () => void }) => {
+    const dispatch = useAppDispatch();
+    const [detailedData, setDetailedData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!item || !isOpen) return;
+
+        const fetchDetails = async () => {
+            setIsLoading(true);
+            setDetailedData(null);
+            try {
+                const action = type == 'Offer'
+                    ? getOffersAction()
+                    // @ts-ignore
+                    : getDemandsAction(); // Assuming demand also uses offer_id
+
+                const response = await dispatch(action).unwrap();
+                const Result = response?.data || response || [];
+                setDetailedData(Result.find((d: any) => d.id == item.offer_id) || null);
+            } catch (error) {
+                toast.push(<Notification type="danger" title={`Error fetching ${type} details.`} />);
+                console.error(`Error fetching ${type} details:`, error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDetails();
+    }, [item, isOpen, type, dispatch]);
+
+    const renderUser = (user: any, label: string) => (
+        <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold">{label}</p>
+            {user ? (
+                <div className="flex items-center gap-2 mt-1">
+                    <Avatar size="sm" shape="circle" src={user.profile_pic_path} icon={<TbUserCircle />} />
+                    <span className="font-semibold">{user.name}</span>
+                </div>
+            ) : (
+                <span className="text-sm text-gray-400 dark:text-gray-500">N/A</span>
+            )}
+        </div>
+    );
+
+    return (
+        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={700}>
+            <div className='mb-4'>
+                <h5 className="mb-1">{type} Details</h5>
+                <p className='text-sm'>Viewing full details for ID: {item.offer_id}</p>
+            </div>
+
+            {isLoading ? (
+                <div className="flex justify-center p-10"><Spinner size="lg" /></div>
+            ) : !detailedData ? (
+                <p>Could not load details for this {type.toLowerCase()}.</p>
+            ) : (
+                <div className="max-h-[70vh] overflow-y-auto pr-4 -mr-4 space-y-4">
+                    <Card bordered>
+                        <DetailItem label="Name" value={detailedData.name} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                            <DetailItem label="Product Name" value={item.product} />
+                            <DetailItem label="Product ID" value={detailedData.product_id} />
+                            <DetailItem label="Generated ID" value={detailedData.generate_id} />
+                            <DetailItem label="Type" value={<Tag className="capitalize">{detailedData.type || type}</Tag>} />
+                        </div>
+                    </Card>
+
+                    <Card bordered>
+                        <h6 className="font-semibold mb-3">People</h6>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {renderUser(detailedData.created_by_user || detailedData.created_by, "Created By")}
+                            {renderUser(detailedData.assign_user_data || detailedData.assign_user, "Assigned To")}
+                        </div>
+                    </Card>
+
+                    <Card bordered>
+                        <h6 className="font-semibold mb-3">Group Information</h6>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <DetailItem label="Group A" value={detailedData.groupA} />
+                            <DetailItem label="Group B" value={detailedData.groupB} />
+                        </div>
+                    </Card>
+
+                    <Card bordered>
+                        <h6 className="font-semibold mb-3">Section Data</h6>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <h6 className="text-sm font-bold mb-1">Sellers ({detailedData.numberOfSellers || 0})</h6>
+                                {detailedData.seller_section_data?.length > 0 ? (
+                                    <ListAsTags list={detailedData.seller_section_data.map((s: any) => s.name)} />
+                                ) : <p className="text-xs text-gray-500">None</p>}
+                            </div>
+                            <div>
+                                <h6 className="text-sm font-bold mb-1">Buyers ({detailedData.numberOfBuyers || 0})</h6>
+                                {detailedData.buyer_section_data?.length > 0 ? (
+                                    <ListAsTags list={detailedData.buyer_section_data.map((b: any) => b.name)} />
+                                ) : <p className="text-xs text-gray-500">None</p>}
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card bordered>
+                        <h6 className="font-semibold mb-3">Timestamps</h6>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <DetailItem label="Created At" value={formatDate(detailedData.created_at, true)} />
+                            <DetailItem label="Last Updated At" value={formatDate(detailedData.updated_at, true)} />
+                        </div>
+                    </Card>
+                </div>
+            )}
+            <div className="text-right mt-6">
+                <Button variant="solid" onClick={onClose}>Close</Button>
+            </div>
+        </Dialog>
+    );
+}
+
+// --- END: Tab Content Components ---
+
 // --- Main View Component ---
 const MemberViewPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -407,6 +446,7 @@ const MemberViewPage = () => {
 
     const [memberData, setMemberData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [viewingOfferDemand, setViewingOfferDemand] = useState<{ item: any, type: 'Offer' | 'Demand' } | null>(null);
 
     useEffect(() => {
         if (!id) {
@@ -454,83 +494,88 @@ const MemberViewPage = () => {
     return (
         <Container>
             <div className="flex gap-1 items-center mb-3">
-                <NavLink to="/business-entities/member"><h6 className="font-semibold hover:text-primary-600">Member</h6></NavLink>
+                <NavLink to="/business-entities/member"><h6 className="font-semibold hover:text-primary-600">Members</h6></NavLink>
                 <BiChevronRight size={22} />
                 <h6 className="font-semibold text-primary">Member Profile</h6>
             </div>
-            <AdaptiveCard>
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+
+            <Card className="mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="flex items-center gap-4 md:col-span-1">
                         <Avatar size={90} shape="circle" src={memberData.full_profile_pic} icon={<TbUserCircle />} />
                         <div>
                             <h5 className="font-bold">{memberData.name || 'N/A'}</h5>
-                            <div className="flex items-center gap-2 mb-1 text-sm"><TbMail className="text-gray-400" /><p>{memberData.email || 'N/A'}</p></div>
-                            <div className="flex items-center gap-2 mb-1 text-sm"><TbPhone className="text-gray-400" /><p>{memberData.number_code} {memberData.number}</p></div>
-                            <div className="flex items-center gap-2 text-sm"><TbGlobe className="text-gray-400" /><p>{memberData.country?.name || 'N/A'}</p></div>
                             <Tag className={`mt-2 ${statusColorMap[currentStatus] || ''} capitalize`}>{memberData.status}</Tag>
+                            <div className="text-sm mt-2 space-y-1">
+                                <div className="flex items-center gap-2"><TbMail className="text-gray-400" /><p>{memberData.email || 'N/A'}</p></div>
+                                <div className="flex items-center gap-2"><TbPhone className="text-gray-400" /><p>{memberData.number_code} {memberData.number}</p></div>
+                                <div className="flex items-center gap-2"><TbGlobe className="text-gray-400" /><p>{memberData.country?.name || 'N/A'}</p></div>
+                            </div>
                         </div>
                     </div>
-                    <div className="text-xs space-y-1">
-                        <p><b>Temp. Company:</b> {memberData.company_temp}</p>
-                        <p><b>Actual Company:</b> {memberData.company_actual}</p>
-                        <p><b>Business Type:</b> {memberData.business_type}</p>
+                    <div className="text-xs space-y-1.5 md:col-span-1">
+                        <p><b>Temp. Company:</b> {memberData.company_temp || 'N/A'}</p>
+                        <p><b>Actual Company:</b> {memberData.company_actual || 'N/A'}</p>
+                        <p><b>Business Type:</b> {memberData.business_type || 'N/A'}</p>
+                        <p><b>Manager:</b> {memberData.relationship_manager?.name || 'N/A'}</p>
                         <p><b>Business Opportunity:</b> <ListAsTags list={memberData.business_opportunity} /></p>
                     </div>
-                    <div className="text-xs space-y-1">
-                        <p><b>Manager:</b> {memberData.relationship_manager?.name || 'N/A'}</p>
-                        <p><b>Interested In:</b> {memberData.interested_in}</p>
-                        <p><b>Grade:</b> {memberData.member_grade}</p>
-                        <p><b>Dealing in Bulk:</b> {memberData.dealing_in_bulk}</p>
-                    </div>
-                    <div className="flex flex-col md:flex-row lg:flex-col gap-2">
-                        <Button icon={<TbArrowLeft />} onClick={() => navigate('/business-entities/member')}>Back</Button>
-                        <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/business-entities/member-edit/${id}`)}>Edit Member</Button>
+                    <div className="flex flex-col md:items-end md:col-span-1 gap-2">
+                        <div className="flex flex-row md:flex-col lg:flex-row gap-2 w-full">
+                            <Button className="w-full" icon={<TbArrowLeft />} onClick={() => navigate('/business-entities/member')}>Back to List</Button>
+                            <Button className="w-full" variant="solid" icon={<TbPencil />} onClick={() => navigate(`/business-entities/member-edit/${id}`)}>Edit Member</Button>
+                        </div>
                     </div>
                 </div>
+            </Card>
 
-                {/* Body Content */}
-                <Tabs className="mt-4" defaultValue="member-details">
+            <AdaptiveCard>
+                <Tabs defaultValue="member-details">
                     <TabList>
-                        <TabNav value="member-details">Member details</TabNav>
-                        <TabNav value="wall-inquiry">Wall inquiry</TabNav>
+                        <TabNav value="member-details">Member Details</TabNav>
+                        <TabNav value="offers">Offers</TabNav>
+                        <TabNav value="demands">Demands</TabNav>
+                        <TabNav value="wall-inquiry">Wall Inquiry</TabNav>
                         <TabNav value="leads">Leads</TabNav>
                         <TabNav value="favorite-products">Favorite Products</TabNav>
                         <TabNav value="assign-brand">Assign Brand</TabNav>
                     </TabList>
                     <div className="mt-6">
                         <TabContent value="member-details">
-                            <div className="flex flex-col gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <Card bordered>
                                     <h5 className="mb-4">Basic Information</h5>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                                         <DetailItem label="Member Code" value={memberData.member_code} />
                                         <DetailItem label="Joined Date" value={formatDate(memberData.created_at)} />
                                         <DetailItem label="Last Updated" value={formatDate(memberData.updated_at, true)} />
                                         <DetailItem label="Profile Completion" value={`${memberData.profile_completion}%`} />
+                                        <DetailItem label="Interested In" value={memberData.interested_in} />
+                                        <DetailItem label="Grade" value={memberData.member_grade} />
+                                        <DetailItem label="Dealing in Bulk" value={memberData.dealing_in_bulk} />
                                     </div>
                                 </Card>
                                 <Card bordered>
                                     <h5 className="mb-4">Contact & Socials</h5>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                                         <DetailItem label="WhatsApp" value={`${memberData.whatsapp_country_code || ''} ${memberData.whatsApp_no || ''}`} />
                                         <DetailItem label="Alternate Email" value={memberData.alternate_email} />
                                         <DetailItem label="Website" value={renderLink(memberData.website)} />
                                         <DetailItem label="LinkedIn" value={renderLink(memberData.linkedIn_profile)} />
                                     </div>
                                 </Card>
-                                <Card bordered>
+                                <Card bordered className="lg:col-span-2">
                                     <h5 className="mb-4">Address</h5>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                                         <DetailItem label="Address" value={memberData.address} />
                                         <DetailItem label="City" value={memberData.city} />
                                         <DetailItem label="State" value={memberData.state} />
                                         <DetailItem label="Country" value={memberData.country?.name} />
                                     </div>
                                 </Card>
-                                <Card bordered>
+                                <Card bordered className="lg:col-span-2">
                                     <h5 className="mb-4">Permissions</h5>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                                         <DetailItem label="Product Upload" value={renderPermission(memberData.product_upload_permission)} />
                                         <DetailItem label="Wall Enquiry" value={renderPermission(memberData.wall_enquiry_permission)} />
                                         <DetailItem label="General Enquiry" value={renderPermission(memberData.enquiry_permission)} />
@@ -539,19 +584,18 @@ const MemberViewPage = () => {
                                 </Card>
                             </div>
                         </TabContent>
-
-                        <TabContent value="wall-inquiry">
-                            <WallInquiryTab
-                                data={memberData.wall_items || []}
-                                products={memberData.favourite_products_list || []}
-                                loading={isLoading}
-                            />
+                        <TabContent value="offers">
+                            <OfferDemandTab data={memberData.offer_demands?.offers || []} loading={isLoading} type="Offers" onRowClick={(item) => setViewingOfferDemand({ item, type: 'Offer' })} />
                         </TabContent>
-
+                        <TabContent value="demands">
+                            <OfferDemandTab data={memberData.offer_demands?.demands || []} loading={isLoading} type="Demands" onRowClick={(item) => setViewingOfferDemand({ item, type: 'Demand' })} />
+                        </TabContent>
+                        <TabContent value="wall-inquiry">
+                            <WallInquiryTab data={memberData.wall_items || []} loading={isLoading} />
+                        </TabContent>
                         <TabContent value="leads">
                             <LeadsTab data={memberData.lead_members || []} loading={isLoading} />
                         </TabContent>
-
                         <TabContent value="favorite-products">
                             <Card bordered>
                                 <h5 className="mb-4">Favourite Products</h5>
@@ -560,7 +604,7 @@ const MemberViewPage = () => {
                                         {memberData.favourite_products_list.map((product: any) => (
                                             <Card key={product.id} className="p-3">
                                                 <div className="flex items-center gap-3">
-                                                    <Avatar shape="square" size={60} src={product.thumb_image_full_path} />
+                                                    <Avatar shape="square" size={60} src={product.thumb_image_full_path} icon={<TbBuildingStore />} />
                                                     <div><p className="font-semibold">{product.name}</p></div>
                                                 </div>
                                             </Card>
@@ -569,7 +613,6 @@ const MemberViewPage = () => {
                                 ) : <p className="text-sm text-gray-500">No favourite products listed.</p>}
                             </Card>
                         </TabContent>
-
                         <TabContent value="assign-brand">
                             <Card bordered>
                                 <h5 className="mb-4">Assigned Brands & Categories</h5>
@@ -590,6 +633,15 @@ const MemberViewPage = () => {
                     </div>
                 </Tabs>
             </AdaptiveCard>
+
+            {viewingOfferDemand && (
+                <OfferDemandDetailDialog
+                    isOpen={!!viewingOfferDemand}
+                    onClose={() => setViewingOfferDemand(null)}
+                    item={viewingOfferDemand.item}
+                    type={viewingOfferDemand.type}
+                />
+            )}
         </Container>
     )
 }
