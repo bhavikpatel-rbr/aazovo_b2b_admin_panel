@@ -87,6 +87,7 @@ import { shallowEqual, useSelector } from "react-redux";
 export type EmployeeStatus = "active" | "inactive" | "on_leave" | "terminated";
 export type EmployeeItem = {
   id: string;
+  employeeId: string;
   status: EmployeeStatus;
   name: string;
   email: string;
@@ -121,10 +122,12 @@ const scheduleSchema = z.object({ event_title: z.string().min(3, "Title is requi
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // --- Helper & Utility Functions ---
+const headerToKeyMap: Record<string, keyof EmployeeItem | string> = { "ID": "id", "Employee ID": "employeeId", "Name": "name", "Email": "email", "Mobile": "mobile", "Status": "status", "Department": "department", "Designation": "designation", "Roles": "roles", "Joining Date": "joiningDate" };
+const EMPLOYEE_CSV_HEADERS = Object.keys(headerToKeyMap);
+
 function exportEmployeesToCsv(filename: string, rows: EmployeeItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
-  const headerToKeyMap: Record<string, keyof EmployeeItem | string> = { "ID": "id", "Name": "name", "Email": "email", "Mobile": "mobile", "Status": "status", "Department": "department", "Designation": "designation", "Roles": "roles", "Joining Date": "joiningDate" };
-  const transformedRows = rows.map(row => { const statusText = row.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); return { id: String(row.id) || "N/A", name: row.name || "N/A", email: row.email || "N/A", mobile: row.mobile || "N/A", status: statusText, department: row.department || "N/A", designation: row.designation || "N/A", roles: Array.isArray(row.roles) ? row.roles.join(', ') : 'N/A', joiningDate: row.joiningDate ? dayjs(row.joiningDate).format("DD-MMM-YYYY") : "N/A" }; });
+  const transformedRows = rows.map(row => { const statusText = row.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); return { id: String(row.id) || "N/A", employeeId: row.employeeId || "N/A", name: row.name || "N/A", email: row.email || "N/A", mobile: row.mobile || "N/A", status: statusText, department: row.department || "N/A", designation: row.designation || "N/A", roles: Array.isArray(row.roles) ? row.roles.join(', ') : 'N/A', joiningDate: row.joiningDate ? dayjs(row.joiningDate).format("DD-MMM-YYYY") : "N/A" }; });
   const csvContent = [ EMPLOYEE_CSV_HEADERS.join(','), ...transformedRows.map(row => EMPLOYEE_CSV_HEADERS.map(header => JSON.stringify(row[headerToKeyMap[header] as keyof typeof row] ?? '')).join(',')) ].join('\n');
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
@@ -331,7 +334,26 @@ const EmployeesListing = () => {
     useEffect(() => {  dispatch(getEmployeesListingAction()).finally(() => setMasterLoadingStatus('idle')); dispatch(getRolesAction()); dispatch(getDepartmentsAction()); dispatch(getDesignationsAction()); dispatch(getAllUsersAction()); }, [dispatch]);
 
     // Data Formatting
-    useEffect(() => { if (Employees?.data?.data) { const formattedData = Employees.data.data.map((emp: any) => ({ ...emp, createdAt: new Date(emp.created_at), joiningDate: emp.date_of_joining ? new Date(emp.date_of_joining) : null, roles: Array.isArray(emp.roles) ? emp.roles.map((r: any) => r.name) : [], department: emp.department?.name || 'N/A', designation: emp.designation?.name || 'N/A', })); setEmployees(formattedData); setEmployeesCount(Employees?.counts || {}); } }, [Employees]);
+    useEffect(() => {
+        if (Employees?.data?.data) {
+            const formattedData = Employees.data.data.map((emp: any) => ({
+                id: String(emp.id),
+                employeeId: emp.employee_id || 'N/A',
+                status: (emp.status?.toLowerCase().replace(' ', '_') || 'inactive') as EmployeeStatus,
+                name: emp.name || 'Unknown',
+                email: emp.email || 'No Email',
+                mobile: emp.mobile_number ? `${emp.mobile_number_code || ''} ${emp.mobile_number}`.trim() : null,
+                department: emp.department?.name || 'N/A',
+                designation: emp.designation?.name || 'N/A',
+                roles: Array.isArray(emp.roles) ? emp.roles.map((r: any) => r.display_name) : [],
+                avatar: emp.profile_pic_path ? emp.profile_pic_path.replace(/([^:]\/)\/+/g, "$1") : null,
+                createdAt: new Date(emp.created_at),
+                joiningDate: emp.date_of_joining ? new Date(emp.date_of_joining) : null,
+            }));
+            setEmployees(formattedData);
+            setEmployeesCount(Employees?.counts || {});
+        }
+    }, [Employees]);
 
     // --- Action Handlers ---
     const handleSendEmail = (employee: EmployeeItem) => { setActionTarget(employee); setIsEmailModalOpen(true); };
@@ -406,12 +428,12 @@ const EmployeesListing = () => {
 
     // Table Columns
     const columns: ColumnDef<EmployeeItem>[] = useMemo(() => [
-        { header: "Status", accessorKey: "status", cell: (props) => { const { status } = props.row.original || {}; const displayStatus = status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toLowerCase()); return (<Tag className={`${employeeStatusColor[status as keyof typeof employeeStatusColor]} capitalize font-semibold border-0`}>{displayStatus}</Tag>); } },
-        { header: "Name", accessorKey: "name", cell: (props) => { const { name, email, mobile, profile_pic_path:avatar } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={32} shape="circle" src={avatar} icon={<TbUserCircle />} className={classNames(avatar && 'cursor-pointer hover:ring-2 hover:ring-indigo-500')} onClick={() => openImageViewer(avatar)}>{!avatar ? name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-2 rtl:mr-2"><span className="font-semibold">{name}</span><div className="text-xs text-gray-500">{email}</div><div className="text-xs text-gray-500">{mobile}</div></div></div>); } },
+        { header: "Status", accessorKey: "status", cell: (props) => { const { status } = props.row.original || {}; const validStatus: EmployeeStatus = EMPLOYEE_STATUS_OPTIONS.some(o => o.value === status) ? status : 'inactive'; const displayStatus = validStatus.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()); return (<Tag className={`${employeeStatusColor[validStatus]} capitalize font-semibold border-0`}>{displayStatus}</Tag>); } },
+        { header: "Name", accessorKey: "name", cell: (props) => { const { name, email, mobile, profile_pic_path, employeeId } = props.row.original || {}; return (<div className="flex items-center"><Avatar size={40} shape="circle" src={profile_pic_path} icon={<TbUserCircle />} className={classNames('cursor-pointer hover:ring-2 hover:ring-indigo-500 ring-offset-2 dark:ring-offset-gray-800', !profile_pic_path && 'bg-gray-200 dark:bg-gray-600')} onClick={() => openImageViewer(profile_pic_path)}>{!profile_pic_path && name ? name.charAt(0).toUpperCase() : ""}</Avatar><div className="ml-3 rtl:mr-3"><span className="font-semibold heading-text">{name}</span><div className="text-xs text-gray-500">{email}</div><div className="flex items-center gap-2 mt-1"><Tag className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px] font-semibold">ID: {employeeId}</Tag>{mobile && (<span className="text-xs text-gray-500 flex items-center gap-1"><TbBrandWhatsapp className="text-green-500"/>{mobile}</span>)}</div></div></div>); } },
         { header: "Designation", accessorKey: "designation", size: 200, cell: (props) => (<div className="font-semibold">{props.row.original?.designation ?? ""}</div>) },
         { header: "Department", accessorKey: "department", size: 200, cell: (props) => (<div className="font-semibold">{props.row.original?.department ?? ""}</div>) },
-        { header: "Roles", accessorKey: "roles", cell: (props) => (<div className="flex flex-wrap gap-1 text-xs">{props.row.original?.roles?.map((role: any) => (<Tag key={role} className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 text-[10px]">{role || ""}</Tag>))}</div>) },
-        { header: "Joined At", accessorKey: "joiningDate", size: 200, cell: (props) => props.row.original?.joiningDate ? <span className="text-xs">{dayjs(props.row.original.joiningDate).format("D MMM YYYY, h:mm A")}</span> : '-' },
+        { header: "Roles", accessorKey: "roles", cell: (props) => (<div className="flex flex-wrap gap-1">{props.row.original?.roles?.map((role: any) => (<Tag key={role} className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100 text-[10px] font-semibold border-0">{role || ""}</Tag>))}</div>) },
+        { header: "Joined At", accessorKey: "joiningDate", size: 150, cell: (props) => props.row.original?.joiningDate ? <span className="text-sm">{dayjs(props.row.original.joiningDate).format("D MMM YYYY")}</span> : '-' },
         { header: "Action", id: "action", size: 120, meta: { HeaderClass: "text-center" }, cell: (props) => (<ActionColumn rowData={props.row.original} onView={() => navigate(`/hr-employees/employees/view/${props.row.original.id}`)} onEdit={() => navigate(`/hr-employees/employees/edit/${props.row.original.id}`)} onChangePassword={() => { /* Implement password change logic */ }} onSendEmail={() => handleSendEmail(props.row.original)} onSendWhatsapp={() => handleSendWhatsapp(props.row.original)} onAddNotification={() => handleAddNotification(props.row.original)} onAddSchedule={() => handleAddSchedule(props.row.original)} />) },
     ], [navigate, openImageViewer]);
     

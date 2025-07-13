@@ -31,64 +31,64 @@ import {
 
 // --- Helper Components for Document Viewing ---
 interface ImageViewerProps {
-  images: { src: string; alt: string }[];
-  startIndex: number;
-  onClose: () => void;
+    images: { src: string; alt: string }[];
+    startIndex: number;
+    onClose: () => void;
 }
 
 const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
     const [currentIndex, setCurrentIndex] = useState(startIndex);
     const handleNext = () => { setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length); };
     const handlePrev = () => { setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length); };
-  
+
     useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'ArrowRight') handleNext();
-        if (e.key === 'ArrowLeft') handlePrev();
-        if (e.key === 'Escape') onClose();
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight') handleNext();
+            if (e.key === 'ArrowLeft') handlePrev();
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onClose]);
-  
+
     if (!images || images.length === 0) return null;
     const currentImage = images[currentIndex];
-  
+
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-[100] transition-opacity duration-300 p-4" onClick={onClose}>
-        <Button type="button" shape="circle" variant="solid" icon={<TbX />} className="absolute top-4 right-4 z-[102] bg-black/50 hover:bg-black/80" onClick={onClose}/>
-        <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-          <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
-            <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronLeft />} className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[101] bg-black/50 hover:bg-black/80" onClick={handlePrev}/>
-            <div className="flex flex-col items-center justify-center h-full">
-              <img src={currentImage.src} alt={currentImage.alt} className="max-h-[calc(100%-4rem)] max-w-full object-contain select-none"/>
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">{currentImage.alt} ({currentIndex + 1} / {images.length})</div>
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-[100] transition-opacity duration-300 p-4" onClick={onClose}>
+            <Button type="button" shape="circle" variant="solid" icon={<TbX />} className="absolute top-4 right-4 z-[102] bg-black/50 hover:bg-black/80" onClick={onClose} />
+            <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+                <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
+                    <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronLeft />} className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[101] bg-black/50 hover:bg-black/80" onClick={handlePrev} />
+                    <div className="flex flex-col items-center justify-center h-full">
+                        <img src={currentImage.src} alt={currentImage.alt} className="max-h-[calc(100%-4rem)] max-w-full object-contain select-none" />
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">{currentImage.alt} ({currentIndex + 1} / {images.length})</div>
+                    </div>
+                    <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronRight />} className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[101] bg-black/50 hover:bg-black/80" onClick={handleNext} />
+                </div>
+                <div className="w-full max-w-5xl flex-shrink-0 mt-4"><div className="flex justify-center p-2"><div className="flex gap-3 overflow-x-auto pb-2">{images.map((image, index) => (<button type="button" key={index} onClick={() => setCurrentIndex(index)} className={classNames("w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all focus:outline-none", { 'border-white opacity-100 scale-105': currentIndex === index, 'border-transparent opacity-60 hover:opacity-100': currentIndex !== index })}><img src={image.src} alt={image.alt} className="w-full h-full object-cover rounded-sm" /></button>))}</div></div></div>
             </div>
-            <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronRight />} className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[101] bg-black/50 hover:bg-black/80" onClick={handleNext}/>
-          </div>
-          <div className="w-full max-w-5xl flex-shrink-0 mt-4"><div className="flex justify-center p-2"><div className="flex gap-3 overflow-x-auto pb-2">{images.map((image, index) => (<button type="button" key={index} onClick={() => setCurrentIndex(index)} className={classNames("w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all focus:outline-none", { 'border-white opacity-100 scale-105': currentIndex === index, 'border-transparent opacity-60 hover:opacity-100': currentIndex !== index })}><img src={image.src} alt={image.alt} className="w-full h-full object-cover rounded-sm" /></button>))}</div></div></div>
         </div>
-      </div>
     );
 };
 
 const DocumentPlaceholder = ({ fileName, fileUrl }: { fileName: string; fileUrl: string; }) => {
     const getFileIcon = () => {
-      const extension = fileName.split('.').pop()?.toLowerCase();
-      switch (extension) {
-        case 'pdf': return <TbFileTypePdf className="text-red-500" size={48} />;
-        case 'xls': case 'xlsx': return <TbFileSpreadsheet className="text-green-500" size={48} />;
-        default: return <TbFile className="text-gray-500" size={48} />;
-      }
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        switch (extension) {
+            case 'pdf': return <TbFileTypePdf className="text-red-500" size={48} />;
+            case 'xls': case 'xlsx': return <TbFileSpreadsheet className="text-green-500" size={48} />;
+            default: return <TbFile className="text-gray-500" size={48} />;
+        }
     };
     return (
-      <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="w-full h-full p-2 flex flex-col items-center justify-center text-center">
-        {getFileIcon()}
-        <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all line-clamp-2">{fileName}</p>
-      </a>
+        <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="w-full h-full p-2 flex flex-col items-center justify-center text-center">
+            {getFileIcon()}
+            <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all line-clamp-2">{fileName}</p>
+        </a>
     );
 };
-  
+
 const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: () => void; }) => {
     const fileUrl = useMemo(() => (file instanceof File ? URL.createObjectURL(file) : file), [file]);
     const fileName = useMemo(() => (file instanceof File ? file.name : (file.split('/').pop() || 'file')), [file]);
@@ -156,7 +156,7 @@ const FileInputPreview: React.FC<FileInputPreviewProps> = ({ label, required, co
                     const isImage = (f: any): f is File | string => (f instanceof File && f.type.startsWith('image/')) || (typeof f === 'string' && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(f));
                     const fileUrl = value instanceof File ? URL.createObjectURL(value) : (typeof value === 'string' ? value : null);
                     const fileName = value instanceof File ? value.name : (typeof value === 'string' ? value.split('/').pop() : 'Document');
-                    
+
                     return (
                         <div className="flex flex-col gap-2">
                             <Input
@@ -165,7 +165,7 @@ const FileInputPreview: React.FC<FileInputPreviewProps> = ({ label, required, co
                                 onChange={(e) => onChange(e.target.files?.[0] || null)}
                             />
                             {value && (
-                                <div 
+                                <div
                                     className="w-full h-24 border-2 border-dashed rounded-md flex items-center justify-center p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
                                     onClick={() => onPreviewClick(value, label)}
                                 >
@@ -200,7 +200,7 @@ interface EquipmentItemFE {
 interface EmployeeFormSchema {
     id?: string;
     registration: { fullName: string; dateOfJoining: Date | null; mobileNumber: string; mobileNumberCode: { label: string, value: string }; email: string; experience: string; password?: string; };
-    personalInformation: { status: { label: string, value: string }; dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; maritalStatus: { label: string, value: string } | null; };
+    personalInformation: { status: { label: string, value: string }; dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; maritual_status: { label: string, value: string } | null; };
     roleResponsibility: { roleId: { label: string, value: string } | null; departmentId: { label: string, value: string }[]; designationId: { label: string, value: string } | null; countryId: { label: string, value: string }[]; categoryId: { label: string, value: string }[]; subcategoryId: { label: string, value: string }[]; brandId: { label: string, value: string }[]; productServiceId: { label: string, value: string }[]; reportingHrId: { label: string, value: string }[]; reportingHeadId: { label: string, value: string } | null; };
     training: { inductionDateCompletion: Date | null; inductionRemarks: string; departmentTrainingDateCompletion: Date | null; departmentTrainingRemarks: string; };
     offBoarding: { exit_interview_conducted: 'yes' | 'no' | ''; exit_interview_remark: string; resignation_letter_received: 'yes' | 'no' | ''; resignation_letter_remark: string; company_assets_returned: 'all' | 'partial' | 'none' | ''; assets_returned_remarks: string; full_and_final_settlement: 'yes' | 'no' | ''; fnf_remarks: string; notice_period_status: 'served' | 'waived' | ''; notice_period_remarks: string; };
@@ -250,7 +250,7 @@ const employeeFormValidationSchema = z.object({
     }
     if (data.registration.dateOfJoining && data.personalInformation.dateOfBirth) {
         if (dayjs(data.personalInformation.dateOfBirth).isAfter(data.registration.dateOfJoining)) {
-             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "DOB cannot be after joining date.", path: ["personalInformation", "dateOfBirth"] });
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "DOB cannot be after joining date.", path: ["personalInformation", "dateOfBirth"] });
         }
     }
 });
@@ -318,7 +318,7 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
             <FormItem label={<>Date of Birth <span className="text-red-500">*</span></>} invalid={!!errors.personalInformation?.dateOfBirth} errorMessage={errors.personalInformation?.dateOfBirth?.message}><Controller name="personalInformation.dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select Date" value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Age" invalid={!!errors.personalInformation?.age} errorMessage={errors.personalInformation?.age?.message}><Controller name="personalInformation.age" control={control} render={({ field }) => <Input type="number" placeholder="Enter Age" {...field} onChange={e => field.onChange(parseInt(e.target.value) || '')} />} /></FormItem>
             <FormItem label="Gender" invalid={!!errors.personalInformation?.gender} errorMessage={(errors.personalInformation?.gender as any)?.message}><Controller name="personalInformation.gender" control={control} render={({ field }) => <Select placeholder="Select Gender" options={genderOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Marital Status" invalid={!!errors.personalInformation?.maritalStatus} errorMessage={(errors.personalInformation?.maritalStatus as any)?.message}><Controller name="personalInformation.maritalStatus" control={control} render={({ field }) => <Select placeholder="Select Marital Status" options={maritalStatusOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
+            <FormItem label="Marital Status" invalid={!!errors.personalInformation?.maritual_status} errorMessage={(errors.personalInformation?.maritual_status as any)?.message}><Controller name="personalInformation.maritual_status" control={control} render={({ field }) => <Select placeholder="Select Marital Status" options={maritalStatusOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label={<>Nationality <span className="text-red-500">*</span></>} invalid={!!errors.personalInformation?.nationalityId} errorMessage={(errors.personalInformation?.nationalityId as any)?.message}><Controller name="personalInformation.nationalityId" control={control} render={({ field }) => <Select placeholder="Select Nationality" options={nationalityOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Blood Group" invalid={!!errors.personalInformation?.bloodGroup} errorMessage={(errors.personalInformation?.bloodGroup as any)?.message}><Controller name="personalInformation.bloodGroup" control={control} render={({ field }) => <Select placeholder="Select Blood Group" options={bloodGroupOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Permanent Address" invalid={!!errors.personalInformation?.permanentAddress} errorMessage={errors.personalInformation?.permanentAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.permanentAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Permanent Address" {...field} />} /></FormItem>
@@ -333,7 +333,7 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
     const [viewingFile, setViewingFile] = useState<File | string | null>(null);
 
     const documentFields = useMemo(() => [
-        { name: 'profile_pic' as const, label: "Profile Picture", accept: ".jpg,.jpeg,.png"  },
+        { name: 'profile_pic' as const, label: "Profile Picture", accept: ".jpg,.jpeg,.png" },
         { name: 'identity_proof' as const, label: "Identity Proof", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'address_proof' as const, label: "Address Proof", required: true, accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'educational_certificates' as const, label: "Educational Certificates", accept: ".pdf,.zip" },
@@ -347,40 +347,40 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
         { name: 'pan_card' as const, label: "PAN Card", accept: ".pdf,.jpg,.jpeg,.png" },
         { name: 'passport_size_photograph' as const, label: "Passport Photograph", accept: ".jpg,.jpeg,.png" },
     ], []);
-    
+
     const watchedFileValues = documentFields.map(doc => formMethods.watch(`documentSubmission.${doc.name}`));
 
     const imageDocsForViewer = useMemo(() => {
         return documentFields
-          .map((doc, index) => ({ ...doc, fileValue: watchedFileValues[index] }))
-          .filter(doc => {
-            const url = doc.fileValue;
-            if (!url) return false;
-            if (url instanceof File) return url.type.startsWith('image/');
-            if (typeof url === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
-            return false;
-          })
-          .map(doc => ({
-            src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
-            alt: doc.label
-          }));
+            .map((doc, index) => ({ ...doc, fileValue: watchedFileValues[index] }))
+            .filter(doc => {
+                const url = doc.fileValue;
+                if (!url) return false;
+                if (url instanceof File) return url.type.startsWith('image/');
+                if (typeof url === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
+                return false;
+            })
+            .map(doc => ({
+                src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
+                alt: doc.label
+            }));
     }, [documentFields, ...watchedFileValues]);
 
     const handlePreviewClick = (fileValue: File | string | null | undefined, docLabel: string) => {
         if (!fileValue) return;
         const isImage = (file: unknown): file is File | string => (file instanceof File && file.type.startsWith('image/')) || (typeof file === 'string' && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file));
-    
+
         if (isImage(fileValue)) {
-          const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
-          if (index > -1) {
-            setSelectedImageIndex(index);
-            setViewerIsOpen(true);
-          }
+            const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
+            if (index > -1) {
+                setSelectedImageIndex(index);
+                setViewerIsOpen(true);
+            }
         } else {
-          setViewingFile(fileValue);
+            setViewingFile(fileValue);
         }
     };
-    
+
     return (
         <>
             <Card id="documentSubmission">
@@ -407,8 +407,8 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
 };
 
 const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) => {
-    const { Roles, departmentsData, designationsData, BrandData, CategoriesData, AllProducts, memberData, reportingTo, CountriesData } = useSelector(masterSelector);
-    
+    const { Roles, departmentsData, designationsData, BrandData, CategoriesData, AllProducts, MemberData, EmployeesList, CountriesData } = useSelector(masterSelector);
+
     const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => toOptions(departmentsData?.data), [departmentsData]);
@@ -417,8 +417,8 @@ const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) =>
     const categoryOptions = useMemo(() => toOptions(CategoriesData), [CategoriesData]);
     const brandOptions = useMemo(() => toOptions(BrandData), [BrandData]);
     const productOptions = useMemo(() => toOptions(AllProducts), [AllProducts]);
-    const reportingHrOptions = useMemo(() => toOptions(reportingTo?.data), [reportingTo]);
-    const reportingHeadOptions = useMemo(() => toOptions(memberData), [memberData]);
+    const reportingHrOptions = useMemo(() => toOptions(EmployeesList?.data?.data), [EmployeesList]);
+    const reportingHeadOptions = useMemo(() => toOptions(MemberData.data), [MemberData]);
     return (
         <Card id="roleResponsibility"><h4 className="mb-6">Role & Responsibility</h4><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
             <FormItem label={<>Role <span className="text-red-500">*</span></>} invalid={!!errors.roleResponsibility?.roleId} errorMessage={(errors.roleResponsibility?.roleId as any)?.message}><Controller name="roleResponsibility.roleId" control={control} render={({ field }) => <Select placeholder="Select Role" options={roleOptions} {...field} />} /></FormItem>
@@ -434,7 +434,7 @@ const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) =>
     );
 };
 
-const EquipmentsAssetsSection = ({ control, formMethods }: FormSectionBaseProps) => {
+const EquipmentsAssetsSection = ({ control, formMethods, errors  }: FormSectionBaseProps) => {
     const { fields, append, remove } = useFieldArray({ control, name: 'equipmentsAssetsProvided.items' });
     const { watch } = formMethods;
     const [viewingFile, setViewingFile] = useState<File | string | null>(null);
@@ -527,7 +527,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         resolver: zodResolver(employeeFormValidationSchema),
         mode: 'onTouched',
     });
-    
+
     const { handleSubmit, reset, control, formState: { errors } } = formMethods;
 
     useEffect(() => {
@@ -557,7 +557,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('blood_group', objToValue(values.personalInformation?.bloodGroup));
         formData.append('permanent_address', values.personalInformation?.permanentAddress || '');
         formData.append('local_address', values.personalInformation?.localAddress || '');
-        formData.append('maritual_status', objToValue(values.personalInformation?.maritalStatus));
+        formData.append('maritual_status', objToValue(values.personalInformation?.maritual_status));
         formData.append('role_id', objToValue(values.roleResponsibility?.roleId));
         formData.append('department_id', arrayToCommaString(values.roleResponsibility?.departmentId));
         formData.append('designation_id', objToValue(values.roleResponsibility?.designationId));
@@ -568,16 +568,31 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('product_service_id', arrayToCommaString(values.roleResponsibility?.productServiceId));
         formData.append('reporting_hr_id', arrayToCommaString(values.roleResponsibility?.reportingHrId));
         formData.append('reporting_head_id', objToValue(values.roleResponsibility?.reportingHeadId));
-        
+
         Object.entries(values.documentSubmission || {}).forEach(([key, file]) => {
-            if (file instanceof File) formData.append(key, file);
+            if (file instanceof File) {
+                // Backend expects these specific fields to be sent as arrays.
+                // The common convention for this with FormData is to append `[]` to the key name.
+                const isArrayField = [
+                    'educational_certificates',
+                    'experience_certificates',
+                    'salary_slips',
+                    'past_offer_letter', // Based on original buggy implementation
+                ].includes(key)
+
+                if (isArrayField) {
+                    formData.append(`${key}[]`, file)
+                } else {
+                    formData.append(key, file)
+                }
+            }
         });
 
         formData.append('training_date_of_completion', formatDate(values.training?.inductionDateCompletion));
         formData.append('training_remark', values.training?.inductionRemarks || '');
         formData.append('specific_training_date_of_completion', formatDate(values.training?.departmentTrainingDateCompletion));
         formData.append('specific_training_remark', values.training?.departmentTrainingRemarks || '');
-        
+
         const yesNoToBoolString = (value: 'yes' | 'no' | '') => value === 'yes' ? '1' : value === 'no' ? '0' : '';
         formData.append('exit_interview_conducted', yesNoToBoolString(values.offBoarding?.exit_interview_conducted));
         formData.append('resignation_letter_received', yesNoToBoolString(values.offBoarding?.resignation_letter_received));
@@ -589,7 +604,7 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('fnf_remarks', values.offBoarding?.fnf_remarks || '');
         formData.append('notice_period_status', values.offBoarding?.notice_period_status || '');
         formData.append('notice_period_remarks', values.offBoarding?.notice_period_remarks || '');
-        
+
         if (values.equipmentsAssetsProvided?.items) {
             const equipmentDataForJson = values.equipmentsAssetsProvided.items.map(item => ({ name: item.name, serial_no: item.serial_no, remark: item.remark, provided: item.provided }));
             formData.append('equipments_assets_issued', JSON.stringify(equipmentDataForJson));
@@ -597,13 +612,13 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
                 if (item.attachment instanceof File) formData.append(`equipment_attachment_${index}`, item.attachment);
             });
         }
-        
+
         onFormSubmit(formData, defaultValues?.id);
     };
-    
+
     const onInvalidSubmit = (errorData: FieldErrors<EmployeeFormSchema>) => {
         console.log(errorData);
-        
+
         toast.push(<Notification title="Error" type="danger">Please fix the errors before submitting.</Notification>);
         for (const key of sectionKeys) {
             if (errorData[key]) {
@@ -712,7 +727,7 @@ const EmployeeFormPage = () => {
         const brandOptions = toOptions(lookups.BrandData || []);
         const productOptions = toOptions(lookups.AllProducts || []);
         const reportingHrOptions = toOptions(lookups.EmployeesList?.data?.data);
-        const reportingHeadOptions = toOptions(lookups.memberData);
+        const reportingHeadOptions = toOptions(lookups.MemberData?.data);
 
         return {
             id: String(apiData.id),
@@ -733,7 +748,7 @@ const EmployeeFormPage = () => {
                 bloodGroup: apiData.blood_group ? { value: apiData.blood_group, label: apiData.blood_group } : null,
                 permanentAddress: apiData.permanent_address || '',
                 localAddress: apiData.local_address || '',
-                maritalStatus: apiData.maritual_status ? { value: apiData.maritual_status, label: apiData.maritual_status } : null,
+                maritual_status: apiData.maritual_status ? { value: apiData.maritual_status, label: apiData.maritual_status } : null,
             },
             roleResponsibility: {
                 roleId: findOption(roleOptions, apiData.role_id),
@@ -783,9 +798,9 @@ const EmployeeFormPage = () => {
 
     useEffect(() => {
         const lookupsReady = lookups.CountriesData?.length > 0 && lookups.Roles?.length > 0 && lookups.departmentsData?.data?.length > 0;
-        
+
         if (isEditMode && employeeId && lookupsReady) {
-            if (initialData === null) { 
+            if (initialData === null) {
                 setIsLoading(true);
                 dispatch(apiGetEmployeeById(employeeId)).unwrap()
                     .then(actionResult => {
@@ -804,8 +819,8 @@ const EmployeeFormPage = () => {
             setIsLoading(false);
             if (initialData === null) setInitialData({});
         }
-    }, [employeeId, isEditMode, dispatch, navigate, apiToForm, initialData]);
-    
+    }, [employeeId, isEditMode, dispatch, navigate, apiToForm, initialData, lookups]);
+
     const handleFormSubmit = (formData: FormData, id?: string) => {
         setIsSubmitting(true);
         const action = isEditMode && id ? editEmployeesAction({ employeeId: id, data: formData }) : addEmployeesAction(formData);
@@ -815,7 +830,7 @@ const EmployeeFormPage = () => {
                 toast.push(<Notification title="Success" type="success">{`Employee ${isEditMode ? 'updated' : 'added'} successfully.`}</Notification>);
                 navigate('/hr-employees/employees');
             })
-            .catch((error: any) => { 
+            .catch((error: any) => {
                 const errorMessage = error?.response?.data?.message || error.message || `Failed to ${isEditMode ? 'update' : 'create'} employee.`;
                 toast.push(<Notification title="Error" type="danger">{errorMessage}</Notification>);
             })
