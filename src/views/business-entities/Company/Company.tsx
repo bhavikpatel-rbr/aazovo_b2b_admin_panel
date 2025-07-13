@@ -761,6 +761,9 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
             }
             return [];
         }
+         if(key === 'customFilter') {
+            return [{ key, value: 'custom', label: `Custom Filter: ${value}` }];
+        }
         if (Array.isArray(value)) {
             return value.filter(item => item !== null && item !== undefined).map((item: { value: string; label: string }) => ({
                 key, value: item.value, label: `${filterKeyToLabelMap[key] || 'Filter'}: ${item.label}`,
