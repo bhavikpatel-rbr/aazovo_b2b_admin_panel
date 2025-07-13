@@ -181,7 +181,7 @@ const EmployeeProfileHeader: React.FC<{ employee: Employee }> = ({
                 <h6 className="font-bold mb-0">{roleName}</h6>
             </div>
 
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-2"><Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/hr-employees/employees/edit/${employee.id}`)}>Edit Employee</Button><Button icon={<TbArrowLeft />} onClick={() => navigate('/hr/employees')}>Back to List</Button></div>
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-2"><Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/hr-employees/employees/edit/${employee.id}`)}>Edit Employee</Button><Button icon={<TbArrowLeft />} onClick={() => navigate('hr-employees/employees')}>Back to List</Button></div>
         </div>
     )
 }
