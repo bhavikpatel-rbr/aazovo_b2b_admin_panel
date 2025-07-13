@@ -136,10 +136,10 @@ const WallItemForm = () => {
   }, [isEditMode, itemId, getwallItemsData, formMethods]);
 
   const productOptions: OptionType<number>[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
-  const memberOptions: OptionType<number>[] = useMemo(() => Array.isArray(memberData) ? memberData.map((c: any) => ({ value: c.id, label: c.name })) : [], [memberData]);
+  const memberOptions: OptionType<number>[] = useMemo(() => Array.isArray(memberData) ? memberData.map((c: any) => ({ value: c.id, label: `(${c.member_code}) - ${c.name || 'N/A'}`, })) : [], [memberData]);
   const paymentTermsOption: OptionType<number>[] = useMemo(() => Array.isArray(PaymentTermsData) ? PaymentTermsData.map((p: any) => ({ value: p.id, label: p.term_name || 'Unnamed' })) : [], [PaymentTermsData]);
   const productSpecOptionsForSelect: OptionType<number>[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((s: any) => ({ value: s.id, label: s.name })) : [], [ProductSpecificationsData]);
-  const salesPersonOptions: OptionType<number>[] = useMemo(() => Array.isArray(salesPerson) ? salesPerson.map((p: any) => ({ value: p.id, label: p.name })) : [], [salesPerson]);
+  const salesPersonOptions: OptionType<number>[] = useMemo(() => Array.isArray(salesPerson) ? salesPerson.map((p: any) => ({ value: p.id, label: `(${p.employee_id}) - ${p.name || 'N/A'}` })) : [], [salesPerson]);
 
   const onFormSubmit = async (formData: WallItemFormData) => {
     setIsSubmitting(true);
