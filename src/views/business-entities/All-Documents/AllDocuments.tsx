@@ -136,10 +136,7 @@ const UnifiedFileViewer: React.FC<{
                         <h6 className="font-semibold truncate" title={currentFile.name}>{currentFile.name}</h6>
                         <span className="text-sm text-gray-400">{currentIndex + 1} / {files.length}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <a href={currentFile.srcUrl} download target="_blank" rel="noopener noreferrer"><Button shape="circle" variant="subtle" size="sm" icon={<TbCloudDownload />} /></a>
-                        <Button shape="circle" variant="subtle" size="sm" icon={<TbX />} onClick={onClose} />
-                    </div>
+                 
                 </header>
                 <main className="relative flex-grow flex items-center justify-center " onClick={e => e.stopPropagation()}>
                     {!isContentLoaded && <Spinner size={40} className="absolute" />}
