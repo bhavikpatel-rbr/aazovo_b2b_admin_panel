@@ -880,7 +880,7 @@ const PartnerAlertModal: React.FC<{ partner: PartnerItem; onClose: () => void }>
                                         <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
                                             <RichTextEditor
                                                 {...field}
-                                                onChange={(val) => field.onChange(val)}
+                                                onChange={(val) => field.onChange(val.html)}
                                                 className="flex-grow min-h-[150px] sm:min-h-[200px]"
                                             />
                                         </div>
