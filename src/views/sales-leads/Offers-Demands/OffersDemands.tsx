@@ -1731,15 +1731,22 @@ const ActiveFiltersDisplay = ({
   filterData,
   onRemoveFilter,
   onClearAll,
+  allUsers,
 }: {
   filterData: FilterFormData;
-  onRemoveFilter: (key: keyof FilterFormData, value: any) => void;
+  onRemoveFilter: (key: keyof FilterFormData, value?: any) => void;
   onClearAll: () => void;
+  allUsers: ApiUserShape[];
 }) => {
   const hasFilters = Object.values(filterData).some(
     (val) => val && (!Array.isArray(val) || val.length > 0)
   );
+  const userMap = useMemo(
+    () => new Map(allUsers.map((u) => [String(u.id), u.name])),
+    [allUsers]
+  );
   if (!hasFilters) return null;
+
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
       <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">
@@ -1750,12 +1757,37 @@ const ActiveFiltersDisplay = ({
           Type: {filterData.quickFilters.value}{" "}
           <TbX
             className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
-            onClick={() =>
-              onRemoveFilter("quickFilters", filterData.quickFilters.value)
-            }
+            onClick={() => onRemoveFilter("quickFilters")}
           />
         </Tag>
       )}
+      {filterData.itemType && (
+        <Tag prefix>
+          Type: {filterData.itemType}{" "}
+          <TbX
+            className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+            onClick={() => onRemoveFilter("itemType")}
+          />
+        </Tag>
+      )}
+      {filterData.creatorIds?.map((id) => (
+        <Tag key={`creator-${id}`} prefix>
+          Creator: {userMap.get(id) || id}{" "}
+          <TbX
+            className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+            onClick={() => onRemoveFilter("creatorIds", id)}
+          />
+        </Tag>
+      ))}
+      {filterData.assigneeIds?.map((id) => (
+        <Tag key={`assignee-${id}`} prefix>
+          Assignee: {userMap.get(id) || id}{" "}
+          <TbX
+            className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+            onClick={() => onRemoveFilter("assigneeIds", id)}
+          />
+        </Tag>
+      ))}
       <Button
         size="xs"
         variant="plain"
@@ -1971,7 +2003,7 @@ const OffersDemands = () => {
     () =>
       Array.isArray(getAllUserData)
         ? getAllUserData.map((user: any) => ({
-            value: user.id,
+            value: String(user.id),
             label: user.name,
           }))
         : [],
@@ -2214,9 +2246,33 @@ const OffersDemands = () => {
     onClearFilters();
     setFilterCriteria({ ...filterCriteria, quickFilters: { type, value } });
   };
-  const handleRemoveFilter = (key: keyof FilterFormData) => {
-    setFilterCriteria((prev) => ({ ...prev, [key]: undefined }));
-  };
+
+  const handleRemoveFilter = useCallback(
+    (key: keyof FilterFormData, value?: any) => {
+      setFilterCriteria((prev) => {
+        const newFilters = { ...prev };
+        const arrayFilters: (keyof FilterFormData)[] = [
+          "creatorIds",
+          "assigneeIds",
+        ];
+
+        if (arrayFilters.includes(key)) {
+          const currentValues = prev[key] as any[] | undefined;
+          if (Array.isArray(currentValues)) {
+            const newValues = currentValues.filter((item) => item !== value);
+            (newFilters as any)[key] =
+              newValues.length > 0 ? newValues : undefined;
+          }
+        } else {
+          (newFilters as any)[key] = null;
+        }
+
+        return newFilters;
+      });
+      handleSetTableConfig({ pageIndex: 1 });
+    },
+    [handleSetTableConfig]
+  );
 
   const handlePaginationChange = useCallback(
     (page: number) => handleSetTableConfig({ pageIndex: page }),
@@ -2887,6 +2943,7 @@ const OffersDemands = () => {
             filterData={filterCriteria}
             onRemoveFilter={handleRemoveFilter}
             onClearAll={onClearFilters}
+            allUsers={getAllUserData}
           />
           <div className="flex-grow overflow-auto">
             <ItemTable
@@ -3024,6 +3081,44 @@ const OffersDemands = () => {
               />
             </FormItem>
           )}
+          <FormItem label="Created By">
+            <Controller
+              name="creatorIds"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Filter by Creator"
+                  options={getAllUserDataOptions}
+                  value={getAllUserDataOptions.filter((opt) =>
+                    field.value?.includes(opt.value)
+                  )}
+                  onChange={(options: any) =>
+                    field.onChange(options?.map((o: any) => o.value) || [])
+                  }
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem label="Assigned To">
+            <Controller
+              name="assigneeIds"
+              control={filterFormMethods.control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Filter by Assignee"
+                  options={getAllUserDataOptions}
+                  value={getAllUserDataOptions.filter((opt) =>
+                    field.value?.includes(opt.value)
+                  )}
+                  onChange={(options: any) =>
+                    field.onChange(options?.map((o: any) => o.value) || [])
+                  }
+                />
+              )}
+            />
+          </FormItem>
           <FormItem label="Created Date">
             <Controller
               name="createdDateRange"

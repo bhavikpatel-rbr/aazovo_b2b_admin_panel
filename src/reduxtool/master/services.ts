@@ -3360,3 +3360,11 @@ export const getmatchopp = async (id:any) => {
     return isAxiosError(err)
   }
 }
+export const getviewopp = async (id:any, key: any) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/lead/view-opp/${id}/${key}`,)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
