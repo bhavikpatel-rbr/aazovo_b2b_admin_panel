@@ -47,7 +47,7 @@ import Tr from "@/components/ui/Table/Tr";
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp, TbCalendarEvent, TbCalendarTime, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbNotesOff, TbPencil, TbPencilPlus, TbPlus, TbReceipt, TbReload, TbSearch, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
+  TbAlarm, TbBell, TbBellRinging, TbBrandWhatsapp, TbCalendarEvent, TbCalendarTime, TbChecks, TbCloudUpload, TbColumns, TbEye, TbFileSearch, TbFilter, TbInfoCircle, TbMail, TbNotesOff, TbPencil, TbPencilPlus, TbPlus, TbReceipt, TbReload, TbSearch, TbTagStarred, TbUser, TbUserCancel, TbUserCheck, TbUserCircle, TbUserExclamation, TbUsersGroup, TbX
 } from "react-icons/tb";
 
 // Types & Utils
@@ -55,6 +55,7 @@ import type { TableQueries } from "@/@types/common";
 import type { ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addAllActionAction,
   addAllAlertsAction,
   addNotificationAction,
   addScheduleAction,
@@ -67,10 +68,12 @@ import {
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { encryptStorage } from "@/utils/secureLocalStorage";
 import cloneDeep from "lodash/cloneDeep";
 import dayjs from "dayjs";
 import { useSelector } from "react-redux";
 import { isEmptyArray } from "formik";
+
 
 // --- START: Detailed Type Definitions (Matching API Response) ---
 interface UserReference { id: number; name: string; }
@@ -166,6 +169,14 @@ interface AlertNote {
   };
 }
 
+// START: Activity Schema
+const activitySchema = z.object({
+    item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+    notes: z.string().optional(),
+});
+type ActivityFormData = z.infer<typeof activitySchema>;
+// END: Activity Schema
+
 const taskPriorityOptions: SelectOption[] = [{ value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' },];
 const eventTypeOptions = [{ value: 'Meeting', label: 'Meeting' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Other', label: 'Other' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'OnboardingSession', label: 'Onboarding Session' }];
 
@@ -184,7 +195,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
 }
 
 // --- START: MODALS SECTION ---
-export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction";
+export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction" | "activity";
 export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
 
 const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
@@ -319,6 +330,54 @@ const GenericInfoDialog: React.FC<{ title: string; onClose: () => void; }> = ({ 
     <div className="text-right mt-6"><Button variant="solid" onClick={onClose}>Close</Button></div>
   </Dialog>
 );
+
+const AddActivityDialog: React.FC<{ member: FormItem; onClose: () => void; user: any; }> = ({ member, onClose, user }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
+        resolver: zodResolver(activitySchema),
+        defaultValues: { item: `Follow up with ${member.name}`, notes: '' },
+        mode: 'onChange',
+    });
+
+    const onAddActivity = async (data: ActivityFormData) => {
+        setIsLoading(true);
+        const payload = {
+            item: data.item,
+            notes: data.notes || '',
+            module_id: String(member.id),
+            module_name: 'Member',
+            user_id: user.id,
+        };
+        try {
+            await dispatch(addAllActionAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Activity Added" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Add Activity Log for "{member.name}"</h5>
+            <Form onSubmit={handleSubmit(onAddActivity)}>
+                <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
+                    <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} />
+                </FormItem>
+                <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+                    <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} />
+                </FormItem>
+                <div className="text-right mt-6">
+                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Activity</Button>
+                </div>
+            </Form>
+        </Dialog>
+    );
+};
 
 const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({ member, onClose }) => {
     const [alerts, setAlerts] = useState<AlertNote[]>([]);
@@ -493,6 +552,15 @@ const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void
   const { type, data: member, isOpen } = modalState;
   const dispatch = useAppDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+
+  useEffect(() => {
+      try {
+          setUserData(encryptStorage.getItem("UserData"));
+      } catch (error) {
+          console.error("Error getting UserData from storage:", error);
+      }
+  }, []);
 
   const handleConfirmSchedule = async (data: ScheduleFormData) => {
     if (!member) return;
@@ -526,6 +594,7 @@ const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void
     case "viewDetail": return <ViewMemberDetailDialog member={member} onClose={onClose} />;
     case "alert": return <MemberAlertModal member={member} onClose={onClose} />;
     case "transaction": return <GenericInfoDialog title={`Transactions for ${member.name}`} onClose={onClose} />;
+    case "activity": return <AddActivityDialog member={member} onClose={onClose} user={userData} />;
     default: return null;
   }
 };
@@ -584,6 +653,7 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
         <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> Add Activity</Dropdown.Item>
       </Dropdown>
     </div>
   );
