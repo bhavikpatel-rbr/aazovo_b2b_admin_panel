@@ -236,7 +236,7 @@ const ActionColumn = ({ rowData, onOpenModal }: {
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="View"><div className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400`} role="button" onClick={() => navigate(`/hr-employees/employees/view/${rowData.id}`)}><TbEye /></div></Tooltip>
       <Tooltip title="Edit"><div className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400`} role="button" onClick={() => navigate(`/hr-employees/employees/edit/${rowData.id}`)}><TbPencil /></div></Tooltip>
-      <Tooltip title="Change Password"><div className={`text-xl p-1.5 cursor-pointer select-none text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400`} role="button" onClick={() => { /* Implement password change logic */ }}><TbKey /></div></Tooltip>
+
       <Dropdown renderTitle={<BsThreeDotsVertical className="text-xl p-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />} placement="bottom-end">
         <Dropdown.Item onClick={() => onOpenModal('email', rowData)} className="flex items-center gap-2"><TbMail size={18} /><span className="text-sm">Send Email</span></Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal('whatsapp', rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /><span className="text-sm">Send Whatsapp</span></Dropdown.Item>
