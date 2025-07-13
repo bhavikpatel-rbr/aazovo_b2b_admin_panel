@@ -33,6 +33,7 @@ import Dropdown from "@/components/ui/Dropdown";
 import Input from "@/components/ui/Input";
 import Notification from "@/components/ui/Notification";
 import Segment from "@/components/ui/Segment";
+import Spinner from "@/components/ui/Spinner";
 import Table from "@/components/ui/Table";
 import toast from "@/components/ui/toast";
 import Upload from "@/components/ui/Upload";
@@ -52,22 +53,47 @@ import FilePdf from "@/assets/svg/files/FilePdf";
 import FileImage from "@/assets/svg/files/FileImage";
 import FileNotFound from "@/assets/svg/FileNotFound";
 
-// --- HELPER FUNCTIONS & COMPONENTS (Ported from previous task) ---
+// --- TYPE DEFINITIONS ---
+type File = {
+  id: string;
+  name: string;
+  fileType: string;
+  size: number;
+  srcUrl: string;
+  uploadDate: number;
+};
+type Directory = { id: string; label: string };
+type DialogProps = { open: boolean; id: string };
+type Layout = "grid" | "list";
+
+// --- HELPER FUNCTIONS & NEW UNIFIED VIEWER ---
 
 const isImageUrl = (url: string | undefined | null): url is string =>
   typeof url === "string" && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
 
-interface ImageViewerProps {
-  images: { src: string; alt: string }[];
+const UnifiedFileViewer: React.FC<{
+  files: File[];
   startIndex: number;
   onClose: () => void;
-}
-
-const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
-    // ... (ImageViewer component code from previous task is unchanged)
+}> = ({ files, startIndex, onClose }) => {
     const [currentIndex, setCurrentIndex] = useState(startIndex);
-    const handleNext = () => { setCurrentIndex((prev) => (prev + 1) % images.length); };
-    const handlePrev = () => { setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);};
+    const [isContentLoaded, setIsContentLoaded] = useState(false);
+    const currentFile = files[currentIndex];
+
+    useEffect(() => {
+        setIsContentLoaded(false); // Reset loading state on file change
+    }, [currentIndex]);
+
+    const handleNext = (e?: MouseEvent) => {
+        e?.stopPropagation();
+        setCurrentIndex((prev) => Math.min(prev + 1, files.length - 1));
+    };
+
+    const handlePrev = (e?: MouseEvent) => {
+        e?.stopPropagation();
+        setCurrentIndex((prev) => Math.max(prev - 1, 0));
+    };
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'ArrowRight') handleNext();
@@ -76,57 +102,60 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-    if (!images || images.length === 0) return null;
-    const currentImage = images[currentIndex];
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-[100] transition-opacity duration-300 p-4" onClick={onClose}>
-            <Button shape="circle" variant="solid" icon={<TbX />} className="absolute top-4 right-4 z-[102] bg-black/50 hover:bg-black/80" onClick={onClose} />
-            <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-                <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
-                    <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronLeft />} className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[101] bg-black/50 hover:bg-black/80" onClick={handlePrev} />
-                    <div className="flex flex-col items-center justify-center h-full">
-                        <img src={currentImage.src} alt={currentImage.alt} className="max-h-[calc(100%-4rem)] max-w-full object-contain select-none" />
-                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">{currentImage.alt} ({currentIndex + 1} / {images.length})</div>
-                    </div>
-                    <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronRight />} className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[101] bg-black/50 hover:bg-black/80" onClick={handleNext} />
-                </div>
-                <div className="w-full max-w-5xl flex-shrink-0 mt-4">
-                    <div className="flex justify-center p-2"><div className="flex gap-3 overflow-x-auto pb-2">{images.map((image, index) => (<button type="button" key={index} onClick={() => setCurrentIndex(index)} className={classNames("w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white", {'border-white opacity-100 scale-105': currentIndex === index, 'border-transparent opacity-60 hover:opacity-100': currentIndex !== index})}><img src={image.src} alt={image.alt} className="w-full h-full object-cover rounded-sm" /></button>))}</div></div>
-                </div>
+    }, [onClose]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (!currentFile) return null;
+
+    const renderContent = () => {
+        if (isImageUrl(currentFile.srcUrl)) {
+            return <img src={currentFile.srcUrl} alt={currentFile.name} className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${isContentLoaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setIsContentLoaded(true)} />;
+        }
+        if (currentFile.fileType === 'pdf') {
+            return <iframe src={currentFile.srcUrl} title={currentFile.name} className={`w-full h-full border-0 bg-white transition-opacity duration-300 ${isContentLoaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setIsContentLoaded(true)}></iframe>;
+        }
+        
+        // Fallback for other file types
+        if (!isContentLoaded) setTimeout(() => setIsContentLoaded(true), 10); // Ensure fade-in happens
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center text-center p-10 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <TbFile className="w-16 h-16 mx-auto mb-4 text-gray-500" />
+                <h5 className="mb-2">{currentFile.name}</h5>
+                <p className="mb-4 text-gray-600 dark:text-gray-300">Preview is not available for this file type.</p>
+                <a href={currentFile.srcUrl} download target="_blank" rel="noopener noreferrer">
+                    <Button variant="solid" icon={<TbCloudDownload />}>Download File</Button>
+                </a>
             </div>
-        </div>
+        );
+    };
+
+    return (
+         <Dialog isOpen={true} onClose={onClose} width="auto" height="10vh"  contentClassName=" p-0 bg-transparent">
+            <div className="w-screen h-screen bg-black/80 backdrop-blur-sm flex flex-col" onClick={onClose}>
+                <header className="flex-shrink-0 h-16 text-white flex items-center justify-between px-4" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-4">
+                        <h6 className="font-semibold truncate" title={currentFile.name}>{currentFile.name}</h6>
+                        <span className="text-sm text-gray-400">{currentIndex + 1} / {files.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <a href={currentFile.srcUrl} download target="_blank" rel="noopener noreferrer"><Button shape="circle" variant="subtle" size="sm" icon={<TbCloudDownload />} /></a>
+                        <Button shape="circle" variant="subtle" size="sm" icon={<TbX />} onClick={onClose} />
+                    </div>
+                </header>
+                <main className="relative flex-grow flex items-center justify-center " onClick={e => e.stopPropagation()}>
+                    {!isContentLoaded && <Spinner size={40} className="absolute" />}
+                    {renderContent()}
+                </main>
+                {files.length > 1 && (
+                    <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none">
+                        <Button shape="circle" size="lg" icon={<TbChevronLeft />} className="pointer-events-auto" onClick={handlePrev} disabled={currentIndex === 0} />
+                        <Button shape="circle" size="lg" icon={<TbChevronRight />} className="pointer-events-auto" onClick={handleNext} disabled={currentIndex === files.length - 1} />
+                    </div>
+                )}
+            </div>
+        </Dialog>
     );
 };
 
-const GenericFileViewer = ({ file, onClose }: { file: File; onClose: () => void }) => {
-    // ... (GenericFileViewer component code from previous task is adapted for File type)
-    const fileUrl = file.srcUrl;
-    const fileName = file.name;
-    const fileExtension = useMemo(() => fileName.split('.').pop()?.toLowerCase(), [fileName]);
-    const isPdf = fileExtension === 'pdf';
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onClose]);
-    const getFileIcon = () => {
-        switch (fileExtension) {
-            case 'pdf': return <TbFileTypePdf className="text-red-500" size={64} />;
-            case 'xls': case 'xlsx': case 'csv': return <TbFileSpreadsheet className="text-green-500" size={64} />;
-            default: return <TbFile className="text-gray-500" size={64} />;
-        }
-    };
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-[100] transition-opacity duration-300 p-4" onClick={onClose}>
-            <Button type="button" shape="circle" variant="solid" icon={<TbX />} className="absolute top-4 right-4 z-[102] bg-black/50 hover:bg-black/80" onClick={onClose} />
-            <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-                {isPdf ? (<iframe src={fileUrl} title={fileName} className="w-full h-full border-none rounded-lg bg-white" />) : (<div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center flex flex-col items-center justify-center max-w-md">{getFileIcon()}<h4 className="mb-2 mt-4">Preview not available</h4><p className="text-gray-600 dark:text-gray-300 mb-6 max-w-xs">This file type can't be shown here. You can open it in a new tab to view or download it.</p><Button variant="solid" onClick={() => window.open(fileUrl, '_blank')}>Open '{fileName}'</Button></div>)}
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">{fileName}</div>
-            </div>
-        </div>
-    );
-};
 
 const DocumentPlaceholder = ({ file }: { file: File }) => {
   const getFileIcon = () => {
@@ -148,17 +177,6 @@ const DocumentPlaceholder = ({ file }: { file: File }) => {
   );
 };
 
-
-// --- TYPE DEFINITIONS ---
-type File = {
-  id: string;
-  name: string;
-  fileType: string;
-  size: number;
-  srcUrl: string;
-  uploadDate: number;
-};
-type Directory = { id: string; label: string };
 
 // --- ZUSTAND STORE ---
 export type FileManagerState = {
@@ -280,7 +298,7 @@ const transformApiData = (apiData: any) => {
 };
 
 // --- SUB-COMPONENTS ---
-const FileType = ({ type }: { type: string }) => { /* ... unchanged ... */ return <>{type === 'directory' ? 'Folder' : type.toUpperCase()}</> };
+const FileType = ({ type }: { type: string }) => <>{type === 'directory' ? 'Folder' : type.toUpperCase()}</>;
 
 const FileItemDropdown = (props: any) => {
   const { onDownload, onRename, onDelete, onOpen } = props;
@@ -331,17 +349,30 @@ const FolderSegment = (props: { folder: File } & any) => {
 
 const FileSegment = (props: { file: File } & any) => {
     const { file, onPreview, ...rest } = props;
+
+    const renderPreview = () => {
+        if (isImageUrl(file.srcUrl)) {
+            return (
+                <img src={file.srcUrl} alt={file.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+            );
+        }
+        if (file.fileType === 'pdf') {
+            return (
+                <div className="w-full h-full flex items-center justify-center p-4">
+                    <TbFileTypePdf className="text-red-500/80" size={60} />
+                </div>
+            );
+        }
+        return <DocumentPlaceholder file={file} />;
+    };
+
     return (
         <div className="bg-white rounded-2xl dark:bg-gray-800 border border-gray-200 dark:border-transparent transition-all hover:shadow-lg group">
-            <div className="w-full h-30 bg-gray-100 dark:bg-gray-700/50 rounded-t-2xl flex items-center justify-center overflow-hidden cursor-pointer" onClick={onPreview}>
-                {isImageUrl(file.srcUrl) ? (
-                    <img src={file.srcUrl} alt={file.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                ) : (
-                    <DocumentPlaceholder file={file} />
-                )}
+            <div className="w-full h-32 bg-gray-100 dark:bg-gray-700/50 rounded-t-2xl flex items-center justify-center cursor-pointer" onClick={onPreview}>
+                {renderPreview()}
             </div>
             <div className="p-3 flex items-start justify-between gap-2">
-                <div className="flex-grow overflow-hidden">
+                <div className="flex-grow">
                     <div className="font-bold heading-text truncate">{file.name}</div>
                     <div className="text-sm text-gray-500"><FileType type={file.fileType} /></div>
                 </div>
@@ -377,7 +408,7 @@ const FileList = (props: any) => {
       {files.length > 0 && (
         <div className="mt-8">
           <h4>Files</h4>
-          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-4 mt-4 gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 mt-4 gap-4 lg:gap-6">
             {files.map((file) => (
                 <FileSegment key={file.id} file={file} onPreview={() => onPreview(file)} {...rest} />
             ))}
@@ -388,10 +419,8 @@ const FileList = (props: any) => {
   );
 };
 
-
-const FileDetails = () => { /* ... unchanged but simplified for brevity in this response ... */ return null };
-const FileManagerDeleteDialog = () => { /* ... unchanged ... */ const {deleteDialog, setDeleteDialog, deleteFile} = useFileManagerStore(); const hClose = () => setDeleteDialog({id:'',open:false}); const hConfirm = () => {deleteFile(deleteDialog.id); hClose()}; return <ConfirmDialog isOpen={deleteDialog.open} type="danger" title="Delete file" onClose={hClose} onCancel={hClose} onConfirm={hConfirm}><p>Are you sure you want to delete this file? This action cannot be undone.</p></ConfirmDialog>};
-const FileManagerRenameDialog = () => { /* ... unchanged ... */ const {renameDialog, setRenameDialog, renameFile} = useFileManagerStore(); const [name, setName] = useState(''); const hClose=()=>setRenameDialog({id:'',open:false}); const hSubmit=()=>{renameFile({id:renameDialog.id, fileName:name}); hClose()}; return <Dialog isOpen={renameDialog.open} onClose={hClose}><h4>Rename</h4><DebouceInput placeholder="New name" onChange={e => setName(e.target.value)} /><div className="mt-4 text-right"><Button size="sm" className="mr-2" onClick={hClose}>Cancel</Button><Button variant="solid" size="sm" disabled={!name} onClick={hSubmit}>OK</Button></div></Dialog>};
+const FileManagerDeleteDialog = () => { const {deleteDialog, setDeleteDialog, deleteFile} = useFileManagerStore(); const hClose = () => setDeleteDialog({id:'',open:false}); const hConfirm = () => {deleteFile(deleteDialog.id); hClose()}; return <ConfirmDialog isOpen={deleteDialog.open} type="danger" title="Delete file" onClose={hClose} onCancel={hClose} onConfirm={hConfirm}><p>Are you sure you want to delete this file? This action cannot be undone.</p></ConfirmDialog>};
+const FileManagerRenameDialog = () => { const {renameDialog, setRenameDialog, renameFile} = useFileManagerStore(); const [name, setName] = useState(''); const hClose=()=>setRenameDialog({id:'',open:false}); const hSubmit=()=>{renameFile({id:renameDialog.id, fileName:name}); hClose()}; return <Dialog isOpen={renameDialog.open} onClose={hClose}><h4>Rename</h4><DebouceInput placeholder="New name" onChange={e => setName(e.target.value)} /><div className="mt-4 text-right"><Button size="sm" className="mr-2" onClick={hClose}>Cancel</Button><Button variant="solid" size="sm" disabled={!name} onClick={hSubmit}>OK</Button></div></Dialog>};
 
 const FileManagerHeader = ({ onEntryClick, onDirectoryClick }: { onEntryClick: () => void; onDirectoryClick: (id: string) => void; }) => {
     const { directories, layout, setLayout } = useFileManagerStore();
@@ -426,8 +455,7 @@ const FileManager = () => {
   const { allDocuments, status: masterLoadingStatus } = useSelector(masterSelector);
   const { layout, fileList, setFileList, setDeleteDialog, setRenameDialog, openedDirectoryId, setOpenedDirectoryId, setDirectories, setSelectedFileId } = useFileManagerStore();
 
-  const [imageViewerState, setImageViewerState] = useState({ open: false, startIndex: 0 });
-  const [genericViewerFile, setGenericViewerFile] = useState<File | null>(null);
+  const [viewerState, setViewerState] = useState({ isOpen: false, startIndex: 0 });
 
   const { trigger, isMutating } = useSWRMutation(`/api/files/${openedDirectoryId}`, getFilesFromFS, {
       onSuccess: (resp) => {
@@ -459,18 +487,20 @@ const FileManager = () => {
   };
   
   const handlePreview = (clickedFile: File) => {
-    if (isImageUrl(clickedFile.srcUrl)) {
-        const imageFiles = fileList.filter(f => isImageUrl(f.srcUrl));
-        const startIndex = imageFiles.findIndex(f => f.id === clickedFile.id);
-        setImageViewerState({ open: true, startIndex: Math.max(0, startIndex) });
-    } else {
-        setGenericViewerFile(clickedFile);
+    // We now treat all non-directory files as viewable items.
+    const viewableFiles = fileList.filter(f => f.fileType !== 'directory');
+    const startIndex = viewableFiles.findIndex(f => f.id === clickedFile.id);
+    
+    if (startIndex !== -1) {
+        setViewerState({ open: true, startIndex });
     }
   };
-
-  const allImagesForViewer = useMemo(() => 
-    fileList.filter(f => isImageUrl(f.srcUrl)).map(f => ({ src: f.srcUrl, alt: f.name })),
-  [fileList]);
+  
+  // This memo now includes all viewable files for the UnifiedFileViewer.
+  const allViewableFiles = useMemo(() => 
+    fileList.filter(f => f.fileType !== 'directory'),
+    [fileList]
+  );
   
   const isLoading = masterLoadingStatus === "loading" || isMutating;
 
@@ -480,7 +510,7 @@ const FileManager = () => {
       <div className="mt-6">
         {isLoading ? (
           layout === "grid" ? (
-            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 mt-4 gap-4 lg:gap-6">{[...Array(8)].map((_, i) => (<div key={i} className="h-35 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse"></div>))}</div>
+            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 mt-4 gap-4 lg:gap-6">{[...Array(8)].map((_, i) => (<div key={i} className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse"></div>))}</div>
           ) : (
             <Table><Table.THead><Table.Tr><Table.Th>Name</Table.Th><Table.Th>Type</Table.Th><Table.Th></Table.Th></Table.Tr></Table.THead><TableRowSkeleton/></Table>
           )
@@ -489,15 +519,18 @@ const FileManager = () => {
         )}
       </div>
       
-      {/* Viewers */}
-      {imageViewerState.open && <ImageViewer images={allImagesForViewer} startIndex={imageViewerState.startIndex} onClose={() => setImageViewerState({ open: false, startIndex: 0 })} />}
-      {genericViewerFile && <GenericFileViewer file={genericViewerFile} onClose={() => setGenericViewerFile(null)} />}
+      {/* Renders the single, unified viewer */}
+      {viewerState.open && 
+        <UnifiedFileViewer 
+          files={allViewableFiles} 
+          startIndex={viewerState.startIndex} 
+          onClose={() => setViewerState({ open: false, startIndex: 0 })} 
+        />
+      }
 
       {/* Dialogs */}
       <FileManagerDeleteDialog />
       <FileManagerRenameDialog />
-      {/* Keep other dialogs if needed */}
-      {/* <FileDetails /> */}
     </div>
   );
 };
