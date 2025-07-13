@@ -2948,7 +2948,11 @@ export const getEmployeeListAsync = async () => {
 export const addEmployeeListAsync = async (payload) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
-    const response = await axiosInstance.post(`${config.apiURL}/employee`, payload);
+    const response = await axiosInstance.post(`${config.apiURL}/employee`, payload,{
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response;
   } catch (err) {
     return isAxiosError(err);
@@ -2958,7 +2962,11 @@ export const addEmployeeListAsync = async (payload) => {
 export const editEmployeeListAsync = async (payload: any) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
-    const response = await axiosInstance.post(`${config.apiURL}/employee/${payload.employeeId}`, payload.data)
+    const response = await axiosInstance.post(`${config.apiURL}/employee/${payload.employeeId}`, payload.data,{
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
     return response;
   } catch (err) {
     return isAxiosError(err);

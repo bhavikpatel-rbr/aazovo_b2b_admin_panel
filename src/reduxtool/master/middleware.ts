@@ -4878,14 +4878,24 @@ export const addEmployeesAction = createAsyncThunk<any, any>(
   async (payload, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addEmployeeListAsync(payload);
-      if (response?.data?.status === true) {
-        dispatch(getEmployeesListingAction());
-        return response;
+
+      if (response?.status === true || response?.status === 200) {
+        dispatch(getEmployeesListingAction())
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to add employee.'
+          message: response?.message || 'Failed to edit employee.'
         });
       }
+
+      // if (response?.data?.status === true) {
+      //   dispatch(getEmployeesListingAction());
+      //   return response;
+      // } else {
+      //   return rejectWithValue({
+      //     message: response?.data?.message || 'Failed to add employee.'
+      //   });
+      // }
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
@@ -4897,14 +4907,23 @@ export const editEmployeesAction = createAsyncThunk(
   async (payload, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editEmployeeListAsync(payload);
-      if (response?.data?.status === true) {
-        dispatch(getEmployeesListingAction());
-        return response;
+       if (response?.status === true || response?.status === 200) {
+        dispatch(getEmployeesListingAction())
+        return response?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to edit employee.'
+          message: response?.message || 'Failed to edit employee.'
         });
       }
+
+      // if (response?.data?.status === true) {
+      //   dispatch(getEmployeesListingAction());
+      //   return response;
+      // } else {
+      //   return rejectWithValue({
+      //     message: response?.data?.message || 'Failed to edit employee.'
+      //   });
+      // }
     } catch (error: unknown) {
       return rejectWithValue(error as Error);
     }
