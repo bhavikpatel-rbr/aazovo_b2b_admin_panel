@@ -94,6 +94,8 @@ import {
   TbUsers,
   TbX,
   TbFlag,
+  TbUserCircle,
+  TbFileDescription,
 } from "react-icons/tb";
 
 // Types
@@ -186,7 +188,7 @@ export type ApiOpportunityItem = {
 };
 export type AutoSpbApiItem = {
   id: number;
-  customer_code: string | null;
+  member_code: string | null;
   phonecode: string | null;
   mobile_no: string | null;
   brand_name: string | null;
@@ -2305,24 +2307,104 @@ const SpbSummaryViewModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   item: AutoSpbApiItem | null;
-}> = ({ isOpen, onClose, item }) => {
-  if (!item) return null;
+  matchType: "Buy" | "Sell" | null;
+}> = ({ isOpen, onClose, item, matchType }) => {
+  const [selectedMessageOptions, setSelectedMessageOptions] = useState<string[]>([]);
+  const [messageTemplate, setMessageTemplate] = useState<
+    "default" | "master" | "wtb" | null
+  >(null);
+  const [customMessage, setCustomMessage] = useState("");
+
+  const messageOptionMap: Record<
+    string,
+    { label: string; key: keyof AutoSpbApiItem }
+  > = {
+    product_status: { label: "Product Status", key: "product_status" },
+    product_specs: { label: "Product Specs", key: "product_specs" },
+    device_type: { label: "Device Type", key: "device_type" },
+    price: { label: "Price", key: "price" },
+    color: { label: "Color", key: "color" },
+    master_cartoon: { label: "Cartoon Type", key: "master_cartoon" },
+    dispatch_status: { label: "Dispatch Status", key: "dispatch_status" },
+    payment_term: { label: "Payment Term", key: "payment_term" },
+    device_condition: { label: "Device Condition", key: "device_condition" },
+    eta_details: { label: "ETA", key: "eta_details" },
+    location: { label: "Location", key: "location" },
+  };
+
+  const messageTemplateOptions = [
+    { value: "default", label: "Default" },
+    { value: "master", label: "Master" },
+    { value: "wtb", label: "WTB" },
+  ];
+  
+  const selectedTemplateLabel =
+    messageTemplateOptions.find((o) => o.value === messageTemplate)?.label ||
+    "Select Template";
+
+  useEffect(() => {
+    // Reset state when a new item is passed to the modal
+    if (item) {
+      setSelectedMessageOptions([]);
+      setMessageTemplate(null);
+      setCustomMessage("");
+    }
+  }, [item]);
+
+  const handleToggleOption = (optionKey: string) => {
+    setSelectedMessageOptions((prev) =>
+      prev.includes(optionKey)
+        ? prev.filter((k) => k !== optionKey)
+        : [...prev, optionKey]
+    );
+  };
+
+  const generateMessage = () => {
+    if (!item) return "";
+
+    const prefix = matchType === "Buy" ? "WTB" : "WTS";
+    let messageParts: string[] = [
+      `${prefix} - ${item.product_name || "N/A"}(${item.color}) | ${
+        item.qty || "N/A"
+      } ${item.unit || ""}unit`,
+    ];
+
+    selectedMessageOptions.forEach((key) => {
+      const option = messageOptionMap[key];
+      if (option) {
+        const value = item[option.key];
+        if (value !== null && value !== undefined && String(value).trim() !== "") {
+          messageParts.push(`${option.label}: ${value}`);
+        }
+      }
+    });
+
+    switch (messageTemplate) {
+      case "master":
+        messageParts.push(
+          "MASTER, LOOSE, ACTIVE, NON ACTIVE, READY, INDIAN SPEC, MIX COLOR"
+        );
+        break;
+      case "wtb":
+        messageParts.push(item.product_name || "N/A");
+        break;
+      case "default":
+        if (customMessage) {
+          messageParts.push(customMessage);
+        }
+        break;
+      default:
+        break;
+    }
+    return messageParts.join("\n");
+  };
 
   const handleCopyDetails = () => {
-    if (!item) return;
-    const details = `Product: ${item.product_name || "N/A"}
-Brand: ${item.brand_name || "N/A"}
-Quantity: ${item.qty || "N/A"} ${item.unit || ""}
-Price: ${item.price ? `$${item.price}` : "N/A"}
-Condition: ${item.device_condition || "N/A"}
-Location: ${item.location || "N/A"}
-Contact: ${item.customer_code || `ID: ${item.id}`}
-Phone: ${item.phonecode || ""}${item.mobile_no || ""}`;
-
+    const details = generateMessage();
     navigator.clipboard.writeText(details).then(() => {
       toast.push(
         <Notification title="Details Copied" type="success" duration={2500}>
-          The listing details have been copied to your clipboard.
+          The customized listing details have been copied to your clipboard.
         </Notification>
       );
     });
@@ -2337,11 +2419,8 @@ Phone: ${item.phonecode || ""}${item.mobile_no || ""}`;
       );
       return;
     }
-    const phone = `${item.phonecode || ""}${item.mobile_no}`.replace(
-      /\D/g,
-      ""
-    );
-    const message = `Hi, I'm interested in your listing for "${item.product_name}".`;
+    const phone = `${item.phonecode || ""}${item.mobile_no}`.replace(/\D/g, "");
+    const message = generateMessage();
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
     toast.push(
@@ -2349,47 +2428,109 @@ Phone: ${item.phonecode || ""}${item.mobile_no || ""}`;
     );
   };
 
+  if (!item) return null;
+
   return (
-    <Dialog
-      isOpen={isOpen}
-      onClose={onClose}
-      onRequestClose={onClose}
-      width={600}
-    >
-      {" "}
-      <h5 className="mb-4">Listing Summary: {item.product_name}</h5>{" "}
-      <div className="mt-4 space-y-3">
-        {" "}
-        <InfoLine label="Brand" text={item.brand_name || "N/A"} />{" "}
-        <InfoLine label="Location" text={item.location || "N/A"} />{" "}
-        <InfoLine label="Qty" text={`${item.qty} ${item.unit || ""}`} />{" "}
-        <InfoLine label="Price" text={item.price ? `$${item.price}` : "N/A"} />{" "}
-        <InfoLine label="Color" text={item.color || "N/A"} />{" "}
-        <InfoLine label="Condition" text={item.device_condition || "N/A"} />{" "}
-        <InfoLine label="Dispatch" text={item.dispatch_status || "N/A"} />{" "}
-        <InfoLine
-          label="ETA"
-          text={
-            item.eta_details
-              ? dayjs(item.eta_details).format("D MMM YYYY")
-              : "N/A"
-          }
-        />{" "}
-        <Card bordered className="mt-4 p-4 bg-gray-50 dark:bg-gray-800">
-          {" "}
-          <h6 className="font-semibold mb-2">Summary</h6>{" "}
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            {" "}
-            {item.summary || "No summary available."}{" "}
-          </p>{" "}
-        </Card>{" "}
-      </div>{" "}
+    <Dialog isOpen={isOpen} onClose={onClose} width={700}>
+      <h5 className="mb-5">Listing Summary</h5>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 shadow-sm border-gray-200 dark:border-gray-600">
+        <div className="flex items-start">
+          <TbInfoCircle className="text-xl mr-2 mt-1 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">
+              Product:
+            </span>{" "}
+            {item.product_name}
+          </p>
+        </div>
+        <div className="flex items-start">
+          <TbUserCircle className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">
+              Brand:
+            </span>{" "}
+            {item.brand_name || "N/A"}
+          </p>
+        </div>
+        <div className="flex items-start">
+          <TbInfoCircle className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">
+              Qty:
+            </span>{" "}
+            {item.qty} {item.unit}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 border-t dark:border-gray-700 pt-4 space-y-4">
+        <h6 className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+          Customize Message for Sharing
+        </h6>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <Dropdown
+            renderTitle={
+              <Button variant="default" icon={<TbPlus />}>
+                Add Details
+              </Button>
+            }
+            placement="bottom-start"
+          >
+            <div className="p-2 w-56 max-h-60 overflow-y-auto">
+              {Object.entries(messageOptionMap).map(([key, { label }]) => (
+                <div key={key} className="px-1">
+                  <label className="flex items-center gap-2 cursor-pointer py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md px-2">
+                    <Checkbox
+                      checked={selectedMessageOptions.includes(key)}
+                      onChange={() => handleToggleOption(key)}
+                    />
+                    <span className="text-sm">{label}</span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </Dropdown>
+           <Dropdown
+            renderTitle={
+              <Button variant="default" className="w-full sm:w-56 justify-start">
+                {selectedTemplateLabel}
+              </Button>
+            }
+            placement="bottom-start"
+          >
+             <div className="w-56">
+                {messageTemplateOptions.map((option) => (
+                    <Dropdown.Item
+                        key={option.value}
+                        onClick={() => setMessageTemplate(option.value as any)}
+                        className={classNames('flex items-center justify-between', {
+                            'bg-gray-100 dark:bg-gray-700': messageTemplate === option.value,
+                        })}
+                    >
+                        <span>{option.label}</span>
+                        {messageTemplate === option.value && (
+                            <BsCheckCircleFill className="text-emerald-500" />
+                        )}
+                    </Dropdown.Item>
+                ))}
+             </div>
+          </Dropdown>
+        </div>
+
+        {messageTemplate === "default" && (
+          <FormItem label="Custom Message">
+            <Input
+              textArea
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="Enter your custom message here..."
+            />
+          </FormItem>
+        )}
+      </div>
+
       <div className="text-right mt-6">
-        <Button
-          className="mr-2"
-          icon={<TbCopy />}
-          onClick={handleCopyDetails}
-        >
+        <Button className="mr-2" icon={<TbCopy />} onClick={handleCopyDetails}>
           Copy Details
         </Button>
         <Button
@@ -2400,10 +2541,7 @@ Phone: ${item.phonecode || ""}${item.mobile_no || ""}`;
         >
           WhatsApp
         </Button>
-        <Button variant="solid" onClick={onClose}>
-          Close
-        </Button>
-      </div>{" "}
+      </div>
     </Dialog>
   );
 };
@@ -2415,35 +2553,35 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
   item,
   onViewSummary,
 }) => {
-  const memberName = item.customer_code || `Member ID: ${item.id}`;
+  const memberName = `Member: ${item.member_code}` || `Member ID: ${item.id}`;
+  const memberPhone = `Phone: ${item.mobile_no}`;
+  const createDate = `Date: ${item.created_at}`;
+  const prodColor = `Color: ${item.color}`;
   return (
     <div className="flex justify-between items-center w-full py-3 text-xs border-b border-gray-200 dark:border-gray-700 last:border-b-0">
       {" "}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 gap-4">
         {" "}
         <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
           {" "}
-          {memberName}{" "}
+          {memberName}{" "}|{" "}
+          {memberPhone}{" "}|{" "}
+          {createDate}{" "}|{" "}
+          {prodColor}{" "}|{" "}
+          {item.qty}
         </p>{" "}
       </div>{" "}
       <div className="flex-shrink-0 flex items-center gap-4">
-        {" "}
+        {/* {" "}
         <div>
           {" "}
           <span className="text-gray-500 dark:text-gray-400">Qty: </span>{" "}
           <span className="font-bold text-gray-800 dark:text-gray-100">
             {" "}
-            {item.qty}{" "}
-          </span>{" "}
-        </div>{" "}
-        <div>
-          {" "}
-          <span className="text-gray-500 dark:text-gray-400">Unit: </span>{" "}
-          <span className="font-bold text-gray-800 dark:text-gray-100">
             {" "}
-            {item.unit || "N/A"}{" "}
           </span>{" "}
-        </div>{" "}
+        </div>{" "} */}
+
         <Tooltip title="View Summary">
           {" "}
           <Button
@@ -2461,7 +2599,7 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
 };
 interface ExpandedAutoSpbDetailsProps {
   row: Row<OpportunityItem>;
-  onViewSummary: (item: AutoSpbApiItem) => void;
+  onViewSummary: (item: AutoSpbApiItem, type: 'Buy' | 'Sell') => void;
 }
 const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
   row,
@@ -2483,14 +2621,14 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
             {" "}
             <TbChecks /> Buyer ({buyItems.length}){" "}
           </h6>{" "}
-          <div className="bg-white dark:bg-gray-800 rounded-md px-3">
+          <div className="bg-white dark:bg-gray-800 rounded-md px-3 max-h-60 overflow-y-auto">
             {" "}
             {buyItems.length > 0 ? (
               buyItems.map((item) => (
                 <SpbSummaryRow
                   key={`buy-${item.id}`}
                   item={item}
-                  onViewSummary={onViewSummary}
+                  onViewSummary={(item) => onViewSummary(item, 'Buy')}
                 />
               ))
             ) : (
@@ -2507,14 +2645,14 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
             {" "}
             <TbBox /> Seller ({sellItems.length}){" "}
           </h6>{" "}
-          <div className="bg-white dark:bg-gray-800 rounded-md px-3">
+          <div className="bg-white dark:bg-gray-800 rounded-md px-3 max-h-60 overflow-y-auto">
             {" "}
             {sellItems.length > 0 ? (
               sellItems.map((item) => (
                 <SpbSummaryRow
                   key={`sell-${item.id}`}
                   item={item}
-                  onViewSummary={onViewSummary}
+                  onViewSummary={(item) => onViewSummary(item, 'Sell')}
                 />
               ))
             ) : (
@@ -2600,15 +2738,19 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   };
   const handleCloseModal = () =>
     setModalState({ isOpen: false, type: null, data: null });
+
   const [summaryModalState, setSummaryModalState] = useState<{
     isOpen: boolean;
     item: AutoSpbApiItem | null;
-  }>({ isOpen: false, item: null });
-  const handleOpenSummaryModal = (item: AutoSpbApiItem) => {
-    setSummaryModalState({ isOpen: true, item });
+    matchType: 'Buy' | 'Sell' | null;
+  }>({ isOpen: false, item: null, matchType: null });
+
+  const handleOpenSummaryModal = (item: AutoSpbApiItem, type: 'Buy' | 'Sell') => {
+    setSummaryModalState({ isOpen: true, item, matchType: type });
   };
+
   const handleCloseSummaryModal = () => {
-    setSummaryModalState({ isOpen: false, item: null });
+    setSummaryModalState({ isOpen: false, item: null, matchType: null });
   };
   const handleCopyClick = (textToCopy: string | undefined) => {
     if (!textToCopy) return;
@@ -3850,6 +3992,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
         isOpen={summaryModalState.isOpen}
         onClose={handleCloseSummaryModal}
         item={summaryModalState.item}
+        matchType={summaryModalState.matchType}
       />
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
