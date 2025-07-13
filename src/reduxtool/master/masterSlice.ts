@@ -93,6 +93,7 @@ import {
   getLeadById,
   getLeadMemberAction,
   getMailTemplatesAction,
+  getMatchingOpportunitiesAction,
   getMemberAction,
   getMembersAction,
   getMemberTypeAction,
@@ -573,6 +574,10 @@ const masterSlice = createSlice({
     builder.addCase(getMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
       MemberData: payload,
+    }));
+    builder.addCase(getMatchingOpportunitiesAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      matchingOpportunities: payload,
     }));
     builder.addCase(getAllProductsAction.fulfilled, (state, { payload }) => ({
       ...state,

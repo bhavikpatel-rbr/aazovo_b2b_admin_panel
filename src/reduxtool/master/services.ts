@@ -3350,3 +3350,13 @@ export const setsavedoc = async (id:any, data: object) => {
     return isAxiosError(err)
   }
 }
+
+
+export const getmatchopp = async (id:any) => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/wall/match-opp/${id}`,)
+    return response?.data
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
