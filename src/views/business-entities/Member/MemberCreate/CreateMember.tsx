@@ -176,7 +176,7 @@ export interface MemberFormSchema {
     member_type?: { label: string; value: string | number };
     brands?: Array<{ label: string; value: string | number }>;
     sub_categories?: Array<{ label: string; value: string | number }>;
-    categories?: Array<{ label:string; value: string | number }>;
+    categories?: Array<{ label: string; value: string | number }>;
   }[];
 }
 export interface FormSectionBaseProps {
@@ -213,7 +213,7 @@ interface ApiSingleCustomerItem {
   office_no?: string;
   alt_mobile?: string;
   alt_email?: string;
-  whatsapp_country_code?:string;
+  whatsapp_country_code?: string;
   alternate_contact_country_code?: string;
   botim?: string;
   skype?: string;
@@ -402,22 +402,22 @@ const transformApiToFormSchema = (
   // using a provided master list for name lookups.
   const createOptionsFromIdString = (idString: string, masterList: any[]) => {
     if (!idString || typeof idString !== 'string' || !idString.startsWith('[')) {
-        return [];
+      return [];
     }
     try {
-        const ids: (string | number)[] = JSON.parse(idString);
-        if (!Array.isArray(ids)) return [];
+      const ids: (string | number)[] = JSON.parse(idString);
+      if (!Array.isArray(ids)) return [];
 
-        // Create a lookup map for efficient name retrieval
-        const masterMap = new Map(masterList.map(item => [String(item.id), item.name]));
+      // Create a lookup map for efficient name retrieval
+      const masterMap = new Map(masterList.map(item => [String(item.id), item.name]));
 
-        return ids.map(id => ({
-            value: String(id),
-            label: masterMap.get(String(id)) || `Unknown ID: ${id}` // Provide a fallback label
-        }));
+      return ids.map(id => ({
+        value: String(id),
+        label: masterMap.get(String(id)) || `Unknown ID: ${id}` // Provide a fallback label
+      }));
     } catch (e) {
-        console.error("Failed to parse ID string or map options:", e);
-        return [];
+      console.error("Failed to parse ID string or map options:", e);
+      return [];
     }
   };
 
@@ -464,12 +464,12 @@ const transformApiToFormSchema = (
     business_type: toSelectOption(formData.business_type),
     favourite_product_id: formData.favourite_products_list?.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
     interested_in: toSelectOption(formData.interested_in),
-    
+
     // --- START: CORRECTED DROPDOWN POPULATION ---
     interested_category_ids: createOptionsFromIdString(formData.interested_category_ids, allCategories),
     interested_subcategory_ids: createOptionsFromIdString(formData.interested_subcategory_ids, allSubCategories),
     // --- END: CORRECTED DROPDOWN POPULATION ---
-    
+
     member_grade: toSelectOption(formData.member_grade),
     relationship_manager: formData.relationship_manager ? { value: String(formData.relationship_manager.id), label: formData.relationship_manager.name } : undefined,
     dealing_in_bulk: formData.dealing_in_bulk || "No",
@@ -491,10 +491,10 @@ const transformApiToFormSchema = (
           return [];
         }
       };
-      
+
       return {
         db_id: apiProfile.id,
-        member_type: {value: apiProfile.member_type.id,label:  apiProfile.member_type.name},
+        member_type: { value: apiProfile.member_type.id, label: apiProfile.member_type.name },
         brands: createSelectOptions(apiProfile.brand_id, apiProfile.brand_names),
         categories: createSelectOptions(apiProfile.category_id, apiProfile.category_names),
         sub_categories: createSelectOptions(apiProfile.sub_category_id, apiProfile.sub_category_names),
@@ -572,13 +572,13 @@ const preparePayloadForApi = (
     payload.dynamic_member_profiles = formData.member_profiles.map(formProfile => {
       const apiProfile: any = {
         // Include the database ID if it exists (for updates)
-        id: formProfile.db_id, 
+        id: formProfile.db_id,
         member_type_id: getValue(formProfile.member_type),
         brand_id: formProfile.brands?.map(b => getValue(b)) || [],
         category_id: formProfile.categories?.map(c => getValue(c)) || [],
         sub_category_id: formProfile.sub_categories?.map(sc => getValue(sc)) || [],
       };
-      
+
       // The backend should ignore the 'id' field if it's undefined (for new profiles)
       if (apiProfile.id === undefined) {
         delete apiProfile.id;
@@ -1960,7 +1960,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     { value: "For Buy", label: "For Buy" },
     { value: "Both", label: "Both" },
   ];
-const memberTypeOptions = MemberTypeData.map((m: any) => ({
+  const memberTypeOptions = MemberTypeData.map((m: any) => ({
     value: m.id,
     label: m.name,
   }));
@@ -2352,7 +2352,7 @@ const PersonalDetailsComponent = ({
             name="name"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Member’s full name" {...field} />
+              <Input placeholder="Member’s full name" {...field} onInput={(e:any) => { if (e.target.value) e.target.value = e.target.value.toUppercash() }} />
             )}
           />
         </FormItem>
@@ -2371,7 +2371,7 @@ const PersonalDetailsComponent = ({
               render={({ field }) => (
                 <Select
                   placeholder="Code"
-                  className="phone_code w-38" 
+                  className="phone_code w-38"
                   options={countryCodeOptions}
                   {...field}
                 />
@@ -2419,7 +2419,7 @@ const PersonalDetailsComponent = ({
             )}
           />
         </FormItem>
-        
+
         {showActualCompany ? (
           <>
             <FormItem
@@ -2434,7 +2434,7 @@ const PersonalDetailsComponent = ({
                   <Input
                     placeholder="Actual company name"
                     {...field}
-                    readOnly 
+                    readOnly
                   />
                 )}
               />
@@ -2446,8 +2446,8 @@ const PersonalDetailsComponent = ({
             />
           </>
         ) : (
-            // A placeholder to maintain layout consistency in create mode
-             <div></div>
+          // A placeholder to maintain layout consistency in create mode
+          <div></div>
         )}
 
         <FormItem
@@ -2911,7 +2911,7 @@ const MemberFormComponent = (props: {
             (typeof val === "object" && !!val?.value),
           { message: "Country is required" }
         ),
-        interested_category_ids: z
+      interested_category_ids: z
         .array(z.any())
         .min(1, { message: "Interested categories are required." }),
     })
@@ -3050,9 +3050,9 @@ const MemberCreate = () => {
   const isEditMode = Boolean(id);
 
   // --- START: CORRECTED STATE MANAGEMENT ---
-  const { 
-    ParentCategories = [], 
-    subCategoriesForSelectedCategoryData = [] 
+  const {
+    ParentCategories = [],
+    subCategoriesForSelectedCategoryData = []
   } = useSelector(masterSelector, shallowEqual);
 
   const [initialData, setInitialData] = useState<Partial<MemberFormSchema> | null>(null);
@@ -3140,7 +3140,7 @@ const MemberCreate = () => {
     dispatch(getBrandAction());
     dispatch(getParentCategoriesAction());
     // Fetch all subcategories by passing 0 or a non-existent ID
-    dispatch(getSubcategoriesByCategoryIdAction(0)); 
+    dispatch(getSubcategoriesByCategoryIdAction(0));
     dispatch(getEmployeesAction());
     dispatch(getAllProductsAction());
     dispatch(getMemberTypeAction());
@@ -3154,10 +3154,10 @@ const MemberCreate = () => {
         setPageLoading(true);
         try {
           const response = await dispatch(getMemberByIdAction(id)).unwrap();
-          
+
           if (response) {
             // After fetching member, fetch their actual company info
-            await dispatch(getActualCompanyAction(id)); 
+            await dispatch(getActualCompanyAction(id));
 
             const apiMemberData: ApiSingleCustomerItem = response;
 
@@ -3195,18 +3195,18 @@ const MemberCreate = () => {
 
       // Only fetch data if master data is available, to avoid race conditions
       if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0) {
-          fetchMemberData();
+        fetchMemberData();
       }
     } else {
       setInitialData(emptyForm);
       setPageLoading(false);
     }
   }, [
-    id, 
-    isEditMode, 
-    navigate, 
-    dispatch, 
-    ParentCategories, 
+    id,
+    isEditMode,
+    navigate,
+    dispatch,
+    ParentCategories,
     subCategoriesForSelectedCategoryData
   ]);
   // --- END: CORRECTED useEffect ---
