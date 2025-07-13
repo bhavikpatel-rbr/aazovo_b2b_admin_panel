@@ -20,8 +20,10 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
+import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
+  Avatar,
   Card,
   Checkbox,
   DatePicker,
@@ -29,6 +31,7 @@ import {
   Drawer,
   Input,
   Select,
+  Spinner,
   Form as UiForm,
   FormItem as UiFormItem,
   Select as UiSelect,
@@ -41,11 +44,16 @@ import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
+import { BsThreeDotsVertical } from "react-icons/bs";
 import {
+  TbAlarm,
   TbBell,
+  TbBellRinging,
   TbBrandGoogleDrive,
   TbBrandWhatsapp,
   TbCalendarClock,
+  TbCalendarEvent,
+  TbCheck,
   TbChecklist,
   TbCloudDownload,
   TbCloudUpload,
@@ -54,10 +62,13 @@ import {
   TbFileAlert,
   TbFileCertificate,
   TbFileCheck,
+  TbFileDescription,
   TbFileExcel,
   TbFilter,
   TbMailShare,
+  TbNotesOff,
   TbPencil,
+  TbPencilPlus,
   TbPlus,
   TbReload,
   TbTagStarred,
@@ -82,11 +93,15 @@ import {
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
+  addAllActionAction,
+  addAllAlertsAction,
   addaccountdocAction,
   addNotificationAction,
   addScheduleAction,
+  addTaskAction,
   editaccountdocAction,
   getaccountdocAction,
+  getAlertsAction,
   getAllCompany,
   getAllUsersAction,
   getbyIDaccountdocAction,
@@ -94,28 +109,46 @@ import {
   getEmployeesListingAction,
   getFormBuilderAction,
   getfromIDcompanymemberAction,
-  getMemberAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
-import { BsThreeDotsVertical } from "react-icons/bs";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import { config } from "localforage";
 import { shallowEqual, useSelector } from "react-redux";
 
 // --- Define Types ---
 export type SelectOption = { value: any; label: string };
-export type ModalType = "notification" | "schedule" | "view";
+export type ModalType =
+  | "notification"
+  | "schedule"
+  | "view"
+  | "task"
+  | "alert"
+  | "activity"
+  | "email"
+  | "whatsapp"
+  | "document";
+
 export interface ModalState {
   isOpen: boolean;
   type: ModalType | null;
-  data: any; // Use `any` to accommodate both list item and full detail object
+  data: any;
 }
 type FilterFormData = {
   filterStatus?: SelectOption[];
   doc_type?: SelectOption[];
   comp_doc?: SelectOption[];
 };
+// START: Alert Note Type Definition
+interface AlertNote {
+  id: number;
+  note: string; // HTML content from RichTextEditor
+  created_by_user: { name: string };
+  created_at: string; // ISO date string
+}
+// END: Alert Note Type Definition
 
-// --- Zod Schema for Schedule Form ---
+// --- Zod Schemas ---
 const scheduleSchema = z.object({
   event_title: z.string().min(3, "Title must be at least 3 characters."),
   event_type: z
@@ -127,7 +160,6 @@ const scheduleSchema = z.object({
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
-// --- Zod Schema for Export Reason Form ---
 const exportReasonSchema = z.object({
   reason: z
     .string()
@@ -136,7 +168,6 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- Zod Schema for Add/Edit Document Form ---
 const addEditDocumentSchema = z.object({
   company_document: z
     .string({ required_error: "Company Document is required." })
@@ -152,6 +183,33 @@ const addEditDocumentSchema = z.object({
   company_id: z.string({ required_error: "Company is required." }),
 });
 type AddEditDocumentFormData = z.infer<typeof addEditDocumentSchema>;
+
+const taskValidationSchema = z.object({
+  task_title: z.string().min(3, "Task title must be at least 3 characters."),
+  assign_to: z.array(z.number()).min(1, "At least one assignee is required."),
+  priority: z.string().min(1, "Please select a priority."),
+  due_date: z.date().nullable().optional(),
+  description: z.string().optional(),
+});
+type TaskFormData = z.infer<typeof taskValidationSchema>;
+const taskPriorityOptions: SelectOption[] = [
+  { value: "Low", label: "Low" },
+  { value: "Medium", label: "Medium" },
+  { value: "High", label: "High" },
+];
+
+const alertNoteSchema = z.object({
+  newNote: z.string().min(10, "Note must contain at least 10 characters."),
+});
+type AlertNoteFormData = z.infer<typeof alertNoteSchema>;
+
+const activitySchema = z.object({
+  item: z
+    .string()
+    .min(3, "Activity item is required and must be at least 3 characters."),
+  notes: z.string().optional(),
+});
+type ActivityFormData = z.infer<typeof activitySchema>;
 
 // --- CSV Exporter Utility ---
 const ACCOUNT_DOC_CSV_HEADERS = [
@@ -279,67 +337,6 @@ const eventTypeOptions = [
   { value: "Task", label: "Task" },
   { value: "FollowUp", label: "General Follow-up" },
   { value: "ProjectKickoff", label: "Project Kick-off" },
-
-  // Customer Onboarding & Support
-  { value: "OnboardingSession", label: "Onboarding Session" },
-  { value: "Training", label: "Training Session" },
-  { value: "SupportCall", label: "Support Call" },
-
-  // General & Administrative
-  { value: "Reminder", label: "Reminder" },
-  { value: "Note", label: "Add a Note" },
-  { value: "FocusTime", label: "Focus Time (Do Not Disturb)" },
-  { value: "StrategySession", label: "Strategy Session" },
-  { value: "TeamMeeting", label: "Team Meeting" },
-  { value: "PerformanceReview", label: "Performance Review" },
-  { value: "Lunch", label: "Lunch / Break" },
-  { value: "Appointment", label: "Personal Appointment" },
-  { value: "Other", label: "Other" },
-  { value: "ProjectKickoff", label: "Project Kick-off" },
-  { value: "InternalSync", label: "Internal Team Sync" },
-  { value: "ClientUpdateMeeting", label: "Client Update Meeting" },
-  { value: "RequirementsGathering", label: "Requirements Gathering" },
-  { value: "UAT", label: "User Acceptance Testing (UAT)" },
-  { value: "GoLive", label: "Go-Live / Deployment Date" },
-  { value: "ProjectSignOff", label: "Project Sign-off" },
-  { value: "PrepareReport", label: "Prepare Report" },
-  { value: "PresentFindings", label: "Present Findings" },
-  { value: "TroubleshootingCall", label: "Troubleshooting Call" },
-  { value: "BugReplication", label: "Bug Replication Session" },
-  { value: "IssueEscalation", label: "Escalate Issue" },
-  { value: "ProvideUpdate", label: "Provide Update on Ticket" },
-  { value: "FeatureRequest", label: "Log Feature Request" },
-  { value: "IntegrationSupport", label: "Integration Support Call" },
-  { value: "DataMigration", label: "Data Migration/Import Task" },
-  { value: "ColdCall", label: "Cold Call" },
-  { value: "DiscoveryCall", label: "Discovery Call" },
-  { value: "QualificationCall", label: "Qualification Call" },
-  { value: "SendFollowUpEmail", label: "Send Follow-up Email" },
-  { value: "LinkedInMessage", label: "Log LinkedIn Message" },
-  { value: "ProposalReview", label: "Proposal Review Meeting" },
-  { value: "ContractSent", label: "Contract Sent" },
-  { value: "NegotiationCall", label: "Negotiation Call" },
-  { value: "TrialSetup", label: "Product Trial Setup" },
-  { value: "TrialCheckIn", label: "Trial Check-in Call" },
-  { value: "WelcomeCall", label: "Welcome Call" },
-  { value: "ImplementationSession", label: "Implementation Session" },
-  { value: "UserTraining", label: "User Training Session" },
-  { value: "AdminTraining", label: "Admin Training Session" },
-  { value: "MonthlyCheckIn", label: "Monthly Check-in" },
-  { value: "QBR", label: "Quarterly Business Review (QBR)" },
-  { value: "HealthCheck", label: "Customer Health Check" },
-  { value: "FeedbackSession", label: "Feedback Session" },
-  { value: "RenewalDiscussion", label: "Renewal Discussion" },
-  { value: "UpsellOpportunity", label: "Upsell/Cross-sell Call" },
-  { value: "CaseStudyInterview", label: "Case Study Interview" },
-  { value: "InvoiceDue", label: "Invoice Due" },
-  { value: "SendInvoice", label: "Send Invoice" },
-  { value: "PaymentReminder", label: "Send Payment Reminder" },
-  { value: "ChaseOverduePayment", label: "Chase Overdue Payment" },
-  { value: "ConfirmPayment", label: "Confirm Payment Received" },
-  { value: "ContractRenewalDue", label: "Contract Renewal Due" },
-  { value: "DiscussBilling", label: "Discuss Billing/Invoice" },
-  { value: "SendQuote", label: "Send Quote/Estimate" },
 ];
 
 const accountDocumentStatusColor: Record<AccountDocumentStatus, string> = {
@@ -370,7 +367,6 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
 
 // --- Helper Components ---
 const AccountDocumentActionColumn = ({
-  onDelete,
   onOpenModal,
   onView,
   onEdit,
@@ -379,14 +375,9 @@ const AccountDocumentActionColumn = ({
   const navigate = useNavigate();
 
   const handleFillUpClick = () => {
-    // Check if there is a formId associated with this document
-    console.log(rowData);
-    
     if (rowData.formId) {
-      // Navigate to the dynamic form page with document and form IDs
       navigate(`/fill-up-form/${rowData.id}/${rowData.formId}`);
     } else {
-      // If no formId, inform the user.
       toast.push(
         <Notification title="No Form to Fill" type="info">
           This document does not have an associated form.
@@ -397,10 +388,7 @@ const AccountDocumentActionColumn = ({
   return (
     <div className="flex items-center justify-center gap-1">
       <Tooltip title="Fillup Form">
-        <div
-          className="text-xl cursor-pointer"
-          onClick={handleFillUpClick}
-        >
+        <div className="text-xl cursor-pointer" onClick={handleFillUpClick}>
           <TbChecklist />
         </div>
       </Tooltip>
@@ -419,19 +407,25 @@ const AccountDocumentActionColumn = ({
           <BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />
         }
       >
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbUser size={18} /> <span className="text-xs">Assign to Task</span>
-        </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          className="flex items-center gap-2"
+          onClick={() => onOpenModal("email", rowData)}
+        >
           <TbMailShare size={18} /> <span className="text-xs">Send Email</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          className="flex items-center gap-2"
+          onClick={() => onOpenModal("whatsapp", rowData)}
+        >
           <TbBrandWhatsapp size={18} />
           <span className="text-xs">Send Whatsapp</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbTagStarred size={18} />
-          <span className="text-xs">Add to Active </span>
+        <Dropdown.Item
+          className="flex items-center gap-2"
+          onClick={() => onOpenModal("notification", rowData)}
+        >
+          <TbBell size={18} />
+          <span className="text-xs">Add Notification</span>
         </Dropdown.Item>
         <Dropdown.Item
           className="flex items-center gap-2"
@@ -442,18 +436,29 @@ const AccountDocumentActionColumn = ({
         </Dropdown.Item>
         <Dropdown.Item
           className="flex items-center gap-2"
-          onClick={() => onOpenModal("notification", rowData)}
+          onClick={() => onOpenModal("task", rowData)}
         >
-          <TbBell size={18} />
-          <span className="text-xs">Add Notification </span>
+          <TbUser size={18} /> <span className="text-xs">Assign Task</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
-          <TbChecklist size={18} />
-          <span className="text-xs">Verify Document </span>
+        <Dropdown.Item
+          className="flex items-center gap-2"
+          onClick={() => onOpenModal("alert", rowData)}
+        >
+          <TbAlarm size={18} />{" "}
+          <span className="text-xs">View/Add Alert</span>
         </Dropdown.Item>
-        <Dropdown.Item className="flex items-center gap-2">
+        <Dropdown.Item
+          className="flex items-center gap-2"
+          onClick={() => onOpenModal("activity", rowData)}
+        >
+          <TbTagStarred size={18} /> <span className="text-xs">Add Activity</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          className="flex items-center gap-2"
+          onClick={() => onOpenModal("document", rowData)}
+        >
           <TbCloudDownload size={18} />
-          <span className="text-xs">Download Document </span>
+          <span className="text-xs">Download Document</span>
         </Dropdown.Item>
       </Dropdown>
     </div>
@@ -482,9 +487,13 @@ const AddNotificationDialog = ({
   } = useForm<NotificationFormData>({
     resolver: zodResolver(notificationSchema),
     defaultValues: {
-      notification_title: `Regarding Document: ${document.documentNumber}`,
+      notification_title: `Regarding Document: ${
+        document.documentNumber || document.document_number
+      }`,
       send_users: [],
-      message: `This is a notification for document number "${document.documentNumber}" for company "${document.companyName}".`,
+      message: `This is a notification for document number "${
+        document.documentNumber || document.document_number
+      }" for company "${document.companyName || document.company?.company_name}".`,
     },
     mode: "onChange",
   });
@@ -517,7 +526,9 @@ const AddNotificationDialog = ({
   };
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Notify about: {document.documentNumber}</h5>
+      <h5 className="mb-4">
+        Notify about: {document.documentNumber || document.document_number}
+      </h5>
       <UiForm onSubmit={handleSubmit(onSend)}>
         <UiFormItem
           label="Title"
@@ -597,11 +608,15 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
   } = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
     defaultValues: {
-      event_title: `Follow-up on Document ${document.documentNumber}`,
+      event_title: `Follow-up on Document ${
+        document.documentNumber || document.document_number
+      }`,
       event_type: undefined,
       date_time: null as any,
       remind_from: null,
-      notes: `Regarding document for ${document.companyName} (Lead: ${document.leadNumber})`,
+      notes: `Regarding document for ${
+        document.companyName || document.company?.company_name
+      } (Lead: ${document.leadNumber || "N/A"})`,
     },
     mode: "onChange",
   });
@@ -624,7 +639,9 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
         <Notification
           type="success"
           title="Event Scheduled"
-          children={`Successfully scheduled event for document ${document.documentNumber}.`}
+          children={`Successfully scheduled event for document ${
+            document.documentNumber || document.document_number
+          }.`}
         />
       );
       onClose();
@@ -643,7 +660,8 @@ const AddScheduleDialog: React.FC<any> = ({ document, onClose }) => {
   return (
     <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
       <h5 className="mb-4">
-        Add Schedule for Document {document.documentNumber}
+        Add Schedule for Document{" "}
+        {document.documentNumber || document.document_number}
       </h5>
       <UiForm onSubmit={handleSubmit(onAddEvent)}>
         <UiFormItem
@@ -766,7 +784,6 @@ const DetailItem = ({
   );
 };
 
-// --- [NEW] Helper component for the redesigned view dialog ---
 const InfoItem = ({
   icon,
   label,
@@ -797,8 +814,6 @@ const InfoItem = ({
   );
 };
 
-// --- [IMPROVED UI] ViewDocumentDialog Component ---
-// --- [CORRECTED UI] ViewDocumentDialog Component ---
 const ViewDocumentDialog = ({
   document,
   onClose,
@@ -853,12 +868,7 @@ const ViewDocumentDialog = ({
               </span>
             </p>
           </div>
-          {/* <Button
-                        shape="circle"
-                        size="sm"
-                        icon={<TbX />}
-                        onClick={onClose}
-                    /> */}
+          <Button shape="circle" size="sm" icon={<TbX />} onClick={onClose} />
         </div>
 
         {/* --- Dialog Body --- */}
@@ -1007,14 +1017,12 @@ const ViewDocumentDialog = ({
   );
 };
 
-// --- Add/Edit Document Drawer Component ---
 const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
   const dispatch = useAppDispatch();
   const title = editingId ? "Edit Document" : "Add New Document";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // --- MODIFICATION: Added `setValue` to reset member field ---
   const {
     control,
     handleSubmit,
@@ -1043,31 +1051,34 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
     AllCompanyData = [],
     getfromIDcompanymemberData = [],
   } = useSelector(masterSelector);
-console.log("EmployeesList", EmployeesList?.data?.data);
 
-  const DocumentTypeDataOptions = DocumentTypeData.length > 0 && DocumentTypeData?.map((p: any) => ({
-    value: p.id,
-    label: p.name,
-  }));
+  const DocumentTypeDataOptions =
+    DocumentTypeData.map((p: any) => ({
+      value: p.id,
+      label: p.name,
+    }));
 
-  const tokenFormDataOptions = tokenForm.length > 0 && tokenForm?.map((p: any) => ({
-    value: p.id,
-    label: p.form_title,
-  }));
+  const tokenFormDataOptions =
+    tokenForm.map((p: any) => ({
+      value: p.id,
+      label: p.form_title,
+    }));
 
-  const EmployyDataOptions = EmployeesList?.data?.data.length > 0 && EmployeesList?.data?.data?.map((p: any) => ({
-    value: p.id,
-    label: p.name,
-  }));
+  const EmployyDataOptions =
+    EmployeesList?.data?.data?.map((p: any) => ({
+      value: p.id,
+      label: p.name,
+    }));
 
-  const AllCompanyDataOptions = AllCompanyData.length > 0 && AllCompanyData?.map((p: any) => ({
-    value: String(p.id),
-    label: p.company_name,
-  }));
+  const AllCompanyDataOptions =
+    AllCompanyData?.map((p: any) => ({
+      value: String(p.id),
+      label: p.company_name,
+    }));
 
   const companyMemberOptions = useMemo(
     () =>
-      getfromIDcompanymemberData.length > 0 && getfromIDcompanymemberData?.map((p: any) => ({
+      getfromIDcompanymemberData?.map((p: any) => ({
         value: p.id,
         label: p.name,
       })) || [],
@@ -1239,7 +1250,7 @@ console.log("EmployeesList", EmployeesList?.data?.data);
                     if (opt?.value) {
                       dispatch(getfromIDcompanymemberAction(opt.value));
                     }
-                    setValue("member_id", 0, { shouldValidate: true });
+                    setValue("member_id", 0 as any, { shouldValidate: true });
                   }}
                 />
               )}
@@ -1371,10 +1382,522 @@ console.log("EmployeesList", EmployeesList?.data?.data);
   );
 };
 
+// --- START: MODALS & ACTIONS ---
+
+const SendEmailAction = ({ document, onClose }: { document: any; onClose: () => void }) => {
+  useEffect(() => {
+    const email = document?.company?.primary_email_id || document?.member?.email;
+    if (!email) {
+      toast.push(
+        <Notification type="warning" title="Missing Email" duration={4000}>
+          No primary email found for the associated company or member.
+        </Notification>
+      );
+      onClose();
+      return;
+    }
+    const subject = `Regarding Document: ${document.document_number}`;
+    const body = `Hello,\n\nThis is regarding your document (Ref: ${document.document_number}).`;
+    window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    onClose();
+  }, [document, onClose]);
+
+  return null;
+};
+
+const SendWhatsAppAction = ({ document, onClose }: { document: any; onClose: () => void }) => {
+  useEffect(() => {
+    const phone = document?.company?.primary_contact_number?.replace(/\D/g, '') || document?.member?.number?.replace(/\D/g, '');
+    const countryCode = document?.company?.primary_contact_number_code?.replace(/\D/g, '') || document?.member?.number_code?.replace(/\D/g, '');
+
+    if (!phone || !countryCode) {
+      toast.push(
+        <Notification type="warning" title="Missing Number" duration={4000}>
+          Primary contact number is not available for the associated company or member.
+        </Notification>
+      );
+      onClose();
+      return;
+    }
+    const fullPhoneNumber = `${countryCode}${phone}`;
+    const message = `Hello,\n\nThis is regarding your document (Ref: ${document.document_number}).`;
+    window.open(`https://wa.me/${fullPhoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
+    onClose();
+  }, [document, onClose]);
+
+  return null;
+};
+
+const AssignTaskDialog = ({ document, onClose, userOptions }: { document: any, onClose: () => void, userOptions: SelectOption[] }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<TaskFormData>({
+    resolver: zodResolver(taskValidationSchema),
+    defaultValues: {
+      task_title: `Follow up on document ${document.document_number}`,
+      assign_to: [],
+      priority: 'Medium',
+    },
+    mode: 'onChange',
+  });
+
+  const onAssignTask = async (data: TaskFormData) => {
+    setIsLoading(true);
+    const payload = {
+      ...data,
+      due_date: data.due_date
+        ? dayjs(data.due_date).format('YYYY-MM-DD')
+        : undefined,
+      module_id: String(document.id),
+      module_name: 'AccountDocument',
+    };
+
+    try {
+      await dispatch(addTaskAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Task Assigned!" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title="Failed to Assign Task"
+          children={error?.message}
+        />
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose}>
+      <h5 className="mb-4">Assign Task for Doc: {document.document_number}</h5>
+      <UiForm onSubmit={handleSubmit(onAssignTask)}>
+        <UiFormItem
+          label="Task Title"
+          invalid={!!errors.task_title}
+          errorMessage={errors.task_title?.message}
+        >
+          <Controller
+            name="task_title"
+            control={control}
+            render={({ field }) => <Input {...field} autoFocus />}
+          />
+        </UiFormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UiFormItem
+            label="Assign To"
+            invalid={!!errors.assign_to}
+            errorMessage={errors.assign_to?.message}
+          >
+            <Controller
+              name="assign_to"
+              control={control}
+              render={({ field }) => (
+                <UiSelect
+                  isMulti
+                  placeholder="Select User(s)"
+                  options={userOptions}
+                  value={userOptions.filter((o) => field.value?.includes(o.value))}
+                  onChange={(opts) => field.onChange(opts?.map((o) => o.value) || [])}
+                />
+              )}
+            />
+          </UiFormItem>
+          <UiFormItem
+            label="Priority"
+            invalid={!!errors.priority}
+            errorMessage={errors.priority?.message}
+          >
+            <Controller
+              name="priority"
+              control={control}
+              render={({ field }) => (
+                <UiSelect
+                  placeholder="Select Priority"
+                  options={taskPriorityOptions}
+                  value={taskPriorityOptions.find((p) => p.value === field.value)}
+                  onChange={(opt) => field.onChange(opt?.value)}
+                />
+              )}
+            />
+          </UiFormItem>
+        </div>
+        <UiFormItem
+          label="Due Date (Optional)"
+          invalid={!!errors.due_date}
+          errorMessage={errors.due_date?.message}
+        >
+          <Controller
+            name="due_date"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                placeholder="Select date"
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        </UiFormItem>
+        <UiFormItem
+          label="Description"
+          invalid={!!errors.description}
+          errorMessage={errors.description?.message}
+        >
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => <Input textArea {...field} rows={4} />}
+          />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button type="button" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button
+            variant="solid"
+            type="submit"
+            loading={isLoading}
+            disabled={!isValid || isLoading}
+            className="ml-2"
+          >
+            Assign Task
+          </Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
+};
+
+const AddActivityDialog = ({ document, onClose, user }: { document: any, onClose: () => void, user: any }) => {
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<ActivityFormData>({
+    resolver: zodResolver(activitySchema),
+    defaultValues: {
+      item: `Follow up on doc ${document.document_number}`,
+      notes: '',
+    },
+    mode: 'onChange',
+  });
+
+  const onAddActivity = async (data: ActivityFormData) => {
+    if (!user?.id) {
+        toast.push(<Notification type="danger" title="User not found. Please log in again." />);
+        return;
+    }
+    setIsLoading(true);
+    const payload = {
+      item: data.item,
+      notes: data.notes || '',
+      module_id: String(document.id),
+      module_name: 'AccountDocument',
+      user_id: user.id,
+    };
+    try {
+      await dispatch(addAllActionAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Activity Added" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(
+        <Notification
+          type="danger"
+          title="Failed to Add Activity"
+          children={error?.message || 'An unknown error occurred.'}
+        />
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Activity Log for Doc "{document.document_number}"</h5>
+      <UiForm onSubmit={handleSubmit(onAddActivity)}>
+        <UiFormItem
+          label="Activity"
+          invalid={!!errors.item}
+          errorMessage={errors.item?.message}
+        >
+          <Controller
+            name="item"
+            control={control}
+            render={({ field }) => (
+              <Input {...field} placeholder="e.g., Followed up with member" />
+            )}
+          />
+        </UiFormItem>
+        <UiFormItem
+          label="Notes (Optional)"
+          invalid={!!errors.notes}
+          errorMessage={errors.notes?.message}
+        >
+          <Controller
+            name="notes"
+            control={control}
+            render={({ field }) => (
+              <Input textArea {...field} placeholder="Add relevant details..." />
+            )}
+          />
+        </UiFormItem>
+        <div className="text-right mt-6">
+          <Button
+            type="button"
+            className="mr-2"
+            onClick={onClose}
+            disabled={isLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="solid"
+            type="submit"
+            loading={isLoading}
+            disabled={!isValid || isLoading}
+            icon={<TbCheck />}
+          >
+            Save Activity
+          </Button>
+        </div>
+      </UiForm>
+    </Dialog>
+  );
+};
+
+const AccountDocumentAlertModal = ({ document, onClose }: { document: any, onClose: () => void }) => {
+    const [alerts, setAlerts] = useState<AlertNote[]>([]);
+    const [isFetching, setIsFetching] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const dispatch = useAppDispatch();
+    const { control, handleSubmit, formState: { errors, isValid }, reset } = useForm<AlertNoteFormData>({
+        resolver: zodResolver(alertNoteSchema),
+        defaultValues: { newNote: '' },
+        mode: 'onChange'
+    });
+
+    const stringToColor = (str: string) => {
+        let hash = 0;
+        if (!str) return '#cccccc';
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i++) {
+            const value = (hash >> (i * 8)) & 0xFF;
+            color += ('00' + value.toString(16)).substr(-2);
+        }
+        return color;
+    };
+
+    const fetchAlerts = useCallback(() => {
+        setIsFetching(true);
+        dispatch(getAlertsAction({ module_id: document.id, module_name: 'AccountDocument' }))
+            .unwrap()
+            .then((data) => setAlerts(data.data || []))
+            .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
+            .finally(() => setIsFetching(false));
+    }, [document.id, dispatch]);
+
+    useEffect(() => {
+        fetchAlerts();
+    }, [fetchAlerts]);
+
+    const onAddNote = async (data: AlertNoteFormData) => {
+        setIsSubmitting(true);
+        try {
+            await dispatch(addAllAlertsAction({ note: data.newNote, module_id: document.id, module_name: 'AccountDocument' })).unwrap();
+            toast.push(<Notification type="success" title="Alert Note Added" />);
+            reset({ newNote: '' });
+            fetchAlerts(); // Refresh the list
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Add Note" children={error?.message} />);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog
+            isOpen={true}
+            onClose={onClose}
+            onRequestClose={onClose}
+            width={1200}
+            contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+        >
+            <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-red-500 to-orange-600 flex-shrink-0 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <TbBellRinging className="text-2xl text-white" />
+                        <h5 className="mb-0 text-white font-bold text-base sm:text-xl">Alerts for: {document.document_number}</h5>
+                    </div>
+                    <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full p-1">
+                        <TbX className="h-6 w-6" />
+                    </button>
+                </div>
+            </header>
+
+            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
+                <div className="relative flex flex-col h-full overflow-hidden">
+                    <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+                        Activity Timeline
+                    </h6>
+                    <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
+                        {isFetching ? (
+                            <div className="flex justify-center items-center h-full"><Spinner size="lg"/></div>
+                        ) : alerts.length > 0 ? (
+                            <div className="space-y-8">
+                                {alerts.map((alert, index) => {
+                                    const userName = alert?.created_by_user?.name || 'N/A';
+                                    const userInitial = userName.charAt(0).toUpperCase();
+                                    return (
+                                        <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                                            <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                                                <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                                                    {userInitial}
+                                                </Avatar>
+                                                {index < alerts.length - 1 && (
+                                                    <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                                                )}
+                                            </div>
+                                            <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                <div className="p-4">
+                                                    <header className="flex justify-between items-center mb-2">
+                                                        <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                            <TbCalendarEvent />
+                                                            <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
+                                                        </div>
+                                                    </header>
+                                                    <div
+                                                        className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                                                        dangerouslySetInnerHTML={{ __html: alert.note }}
+                                                    />
+                                                </div>
+                                            </Card>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
+                                <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
+                                <p className="text-xl font-semibold text-gray-600 dark:text-gray-300">No Alerts Yet</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Be the first to add a note.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-col mt-8 lg:mt-0 h-full">
+                    <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+                        <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <TbPencilPlus className="text-xl text-red-600 dark:text-red-400" />
+                                <h6 className="font-semibold text-gray-800 dark:text-gray-200 mb-0">Add New Alert Note</h6>
+                            </div>
+                        </header>
+                        <UiForm onSubmit={handleSubmit(onAddNote)} className="p-4 flex-grow flex flex-col">
+                            <UiFormItem invalid={!!errors.newNote} errorMessage={errors.newNote?.message} className="flex-grow flex flex-col">
+                                <Controller
+                                    name="newNote"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <div className="border dark:border-gray-700 rounded-md flex-grow flex flex-col">
+                                            <RichTextEditor
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                className="flex-grow min-h-[150px] sm:min-h-[200px]"
+                                            />
+                                        </div>
+                                    )}
+                                />
+                            </UiFormItem>
+                            <footer className="flex items-center justify-end mt-4 pt-4 border-t dark:border-gray-700 flex-shrink-0">
+                                <Button type="button" className="mr-3" onClick={onClose} disabled={isSubmitting}>
+                                    Cancel
+                                </Button>
+                                <Button variant="solid" color="red" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
+                                    Submit Note
+                                </Button>
+                            </footer>
+                        </UiForm>
+                    </Card>
+                </div>
+            </main>
+        </Dialog>
+    );
+};
+
+const DownloadDocumentsDialog = ({ document, onClose }: { document: any, onClose: () => void }) => {
+    const documents = useMemo(() => {
+        // This is a hypothetical structure. You need to adjust this based on the actual
+        // API response from `getbyIDaccountdocAction`.
+        // Let's assume the full document object has an array `document_files`.
+        const allDocs: { name: string; url: string }[] = [];
+        if (Array.isArray(document.document_files)) {
+            document.document_files.forEach((file: any) => {
+                if (file.name && file.url) {
+                    allDocs.push({ name: file.name, url: file.url });
+                }
+            });
+        }
+        // Add other potential single file fields if they exist
+        if(document.file_path) {
+            allDocs.push({name: "Primary Document", url: document.file_path});
+        }
+        return allDocs;
+    }, [document]);
+
+    return (
+        <Dialog isOpen={true} onClose={onClose} width={600}>
+            <h5 className="mb-4">Download Documents for {document.document_number}</h5>
+            <div className="max-h-96 overflow-y-auto">
+                {documents.length > 0 ? (
+                    <div className="space-y-2">
+                        {documents.map((doc, index) => (
+                            <a
+                                key={index}
+                                href={doc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600 transition-colors"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <TbFileDescription className="text-lg text-gray-500" />
+                                    {doc.name}
+                                </span>
+                                <TbCloudDownload className="text-lg text-blue-500" />
+                            </a>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-center py-4 text-gray-500">No documents available for download.</p>
+                )}
+            </div>
+            <div className="text-right mt-6">
+                <Button variant="solid" onClick={onClose}>Close</Button>
+            </div>
+        </Dialog>
+    );
+};
+
+
 const AccountDocumentModals = ({
   modalState,
   onClose,
   getAllUserDataOptions,
+  user,
 }: any) => {
   const { type, data: document, isOpen } = modalState;
   if (!isOpen || !document) return null;
@@ -1391,6 +1914,24 @@ const AccountDocumentModals = ({
       return <AddScheduleDialog document={document} onClose={onClose} />;
     case "view":
       return <ViewDocumentDialog document={document} onClose={onClose} />;
+    case "email":
+      return <SendEmailAction document={document} onClose={onClose} />;
+    case "whatsapp":
+      return <SendWhatsAppAction document={document} onClose={onClose} />;
+    case "task":
+      return (
+        <AssignTaskDialog
+          document={document}
+          onClose={onClose}
+          userOptions={getAllUserDataOptions}
+        />
+      );
+    case "alert":
+        return <AccountDocumentAlertModal document={document} onClose={onClose} />;
+    case "activity":
+        return <AddActivityDialog document={document} onClose={onClose} user={user} />;
+    case "document":
+        return <DownloadDocumentsDialog document={document} onClose={onClose} />;
     default:
       return null;
   }
@@ -1619,6 +2160,7 @@ const AccountDocument = () => {
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
+  const [userData, setUserData] = useState<any>(null);
 
   const exportReasonFormMethods = useForm<ExportReasonFormData>({
     resolver: zodResolver(exportReasonSchema),
@@ -1629,6 +2171,12 @@ const AccountDocument = () => {
   useEffect(() => {
     dispatch(getAllUsersAction());
     dispatch(getaccountdocAction());
+    try {
+      const { useEncryptApplicationStorage } = config;
+      setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage));
+    } catch (error) {
+      console.error("Error getting UserData:", error);
+    }
   }, [dispatch]);
 
   const getAllUserDataOptions = useMemo(
@@ -1640,9 +2188,26 @@ const AccountDocument = () => {
   );
   const handleOpenModal = useCallback(
     (type: ModalType, itemData: AccountDocumentListItem) => {
-      setModalState({ isOpen: true, type, data: itemData });
+      const typesRequiringFullData: ModalType[] = ['view', 'email', 'whatsapp', 'task', 'alert', 'activity', 'document'];
+      
+      if (typesRequiringFullData.includes(type)) {
+          toast.push(<Notification title="Loading Details..." type="info" duration={1500}><Spinner /></Notification>, {
+            placement: 'top-center'
+          });
+          dispatch(getbyIDaccountdocAction(itemData.id))
+              .unwrap()
+              .then((result) => {
+                  setModalState({ isOpen: true, type, data: result.data });
+              })
+              .catch((err) => {
+                   toast.push(<Notification title="Error" type="danger" children={err?.message || "Could not fetch document details."}/>);
+              });
+      } else {
+          // For simple modals like notification and schedule that have enough data in the list item
+          setModalState({ isOpen: true, type, data: itemData });
+      }
     },
-    []
+    [dispatch]
   );
   const handleCloseModal = useCallback(() => {
     setModalState({ isOpen: false, type: null, data: null });
@@ -1662,24 +2227,6 @@ const AccountDocument = () => {
     setIsAddEditDrawerOpen(false);
     setEditingId(null);
   };
-
-  const handleViewClick = useCallback(
-    (item: AccountDocumentListItem) => {
-      const fullItemData = getaccountdoc?.data?.find(
-        (d: any) => String(d.id) === item.id
-      );
-      if (fullItemData) {
-        setModalState({ isOpen: true, type: "view", data: fullItemData });
-      } else {
-        toast.push(
-          <Notification type="danger" title="Error">
-            Could not find document details.
-          </Notification>
-        );
-      }
-    },
-    [getaccountdoc?.data]
-  );
 
   const filterOptions = useMemo(() => {
     const rawData = getaccountdoc?.data || [];
@@ -2084,23 +2631,20 @@ const AccountDocument = () => {
         meta: { HeaderClass: "text-center" },
         cell: (props: CellContext<AccountDocumentListItem, any>) => (
           <AccountDocumentActionColumn
-            onDelete={() => handleDeleteClick(props.row.original)}
             onOpenModal={handleOpenModal}
             onEdit={() => handleOpenEditDrawer(props.row.original)}
-            onView={() => handleViewClick(props.row.original)}
+            onView={() => handleOpenModal('view', props.row.original)}
             rowData={props.row.original}
           />
         ),
       },
     ],
-    [handleDeleteClick, handleOpenModal, handleViewClick, handleOpenEditDrawer]
+    [handleOpenModal, handleOpenEditDrawer]
   );
 
   const [filteredColumns, setFilteredColumns] =
-    useState<ColumnDef<AccountDocumentListItem>[]>(columns);  
-  useEffect(() => {
-    setFilteredColumns(columns);
-  }, []);
+    useState<ColumnDef<AccountDocumentListItem>[]>(columns);
+
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -2381,6 +2925,7 @@ const AccountDocument = () => {
         modalState={modalState}
         onClose={handleCloseModal}
         getAllUserDataOptions={getAllUserDataOptions}
+        user={userData}
       />
       <ConfirmDialog
         isOpen={isExportReasonModalOpen}
