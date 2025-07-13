@@ -92,7 +92,7 @@ const DocumentViewer: React.FC<{
     };
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} width="auto" height="85vh" closable={false} bodyOpenClassName="overflow-hidden" contentClassName="top-0 p-0 bg-transparent">
+        <Dialog isOpen={isOpen} onClose={onClose} width="auto" height="85vh" closable={false}  contentClassName="top-0 p-0 bg-transparent">
             <div className="w-full h-full bg-black/80 backdrop-blur-sm flex flex-col">
                 <header className="flex-shrink-0 h-16 bg-gray-800/50 text-white flex items-center justify-between px-4">
                     <div className="flex items-center gap-4">
@@ -104,7 +104,7 @@ const DocumentViewer: React.FC<{
                         <Button shape="circle" variant="subtle" size="sm" icon={<TbX />} onClick={onClose} />
                     </div>
                 </header>
-                <main className="relative flex-grow flex items-center justify-center overflow-hidden">
+                <main className="relative flex-grow flex items-center justify-center ">
                     {!isContentLoaded && <Spinner size={40} className="absolute" />}
                     {renderContent()}
                 </main>
@@ -133,7 +133,7 @@ const DocumentCard: React.FC<{ document: DocumentRecord; onPreview: () => void }
 
     return (
         <Card bodyClass="p-0" className="hover:shadow-lg transition-shadow flex flex-col">
-            <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden cursor-pointer" onClick={onPreview}>{renderPreviewIcon()}</div>
+            <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center  cursor-pointer" onClick={onPreview}>{renderPreviewIcon()}</div>
             <div className="p-4 flex flex-col flex-grow">
                 <p className="font-semibold truncate flex-grow" title={document.name}>{document.name}</p>
                 <div className="flex justify-between items-center mt-3">
@@ -168,7 +168,116 @@ const MembersTabView = ({ company }: { company: ApiSingleCompanyItem }) => { con
 const TeamsTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const teams = company.company_team_members || []; if (teams.length === 0) return <NoDataMessage message="No team members found." />; return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{teams.map(t => (<InfoCard key={t.id} title={t.person_name} data={[{ label: 'Team', value: t.team_name },{ label: 'Designation', value: t.designation },{ label: 'Contact', value: t.number }]} />))}</div> };
 const OfficesTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const offices = company.office_info || []; if (offices.length === 0) return <NoDataMessage message="No office locations found." />; return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{offices.map(o => (<InfoCard key={o.id} title={o.office_name} data={[{ label: 'Type', value: o.office_type },{ label: 'Address', value: o.address },{ label: 'Location', value: `${o.city}, ${o.state}` },{ label: 'Contact Person', value: o.contact_person }]} />))}</div> };
 const VerificationTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const verifications = company.company_spot_verification || []; if (verifications.length === 0) return <NoDataMessage message="No spot verifications found." />; return <div className="space-y-4">{verifications.map(v => <Card key={v.id} bodyClass='p-4'><div className="flex justify-between items-center"><h6 className="font-semibold">Verified by {v.verified_by_name || 'Unknown'}</h6>{v.verified ? <Tag className='bg-emerald-100 text-emerald-700'>Verified</Tag> : <Tag className='bg-red-100 text-red-700'>Not Verified</Tag>}</div>{v.remark && <p className="text-sm mt-2 text-gray-600"><TbMessage2 className='inline-block mr-2' />{v.remark}</p>}{v.photo_upload && <Button size='sm' className='mt-2' onClick={() => window.open(v.photo_upload || '', '_blank')}>View Photo</Button>}</Card>)}</div> };
-const TransactionsTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const allTransactions = useMemo(() => company.transaction_docs || [], [company]); const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]); const filteredTransactions = useMemo(() => { const [startDate, endDate] = dateRange; if (!startDate || !endDate) { return allTransactions; } return allTransactions.filter(transaction => { const transactionDate = dayjs(transaction.created_at); return transactionDate.isAfter(dayjs(startDate).startOf('day')) && transactionDate.isBefore(dayjs(endDate).endOf('day')); }); }, [allTransactions, dateRange]); const handleResetFilter = () => setDateRange([null, null]); const formatDocTitle = (key: string) => { const customTitles: Record<string, string> = { pi_upload: "PO", imei_excel_sheet_miracle: "IMEI Sheet", invoice_upload: "Purchase Invoice", e_way_bill: "E-Way Bill" }; return customTitles[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); }; const formatTransactionId = (id: number | undefined | null): string => { if (id === null || id === undefined) return 'N/A'; return String(id).padStart(5, '0'); }; if (allTransactions.length === 0) { return <NoDataMessage message="No transaction documents found." />; } return <div className='space-y-6'><Card><div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"><div className='flex items-center gap-2'><label className='font-semibold'>Date:</label><DatePicker.DatePickerRange value={dateRange} onChange={setDateRange} placeholder="Pick date range" /></div><div className="flex gap-2"><Button onClick={handleResetFilter}>Reset</Button></div></div></Card>{filteredTransactions.length > 0 ? filteredTransactions.map(transaction => { const uploadedDocs = transaction.filled_form?.form_data?.uploads_doc_s; if (!transaction.filled_form || !uploadedDocs) return null; const sortedDocs = Object.entries(uploadedDocs).filter(([_, url]) => !!url).sort(([keyA], [keyB]) => { const indexA = ['pi_upload', 'imei_excel_sheet_miracle', 'invoice_upload', 'e_way_bill'].indexOf(keyA); const indexB = ['pi_upload', 'imei_excel_sheet_miracle', 'invoice_upload', 'e_way_bill'].indexOf(keyB); if (indexA !== -1 && indexB !== -1) return indexA - indexB; if (indexA !== -1) return -1; if (indexB !== -1) return 1; return keyA.localeCompare(keyB); }); return <Card key={transaction.id} bodyClass="p-0"><div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/60 p-3 rounded-t-lg"><h5 className="font-semibold">Form ID: #{formatTransactionId(transaction.filled_form?.accountdoc_id)}</h5><span className="text-sm text-gray-500">{dayjs(transaction.filled_form.created_at).format('DD MMM YYYY, hh:mm A')}</span></div><div className="p-4"><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">{sortedDocs.map(([docKey, docUrl]) => <a href={docUrl} target="_blank" rel="noopener noreferrer" key={docKey}><Card clickable className="h-full"><div className="flex flex-col items-center justify-center text-center gap-2 py-4"><TbFileInvoice size={36} className='text-gray-400' /><h6 className="font-semibold uppercase">{formatDocTitle(docKey)}</h6><p className="text-xs text-gray-500">{dayjs(transaction.created_at).format('DD-MM-YYYY HH:mm:ss')}</p></div></Card></a>)}</div></div></Card>}) : <NoDataMessage message="No transactions found for the selected date range." />}</div> };
+
+// --- TransactionsTabView (MODIFIED) ---
+const TransactionsTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
+    const allTransactions = useMemo(() => company.transaction_docs || [], [company]);
+    const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+
+    // State for the document viewer
+    const [viewerState, setViewerState] = useState<{
+        isOpen: boolean;
+        docs: DocumentRecord[];
+        index: number;
+    }>({ isOpen: false, docs: [], index: 0 });
+
+    const filteredTransactions = useMemo(() => {
+        const [startDate, endDate] = dateRange;
+        if (!startDate || !endDate) return allTransactions;
+        return allTransactions.filter(transaction => {
+            const transactionDate = dayjs(transaction.created_at);
+            return transactionDate.isAfter(dayjs(startDate).startOf('day')) && transactionDate.isBefore(dayjs(endDate).endOf('day'));
+        });
+    }, [allTransactions, dateRange]);
+
+    const handleResetFilter = () => setDateRange([null, null]);
+
+    const getFileType = (url: string | null): 'image' | 'pdf' | 'other' => {
+        if (!url) return 'other';
+        const extension = url.split('.').pop()?.toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image';
+        if (extension === 'pdf') return 'pdf';
+        return 'other';
+    };
+
+    const formatDocTitle = (key: string) => {
+        const customTitles: Record<string, string> = { pi_upload: "PO", imei_excel_sheet_miracle: "IMEI Sheet", invoice_upload: "Purchase Invoice", e_way_bill: "E-Way Bill" };
+        return customTitles[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    const formatTransactionId = (id: number | undefined | null): string => {
+        if (id === null || id === undefined) return 'N/A';
+        return String(id).padStart(5, '0');
+    };
+
+    // Viewer control functions
+    const handlePreview = (docs: DocumentRecord[], index: number) => {
+        setViewerState({ isOpen: true, docs, index });
+    };
+    const handleCloseViewer = () => setViewerState({ isOpen: false, docs: [], index: 0 });
+    const handleNext = () => setViewerState(prev => ({ ...prev, index: Math.min(prev.index + 1, prev.docs.length - 1) }));
+    const handlePrev = () => setViewerState(prev => ({ ...prev, index: Math.max(prev.index - 1, 0) }));
+
+    if (allTransactions.length === 0) {
+        return <NoDataMessage message="No transaction documents found." />;
+    }
+
+    return (
+        <div className='space-y-6'>
+            <Card>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className='flex items-center gap-2'><label className='font-semibold'>Date:</label><DatePicker.DatePickerRange value={dateRange} onChange={setDateRange} placeholder="Pick date range" /></div>
+                    <div className="flex gap-2"><Button onClick={handleResetFilter}>Reset</Button></div>
+                </div>
+            </Card>
+
+            {filteredTransactions.length > 0 ? filteredTransactions.map(transaction => {
+                const uploadedDocs = transaction.filled_form?.form_data?.uploads_doc_s;
+                if (!transaction.filled_form || !uploadedDocs) return null;
+
+                const transactionDocs: DocumentRecord[] = Object.entries(uploadedDocs)
+                    .filter(([_, url]) => !!url)
+                    .map(([docKey, docUrl]) => ({
+                        name: formatDocTitle(docKey),
+                        url: docUrl as string,
+                        type: getFileType(docUrl),
+                        verified: true, // Assuming transaction docs are verified
+                    }));
+
+                if (transactionDocs.length === 0) return null;
+
+                return (
+                    <Card key={transaction.id} bodyClass="p-0">
+                        <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/60 p-3 rounded-t-lg">
+                            <h5 className="font-semibold">Form ID: #{formatTransactionId(transaction.filled_form?.accountdoc_id)}</h5>
+                            <span className="text-sm text-gray-500">{dayjs(transaction.filled_form.created_at).format('DD MMM YYYY, hh:mm A')}</span>
+                        </div>
+                        <div className="p-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {transactionDocs.map((doc, index) => (
+                                    <DocumentCard
+                                        key={doc.url}
+                                        document={doc}
+                                        onPreview={() => handlePreview(transactionDocs, index)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </Card>
+                )
+            }) : <NoDataMessage message="No transactions found for the selected date range." />}
+            
+            <DocumentViewer
+                isOpen={viewerState.isOpen}
+                onClose={handleCloseViewer}
+                documents={viewerState.docs}
+                currentIndex={viewerState.index}
+                onNext={handleNext}
+                onPrev={handlePrev}
+            />
+        </div>
+    );
+};
 
 const DocumentsTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
     const [viewerState, setViewerState] = useState({ isOpen: false, index: 0 });
