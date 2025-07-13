@@ -29,7 +29,7 @@ import {
 } from 'react-icons/tb';
 
 // Redux (Assuming similar structure)
-// import { getProductById } from '@/reduxtool/master/middleware'; // Placeholder for your actual Redux thunk
+import { getProductById } from '@/reduxtool/master/middleware'; // Placeholder for your actual Redux thunk
 import { useAppDispatch } from '@/reduxtool/store';
 
 
@@ -534,20 +534,22 @@ const ProductView = () => {
             }
             setLoading(true);
             try {
+                const response = await dispatch(getProductById(id)).unwrap();
+                setProduct(response);
                 // --- MOCK IMPLEMENTATION using provided JSON ---
                 // NOTE: I've added mock data for the new optional fields in `product_leads` to demonstrate filtering.
-                const mockApiResponse: ProductApiResponse = {"status":true,"message":"Product found","data":{"id":1,"category_id":1,"sub_category_id":5,"brand_id":1,"sku_code":"hhfghfh","name":"IPHONE 16E 5G 8GB 256GB","unit_id":1,"country_id":254,"color":null,"hsn_code":"85171300","shelf_life":null,"packaging_size":"10x10","packaging_type":"Box","tax_rate":"18","procurement_lead_time":"5 days","slug":"iphone-16e-5g-8gb-256gb","description":"This is the full, detailed description of the iPhone 16E.","short_description":"A brief summary of the iPhone 16E.","payment_term":"Net 30","delivery_details":"Standard shipping.","thumb_image":"prod_thumb_image_1751973575.jpg","status":"Active","product_keywords":"IPH16E, iPhone 16, Apple Mobile","created_by":1,"updated_by":1,"meta_title":"Buy iPhone 16E 5G 8GB 256GB Online","meta_descr":"Get the best deals on the new iPhone 16E.","meta_keyword":"iphone 16e, apple, 5g mobile","created_at":"2025-07-08T11:19:35.000000Z","updated_at":"2025-07-13T04:46:50.000000Z","thumb_image_full_path":"https://aazovo.omcommunication.co/product_thumb_images/prod_thumb_image_1751973575.jpg","created_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com","profile_pic_path":"https://aazovo.omcommunication.co/storage/users/profile_pics/686e018a3d879.jpg"},"updated_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com"},"category":{"id":1,"name":"ELECTRONICS"},"sub_category":{"id":5,"name":"MOBILE"},"brand":{"id":1,"name":"APPLE"},"country":{"id":254,"name":"Global"},"unit1":{"id":1,"name":"Pcs"},
-                "product_leads":[
-                    {"id":1, "name":"IPHONE 16E Lead", "status":"New", "created_at":"2025-07-10T11:00:00Z", "created_by_user":{"id":1, "name":"Tushar Joshi", "profile_pic_path":"https://..."},"brand":{"id":1, "name":"APPLE"}, "type": "Webform", "company": "Global Tech", "source": "Organic Search", "want_to": "Buy"},
-                    {"id":2, "name":"IPHONE 16E Lead", "status":"Contacted", "created_at":"2025-07-11T14:30:00Z", "created_by_user":{"id":1, "name":"Tushar Joshi", "profile_pic_path":"https://..."},"brand":{"id":1, "name":"APPLE"}, "type": "Phone Call", "company": "Device Resellers Inc.", "source": "PPC Campaign", "want_to": "Sell"},
-                    {"id":3, "name":"IPHONE 16E Lead", "status":"New", "created_at":"2025-07-12T09:00:00Z", "created_by_user":{"id":1, "name":"Tushar Joshi", "profile_pic_path":"https://..."},"brand":{"id":1, "name":"APPLE"}, "type": "Webform", "company": "Global Tech", "source": "Referral", "want_to": "Buy"}
-                ],
-                "wall_enquiries":[
-                    {"id":1,"want_to":"Sell","qty":"250","price":null,"status":"Active","product_status":"Active","device_condition":"New","created_at":"2025-07-11T12:26:04.000000Z","created_by_user":null,"member":{"id":6,"name":"North America Traders","email":"contact@northamerica.com","number":"9714800002"}},
-                    {"id":2,"want_to":"Sell","qty":"1","price":"1200","status":"Active","product_status":"Active","device_condition":"Used - Like New","created_at":"2025-07-10T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com"},"member":{"id":7,"name":"European Distributors","email":"sales@eurodist.com","number":"1234567890"}},
-                    {"id":3,"want_to":"Buy","qty":"300","price":null,"status":"Pending","product_status":"Active","device_condition":"New","created_at":"2025-07-09T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com"},"member":{"id":8,"name":"Asia Pacific Imports","email":"imports@asiapac.com","number":"0987654321"}}
-                ]}};
-                setProduct(mockApiResponse.data);
+                // const mockApiResponse: ProductApiResponse = {"status":true,"message":"Product found","data":{"id":1,"category_id":1,"sub_category_id":5,"brand_id":1,"sku_code":"hhfghfh","name":"IPHONE 16E 5G 8GB 256GB","unit_id":1,"country_id":254,"color":null,"hsn_code":"85171300","shelf_life":null,"packaging_size":"10x10","packaging_type":"Box","tax_rate":"18","procurement_lead_time":"5 days","slug":"iphone-16e-5g-8gb-256gb","description":"This is the full, detailed description of the iPhone 16E.","short_description":"A brief summary of the iPhone 16E.","payment_term":"Net 30","delivery_details":"Standard shipping.","thumb_image":"prod_thumb_image_1751973575.jpg","status":"Active","product_keywords":"IPH16E, iPhone 16, Apple Mobile","created_by":1,"updated_by":1,"meta_title":"Buy iPhone 16E 5G 8GB 256GB Online","meta_descr":"Get the best deals on the new iPhone 16E.","meta_keyword":"iphone 16e, apple, 5g mobile","created_at":"2025-07-08T11:19:35.000000Z","updated_at":"2025-07-13T04:46:50.000000Z","thumb_image_full_path":"https://aazovo.omcommunication.co/product_thumb_images/prod_thumb_image_1751973575.jpg","created_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com","profile_pic_path":"https://aazovo.omcommunication.co/storage/users/profile_pics/686e018a3d879.jpg"},"updated_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com"},"category":{"id":1,"name":"ELECTRONICS"},"sub_category":{"id":5,"name":"MOBILE"},"brand":{"id":1,"name":"APPLE"},"country":{"id":254,"name":"Global"},"unit1":{"id":1,"name":"Pcs"},
+                // "product_leads":[
+                //     {"id":1, "name":"IPHONE 16E Lead", "status":"New", "created_at":"2025-07-10T11:00:00Z", "created_by_user":{"id":1, "name":"Tushar Joshi", "profile_pic_path":"https://..."},"brand":{"id":1, "name":"APPLE"}, "type": "Webform", "company": "Global Tech", "source": "Organic Search", "want_to": "Buy"},
+                //     {"id":2, "name":"IPHONE 16E Lead", "status":"Contacted", "created_at":"2025-07-11T14:30:00Z", "created_by_user":{"id":1, "name":"Tushar Joshi", "profile_pic_path":"https://..."},"brand":{"id":1, "name":"APPLE"}, "type": "Phone Call", "company": "Device Resellers Inc.", "source": "PPC Campaign", "want_to": "Sell"},
+                //     {"id":3, "name":"IPHONE 16E Lead", "status":"New", "created_at":"2025-07-12T09:00:00Z", "created_by_user":{"id":1, "name":"Tushar Joshi", "profile_pic_path":"https://..."},"brand":{"id":1, "name":"APPLE"}, "type": "Webform", "company": "Global Tech", "source": "Referral", "want_to": "Buy"}
+                // ],
+                // "wall_enquiries":[
+                //     {"id":1,"want_to":"Sell","qty":"250","price":null,"status":"Active","product_status":"Active","device_condition":"New","created_at":"2025-07-11T12:26:04.000000Z","created_by_user":null,"member":{"id":6,"name":"North America Traders","email":"contact@northamerica.com","number":"9714800002"}},
+                //     {"id":2,"want_to":"Sell","qty":"1","price":"1200","status":"Active","product_status":"Active","device_condition":"Used - Like New","created_at":"2025-07-10T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com"},"member":{"id":7,"name":"European Distributors","email":"sales@eurodist.com","number":"1234567890"}},
+                //     {"id":3,"want_to":"Buy","qty":"300","price":null,"status":"Pending","product_status":"Active","device_condition":"New","created_at":"2025-07-09T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com"},"member":{"id":8,"name":"Asia Pacific Imports","email":"imports@asiapac.com","number":"0987654321"}}
+                // ]}};
+                // setProduct(mockApiResponse.data);
 
             } catch (error: any) {
                 toast.push(<Notification type="danger" title="Fetch Error">{error?.message || 'Failed to load product data.'}</Notification>);
