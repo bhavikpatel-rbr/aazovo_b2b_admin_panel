@@ -199,8 +199,8 @@ const WallEnquiryHeader = ({ enquiry }: { enquiry: WallEnquiryData }) => {
         <InfoPair label="Created At" value={dayjs(enquiry.created_at).format('DD MMM YYYY')} />
       </div>
       <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
-        <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/wall/edit-enquiry/${enquiry.id}`)}>Edit Enquiry</Button>
-        <Button icon={<TbArrowLeft />} onClick={() => navigate('/wall/listings')}>Back to List</Button>
+        {/* <Button variant="solid" icon={<TbPencil />} onClick={() => navigate('/sales-leads/wall-listing')}>Edit Enquiry</Button> */}
+        <Button icon={<TbArrowLeft />} onClick={() => navigate('/sales-leads/wall-listing')}>Back to List</Button>
       </div>
     </div>
   );
