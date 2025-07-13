@@ -870,19 +870,17 @@ const ViewOpportunitiesDialog: React.FC<{
   const dispatch = useAppDispatch();
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  console.log(lead, 'lead');
   
   useEffect(() => {
     const fetchOpportunities = async () => {
-      if (!lead.id) {
+      if (!lead.product_id) {
         setIsLoading(false);
         return;
       }
       setIsLoading(true);
       try {
         // In a real application, you would dispatch an action here:
-        const actionResult = await dispatch(getLeadOpportunitiesAction({ id: lead.id, key: lead.want_to })).unwrap();
+        const actionResult = await dispatch(getLeadOpportunitiesAction({ id: lead.product_id, key: lead.want_to })).unwrap();
         if (actionResult?.data) {
           const formattedData = actionResult.data.map((item: any) => ({
             id: item.id,
