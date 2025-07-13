@@ -135,6 +135,7 @@ import {
   getAlertsAction,
   getAllUsersAction,
   getAutoMatchDataAction,
+  getLeadOpportunitiesAction,
   getOpportunitiesAction,
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
@@ -142,6 +143,7 @@ import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
+import { DataTable } from "@/components/shared";
 
 // --- Type Definitions ---
 export type ApiOpportunityItem = {
@@ -364,6 +366,7 @@ export type OpportunityModalType =
   | "task"
   | "active"
   | "calendar"
+  | "Opportunity"
   | "alert";
 export interface OpportunityModalState {
   isOpen: boolean;
@@ -860,7 +863,159 @@ const AddActivityDialog: React.FC<{
     </Dialog>
   );
 };
+const ViewOpportunitiesDialog: React.FC<{
+  opportunity:any,
+  onClose: () => void;
+}> = ({ opportunity:lead, onClose }) => {
+  const dispatch = useAppDispatch();
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  console.log(lead, 'lead');
+  
+  useEffect(() => {
+    const fetchOpportunities = async () => {
+      if (!lead.id) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        // In a real application, you would dispatch an action here:
+        const actionResult = await dispatch(getLeadOpportunitiesAction({ id: lead.id, key: lead.want_to })).unwrap();
+        if (actionResult?.data) {
+          const formattedData = actionResult.data.map((item: any) => ({
+            id: item.id,
+            want_to: item.want_to,
+            product_name: item.product_name,
+            brand_name: item.brand_name,
+            qty: item.qty,
+            price: item.price,
+            device_condition: item.device_condition,
+            color: item.color,
+            member_name: item.member_name,
+            member_code: item.member_code,
+            country_name: item.country_name,
+            leads_count: item.leads_count,
+          }));
+          setData(formattedData);
+        } else {
+          setData([]); // Ensure data is cleared if API returns nothing
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        // setOpportunities(dummyOpportunities); // Using dummy data as the simulated response
+      } catch (error) {
+        console.error("Failed to fetch opportunities:", error);
+        toast.push(
+          <Notification type="danger" title="Error">
+            Could not load opportunities.
+          </Notification>
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOpportunities();
+  }, [lead.id]);
+  const columns = useMemo(() => [
+    {
+      header: 'Listing',
+      accessorKey: 'product_name',
+      cell: ({ row }) => {
+        const { want_to, product_name, brand_name, color, device_condition } = row.original;
+        const intent = want_to as WallIntent;
+        return (
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{product_name}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">{brand_name}</p>
+            <div className="flex items-center flex-wrap gap-1 mt-2">
+              <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[intent] || ''}`}>{want_to}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{device_condition}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{color}</Tag>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Member',
+      accessorKey: 'member_name',
+      cell: ({ row }) => {
+        const { member_name, member_code, country_name } = row.original;
+        return (
+          <div>
+            <p className="font-semibold">{member_name}</p>
+            <p className="text-xs text-gray-500">{member_code}</p>
+            <p className="text-xs text-gray-500">{country_name}</p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Details',
+      accessorKey: 'qty',
+      cell: ({ row }) => {
+        const { qty, price } = row.original;
+        return (
+          <div>
+            <p>Qty: <span className="font-semibold">{qty}</span></p>
+            <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Leads',
+      accessorKey: 'leads_count',
+      cell: ({ row }) => <span className="font-semibold">{row.original.leads_count}</span>
+    },
+  ], []);
+  return (
+
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={1000}
+      bodyOpenClassName="overflow-hidden"
+    >
+      <div className="flex flex-col h-full max-h-[80vh]">
+        {/* Dialog Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <TbBulb className="text-2xl text-amber-500" />
+            <h5 className="mb-0">Opportunities for {lead.lead_number}</h5>
+          </div>
+        </div>
+
+        {/* Dialog Body */}
+        <div className="flex-grow overflow-y-auto px-6 py-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Spinner size={40} />
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={data}
+              noData={data.length === 0}
+
+            />
+          )}
+        </div>
+
+        {/* Dialog Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+          <Button variant="solid" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </Dialog>
+
+
+
+  );
+};
 const OpportunityAlertModal: React.FC<{ opportunity: OpportunityItem; onClose: () => void }> = ({ opportunity, onClose }) => {
     const [alerts, setAlerts] = useState<AlertNote[]>([]);
     const [isFetching, setIsFetching] = useState(false);
@@ -1196,6 +1351,13 @@ const OpportunityModals: React.FC<OpportunityModalsProps> = ({
        case "alert":
         return (
             <OpportunityAlertModal
+                opportunity={item}
+                onClose={onClose}
+            />
+        );
+         case "Opportunity":
+        return (
+            <ViewOpportunitiesDialog
                 opportunity={item}
                 onClose={onClose}
             />
@@ -2355,7 +2517,7 @@ const MainRowActionColumn = ({
           <TbAlarm size={18} /> <span className="text-xs">View Alert</span>{" "}
         </Dropdown.Item>{" "}
         <Dropdown.Item
-          onClick={handleViewDetails}
+          onClick={() => onOpenModal("Opportunity", item)}
           className="flex items-center gap-2"
         >
           {" "}
