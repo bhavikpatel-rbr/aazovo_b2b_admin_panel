@@ -177,13 +177,13 @@ const LeadsTab = ({ data, loading }: { data: any[], loading: boolean }) => {
             leads = leads.filter(d => d.business_type === filters.type.value);
         }
         if (filters.wantTo) {
-             // Assuming 'interested_in' maps to 'wantTo'
+            // Assuming 'interested_in' maps to 'wantTo'
             leads = leads.filter(d => d.interested_in === filters.wantTo.value);
         }
         if (filters.search) {
             const searchTerm = filters.search.toLowerCase();
-            leads = leads.filter(d => 
-                Object.values(d).some(val => 
+            leads = leads.filter(d =>
+                Object.values(d).some(val =>
                     String(val).toLowerCase().includes(searchTerm)
                 )
             );
@@ -203,7 +203,7 @@ const LeadsTab = ({ data, loading }: { data: any[], loading: boolean }) => {
         { header: 'Want To?', accessorKey: 'interested_in' }, // Mapped to interested_in
         { header: 'Qty', cell: () => 'N/A' }, // Not in lead_members object
         { header: 'Target Price', cell: () => 'N/A' }, // Not in lead_members object
-        { header: 'Action', id: 'action', cell: () => <Button size="xs" variant="solid">View</Button> },
+        // { header: 'Action', id: 'action', cell: () => <Button size="xs" variant="solid">View</Button> },
     ], []);
 
     return (
@@ -255,10 +255,10 @@ const WallInquiryTab = ({ data, products, loading }: { data: any[], products: an
     const [sort, setSort] = useState<SortingState>([]);
 
     const filteredData = useMemo(() => {
-        let wallItems = data.map(item => ({...item, productName: productMap.get(item.product_id) || `Product ID: ${item.product_id}`}));
+        let wallItems = data.map(item => ({ ...item, productName: productMap.get(item.product_id) || `${item.product.name}` }));
 
         if (filters.product) {
-            wallItems = wallItems.filter(item => item.product_id === filters.product.value);
+            wallItems = wallItems.filter(item => item.product.name === filters.product.value);
         }
         if (filters.status) {
             wallItems = wallItems.filter(item => item.status === filters.status.value);
@@ -274,8 +274,8 @@ const WallInquiryTab = ({ data, products, loading }: { data: any[], products: an
         }
         return wallItems;
     }, [data, filters, productMap]);
-    
-    const productOptions = useMemo(() => 
+
+    const productOptions = useMemo(() =>
         products.map(p => ({ label: p.name, value: p.id })),
         [products]
     );
@@ -285,7 +285,7 @@ const WallInquiryTab = ({ data, products, loading }: { data: any[], products: an
     };
 
     const handleReset = () => setFilters(initialFilters);
-    
+    const navigate = useNavigate();
     const columns = useMemo(() => [
         { header: 'Status', accessorKey: 'status' },
         { header: 'Product Name', accessorKey: 'productName' },
@@ -293,14 +293,14 @@ const WallInquiryTab = ({ data, products, loading }: { data: any[], products: an
         { header: 'Qty', accessorKey: 'qty' },
         { header: 'Product Status', accessorKey: 'product_status' },
         { header: 'Want To?', accessorKey: 'want_to' },
-        { header: 'Action', id: 'action', cell: () => <Button size="xs" variant="solid">View</Button> },
+        { header: 'Action', id: 'action', accessorKey: 'id', cell: (props: any) => <Button size="xs" onClick={() => navigate(`/sales-leads/wall-item/${props.getValue()}`)} variant="solid">View</Button> },
     ], []);
 
     return (
         <Card bordered>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
                 <DatePicker placeholder="Pick date range" value={filters.createdDate} onChange={(date) => handleFilterChange('createdDate', date)} />
-                <Select placeholder="Select Product Name" options={productOptions} value={filters.product} onChange={(option) => handleFilterChange('product', option)} isClearable/>
+                <Select placeholder="Select Product Name" options={productOptions} value={filters.product} onChange={(option) => handleFilterChange('product', option)} isClearable />
                 <Select
                     placeholder="Select Status"
                     options={[{ label: 'Active', value: 'Active' }, { label: 'Inactive', value: 'Inactive' }]}
@@ -308,7 +308,7 @@ const WallInquiryTab = ({ data, products, loading }: { data: any[], products: an
                     onChange={(option) => handleFilterChange('status', option)}
                     isClearable
                 />
-                 <Select
+                <Select
                     placeholder="Select Option"
                     options={[{ label: 'Buy', value: 'Buy' }, { label: 'Sell', value: 'Sell' }]}
                     value={filters.wantTo}
@@ -316,7 +316,7 @@ const WallInquiryTab = ({ data, products, loading }: { data: any[], products: an
                     isClearable
                 />
             </div>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
                 <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-1">Search:</label>
                     <Input placeholder="Search..." value={filters.search} onChange={(e) => handleFilterChange('search', e.target.value)} />
@@ -334,7 +334,7 @@ const DetailItem = ({ label, value }: { label: string; value: React.ReactNode })
     <div className="mb-3">
         <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
         <div className="text-sm font-semibold">
-            {(value === '' || value === undefined || value === null) ? 
+            {(value === '' || value === undefined || value === null) ?
                 <span className="text-gray-400 dark:text-gray-500">N/A</span> : value
             }
         </div>
@@ -541,10 +541,10 @@ const MemberViewPage = () => {
                         </TabContent>
 
                         <TabContent value="wall-inquiry">
-                            <WallInquiryTab 
-                                data={memberData.wall_items || []} 
+                            <WallInquiryTab
+                                data={memberData.wall_items || []}
                                 products={memberData.favourite_products_list || []}
-                                loading={isLoading} 
+                                loading={isLoading}
                             />
                         </TabContent>
 
