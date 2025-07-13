@@ -264,7 +264,7 @@ const Navigator = ({ activeSection, onNavigate }: { activeSection: FormSectionKe
     ];
     return (
         <div className="flex overflow-x-auto sm:justify-center">
-            <div className="flex flex-nowrap gap-x-6 gap-y-2">
+            <div className="flex flex-nowrap gap-x-25 gap-y-2">
                 {sections.map(sec => (
                     <button
                         key={sec.key} type="button" onClick={() => onNavigate(sec.key)}
