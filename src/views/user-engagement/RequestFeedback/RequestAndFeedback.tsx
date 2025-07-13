@@ -101,6 +101,8 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { authSelector } from "@/reduxtool/auth/authSlice";
+import { config } from "localforage";
+import { encryptStorage } from "@/utils/secureLocalStorage";
 
 // --- Define Types ---
 export type SelectOption = { value: any; label: string };
@@ -368,6 +370,15 @@ const RequestAndFeedbackListing = () => {
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
 
+
+      const [userData, setUserData] = useState<any>(null);
+  
+      useEffect(() => {
+          const { useEncryptApplicationStorage } = config;
+          try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+          catch (error) { console.error("Error getting UserData:", error); }
+      }, []);
+
   const openImageViewer = useCallback((path: string | null | undefined) => {
     if (path) {
       setImageView(path);
@@ -427,7 +438,7 @@ const RequestAndFeedbackListing = () => {
   const handleConfirmNotification = async (formData: NotificationFormData) => { if (!actionTargetItem) return; setIsSubmittingAction(true); const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(actionTargetItem.id), module_name: 'RequestFeedback', }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent Successfully!" />); closeNotificationModal(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsSubmittingAction(false); } };
   const handleConfirmTask = async (data: TaskFormData) => { if (!actionTargetItem) return; setIsSubmittingAction(true); try { const payload = { ...data, due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined, module_id: String(actionTargetItem.id), module_name: 'RequestFeedback', }; await dispatch(addTaskAction(payload)).unwrap(); toast.push(<Notification type="success" title="Task Assigned!" />); closeTaskModal(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
   const handleConfirmSchedule = async (data: ScheduleFormData) => { if (!actionTargetItem) return; setIsSubmittingAction(true); const payload = { module_id: Number(actionTargetItem.id), module_name: 'RequestFeedback', event_title: data.event_title, event_type: data.event_type, date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'), ...(data.remind_from && { remind_from: dayjs(data.remind_from).format('YYYY-MM-DDTHH:mm:ss') }), notes: data.notes || '', }; try { await dispatch(addScheduleAction(payload)).unwrap(); toast.push(<Notification type="success" title="Event Scheduled" />); closeScheduleModal(); } catch (error: any) { toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An error occurred.'} />); } finally { setIsSubmittingAction(false); } };
-  const handleConfirmActivity = async (data: ActivityFormData) => { if (!actionTargetItem || !user?.id) return; setIsSubmittingAction(true); const payload = { item: data.item, notes: data.notes || '', module_id: String(actionTargetItem.id), module_name: 'RequestFeedback', user_id: user.id, }; try { await dispatch(addAllActionAction(payload)).unwrap(); toast.push(<Notification type="success" title="Activity Added" />); closeActivityModal(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsSubmittingAction(false); } };
+  const handleConfirmActivity = async (data: ActivityFormData) => { if (!actionTargetItem || !userData?.id) return; setIsSubmittingAction(true); const payload = { item: data.item, notes: data.notes || '', module_id: String(actionTargetItem.id), module_name: 'RequestFeedback', user_id: userData.id, }; try { await dispatch(addAllActionAction(payload)).unwrap(); toast.push(<Notification type="success" title="Activity Added" />); closeActivityModal(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />); } finally { setIsSubmittingAction(false); } };
 
   const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
   useEffect(() => { dispatch(getRequestFeedbacksAction()); dispatch(getAllUsersAction()) }, [dispatch]);
