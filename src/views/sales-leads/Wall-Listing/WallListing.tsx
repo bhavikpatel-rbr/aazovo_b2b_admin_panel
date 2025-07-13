@@ -1164,7 +1164,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           </div>
         )}
       </Drawer>
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={480}
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={500}
         footer={
           <div className="text-right w-full">
             <Button size="sm" className="mr-2" onClick={onClearFilters} type="button">Clear All</Button>
