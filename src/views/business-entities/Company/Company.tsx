@@ -31,6 +31,7 @@ import {
     Form,
     FormItem,
     Input,
+    Spinner,
     Tag,
     Form as UiForm,
     FormItem as UiFormItem,
@@ -215,7 +216,7 @@ interface CompanyModalsProps { modalState: ModalState; onClose: () => void; getA
 
 
 
-const CompanyAlertModal: React.FC<{ company: CompanyItem; onClose: () => void; }> = ({ company, onClose }) => {
+const CompanyAlertModal: React.FC<{ company: CompanyItem; onClose: () => void }> = ({ company, onClose }) => {
     // --- State and Hooks (no changes needed) ---
     const [alerts, setAlerts] = useState<AlertNote[]>([]);
     const [isFetching, setIsFetching] = useState(false);
@@ -249,6 +250,7 @@ const CompanyAlertModal: React.FC<{ company: CompanyItem; onClose: () => void; }
             .then((data) => setAlerts(data.data || []))
             .catch(() => toast.push(<Notification type="danger" title="Failed to fetch alerts." />))
             .finally(() => setIsFetching(false));
+            reset({ newNote: '' })
     }, [company.id, dispatch]);
 
     const onAddNote = async (data: AlertNoteFormData) => {
@@ -273,7 +275,7 @@ const CompanyAlertModal: React.FC<{ company: CompanyItem; onClose: () => void; }
             onClose={onClose}
             onRequestClose={onClose}
             width={1200}
-            contentClassName="p-0 flex flex-col max-h-[95vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
+            contentClassName="p-0 flex flex-col max-h-[90vh] h-full bg-gray-50 dark:bg-gray-900 rounded-lg"
         >
             {/* --- Header --- */}
             <header className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 flex-shrink-0 rounded-t-lg">
@@ -289,47 +291,54 @@ const CompanyAlertModal: React.FC<{ company: CompanyItem; onClose: () => void; }
                     </button>
                 </div>
             </header>
-            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-y-auto">
-                <div className="flex flex-col lg:h-full overflow-hidden min-h-[400px]">
+
+            {/* --- Main Content: Grid for two columns --- */}
+            <main className="flex-grow min-h-0 p-4 sm:p-6 lg:grid lg:grid-cols-2 lg:gap-x-8 overflow-hidden">
+
+                {/* --- Left Column: Activity Timeline (This column scrolls internally) --- */}
+                <div className="relative flex flex-col h-full overflow-hidden">
                     <h6 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
                         Activity Timeline
                     </h6>
-                    <div className="space-y-8 lg:flex-grow lg:overflow-y-auto lg:pr-4 lg:-mr-4">
-                        {/* Alert mapping JSX... no changes here */}
+                    
+                    {/* The scrollable container for the timeline */}
+                    <div className="flex-grow overflow-y-auto lg:pr-4 lg:-mr-4">
                         {isFetching ? (
-                            <div className="flex justify-center items-center h-full"><p className="text-gray-500">Loading timeline...</p></div>
+                            <div className="flex justify-center items-center h-full"><Spinner size="lg"/></div>
                         ) : alerts.length > 0 ? (
-                            alerts.map((alert, index) => {
-                                const userName = alert?.created_by_user?.name || 'N/A';
-                                const userInitial = userName.charAt(0).toUpperCase();
-                                return (
-                                    <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
-                                        <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
-                                            <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
-                                                {userInitial}
-                                            </Avatar>
-                                            {index < alerts.length - 1 && (
-                                                <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                                            )}
-                                        </div>
-                                        <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                                            <div className="p-4">
-                                                <header className="flex justify-between items-center mb-2">
-                                                    <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
-                                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                                        <TbCalendarTime />
-                                                        <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
-                                                    </div>
-                                                </header>
-                                                <div
-                                                    className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
-                                                    dangerouslySetInnerHTML={{ __html: alert.note }}
-                                                />
+                            <div className="space-y-8">
+                                {alerts.map((alert, index) => {
+                                    const userName = alert?.created_by_user?.name || 'N/A';
+                                    const userInitial = userName.charAt(0).toUpperCase();
+                                    return (
+                                        <div key={`${alert.id}-${index}`} className="relative flex items-start gap-4 pl-12">
+                                            <div className="absolute left-0 top-0 z-10 flex flex-col items-center h-full">
+                                                <Avatar shape="circle" size="md" style={{ backgroundColor: stringToColor(userName) }}>
+                                                    {userInitial}
+                                                </Avatar>
+                                                {index < alerts.length - 1 && (
+                                                    <div className="mt-2 flex-grow w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                                                )}
                                             </div>
-                                        </Card>
-                                    </div>
-                                );
-                            })
+                                            <Card className="flex-grow shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                                <div className="p-4">
+                                                    <header className="flex justify-between items-center mb-2">
+                                                        <p className="font-bold text-gray-800 dark:text-gray-100">{userName}</p>
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                            <TbCalendarTime />
+                                                            <span>{dayjs(alert.created_at).format('DD MMM YYYY, h:mm A')}</span>
+                                                        </div>
+                                                    </header>
+                                                    <div
+                                                        className="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-300"
+                                                        dangerouslySetInnerHTML={{ __html: alert.note }}
+                                                    />
+                                                </div>
+                                            </Card>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         ) : (
                             <div className="flex flex-col justify-center items-center h-full text-center py-10 bg-white dark:bg-gray-800/50 rounded-lg">
                                 <TbNotesOff className="text-6xl text-gray-300 dark:text-gray-500 mb-4" />
@@ -339,7 +348,9 @@ const CompanyAlertModal: React.FC<{ company: CompanyItem; onClose: () => void; }
                         )}
                     </div>
                 </div>
-                <div className="flex flex-col mt-8 lg:mt-0">
+
+                {/* --- Right Column: Add New Note (Stays in place) --- */}
+                <div className="flex flex-col mt-8 lg:mt-0 h-full">
                     <Card className="shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
                         <header className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-t-lg border-b dark:border-gray-700 flex-shrink-0">
                             <div className="flex items-center gap-2">
@@ -712,12 +723,12 @@ const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, onOpenEnableBilling
             <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
                 <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
-                {rowData.need_enable && (
+                {rowData.need_enable ? (
                     <Dropdown.Item onClick={() => onOpenEnableBillingModal(rowData)} className="flex items-center gap-2">
                         <TbShieldCheck /> Add Billing Document
                     </Dropdown.Item>
 
-                )}
+                ) : null}
                 <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal('task', rowData)} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
@@ -749,6 +760,9 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
                 return [{ key, value: 'date-range', label: `Date: ${dateArray[0].toLocaleDateString()} - ${dateArray[1].toLocaleDateString()}` }];
             }
             return [];
+        }
+         if(key === 'customFilter') {
+            return [{ key, value: 'custom', label: `Custom Filter: ${value}` }];
         }
         if (Array.isArray(value)) {
             return value.filter(item => item !== null && item !== undefined).map((item: { value: string; label: string }) => ({

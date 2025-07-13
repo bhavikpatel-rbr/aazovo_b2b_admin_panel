@@ -3619,12 +3619,14 @@ export const addcompanyAction = createAsyncThunk<any, any>("auth/addcompany",
   async (data, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await addCompanyAsync(data)
-      if (response?.data?.status === true) {
+      console.log("response?.data?.status", response?.data?.status);
+
+      if (response?.status === true) {
         dispatch(getCompanyAction())
         return response?.data?.data
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to add company.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
@@ -3638,12 +3640,15 @@ export const editCompanyAction = createAsyncThunk<any, { id: string | number; pa
   async ({ id, payload }, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editCompanyAsync(id, payload);
-      if (response?.data?.status === true) {
+      // console.log("response?.data?.status", response?.errors[0]);
+      console.log("response?.message", response?.message);
+
+      if (response?.status === true) {
         dispatch(getCompanyAction());
         return response?.data?.data;
       } else {
         return rejectWithValue({
-          message: response?.data?.message || 'Failed to edit company.'
+          message: response?.message || 'Failed to edit company.'
         });
       }
     } catch (error: unknown) {
@@ -5450,7 +5455,7 @@ export const setenablebillingAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await setenablebilling(id)
       console.log(response, 'response');
-      
+
       if (response) {
         dispatch(getPendingBillAction());
         return response?.data

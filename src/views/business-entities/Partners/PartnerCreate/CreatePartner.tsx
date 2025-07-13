@@ -1382,26 +1382,88 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
     </Card>
   );
 };
+const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: () => void; }) => {
+  const fileUrl = useMemo(() => (file instanceof File ? URL.createObjectURL(file) : file), [file]);
+  const fileName = useMemo(() => (file instanceof File ? file.name : (file.split('/').pop() || 'file')), [file]);
+  const fileExtension = useMemo(() => fileName.split('.').pop()?.toLowerCase(), [fileName]);
 
+  const isPdf = fileExtension === 'pdf';
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const getFileIcon = () => {
+    switch (fileExtension) {
+      case 'pdf': return <TbFileTypePdf className="text-red-500" size={64} />;
+      case 'xls': case 'xlsx': case 'csv': return <TbFileSpreadsheet className="text-green-500" size={64} />;
+      default: return <TbFile className="text-gray-500" size={64} />;
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4"
+      onClick={onClose}
+    >
+      <Button
+        type="button"
+        shape="circle"
+        variant="solid"
+        icon={<TbX />}
+        className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80"
+        onClick={onClose}
+      />
+
+      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        {isPdf ? (
+          <iframe src={fileUrl} title={fileName} className="w-full h-full border-none rounded-lg bg-white" />
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center flex flex-col items-center justify-center max-w-md">
+            {getFileIcon()}
+            <h4 className="mb-2 mt-4">Preview not available</h4>
+            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-xs">
+              This file type can't be shown here. You can open it in a new tab to view or download it.
+            </p>
+            <Button
+              variant="solid"
+              onClick={() => window.open(fileUrl, '_blank')}
+            >
+              Open '{fileName}'
+            </Button>
+          </div>
+        )}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">
+          {fileName}
+        </div>
+      </div>
+    </div>
+  );
+};
 // --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
     const { watch } = formMethods;
     const [viewerIsOpen, setViewerIsOpen] = useState(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    const [viewingFile, setViewingFile] = useState<File | string | null>(null);
 
     const watchedCountry = watch("country_id");
 
     const kycDocs = useMemo(() => {
         const allDocs = [
-            { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_verified" as const, indiaOnly: true },
-            { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_verified" as const, indiaOnly: true },
-            { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_verified" as const, indiaOnly: false },
-            { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_verified" as const, indiaOnly: false },
-            { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_verified" as const, indiaOnly: false },
-            { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_verified" as const, indiaOnly: false },
-            { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_verified" as const, indiaOnly: false },
-            { label: "Agreement/Quotation", name: "agreement_file" as const, remarkName: "agreement_remark" as const, enabledName: "agreement_verified" as const, indiaOnly: false },
-            { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_verified" as const, indiaOnly: false },
+            { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_verified" as const, indiaOnly: true, required: true },
+            { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_verified" as const, indiaOnly: true, required: true },
+            { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_verified" as const, indiaOnly: false, required: true },
+            { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_verified" as const, indiaOnly: false, required: false },
+            { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_verified" as const, indiaOnly: false, required: true },
+            { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_verified" as const, indiaOnly: false, required: false },
+            { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_verified" as const, indiaOnly: false, required: true },
+            { label: "Agreement/Quotation", name: "agreement_file" as const, remarkName: "agreement_remark" as const, enabledName: "agreement_verified" as const, indiaOnly: false, required: false },
+            { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_verified" as const, indiaOnly: false, required: false },
         ];
         
         const isIndia = String(watchedCountry?.value) === '101';
@@ -1409,38 +1471,63 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
 
     }, [watchedCountry]);
     
-    // FIX: Ensure the image viewer can generate URLs for both string paths and new File objects.
+    const watchedFileValues = watch(kycDocs.map(doc => doc.name));
+
     const imageDocsForViewer = useMemo(() => {
         return kycDocs
-            .map(doc => ({ ...doc, fileValue: watch(doc.name) }))
-            .filter(doc => doc.fileValue) // Ensure there's a file
-            .map(doc => {
-                 const isFileObject = doc.fileValue instanceof File;
-                 const src = isFileObject ? URL.createObjectURL(doc.fileValue) : String(doc.fileValue);
-                 // Only include if it's a valid image
-                 return isImageUrl(isFileObject ? doc.fileValue.name : src) ? { src, alt: doc.label } : null;
+            .map((doc, index) => ({
+                ...doc,
+                fileValue: watchedFileValues[index]
+            }))
+            .filter(doc => {
+                const url = doc.fileValue;
+                if (!url) return false;
+                if (url instanceof File) return url.type.startsWith('image/');
+                if (typeof url === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
+                return false;
             })
-            .filter(Boolean) as { src: string; alt: string }[];
-    }, [kycDocs, watch]);
+            .map(doc => ({
+                src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
+                alt: doc.label
+            }));
+    }, [kycDocs, watchedFileValues]);
 
-    const openViewer = (docLabel: string) => {
+    const openImageViewer = (docLabel: string) => {
         const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
         if (index > -1) {
             setSelectedImageIndex(index);
             setViewerIsOpen(true);
         }
     };
+    
+    const closeImageViewer = () => setViewerIsOpen(false);
+    const closeGenericViewer = () => setViewingFile(null);
 
-    const closeViewer = () => setViewerIsOpen(false);
+    const handlePreviewClick = (fileValue: File | string | null | undefined, docLabel: string) => {
+        if (!fileValue) return;
+
+        const isImage = (file: unknown): boolean => {
+            if (file instanceof File) return file.type.startsWith('image/');
+            if (typeof file === 'string') return /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(file);
+            return false;
+        }
+
+        if (isImage(fileValue)) {
+            openImageViewer(docLabel);
+        } else {
+            setViewingFile(fileValue as File | string);
+        }
+    };
   
     return (
         <Card id="kycDocuments">
-            <h5 className="mb-4">Current Documents</h5>
+            <h5 className="mb-4">KYC Documents</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6">
                 {kycDocs.map((doc) => {
                     const fileValue = watch(doc.name);
                     const isFileObject = fileValue instanceof File;
-                    
+                    const isViewableImage = isFileObject ? fileValue.type.startsWith('image/') : (typeof fileValue === 'string' && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(fileValue));
+
                     return (
                         <div key={doc.name}>
                             <label className="flex items-center gap-2 mb-1">
@@ -1448,51 +1535,56 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                                     name={doc.enabledName}
                                     control={control}
                                     render={({ field }) => (
-                                        <Checkbox checked={!!field.value} onChange={field.onChange}>
-                                            {doc.label} (Verified) {doc.indiaOnly && <span className="text-red-500">*</span>}
-                                        </Checkbox>
+                                        <Checkbox checked={!!field.value} onChange={field.onChange} />
                                     )}
                                 />
+                                {doc.label}
+                                {doc.required && <span className="text-red-500">*</span>}
                             </label>
                             <FormItem
-                                invalid={!!errors[doc.name]}
-                                errorMessage={(errors[doc.name] as any)?.message as string}
+                                invalid={!!(errors as any)[doc.name]}
+                                errorMessage={(errors as any)[doc.name]?.message as string}
                             >
                                 <Controller
                                     name={doc.name}
                                     control={control}
-                                    render={({ field: { onChange, ref } }) => (
+                                    render={({ field: { value, onChange, ...fieldProps } }) => (
                                         <Input
+                                            {...fieldProps}
                                             type="file"
-                                            ref={ref}
                                             onChange={(e) => onChange(e.target.files?.[0])}
                                         />
                                     )}
                                 />
                             </FormItem>
-                             {/* FIX: Show preview immediately for both new and existing files. */}
+                            
                             {fileValue && (
                                 <div className="mt-2">
-                                    {(isImageUrl(fileValue) || (isFileObject && fileValue.type.startsWith('image/'))) ? (
-                                        <button type="button" onClick={() => openViewer(doc.label)} className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePreviewClick(fileValue, doc.label)}
+                                        className="w-full h-24 border rounded-md p-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 text-center"
+                                    >
+                                        {isViewableImage ? (
                                             <img
                                                 src={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)}
                                                 alt={doc.label}
                                                 className="max-h-full max-w-full object-contain"
                                             />
-                                        </button>
-                                    ) : (
-                                        <DocumentPlaceholder
-                                            fileName={isFileObject ? fileValue.name : String(fileValue).split('/').pop() || 'Document'}
-                                            fileUrl={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)}
-                                        />
-                                    )}
+                                        ) : (
+                                            <DocumentPlaceholder
+                                                fileName={isFileObject ? fileValue.name : String(fileValue).split('/').pop() || 'Document'}
+                                                fileUrl={isFileObject ? URL.createObjectURL(fileValue) : String(fileValue)}
+                                            />
+                                        )}
+                                    </button>
                                 </div>
                             )}
+
                             <FormItem
                                 className="mt-2"
-                                invalid={!!errors[doc.remarkName]}
-                                errorMessage={(errors[doc.remarkName] as any)?.message as string}
+                                invalid={!!(errors as any)[doc.remarkName]}
+                                errorMessage={(errors as any)[doc.remarkName]?.message as string}
                             >
                                 <Controller
                                     name={doc.remarkName}
@@ -1513,14 +1605,12 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                 <ImageViewer
                     images={imageDocsForViewer}
                     startIndex={selectedImageIndex}
-                    onClose={closeViewer}
+                    onClose={closeImageViewer}
                 />
             )}
-            <hr className="my-6" />
-            <h5 className="mb-4">Past Documents</h5>
-            <p className="text-gray-500">
-                Section for past documents can be built here if needed.
-            </p>
+            {viewingFile && (
+                <GenericFileViewer file={viewingFile} onClose={closeGenericViewer} />
+            )}
         </Card>
     );
 };
