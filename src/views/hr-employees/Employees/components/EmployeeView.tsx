@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect, SyntheticEvent } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { NavLink, useParams, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import classNames from 'classnames'
 
-// UI Components
+// --- UI Components ---
 import Container from '@/components/shared/Container'
 import Card from '@/components/ui/Card'
 import Avatar from '@/components/ui/Avatar'
@@ -11,558 +11,781 @@ import Tag from '@/components/ui/Tag'
 import Button from '@/components/ui/Button'
 import DataTable from '@/components/shared/DataTable'
 import Tooltip from '@/components/ui/Tooltip'
-import DebouceInput from '@/components/shared/DebouceInput'
-import Dropdown from '@/components/ui/Dropdown'
+import Skeleton from '@/components/ui/Skeleton'
+import Dialog from '@/components/ui/Dialog' // For the document viewer
 
-// Icons
+// --- Icons ---
 import {
     TbUserCircle,
     TbMail,
     TbPhone,
-    TbBuildingSkyscraper,
-    TbBriefcase,
-    TbCalendar,
-    TbPencil,
-    TbChevronRight,
     TbDownload,
-    TbSearch,
-    TbX,
-    TbFilter,
-    TbUser,
-    TbUsers,
-    TbPhoneCall,
-    TbSchool,
-    TbHistory,
-    TbTargetArrow,
-    TbCertificate,
-    TbDeviceLaptop,
-    TbLogout,
-    TbCheck,
-    TbFileText,
-    TbUserShare,
+    TbAlertCircle,
     TbArrowLeft,
+    TbUsers,
+    TbFileText,
+    TbBriefcase,
+    TbDeviceLaptop,
+    TbPencil,
+    TbCalendar,
+    TbCertificate,
+    TbMapPin,
+    TbUserCheck,
+    TbSearch,
+    TbLayoutList,
+    TbBuildingStore,
+    TbCategory,
+    TbPaperclip,
+    TbEye,
+    TbFile,
+    TbPhoto,
+    TbX,
+    TbChevronLeft,
+    TbChevronRight,
+    TbFileTypePdf,
 } from 'react-icons/tb'
-
-// Types & Services
-import type { ColumnDef } from '@/components/shared/DataTable'
 import { BiChevronRight } from 'react-icons/bi'
-import { apiGetEmployeeById } from '@/reduxtool/master/middleware'
-import { useAppDispatch } from '@/reduxtool/store'
 
-// Define a more specific type based on your JSON response
+// --- Redux & API Services ---
+import { apiGetEmployeeById } from '@/reduxtool/master/middleware' // Assuming this path is correct
+import { useAppDispatch } from '@/reduxtool/store' // Assuming this path is correct
+
+// --- UPDATED TYPE DEFINITIONS (to match new JSON) ---
+type Role = {
+    id: number
+    display_name: string
+}
+
+// A generic object with a 'name' property, used for nested data
+type SimpleObject = {
+    id: number
+    name: string
+} | null
+
+type Asset = {
+    id: number
+    name: string
+    serial_no: string
+    created_at: string
+}
+
+// This now reflects the new, more detailed JSON structure
 export type Employee = {
-    id: number;
-    name: string;
-    profile_pic_path: string | null;
-    email: string;
-    maritual_status: string | null;
-    employee_id: string | null;
-    date_of_joining: string | null;
-    mobile_number: string;
-    mobile_number_code: string | null;
-    status: 'Active' | 'Inactive' | 'Terminated' | 'On Leave';
-    date_of_birth: string | null;
-    gender: string | null;
-    nationality: { name: string } | null;
-    blood_group: string | null;
-    permanent_address: string | null;
-    local_address: string | null;
-    department: { name: string } | null;
-    designation: { name: string } | null;
-    roles: { display_name: string }[];
-    assets: { id: number; name: string; serial_number: string; issued_on: string; status: string }[];
-    // Document paths
-    identity_proof_path: string | null;
-    address_proof_path: string | null;
-    offer_letter_path: string | null;
-    past_offer_letter_path: string | null;
-    relieving_letter_path: string | null;
-    designation_letter_path: string | null;
-    educational_certificates_path: string[];
-    experience_certificates_path: string[];
-    salary_slips_path: string[];
-    bank_account_proof_path: string | null;
-    pan_card_path: string | null;
-    passport_size_photograph_path: string | null;
-    [key: string]: any; // Allow other fields
-};
+    id: number
+    name: string
+    email: string
+    employee_id: string
+    status: 'Active' | 'Inactive' | string
+    profile_pic_path: string | null
+    mobile_number: string
+    mobile_number_code: string
+    date_of_joining: string
+    date_of_birth: string | null
+    gender: string | null
+    maritual_status: string | null
+    blood_group: string | null
+    permanent_address: string | null
+    local_address: string | null
+
+    // Nested Objects with just a name
+    department: SimpleObject
+    designation: SimpleObject
+    nationality: SimpleObject
+    country: SimpleObject
+    category: SimpleObject
+    sub_category: SimpleObject
+    brand: SimpleObject
+    product: SimpleObject & { name: string }
+
+    // Nested User/Member objects
+    reporting_hr: SimpleObject // Keeps it simple if only name is needed
+    reporting_head: SimpleObject // Keeps it simple if only name is needed
+
+    roles: Role[]
+    assets: Asset[]
+
+    // Training
+    training_date_of_completion: string | null
+    training_remark: string | null
+    specific_training_date_of_completion: string | null
+    specific_training_remark: string | null
+
+    // Document Paths (some are strings, some are stringified JSON arrays)
+    identity_proof_path: string | null
+    address_proof_path: string | null
+    offer_letter_path: string | null
+    past_offer_letter_path: string | null
+    relieving_letter_path: string | null
+    designation_letter_path: string | null
+    bank_account_proof_path: string | null
+    pan_card_path: string | null
+    passport_size_photograph_path: string | null
+
+    // These are strings containing JSON arrays in the new payload
+    educational_certificates: string | string[]
+    experience_certificates: string | string[]
+    salary_slips: string | string[]
+
+    // Timestamps
+    created_at: string
+    updated_at: string
+}
 
 export const employeeStatusColor: Record<string, string> = {
-    active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-    inactive: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
-    terminated: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
-    on_leave: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
-};
-
+    Active: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
+    Inactive: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
+    default: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100',
+}
 
 // --- HELPER & REUSABLE COMPONENTS ---
 
-interface EmployeeProfileHeaderProps {
-  employee: Employee;
+const EmployeeProfileHeader: React.FC<{ employee: Employee }> = ({
+    employee,
+}) => {
+    const status = employee.status || 'default'
+    const statusClass = employeeStatusColor[status] || employeeStatusColor.default
+    const roleName = employee.roles?.[0]?.display_name ?? 'N/A'
+    const navigate = useNavigate()
+    return (
+        <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+            <div className="flex items-center gap-4">
+                <Avatar
+                    size={80}
+                    shape="circle"
+                    src={employee.profile_pic_path || ''}
+                    icon={<TbUserCircle />}
+                />
+                <div>
+                    <div className="flex items-center gap-2">
+                        <h4 className="font-bold mb-0">{employee.name}</h4>
+                        <Tag className={`${statusClass} capitalize`}>
+                            {employee.status}
+                        </Tag>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                        <TbPhone size={16} />
+                        <span>
+                            Mobile: {employee.mobile_number_code}{' '}
+                            {employee.mobile_number}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                        <TbMail size={16} />
+                        <span>Email: {employee.email}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-3 border rounded-md inline-block text-center">
+                <p className="text-gray-500 text-xs mb-1 uppercase">Role</p>
+                <h6 className="font-bold mb-0">{roleName}</h6>
+            </div>
+
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-2"><Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/hr-employees/employees/edit/${employee.id}`)}>Edit Employee</Button><Button icon={<TbArrowLeft />} onClick={() => navigate('hr-employees/employees')}>Back to List</Button></div>
+        </div>
+    )
 }
-const EmployeeProfileHeader = ({ employee }: EmployeeProfileHeaderProps) => {
-  const navigate = useNavigate();
 
-  const handleEdit = () => {
-    navigate(`/hr-employees/employees/edit/${employee.id}`);
-  };
-  
-  // Safely get the status, default to 'inactive' if null or undefined
-  console.log(employee, 'employee.status');
-  
-  const status = employee.status || 'inactive';
+const DetailSection: React.FC<{
+    title: string
+    icon: React.ReactNode
+    children: React.ReactNode
+}> = ({ title, icon, children }) => (
+    <Card className="mb-6">
+        <h5 className="flex items-center gap-2 mb-4 font-semibold text-gray-700 dark:text-gray-200">
+            {icon}
+            <span>{title}</span>
+        </h5>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+            {children}
+        </div>
+    </Card>
+)
 
-  return (
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-      <div className="flex items-center gap-4">
-        <Avatar
-          size={110}
-          shape="circle"
-          src={employee.profile_pic_path || ''}
-          icon={<TbUserCircle />}
-        />
-        <div className="flex flex-col">
-          <h4 className="font-bold">{employee.name}</h4>
-          <div className="flex items-center gap-2 mb-1">
-            <TbMail className="text-gray-400" /> <p>{employee.email}</p>
-          </div>
-          {employee.mobile_number && (
-            <div className="flex items-center gap-2">
-              <TbPhone className="text-gray-400" /> <p>{employee.mobile_number_code} {employee.mobile_number}</p>
-            </div>
-          )}
-          <div className="mt-2">
-            <Tag
-              className={`${
-                employeeStatusColor[status]
-              } capitalize`}
-            >
-              {employee.status || 'N/A'}
-            </Tag>
-          </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4">
-        <div className="flex items-center gap-2">
-          <TbUserShare className="text-gray-400" />
-          <span className="font-semibold">Role:</span>
-          <span>{employee.roles?.[0]?.display_name || 'N/A'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <TbBuildingSkyscraper className="text-gray-400" />
-          <span className="font-semibold">Department:</span>
-          <span>{employee.department?.name || 'N/A'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <TbBriefcase className="text-gray-400" />
-          <span className="font-semibold">Designation:</span>
-          <span>{employee.designation?.name || 'N/A'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <TbCalendar className="text-gray-400" />
-          <span className="font-semibold">Joined:</span>
-          <span>{employee.date_of_joining ? dayjs(employee.date_of_joining).format("D MMM YYYY") : 'N/A'}</span>
-        </div>
-      </div>
-      <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
-         <Button variant="solid" icon={<TbPencil />} onClick={handleEdit}>
-          Edit Employee
-        </Button>
-        <Button icon={<TbArrowLeft />} onClick={() => navigate('/hr-employees/employees')}>Back to List</Button>
-   
-      </div>
-    </div>
-  );
-};
-
-// ... (EmployeeViewNavigator remains the same)
-const employeeViewNavigationList = [
-    { label: "Employee Details", link: "details" },
-    { label: "Documents", link: "documents" },
-    { label: "Wall Inquiry", link: "inquiry" },
-    { label: "Offer & Demands", link: "offers" },
-    { label: "Employee", link: "team" },
-    { label: "Member", link: "members" },
-  ];
-  type NavigatorComponentProps = {
-    activeSection: string;
-    onNavigate: (sectionKey: string) => void;
-  };
-  const EmployeeViewNavigator = ({
-    activeSection,
-    onNavigate,
-  }: NavigatorComponentProps) => {
-    return (
-      <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">
-        {employeeViewNavigationList.map((nav) => (
-          <button
-            type="button"
-            key={nav.link}
-            className={classNames(
-              "cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max",
-              "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none",
-              {
-                "bg-indigo-50 dark:bg-indigo-700/60 text-indigo-600 dark:text-indigo-200 font-semibold":
-                  activeSection === nav.link,
-                "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200":
-                  activeSection !== nav.link,
-              }
-            )}
-            onClick={() => onNavigate(nav.link)}
-            title={nav.label}
-          >
-            <span className="font-medium text-xs sm:text-sm truncate">
-              {nav.label}
-            </span>
-          </button>
-        ))}
-      </div>
-    );
-  };
-// ... (SubTableTools remains the same)
-interface SubTableToolsProps {
-    searchQuery: string;
-    onSearchChange: (value: string) => void;
-    filterValue?: string;
-    filterOptions?: { value: string; label: string }[];
-    onFilterChange?: (selected: { value: string; label: string } | null) => void;
-    onClearFilters: () => void;
-  }
-  const SubTableTools = ({
-    searchQuery,
-    onSearchChange,
-    filterValue,
-    filterOptions,
-    onFilterChange,
-    onClearFilters,
-  }: SubTableToolsProps) => {
-    const handleDropdownSelect = (eventKey: string, e: SyntheticEvent) => {
-      if (!onFilterChange || !filterOptions) return;
-      if (eventKey === "_all") {
-        onFilterChange(null);
-      } else {
-        const selectedOption = filterOptions.find(
-          (opt) => opt.value === eventKey
-        );
-        if (selectedOption) {
-          onFilterChange(selectedOption);
-        }
-      }
-    };
-    const currentFilterLabel =
-      filterOptions?.find((opt) => opt.value === filterValue)?.label || "Filter";
-    return (
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <DebouceInput
-          placeholder="Quick Search..."
-          suffix={<TbSearch className="text-lg" />}
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-        <div className="flex items-center gap-2">
-          {filterOptions && onFilterChange && (
-            <Dropdown
-              renderTitle={
-                <Button
-                  size="sm"
-                  icon={<TbFilter />}
-                  className="w-[100px] justify-between"
-                >
-                  <span>{currentFilterLabel}</span>
-                </Button>
-              }
-            >
-              <Dropdown.Item eventKey="_all" onSelect={handleDropdownSelect}>
-                All
-              </Dropdown.Item>
-              <Dropdown.Item variant="divider" />
-              {filterOptions.map((option) => (
-                <Dropdown.Item
-                  key={option.value}
-                  eventKey={option.value}
-                  onSelect={handleDropdownSelect}
-                >
-                  {option.label}
-                </Dropdown.Item>
-              ))}
-            </Dropdown>
-          )}
-          <Tooltip title="Clear Search & Filters">
-            <Button
-              size="sm"
-              icon={<TbX />}
-              onClick={onClearFilters}
-              variant="plain"
-            />
-          </Tooltip>
-        </div>
-      </div>
-    );
-  };
-
-// --- MAIN TABS ---
-
-// --- 1. Employee Details Tab (Complex View) ---
-const DetailSection = ({ title, icon, children, noDataMessage }: { title: string; icon: React.ReactNode; children: React.ReactNode; noDataMessage?: string; }) => (
-    <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-600 last:mb-0 last:pb-0 last:border-b-0">
-        <div className="flex items-center gap-2 mb-4">
-            {icon} <h5 className="mb-0">{title}</h5>
-        </div>
-        <div>{noDataMessage ? <p className="text-gray-500">{noDataMessage}</p> : children}</div>
-    </div>
-);
-const InfoPair = ({ label, value }: { label: string; value: string | number | undefined | null; }) => (
-    <div className="grid grid-cols-2 py-1">
-        <span className="font-semibold text-gray-700 dark:text-gray-300">{label}</span>
-        <span>{value || 'N/A'}</span>
-    </div>
-);
-const RegistrationInfo = ({ employee }: { employee: Employee }) => (
-  <DetailSection title="Registration Information" icon={<TbUser size={22} />}>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-      <InfoPair label="Employee ID" value={employee.employee_id} />
-      <InfoPair label="Joining Date" value={employee.date_of_joining ? dayjs(employee.date_of_joining).format("D MMM YYYY") : 'N/A'} />
-      <InfoPair label="Employment Type" value={"Permanent"} />
-      <InfoPair label="Probation End Date" value={employee.date_of_joining ? dayjs(employee.date_of_joining).add(3, 'month').format("D MMM YYYY") : 'N/A'} />
-    </div>
-  </DetailSection>
-);
-const PersonalInfo = ({ employee }: { employee: Employee }) => (
-  <DetailSection title="Personal Information" icon={<TbUserCircle size={22} />}>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-      <InfoPair label="Date of Birth" value={employee.date_of_birth ? dayjs(employee.date_of_birth).format("D MMM YYYY") : 'N/A'} />
-      <InfoPair label="Gender" value={employee.gender} />
-      <InfoPair label="Marital Status" value={employee.maritual_status} />
-      <InfoPair label="Nationality" value={employee.nationality?.name} />
-      <InfoPair label="Blood Group" value={employee.blood_group} />
-    </div>
-  </DetailSection>
-);
-const EmergencyContact = () => (
-    <DetailSection title="Emergency Contact" icon={<TbPhoneCall size={22} />} noDataMessage="No emergency contact details available." >
-        {/* This will be hidden due to noDataMessage */}
-    </DetailSection>
-);
-const RoleAndResponsibility = () => (
-  <DetailSection title="Role & Responsibility" icon={<TbTargetArrow size={22} />} noDataMessage="No roles and responsibilities defined.">
-  </DetailSection>
-);
-const OffBoardingInfo = ({ employee }: { employee: Employee }) => {
-    // Show this section only if the employee status is something other than 'Active'
-    if (employee.status == 'active') {
-        return null;
-    }
-    return (
-        <DetailSection title="Off-Boarding Information" icon={<TbLogout size={22} />}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                <InfoPair label="Resignation Date" value={employee.resignation_date} />
-                <InfoPair label="Last Working Day" value={employee.last_working_day} />
-                <div className="col-span-full">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Resignation Remark</span>
-                    <p className="mt-1 text-gray-600 dark:text-gray-400">{employee.resignation_letter_remark || 'N/A'}</p>
-                </div>
-                 <div className="col-span-full">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Exit Interview Remark</span>
-                    <p className="mt-1 text-gray-600 dark:text-gray-400">{employee.exit_interview_remark || 'N/A'}</p>
-                </div>
-                <div className="col-span-full mt-4">
-                    <h6 className="font-semibold text-gray-700 dark:text-gray-300 mt-4 mb-2">Clearance Status</h6>
-                    <InfoPair label="Full & Final Settlement" value={employee.full_and_final_settlement ? "Completed" : "Pending"} />
-                    <InfoPair label="Assets Returned" value={employee.company_assets_returned ? "Yes" : "No"} />
-                </div>
-            </div>
-        </DetailSection>
-    );
-};
-const FamilyDetailsTable = () => (
-    <DetailSection title="Family Details" icon={<TbUsers size={22} />} noDataMessage="No family details have been added.">
-    </DetailSection>
-);
-const EducationDetailsTable = () => (
-    <DetailSection title="Education Details" icon={<TbSchool size={22} />} noDataMessage="No education details have been added.">
-    </DetailSection>
-);
-const EmploymentHistoryTable = () => (
-    <DetailSection title="Employment History" icon={<TbHistory size={22} />} noDataMessage="No employment history has been added.">
-    </DetailSection>
-);
-const TrainingTable = ({ employee }: { employee: Employee }) => (
-    <DetailSection title="Training" icon={<TbCertificate size={22} />}>
-        <InfoPair label="General Training Completion" value={employee.training_date_of_completion ? dayjs(employee.training_date_of_completion).format("D MMM YYYY") : 'N/A'}/>
-        <InfoPair label="General Training Remark" value={employee.training_remark}/>
-        <InfoPair label="Specific Training Completion" value={employee.specific_training_date_of_completion ? dayjs(employee.specific_training_date_of_completion).format("D MMM YYYY") : 'N/A'}/>
-        <InfoPair label="Specific Training Remark" value={employee.specific_training_remark}/>
-    </DetailSection>
-);
-
-const AssetsTable = ({ assets }: { assets: Employee['assets'] }) => {
-    type Record = Employee['assets'][0];
-    const columns = useMemo<ColumnDef<Record>[]>(() => [ { header: "Asset Name", accessorKey: "name" }, { header: "Serial No.", accessorKey: "serial_number" }, { header: "Issued On", cell: (props) => dayjs(props.row.original.issued_on).format("D MMM YYYY") }, { header: "Status", accessorKey: "status" }, ], []);
-    return (
-        <DetailSection title="Equipments & Assets Provided" icon={<TbDeviceLaptop size={22} />} noDataMessage={!assets || assets.length === 0 ? "No assets have been assigned." : ""}>
-            {assets && assets.length > 0 && <DataTable columns={columns} data={assets} />}
-        </DetailSection>
-    );
-};
-
-const EmployeeDetailsTab = ({ employee }: { employee: Employee }) => {
-  return (
+const InfoPair: React.FC<{ label: string; value?: string | number | null }> = ({
+    label,
+    value,
+}) => (
     <div>
-      <RegistrationInfo employee={employee} />
-      <PersonalInfo employee={employee} />
-      <FamilyDetailsTable />
-      <EmergencyContact />
-      <EducationDetailsTable />
-      <EmploymentHistoryTable />
-      <RoleAndResponsibility />
-      <TrainingTable employee={employee} />
-      <AssetsTable assets={employee.assets} />
-      <OffBoardingInfo employee={employee} />
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+            {label}
+        </span>
+        <p className="font-medium">{value ?? '—'}</p>
     </div>
-  );
+)
+
+const EmptyState: React.FC<{
+    icon: React.ReactNode
+    title: string
+    message: string
+}> = ({ icon, title, message }) => (
+    <div className="flex flex-col items-center justify-center text-center py-10 px-4">
+        <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-4 text-gray-500 dark:text-gray-300">
+            {icon}
+        </div>
+        <h6 className="font-semibold">{title}</h6>
+        <p className="text-gray-500">{message}</p>
+    </div>
+)
+
+// --- NEW DOCUMENT COMPONENTS ---
+
+interface DocumentRecord {
+    name: string
+    type: 'image' | 'pdf' | 'other'
+    url: string
+}
+
+const DocumentViewer: React.FC<{
+    isOpen: boolean
+    onClose: () => void
+    documents: DocumentRecord[]
+    currentIndex: number
+    onNext: () => void
+    onPrev: () => void
+}> = ({ isOpen, onClose, documents, currentIndex, onNext, onPrev }) => {
+    const document = documents[currentIndex]
+
+    if (!document) {
+        return null
+    }
+
+    const renderContent = () => {
+        switch (document.type) {
+            case 'image':
+                return (
+                    <img
+                        src={document.url}
+                        alt={document.name}
+                        className="max-h-full max-w-full object-contain"
+                    />
+                )
+            case 'pdf':
+                return (
+                    <iframe
+                        src={document.url}
+                        title={document.name}
+                        className="w-full h-full"
+                        frameBorder="0"
+                    ></iframe>
+                )
+            default:
+                return (
+                    <div className="text-center p-10 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                        <TbFile size={60} className="mx-auto mb-4" />
+                        <h5 className="mb-2">{document.name}</h5>
+                        <p className="mb-4">
+                            Preview is not available for this file type.
+                        </p>
+                        <a href={document.url} download target="_blank" rel="noopener noreferrer">
+                            <Button variant="solid" icon={<TbDownload />}>
+                                Download
+                            </Button>
+                        </a>
+                    </div>
+                )
+        }
+    }
+
+    return (
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            width="90vw"
+            height="90vh"
+            closable={false}
+            bodyOpenClassName="overflow-hidden" // Prevents background scroll
+            contentClassName="p-0"
+        >
+            <div className="relative w-full h-full bg-gray-200 dark:bg-gray-900 flex items-center justify-center">
+                {/* Close Button */}
+                <Button
+                    shape="circle"
+                    variant="plain"
+                    size="sm"
+                    icon={<TbX />}
+                    className="absolute top-2 right-2 z-20 bg-white/70 dark:bg-black/70"
+                    onClick={onClose}
+                />
+
+                {/* Content */}
+                <div className="relative w-full h-full flex-grow p-4 md:p-8">
+                    {renderContent()}
+                </div>
+
+                {/* Navigation */}
+                {documents.length > 1 && (
+                    <>
+                        <Button
+                            shape="circle"
+                            size="lg"
+                            icon={<TbChevronLeft />}
+                            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20"
+                            onClick={onPrev}
+                            disabled={currentIndex === 0}
+                        />
+                        <Button
+                            shape="circle"
+                            size="lg"
+                            icon={<TbChevronRight />}
+                            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20"
+                            onClick={onNext}
+                            disabled={currentIndex === documents.length - 1}
+                        />
+                    </>
+                )}
+            </div>
+        </Dialog>
+    )
+}
+
+const DocumentCard: React.FC<{
+    document: DocumentRecord
+    onPreview: () => void
+}> = ({ document, onPreview }) => {
+    const renderPreviewIcon = () => {
+        switch (document.type) {
+            case 'image':
+                return (
+                    <img
+                        src={document.url}
+                        alt={document.name}
+                        className="w-full h-full object-cover"
+                    />
+                )
+            case 'pdf':
+                return <TbFileTypePdf className="w-12 h-12 text-red-500" />
+            default:
+                return <TbFile className="w-12 h-12 text-gray-500" />
+        }
+    }
+
+    return (
+        <Card bodyClass="p-0" className="hover:shadow-lg transition-shadow">
+            <div
+                className="w-full h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden cursor-pointer"
+                onClick={onPreview}
+            >
+                {renderPreviewIcon()}
+            </div>
+            <div className="p-4">
+                <p className="font-semibold truncate" title={document.name}>
+                    {document.name}
+                </p>
+                <div className="flex justify-end gap-2 mt-3">
+                    <Tooltip title="Preview">
+                        <Button
+                            shape="circle"
+                            size="sm"
+                            icon={<TbEye />}
+                            onClick={onPreview}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Download">
+                        <a href={document.url} download target="_blank" rel="noopener noreferrer">
+                            <Button shape="circle" size="sm" icon={<TbDownload />} />
+                        </a>
+                    </Tooltip>
+                </div>
+            </div>
+        </Card>
+    )
+}
+
+// --- TAB COMPONENTS ---
+
+const EmployeeDetailsTab: React.FC<{ employee: Employee }> = ({ employee }) => {
+    return (
+        <>
+            <DetailSection title="Registration Information" icon={<TbUserCircle size={20} />}>
+                <InfoPair label="Full Name" value={employee.name} />
+                <InfoPair label="Employee ID" value={employee.employee_id} />
+                <InfoPair label="Date of Joining" value={dayjs(employee.date_of_joining).format('D MMM YYYY')} />
+                <InfoPair label="Department" value={employee.department?.name} />
+                <InfoPair label="Designation" value={employee.designation?.name} />
+                <InfoPair label="Role" value={employee.roles?.[0]?.display_name} />
+            </DetailSection>
+
+            <DetailSection title="Work & Product Assignment" icon={<TbBuildingStore size={20} />}>
+                <InfoPair label="Category" value={employee.category?.name} />
+                <InfoPair label="Sub Category" value={employee.sub_category?.name} />
+                <InfoPair label="Brand" value={employee.brand?.name} />
+                <div className="lg:col-span-3">
+                    <InfoPair label="Product / Service" value={employee.product?.name} />
+                </div>
+            </DetailSection>
+
+            <DetailSection title="Personal Information" icon={<TbUserCircle size={20} />}>
+                <InfoPair label="Date of Birth" value={employee.date_of_birth ? dayjs(employee.date_of_birth).format('D MMM YYYY') : null} />
+                <InfoPair label="Gender" value={employee.gender} />
+                <InfoPair label="Marital Status" value={employee.maritual_status} />
+                <InfoPair label="Nationality" value={employee.nationality?.name} />
+                <InfoPair label="Blood Group" value={employee.blood_group} />
+            </DetailSection>
+
+            <DetailSection title="Reporting Structure" icon={<TbUserCheck size={20} />}>
+                <InfoPair label="Reporting HR" value={employee.reporting_hr?.name} />
+                <InfoPair label="Reporting Head" value={employee.reporting_head?.name} />
+            </DetailSection>
+
+            <DetailSection title="Contact & Address" icon={<TbMapPin size={20} />}>
+                <div className="lg:col-span-3">
+                    <InfoPair label="Permanent Address" value={employee.permanent_address} />
+                </div>
+                <div className="lg:col-span-3">
+                    <InfoPair label="Local Address" value={employee.local_address} />
+                </div>
+            </DetailSection>
+
+            <DetailSection title="Training Details" icon={<TbCertificate size={20} />}>
+                <InfoPair label="General Training Completion" value={employee.training_date_of_completion ? dayjs(employee.training_date_of_completion).format('D MMM YYYY') : null} />
+                <InfoPair label="General Training Remark" value={employee.training_remark} />
+                <InfoPair label="Specific Training Completion" value={employee.specific_training_date_of_completion ? dayjs(employee.specific_training_date_of_completion).format('D MMM YYYY') : null} />
+                <InfoPair label="Specific Training Remark" value={employee.specific_training_remark} />
+            </DetailSection>
+        </>
+    );
 };
 
+const DocumentsTab: React.FC<{ employee: Employee }> = ({ employee }) => {
+    const [viewerState, setViewerState] = useState({ isOpen: false, index: 0 })
 
-const DocumentsTab = ({ employee }: { employee: Employee }) => {
-    const documentList = useMemo(() => {
-        if (!employee) return [];
-        const docs = [];
-        const addDoc = (name: string, type: string, url: string | null, date: string) => {
-            if(url) docs.push({name, type, url, uploadedAt: date})
-        }
-        
-        addDoc('Identity Proof', 'KYC', employee.identity_proof_path, employee.updated_at)
-        addDoc('Address Proof', 'KYC', employee.address_proof_path, employee.updated_at)
-        addDoc('Offer Letter', 'Onboarding', employee.offer_letter_path, employee.created_at)
-        addDoc('Relieving Letter', 'Experience', employee.relieving_letter_path, employee.updated_at)
-        
-        employee.educational_certificates_path?.forEach((url, i) => addDoc(`Educational Certificate ${i + 1}`, 'Education', url, employee.updated_at));
-        employee.experience_certificates_path?.forEach((url, i) => addDoc(`Experience Certificate ${i + 1}`, 'Experience', url, employee.updated_at));
-        employee.salary_slips_path?.forEach((url, i) => addDoc(`Salary Slip ${i + 1}`, 'Financial', url, employee.updated_at));
-        
-        return docs;
-    }, [employee]);
-    
-    type Record = typeof documentList[0];
-    const [searchQuery, setSearchQuery] = useState('');
-    const columns = useMemo<ColumnDef<Record>[]>(() => [ { header: 'Document Name', accessorKey: 'name' }, { header: 'Type', accessorKey: 'type' }, { header: 'Uploaded At', accessorKey: 'uploadedAt', cell: (props) => dayjs(props.getValue() as Date).format('D MMM YYYY') }, { header: 'Action', id: 'action', cell: (props) => <Tooltip title="Download"> <a href={props.row.original.url} target="_blank" rel="noopener noreferrer"> <Button shape="circle" size="sm" icon={<TbDownload />} /> </a> </Tooltip> } ], []);
-    const filteredData = useMemo(() => { if (!searchQuery) return documentList; const q = searchQuery.toLowerCase(); return documentList.filter(item => item.name.toLowerCase().includes(q) || item.type.toLowerCase().includes(q)); }, [documentList, searchQuery]);
-    return (<> <div className="mb-4"> <SubTableTools searchQuery={searchQuery} onSearchChange={(val) => setSearchQuery(val)} onClearFilters={() => setSearchQuery('')} /> </div> <DataTable columns={columns} data={filteredData} /> </>);
-};
-// Other placeholder tabs
-const WallInquiryTab = () => <p className='text-gray-500'>Wall Inquiry data will be displayed here.</p>;
-const OfferDemandsTab = () => <p className='text-gray-500'>Offer & Demands data will be displayed here.</p>;
-const EmployeeTeamTab = () => <p className='text-gray-500'>Team members reporting to this employee will be displayed here.</p>;
-const AssociatedMembersTab = () => <p className='text-gray-500'>Associated members (clients, vendors) will be displayed here.</p>;
+    const documentList = useMemo((): DocumentRecord[] => {
+        const docs: DocumentRecord[] = []
+        const baseUrl = 'https://aazovo.omcommunication.co'
 
-// --- MAIN EMPLOYEE VIEW PAGE ---
-const EmployeeView = () => {
-  const { id } = useParams<{ id: string }>();
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<string>(employeeViewNavigationList[0].link);
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    const fetchEmployeeData = async () => {
-        if (!id) {
-            setError("No employee ID provided.");
-            setLoading(false);
-            return;
-        }
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await dispatch(apiGetEmployeeById(id)).unwrap();
-            if (response && response.data) {
-                 setEmployee(response.data);
-            } else {
-                setError("Employee not found.");
-                setEmployee(null);
+        const getFileType = (url: string): 'image' | 'pdf' | 'other' => {
+            if (!url) return 'other';
+            const extension = url.split('.').pop()?.toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+                return 'image';
             }
-        } catch (err: any) {
-            console.error("Failed to fetch employee", err);
-            setError(err.message || "Failed to load employee details. Please try again.");
-            setEmployee(null);
-        } finally {
-            setLoading(false);
+            if (extension === 'pdf') {
+                return 'pdf';
+            }
+            return 'other';
+        }
+
+        const addDoc = (name: string, url: string | null) => {
+            if (url) docs.push({ name, url, type: getFileType(url) })
+        }
+
+        const parseAndAddDocs = (namePrefix: string, data: string | string[] | null) => {
+            if (!data) return
+            let relativeUrls: string[] = []
+            if (typeof data === 'string') {
+                try {
+                    // This handles cases like "[\"\\/path\\/to\\/doc.pdf\"]"
+                    relativeUrls = JSON.parse(data)
+                } catch (e) {
+                    console.error(`Failed to parse document JSON for ${namePrefix}:`, data)
+                    return;
+                }
+            } else {
+                relativeUrls = data
+            }
+
+            if (Array.isArray(relativeUrls)) {
+                relativeUrls.forEach((relUrl, i) => {
+                    if (relUrl && typeof relUrl === 'string') {
+                        const fullUrl = relUrl.startsWith('http') ? relUrl : `${baseUrl}${relUrl}`;
+                        const docName = `${namePrefix} ${relativeUrls.length > 1 ? i + 1 : ''}`.trim()
+                        docs.push({ name: docName, url: fullUrl, type: getFileType(fullUrl) })
+                    }
+                })
+            }
+        }
+
+        // KYC & Onboarding Docs
+        addDoc('Identity Proof', employee.identity_proof_path)
+        addDoc('Address Proof', employee.address_proof_path)
+        addDoc('PAN Card', employee.pan_card_path)
+        addDoc('Passport Size Photo', employee.passport_size_photograph_path)
+        addDoc('Bank Account Proof', employee.bank_account_proof_path)
+        addDoc('Offer Letter', employee.offer_letter_path)
+        addDoc('Past Offer Letter', employee.past_offer_letter_path)
+        addDoc('Designation Letter', employee.designation_letter_path)
+        addDoc('Relieving Letter', employee.relieving_letter_path)
+
+        // Docs from stringified JSON
+        parseAndAddDocs('Salary Slip', employee.salary_slips)
+        parseAndAddDocs('Educational Certificate', employee.educational_certificates)
+        parseAndAddDocs('Experience Certificate', employee.experience_certificates)
+
+        return docs
+    }, [employee])
+
+    if (!documentList.length) {
+        return (
+            <EmptyState
+                icon={<TbPaperclip size={28} />}
+                title="No Documents Found"
+                message="Official documents for this employee will be listed here."
+            />
+        )
+    }
+
+    const handlePreview = (index: number) => {
+        setViewerState({ isOpen: true, index: index })
+    }
+
+    const handleCloseViewer = () => {
+        setViewerState({ isOpen: false, index: 0 })
+    }
+
+    const handleNext = () => {
+        setViewerState((prev) => ({
+            ...prev,
+            index: Math.min(prev.index + 1, documentList.length - 1)
+        }))
+    }
+
+    const handlePrev = () => {
+        setViewerState((prev) => ({
+            ...prev,
+            index: Math.max(prev.index - 1, 0)
+        }))
+    }
+
+    return (
+        <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {documentList.map((doc, index) => (
+                    <DocumentCard
+                        key={index}
+                        document={doc}
+                        onPreview={() => handlePreview(index)}
+                    />
+                ))}
+            </div>
+            <DocumentViewer
+                isOpen={viewerState.isOpen}
+                onClose={handleCloseViewer}
+                documents={documentList}
+                currentIndex={viewerState.index}
+                onNext={handleNext}
+                onPrev={handlePrev}
+            />
+        </div>
+    )
+}
+
+const AssetsTab: React.FC<{ assets: Asset[] }> = ({ assets }) => {
+    if (!assets || assets.length === 0) {
+        return <EmptyState icon={<TbDeviceLaptop size={28} />} title="No Assets Assigned" message="Company assets provided to this employee will appear here." />;
+    }
+
+    const columns = useMemo<ColumnDef<Asset>[]>(() => [
+        { header: 'Asset Name', accessorKey: 'name' },
+        { header: 'Serial Number', accessorKey: 'serial_no' },
+        { header: 'Issued On', cell: (props) => dayjs(props.row.original.created_at).format("D MMM YYYY") }
+    ], []);
+
+    return <DataTable columns={columns} data={assets} />;
+}
+
+
+// --- MAIN PAGE COMPONENT ---
+
+const EmployeeView: React.FC = () => {
+    const { id } = useParams<{ id: string }>()
+    const navigate = useNavigate()
+    const dispatch = useAppDispatch()
+
+    const [employee, setEmployee] = useState<Employee | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [activeSection, setActiveSection] = useState<string>('details')
+
+    // Updated Navigation List
+    const navigationList = [
+        { label: 'Employee details', link: 'details' },
+        { label: 'Documents', link: 'documents' },
+        { label: 'Wall inquiry', link: 'inquiry' },
+        { label: 'Offer & Demand', link: 'offers' },
+        { label: 'Assets', link: 'assets' }, // Changed to 'Assets' to match data
+        { label: 'Member', link: 'members' },
+    ]
+
+    useEffect(() => {
+        const fetchEmployeeData = async () => {
+            if (!id) {
+                setError('No employee ID found.')
+                setLoading(false)
+                return
+            }
+            setLoading(true)
+            try {
+                // This dispatches the Redux Thunk action to fetch data
+                const response = await dispatch(apiGetEmployeeById(id)).unwrap()
+
+                if (response && response.data) {
+                    setEmployee(response.data.data)
+                } else {
+                    setError('Employee data could not be loaded or is empty.')
+                    setEmployee(null)
+                }
+            } catch (err: any) {
+                console.error('API Error:', err)
+                setError(
+                    err.message ||
+                    'An unexpected error occurred while fetching data.'
+                )
+                setEmployee(null)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchEmployeeData()
+    }, [id, dispatch])
+
+    const renderActiveSection = () => {
+        if (!employee) return null
+        switch (activeSection) {
+            case 'details':
+                return <EmployeeDetailsTab employee={employee} />
+            case 'documents':
+                return <DocumentsTab employee={employee} />
+            case 'assets':
+                return <AssetsTab assets={employee.assets || []} /> // Render AssetsTab for 'assets'
+            case 'inquiry':
+                return (
+                    <EmptyState
+                        icon={<TbSearch size={28} />}
+                        title="No Wall Inquiries"
+                        message="Inquiries related to this employee will be listed here."
+                    />
+                )
+            case 'offers':
+                return (
+                    <EmptyState
+                        icon={<TbLayoutList size={28} />}
+                        title="No Offers or Demands"
+                        message="All offers and demands will be displayed on this page."
+                    />
+                )
+            case 'members':
+                return (
+                    <EmptyState
+                        icon={<TbUsers size={28} />}
+                        title="No Associated Members"
+                        message="Associated members will be shown here."
+                    />
+                )
+            default:
+                return <EmployeeDetailsTab employee={employee} />
         }
     }
-    fetchEmployeeData();
-  }, [id, dispatch]);
 
-  const renderActiveSection = () => {
-    if (!employee) return null;
-    switch (activeSection) {
-      case "details": return <EmployeeDetailsTab employee={employee} />;
-      case "documents": return <DocumentsTab employee={employee} />;
-      case "inquiry": return <WallInquiryTab />;
-      case "offers": return <OfferDemandsTab />;
-      case "team": return <EmployeeTeamTab />;
-      case "members": return <AssociatedMembersTab />;
-      default: return <EmployeeDetailsTab employee={employee} />;
+    const PageTitle = (
+        <div className="flex gap-2 items-center mb-4">
+            <TbUsers />
+            <NavLink to="/hr/employees">
+                <span className="font-semibold hover:text-indigo-600">
+                    Employees
+                </span>
+            </NavLink>
+            <BiChevronRight size={18} />
+            <span className="font-semibold text-indigo-600">
+                {loading ? 'Loading...' : employee?.name || 'View Employee'}
+            </span>
+        </div>
+    )
+
+    if (loading) {
+        return (
+            <Container>
+                {PageTitle}
+                <Card>
+                    <Skeleton paragraph={{ rows: 10 }} />
+                </Card>
+            </Container>
+        )
     }
-  };
 
-  const PageTitle = (
-      <div className="flex gap-1 items-center mb-4">
-        <NavLink to="/hr-employees/employees">
-          <h6 className="font-semibold hover:text-primary-600">
-            Employees
-          </h6>
-        </NavLink>
-        <BiChevronRight size={18} />
-        <h6 className="font-semibold text-primary-600">
-          {employee?.name || 'View Employee'}
-        </h6>
-      </div>
-  );
+    if (error) {
+        return (
+            <Container>
+                {PageTitle}
+                <Card className="p-8">
+                    <EmptyState
+                        icon={
+                            <TbAlertCircle className="text-red-500" size={40} />
+                        }
+                        title="An Error Occurred"
+                        message={error}
+                    />
+                    <div className="text-center mt-4">
+                        <Button
+                            icon={<TbArrowLeft />}
+                            onClick={() => navigate(-1)}
+                        >
+                            Go Back
+                        </Button>
+                    </div>
+                </Card>
+            </Container>
+        )
+    }
 
-  if (loading) {
+    if (!employee) {
+        return (
+            <Container>
+                {PageTitle}
+                <Card className="p-8">
+                    <EmptyState
+                        icon={<TbUserCircle size={40} />}
+                        title="Employee Not Found"
+                        message="We couldn't find any data for this employee ID."
+                    />
+                    <div className="text-center mt-4">
+                        <Button
+                            icon={<TbArrowLeft />}
+                            onClick={() => navigate('/hr/employees')}
+                        >
+                            Back to List
+                        </Button>
+                    </div>
+                </Card>
+            </Container>
+        )
+    }
+
     return (
         <Container className="h-full">
-            {PageTitle}
-            <div className="flex justify-center items-center h-96">
-                <p>Loading...</p> 
+            <div className="flex items-center justify-between mb-4">
+                {PageTitle}
             </div>
+
+            <Card className="mb-6" bodyClass="p-4 sm:p-6">
+                <EmployeeProfileHeader employee={employee} />
+            </Card>
+
+            <div className="flex flex-row items-center border-b border-gray-200 dark:border-gray-600 mb-6 flex-wrap">
+                {navigationList.map((nav) => (
+                    <button
+                        type="button"
+                        key={nav.link}
+                        className={classNames(
+                            'px-4 py-2 -mb-px font-semibold focus:outline-none whitespace-nowrap',
+                            {
+                                'text-indigo-600 border-b-2 border-indigo-600':
+                                    activeSection === nav.link,
+                                'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200':
+                                    activeSection !== nav.link,
+                            }
+                        )}
+                        onClick={() => setActiveSection(nav.link)}
+                    >
+                        {nav.label}
+                    </button>
+                ))}
+            </div>
+
+            <div>{renderActiveSection()}</div>
         </Container>
-    );
-  }
+    )
+}
 
-  if (error) {
-     return <Container className="h-full">
-        {PageTitle}
-        <Card className='p-8 text-center'>
-            <p className='text-red-500 font-semibold'>{error}</p>
-        </Card>
-     </Container>;
-  }
-
-  if (!employee) {
-       return <Container className="h-full">
-        {PageTitle}
-        <Card className='p-8 text-center'>
-            <p>Employee could not be found.</p>
-        </Card>
-     </Container>;
-  }
-
-
-  return (
-    <Container className="h-full">
-      {PageTitle}
-      <Card bodyClass="p-0">
-        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-          <EmployeeProfileHeader employee={employee?.data} />
-        </div>
-        <div className="px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700">
-          <EmployeeViewNavigator activeSection={activeSection} onNavigate={setActiveSection} />
-        </div>
-        <div className="p-4 sm:p-6">{renderActiveSection()}</div>
-      </Card>
-    </Container>
-  );
-};
-
-export default EmployeeView;
+export default EmployeeView
