@@ -723,12 +723,12 @@ const CompanyActionColumn = ({ rowData, onEdit, onOpenModal, onOpenEnableBilling
             <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
                 <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
-                {rowData.need_enable && (
+                {rowData.need_enable ? (
                     <Dropdown.Item onClick={() => onOpenEnableBillingModal(rowData)} className="flex items-center gap-2">
                         <TbShieldCheck /> Add Billing Document
                     </Dropdown.Item>
 
-                )}
+                ) : null}
                 <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal('schedule', rowData)} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
                 <Dropdown.Item onClick={() => onOpenModal('task', rowData)} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
