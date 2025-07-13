@@ -75,6 +75,7 @@ import {
   TbUserCircle,
   TbX,
   TbCheck,
+  TbCopy,
 } from "react-icons/tb";
 
 // Redux
@@ -2547,6 +2548,15 @@ const OffersDemands = () => {
     ]
   );
 
+   const handleCopy = useCallback((text: string, successMessage: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      toast.push(
+        <Notification title={successMessage} type="success" duration={2500} />
+      );
+    });
+  }, []);
+
   const columns: ColumnDef<OfferDemandItem>[] = useMemo(
     () => [
       {
@@ -2601,18 +2611,38 @@ const OffersDemands = () => {
                   group.groupName === "Group B";
                 if (isSpecialGroup && group.items?.[0]) {
                   const fullText = group.items[0];
+                  console.log("row.original",row.original);
+                  
+                  // MODIFICATION START
+                  const messageToCopy = `Offer ID: ${row.original.originalApiItem.id}\nOffer Name: ${row.original.name}\n\nMessage:\n${fullText}`;
                   return (
-                    <div key={index} className="text-xs">
-                      <b className="text-gray-700 dark:text-gray-200">
-                        {group.groupName}:{" "}
-                      </b>
-                      <Tooltip title={fullText}>
-                        <p className="line-clamp-2 pl-2 text-gray-600 dark:text-gray-400">
-                          {fullText}
-                        </p>
-                      </Tooltip>
+                    <div
+                      key={index}
+                      role="button"
+                      className="group p-1 -m-1 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      onClick={() =>
+                        handleCopy(
+                          messageToCopy,
+                          `${group.groupName} details copied!`
+                        )
+                      }
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-grow text-xs">
+                          <b className="text-gray-700 dark:text-gray-200">
+                            {group.groupName}:{" "}
+                          </b>
+                          <Tooltip title={fullText}>
+                            <p className="line-clamp-2 pl-2 text-gray-600 dark:text-gray-400">
+                              {fullText}
+                            </p>
+                          </Tooltip>
+                        </div>
+                        <TbCopy className="text-gray-400 group-hover:text-indigo-500 ml-2 mt-0.5 flex-shrink-0" />
+                      </div>
                     </div>
                   );
+                  // MODIFICATION END
                 }
                 return (
                   <div key={index} className="text-xs">
