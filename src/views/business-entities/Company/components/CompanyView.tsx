@@ -3,7 +3,7 @@ import { NavLink, useParams, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import classNames from 'classnames';
 
-// UI Components
+// --- UI Components ---
 import Container from '@/components/shared/Container';
 import Card from '@/components/ui/Card';
 import Avatar from '@/components/ui/Avatar';
@@ -13,102 +13,145 @@ import Notification from '@/components/ui/Notification';
 import Spinner from '@/components/ui/Spinner';
 import toast from '@/components/ui/toast';
 import { DatePicker } from '@/components/ui';
+import Dialog from '@/components/ui/Dialog';
+import Tooltip from '@/components/ui/Tooltip';
 
-// Icons
+
+// --- Icons ---
 import { BiChevronRight } from 'react-icons/bi';
 import {
     TbUserCircle, TbMail, TbPhone, TbBuilding, TbBriefcase, TbCalendar, TbPencil, TbDownload,
     TbUser, TbFileText, TbBuildingBank, TbReportMoney, TbArrowLeft, TbUsersGroup, TbLicense,
-    TbWorld, TbCheck, TbX, TbFileDescription, TbUserSearch, TbMessage2,
+    TbWorld, TbCheck, TbX, TbFileDescription, TbUserSearch, TbMessage2, TbEye,
     TbCoinRupee, TbFileInvoice, TbFile, TbFileSpreadsheet, TbFileTypePdf, TbPhoto, TbChevronLeft, TbChevronRight
 } from 'react-icons/tb';
 
-// Types, Redux and Helpers
+// --- Types, Redux and Helpers ---
 import { getCompanyByIdAction } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
 
-// --- START: Full-Screen Viewer Helper Components ---
-interface ImageViewerProps {
-  images: { src: string; alt: string }[];
-  startIndex: number;
-  onClose: () => void;
-}
-
-const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
-  const [currentIndex, setCurrentIndex] = useState(startIndex);
-  const handleNext = () => setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-  const handlePrev = () => setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') handleNext();
-      if (e.key === 'ArrowLeft') handlePrev();
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  if (!images || images.length === 0) return null;
-  const currentImage = images[currentIndex];
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4" onClick={onClose}>
-      <Button type="button" shape="circle" variant="solid" icon={<TbX />} className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80" onClick={onClose} />
-      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-        <div className="relative flex-grow flex items-center justify-center w-full max-w-6xl overflow-hidden">
-          <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronLeft />} className="absolute left-2 md:left-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80" onClick={handlePrev} />
-          <div className="flex flex-col items-center justify-center h-full">
-            <img src={currentImage.src} alt={currentImage.alt} className="max-h-[calc(100%-4rem)] max-w-full object-contain select-none transition-transform duration-300" />
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">{currentImage.alt} ({currentIndex + 1} / {images.length})</div>
-          </div>
-          <Button type="button" shape="circle" variant="solid" size="lg" icon={<TbChevronRight />} className="absolute right-2 md:right-4 opacity-70 hover:opacity-100 transition-opacity z-[51] bg-black/50 hover:bg-black/80" onClick={handleNext} />
-        </div>
-        <div className="w-full max-w-5xl flex-shrink-0 mt-4">
-          <div className="flex justify-center p-2"><div className="flex gap-3 overflow-x-auto pb-2">{images.map((image, index) => (<button type="button" key={index} onClick={() => setCurrentIndex(index)} className={classNames("w-24 h-16 flex-shrink-0 rounded-md border-2 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white", currentIndex === index ? 'border-white opacity-100 scale-105' : 'border-transparent opacity-60 hover:opacity-100')}><img src={image.src} alt={image.alt} className="w-full h-full object-cover rounded-sm" /></button>))}</div></div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const GenericFileViewer = ({ fileUrl, fileName, onClose }: { fileUrl: string; fileName: string; onClose: () => void; }) => {
-  const fileExtension = useMemo(() => fileName.split('.').pop()?.toLowerCase(), [fileName]);
-  const isPdf = fileExtension === 'pdf';
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  const getFileIcon = () => {
-    switch (fileExtension) {
-      case 'pdf': return <TbFileTypePdf className="text-red-500" size={64} />;
-      case 'xls': case 'xlsx': return <TbFileSpreadsheet className="text-green-500" size={64} />;
-      default: return <TbFile className="text-gray-500" size={64} />;
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-300 p-4" onClick={onClose}>
-      <Button type="button" shape="circle" variant="solid" icon={<TbX />} className="absolute top-4 right-4 z-[52] bg-black/50 hover:bg-black/80" onClick={onClose} />
-      <div className="w-full h-full flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-        {isPdf ? <iframe src={fileUrl} title={fileName} className="w-full h-full border-none rounded-lg bg-white" /> : <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center flex flex-col items-center justify-center max-w-md">{getFileIcon()}<h4 className="mb-2 mt-4">Preview not available</h4><p className="text-gray-600 dark:text-gray-300 mb-6 max-w-xs">You can open this file in a new tab to view or download it.</p><Button variant="solid" onClick={() => window.open(fileUrl, '_blank')}>Open '{fileName}'</Button></div>}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md">{fileName}</div>
-      </div>
-    </div>
-  );
-};
-// --- END: Full-Screen Viewer Helper Components ---
-
-// --- Type Definitions (Matching the provided JSON) ---
+// --- TYPE DEFINITIONS (Matching the provided JSON) ---
 interface OfficeInfo { id: number; office_type: string; office_name: string; state: string; city: string; zip_code: string; gst_number: string; address: string; office_email: string; contact_person: string | null; office_phone: string | null; }
 interface FilledForm { id: number; accountdoc_id: number; created_at: string; form_data?: { uploads_doc_s?: { [key: string]: string | undefined; } } }
 interface TransactionDoc { id: number; company_document: string; invoice_number: string; status: string; created_at: string; filled_form?: FilledForm; }
 interface ApiSingleCompanyItem { id: number; company_code: string; company_name: string; status: string; primary_email_id: string; primary_contact_number: string; primary_contact_number_code: string; alternate_contact_number?: string | null; alternate_contact_number_code?: string | null; alternate_email_id?: string | null; general_contact_number?: string | null; general_contact_number_code?: string | null; ownership_type: string; owner_name: string; company_address?: string | null; country_id: number; state?: string | null; city?: string | null; zip_code?: string | null; gst_number: string; pan_number: string; trn_number?: string | null; tan_number?: string | null; establishment_year?: string | null; no_of_employees?: number | null; company_website?: string | null; primary_business_type?: string | null; kyc_verified: boolean; enable_billing: boolean; billing_due?: string; company_logo?: string | null; primary_account_number?: string | null; primary_bank_name?: string | null; primary_ifsc_code?: string | null; primary_swift_code?: string | null; secondary_account_number?: string | null; secondary_bank_name?: string | null; secondary_ifsc_code?: string | null; secondary_swift_code?: string | null; aadhar_card_file?: string | null; aadhar_card_verified?: boolean; pan_card_file?: string | null; pan_card_verified?: boolean; gst_certificate_file?: string | null; gst_certificate_verified?: boolean; office_photo_file?: string | null; office_photo_verified?: boolean; cancel_cheque_file?: string | null; cancel_cheque_verified?: boolean; visiting_card_file?: string | null; visiting_card_verified?: boolean; authority_letter_file?: string | null; authority_letter_verified?: boolean; ABCQ_file?: string | null; ABCQ_verified?: boolean; other_document_file?: string | null; other_document_verified?: boolean; created_at: string; country?: { name: string }; continent?: { name: string }; company_certificate?: Array<{ id: number; certificate_name: string; upload_certificate_path: string | null }>; company_bank_details?: Array<{ id: number; type: string; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string }>; company_member_management?: Array<{ id: number; person_name: string; member_id: string; designation: string; number: string; }>; company_team_members?: Array<{ id: number; person_name: string; team_name: string; designation: string; number: string; }>; office_info?: OfficeInfo[]; company_spot_verification?: Array<{ id: number; verified_by_name?: string; verified: boolean; remark: string | null; photo_upload: string | null; }>; transaction_docs?: TransactionDoc[]; }
 
-// --- Reusable Helper Components ---
+// --- VIEWER & CARD COMPONENTS ---
+interface DocumentRecord {
+    name: string;
+    type: 'image' | 'pdf' | 'other';
+    url: string;
+    verified?: boolean;
+}
+
+const DocumentViewer: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    documents: DocumentRecord[];
+    currentIndex: number;
+    onNext: () => void;
+    onPrev: () => void;
+}> = ({ isOpen, onClose, documents, currentIndex, onNext, onPrev }) => {
+    const [isContentLoaded, setIsContentLoaded] = useState(false);
+    const document = documents[currentIndex];
+
+    useEffect(() => {
+        setIsContentLoaded(false);
+    }, [currentIndex]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight') onNext();
+            if (e.key === 'ArrowLeft') onPrev();
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onNext, onPrev, onClose]);
+
+    if (!document) return null;
+
+    const renderContent = () => {
+        switch (document.type) {
+            case 'image':
+                return <img src={document.url} alt={document.name} className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${isContentLoaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setIsContentLoaded(true)} />;
+            case 'pdf':
+                return <iframe src={document.url} title={document.name} className={`w-full h-full border-0 transition-opacity duration-300 ${isContentLoaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setIsContentLoaded(true)}></iframe>;
+            default:
+                if (!isContentLoaded) setIsContentLoaded(true);
+                return (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-center p-10 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                        <TbFile size={60} className="mx-auto mb-4 text-gray-500" />
+                        <h5 className="mb-2">{document.name}</h5>
+                        <p className="mb-4 text-gray-600 dark:text-gray-300">Preview is not available for this file type.</p>
+                        <a href={document.url} download target="_blank" rel="noopener noreferrer"><Button variant="solid" icon={<TbDownload />}>Download File</Button></a>
+                    </div>
+                );
+        }
+    };
+
+    return (
+        <Dialog isOpen={isOpen} onClose={onClose} width="auto" height="85vh" closable={false} bodyOpenClassName="overflow-hidden" contentClassName="top-0 p-0 bg-transparent">
+            <div className="w-full h-full bg-black/80 backdrop-blur-sm flex flex-col">
+                <header className="flex-shrink-0 h-16 bg-gray-800/50 text-white flex items-center justify-between px-4">
+                    <div className="flex items-center gap-4">
+                        <h6 className="font-semibold truncate" title={document.name}>{document.name}</h6>
+                        <span className="text-sm text-gray-400">{currentIndex + 1} / {documents.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <a href={document.url} download target="_blank" rel="noopener noreferrer"><Button shape="circle" variant="subtle" size="sm" icon={<TbDownload />} /></a>
+                        <Button shape="circle" variant="subtle" size="sm" icon={<TbX />} onClick={onClose} />
+                    </div>
+                </header>
+                <main className="relative flex-grow flex items-center justify-center overflow-hidden">
+                    {!isContentLoaded && <Spinner size={40} className="absolute" />}
+                    {renderContent()}
+                </main>
+                {documents.length > 1 && (
+                    <>
+                        <Button shape="circle" size="lg" icon={<TbChevronLeft />} className="!absolute left-4 top-1/2 -translate-y-1/2" onClick={onPrev} disabled={currentIndex === 0} />
+                        <Button shape="circle" size="lg" icon={<TbChevronRight />} className="!absolute right-4 top-1/2 -translate-y-1/2" onClick={onNext} disabled={currentIndex === documents.length - 1} />
+                    </>
+                )}
+            </div>
+        </Dialog>
+    );
+};
+
+const DocumentCard: React.FC<{ document: DocumentRecord; onPreview: () => void }> = ({ document, onPreview }) => {
+    const renderPreviewIcon = () => {
+        switch (document.type) {
+            case 'image':
+                return <img src={document.url} alt={document.name} className="w-full h-full object-cover" />;
+            case 'pdf':
+                return <TbFileTypePdf className="w-12 h-12 text-red-500" />;
+            default:
+                return <TbFile className="w-12 h-12 text-gray-500" />;
+        }
+    };
+
+    return (
+        <Card bodyClass="p-0" className="hover:shadow-lg transition-shadow flex flex-col">
+            <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden cursor-pointer" onClick={onPreview}>{renderPreviewIcon()}</div>
+            <div className="p-4 flex flex-col flex-grow">
+                <p className="font-semibold truncate flex-grow" title={document.name}>{document.name}</p>
+                <div className="flex justify-between items-center mt-3">
+                   {document.verified ?
+                        <Tag className="bg-emerald-100 text-emerald-700"><TbCheck className='mr-1' />Verified</Tag> :
+                        <Tag className="bg-red-100 text-red-700"><TbX className='mr-1' />Not Verified</Tag>
+                    }
+                    <div className="flex gap-2">
+                        <Tooltip title="Preview"><Button shape="circle" size="sm" icon={<TbEye />} onClick={onPreview} /></Tooltip>
+                        <Tooltip title="Download"><a href={document.url} download target="_blank" rel="noopener noreferrer"><Button shape="circle" size="sm" icon={<TbDownload />} /></a></Tooltip>
+                    </div>
+                </div>
+            </div>
+        </Card>
+    );
+};
+
+// --- REUSABLE HELPER COMPONENTS ---
 const getCompanyStatusClass = (status?: string) => { const s = status?.toLowerCase() || ''; switch (s) { case 'active': case 'approved': case 'verified': return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'; case 'inactive': return 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100'; case 'blocked': case 'non verified': return 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100'; case 'pending': return 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100'; default: return 'bg-gray-100 text-gray-500'; } };
 const CompanyProfileHeader = ({ company }: { company: ApiSingleCompanyItem }) => { const navigate = useNavigate(); return <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4"><div className="flex items-center gap-4"><div><h4 className="font-bold">({company.company_code}) - {company.company_name}</h4><div className="flex items-center gap-2 mb-1 text-sm"><TbMail className="text-gray-400" /> <p>{company.primary_email_id}</p></div>{company.primary_contact_number && (<div className="flex items-center gap-2 text-sm"><TbPhone className="text-gray-400" /> <p>{company.primary_contact_number_code} {company.primary_contact_number}</p></div>)}<div className="mt-2"><Tag className={`${getCompanyStatusClass(company.status)} capitalize`}>{company.status || 'N/A'}</Tag></div></div></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm"><div className="flex items-center gap-2"><TbUserCircle className="text-gray-400" /><span className="font-semibold">Owner:</span><span>{company.owner_name}</span></div><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">GST:</span><span>{company.gst_number || 'N/A'}</span></div><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">PAN NO:</span><span>{company.pan_number || 'N/A'}</span></div></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm"><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TAN No:</span><span>{company.tan_number || 'N/A'}</span></div><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TRN NO:</span><span>{company.trn_number || 'N/A'}</span></div></div><div className="flex flex-col sm:flex-row lg:flex-col gap-2"><Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/business-entities/company-edit/${company.id}`)}>Edit Company</Button><Button icon={<TbArrowLeft />} onClick={() => navigate('/business-entities/company')}>Back to List</Button></div></div> };
 const companyViewNavigationList = [{ label: "Details", link: "details", icon: <TbUser /> },{ label: "Kyc Documents", link: "documents", icon: <TbFileText /> },{ label: "Bank & Billing", link: "bank", icon: <TbBuildingBank /> },{ label: "Members", link: "members", icon: <TbUsersGroup /> },{ label: "Teams", link: "teams", icon: <TbUsersGroup /> },{ label: "Offices", link: "offices", icon: <TbBuilding /> },{ label: "Verification", link: "verification", icon: <TbLicense /> },{ label: "Transactions", link: "transactions", icon: <TbCoinRupee /> }];
@@ -125,213 +168,140 @@ const MembersTabView = ({ company }: { company: ApiSingleCompanyItem }) => { con
 const TeamsTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const teams = company.company_team_members || []; if (teams.length === 0) return <NoDataMessage message="No team members found." />; return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{teams.map(t => (<InfoCard key={t.id} title={t.person_name} data={[{ label: 'Team', value: t.team_name },{ label: 'Designation', value: t.designation },{ label: 'Contact', value: t.number }]} />))}</div> };
 const OfficesTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const offices = company.office_info || []; if (offices.length === 0) return <NoDataMessage message="No office locations found." />; return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{offices.map(o => (<InfoCard key={o.id} title={o.office_name} data={[{ label: 'Type', value: o.office_type },{ label: 'Address', value: o.address },{ label: 'Location', value: `${o.city}, ${o.state}` },{ label: 'Contact Person', value: o.contact_person }]} />))}</div> };
 const VerificationTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const verifications = company.company_spot_verification || []; if (verifications.length === 0) return <NoDataMessage message="No spot verifications found." />; return <div className="space-y-4">{verifications.map(v => <Card key={v.id} bodyClass='p-4'><div className="flex justify-between items-center"><h6 className="font-semibold">Verified by {v.verified_by_name || 'Unknown'}</h6>{v.verified ? <Tag className='bg-emerald-100 text-emerald-700'>Verified</Tag> : <Tag className='bg-red-100 text-red-700'>Not Verified</Tag>}</div>{v.remark && <p className="text-sm mt-2 text-gray-600"><TbMessage2 className='inline-block mr-2' />{v.remark}</p>}{v.photo_upload && <Button size='sm' className='mt-2' onClick={() => window.open(v.photo_upload || '', '_blank')}>View Photo</Button>}</Card>)}</div> };
-const TransactionsTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const allTransactions = useMemo(() => company.transaction_docs || [], [company]); const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]); const filteredTransactions = useMemo(() => { const [startDate, endDate] = dateRange; if (!startDate || !endDate) { return allTransactions; } return allTransactions.filter(transaction => { const transactionDate = dayjs(transaction.created_at); return transactionDate.isAfter(dayjs(startDate).startOf('day')) && transactionDate.isBefore(dayjs(endDate).endOf('day')); }); }, [allTransactions, dateRange]); const handleResetFilter = () => setDateRange([null, null]); const formatDocTitle = (key: string) => { const customTitles: Record<string, string> = { pi_upload: "PO", imei_excel_sheet_miracle: "IMEI Sheet", invoice_upload: "Purchase Invoice", e_way_bill: "E-Way Bill" }; return customTitles[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); }; const formatTransactionId = (id: number | undefined | null): string => { if (id === null || id === undefined) return 'N/A'; return String(id).padStart(5, '0'); }; const documentOrder: string[] = ['pi_upload', 'imei_excel_sheet_miracle', 'invoice_upload', 'e_way_bill']; if (allTransactions.length === 0) { return <NoDataMessage message="No transaction documents found." />; } return <div className='space-y-6'><Card><div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"><div className='flex items-center gap-2'><label className='font-semibold'>Date:</label><DatePicker.DatePickerRange value={dateRange} onChange={setDateRange} placeholder="Pick date range" /></div><div className="flex gap-2"><Button onClick={handleResetFilter}>Reset</Button></div></div></Card>{filteredTransactions.length > 0 ? filteredTransactions.map(transaction => { const uploadedDocs = transaction.filled_form?.form_data?.uploads_doc_s; if (!transaction.filled_form || !uploadedDocs) return null; const sortedDocs = Object.entries(uploadedDocs).filter(([_, url]) => !!url).sort(([keyA], [keyB]) => { const indexA = documentOrder.indexOf(keyA); const indexB = documentOrder.indexOf(keyB); if (indexA !== -1 && indexB !== -1) return indexA - indexB; if (indexA !== -1) return -1; if (indexB !== -1) return 1; return keyA.localeCompare(keyB); }); return <Card key={transaction.id} bodyClass="p-0"><div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/60 p-3 rounded-t-lg"><h5 className="font-semibold">Form ID: #{formatTransactionId(transaction.filled_form?.accountdoc_id)}</h5><span className="text-sm text-gray-500">{dayjs(transaction.filled_form.created_at).format('DD MMM YYYY, hh:mm A')}</span></div><div className="p-4"><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">{sortedDocs.map(([docKey, docUrl]) => <a href={docUrl} target="_blank" rel="noopener noreferrer" key={docKey}><Card clickable className="h-full"><div className="flex flex-col items-center justify-center text-center gap-2 py-4"><TbFileInvoice size={36} className='text-gray-400' /><h6 className="font-semibold uppercase">{formatDocTitle(docKey)}</h6><p className="text-xs text-gray-500">{dayjs(transaction.created_at).format('DD-MM-YYYY HH:mm:ss')}</p></div></Card></a>)}</div></div></Card>}) : <NoDataMessage message="No transactions found for the selected date range." />}</div> };
+const TransactionsTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const allTransactions = useMemo(() => company.transaction_docs || [], [company]); const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]); const filteredTransactions = useMemo(() => { const [startDate, endDate] = dateRange; if (!startDate || !endDate) { return allTransactions; } return allTransactions.filter(transaction => { const transactionDate = dayjs(transaction.created_at); return transactionDate.isAfter(dayjs(startDate).startOf('day')) && transactionDate.isBefore(dayjs(endDate).endOf('day')); }); }, [allTransactions, dateRange]); const handleResetFilter = () => setDateRange([null, null]); const formatDocTitle = (key: string) => { const customTitles: Record<string, string> = { pi_upload: "PO", imei_excel_sheet_miracle: "IMEI Sheet", invoice_upload: "Purchase Invoice", e_way_bill: "E-Way Bill" }; return customTitles[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); }; const formatTransactionId = (id: number | undefined | null): string => { if (id === null || id === undefined) return 'N/A'; return String(id).padStart(5, '0'); }; if (allTransactions.length === 0) { return <NoDataMessage message="No transaction documents found." />; } return <div className='space-y-6'><Card><div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"><div className='flex items-center gap-2'><label className='font-semibold'>Date:</label><DatePicker.DatePickerRange value={dateRange} onChange={setDateRange} placeholder="Pick date range" /></div><div className="flex gap-2"><Button onClick={handleResetFilter}>Reset</Button></div></div></Card>{filteredTransactions.length > 0 ? filteredTransactions.map(transaction => { const uploadedDocs = transaction.filled_form?.form_data?.uploads_doc_s; if (!transaction.filled_form || !uploadedDocs) return null; const sortedDocs = Object.entries(uploadedDocs).filter(([_, url]) => !!url).sort(([keyA], [keyB]) => { const indexA = ['pi_upload', 'imei_excel_sheet_miracle', 'invoice_upload', 'e_way_bill'].indexOf(keyA); const indexB = ['pi_upload', 'imei_excel_sheet_miracle', 'invoice_upload', 'e_way_bill'].indexOf(keyB); if (indexA !== -1 && indexB !== -1) return indexA - indexB; if (indexA !== -1) return -1; if (indexB !== -1) return 1; return keyA.localeCompare(keyB); }); return <Card key={transaction.id} bodyClass="p-0"><div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/60 p-3 rounded-t-lg"><h5 className="font-semibold">Form ID: #{formatTransactionId(transaction.filled_form?.accountdoc_id)}</h5><span className="text-sm text-gray-500">{dayjs(transaction.filled_form.created_at).format('DD MMM YYYY, hh:mm A')}</span></div><div className="p-4"><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">{sortedDocs.map(([docKey, docUrl]) => <a href={docUrl} target="_blank" rel="noopener noreferrer" key={docKey}><Card clickable className="h-full"><div className="flex flex-col items-center justify-center text-center gap-2 py-4"><TbFileInvoice size={36} className='text-gray-400' /><h6 className="font-semibold uppercase">{formatDocTitle(docKey)}</h6><p className="text-xs text-gray-500">{dayjs(transaction.created_at).format('DD-MM-YYYY HH:mm:ss')}</p></div></Card></a>)}</div></div></Card>}) : <NoDataMessage message="No transactions found for the selected date range." />}</div> };
 
-// --- CORRECTED DocumentsTabView ---
-const DocumentsTabView = ({ company, onPreviewClick }: { company: ApiSingleCompanyItem; onPreviewClick: (doc: { name: string; url: string | null }) => void; }) => {
+const DocumentsTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
+    const [viewerState, setViewerState] = useState({ isOpen: false, index: 0 });
 
-    const allDocs = useMemo(() => {
-        const kycDocsList = [
-            { name: "Aadhar Card", url: company.aadhar_card_file, verified: company.aadhar_card_verified },
-            { name: "PAN Card", url: company.pan_card_file, verified: company.pan_card_verified },
-            { name: "GST Certificate", url: company.gst_certificate_file, verified: company.gst_certificate_verified },
-            { name: "Office Photo", url: company.office_photo_file, verified: company.office_photo_verified },
-            { name: "Cancel Cheque", url: company.cancel_cheque_file, verified: company.cancel_cheque_verified },
-            { name: "Visiting Card", url: company.visiting_card_file, verified: company.visiting_card_verified },
-            { name: "Authority Letter", url: company.authority_letter_file, verified: company.authority_letter_verified },
-            { name: "194Q Declaration", url: company.ABCQ_file, verified: company.ABCQ_verified },
-            { name: "Other Document", url: company.other_document_file, verified: company.other_document_verified },
-        ];
+    const documentList = useMemo((): DocumentRecord[] => {
+        const docs: DocumentRecord[] = [];
+        const getFileType = (url: string | null): 'image' | 'pdf' | 'other' => {
+            if (!url) return 'other';
+            const extension = url.split('.').pop()?.toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image';
+            if (extension === 'pdf') return 'pdf';
+            return 'other';
+        };
+
+        const addDoc = (name: string, url: string | null, verified?: boolean) => {
+            if (url) {
+                docs.push({ name, url, type: getFileType(url), verified });
+            }
+        };
+
+        addDoc("Aadhar Card", company.aadhar_card_file, company.aadhar_card_verified);
+        addDoc("PAN Card", company.pan_card_file, company.pan_card_verified);
+        addDoc("GST Certificate", company.gst_certificate_file, company.gst_certificate_verified);
+        addDoc("Office Photo", company.office_photo_file, company.office_photo_verified);
+        addDoc("Cancel Cheque", company.cancel_cheque_file, company.cancel_cheque_verified);
+        addDoc("Visiting Card", company.visiting_card_file, company.visiting_card_verified);
+        addDoc("Authority Letter", company.authority_letter_file, company.authority_letter_verified);
+        addDoc("194Q Declaration", company.ABCQ_file, company.ABCQ_verified);
+        addDoc("Other Document", company.other_document_file, company.other_document_verified);
         
-        const companyCerts = (company.company_certificate || []).map(cert => ({
-            name: cert.certificate_name,
-            url: cert.upload_certificate_path,
-            verified: true 
-        }));
+        (company.company_certificate || []).forEach(cert => {
+            addDoc(cert.certificate_name, cert.upload_certificate_path, true);
+        });
 
-        return [...kycDocsList, ...companyCerts].filter(doc => doc.url);
+        return docs;
     }, [company]);
-    
-    const isImageUrl = (url: string | null): boolean => !!url && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(url);
 
-    const getFileIcon = (url: string | null) => {
-        const extension = url?.split('.').pop()?.toLowerCase();
-        switch (extension) {
-            case 'pdf': return <TbFileTypePdf size={36} className='text-red-400' />;
-            case 'xls': case 'xlsx': return <TbFileSpreadsheet size={36} className='text-green-400' />;
-            default: return <TbFileDescription size={36} className='text-gray-400' />;
-        }
-    };
-    
-    if (allDocs.length === 0) {
+    if (documentList.length === 0) {
         return <NoDataMessage message="No KYC or company certificates are available." />;
     }
 
+    const handlePreview = (index: number) => setViewerState({ isOpen: true, index });
+    const handleCloseViewer = () => setViewerState({ isOpen: false, index: 0 });
+    const handleNext = () => setViewerState(prev => ({ ...prev, index: Math.min(prev.index + 1, documentList.length - 1) }));
+    const handlePrev = () => setViewerState(prev => ({ ...prev, index: Math.max(prev.index - 1, 0) }));
+
     return (
-        <div className='space-y-6'>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {allDocs.map((doc, index) => (
-                    <Card key={index} clickable className="h-full" onClick={() => onPreviewClick(doc)}>
-                        <div className="flex flex-col items-center justify-center text-center gap-3 py-4 h-full">
-                            {isImageUrl(doc.url) ? (
-                                <img src={doc.url!} alt={doc.name} className="w-16 h-16 object-cover rounded-md bg-gray-100" />
-                            ) : (
-                                getFileIcon(doc.url)
-                            )}
-                            <h6 className="font-semibold uppercase text-sm">{doc.name}</h6>
-                            {doc.verified ? 
-                                <Tag className="bg-emerald-100 text-emerald-700"><TbCheck className='mr-1' />Verified</Tag> : 
-                                <Tag className="bg-red-100 text-red-700"><TbX className='mr-1' />Not Verified</Tag>
-                            }
-                             <Button
-                                size="xs"
-                                variant="outline"
-                                icon={<TbDownload />}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(doc.url || '', '_blank');
-                                }}
-                            >
-                                Download
-                            </Button>
-                        </div>
-                    </Card>
+        <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {documentList.map((doc, index) => (
+                    <DocumentCard key={index} document={doc} onPreview={() => handlePreview(index)} />
                 ))}
             </div>
+            <DocumentViewer
+                isOpen={viewerState.isOpen}
+                onClose={handleCloseViewer}
+                documents={documentList}
+                currentIndex={viewerState.index}
+                onNext={handleNext}
+                onPrev={handlePrev}
+            />
         </div>
     );
 };
 
-
 // --- MAIN COMPANY VIEW PAGE ---
 const CompanyView = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const dispatch = useAppDispatch();
 
-  const [company, setCompany] = useState<ApiSingleCompanyItem | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<string>(companyViewNavigationList[0].link);
+    const [company, setCompany] = useState<ApiSingleCompanyItem | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [activeSection, setActiveSection] = useState<string>(companyViewNavigationList[0].link);
 
-  // --- STATE LIFTED UP FOR VIEWERS ---
-  const [viewerIsOpen, setViewerIsOpen] = useState(false);
-  const [viewingFile, setViewingFile] = useState<{ url: string, name: string } | null>(null);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    useEffect(() => {
+        if (!id) {
+            toast.push(<Notification type="danger" title="Error">No Company ID provided.</Notification>);
+            navigate('/business-entities/company');
+            return;
+        }
+        const fetchCompany = async () => {
+            setLoading(true);
+            try {
+                const response = await dispatch(getCompanyByIdAction(id)).unwrap();
+                setCompany(response);
+            } catch (error: any) {
+                toast.push(<Notification type="danger" title="Fetch Error">{error?.message || 'Failed to load company data.'}</Notification>);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCompany();
+    }, [id, dispatch, navigate]);
 
-  useEffect(() => {
-    if (!id) {
-      toast.push(<Notification type="danger" title="Error">No Company ID provided.</Notification>);
-      navigate('/business-entities/company');
-      return;
-    }
-    const fetchCompany = async () => {
-      setLoading(true);
-      try {
-        const response = await dispatch(getCompanyByIdAction(id)).unwrap();
-        setCompany(response);
-      } catch (error: any) {
-        toast.push(<Notification type="danger" title="Fetch Error">{error?.message || 'Failed to load company data.'}</Notification>);
-      } finally {
-        setLoading(false);
-      }
+    const renderActiveSection = () => {
+        if (!company) return <NoDataMessage message="Company data is not available." />;
+
+        switch (activeSection) {
+            case "details": return <DetailsTabView company={company} />;
+            case "documents": return <DocumentsTabView company={company} />;
+            case "bank": return <BankAndBillingTabView company={company} />;
+            case "members": return <MembersTabView company={company} />;
+            case "teams": return <TeamsTabView company={company} />;
+            case "offices": return <OfficesTabView company={company} />;
+            case "verification": return <VerificationTabView company={company} />;
+            case "transactions": return <TransactionsTabView company={company} />;
+            default: return <DetailsTabView company={company} />;
+        }
     };
-    fetchCompany();
-  }, [id, dispatch, navigate]);
 
-  const allDocs = useMemo(() => {
-    if (!company) return [];
-    const kycDocsList = [
-        { name: "Aadhar Card", url: company.aadhar_card_file },
-        { name: "PAN Card", url: company.pan_card_file },
-        { name: "GST Certificate", url: company.gst_certificate_file },
-        { name: "Office Photo", url: company.office_photo_file },
-        { name: "Cancel Cheque", url: company.cancel_cheque_file },
-        { name: "Visiting Card", url: company.visiting_card_file },
-        { name: "Authority Letter", url: company.authority_letter_file },
-        { name: "194Q Declaration", url: company.ABCQ_file },
-        { name: "Other Document", url: company.other_document_file },
-    ];
-    const companyCerts = (company.company_certificate || []).map(cert => ({
-        name: cert.certificate_name,
-        url: cert.upload_certificate_path,
-    }));
-    return [...kycDocsList, ...companyCerts].filter(doc => doc.url);
-  }, [company]);
-  
-  const imageDocsForViewer = useMemo(() => allDocs
-      .filter(doc => doc.url && /\.(jpeg|jpg|gif|png|svg|webp)$/i.test(doc.url))
-      .map(doc => ({ src: doc.url!, alt: doc.name })),
-      [allDocs]
-  );
-  
-  const handlePreviewClick = (doc: { name: string; url: string | null }) => {
-      if (!doc.url) return;
-      if (/\.(jpeg|jpg|gif|png|svg|webp)$/i.test(doc.url)) {
-          const index = imageDocsForViewer.findIndex(img => img.src === doc.url);
-          if (index > -1) {
-              setSelectedImageIndex(index);
-              setViewerIsOpen(true);
-          }
-      } else {
-          setViewingFile({ url: doc.url, name: doc.name });
-      }
-  };
-
-
-  const renderActiveSection = () => {
-    if (!company) return <NoDataMessage message="Company data is not available." />;
-
-    switch (activeSection) {
-      case "details": return <DetailsTabView company={company} />;
-      case "documents": return <DocumentsTabView company={company} onPreviewClick={handlePreviewClick} />;
-      case "bank": return <BankAndBillingTabView company={company} />;
-      case "members": return <MembersTabView company={company} />;
-      case "teams": return <TeamsTabView company={company} />;
-      case "offices": return <OfficesTabView company={company} />;
-      case "verification": return <VerificationTabView company={company} />;
-      case "transactions": return <TransactionsTabView company={company} />;
-      default: return <DetailsTabView company={company} />;
+    if (loading) {
+        return <Container className="h-full flex justify-center items-center"><Spinner size={40} /></Container>;
     }
-  };
 
-  if (loading) {
-    return <Container className="h-full flex justify-center items-center"><Spinner size={40} /></Container>;
-  }
+    if (!company) {
+        return <Container><Card className="text-center p-8"><h4 className="mb-4">Company Not Found</h4><p>The company you are looking for does not exist or could not be loaded.</p><Button className="mt-4" onClick={() => navigate('/business-entities/company')}>Back to List</Button></Card></Container>;
+    }
 
-  if (!company) {
-    return <Container><Card className="text-center p-8"><h4 className="mb-4">Company Not Found</h4><p>The company you are looking for does not exist or could not be loaded.</p><Button className="mt-4" onClick={() => navigate('/business-entities/company')}>Back to List</Button></Card></Container>;
-  }
-
-  return (
-    <Container className="h-full">
-      <div className="flex gap-1 items-end mb-4">
-        <NavLink to="/business-entities/company"><h6 className="font-semibold hover:text-primary-600">Companies</h6></NavLink>
-        <BiChevronRight size={18} />
-        <h6 className="font-semibold text-primary-600">{company.company_name}</h6>
-      </div>
-      <Card bodyClass="p-0">
-        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700"><CompanyProfileHeader company={company} /></div>
-        <div className="px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700"><CompanyViewNavigator activeSection={activeSection} onNavigate={setActiveSection} /></div>
-        <div className="p-4 sm:p-6">{renderActiveSection()}</div>
-      </Card>
-      
-      {/* Viewers are now rendered at the top level */}
-      {viewerIsOpen && (
-          <ImageViewer
-              images={imageDocsForViewer}
-              startIndex={selectedImageIndex}
-              onClose={() => setViewerIsOpen(false)}
-          />
-      )}
-      {viewingFile && (
-          <GenericFileViewer
-              fileUrl={viewingFile.url}
-              fileName={viewingFile.name}
-              onClose={() => setViewingFile(null)}
-          />
-      )}
-    </Container>
-  );
+    return (
+        <Container className="h-full">
+            <div className="flex gap-1 items-end mb-4">
+                <NavLink to="/business-entities/company"><h6 className="font-semibold hover:text-primary-600">Companies</h6></NavLink>
+                <BiChevronRight size={18} />
+                <h6 className="font-semibold text-primary-600">{company.company_name}</h6>
+            </div>
+            <Card bodyClass="p-0">
+                <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700"><CompanyProfileHeader company={company} /></div>
+                <div className="px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700"><CompanyViewNavigator activeSection={activeSection} onNavigate={setActiveSection} /></div>
+                <div className="p-4 sm:p-6">{renderActiveSection()}</div>
+            </Card>
+        </Container>
+    );
 };
 
 export default CompanyView;
