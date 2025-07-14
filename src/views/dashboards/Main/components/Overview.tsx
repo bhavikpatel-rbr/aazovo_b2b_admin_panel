@@ -136,6 +136,7 @@ const Overview = () => {
         partnerData,
         EmployeesList: Employees,
     } = useSelector(masterSelector);
+console.log("ProductsData", ProductsData);
 
     useEffect(() => {
         dispatch(getCompanyAction());
@@ -195,8 +196,8 @@ const Overview = () => {
     const productColumns = [
         { header: "ID", accessorKey: "id", size: 60, meta: { tdClass: "text-center", thClass: "text-center" }, cell: ({ getValue }: any) => getValue().toString().padStart(6, '0'), },
         { header: "Product", id: "productInfo", size: 300, cell: (props: any) => ( <div className="flex items-center gap-3"> <Avatar size={30} shape="circle" src={props.row.original.thumbImageFullPath || undefined} icon={<TbBox />} /> <Tooltip title={props.row.original.name}> <div className="truncate"><span className="font-semibold">{props.row.original.name}</span><div className="text-xs text-gray-500">SKU: {props.row.original.skuCode || "-"}</div></div> </Tooltip> </div> ), },
-        { header: "Category", accessorKey: "categoryName", cell: (props: any) => props.row.original.categoryName || "-", },
-        { header: "Sub Cat", accessorKey: "subCategoryName", cell: (props: any) => props.row.original.subCategoryName || "-", },
+        { header: "Category", accessorKey: "categoryName", cell: (props: any) => props.row.original.category.name || "-", },
+        { header: "Sub Cat", accessorKey: "subCategoryName", cell: (props: any) => props.row.original?.sub_category?.name || "-", },
         { header: "Brand", accessorKey: "brandName", cell: (props: any) => props.row.original.brandName || "-", },
         { header: "Status", accessorKey: "status", cell: (props: any) => (<Tag className={`${productStatusColor[props.row.original.status] || "bg-gray-200"} capitalize font-semibold border-0`}>{props.row.original.status}</Tag>), },
         { header: 'Business', accessorKey: 'wallCount', size: 180, meta: { HeaderClass: 'text-center' }, cell: (props: any) => ( <div className='flex flex-col gap-4 text-center items-center '> <Tooltip title={`Buy: ${props.row.original?.wall?.buy || 0} | Sell: ${props.row.original?.wall?.sell || 0} | Total: ${props.row.original?.wall?.total || 0}`} className='text-xs'> <div className=' bg-blue-100 text-blue-600 rounded-md p-1.5 text-xs inline'> Wall Listing: {props?.row?.original?.wall?.buy || 0} | {props?.row?.original?.wall?.sell || 0} | {props?.row?.original?.wall?.total || 0} </div> </Tooltip> <Tooltip title={`Offers: ${props.row.original?.opportunities?.offers || 0} | Demands: ${props.row.original?.opportunities?.demands || 0} | Total: ${props.row.original?.opportunities?.total || 0}`} className='text-xs'> <div className=' bg-orange-100 text-orange-600 rounded-md p-1.5 text-xs inline'> Opportunities: {props?.row?.original?.opportunities?.offers || 0} | {props?.row?.original?.opportunities?.demands || 0} | {props?.row?.original?.opportunities?.total || 0} </div> </Tooltip> <Tooltip title={`Success: ${props.row.original?.leads?.success || 0} | Lost: ${props.row.original?.leads?.lost || 0} | Total: ${props.row.original?.leads?.total || 0}`} className='text-xs'> <div className=' bg-green-100 text-green-600 rounded-md p-1.5 text-xs inline'> Leads: {props?.row?.original?.leads?.success || 0} | {props?.row?.original?.leads?.lost || 0} | {props?.row?.original?.leads?.total || 0} </div> </Tooltip> </div> ) },

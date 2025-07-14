@@ -1915,8 +1915,8 @@ const Products = () => {
   }, [thumbImagePreviewUrl, galleryImages]);
 
   const mappedProducts: ProductItem[] = useMemo(() => {
-    if (!Array.isArray(ProductsData)) return [];
-    return ProductsData.map((apiItem: ApiProductItem): ProductItem => {
+    if (!Array.isArray(ProductsData?.data)) return [];
+    return ProductsData?.data.map((apiItem: ApiProductItem): ProductItem => {
       let iconFullPath: string | null = null;
       if (apiItem.icon_full_path) iconFullPath = apiItem.icon_full_path;
       else if (apiItem.icon)
@@ -2059,7 +2059,7 @@ const Products = () => {
       };
     });
   }, [
-    ProductsData,
+    ProductsData?.data,
     // domainOptions,
     categoryOptions,
     brandOptions,
@@ -2843,7 +2843,7 @@ const Products = () => {
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex items-center gap-2 p-2";
 
-  if (isLoadingData && !ProductsData?.length) {
+  if (isLoadingData && !ProductsData?.data?.length) {
     return (
       <Container className="h-full">
         <div className="h-full flex flex-col items-center justify-center">
@@ -3052,7 +3052,7 @@ const Products = () => {
             <DataTable
               columns={filteredColumns}
               data={pageData}
-              loading={isLoadingData && ProductsData?.length > 0}
+              loading={isLoadingData && ProductsData?.data?.length > 0}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,

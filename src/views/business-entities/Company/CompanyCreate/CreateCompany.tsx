@@ -945,13 +945,13 @@ const CompanyDetailsSection = ({
 
         <FormItem className="sm:col-span-6 lg:col-span-4" label={<div>Primary Contact Number</div>} invalid={!!errors.primary_contact_number || !!errors.primary_contact_number_code} errorMessage={(errors.primary_contact_number?.message || (errors.primary_contact_number_code as any)?.message) as string}>
           <div className="flex items-start gap-2">
-            <div className="w-2/5"> <Controller name="primary_contact_number_code" control={control} render={({ field }) => (<Select options={countryCodeOptions} placeholder="Code" {...field} />)} /> </div>
+            <div className="w-2/6"> <Controller name="primary_contact_number_code" control={control} render={({ field }) => (<Select options={countryCodeOptions} placeholder="Code" {...field} />)} /> </div>
             <div className="w-3/5"> <Controller name="primary_contact_number" control={control} render={({ field }) => (<Input placeholder="Primary Contact" {...field} />)} /> </div>
           </div>
         </FormItem>
         <FormItem className="sm:col-span-6 lg:col-span-4" label="Alternate Contact Number">
           <div className="flex items-start gap-2">
-            <div className="w-2/5"> <Controller name="alternate_contact_number_code" control={control} render={({ field }) => (<Select options={countryCodeOptions} placeholder="Code" {...field} />)} /> </div>
+            <div className="w-2/6"> <Controller name="alternate_contact_number_code" control={control} render={({ field }) => (<Select options={countryCodeOptions} placeholder="Code" {...field} />)} /> </div>
             <div className="w-3/5"> <Controller name="alternate_contact_number" control={control} render={({ field }) => (<Input placeholder="Alternate Contact" {...field} />)} /> </div>
           </div>
         </FormItem>
@@ -1973,6 +1973,13 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     office_photo_file: fileValidation,
 
     primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
+    primary_contact_number: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{10}$/, "Invalid contact number")
+    .optional()
+    .or(z.literal(""))
+    .nullable(),
     primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
@@ -2292,13 +2299,13 @@ const CompanyCreate = () => {
     navigate("/business-entities/company");
   };
 
-  if (pageLoading || !initialData) {
-    return (
-      <Container className="h-full flex justify-center items-center">
-        <p>Loading company details...</p>
-      </Container>
-    );
-  }
+  // if (pageLoading || !initialData) {
+  //   return (
+  //     <Container className="h-full flex justify-center items-center">
+  //       <p>Loading company details...</p>
+  //     </Container>
+  //   );
+  // }
 
   return (
     <Container className="h-full">
