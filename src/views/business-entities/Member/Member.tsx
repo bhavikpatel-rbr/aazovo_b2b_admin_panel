@@ -652,12 +652,12 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
       <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600" role="button" onClick={() => navigate(`/business-entities/member-edit/${rowData.id}`)}><TbPencil /></div></Tooltip>
       <Tooltip title="View Page"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600" role="button" onClick={() => navigate(`/business-entities/member-view/${rowData.id}`)}><TbEye /></div></Tooltip>
       <Dropdown renderTitle={<BsThreeDotsVertical className="ml-0.5 mr-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" />}>
-        <Dropdown.Item onClick={() => handleSendEmail(rowData)} className="flex items-center gap-2"><TbMail /> Send Email</Dropdown.Item>
-        <Dropdown.Item onClick={() => handleSendWhatsapp(rowData)} className="flex items-center gap-2"><TbBrandWhatsapp /> Send WhatsApp</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell /> Add Notification</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser /> Assign Task</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent /> Add Schedule</Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm /> View Alert</Dropdown.Item>
+        <Dropdown.Item onClick={() => handleSendEmail(rowData)} className="flex items-center gap-2"><TbMail size={18}/> Send Email</Dropdown.Item>
+        <Dropdown.Item onClick={() => handleSendWhatsapp(rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18}/> Send WhatsApp</Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18}/> Add Notification</Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18}/> Assign Task</Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18}/> Add Schedule</Dropdown.Item>
+        <Dropdown.Item onClick={() => onOpenModal("alert", rowData)} className="flex items-center gap-2"><TbAlarm size={18}/> View Alert</Dropdown.Item>
         <Dropdown.Item onClick={() => onOpenModal("activity", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> Add Activity</Dropdown.Item>
       </Dropdown>
     </div>

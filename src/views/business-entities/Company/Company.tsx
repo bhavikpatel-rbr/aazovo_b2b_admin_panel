@@ -2330,64 +2330,64 @@ const CompanyActionColumn = ({
           onClick={() => onOpenModal("email", rowData)}
           className="flex items-center gap-2"
         >
-          <TbMail /> Send Email
+          <TbMail size={18}/> Send Email
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("whatsapp", rowData)}
           className="flex items-center gap-2"
         >
-          <TbBrandWhatsapp /> Send WhatsApp
+          <TbBrandWhatsapp size={18}/> Send WhatsApp
         </Dropdown.Item>
         {rowData.need_enable ? (
           <Dropdown.Item
             onClick={() => onOpenEnableBillingModal(rowData)}
             className="flex items-center gap-2"
           >
-            <TbShieldCheck /> Check Eligibility
+            <TbShieldCheck size={18}/> Check Eligibility
           </Dropdown.Item>
         ) : null}
         <Dropdown.Item
           onClick={() => onOpenModal("notification", rowData)}
           className="flex items-center gap-2"
         >
-          <TbBell /> Add Notification
+          <TbBell size={18}/> Add Notification
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("schedule", rowData)}
           className="flex items-center gap-2"
         >
-          <TbCalendarEvent /> Add Schedule
+          <TbCalendarEvent size={18}/> Add Schedule
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("task", rowData)}
           className="flex items-center gap-2"
         >
-          <TbUser /> Assign Task
+          <TbUser size={18}/> Assign Task
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("members", rowData)}
           className="flex items-center gap-2"
         >
-          <TbUsersGroup /> View Members
+          <TbUsersGroup size={18}/> View Members
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("alert", rowData)}
           className="flex items-center gap-2"
         >
-          <TbAlarm /> View Alert
+          <TbAlarm size={18}/> View Alert
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("activity", rowData)}
           className="flex items-center gap-2"
         >
-          <TbTagStarred size={18} />{" "}
+          <TbTagStarred size={18}/>{" "}
           <span className="text-xs">Add Activity</span>
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("document", rowData)}
           className="flex items-center gap-2"
         >
-          <TbDownload /> Download Document
+          <TbDownload size={18}/> Download Document
         </Dropdown.Item>
       </Dropdown>
     </div>

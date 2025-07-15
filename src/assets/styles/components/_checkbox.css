@@ -1,14 +1,14 @@
 @layer components {
   .checkbox {
-    @apply h-5 
-      w-5 
+    @apply h-4 
+      w-4 
       border 
       border-gray-300 
       dark:border-gray-600
       ring-1
       ring-gray-300
       dark:ring-gray-600
-      rounded 
+      rounded-[1px] 
       cursor-pointer 
       inline-block 
       align-middle 
