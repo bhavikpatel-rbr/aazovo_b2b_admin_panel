@@ -341,11 +341,13 @@ export interface CompanyFormSchema {
   other_document_remark_enabled?: boolean;
 
   primary_account_number?: string;
+  primary_benificeiry_name?: string;
   primary_bank_name?: string;
   primary_ifsc_code?: string;
   primary_swift_code?: string;
   primary_bank_verification_photo?: File | string | null;
   secondary_account_number?: string;
+  secondary_benificeiry_number?: string;
   secondary_bank_name?: string;
   secondary_ifsc_code?: string;
   secondary_swift_code?: string;
@@ -439,10 +441,12 @@ interface ApiSingleCompanyItem {
 
   primary_account_number?: string | null;
   primary_bank_name?: string | null;
+  primary_benificeiry_name?: string | null;
   primary_ifsc_code?: string | null;
   primary_swift_code?: string | null;
   primary_bank_verification_photo?: string | null;
   secondary_account_number?: string | null;
+  secondary_benificeiry_number?: string | null;
   secondary_bank_name?: string | null;
   secondary_ifsc_code?: string | null;
   secondary_swift_code?: string | null;
@@ -574,10 +578,12 @@ const transformApiToFormSchema = (
 
     primary_account_number: apiData.primary_account_number || '',
     primary_bank_name: apiData.primary_bank_name || '',
+    primary_benificeiry_name: apiData.primary_benificeiry_name || '',
     primary_ifsc_code: apiData.primary_ifsc_code || '',
     primary_swift_code: apiData.primary_swift_code || '',
     primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
     secondary_account_number: apiData.secondary_account_number || '',
+    secondary_benificeiry_number: apiData?.secondary_benificeiry_number || '',
     secondary_bank_name: apiData.secondary_bank_name || '',
     secondary_ifsc_code: apiData.secondary_ifsc_code || '',
     secondary_swift_code: apiData.secondary_swift_code || '',
@@ -674,8 +680,8 @@ const preparePayloadForApi = (
     "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
     "company_address", "city", "state", "zip_code", "country_id", "continent_id", "gst_number", "pan_number", "trn_number", "tan_number",
     "establishment_year", "no_of_employees", "company_website", "primary_business_type", "status", "support_email", "notification_email",
-    "primary_account_number", "primary_bank_name", "primary_ifsc_code", "primary_swift_code",
-    "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code"
+    "primary_account_number","primary_benificeiry_name", "primary_bank_name", "primary_ifsc_code", "primary_swift_code",
+    "secondary_account_number","secondary_benificeiry_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code"
   ];
   simpleFields.forEach(field => appendField(field, data[field]));
 
@@ -1169,7 +1175,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
     { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_remark_enabled" as const },
     { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: true },
     { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_remark_enabled" as const },
-    { label: "Cancel Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: true },
+    { label: "Cancelled Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: true },
     { label: "194Q Declaration", name: "ABCQ_file" as const, remarkName: "ABCQ_remark" as const, enabledName: "ABCQ_remark_enabled" as const },
     { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
   ], [isIndiaSelected]);
@@ -1311,19 +1317,20 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
     <Card id="bankDetails">
       <h4 className="mb-6">Bank Details (Primary)</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-        <FormItem label="Primary Account Number" invalid={!!errors.primary_account_number} errorMessage={errors.primary_account_number?.message as string}>
-          <Controller name="primary_account_number" control={control} render={({ field }) => (<Input placeholder="Primary Account No." {...field} />)} />
+          <FormItem label="Primary Benificeiry Name" invalid={!!errors.primary_benificeiry_name} errorMessage={errors.primary_benificeiry_name?.message as string}>
+          <Controller name="primary_benificeiry_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Benificeiry Name" />)} />
         </FormItem>
-        <FormItem label="Primary Bank Name" invalid={!!errors.primary_bank_name} errorMessage={errors.primary_bank_name?.message as string}>
+         <FormItem label="Primary Bank Name" invalid={!!errors.primary_bank_name} errorMessage={errors.primary_bank_name?.message as string}>
           <Controller name="primary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
         </FormItem>
         <FormItem label="Primary IFSC Code" invalid={!!errors.primary_ifsc_code} errorMessage={errors.primary_ifsc_code?.message as string}>
           <Controller name="primary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Primary IFSC" {...field} />)} />
         </FormItem>
-        <FormItem label="Primary Swift Code" invalid={!!errors.primary_swift_code} errorMessage={errors.primary_swift_code?.message as string}>
-          <Controller name="primary_swift_code" control={control} render={({ field }) => (<Input placeholder="Primary Swift Code" {...field} />)} />
+        <FormItem label="Primary Account Number" invalid={!!errors.primary_account_number} errorMessage={errors.primary_account_number?.message as string}>
+          <Controller name="primary_account_number" control={control} render={({ field }) => (<Input placeholder="Primary Account No." {...field} />)} />
         </FormItem>
-        <FormItem label="Primary Bank Verification Photo" className="md:col-span-4" invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
+       
+         <FormItem label="Primary Bank Verification Photo" className="md:col-span-3"  invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
           <Controller name="primary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
           {primaryBankPhotoValue && (
             <div className="mt-1">
@@ -1333,24 +1340,29 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
             </div>
           )}
         </FormItem>
+        <FormItem label="Primary Swift Code" invalid={!!errors.primary_swift_code} errorMessage={errors.primary_swift_code?.message as string}>
+          <Controller name="primary_swift_code" control={control} render={({ field }) => (<Input placeholder="Primary Swift Code" {...field} />)} />
+        </FormItem>
+       
       </div>
 
       <hr className="my-3" />
       <h4 className="mb-6">Bank Details (Secondary)</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-        <FormItem label="Secondary Account Number" invalid={!!errors.secondary_account_number} errorMessage={errors.secondary_account_number?.message as string}>
-          <Controller name="secondary_account_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
+         <FormItem label="Secondary Benificeiry Number" invalid={!!errors.secondary_benificeiry_number} errorMessage={errors.secondary_benificeiry_number?.message as string}>
+          <Controller name="secondary_benificeiry_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
         </FormItem>
-        <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
+         <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
           <Controller name="secondary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
         </FormItem>
         <FormItem label="Secondary IFSC Code" invalid={!!errors.secondary_ifsc_code} errorMessage={errors.secondary_ifsc_code?.message as string}>
           <Controller name="secondary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Secondary IFSC" {...field} />)} />
         </FormItem>
-        <FormItem label="Secondary Swift Code" invalid={!!errors.secondary_swift_code} errorMessage={errors.secondary_swift_code?.message as string}>
-          <Controller name="secondary_swift_code" control={control} render={({ field }) => (<Input placeholder="Secondary Swift Code" {...field} />)} />
+        <FormItem label="Secondary Account Number" invalid={!!errors.secondary_account_number} errorMessage={errors.secondary_account_number?.message as string}>
+          <Controller name="secondary_account_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
         </FormItem>
-        <FormItem label="Secondary Bank Verification Photo" className="md:col-span-4" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
+       
+        <FormItem label="Secondary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
           <Controller name="secondary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
           {secondaryBankPhotoValue && (
             <div className="mt-1">
@@ -1360,6 +1372,10 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
             </div>
           )}
         </FormItem>
+        <FormItem label="Secondary Swift Code" invalid={!!errors.secondary_swift_code} errorMessage={errors.secondary_swift_code?.message as string}>
+          <Controller name="secondary_swift_code" control={control} render={({ field }) => (<Input placeholder="Secondary Swift Code" {...field} />)} />
+        </FormItem>
+        
       </div>
 
       <hr className="my-6" />
@@ -1968,9 +1984,9 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     // CORRECTED: Aadhar and PAN are now optional by default. Validation is handled in .superRefine()
     aadhar_card_file: z.any().optional().nullable(),
     pan_card_file: z.any().optional().nullable(),
-    gst_certificate_file: fileValidation,
-    cancel_cheque_file: fileValidation,
-    office_photo_file: fileValidation,
+    gst_certificate_file: z.any().optional().nullable(),
+    cancel_cheque_file: z.any().optional().nullable(),
+    office_photo_file: z.any().optional().nullable(),
 
     primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_contact_number: z
@@ -1981,10 +1997,12 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     .or(z.literal(""))
     .nullable(),
     primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
+    primary_benificeiry_name: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_bank_verification_photo: z.any().optional().nullable(),
     secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
+    secondary_benificeiry_number: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
@@ -2047,12 +2065,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       if (!data.pan_number) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ['pan_number'] });
       }
-      if (!data.aadhar_card_file) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Aadhar Card file is required for India.", path: ['aadhar_card_file'] });
-      }
-      if (!data.pan_card_file) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Card file is required for India.", path: ['pan_card_file'] });
-      }
+     
     }
   });
 
@@ -2186,9 +2199,9 @@ const CompanyCreate = () => {
     aadhar_card_file: null, aadhar_card_remark: "", aadhar_card_remark_enabled: false,
     pan_card_file: null, pan_card_remark: "", pan_card_remark_enabled: false,
     other_document_file: null, other_document_remark: "", other_document_remark_enabled: false,
-    primary_account_number: "", primary_bank_name: null, primary_ifsc_code: "",
+    primary_account_number: "",primary_benificeiry_name:"", primary_bank_name: "", primary_ifsc_code: "",
     primary_swift_code: "", primary_bank_verification_photo: null,
-    secondary_account_number: "", secondary_bank_name: null, secondary_ifsc_code: "",
+    secondary_account_number: "",secondary_benificeiry_number:"", secondary_bank_name: "", secondary_ifsc_code: "",
     secondary_swift_code: "", secondary_bank_verification_photo: null,
     company_bank_details: [],
     USER_ACCESS: false, billing_documents: [], enabled_billing_docs: [],

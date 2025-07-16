@@ -2380,8 +2380,7 @@ const CompanyActionColumn = ({
           onClick={() => onOpenModal("activity", rowData)}
           className="flex items-center gap-2"
         >
-          <TbTagStarred size={18} />{" "}
-          <span className="text-xs">Add Activity</span>
+          <TbTagStarred  /> Add Activity
         </Dropdown.Item>
         <Dropdown.Item
           onClick={() => onOpenModal("document", rowData)}
@@ -3224,6 +3223,36 @@ const CompanyListTable = () => {
           const formattedDate = due_after_3_months_date
             ? dayjs(due_after_3_months_date).format("D MMM, YYYY")
             : "N/A";
+
+            function formatDueDateInDays(dueDateString :any) {
+  // Create Date objects for the due date and today
+  const dueDate = new Date(dueDateString);
+  const today = new Date();
+
+  // To ensure we're comparing days, not times, reset the time part to midnight
+  dueDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  // Calculate the difference in milliseconds
+  const diffTime = dueDate.getTime() - today.getTime();
+
+  // Convert the difference from milliseconds to days
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  // Return a formatted string based on the difference
+  if (diffDays > 1) {
+    return `in ${diffDays} days`;
+  } else if (diffDays === 1) {
+    return `Tomorrow`;
+  } else if (diffDays === 0) {
+    return `Today`;
+  } else if (diffDays === -1) {
+    return `Yesterday (1 day overdue)`;
+  } else {
+    // The date is in the past
+    return `N/A`;
+  }
+}
           return (
             <div className="flex flex-col gap-1 text-xs">
               {" "}
@@ -3254,7 +3283,7 @@ const CompanyListTable = () => {
                 </Tooltip>
               </div>{" "}
               <span>
-                <b>Enable Billing Due:</b> {formattedDate}
+                <b>Enable Billing Due:</b> {formatDueDateInDays(formattedDate)}
               </span>{" "}
               <Tooltip title={`Profile Completion ${profile_completion}%`}>
                 {" "}
