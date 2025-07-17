@@ -5,7 +5,7 @@ import dynamicImport from 'vite-plugin-dynamic-import'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: './',
+  // base: '/admin-panel/',
   plugins: [react(), dynamicImport()],
   assetsInclude: ['**/*.md'],
   define: {
