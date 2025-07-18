@@ -19,7 +19,7 @@ function App() {
         <ReduxProvider store={store}>
             <PersistGate loading={null} persistor={persistor}>
                 <Theme>
-                    <BrowserRouter>
+                    <BrowserRouter basename="/adminpanel">
                         <Loader />
                         <AuthProvider>
                             <Layout>
