@@ -696,8 +696,8 @@ const preparePayloadForApi = (
     "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
     "company_address", "city", "state", "zip_code", "country_id", "continent_id", "gst_number", "pan_number", "trn_number", "tan_number",
     "establishment_year", "no_of_employees", "company_website", "primary_business_type", "status", "support_email", "notification_email",
-    "primary_account_number","primary_benificeiry_name", "primary_bank_name", "primary_ifsc_code", "primary_swift_code", "primary_is_default",
-    "secondary_account_number","secondary_benificeiry_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code", "secondary_is_default"
+    "primary_account_number", "primary_benificeiry_name", "primary_bank_name", "primary_ifsc_code", "primary_swift_code", "primary_is_default",
+    "secondary_account_number", "secondary_benificeiry_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code", "secondary_is_default"
   ];
   // --- MODIFICATION END ---
   simpleFields.forEach(field => appendField(field, data[field]));
@@ -747,7 +747,7 @@ const preparePayloadForApi = (
     apiPayload.append(doc.beVerifyKey, data[doc.feVerifyKey] ? "1" : "0");
     apiPayload.append(doc.beRemarkKey, data[doc.feRemarkKey] || "");
   });
-  
+
   data.company_bank_details?.forEach((bank: CompanyBankDetailItemFE, index: number) => {
     apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
     apiPayload.append(`company_bank_details[${index}][bank_name]`, bank.bank_name || '');
@@ -1186,40 +1186,71 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [viewingFile, setViewingFile] = useState<File | string | null>(null);
 
-  const handleShare = useCallback((shareType: 'email' | 'whatsapp', file: File | string | null, docLabel: string) => {
+  const handleShare = useCallback(async (shareType: 'email' | 'whatsapp' | 'native', file: File | string | null, docLabel: string) => {
     if (!file) {
-        toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
-        return;
+      toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
+      return;
     }
 
-    if (typeof file !== 'string' || !file.startsWith('http')) {
-        toast.push(
-            <Notification type="info" title="Action Required" duration={5000}>
-                Please save the company first. Sharing is only available for uploaded documents.
-            </Notification>
-        );
-        return;
-    }
-
-    const documentUrl = file;
     const companyName = getValues("company_name") || "this company";
     const subject = `${docLabel} for ${companyName}`;
-    const message = `Please find the ${docLabel} for ${companyName} at the following link: ${documentUrl}`;
-    const encodedMessage = encodeURIComponent(message);
+    const message = `Please find the ${docLabel} for ${companyName}.`;
 
-    let shareUrl = '';
+    // --- Case 1: The file is an existing URL (already saved) ---
+    // We can create mailto: and whatsapp: links.
+    if (typeof file === 'string' && (file.startsWith('http') || file.startsWith('blob:'))) {
+      const fullMessage = `${message}\n\nLink: ${file}`;
+      const encodedMessage = encodeURIComponent(fullMessage);
+      let shareUrl = '';
 
-    if (shareType === 'email') {
+      if (shareType === 'email') {
         const encodedSubject = encodeURIComponent(subject);
         shareUrl = `mailto:?subject=${encodedSubject}&body=${encodedMessage}`;
-    } else if (shareType === 'whatsapp') {
+      } else if (shareType === 'whatsapp') {
         shareUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+      }
+
+      if (shareUrl) {
+        window.open(shareUrl, '_blank', 'noopener,noreferrer');
+      }
+      return;
     }
 
-    if (shareUrl) {
-        window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    // --- Case 2: The file is a new File object (not yet saved) ---
+    // We must use the Web Share API to share the actual file content.
+    if (file instanceof File) {
+      // Check if the browser supports the Web Share API for files
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          // This opens the device's native share dialog (on mobile, Windows, ChromeOS, etc.)
+          await navigator.share({
+            files: [file],
+            title: subject,
+            text: message,
+          });
+        } catch (error: any) {
+          // The user might cancel the share dialog, which is not a real error. We ignore it.
+          if (error.name !== 'AbortError') {
+            console.error("Web Share API failed:", error);
+            toast.push(<Notification type="danger" title="Sharing Failed">Could not share the file directly.</Notification>);
+          }
+        }
+      } else {
+        // This is the fallback for browsers that do NOT support sharing local files (e.g., Firefox, Safari on macOS)
+        toast.push(
+          <Notification type="info" title="Action Required" duration={6000}>
+            To share this new file, please save the company first. Your browser doesn't support direct sharing of unsaved files.
+          </Notification>
+        );
+      }
+      return;
     }
+
+    // Fallback for any other unexpected type
+    toast.push(<Notification type="danger" title="Unsupported File">Cannot share this file type.</Notification>);
+
   }, [getValues]);
+
 
 
   const kycDocs = useMemo(() => [
@@ -1331,26 +1362,26 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                   </button>
                   {doc.name === 'cancel_cheque_file' && (
                     <div className="mt-2 flex items-center justify-end gap-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="xs"
-                            icon={<TbMail />}
-                            onClick={() => handleShare('email', fileValue, doc.label)}
-                            title="Share via Email"
-                        >
-                            Email
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="xs"
-                            icon={<TbBrandWhatsapp />}
-                            onClick={() => handleShare('whatsapp', fileValue, doc.label)}
-                            title="Share on WhatsApp"
-                        >
-                            WhatsApp
-                        </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        icon={<TbMail />}
+                        onClick={() => handleShare('email', fileValue, doc.label)}
+                        title="Share via Email"
+                      >
+                        Email
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        icon={<TbBrandWhatsapp />}
+                        onClick={() => handleShare('whatsapp', fileValue, doc.label)}
+                        title="Share on WhatsApp"
+                      >
+                        WhatsApp
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -1381,192 +1412,192 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
 // --- BankDetailsSection ---
 // --- MODIFICATION START: Complete rewrite of BankDetailsSection for new logic ---
 const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
-    const { watch, setValue, getValues } = formMethods;
-    const bankTypeOptions = [{ value: "Primary", label: "Primary" }, { value: "Secondary", label: "Secondary" }, { value: "Other", label: "Other" }];
+  const { watch, setValue, getValues } = formMethods;
+  const bankTypeOptions = [{ value: "Primary", label: "Primary" }, { value: "Secondary", label: "Secondary" }, { value: "Other", label: "Other" }];
 
-    const { fields, append, remove } = useFieldArray({ control, name: "company_bank_details" });
+  const { fields, append, remove } = useFieldArray({ control, name: "company_bank_details" });
 
-    const primaryBankPhotoValue = watch("primary_bank_verification_photo");
-    const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
+  const primaryBankPhotoValue = watch("primary_bank_verification_photo");
+  const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
 
-    const handleShare = useCallback((shareType: 'email' | 'whatsapp', file: File | string | null, docLabel: string) => {
-        if (!file) {
-            toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
-            return;
-        }
+  const handleShare = useCallback((shareType: 'email' | 'whatsapp', file: File | string | null, docLabel: string) => {
+    if (!file) {
+      toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
+      return;
+    }
 
-        if (typeof file !== 'string' || !file.startsWith('http')) {
-            toast.push(
-                <Notification type="info" title="Action Required" duration={5000}>
-                    Please save the company first. Sharing is only available for uploaded documents.
-                </Notification>
-            );
-            return;
-        }
+    if (typeof file !== 'string' || !file.startsWith('http')) {
+      toast.push(
+        <Notification type="info" title="Action Required" duration={5000}>
+          Please save the company first. Sharing is only available for uploaded documents.
+        </Notification>
+      );
+      return;
+    }
 
-        const documentUrl = file;
-        const companyName = getValues("company_name") || "this company";
-        const subject = `${docLabel} for ${companyName}`;
-        const message = `Please find the ${docLabel} for ${companyName} at the following link: ${documentUrl}`;
-        const encodedMessage = encodeURIComponent(message);
+    const documentUrl = file;
+    const companyName = getValues("company_name") || "this company";
+    const subject = `${docLabel} for ${companyName}`;
+    const message = `Please find the ${docLabel} for ${companyName} at the following link: ${documentUrl}`;
+    const encodedMessage = encodeURIComponent(message);
 
-        let shareUrl = '';
-        if (shareType === 'email') {
-            const encodedSubject = encodeURIComponent(subject);
-            shareUrl = `mailto:?subject=${encodedSubject}&body=${encodedMessage}`;
-        } else if (shareType === 'whatsapp') {
-            shareUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
-        }
+    let shareUrl = '';
+    if (shareType === 'email') {
+      const encodedSubject = encodeURIComponent(subject);
+      shareUrl = `mailto:?subject=${encodedSubject}&body=${encodedMessage}`;
+    } else if (shareType === 'whatsapp') {
+      shareUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+    }
 
-        if (shareUrl) {
-            window.open(shareUrl, '_blank', 'noopener,noreferrer');
-        }
-    }, [getValues]);
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, [getValues]);
 
-    const handleSetDefaultBank = (type: 'primary' | 'secondary' | 'additional', index?: number) => {
-        // Reset all defaults first
-        setValue('primary_is_default', false);
-        setValue('secondary_is_default', false);
-        const additionalBanks = getValues('company_bank_details') || [];
-        const updatedAdditionalBanks = additionalBanks.map(bank => ({ ...bank, is_default: false }));
+  const handleSetDefaultBank = (type: 'primary' | 'secondary' | 'additional', index?: number) => {
+    // Reset all defaults first
+    setValue('primary_is_default', false);
+    setValue('secondary_is_default', false);
+    const additionalBanks = getValues('company_bank_details') || [];
+    const updatedAdditionalBanks = additionalBanks.map(bank => ({ ...bank, is_default: false }));
 
-        // Set the new default
-        if (type === 'primary') {
-            setValue('primary_is_default', true);
-        } else if (type === 'secondary') {
-            setValue('secondary_is_default', true);
-        } else if (type === 'additional' && index !== undefined) {
-            updatedAdditionalBanks[index].is_default = true;
-        }
+    // Set the new default
+    if (type === 'primary') {
+      setValue('primary_is_default', true);
+    } else if (type === 'secondary') {
+      setValue('secondary_is_default', true);
+    } else if (type === 'additional' && index !== undefined) {
+      updatedAdditionalBanks[index].is_default = true;
+    }
 
-        setValue('company_bank_details', updatedAdditionalBanks, { shouldDirty: true, shouldTouch: true });
-    };
+    setValue('company_bank_details', updatedAdditionalBanks, { shouldDirty: true, shouldTouch: true });
+  };
 
-    return (
-        <Card id="bankDetails">
-            <h4 className="mb-6">Bank Details (Primary)</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-                <FormItem label="Primary Beneficiary Name" invalid={!!errors.primary_benificeiry_name} errorMessage={errors.primary_benificeiry_name?.message as string}>
-                    <Controller name="primary_benificeiry_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Beneficiary Name" />)} />
-                </FormItem>
-                <FormItem label="Primary Bank Name" invalid={!!errors.primary_bank_name} errorMessage={errors.primary_bank_name?.message as string}>
-                    <Controller name="primary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
-                </FormItem>
-                <FormItem label="Primary IFSC Code" invalid={!!errors.primary_ifsc_code} errorMessage={errors.primary_ifsc_code?.message as string}>
-                    <Controller name="primary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Primary IFSC" {...field} />)} />
-                </FormItem>
-                <FormItem label="Primary Account Number" invalid={!!errors.primary_account_number} errorMessage={errors.primary_account_number?.message as string}>
-                    <Controller name="primary_account_number" control={control} render={({ field }) => (<Input placeholder="Primary Account No." {...field} />)} />
-                </FormItem>
-                <FormItem label="Primary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
-                    <Controller name="primary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-                    {primaryBankPhotoValue && (
-                        <div className="mt-2 flex items-start gap-4">
-                            <div className="w-24 h-24 border rounded flex items-center justify-center">
-                                <img src={typeof primaryBankPhotoValue === 'string' ? primaryBankPhotoValue : URL.createObjectURL(primaryBankPhotoValue)} alt="Primary bank photo" className="max-h-full max-w-full" />
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>Email</Button>
-                                <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>WhatsApp</Button>
-                            </div>
-                        </div>
-                    )}
-                </FormItem>
-                <FormItem label="Primary Swift Code" invalid={!!errors.primary_swift_code} errorMessage={errors.primary_swift_code?.message as string}>
-                    <Controller name="primary_swift_code" control={control} render={({ field }) => (<Input placeholder="Primary Swift Code" {...field} />)} />
-                </FormItem>
+  return (
+    <Card id="bankDetails">
+      <h4 className="mb-6">Bank Details (Primary)</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+        <FormItem label="Primary Beneficiary Name" invalid={!!errors.primary_benificeiry_name} errorMessage={errors.primary_benificeiry_name?.message as string}>
+          <Controller name="primary_benificeiry_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Beneficiary Name" />)} />
+        </FormItem>
+        <FormItem label="Primary Bank Name" invalid={!!errors.primary_bank_name} errorMessage={errors.primary_bank_name?.message as string}>
+          <Controller name="primary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
+        </FormItem>
+        <FormItem label="Primary IFSC Code" invalid={!!errors.primary_ifsc_code} errorMessage={errors.primary_ifsc_code?.message as string}>
+          <Controller name="primary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Primary IFSC" {...field} />)} />
+        </FormItem>
+        <FormItem label="Primary Account Number" invalid={!!errors.primary_account_number} errorMessage={errors.primary_account_number?.message as string}>
+          <Controller name="primary_account_number" control={control} render={({ field }) => (<Input placeholder="Primary Account No." {...field} />)} />
+        </FormItem>
+        <FormItem label="Primary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
+          <Controller name="primary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+          {primaryBankPhotoValue && (
+            <div className="mt-2 flex items-start gap-4">
+              <div className="w-24 h-24 border rounded flex items-center justify-center">
+                <img src={typeof primaryBankPhotoValue === 'string' ? primaryBankPhotoValue : URL.createObjectURL(primaryBankPhotoValue)} alt="Primary bank photo" className="max-h-full max-w-full" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>Email</Button>
+                <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>WhatsApp</Button>
+              </div>
+            </div>
+          )}
+        </FormItem>
+        <FormItem label="Primary Swift Code" invalid={!!errors.primary_swift_code} errorMessage={errors.primary_swift_code?.message as string}>
+          <Controller name="primary_swift_code" control={control} render={({ field }) => (<Input placeholder="Primary Swift Code" {...field} />)} />
+        </FormItem>
+      </div>
+      <div className="border-t dark:border-gray-600 mt-4 pt-3">
+        <Controller name="primary_is_default" control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('primary'); }}>Set as Default</Checkbox>)} />
+      </div>
+
+      <hr className="my-6" />
+
+      <h4 className="mb-6">Bank Details (Secondary)</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+        <FormItem label="Secondary Beneficiary Number" invalid={!!errors.secondary_benificeiry_number} errorMessage={errors.secondary_benificeiry_number?.message as string}>
+          <Controller name="secondary_benificeiry_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
+        </FormItem>
+        <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
+          <Controller name="secondary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
+        </FormItem>
+        <FormItem label="Secondary IFSC Code" invalid={!!errors.secondary_ifsc_code} errorMessage={errors.secondary_ifsc_code?.message as string}>
+          <Controller name="secondary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Secondary IFSC" {...field} />)} />
+        </FormItem>
+        <FormItem label="Secondary Account Number" invalid={!!errors.secondary_account_number} errorMessage={errors.secondary_account_number?.message as string}>
+          <Controller name="secondary_account_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
+        </FormItem>
+        <FormItem label="Secondary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
+          <Controller name="secondary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+          {secondaryBankPhotoValue && (
+            <div className="mt-2 flex items-start gap-4">
+              <div className="w-24 h-24 border rounded flex items-center justify-center">
+                <img src={typeof secondaryBankPhotoValue === 'string' ? secondaryBankPhotoValue : URL.createObjectURL(secondaryBankPhotoValue)} alt="Secondary bank photo" className="max-h-full max-w-full" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>Email</Button>
+                <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>WhatsApp</Button>
+              </div>
+            </div>
+          )}
+        </FormItem>
+        <FormItem label="Secondary Swift Code" invalid={!!errors.secondary_swift_code} errorMessage={errors.secondary_swift_code?.message as string}>
+          <Controller name="secondary_swift_code" control={control} render={({ field }) => (<Input placeholder="Secondary Swift Code" {...field} />)} />
+        </FormItem>
+      </div>
+      <div className="border-t dark:border-gray-600 mt-4 pt-3">
+        <Controller name="secondary_is_default" control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('secondary'); }}>Set as Default</Checkbox>)} />
+      </div>
+
+      <hr className="my-6" />
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="mb-0">Additional Bank Details</h4>
+        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ bank_account_number: "", bank_name: undefined, ifsc_code: "", swift_code: "", verification_photo: null, type: undefined, is_default: false })}> Add More Banks </Button>
+      </div>
+      {fields.map((item, index) => {
+        const bankPhotoValue = watch(`company_bank_details.${index}.verification_photo`);
+        return (
+          <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
+            <Button type="button" size="xs" variant="plain" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10"> Remove </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 items-start">
+              <FormItem label={`Type ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.type} errorMessage={(errors.company_bank_details?.[index]?.type as any)?.message as string}>
+                <Controller name={`company_bank_details.${index}.type`} control={control} render={({ field }) => (<Select placeholder="Select Type" options={bankTypeOptions} {...field} />)} />
+              </FormItem>
+              <FormItem label={`Account Number ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_account_number} errorMessage={errors.company_bank_details?.[index]?.bank_account_number?.message as string}>
+                <Controller name={`company_bank_details.${index}.bank_account_number`} control={control} render={({ field }) => (<Input placeholder="Account No." {...field} />)} />
+              </FormItem>
+              <FormItem label={`Bank Name ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_name} errorMessage={errors.company_bank_details?.[index]?.bank_name?.message as string}>
+                <Controller name={`company_bank_details.${index}.bank_name`} control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
+              </FormItem>
+              <FormItem label={`IFSC Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.ifsc_code} errorMessage={errors.company_bank_details?.[index]?.ifsc_code?.message as string}>
+                <Controller name={`company_bank_details.${index}.ifsc_code`} control={control} render={({ field }) => (<Input placeholder="IFSC" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Swift Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.swift_code} errorMessage={errors.company_bank_details?.[index]?.swift_code?.message as string}>
+                <Controller name={`company_bank_details.${index}.swift_code`} control={control} render={({ field }) => (<Input placeholder="Swift Code" {...field} />)} />
+              </FormItem>
+              <FormItem label={`Bank Verification Photo ${index + 1}`} className="md:col-span-1">
+                <Controller name={`company_bank_details.${index}.verification_photo`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+                {bankPhotoValue && (
+                  <div className="mt-2 flex items-start gap-4">
+                    <div className="w-24 h-24 border rounded flex items-center justify-center">
+                      <img src={typeof bankPhotoValue === 'string' ? bankPhotoValue : URL.createObjectURL(bankPhotoValue)} alt={`Bank ${index + 1} photo`} className="max-h-full max-w-full" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', bankPhotoValue, `Bank ${index + 1} Verification Photo`)}>Email</Button>
+                      <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', bankPhotoValue, `Bank ${index + 1} Verification Photo`)}>WhatsApp</Button>
+                    </div>
+                  </div>
+                )}
+              </FormItem>
             </div>
             <div className="border-t dark:border-gray-600 mt-4 pt-3">
-                <Controller name="primary_is_default" control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('primary'); }}>Set as Default</Checkbox>)} />
+              <Controller name={`company_bank_details.${index}.is_default`} control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('additional', index); }}>Set as Default</Checkbox>)} />
             </div>
-
-            <hr className="my-6" />
-
-            <h4 className="mb-6">Bank Details (Secondary)</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-                <FormItem label="Secondary Beneficiary Number" invalid={!!errors.secondary_benificeiry_number} errorMessage={errors.secondary_benificeiry_number?.message as string}>
-                    <Controller name="secondary_benificeiry_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
-                </FormItem>
-                <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
-                    <Controller name="secondary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
-                </FormItem>
-                <FormItem label="Secondary IFSC Code" invalid={!!errors.secondary_ifsc_code} errorMessage={errors.secondary_ifsc_code?.message as string}>
-                    <Controller name="secondary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Secondary IFSC" {...field} />)} />
-                </FormItem>
-                <FormItem label="Secondary Account Number" invalid={!!errors.secondary_account_number} errorMessage={errors.secondary_account_number?.message as string}>
-                    <Controller name="secondary_account_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
-                </FormItem>
-                <FormItem label="Secondary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
-                    <Controller name="secondary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-                    {secondaryBankPhotoValue && (
-                         <div className="mt-2 flex items-start gap-4">
-                            <div className="w-24 h-24 border rounded flex items-center justify-center">
-                                <img src={typeof secondaryBankPhotoValue === 'string' ? secondaryBankPhotoValue : URL.createObjectURL(secondaryBankPhotoValue)} alt="Secondary bank photo" className="max-h-full max-w-full" />
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>Email</Button>
-                                <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>WhatsApp</Button>
-                            </div>
-                        </div>
-                    )}
-                </FormItem>
-                <FormItem label="Secondary Swift Code" invalid={!!errors.secondary_swift_code} errorMessage={errors.secondary_swift_code?.message as string}>
-                    <Controller name="secondary_swift_code" control={control} render={({ field }) => (<Input placeholder="Secondary Swift Code" {...field} />)} />
-                </FormItem>
-            </div>
-             <div className="border-t dark:border-gray-600 mt-4 pt-3">
-                <Controller name="secondary_is_default" control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('secondary'); }}>Set as Default</Checkbox>)} />
-            </div>
-
-            <hr className="my-6" />
-            <div className="flex justify-between items-center mb-4">
-                <h4 className="mb-0">Additional Bank Details</h4>
-                <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ bank_account_number: "", bank_name: undefined, ifsc_code: "", swift_code: "", verification_photo: null, type: undefined, is_default: false })}> Add More Banks </Button>
-            </div>
-            {fields.map((item, index) => {
-                const bankPhotoValue = watch(`company_bank_details.${index}.verification_photo`);
-                return (
-                    <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
-                        <Button type="button" size="xs" variant="plain" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10"> Remove </Button>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 items-start">
-                            <FormItem label={`Type ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.type} errorMessage={(errors.company_bank_details?.[index]?.type as any)?.message as string}>
-                                <Controller name={`company_bank_details.${index}.type`} control={control} render={({ field }) => (<Select placeholder="Select Type" options={bankTypeOptions} {...field} />)} />
-                            </FormItem>
-                            <FormItem label={`Account Number ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_account_number} errorMessage={errors.company_bank_details?.[index]?.bank_account_number?.message as string}>
-                                <Controller name={`company_bank_details.${index}.bank_account_number`} control={control} render={({ field }) => (<Input placeholder="Account No." {...field} />)} />
-                            </FormItem>
-                            <FormItem label={`Bank Name ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_name} errorMessage={errors.company_bank_details?.[index]?.bank_name?.message as string}>
-                                <Controller name={`company_bank_details.${index}.bank_name`} control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
-                            </FormItem>
-                            <FormItem label={`IFSC Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.ifsc_code} errorMessage={errors.company_bank_details?.[index]?.ifsc_code?.message as string}>
-                                <Controller name={`company_bank_details.${index}.ifsc_code`} control={control} render={({ field }) => (<Input placeholder="IFSC" {...field} />)} />
-                            </FormItem>
-                            <FormItem label={`Swift Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.swift_code} errorMessage={errors.company_bank_details?.[index]?.swift_code?.message as string}>
-                                <Controller name={`company_bank_details.${index}.swift_code`} control={control} render={({ field }) => (<Input placeholder="Swift Code" {...field} />)} />
-                            </FormItem>
-                            <FormItem label={`Bank Verification Photo ${index + 1}`} className="md:col-span-1">
-                                <Controller name={`company_bank_details.${index}.verification_photo`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-                                {bankPhotoValue && (
-                                     <div className="mt-2 flex items-start gap-4">
-                                        <div className="w-24 h-24 border rounded flex items-center justify-center">
-                                            <img src={typeof bankPhotoValue === 'string' ? bankPhotoValue : URL.createObjectURL(bankPhotoValue)} alt={`Bank ${index + 1} photo`} className="max-h-full max-w-full" />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', bankPhotoValue, `Bank ${index + 1} Verification Photo`)}>Email</Button>
-                                            <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', bankPhotoValue, `Bank ${index + 1} Verification Photo`)}>WhatsApp</Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </FormItem>
-                        </div>
-                        <div className="border-t dark:border-gray-600 mt-4 pt-3">
-                            <Controller name={`company_bank_details.${index}.is_default`} control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('additional', index); }}>Set as Default</Checkbox>)} />
-                        </div>
-                    </Card>
-                );
-            })}
-        </Card>
-    );
+          </Card>
+        );
+      })}
+    </Card>
+  );
 };
 // --- MODIFICATION END ---
 
@@ -2210,7 +2241,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       if (!data.pan_number) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "PAN Number is required for India.", path: ['pan_number'] });
       }
-     
+
     }
   });
 
@@ -2344,9 +2375,9 @@ const CompanyCreate = () => {
     aadhar_card_file: null, aadhar_card_remark: "", aadhar_card_remark_enabled: false,
     pan_card_file: null, pan_card_remark: "", pan_card_remark_enabled: false,
     other_document_file: null, other_document_remark: "", other_document_remark_enabled: false,
-    primary_account_number: "",primary_benificeiry_name:"", primary_bank_name: "", primary_ifsc_code: "",
+    primary_account_number: "", primary_benificeiry_name: "", primary_bank_name: "", primary_ifsc_code: "",
     primary_swift_code: "", primary_bank_verification_photo: null, primary_is_default: false,
-    secondary_account_number: "",secondary_benificeiry_number:"", secondary_bank_name: "", secondary_ifsc_code: "",
+    secondary_account_number: "", secondary_benificeiry_number: "", secondary_bank_name: "", secondary_ifsc_code: "",
     secondary_swift_code: "", secondary_bank_verification_photo: null, secondary_is_default: false,
     company_bank_details: [],
     USER_ACCESS: false, billing_documents: [], enabled_billing_docs: [],
@@ -2457,11 +2488,11 @@ const CompanyCreate = () => {
   };
 
   if (pageLoading || !initialData) {
-     return (
-       <Container className="h-full flex justify-center items-center">
-         <Spinner size="40px" />
-       </Container>
-     );
+    return (
+      <Container className="h-full flex justify-center items-center">
+        <Spinner size="40px" />
+      </Container>
+    );
   }
 
   return (
