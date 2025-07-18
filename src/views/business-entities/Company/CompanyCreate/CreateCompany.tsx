@@ -47,7 +47,7 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BiChevronRight } from "react-icons/bi";
-import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf, TbUserCircle, TbPhone, TbMail, TbWorld, TbCategory } from "react-icons/tb";
+import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf, TbUserCircle, TbPhone, TbMail, TbWorld, TbCategory, TbBrandWhatsapp } from "react-icons/tb";
 import { z } from "zod";
 import { useSelector } from "react-redux";
 
@@ -238,7 +238,9 @@ interface CompanyBankDetailItemFE {
   swift_code?: string;
   verification_photo?: File | string | null;
   type?: { label: string; value: string };
+  is_default?: boolean;
 }
+
 
 interface CertificateItemFE {
   id?: string;
@@ -274,6 +276,7 @@ interface EnabledBillingDocItemFE {
   document?: File | string | null;
 }
 
+// --- MODIFICATION START: Added is_default fields for primary/secondary banks ---
 export interface CompanyFormSchema {
   id?: string | number;
   company_name?: string;
@@ -346,12 +349,14 @@ export interface CompanyFormSchema {
   primary_ifsc_code?: string;
   primary_swift_code?: string;
   primary_bank_verification_photo?: File | string | null;
+  primary_is_default?: boolean;
   secondary_account_number?: string;
   secondary_benificeiry_number?: string;
   secondary_bank_name?: string;
   secondary_ifsc_code?: string;
   secondary_swift_code?: string;
   secondary_bank_verification_photo?: File | string | null;
+  secondary_is_default?: boolean;
   company_bank_details?: CompanyBankDetailItemFE[];
 
   USER_ACCESS?: boolean;
@@ -363,6 +368,7 @@ export interface CompanyFormSchema {
   company_spot_verification?: SpotVerificationItemFE[];
   company_references?: ReferenceItemFE[];
 }
+// --- MODIFICATION END ---
 
 export interface FormSectionBaseProps {
   control: Control<CompanyFormSchema>;
@@ -371,6 +377,7 @@ export interface FormSectionBaseProps {
   getValues: UseFormReturn<CompanyFormSchema>['getValues'];
 }
 
+// --- MODIFICATION START: Added is_default to API response for primary/secondary ---
 interface ApiSingleCompanyItem {
   id: number;
   company_name?: string;
@@ -445,13 +452,15 @@ interface ApiSingleCompanyItem {
   primary_ifsc_code?: string | null;
   primary_swift_code?: string | null;
   primary_bank_verification_photo?: string | null;
+  primary_is_default?: boolean | string;
   secondary_account_number?: string | null;
   secondary_benificeiry_number?: string | null;
   secondary_bank_name?: string | null;
   secondary_ifsc_code?: string | null;
   secondary_swift_code?: string | null;
   secondary_bank_verification_photo?: string | null;
-  company_bank_details?: Array<{ id: number; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; }>;
+  secondary_is_default?: boolean | string;
+  company_bank_details?: Array<{ id: number; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string; type: string; verification_photo: string | null; is_default?: boolean | string; }>;
   billing_documents?: Array<{ id: number; document_name: { label: string; value: string }; document: string | null; }>;
   enable_billing_documents?: Array<{ id: number; document_name: { label: string; value: string }; document: string | null; }>;
   company_member_management?: Array<{ member_id: string; designation: string; person_name: string; number: string; }>;
@@ -459,6 +468,7 @@ interface ApiSingleCompanyItem {
   company_spot_verification?: Array<{ id: number; verified_by_id?: string | number; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; }>;
   company_references?: Array<{ id: number; person_name: string; company_id: string; number: string; remark: string | null; }>;
 }
+// --- MODIFICATION END ---
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
 const transformApiToFormSchema = (
@@ -576,18 +586,21 @@ const transformApiToFormSchema = (
     other_document_remark: apiData.other_document_remark || "",
     other_document_remark_enabled: stringToBoolean(apiData.other_document_verified),
 
+    // --- MODIFICATION START: Transform is_default for all bank types ---
     primary_account_number: apiData.primary_account_number || '',
     primary_bank_name: apiData.primary_bank_name || '',
     primary_benificeiry_name: apiData.primary_benificeiry_name || '',
     primary_ifsc_code: apiData.primary_ifsc_code || '',
     primary_swift_code: apiData.primary_swift_code || '',
     primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
+    primary_is_default: stringToBoolean(apiData.primary_is_default),
     secondary_account_number: apiData.secondary_account_number || '',
     secondary_benificeiry_number: apiData?.secondary_benificeiry_number || '',
     secondary_bank_name: apiData.secondary_bank_name || '',
     secondary_ifsc_code: apiData.secondary_ifsc_code || '',
     secondary_swift_code: apiData.secondary_swift_code || '',
     secondary_bank_verification_photo: apiData.secondary_bank_verification_photo || null,
+    secondary_is_default: stringToBoolean(apiData.secondary_is_default),
     company_bank_details: apiData.company_bank_details?.map(bank => ({
       id: String(bank.id),
       bank_account_number: bank.bank_account_number || '',
@@ -596,7 +609,9 @@ const transformApiToFormSchema = (
       swift_code: bank.swift_code || '',
       type: bank.type ? { label: bank.type, value: bank.type } : undefined,
       verification_photo: bank.verification_photo || null,
+      is_default: stringToBoolean(bank.is_default),
     })) || [],
+    // --- MODIFICATION END ---
 
     USER_ACCESS: stringToBoolean(apiData.kyc_verified),
     billing_documents: apiData.billing_documents?.map(doc => ({
@@ -675,14 +690,16 @@ const preparePayloadForApi = (
     apiPayload.append("_method", "PUT");
   }
 
+  // --- MODIFICATION START: Add is_default fields to simple fields list ---
   const simpleFields: (keyof CompanyFormSchema)[] = [
     "company_name", "primary_contact_number", "primary_contact_number_code", "general_contact_number", "general_contact_number_code",
     "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
     "company_address", "city", "state", "zip_code", "country_id", "continent_id", "gst_number", "pan_number", "trn_number", "tan_number",
     "establishment_year", "no_of_employees", "company_website", "primary_business_type", "status", "support_email", "notification_email",
-    "primary_account_number","primary_benificeiry_name", "primary_bank_name", "primary_ifsc_code", "primary_swift_code",
-    "secondary_account_number","secondary_benificeiry_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code"
+    "primary_account_number","primary_benificeiry_name", "primary_bank_name", "primary_ifsc_code", "primary_swift_code", "primary_is_default",
+    "secondary_account_number","secondary_benificeiry_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code", "secondary_is_default"
   ];
+  // --- MODIFICATION END ---
   simpleFields.forEach(field => appendField(field, data[field]));
 
   appendField("kyc_verified", data.USER_ACCESS);
@@ -730,7 +747,7 @@ const preparePayloadForApi = (
     apiPayload.append(doc.beVerifyKey, data[doc.feVerifyKey] ? "1" : "0");
     apiPayload.append(doc.beRemarkKey, data[doc.feRemarkKey] || "");
   });
-
+  
   data.company_bank_details?.forEach((bank: CompanyBankDetailItemFE, index: number) => {
     apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
     apiPayload.append(`company_bank_details[${index}][bank_name]`, bank.bank_name || '');
@@ -738,6 +755,7 @@ const preparePayloadForApi = (
     apiPayload.append(`company_bank_details[${index}][swift_code]`, bank.swift_code || '');
     apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
     apiPayload.append(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
+    apiPayload.append(`company_bank_details[${index}][is_default]`, bank.is_default ? "1" : "0");
   });
 
   data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
@@ -1160,13 +1178,49 @@ const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: ()
 // --- END: New Helper Component ---
 // --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
-  const { watch } = formMethods;
+  const { watch, getValues } = formMethods;
   const selectedCountry = watch("country_id");
   const isIndiaSelected = selectedCountry?.value === '101';
 
   const [viewerIsOpen, setViewerIsOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [viewingFile, setViewingFile] = useState<File | string | null>(null);
+
+  const handleShare = useCallback((shareType: 'email' | 'whatsapp', file: File | string | null, docLabel: string) => {
+    if (!file) {
+        toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
+        return;
+    }
+
+    if (typeof file !== 'string' || !file.startsWith('http')) {
+        toast.push(
+            <Notification type="info" title="Action Required" duration={5000}>
+                Please save the company first. Sharing is only available for uploaded documents.
+            </Notification>
+        );
+        return;
+    }
+
+    const documentUrl = file;
+    const companyName = getValues("company_name") || "this company";
+    const subject = `${docLabel} for ${companyName}`;
+    const message = `Please find the ${docLabel} for ${companyName} at the following link: ${documentUrl}`;
+    const encodedMessage = encodeURIComponent(message);
+
+    let shareUrl = '';
+
+    if (shareType === 'email') {
+        const encodedSubject = encodeURIComponent(subject);
+        shareUrl = `mailto:?subject=${encodedSubject}&body=${encodedMessage}`;
+    } else if (shareType === 'whatsapp') {
+        shareUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+    }
+
+    if (shareUrl) {
+        window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, [getValues]);
+
 
   const kycDocs = useMemo(() => [
     { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: isIndiaSelected },
@@ -1180,16 +1234,13 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
     { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
   ], [isIndiaSelected]);
 
-  // ***** CORRECTED LOGIC *****
-  // Watch all file fields and include the result in the useMemo dependency array.
-  // This ensures `imageDocsForViewer` is recalculated whenever a file is uploaded or removed.
   const watchedFileValues = watch(kycDocs.map(doc => doc.name));
 
   const imageDocsForViewer = useMemo(() => {
     return kycDocs
       .map((doc, index) => ({
         ...doc,
-        fileValue: watchedFileValues[index] // Use the fresh values from watch
+        fileValue: watchedFileValues[index]
       }))
       .filter(doc => {
         const url = doc.fileValue;
@@ -1202,7 +1253,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
         src: doc.fileValue instanceof File ? URL.createObjectURL(doc.fileValue) : doc.fileValue as string,
         alt: doc.label
       }));
-  }, [kycDocs, watchedFileValues]); // Dependency on the actual values
+  }, [kycDocs, watchedFileValues]);
 
   const openImageViewer = (docLabel: string) => {
     const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
@@ -1278,6 +1329,30 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
                       />
                     )}
                   </button>
+                  {doc.name === 'cancel_cheque_file' && (
+                    <div className="mt-2 flex items-center justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            icon={<TbMail />}
+                            onClick={() => handleShare('email', fileValue, doc.label)}
+                            title="Share via Email"
+                        >
+                            Email
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            icon={<TbBrandWhatsapp />}
+                            onClick={() => handleShare('whatsapp', fileValue, doc.label)}
+                            title="Share on WhatsApp"
+                        >
+                            WhatsApp
+                        </Button>
+                    </div>
+                  )}
                 </div>
               )}
               <FormItem className="mt-2" invalid={!!(errors as any)[doc.remarkName]} errorMessage={(errors as any)[doc.remarkName]?.message as string} >
@@ -1304,123 +1379,197 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
 };
 
 // --- BankDetailsSection ---
+// --- MODIFICATION START: Complete rewrite of BankDetailsSection for new logic ---
 const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
-  const { watch } = formMethods;
-  const bankTypeOptions = [{ value: "Primary", label: "Primary" }, { value: "Secondary", label: "Secondary" }, { value: "Other", label: "Other" }];
+    const { watch, setValue, getValues } = formMethods;
+    const bankTypeOptions = [{ value: "Primary", label: "Primary" }, { value: "Secondary", label: "Secondary" }, { value: "Other", label: "Other" }];
 
-  const { fields, append, remove } = useFieldArray({ control, name: "company_bank_details" });
+    const { fields, append, remove } = useFieldArray({ control, name: "company_bank_details" });
 
-  const primaryBankPhotoValue = watch("primary_bank_verification_photo");
-  const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
+    const primaryBankPhotoValue = watch("primary_bank_verification_photo");
+    const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
 
-  return (
-    <Card id="bankDetails">
-      <h4 className="mb-6">Bank Details (Primary)</h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-          <FormItem label="Primary Benificeiry Name" invalid={!!errors.primary_benificeiry_name} errorMessage={errors.primary_benificeiry_name?.message as string}>
-          <Controller name="primary_benificeiry_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Benificeiry Name" />)} />
-        </FormItem>
-         <FormItem label="Primary Bank Name" invalid={!!errors.primary_bank_name} errorMessage={errors.primary_bank_name?.message as string}>
-          <Controller name="primary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
-        </FormItem>
-        <FormItem label="Primary IFSC Code" invalid={!!errors.primary_ifsc_code} errorMessage={errors.primary_ifsc_code?.message as string}>
-          <Controller name="primary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Primary IFSC" {...field} />)} />
-        </FormItem>
-        <FormItem label="Primary Account Number" invalid={!!errors.primary_account_number} errorMessage={errors.primary_account_number?.message as string}>
-          <Controller name="primary_account_number" control={control} render={({ field }) => (<Input placeholder="Primary Account No." {...field} />)} />
-        </FormItem>
-       
-         <FormItem label="Primary Bank Verification Photo" className="md:col-span-3"  invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
-          <Controller name="primary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-          {primaryBankPhotoValue && (
-            <div className="mt-1">
-              {primaryBankPhotoValue instanceof File ? (<img src={URL.createObjectURL(primaryBankPhotoValue)} alt="Primary bank photo" className="h-16 w-auto" />)
-                : typeof primaryBankPhotoValue === 'string' ? (<img src={`${primaryBankPhotoValue}`} alt="Primary bank photo" className="h-16 w-auto" />)
-                  : null}
+    const handleShare = useCallback((shareType: 'email' | 'whatsapp', file: File | string | null, docLabel: string) => {
+        if (!file) {
+            toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
+            return;
+        }
+
+        if (typeof file !== 'string' || !file.startsWith('http')) {
+            toast.push(
+                <Notification type="info" title="Action Required" duration={5000}>
+                    Please save the company first. Sharing is only available for uploaded documents.
+                </Notification>
+            );
+            return;
+        }
+
+        const documentUrl = file;
+        const companyName = getValues("company_name") || "this company";
+        const subject = `${docLabel} for ${companyName}`;
+        const message = `Please find the ${docLabel} for ${companyName} at the following link: ${documentUrl}`;
+        const encodedMessage = encodeURIComponent(message);
+
+        let shareUrl = '';
+        if (shareType === 'email') {
+            const encodedSubject = encodeURIComponent(subject);
+            shareUrl = `mailto:?subject=${encodedSubject}&body=${encodedMessage}`;
+        } else if (shareType === 'whatsapp') {
+            shareUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+        }
+
+        if (shareUrl) {
+            window.open(shareUrl, '_blank', 'noopener,noreferrer');
+        }
+    }, [getValues]);
+
+    const handleSetDefaultBank = (type: 'primary' | 'secondary' | 'additional', index?: number) => {
+        // Reset all defaults first
+        setValue('primary_is_default', false);
+        setValue('secondary_is_default', false);
+        const additionalBanks = getValues('company_bank_details') || [];
+        const updatedAdditionalBanks = additionalBanks.map(bank => ({ ...bank, is_default: false }));
+
+        // Set the new default
+        if (type === 'primary') {
+            setValue('primary_is_default', true);
+        } else if (type === 'secondary') {
+            setValue('secondary_is_default', true);
+        } else if (type === 'additional' && index !== undefined) {
+            updatedAdditionalBanks[index].is_default = true;
+        }
+
+        setValue('company_bank_details', updatedAdditionalBanks, { shouldDirty: true, shouldTouch: true });
+    };
+
+    return (
+        <Card id="bankDetails">
+            <h4 className="mb-6">Bank Details (Primary)</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+                <FormItem label="Primary Beneficiary Name" invalid={!!errors.primary_benificeiry_name} errorMessage={errors.primary_benificeiry_name?.message as string}>
+                    <Controller name="primary_benificeiry_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Beneficiary Name" />)} />
+                </FormItem>
+                <FormItem label="Primary Bank Name" invalid={!!errors.primary_bank_name} errorMessage={errors.primary_bank_name?.message as string}>
+                    <Controller name="primary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
+                </FormItem>
+                <FormItem label="Primary IFSC Code" invalid={!!errors.primary_ifsc_code} errorMessage={errors.primary_ifsc_code?.message as string}>
+                    <Controller name="primary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Primary IFSC" {...field} />)} />
+                </FormItem>
+                <FormItem label="Primary Account Number" invalid={!!errors.primary_account_number} errorMessage={errors.primary_account_number?.message as string}>
+                    <Controller name="primary_account_number" control={control} render={({ field }) => (<Input placeholder="Primary Account No." {...field} />)} />
+                </FormItem>
+                <FormItem label="Primary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.primary_bank_verification_photo} errorMessage={(errors.primary_bank_verification_photo as any)?.message as string}>
+                    <Controller name="primary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+                    {primaryBankPhotoValue && (
+                        <div className="mt-2 flex items-start gap-4">
+                            <div className="w-24 h-24 border rounded flex items-center justify-center">
+                                <img src={typeof primaryBankPhotoValue === 'string' ? primaryBankPhotoValue : URL.createObjectURL(primaryBankPhotoValue)} alt="Primary bank photo" className="max-h-full max-w-full" />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>Email</Button>
+                                <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', primaryBankPhotoValue, 'Primary Bank Verification Photo')}>WhatsApp</Button>
+                            </div>
+                        </div>
+                    )}
+                </FormItem>
+                <FormItem label="Primary Swift Code" invalid={!!errors.primary_swift_code} errorMessage={errors.primary_swift_code?.message as string}>
+                    <Controller name="primary_swift_code" control={control} render={({ field }) => (<Input placeholder="Primary Swift Code" {...field} />)} />
+                </FormItem>
             </div>
-          )}
-        </FormItem>
-        <FormItem label="Primary Swift Code" invalid={!!errors.primary_swift_code} errorMessage={errors.primary_swift_code?.message as string}>
-          <Controller name="primary_swift_code" control={control} render={({ field }) => (<Input placeholder="Primary Swift Code" {...field} />)} />
-        </FormItem>
-       
-      </div>
-
-      <hr className="my-3" />
-      <h4 className="mb-6">Bank Details (Secondary)</h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-         <FormItem label="Secondary Benificeiry Number" invalid={!!errors.secondary_benificeiry_number} errorMessage={errors.secondary_benificeiry_number?.message as string}>
-          <Controller name="secondary_benificeiry_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
-        </FormItem>
-         <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
-          <Controller name="secondary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
-        </FormItem>
-        <FormItem label="Secondary IFSC Code" invalid={!!errors.secondary_ifsc_code} errorMessage={errors.secondary_ifsc_code?.message as string}>
-          <Controller name="secondary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Secondary IFSC" {...field} />)} />
-        </FormItem>
-        <FormItem label="Secondary Account Number" invalid={!!errors.secondary_account_number} errorMessage={errors.secondary_account_number?.message as string}>
-          <Controller name="secondary_account_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
-        </FormItem>
-       
-        <FormItem label="Secondary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
-          <Controller name="secondary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-          {secondaryBankPhotoValue && (
-            <div className="mt-1">
-              {secondaryBankPhotoValue instanceof File ? (<img src={URL.createObjectURL(secondaryBankPhotoValue)} alt="Secondary bank photo" className="h-16 w-auto" />)
-                : typeof secondaryBankPhotoValue === 'string' ? (<img src={`${secondaryBankPhotoValue}`} alt="Secondary bank photo" className="h-16 w-auto" />)
-                  : null}
+            <div className="border-t dark:border-gray-600 mt-4 pt-3">
+                <Controller name="primary_is_default" control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('primary'); }}>Set as Default</Checkbox>)} />
             </div>
-          )}
-        </FormItem>
-        <FormItem label="Secondary Swift Code" invalid={!!errors.secondary_swift_code} errorMessage={errors.secondary_swift_code?.message as string}>
-          <Controller name="secondary_swift_code" control={control} render={({ field }) => (<Input placeholder="Secondary Swift Code" {...field} />)} />
-        </FormItem>
-        
-      </div>
 
-      <hr className="my-6" />
-      <div className="flex justify-between items-center mb-4">
-        <h4 className="mb-0">Additional Bank Details</h4>
-        <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ bank_account_number: "", bank_name: undefined, ifsc_code: "", swift_code: "", verification_photo: null, type: undefined })}> Add More Banks </Button>
-      </div>
-      {fields.map((item, index) => {
-        const bankPhotoValue = watch(`company_bank_details.${index}.verification_photo`);
-        return (
-          <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
-            <Button type="button" size="xs" variant="plain" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10"> Remove </Button>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 items-start">
-              <FormItem label={`Type ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.type} errorMessage={(errors.company_bank_details?.[index]?.type as any)?.message as string}>
-                <Controller name={`company_bank_details.${index}.type`} control={control} render={({ field }) => (<Select placeholder="Select Type" options={bankTypeOptions} {...field} />)} />
-              </FormItem>
-              <FormItem label={`Account Number ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_account_number} errorMessage={errors.company_bank_details?.[index]?.bank_account_number?.message as string}>
-                <Controller name={`company_bank_details.${index}.bank_account_number`} control={control} render={({ field }) => (<Input placeholder="Account No." {...field} />)} />
-              </FormItem>
-              <FormItem label={`Bank Name ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_name} errorMessage={errors.company_bank_details?.[index]?.bank_name?.message as string}>
-                <Controller name={`company_bank_details.${index}.bank_name`} control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
-              </FormItem>
-              <FormItem label={`IFSC Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.ifsc_code} errorMessage={errors.company_bank_details?.[index]?.ifsc_code?.message as string}>
-                <Controller name={`company_bank_details.${index}.ifsc_code`} control={control} render={({ field }) => (<Input placeholder="IFSC" {...field} />)} />
-              </FormItem>
-              <FormItem label={`Swift Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.swift_code} errorMessage={errors.company_bank_details?.[index]?.swift_code?.message as string}>
-                <Controller name={`company_bank_details.${index}.swift_code`} control={control} render={({ field }) => (<Input placeholder="Swift Code" {...field} />)} />
-              </FormItem>
-              <FormItem label={`Bank Verification Photo ${index + 1}`} className="md:col-span-1">
-                <Controller name={`company_bank_details.${index}.verification_photo`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
-                {bankPhotoValue && (
-                  <div className="mt-1">
-                    {bankPhotoValue instanceof File ? (<img src={URL.createObjectURL(bankPhotoValue)} alt={`Bank ${index + 1} photo`} className="h-16 w-auto" />)
-                      : typeof bankPhotoValue === 'string' ? (<img src={`${bankPhotoValue}`} alt={`Bank ${index + 1} photo`} className="h-16 w-auto" />)
-                        : null}
-                  </div>
-                )}
-              </FormItem>
+            <hr className="my-6" />
+
+            <h4 className="mb-6">Bank Details (Secondary)</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+                <FormItem label="Secondary Beneficiary Number" invalid={!!errors.secondary_benificeiry_number} errorMessage={errors.secondary_benificeiry_number?.message as string}>
+                    <Controller name="secondary_benificeiry_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
+                </FormItem>
+                <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
+                    <Controller name="secondary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
+                </FormItem>
+                <FormItem label="Secondary IFSC Code" invalid={!!errors.secondary_ifsc_code} errorMessage={errors.secondary_ifsc_code?.message as string}>
+                    <Controller name="secondary_ifsc_code" control={control} render={({ field }) => (<Input placeholder="Secondary IFSC" {...field} />)} />
+                </FormItem>
+                <FormItem label="Secondary Account Number" invalid={!!errors.secondary_account_number} errorMessage={errors.secondary_account_number?.message as string}>
+                    <Controller name="secondary_account_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
+                </FormItem>
+                <FormItem label="Secondary Bank Verification Photo" className="md:col-span-3" invalid={!!errors.secondary_bank_verification_photo} errorMessage={(errors.secondary_bank_verification_photo as any)?.message as string}>
+                    <Controller name="secondary_bank_verification_photo" control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+                    {secondaryBankPhotoValue && (
+                         <div className="mt-2 flex items-start gap-4">
+                            <div className="w-24 h-24 border rounded flex items-center justify-center">
+                                <img src={typeof secondaryBankPhotoValue === 'string' ? secondaryBankPhotoValue : URL.createObjectURL(secondaryBankPhotoValue)} alt="Secondary bank photo" className="max-h-full max-w-full" />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>Email</Button>
+                                <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', secondaryBankPhotoValue, 'Secondary Bank Verification Photo')}>WhatsApp</Button>
+                            </div>
+                        </div>
+                    )}
+                </FormItem>
+                <FormItem label="Secondary Swift Code" invalid={!!errors.secondary_swift_code} errorMessage={errors.secondary_swift_code?.message as string}>
+                    <Controller name="secondary_swift_code" control={control} render={({ field }) => (<Input placeholder="Secondary Swift Code" {...field} />)} />
+                </FormItem>
             </div>
-          </Card>
-        );
-      })}
-    </Card>
-  );
+             <div className="border-t dark:border-gray-600 mt-4 pt-3">
+                <Controller name="secondary_is_default" control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('secondary'); }}>Set as Default</Checkbox>)} />
+            </div>
+
+            <hr className="my-6" />
+            <div className="flex justify-between items-center mb-4">
+                <h4 className="mb-0">Additional Bank Details</h4>
+                <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ bank_account_number: "", bank_name: undefined, ifsc_code: "", swift_code: "", verification_photo: null, type: undefined, is_default: false })}> Add More Banks </Button>
+            </div>
+            {fields.map((item, index) => {
+                const bankPhotoValue = watch(`company_bank_details.${index}.verification_photo`);
+                return (
+                    <Card key={item.id} className="mb-4 border dark:border-gray-600 relative rounded-md" bodyClass="p-4">
+                        <Button type="button" size="xs" variant="plain" icon={<TbTrash size={16} />} onClick={() => remove(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10"> Remove </Button>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 items-start">
+                            <FormItem label={`Type ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.type} errorMessage={(errors.company_bank_details?.[index]?.type as any)?.message as string}>
+                                <Controller name={`company_bank_details.${index}.type`} control={control} render={({ field }) => (<Select placeholder="Select Type" options={bankTypeOptions} {...field} />)} />
+                            </FormItem>
+                            <FormItem label={`Account Number ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_account_number} errorMessage={errors.company_bank_details?.[index]?.bank_account_number?.message as string}>
+                                <Controller name={`company_bank_details.${index}.bank_account_number`} control={control} render={({ field }) => (<Input placeholder="Account No." {...field} />)} />
+                            </FormItem>
+                            <FormItem label={`Bank Name ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.bank_name} errorMessage={errors.company_bank_details?.[index]?.bank_name?.message as string}>
+                                <Controller name={`company_bank_details.${index}.bank_name`} control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
+                            </FormItem>
+                            <FormItem label={`IFSC Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.ifsc_code} errorMessage={errors.company_bank_details?.[index]?.ifsc_code?.message as string}>
+                                <Controller name={`company_bank_details.${index}.ifsc_code`} control={control} render={({ field }) => (<Input placeholder="IFSC" {...field} />)} />
+                            </FormItem>
+                            <FormItem label={`Swift Code ${index + 1}`} invalid={!!errors.company_bank_details?.[index]?.swift_code} errorMessage={errors.company_bank_details?.[index]?.swift_code?.message as string}>
+                                <Controller name={`company_bank_details.${index}.swift_code`} control={control} render={({ field }) => (<Input placeholder="Swift Code" {...field} />)} />
+                            </FormItem>
+                            <FormItem label={`Bank Verification Photo ${index + 1}`} className="md:col-span-1">
+                                <Controller name={`company_bank_details.${index}.verification_photo`} control={control} render={({ field: { onChange, ref, value, ...rest } }) => (<Input type="file" ref={ref} accept="image/*,application/pdf" onChange={(e) => onChange(e.target.files?.[0])} {...rest} />)} />
+                                {bankPhotoValue && (
+                                     <div className="mt-2 flex items-start gap-4">
+                                        <div className="w-24 h-24 border rounded flex items-center justify-center">
+                                            <img src={typeof bankPhotoValue === 'string' ? bankPhotoValue : URL.createObjectURL(bankPhotoValue)} alt={`Bank ${index + 1} photo`} className="max-h-full max-w-full" />
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            <Button type="button" variant="outline" size="xs" icon={<TbMail />} onClick={() => handleShare('email', bankPhotoValue, `Bank ${index + 1} Verification Photo`)}>Email</Button>
+                                            <Button type="button" variant="outline" size="xs" icon={<TbBrandWhatsapp />} onClick={() => handleShare('whatsapp', bankPhotoValue, `Bank ${index + 1} Verification Photo`)}>WhatsApp</Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </FormItem>
+                        </div>
+                        <div className="border-t dark:border-gray-600 mt-4 pt-3">
+                            <Controller name={`company_bank_details.${index}.is_default`} control={control} render={({ field }) => (<Checkbox checked={field.value} onChange={(e) => { field.onChange(e); if (e) handleSetDefaultBank('additional', index); }}>Set as Default</Checkbox>)} />
+                        </div>
+                    </Card>
+                );
+            })}
+        </Card>
+    );
 };
+// --- MODIFICATION END ---
+
 
 // --- SpotVerificationSection ---
 const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
@@ -1980,33 +2129,28 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       office_phone: z.string().optional().nullable(),
     })).optional(),
 
-    // KYC Docs
-    // CORRECTED: Aadhar and PAN are now optional by default. Validation is handled in .superRefine()
     aadhar_card_file: z.any().optional().nullable(),
     pan_card_file: z.any().optional().nullable(),
     gst_certificate_file: z.any().optional().nullable(),
     cancel_cheque_file: z.any().optional().nullable(),
     office_photo_file: z.any().optional().nullable(),
 
+    // --- MODIFICATION START: Update Zod schema for primary/secondary bank details ---
     primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_contact_number: z
-    .string()
-    .trim()
-    .regex(/^[0-9]{10}$/, "Invalid contact number")
-    .optional()
-    .or(z.literal(""))
-    .nullable(),
+    primary_contact_number: z.string().trim().regex(/^[0-9]{10}$/, "Invalid contact number").optional().or(z.literal("")).nullable(),
     primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_benificeiry_name: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_bank_verification_photo: z.any().optional().nullable(),
+    primary_is_default: z.boolean().optional(),
     secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_benificeiry_number: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_bank_verification_photo: z.any().optional().nullable(),
+    secondary_is_default: z.boolean().optional(),
     company_bank_details: z.array(z.object({
       bank_account_number: z.string().trim().min(1, "Account number required if bank entry added"),
       bank_name: z.string().min(1, "Bank name required"),
@@ -2014,7 +2158,9 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       swift_code: z.string().trim().optional().nullable(),
       verification_photo: z.any().optional().nullable(),
       type: z.object({ label: z.string(), value: z.string().min(1, "Bank type required") }, { required_error: "Bank type is required" }),
+      is_default: z.boolean().optional(),
     })).optional(),
+    // --- MODIFICATION END ---
 
     USER_ACCESS: z.boolean({ required_error: "User Access selection is required" }),
     billing_documents: z.array(z.object({
@@ -2057,7 +2203,6 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     gst_number: z.string().trim().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number format.").optional().or(z.literal("")).nullable(),
     pan_number: z.string().trim().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN card number format.").optional().or(z.literal("")).nullable(),
   }).passthrough().superRefine((data, ctx) => {
-    // CORRECTED: If country is India (ID 101), GST, PAN, Aadhar, and PAN Card files are required
     if (data.country_id?.value === '101') {
       if (!data.gst_number) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "GST Number is required for India.", path: ['gst_number'] });
@@ -2200,9 +2345,9 @@ const CompanyCreate = () => {
     pan_card_file: null, pan_card_remark: "", pan_card_remark_enabled: false,
     other_document_file: null, other_document_remark: "", other_document_remark_enabled: false,
     primary_account_number: "",primary_benificeiry_name:"", primary_bank_name: "", primary_ifsc_code: "",
-    primary_swift_code: "", primary_bank_verification_photo: null,
+    primary_swift_code: "", primary_bank_verification_photo: null, primary_is_default: false,
     secondary_account_number: "",secondary_benificeiry_number:"", secondary_bank_name: "", secondary_ifsc_code: "",
-    secondary_swift_code: "", secondary_bank_verification_photo: null,
+    secondary_swift_code: "", secondary_bank_verification_photo: null, secondary_is_default: false,
     company_bank_details: [],
     USER_ACCESS: false, billing_documents: [], enabled_billing_docs: [],
     company_members: [], company_teams: [],
@@ -2221,7 +2366,6 @@ const CompanyCreate = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    // Guard clause to prevent running until all lookup data is available.
     const lookupsReady = CountriesData?.length > 0 && ContinentsData?.length > 0 && MemberData && AllCompaniesData && EmployeesList;
 
     if (isEditMode && id && lookupsReady) {
@@ -2266,7 +2410,7 @@ const CompanyCreate = () => {
       setInitialData(getEmptyFormValues());
       setPageLoading(false);
     }
-  }, [id, navigate, dispatch]);
+  }, [id, navigate, dispatch, isEditMode, AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData, documentTypeOptions]);
 
 
   const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
@@ -2312,13 +2456,13 @@ const CompanyCreate = () => {
     navigate("/business-entities/company");
   };
 
-  // if (pageLoading || !initialData) {
-  //   return (
-  //     <Container className="h-full flex justify-center items-center">
-  //       <p>Loading company details...</p>
-  //     </Container>
-  //   );
-  // }
+  if (pageLoading || !initialData) {
+     return (
+       <Container className="h-full flex justify-center items-center">
+         <Spinner size="40px" />
+       </Container>
+     );
+  }
 
   return (
     <Container className="h-full">
