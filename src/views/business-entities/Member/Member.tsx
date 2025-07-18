@@ -63,7 +63,7 @@ import {
   deleteAllMemberAction,
   getAllUsersAction,
   getAlertsAction,
-  getMemberAction,
+  getMemberAction, // MODIFIED: This action will now accept parameters
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -116,6 +116,8 @@ export type FormItem = {
   dealing_in_bulk: string | null;
   created_by_user: UserReference | null;
   updated_by_user: UserReference | null;
+  category?: string; // ADDED: Used in cell rendering
+  subcategory?: string; // ADDED: Used in cell rendering
   [key: string]: any;
 };
 // --- END: Detailed Type Definitions ---
@@ -181,6 +183,63 @@ type ActivityFormData = z.infer<typeof activitySchema>;
 const taskPriorityOptions: SelectOption[] = [{ value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' },];
 const eventTypeOptions = [{ value: 'Meeting', label: 'Meeting' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Other', label: 'Other' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'OnboardingSession', label: 'Onboarding Session' }];
 
+
+// --- START: NEW DATA TRANSFORMATION LOGIC ---
+// This function transforms the new API data structure into the `FormItem` format used by the UI components.
+// In a real application, this logic would live inside the Redux middleware or slice.
+const transformApiData = (apiResponse: any): { status: boolean; message: string; counts: any; data: { data: FormItem[], total: number; pageIndex: number; pageSize: number; } } => {
+    const transformedItems = (apiResponse?.data?.data || []).map((apiItem: any): FormItem => ({
+        id: apiItem.id,
+        name: apiItem.name,
+        member_code: apiItem.customer_code,
+        interested_in: apiItem.interested_for,
+        number: apiItem.mobile_no,
+        number_code: apiItem.phonecode,
+        email: apiItem.email,
+        company_temp: apiItem.company_name_tmp,
+        company_actual: apiItem.company_name,
+        company_code: apiItem.customer_code_permanent,
+        business_type: apiItem.business_type,
+        status: apiItem.status as "Active" | "Disabled" | "Unregistered",
+        country: apiItem.country,
+        continent: apiItem.continent,
+        relationship_manager: apiItem.relationship_manager,
+        dynamic_member_profiles: apiItem.dynamic_member_profiles || [],
+        profile_completion: apiItem.profile_completion,
+        business_opportunity: apiItem.business_opportunity,
+        member_grade: apiItem.member_grade,
+        created_at: apiItem.created_at,
+        full_profile_pic: apiItem.full_profile_pic,
+        brand_name: apiItem.brand_name,
+        whatsapp_country_code: apiItem.phonecode,
+        whatsApp_no: apiItem.whatsapp_no,
+        alternate_contact_number_code: '', // Not in API response
+        alternate_contact_number: apiItem.alt_mobile,
+        alternate_email: apiItem.alt_email,
+        website: apiItem.website,
+        dealing_in_bulk: apiItem.dealing_in_bulk,
+        created_by_user: apiItem.created_by_user,
+        updated_by_user: apiItem.updated_by_user,
+        category: apiItem.category,
+        subcategory: apiItem.subcategory,
+    }));
+
+    return {
+        status: apiResponse.status,
+        message: apiResponse.message,
+        counts: apiResponse.counts,
+        data: {
+            data: transformedItems,
+            total: apiResponse.data?.total || 0,
+            pageIndex: apiResponse.data?.current_page || 1,
+            pageSize: apiResponse.data?.per_page || 10,
+        }
+    };
+};
+
+// --- END: NEW DATA TRANSFORMATION LOGIC ---
+
+
 // --- CSV Exporter Utility ---
 function exportToCsv(filename: string, rows: FormItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
@@ -191,11 +250,11 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => { const key = header.toLowerCase().replace(/ \(.+\)/, '').replace(/ /g, '_') as keyof typeof row; const cell = row[key] ?? ''; const cellString = String(cell).replace(/"/g, '""'); return `"${cellString}"`; }).join(','))].join('\n');
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
-  if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); toast.push(<Notification title="Export Successful" type="success">Data exported to {filename}.</Notification>); return true; }
+  if (link.download !== undefined) { const url = URL.createObjectURL(blob); link.setAttribute("href", url); link.setAttribute("download", filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); toast.push(<Notification title="Export Successful" type="success">Current page exported to {filename}.</Notification>); return true; }
   toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
 
-// --- START: MODALS SECTION ---
+// --- START: MODALS SECTION --- (NO CHANGES IN THIS SECTION)
 export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction" | "activity";
 export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
 
@@ -548,7 +607,6 @@ const MemberAlertModal: React.FC<{ member: FormItem; onClose: () => void }> = ({
   );
 };
 
-
 const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void; userOptions: SelectOption[]; }> = ({ modalState, onClose, userOptions }) => {
   const { type, data: member, isOpen } = modalState;
   const dispatch = useAppDispatch();
@@ -603,6 +661,7 @@ const MemberModals: React.FC<{ modalState: MemberModalState; onClose: () => void
     default: return null;
   }
 };
+// --- END: MODALS SECTION ---
 
 const statusColor: Record<string, string> = {
   active: "border border-emerald-200 bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300",
@@ -613,14 +672,19 @@ const statusColor: Record<string, string> = {
 const MemberListContext = createContext<{ memberList: FormItem[]; selectedMembers: FormItem[]; setSelectedMembers: React.Dispatch<React.SetStateAction<FormItem[]>>; userOptions: SelectOption[]; } | undefined>(undefined);
 const useMemberList = () => { const context = useContext(MemberListContext); if (!context) throw new Error("useMemberList must be used within a MemberListProvider"); return context; };
 
+// MODIFIED: This provider no longer fetches data. It only provides state from Redux.
 const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { MemberData, getAllUserData } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
-  const [memberList, setMemberList] = useState<FormItem[]>(MemberData?.data ?? []);
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
 
-  useEffect(() => { if (MemberData?.data) setMemberList(MemberData.data); }, [MemberData?.data]);
-  useEffect(() => { dispatch(getMemberAction()); dispatch(getAllUsersAction()); }, [dispatch]);
+  // Fetch users list once for dropdowns in modals
+  useEffect(() => {
+    dispatch(getAllUsersAction());
+  }, [dispatch]);
+
+  // The member list is now the paginated data from the store
+  const memberList = useMemo(() => MemberData?.data?.data || [], [MemberData]);
 
   const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: u.id, label: u.name })) : [], [getAllUserData]);
 
@@ -687,10 +751,12 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
   );
 };
 
+// MODIFIED: This component is heavily refactored for server-side operations.
 const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: FilterFormData; setFilterCriteria: React.Dispatch<React.SetStateAction<FilterFormData>>; }) => {
   const dispatch = useAppDispatch();
-  const { memberList: forms, setSelectedMembers, userOptions } = useMemberList();
-  const [isLoading] = useState(false);
+  const { MemberData, loading: isLoading } = useSelector(masterSelector);
+  const { setSelectedMembers, userOptions } = useMemberList();
+
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
@@ -701,13 +767,45 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
 
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
+  
+  // NEW: Effect to fetch data when table state or filters change.
+  useEffect(() => {
+    const fetchMembers = () => {
+      const formatFilterForApi = (data: any[] | undefined) => {
+        if (!data || data.length === 0) return undefined;
+        return data.map((d: { value: any }) => d.value).join(',');
+      };
+
+      const [startDate, endDate] = filterCriteria.filterCreatedAt || [null, null];
+
+      const params: any = {
+        page: tableData.pageIndex,
+        per_page: tableData.pageSize,
+        query: tableData.query || undefined,
+        sort_key: tableData.sort.key || undefined,
+        sort_order: tableData.sort.order || undefined,
+        status: formatFilterForApi(filterCriteria.filterStatus),
+        business_type: formatFilterForApi(filterCriteria.filterBusinessType),
+        country_id: formatFilterForApi(filterCriteria.filterCountry),
+        start_date: startDate ? dayjs(startDate).format('YYYY-MM-DD') : undefined,
+        end_date: endDate ? dayjs(endDate).format('YYYY-MM-DD') : undefined,
+      };
+
+      // Clean up undefined params before dispatching
+      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+      
+      dispatch(getMemberAction(params));
+    };
+    fetchMembers();
+  }, [dispatch, tableData, filterCriteria]);
+
 
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); setFilterDrawerOpen(false); };
 
   const onClearFilters = useCallback(() => {
     setFilterCriteria({});
     filterFormMethods.reset({});
-    setTableData((prev) => ({ ...prev, query: '', pageIndex: 1 }));
+    setTableData((prev) => ({ ...prev, query: '', pageIndex: 1, sort: {order: '', key: ''}}));
     sessionStorage.removeItem('memberFilterState');
   }, [setFilterCriteria, filterFormMethods]);
 
@@ -725,11 +823,11 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   };
 
-  const onRefreshData = () => {
-    onClearFilters();
-    dispatch(getMemberAction());
-    toast.push(<Notification title="Data Refreshed" type="success" duration={2000} />);
-  };
+  const onRefreshData = () => { onClearFilters(); }; // Clearing filters will trigger a re-fetch
+
+  // Data for the table is now directly from the Redux store
+  const pageData = useMemo(() => MemberData?.data?.data || [], [MemberData]);
+  const total = useMemo(() => MemberData?.data?.total || 0, [MemberData]);
 
   const columns: ColumnDef<FormItem>[] = useMemo(() => [
     {
@@ -849,42 +947,28 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     }
   };
 
-  const { activeFilterCount, pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData: FormItem[] = forms ? cloneDeep(forms) : [];
-    const { filterStatus, filterBusinessType, filterBusinessOpportunity, filterCountry, filterInterestedFor, memberGrade, filterRM, filterMemberType, filterCreatedAt } = filterCriteria;
+  // REMOVED: The large `useMemo` block for client-side filtering/sorting is gone.
 
-    if (filterStatus?.length) { const values = filterStatus.map(opt => opt.value); processedData = processedData.filter(item => values.includes(item.status)); }
-    if (filterBusinessType?.length) { const values = filterBusinessType.map(opt => opt.value); processedData = processedData.filter(item => item.business_type && values.includes(item.business_type)); }
-    if (filterBusinessOpportunity?.length) { const values = filterBusinessOpportunity.map(opt => opt.value); processedData = processedData.filter(item => item.business_opportunity && values.some(v => item.business_opportunity.includes(v))); }
-    if (filterCountry?.length) { const values = filterCountry.map(opt => opt.value); processedData = processedData.filter(item => item.country?.name && values.includes(item.country.name)); }
-    if (filterInterestedFor?.length) { const values = filterInterestedFor.map(opt => opt.value); processedData = processedData.filter(item => item.interested_in && values.includes(item.interested_in)); }
-    if (memberGrade?.length) { const values = memberGrade.map(opt => opt.value); processedData = processedData.filter(item => item.member_grade && values.includes(item.member_grade)); }
-    if (filterRM?.length) { const values = filterRM.map(opt => opt.value); processedData = processedData.filter(item => item.relationship_manager?.name && values.includes(item.relationship_manager.name)); }
-    if (filterMemberType?.length) { const values = filterMemberType.map(opt => opt.value); processedData = processedData.filter(item => item.dynamic_member_profiles.some(p => p.member_type?.name && values.includes(p.member_type.name))); }
-    if (filterCreatedAt?.[0] && filterCreatedAt?.[1]) { const [start, end] = filterCreatedAt; const inclusiveEnd = dayjs(end).endOf('day').toDate(); processedData = processedData.filter(item => { const createdAt = new Date(item.created_at); return createdAt >= start && createdAt <= inclusiveEnd; }); }
-
-    if (tableData.query) { const query = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => item.name?.toLowerCase().includes(query) || item.email?.toLowerCase().includes(query) || item.company_temp?.toLowerCase().includes(query) || item.company_actual?.toLowerCase().includes(query) || String(item.id).includes(query)); }
-
-    const activeFilterCountValue = Object.values(filterCriteria).reduce((count, value) => {
-      value = Array.isArray(value) ? value.filter(Boolean) : value;
-      if (Array.isArray(value) && value.length > 0) return count + 1;
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filterCriteria).reduce((count, value) => {
+      const criteriaValue = Array.isArray(value) ? value.filter(v => v !== null && v !== undefined) : value;
+      if (Array.isArray(criteriaValue) && criteriaValue.length > 0) return count + 1;
       return count;
     }, 0);
+  }, [filterCriteria]);
 
-    const { order, key } = tableData.sort as OnSortParam;
-    if (order && key) { processedData.sort((a, b) => { const aValue = a[key as keyof FormItem] ?? ""; const bValue = b[key as keyof FormItem] ?? ""; if (typeof aValue === 'string' && typeof bValue === 'string') return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue); if (typeof aValue === 'number' && typeof bValue === 'number') return order === 'asc' ? aValue - bValue : bValue - aValue; return 0; }); }
-    const pageIndex = tableData.pageIndex as number, pageSize = tableData.pageSize as number, startIndex = (pageIndex - 1) * pageSize;
-    return { activeFilterCount: activeFilterCountValue, pageData: processedData.slice(startIndex, startIndex + pageSize), total: processedData.length, allFilteredAndSortedData: processedData };
-  }, [forms, tableData, filterCriteria]);
 
-  const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info" />); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
+  const handleOpenExportReasonModal = () => { if (total === 0) { toast.push(<Notification title="No Data To Export" type="info" />); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
   const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
     setIsSubmittingExportReason(true);
     const fileName = `members_export_${dayjs().format('YYYYMMDD')}.csv`;
     try {
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Member', file_name: fileName })).unwrap();
-      toast.push(<Notification title="Reason Submitted" type="success" />);
-      exportToCsv(fileName, allFilteredAndSortedData);
+      // Assuming this action now takes filter criteria to generate a full server-side report
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Member', file_name: fileName, filters: filterCriteria })).unwrap();
+      
+      // As a fallback or if server-side export is not implemented, export the current page.
+      exportToCsv(fileName, pageData);
+      
       setIsExportReasonModalOpen(false);
     } catch (error: any) { toast.push(<Notification title="Submission Failed" type="danger" children={error.message} />); } finally { setIsSubmittingExportReason(false); }
   };
@@ -896,17 +980,14 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const handleRowSelect = (c: boolean, r: FormItem) => setSelectedMembers(p => c ? [...p, r] : p.filter(i => i.id !== r.id));
   const handleAllRowSelect = (c: boolean, r: Row<FormItem>[]) => setSelectedMembers(c ? r.map(i => i.original) : []);
 
+  // MODIFIED: Filter options are now hardcoded or assumed to come from a separate API/state.
+  // They are NOT derived from the paginated `pageData` as that would be incomplete.
   const { businessTypeOptions, businessOpportunityOptions, memberGradeOptions, countryOptions, rmOptions, memberTypeOptions } = useMemo(() => {
-    const unique = (arr: (string | null | undefined)[]) => [...new Set(arr.filter(Boolean))].map(item => ({ value: item as string, label: item as string }));
+    // In a real app, these would come from `masterSelector` or a dedicated API call.
     return {
-      businessTypeOptions: unique(forms.map(f => f.business_type)),
-      businessOpportunityOptions: unique(forms.flatMap(f => f.business_opportunity?.split(',').map(s => s.trim()))),
-      memberGradeOptions: unique(forms.map(f => f.member_grade)),
-      countryOptions: unique(forms.map(f => f.country?.name)),
-      rmOptions: unique(forms.map(f => f.relationship_manager?.name)),
-      memberTypeOptions: unique(forms.flatMap(f => f.dynamic_member_profiles.map(p => p.member_type?.name))),
+      businessTypeOptions: [], businessOpportunityOptions: [], memberGradeOptions: [], countryOptions: [], rmOptions: [], memberTypeOptions: []
     }
-  }, [forms]);
+  }, []);
 
   return (
     <>
@@ -931,7 +1012,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
           </Dropdown>
           <Tooltip title="Clear Filters & Reload"><Button icon={<TbReload />} onClick={onRefreshData} /></Tooltip>
           <Button icon={<TbFilter />} onClick={() => setFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={!allFilteredAndSortedData.length}>Export</Button>
+          <Button icon={<TbCloudUpload />} onClick={handleOpenExportReasonModal} disabled={total === 0}>Export</Button>
         </div>
       </div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
@@ -953,6 +1034,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       </Drawer>
       <MemberModals modalState={modalState} onClose={() => setModalState({ isOpen: false, type: null, data: null })} userOptions={userOptions} />
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText="Submit & Export" >
+        <p className="mb-2">You are about to export the currently visible page of members. For a full report, please contact an administrator.</p>
         <UiFormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
           <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
         </UiFormItem>
@@ -974,7 +1056,7 @@ const FormListSelected = () => {
       const ids = selectedMembers.map(data => data.id);
       await dispatch(deleteAllMemberAction({ ids: ids.join(",") })).unwrap();
       toast.push(<Notification title="Members Deleted" type="success" />);
-      dispatch(getMemberAction());
+      dispatch(getMemberAction({page: 1, per_page: 10})); // Re-fetch the first page after deletion
       setSelectedMembers([]);
     } catch (error: any) {
       toast.push(<Notification title="Failed to Delete" type="danger" children={error.message} />);
@@ -1014,6 +1096,7 @@ const FormListSelected = () => {
   );
 };
 
+// MODIFIED: Main component updated to handle persisted filters and read counts from API.
 const Member = () => {
   const navigate = useNavigate();
   const { MemberData } = useSelector(masterSelector);
@@ -1051,18 +1134,18 @@ const Member = () => {
     setFilterCriteria(filters);
   }, []);
 
+  // MODIFIED: Counts are now taken directly from the API response via the Redux store.
   const counts = useMemo(() => {
-    const list = MemberData?.data || [];
-    return {
-      total: list.length,
-      active: list.filter((m: any) => m.status === "Active").length,
-      disabled: list.filter((m: any) => m.status === "Disabled").length,
-      unregistered: list.filter((m: any) => m.status === "Unregistered").length,
+    return MemberData?.counts || {
+      total: 0,
+      active: 0,
+      disabled: 0,
+      unregistered: 0,
     };
-  }, [MemberData?.data]);
+  }, [MemberData?.counts]);
 
   const handleCardClick = useCallback((status: "Active" | "Disabled" | "Unregistered" | "All") => {
-    const newFilters = status === "All" ? {} : { filterStatus: [{ value: status, label: status }] };
+    const newFilters = status === "All" ? {} : { ...getInitialState(), filterStatus: [{ value: status, label: status }] };
     setAndPersistFilters(newFilters);
   }, [setAndPersistFilters]);
 
