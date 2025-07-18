@@ -3,7 +3,6 @@
   "private": true,
   "version": "1.2.2",
   "type": "module",
-   "homepage": "https://www.omcommunication.co/adminpanel",
   "scripts": {
     "dev": "vite",
     "build": "node --max-old-space-size=4096 node_modules/vite/bin/vite.js build",
