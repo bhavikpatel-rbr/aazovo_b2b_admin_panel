@@ -1388,27 +1388,19 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
 
     useEffect(() => {
         dispatch(getAllTaskAction())
-        setIsLoading(masterLoadingStatus === 'loading')
-        if (
-            masterLoadingStatus === 'idle' &&
-            AllTaskData &&
-            Array.isArray(AllTaskData)
-        ) {
-            const transformed = AllTaskData.map(transformApiTaskToTaskItem)
+        
+    }, [ ])
+
+     useEffect(() => {
+        console.log("AllTaskData?.length",AllTaskData?.length);
+        
+        if (AllTaskData?.length > 0) {
+             const transformed = AllTaskData.map(transformApiTaskToTaskItem)
             setTasks(transformed)
-        } else if (masterLoadingStatus === 'failed') {
-            toast.push(
-                <Notification
-                    title="Error Loading Tasks"
-                    type="danger"
-                    duration={3000}
-                >
-                    There was an issue fetching the task list.
-                </Notification>,
-            )
-            setTasks([])
         }
-    }, [AllTaskData, masterLoadingStatus])
+           
+       
+    }, [AllTaskData])
 
     const uniqueAssignees = useMemo(() => {
         const allAssignees = tasks.flatMap((t) =>
@@ -1680,7 +1672,6 @@ console.log("phone",phone);
         const message = `Hi ${primaryAssignee.name}, this is a message regarding the task: "${task.note}" (ID: ${task.id}).`;
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
     }, []);
-console.log("userData",userData?.id);
 
     const handleConfirmActivity = async (data: ActivityFormData) => {
         if (!modalState.data || !userData?.id) {
