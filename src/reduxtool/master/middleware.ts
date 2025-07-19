@@ -1006,7 +1006,7 @@ export const getBrandAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getBrandAsync()
       if (response?.data?.status) {
-        return response?.data?.data?.data
+        return response?.data?.data
       }
 
       return rejectWithValue(response)
@@ -3741,7 +3741,7 @@ export const getAllProductsAction = createAsyncThunk("auth/allproducts",
 export const getMemberlistingAction = createAsyncThunk("auth/Memberlist",
   async (param, { rejectWithValue, dispatch }) => {
     try {
-      
+
       const response: AxiosResponse<any> = await getMemberlistAsync(param)
       if (response?.data?.status === true) {
         return response?.data

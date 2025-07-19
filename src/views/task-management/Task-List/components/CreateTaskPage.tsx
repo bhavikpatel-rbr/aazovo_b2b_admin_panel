@@ -118,7 +118,7 @@ type TaskStatusDisplay = typeof taskStatusLabelsDisplay[number];
 const createTaskSchema = z.object({
   task_title: z.string().min(1, "Task title is required.").max(255),
   module_name: z.string().min(1, "Module name is required."),
-  module_id: z.string().min(1, "Module ID is required."),
+  module_id: z.string().optional(),
   assignedToIds: z.array(z.string()).min(1, "Assign to at least one member."),
   status: z.enum(taskStatusLabelsApi, { required_error: "Status is required." }), // Updated validation
   priority: z.enum(["Low", "Medium", "High", "Urgent"], { required_error: "Priority is required." }),
@@ -476,13 +476,13 @@ console.log("original",original.activity_notes[0]?.activity_type);
             </div>
 
             {/* Module ID */}
-            <div className="flex items-center">
+            {/* <div className="flex items-center">
               <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Module ID: <span className="text-red-500">*</span></label>
               <div className="w-full">
                 <Controller name="module_id" control={control} render={({ field }) => <Input {...field} placeholder="Enter the ID of the related item" />} />
                 {errors.module_id && <p className="text-red-500 text-xs mt-1">{errors.module_id.message}</p>}
               </div>
-            </div>
+            </div> */}
 
             {/* Status */}
             <div className="flex items-start">
