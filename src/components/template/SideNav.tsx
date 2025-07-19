@@ -17,10 +17,11 @@ import {
 } from '@/constants/theme.constant'
 import type { Mode } from '@/@types/theme'
 import LogoWithoutName from './LogoWithoutName'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ConfirmDialog } from '../shared'
 import { useAppDispatch } from '@/reduxtool/store'
 import { logoutAction } from '@/reduxtool/auth/middleware'
+import { resetMasterState } from '@/reduxtool/master/masterSlice'
 
 type SideNavProps = {
     translationSetup?: boolean
@@ -48,17 +49,25 @@ const SideNav = ({
     contentClass,
     mode,
 }: SideNavProps) => {
+    
     const defaultMode = useThemeStore((state) => state.mode)
     const direction = useThemeStore((state) => state.direction)
     const sideNavCollapse = useThemeStore(
         (state) => state.layout.sideNavCollapse,
     )
+
+     
 const dispatch = useAppDispatch();
     const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
     const currentRouteKey = useRouteKeyStore((state) => state.currentRouteKey)
  const handleSignOutClick = () => {
     setIsLogoutDialogOpen(true);
   };
+  useEffect(() => {
+        // This effect will run whenever the currentRouteKey changes,
+        // which happens when the user navigates to a new page.
+        dispatch(resetMasterState())
+    }, [currentRouteKey, dispatch])
 
   const onDialogClose = () => {
     setIsLogoutDialogOpen(false);
