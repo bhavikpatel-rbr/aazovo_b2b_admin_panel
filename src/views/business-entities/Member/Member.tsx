@@ -756,7 +756,8 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
 // MODIFIED: This component is heavily refactored for server-side operations.
 const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: FilterFormData; setFilterCriteria: React.Dispatch<React.SetStateAction<FilterFormData>>; }) => {
   const dispatch = useAppDispatch();
-  const { MemberlistData: MemberData, loading: isLoading } = useSelector(masterSelector);
+  const { MemberlistData: MemberData } = useSelector(masterSelector);
+    const [isLoading, setIsLoading] = useState(false);
   const { setSelectedMembers, userOptions } = useMemberList();
 
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 20, sort: { order: "", key: "" }, query: "" });
@@ -799,13 +800,14 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
 
       // Clean up undefined params before dispatching
       Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
-      
+      setIsLoading(true);
       dispatch(getMemberlistingAction(params));
     };
     fetchMembers();
   }, [dispatch, tableData, filterCriteria]);
 
 
+  useEffect(() => {if(MemberData?.data?.data) setIsLoading(false)}, [MemberData]);
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); setFilterDrawerOpen(false); };
 
   const onClearFilters = useCallback(() => {
