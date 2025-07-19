@@ -2222,6 +2222,28 @@ export const getAllProductsAsync = async () => {
   }
 }
 
+export const getMemberlistAsync = async (params: any) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      // Iterate over the params object and append them to the query string
+      // if they have a valid value.
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await axiosInstance.get(`${config.apiURL}/customers?${queryParams.toString()}`);
+
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const getMemberAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/customer`)
@@ -2948,7 +2970,7 @@ export const getEmployeeListAsync = async () => {
 export const addEmployeeListAsync = async (payload) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
-    const response = await axiosInstance.post(`${config.apiURL}/employee`, payload,{
+    const response = await axiosInstance.post(`${config.apiURL}/employee`, payload, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -2962,7 +2984,7 @@ export const addEmployeeListAsync = async (payload) => {
 export const editEmployeeListAsync = async (payload: any) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
-    const response = await axiosInstance.post(`${config.apiURL}/employee/${payload.employeeId}`, payload.data,{
+    const response = await axiosInstance.post(`${config.apiURL}/employee/${payload.employeeId}`, payload.data, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -3153,7 +3175,7 @@ export const getAllDocumentsAsync = async () => {
 
 export const getAlertsActionAsync = async (data: object) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/alerts`,data)
+    const response = await axiosInstance.post(`${config.apiURL}/alerts`, data)
     return response?.data
   } catch (err) {
     return isAxiosError(err)
@@ -3338,9 +3360,9 @@ export const setenablebilling = async (id: object) => {
   }
 }
 
-export const setsavedoc = async (id:any, data: object) => {
+export const setsavedoc = async (id: any, data: object) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/save-docs/${id}`, data,{
+    const response = await axiosInstance.post(`${config.apiURL}/save-docs/${id}`, data, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -3352,7 +3374,7 @@ export const setsavedoc = async (id:any, data: object) => {
 }
 
 
-export const getmatchopp = async (id:any) => {
+export const getmatchopp = async (id: any) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/wall/match-opp/${id}`,)
     return response?.data
@@ -3360,7 +3382,7 @@ export const getmatchopp = async (id:any) => {
     return isAxiosError(err)
   }
 }
-export const getviewopp = async (id:any, key: any) => {
+export const getviewopp = async (id: any, key: any) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/lead/view-opp/${id}/${key}`,)
     return response?.data

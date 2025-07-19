@@ -63,8 +63,8 @@ import {
   deleteAllMemberAction,
   getAllUsersAction,
   getAlertsAction,
-  getMemberAction, // MODIFIED: This action will now accept parameters
   submitExportReasonAction,
+  getMemberlistingAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
@@ -254,7 +254,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>); return false;
 }
 
-// --- START: MODALS SECTION --- (NO CHANGES IN THIS SECTION)
+// --- START: MODALS SECTION ---
 export type MemberModalType = "notification" | "task" | "calendar" | "viewDetail" | "alert" | "transaction" | "activity";
 export interface MemberModalState { isOpen: boolean; type: MemberModalType | null; data: FormItem | null; }
 
@@ -674,7 +674,7 @@ const useMemberList = () => { const context = useContext(MemberListContext); if 
 
 // MODIFIED: This provider no longer fetches data. It only provides state from Redux.
 const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { MemberData, getAllUserData } = useSelector(masterSelector);
+  const { MemberlistData: MemberData, getAllUserData } = useSelector(masterSelector);
   const dispatch = useAppDispatch();
   const [selectedMembers, setSelectedMembers] = useState<FormItem[]>([]);
 
@@ -686,6 +686,8 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // The member list is now the paginated data from the store
   const memberList = useMemo(() => MemberData?.data?.data || [], [MemberData]);
 
+
+  
   const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: u.id, label: u.name })) : [], [getAllUserData]);
 
   return (<MemberListContext.Provider value={{ memberList, setSelectedMembers, selectedMembers, userOptions }}>{children}</MemberListContext.Provider>);
@@ -754,10 +756,10 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
 // MODIFIED: This component is heavily refactored for server-side operations.
 const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: FilterFormData; setFilterCriteria: React.Dispatch<React.SetStateAction<FilterFormData>>; }) => {
   const dispatch = useAppDispatch();
-  const { MemberData, loading: isLoading } = useSelector(masterSelector);
+  const { MemberlistData: MemberData, loading: isLoading } = useSelector(masterSelector);
   const { setSelectedMembers, userOptions } = useMemberList();
 
-  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 20, sort: { order: "", key: "" }, query: "" });
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
@@ -781,20 +783,24 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
       const params: any = {
         page: tableData.pageIndex,
         per_page: tableData.pageSize,
-        query: tableData.query || undefined,
+        search: tableData.query || undefined,
         sort_key: tableData.sort.key || undefined,
         sort_order: tableData.sort.order || undefined,
         status: formatFilterForApi(filterCriteria.filterStatus),
         business_type: formatFilterForApi(filterCriteria.filterBusinessType),
-        country_id: formatFilterForApi(filterCriteria.filterCountry),
-        start_date: startDate ? dayjs(startDate).format('YYYY-MM-DD') : undefined,
-        end_date: endDate ? dayjs(endDate).format('YYYY-MM-DD') : undefined,
+        country: formatFilterForApi(filterCriteria.filterCountry),
+        business_opportunity: formatFilterForApi(filterCriteria.filterBusinessOpportunity),
+        interested_in: formatFilterForApi(filterCriteria.filterInterestedFor),
+        grade: formatFilterForApi(filterCriteria.memberGrade),
+        relationship_manager: formatFilterForApi(filterCriteria.filterRM),
+        member_type: formatFilterForApi(filterCriteria.filterMemberType),
+        created_date: (startDate && endDate) ? `${dayjs(startDate).format('YYYY-MM-DD')} ~ ${dayjs(endDate).format('YYYY-MM-DD')}` : undefined,
       };
 
       // Clean up undefined params before dispatching
       Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
       
-      dispatch(getMemberAction(params));
+      dispatch(getMemberlistingAction(params));
     };
     fetchMembers();
   }, [dispatch, tableData, filterCriteria]);
@@ -829,6 +835,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const pageData = useMemo(() => MemberData?.data?.data || [], [MemberData]);
   const total = useMemo(() => MemberData?.data?.total || 0, [MemberData]);
 
+  
   const columns: ColumnDef<FormItem>[] = useMemo(() => [
     {
       header: "Member", accessorKey: "name", id: "member", size: 200, cell: ({ row }) => (
@@ -905,7 +912,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
               <h6>Dynamic Profiles for {row.original.name}</h6>
               <Table className="mt-4">
                 <thead className="bg-gray-100 dark:bg-gray-700">
-                  <Tr><Td>Member Type</Td><Td>Brands</Td><Td>Sub Categories</Td></Tr>
+                  <Tr><Td>Member Type</Td><Td>Brands</Td><Td>Categories</Td><Td>Sub Categories</Td></Tr>
                 </thead>
                 <tbody>
                   {dynamic_member_profiles?.length > 0 ? (
@@ -947,8 +954,6 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     }
   };
 
-  // REMOVED: The large `useMemo` block for client-side filtering/sorting is gone.
-
   const activeFilterCount = useMemo(() => {
     return Object.values(filterCriteria).reduce((count, value) => {
       const criteriaValue = Array.isArray(value) ? value.filter(v => v !== null && v !== undefined) : value;
@@ -963,12 +968,8 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
     setIsSubmittingExportReason(true);
     const fileName = `members_export_${dayjs().format('YYYYMMDD')}.csv`;
     try {
-      // Assuming this action now takes filter criteria to generate a full server-side report
       await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Member', file_name: fileName, filters: filterCriteria })).unwrap();
-      
-      // As a fallback or if server-side export is not implemented, export the current page.
       exportToCsv(fileName, pageData);
-      
       setIsExportReasonModalOpen(false);
     } catch (error: any) { toast.push(<Notification title="Submission Failed" type="danger" children={error.message} />); } finally { setIsSubmittingExportReason(false); }
   };
@@ -980,10 +981,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const handleRowSelect = (c: boolean, r: FormItem) => setSelectedMembers(p => c ? [...p, r] : p.filter(i => i.id !== r.id));
   const handleAllRowSelect = (c: boolean, r: Row<FormItem>[]) => setSelectedMembers(c ? r.map(i => i.original) : []);
 
-  // MODIFIED: Filter options are now hardcoded or assumed to come from a separate API/state.
-  // They are NOT derived from the paginated `pageData` as that would be incomplete.
   const { businessTypeOptions, businessOpportunityOptions, memberGradeOptions, countryOptions, rmOptions, memberTypeOptions } = useMemo(() => {
-    // In a real app, these would come from `masterSelector` or a dedicated API call.
     return {
       businessTypeOptions: [], businessOpportunityOptions: [], memberGradeOptions: [], countryOptions: [], rmOptions: [], memberTypeOptions: []
     }
@@ -1056,7 +1054,7 @@ const FormListSelected = () => {
       const ids = selectedMembers.map(data => data.id);
       await dispatch(deleteAllMemberAction({ ids: ids.join(",") })).unwrap();
       toast.push(<Notification title="Members Deleted" type="success" />);
-      dispatch(getMemberAction({page: 1, per_page: 10})); // Re-fetch the first page after deletion
+      dispatch(getMemberlistingAction({page: 1, per_page: 20})); // Re-fetch the first page after deletion
       setSelectedMembers([]);
     } catch (error: any) {
       toast.push(<Notification title="Failed to Delete" type="danger" children={error.message} />);
@@ -1099,7 +1097,7 @@ const FormListSelected = () => {
 // MODIFIED: Main component updated to handle persisted filters and read counts from API.
 const Member = () => {
   const navigate = useNavigate();
-  const { MemberData } = useSelector(masterSelector);
+  const { MemberlistData:MemberData } = useSelector(masterSelector);
 
   const MEMBER_FILTER_STORAGE_KEY = 'memberFilterState';
 

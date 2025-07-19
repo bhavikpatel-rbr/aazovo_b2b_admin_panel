@@ -95,6 +95,7 @@ import {
   getMailTemplatesAction,
   getMatchingOpportunitiesAction,
   getMemberAction,
+  getMemberlistingAction,
   getMembersAction,
   getMemberTypeAction,
   getNotificationAction,
@@ -574,6 +575,10 @@ const masterSlice = createSlice({
     builder.addCase(getMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
       MemberData: payload,
+    }));
+    builder.addCase(getMemberlistingAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      MemberlistData: payload,
     }));
     builder.addCase(getMatchingOpportunitiesAction.fulfilled, (state, { payload }) => ({
       ...state,
