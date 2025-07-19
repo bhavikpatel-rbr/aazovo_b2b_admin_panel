@@ -119,15 +119,15 @@ const transformApiDataToExportMappingItem = (
     if (!apiData) return null
     try {
         return {
-            id: apiData.id,
+            id: apiData?.id,
             userId: null,
-            userName: apiData.user.name || 'System / Unknown',
-            userRole: apiData.user.roles[0]?.display_name || 'N/A',
-            exportFrom: apiData.exported_from || 'N/A',
-            fileName: apiData.file_name,
-            reason: apiData.reason,
-            exportDate: new Date(apiData.created_at),
-            profile_pic_path: apiData.user.profile_pic_path,
+            userName: apiData?.user?.name || 'System / Unknown',
+            userRole: apiData?.user?.roles[0]?.display_name || 'N/A',
+            exportFrom: apiData?.exported_from || 'N/A',
+            fileName: apiData?.file_name,
+            reason: apiData?.reason,
+            exportDate: new Date(apiData?.created_at),
+            profile_pic_path: apiData?.user?.profile_pic_path,
         }
     } catch (error) {
         console.error('Error transforming API data for ID:', apiData.id, error)
@@ -300,6 +300,7 @@ const ExportMapping = () => {
     const activeFilterCount = useMemo(() => {
         let count = 0; if (activeFilters.userRole?.length) count++; if (activeFilters.exportFrom?.length) count++; if (activeFilters.fileExtensions?.length) count++; if (activeFilters.exportDate) count++; return count;
     }, [activeFilters]);
+    
 
     useEffect(() => { if (exportData.data.length > 0 && exportData.filename && csvLinkRef.current) { csvLinkRef.current.link.click(); setExportData({ data: [], filename: '' }); } }, [exportData]);
 
