@@ -1,25 +1,54 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import cn from '../utils/classNames'
-import ReactSelect from 'react-select'
-import CreatableSelect from 'react-select/creatable'
-import AsyncSelect from 'react-select/async'
+import type { ComponentType, JSX, Ref } from 'react'
+import { HiCheck, HiChevronDown, HiX } from 'react-icons/hi'
+import type {
+    ClassNamesConfig,
+    GroupBase,
+    OptionProps,
+    Props as ReactSelectProps,
+    StylesConfig,
+} from 'react-select'
+import ReactSelect, { components } from 'react-select'
+import type { AsyncProps } from 'react-select/async'
+import type { CreatableProps } from 'react-select/creatable'
+import type { CommonProps, TypeAttributes } from '../@types/common'
 import { useConfig } from '../ConfigProvider'
 import { useForm, useFormItem } from '../Form/context'
 import { useInputGroup } from '../InputGroup/context'
-import { HiChevronDown, HiX } from 'react-icons/hi'
-import DefaultOption from './Option'
 import Spinner from '../Spinner/Spinner'
+import cn from '../utils/classNames'
 import { CONTROL_SIZES } from '../utils/constants'
-import type { CommonProps, TypeAttributes } from '../@types/common'
-import type {
-    Props as ReactSelectProps,
-    StylesConfig,
-    ClassNamesConfig,
-    GroupBase,
-} from 'react-select'
-import type { AsyncProps } from 'react-select/async'
-import type { CreatableProps } from 'react-select/creatable'
-import type { Ref, JSX } from 'react'
+
+// You can place this CSS in your global stylesheet or use a CSS-in-JS solution.
+// For demonstration, it's included here as a comment block.
+/*
+<style>
+.custom-checkbox {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: 1px solid #d1d5db; // gray-300
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .custom-checkbox {
+    border: 1px solid #4b5563; // dark:gray-600
+}
+
+.custom-checkbox-checked {
+    color: white;
+    background-color: #3b82f6; // A sample primary color (blue-500)
+    border-color: #3b82f6;
+}
+
+.select-option:hover .custom-checkbox {
+    border-color: #3b82f6;
+}
+</style>
+*/
 
 const DefaultDropdownIndicator = () => {
     return (
@@ -59,6 +88,36 @@ const DefaultLoadingIndicator = ({
     )
 }
 
+// DefaultOption remains for single select
+const DefaultOption = components.Option;
+
+// Custom Option component with a checkbox for multi-select
+const CheckboxOption = <
+    Option,
+    IsMulti extends boolean,
+    Group extends GroupBase<Option>,
+>({
+    children,
+    isSelected,
+    ...rest
+}: OptionProps<Option, IsMulti, Group>) => {
+    return (
+        <DefaultOption {...rest}>
+            <div className="flex items-center gap-x-2">
+                <span
+                    className={cn(
+                        'custom-checkbox',
+                        isSelected && 'custom-checkbox-checked',
+                    )}
+                >
+                    <HiCheck className={cn(!isSelected && 'hidden')} />
+                </span>
+                <span>{children}</span>
+            </div>
+        </DefaultOption>
+    )
+}
+
 export type SelectProps<
     Option,
     IsMulti extends boolean = false,
@@ -69,9 +128,8 @@ export type SelectProps<
     CreatableProps<Option, IsMulti, Group> & {
         invalid?: boolean
         size?: TypeAttributes.ControlSize
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         field?: any
-        componentAs?: ReactSelect | CreatableSelect | AsyncSelect
+        componentAs?: ComponentType
     }
 
 function Select<
@@ -80,7 +138,7 @@ function Select<
     Group extends GroupBase<Option> = GroupBase<Option>,
 >(props: SelectProps<Option, IsMulti, Group>) {
     const {
-        components,
+        components: parentComponents,
         componentAs: Component = ReactSelect,
         size,
         styles,
@@ -88,6 +146,7 @@ function Select<
         classNames,
         field,
         invalid,
+        isMulti,
         ...rest
     } = props
 
@@ -108,6 +167,7 @@ function Select<
     return (
         <Component<Option, IsMulti, Group>
             className={selectClass}
+            isMulti={isMulti}
             classNames={
                 {
                     control: (state) =>
@@ -119,42 +179,39 @@ function Select<
                                 const classes: string[] = [
                                     'bg-gray-100 dark:bg-gray-700',
                                 ]
-
-                                const { isFocused } = state
-
-                                if (isFocused) {
+                                if (state.isFocused) {
                                     classes.push(
                                         'select-control-focused ring-1 ring-primary border-primary bg-transparent',
                                     )
                                 }
-
                                 if (isSelectInvalid) {
                                     classes.push(
                                         'select-control-invalid bg-error-subtle',
                                     )
                                 }
-
-                                if (isFocused && isSelectInvalid) {
+                                if (state.isFocused && isSelectInvalid) {
                                     classes.push('ring-error border-error')
                                 }
-
                                 return classes
                             })(),
                         ),
-                    valueContainer: ({ isMulti, hasValue, selectProps }) =>
+                    valueContainer: ({
+                        isMulti: isMultiValue,
+                        hasValue,
+                        selectProps,
+                    }) =>
                         cn(
                             'select-value-container',
-                            isMulti &&
+                            isMultiValue &&
                                 hasValue &&
                                 selectProps.controlShouldRenderValue
                                 ? 'flex'
                                 : 'grid',
                         ),
-                    input: ({ value, isDisabled }) =>
+                    input: ({ isDisabled }) =>
                         cn(
                             'select-input-container',
                             isDisabled ? 'invisible' : 'visible',
-                            value && '[transform:translateZ(0)]',
                         ),
                     placeholder: () =>
                         cn(
@@ -162,6 +219,21 @@ function Select<
                             isSelectInvalid ? 'text-error' : 'text-gray-400',
                         ),
                     indicatorsContainer: () => 'select-indicators-container',
+                    dropdownIndicator: (state) =>
+                        cn(
+                            'select-dropdown-indicator-container',
+                            state.isFocused && 'text-primary dark:text-white',
+                            'hover:text-primary dark:hover:text-white',
+                        ),
+                    option: (state) =>
+                        cn(
+                            'select-option',
+                            state.isSelected &&
+                                'bg-primary-active text-primary-active-text',
+                            state.isFocused &&
+                                !state.isSelected &&
+                                'bg-primary-hover text-primary-hover-text',
+                        ),
                     singleValue: () => 'select-single-value',
                     multiValue: () => 'select-multi-value',
                     multiValueLabel: () => 'select-multi-value-label',
@@ -187,12 +259,6 @@ function Select<
                     multiValueLabel: () => ({}),
                     multiValueRemove: () => ({}),
                     menu: ({
-                        backgroundColor,
-                        marginTop,
-                        marginBottom,
-                        border,
-                        borderRadius,
-                        boxShadow,
                         ...provided
                     }) => ({ ...provided, zIndex: 50 }),
                     ...styles,
@@ -200,12 +266,14 @@ function Select<
             }
             components={{
                 IndicatorSeparator: () => null,
-                Option: DefaultOption,
+                Option: isMulti ? CheckboxOption : DefaultOption,
                 LoadingIndicator: DefaultLoadingIndicator,
                 DropdownIndicator: DefaultDropdownIndicator,
                 ClearIndicator: DefaultClearIndicator,
-                ...components,
+                ...parentComponents,
             }}
+            closeMenuOnSelect={!isMulti}
+            hideSelectedOptions={false}
             {...field}
             {...rest}
         />
