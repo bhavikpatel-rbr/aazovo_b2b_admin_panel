@@ -193,7 +193,7 @@ type MatchingOpportunityItem = {
     device_condition: string;
     color: string;
     member_name: string;
-    member_code: string;
+    customer_code: string;
     country_name: string;
     leads_count: number;
 };
@@ -548,7 +548,7 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
                         device_condition: item.device_condition,
                         color: item.color,
                         member_name: item.member_name,
-                        member_code: item.member_code,
+                        customer_code: item.customer_code,
                         country_name: item.country_name,
                         leads_count: item.leads_count,
                     }));
@@ -592,11 +592,11 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
             header: 'Member',
             accessorKey: 'member_name',
             cell: ({ row }) => {
-                const { member_name, member_code, country_name } = row.original;
+                const { member_name, customer_code, country_name } = row.original;
                 return (
                     <div>
                         <p className="font-semibold">{member_name}</p>
-                        <p className="text-xs text-gray-500">{member_code}</p>
+                        <p className="text-xs text-gray-500">{customer_code}</p>
                         <p className="text-xs text-gray-500">{country_name}</p>
                     </div>
                 );
@@ -1124,11 +1124,11 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
         {
           header: "Company & Member", accessorKey: "company_name", size: 260, cell: ({ row }) => {
-            const { name, member_code, email, number, company_code } = row.original?.member || {};
+            const { name, customer_code, email, number, company_code } = row.original?.member || {};
             return (
               <div className="flex flex-col gap-0.5 text-xs">
                 <div className="mt-1 pt-1 dark:border-gray-700 w-full">
-                  {member_code ||company_code  && (<span className="font-semibold text-gray-500 dark:text-gray-400">{member_code} | {company_code}</span>)}
+                  {customer_code ||company_code  && (<span className="font-semibold text-gray-500 dark:text-gray-400">{customer_code} | {company_code}</span>)}
                   {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
                   {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{email}</a>)}
                   {number && (<span className="block text-gray-600 dark:text-gray-300">{number}</span>)}

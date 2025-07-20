@@ -546,7 +546,7 @@ const MemberViewPage = () => {
                                 <Card bordered>
                                     <h5 className="mb-4">Basic Information</h5>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                        <DetailItem label="Member Code" value={memberData.member_code} />
+                                        <DetailItem label="Member Code" value={memberData.customer_code} />
                                         <DetailItem label="Joined Date" value={formatDate(memberData.created_at)} />
                                         <DetailItem label="Last Updated" value={formatDate(memberData.updated_at, true)} />
                                         <DetailItem label="Profile Completion" value={`${memberData.profile_completion}%`} />

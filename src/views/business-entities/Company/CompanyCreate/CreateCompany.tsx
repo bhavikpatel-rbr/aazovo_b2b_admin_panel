@@ -1969,7 +1969,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
     return Array.isArray(data)
       ? data.map((m: any) => ({
         value: String(m.id),
-        label: `(${m.member_code}) - ${m.name || 'N/A'}`,
+        label: `(${m.customer_code}) - ${m.name || 'N/A'}`,
         status: m.status,
       }))
       : [];
@@ -2405,7 +2405,7 @@ const CompanyCreate = () => {
         try {
           const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
           if (actionResult) {
-            const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.member_code}) - ${m.name}` }));
+            const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.customer_code}) - ${m.name}` }));
 
             const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
             const employeeList = Array.isArray(employeeDataSource) ? employeeDataSource : [];

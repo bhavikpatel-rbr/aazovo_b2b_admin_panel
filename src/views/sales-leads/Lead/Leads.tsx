@@ -650,7 +650,7 @@ const ViewOpportunitiesDialog: React.FC<{
             device_condition: item.device_condition,
             color: item.color,
             member_name: item.member_name,
-            member_code: item.member_code,
+            customer_code: item.customer_code,
             country_name: item.country_name,
             leads_count: item.leads_count,
           }));
@@ -698,11 +698,11 @@ const ViewOpportunitiesDialog: React.FC<{
       header: 'Member',
       accessorKey: 'member_name',
       cell: ({ row }) => {
-        const { member_name, member_code, country_name } = row.original;
+        const { member_name, customer_code, country_name } = row.original;
         return (
           <div>
             <p className="font-semibold">{member_name}</p>
-            <p className="text-xs text-gray-500">{member_code}</p>
+            <p className="text-xs text-gray-500">{customer_code}</p>
             <p className="text-xs text-gray-500">{country_name}</p>
           </div>
         );
@@ -2633,9 +2633,9 @@ const LeadsListing = ({ isDashboard }) => {
               <div>
                 {buyer ? (
                   <>
-                    <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Buyer : {buyer.member_code}</div>
+                    <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Buyer : {buyer.customer_code}</div>
                     <div className="text-sm truncate">{buyer.name}</div>
-                    {/* <div className="text-xs text-gray-500"> {buyer.member_code}</div> */}
+                    {/* <div className="text-xs text-gray-500"> {buyer.customer_code}</div> */}
                   </>
                 ) : (
                   <div className="text-xs text-gray-400 italic">No Buyer Info</div>
@@ -2649,9 +2649,9 @@ const LeadsListing = ({ isDashboard }) => {
               <div>
                 {supplier ? (
                   <>
-                    <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Supplier : {supplier.member_code}</div>
+                    <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Supplier : {supplier.customer_code}</div>
                     <div className="text-sm truncate">{supplier.name}</div>
-                    {/* <div className="text-xs text-gray-500">code: {supplier.member_code}</div> */}
+                    {/* <div className="text-xs text-gray-500">code: {supplier.customer_code}</div> */}
                   </>
                 ) : (
                   <div className="text-xs text-gray-400 italic">No Supplier Info</div>

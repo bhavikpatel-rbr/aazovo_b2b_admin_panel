@@ -173,7 +173,7 @@ export type ApiOpportunityItem = {
   company_billing_enabled?: boolean;
   customer_name: string | null;
   member_id: string | null;
-  member_code?: string | null;
+  customer_code?: string | null;
   email: string | null;
   mobile_no?: string | null;
   phonecode?: string | null;
@@ -205,7 +205,7 @@ export type ApiOpportunityItem = {
 };
 export type AutoSpbApiItem = {
   id: number;
-  member_code: string | null;
+  customer_code: string | null;
   phonecode: string | null;
   mobile_no: string | null;
   brand_name: string | null;
@@ -258,7 +258,7 @@ export type OpportunityItem = {
   company_billing_enabled?: boolean;
   customer_name: string;
   member_id?: string;
-  member_code?: string;
+  customer_code?: string;
   email?: string;
   mobile_no?: string;
   member_type: "Standard" | "Premium" | "INS-PREMIUM" | string;
@@ -892,7 +892,7 @@ const ViewOpportunitiesDialog: React.FC<{
             device_condition: item.device_condition,
             color: item.color,
             member_name: item.member_name,
-            member_code: item.member_code,
+            customer_code: item.customer_code,
             country_name: item.country_name,
             leads_count: item.leads_count,
           }));
@@ -943,11 +943,11 @@ const ViewOpportunitiesDialog: React.FC<{
       header: 'Member',
       accessorKey: 'member_name',
       cell: ({ row }: { row: { original: any } }) => {
-        const { member_name, member_code, country_name } = row.original;
+        const { member_name, customer_code, country_name } = row.original;
         return (
           <div>
             <p className="font-semibold">{member_name}</p>
-            <p className="text-xs text-gray-500">{member_code}</p>
+            <p className="text-xs text-gray-500">{customer_code}</p>
             <p className="text-xs text-gray-500">{country_name}</p>
           </div>
         );
@@ -2674,7 +2674,7 @@ const ExpandedOpportunityDetails: React.FC<{
             <div className="flex items-center gap-2">
               <InfoLine
                 icon={<TbUser size={14} />}
-                text={`${item.customer_name} (${item.member_code})`}
+                text={`${item.customer_name} (${item.customer_code})`}
                 className="font-semibold flex-grow"
               />
               <Tooltip
@@ -3044,7 +3044,7 @@ const SpbSummaryRow: React.FC<SpbSummaryRowProps> = ({
   isSelected,
   onToggleSelect,
 }) => {
-  const memberName = `Member: ${item.member_code}` || `Member ID: ${item.id}`;
+  const memberName = `Member: ${item.customer_code}` || `Member ID: ${item.id}`;
   const memberPhone = `Phone: ${item.mobile_no || 'N/A'}`;
   // const createDate = `Date: ${formatCustomDateTime(item.created_at)}`;
   const prodColor = `Color: ${item.color}`;
@@ -3420,7 +3420,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           company_code: apiItem.company_code || `C-${apiItem.company_id}`,
           company_verified: apiItem.company_verified ?? Math.random() > 0.5,
           company_billing_enabled: apiItem.company_billing_enabled ?? Math.random() > 0.7,
-          member_code: apiItem.member_code || `M-${apiItem.member_id}`,
+          customer_code: apiItem.customer_code || `M-${apiItem.member_id}`,
           member_verified: apiItem.member_verified ?? false,
           country: apiItem.country || "USA",
           country_flag: apiItem.country_flag || undefined,
@@ -3890,7 +3890,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                   />{" "}
                   <span className="font-semibold text-gray-800 dark:text-gray-100">
                     {" "}
-                    {item.customer_name} ({item.member_code}){" "}
+                    {item.customer_name} ({item.customer_code}){" "}
                   </span>{" "}
                   <Tooltip
                     title={item.company_verified ? "Verified" : "Not Verified"}

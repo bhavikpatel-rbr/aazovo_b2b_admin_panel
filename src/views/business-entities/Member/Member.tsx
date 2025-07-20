@@ -87,7 +87,7 @@ export type SelectOption = { value: any; label: string };
 export type FormItem = {
   id: number;
   name: string;
-  member_code: string;
+  customer_code: string;
   interested_in: string | null;
   number: string;
   number_code: string;
@@ -191,7 +191,7 @@ const transformApiData = (apiResponse: any): { status: boolean; message: string;
     const transformedItems = (apiResponse?.data?.data || []).map((apiItem: any): FormItem => ({
         id: apiItem.id,
         name: apiItem.name,
-        member_code: apiItem.customer_code,
+        customer_code: apiItem.customer_code,
         interested_in: apiItem.interested_for,
         number: apiItem.mobile_no,
         number_code: apiItem.phonecode,
@@ -245,7 +245,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
   const CSV_HEADERS = ["Member ID", "Member Code", "Name", "Email", "Contact", "Status", "Company (Temp)", "Company (Actual)", "Business Type", "Business Opportunity", "Member Grade", "Interested In", "Country", "Profile Completion (%)", "Joined Date"];
   const preparedRows = rows.map(row => ({
-    id: row.id, member_code: row.member_code, name: row.name, email: row.email, contact: `${row.number_code || ''} ${row.number || ''}`.trim(), status: row.status, company_temp: row.company_temp || 'N/A', company_actual: row.company_actual || 'N/A', business_type: row.business_type || 'N/A', business_opportunity: row.business_opportunity || 'N/A', member_grade: row.member_grade || 'N/A', interested_in: row.interested_in || 'N/A', country: row.country?.name || 'N/A', profile_completion: row.profile_completion, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A'
+    id: row.id, customer_code: row.customer_code, name: row.name, email: row.email, contact: `${row.number_code || ''} ${row.number || ''}`.trim(), status: row.status, company_temp: row.company_temp || 'N/A', company_actual: row.company_actual || 'N/A', business_type: row.business_type || 'N/A', business_opportunity: row.business_opportunity || 'N/A', member_grade: row.member_grade || 'N/A', interested_in: row.interested_in || 'N/A', country: row.country?.name || 'N/A', profile_completion: row.profile_completion, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A'
   }));
   const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => { const key = header.toLowerCase().replace(/ \(.+\)/, '').replace(/ /g, '_') as keyof typeof row; const cell = row[key] ?? ''; const cellString = String(cell).replace(/"/g, '""'); return `"${cellString}"`; }).join(','))].join('\n');
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
@@ -260,7 +260,7 @@ export interface MemberModalState { isOpen: boolean; type: MemberModalType | nul
 
 const AddNotificationDialog: React.FC<{ member: FormItem; onClose: () => void; userOptions: SelectOption[] }> = ({ member, onClose, userOptions }) => {
   const dispatch = useAppDispatch(); const [isLoading, setIsLoading] = useState(false);
-  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(z.object({ notification_title: z.string().min(3), send_users: z.array(z.number()).min(1), message: z.string().min(10) })), defaultValues: { notification_title: `Regarding Member: ${member.name}`, send_users: [], message: `This is a notification for member "${member.name}" (${member.member_code}). Please review their details.`, }, mode: 'onChange', });
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({ resolver: zodResolver(z.object({ notification_title: z.string().min(3), send_users: z.array(z.number()).min(1), message: z.string().min(10) })), defaultValues: { notification_title: `Regarding Member: ${member.name}`, send_users: [], message: `This is a notification for member "${member.name}" (${member.customer_code}). Please review their details.`, }, mode: 'onChange', });
   const onSend = async (formData: any) => { setIsLoading(true); const payload = { ...formData, module_id: String(member.id), module_name: 'Member' }; try { await dispatch(addNotificationAction(payload)).unwrap(); toast.push(<Notification type="success" title="Notification Sent!" />); onClose(); } catch (error: any) { toast.push(<Notification type="danger" title="Failed" children={error?.message} />); } finally { setIsLoading(false); } };
   return (<Dialog isOpen={true} onClose={onClose}> <h5 className="mb-4">Notify User about: {member.name}</h5> <UiForm onSubmit={handleSubmit(onSend)}> <UiFormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} autoFocus />} /></UiFormItem> <UiFormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<UiSelect isMulti placeholder="Select User(s)" options={userOptions} value={userOptions.filter((o) => field.value?.includes(o.value))} onChange={(options) => field.onChange(options?.map((o) => o.value) || [])} />)} /></UiFormItem> <UiFormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></UiFormItem> <div className="text-right mt-6"><Button type="button" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid}>Send</Button></div> </UiForm> </Dialog>);
 };
@@ -324,7 +324,7 @@ const ViewMemberDetailDialog: React.FC<{ member: FormItem; onClose: () => void; 
           <h6 className="mb-2 font-semibold">Basic Information</h6>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
             {renderDetailItem("Member ID", getDisplayValue(member.id))}
-            {renderDetailItem("Member Code", getDisplayValue(member.member_code))}
+            {renderDetailItem("Member Code", getDisplayValue(member.customer_code))}
             {renderDetailItem("Name", getDisplayValue(member.name))}
             {renderDetailItem("Status", <Tag className="capitalize">{getDisplayValue(member.status)}</Tag>)}
             {renderDetailItem("Joined Date", formatDate(member.created_at))}
@@ -845,7 +845,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
           <div className="flex items-center gap-2">
             <Avatar src={row.original.full_profile_pic || undefined} shape="circle" size="sm" icon={<TbUserCircle />} />
             <div className="text-xs">
-              <b className="text-xs text-blue-500"><em>{row.original.member_code}</em></b> <br />
+              <b className="text-xs text-blue-500"><em>{row.original.customer_code}</em></b> <br />
               <b className="text-sm">{row.original.name}</b>
             </div>
           </div>
