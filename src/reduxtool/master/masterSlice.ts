@@ -103,6 +103,7 @@ import {
   getOfferById,
   getOffersAction,
   getOpportunitiesAction,
+  getOpportunitieslistingAction,
   getParentCategoriesAction,
   getpartnerAction,
   getPaymentTermAction,
@@ -648,6 +649,10 @@ const masterSlice = createSlice({
     builder.addCase(getActivityLogAction.fulfilled, (state, { payload }) => ({
       ...state,
       activityLogsData: payload,
+    }));
+    builder.addCase(getOpportunitieslistingAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      Opportunitieslist: payload,
     }));
     builder.addCase(getOpportunitiesAction.fulfilled, (state, { payload }) => ({
       ...state,

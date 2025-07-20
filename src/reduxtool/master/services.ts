@@ -535,7 +535,7 @@ export const deleteAllBrandListAsync = async (unitData: any) => {
 
 export const getProductslistAsync = async (params: any) => {
   try {
-     const queryParams = new URLSearchParams();
+    const queryParams = new URLSearchParams();
 
     if (params) {
       // Iterate over the params object and append them to the query string
@@ -2570,6 +2570,28 @@ export const addWallItemAsync = async (unitData: FormData) => {
     return isAxiosError(err);
   }
 };
+
+
+export const getOpportunitieslistAsync = async (params: any) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      // Iterate over the params object and append them to the query string
+      // if they have a valid value.
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await axiosInstance.get(`${config.apiURL}/opportunity?${queryParams.toString()}`);
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 export const getOpportunitiesAsync = async () => {
   try {
