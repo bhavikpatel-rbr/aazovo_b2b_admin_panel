@@ -27,7 +27,7 @@ import {
   Tooltip,
   Notification,
   Checkbox,
-  Skeleton, // Skeleton Imported
+  Skeleton,
 } from "@/components/ui";
 import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
@@ -65,6 +65,7 @@ import {
   TbProgress,
   TbProgressX,
   TbProgressHelp,
+  TbPhoto,
 } from "react-icons/tb";
 
 // Types
@@ -90,17 +91,17 @@ import {
   addScheduleAction,
   addTaskAction,
   getDepartmentsAction,
+  getParentCategoriesAction, // IMPORTED
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
 
 // --- Define Types & Constants ---
 export type SelectOption = { value: any; label: string };
+export type ApiLookupItem = { id: string | number; name: string };
 
-// REQUIREMENT: Type ( Feedback / Request )
 export type RequestFeedbackType = "Request" | "Feedback";
 
-// REQUIREMENT: Status :-- Pending/ Resolved/ In progress/ Rejected
 export type RequestFeedbackStatus =
   | "Pending"
   | "In progress"
@@ -114,16 +115,20 @@ export type RequestFeedbackItem = {
   email: string;
   mobile_no: string;
   company_name?: string | null;
-  feedback_details: string; // This is the "Description" field
+  feedback_details: string;
   attachment?: string | null;
+  icon_full_path?: string | null;
   type: RequestFeedbackType;
-  category: string;
+  category_id: string | number | null; // MODIFIED
   department_id: string | number;
   status: RequestFeedbackStatus;
   rating?: number | string | null;
   created_at: string;
   updated_at: string;
   department?: { id: number; name: string };
+  category?: { id: number; name: string }; // MODIFIED
+  // UI Display helpers
+  categoryName?: string;
 };
 
 const TYPE_OPTIONS: SelectOption[] = [
@@ -131,26 +136,6 @@ const TYPE_OPTIONS: SelectOption[] = [
   { value: "Feedback", label: "Feedback" },
 ];
 
-// REQUIREMENT: Categories for Request
-const CATEGORY_OPTIONS_REQUEST: SelectOption[] = [
-  { value: "New Product Request", label: "New Product Request" },
-  { value: "Account Statement Request", label: "Account Statement Request" },
-  { value: "Catalogue Request", label: "Catalogue Request" },
-  { value: "Account Documents request", label: "Account Documents request" },
-  { value: "Others", label: "Others" },
-];
-
-// REQUIREMENT: Categories for Feedback
-const CATEGORY_OPTIONS_FEEDBACK: SelectOption[] = [
-  { value: "Feature feedback", label: "Feature feedback" },
-  { value: "Website feedback", label: "Website feedback" },
-  { value: "Testimonial", label: "Testimonial" },
-  { value: "Service feedback", label: "Service feedback" },
-  { value: "Transactional feedback", label: "Transactional feedback" },
-  { value: "Others", label: "Others" },
-];
-
-// REQUIREMENT: Status options for the form and listing
 const STATUS_OPTIONS: { value: RequestFeedbackStatus; label: string }[] = [
   { value: "Pending", label: "Pending" },
   { value: "In progress", label: "In progress" },
@@ -158,7 +143,6 @@ const STATUS_OPTIONS: { value: RequestFeedbackStatus; label: string }[] = [
   { value: "Rejected", label: "Rejected" },
 ];
 
-// REQUIREMENT: Rating options
 const RATING_OPTIONS: SelectOption[] = [
   { value: "1", label: "1 Star (Poor)" },
   { value: "2", label: "2 Stars (Fair)" },
@@ -189,7 +173,7 @@ const requestFeedbackFormSchema = z.object({
   type: z.enum(["Request", "Feedback"], {
     errorMap: () => ({ message: "Please select a type." }),
   }),
-  category: z.string().min(1, "Category is required."),
+  category_id: z.string().min(1, "Category is required."), // MODIFIED
   department_id: z.string().min(1, "Department is required."),
   feedback_details: z
     .string()
@@ -210,13 +194,15 @@ const filterFormSchema = z.object({
   filterStatus: z
     .array(z.object({ value: z.string(), label: z.string() }))
     .optional(),
-  filterRating: z
-    .array(z.object({ value: z.string(), label: z.string() }))
-    .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- Helper Functions ---
+const isImageFile = (filename: string | null | undefined): boolean => {
+  if (!filename) return false;
+  return /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filename);
+};
+
 const itemPathUtil = (filename: string | null | undefined): string => {
   const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
   return filename ? `${baseUrl}/storage/${filename}` : "#";
@@ -423,8 +409,8 @@ const ActiveFiltersDisplay = ({
   onRemoveFilter: (key: keyof FilterFormData, value: string) => void;
   onClearAll: () => void;
 }) => {
-  const { filterType, filterStatus, filterRating } = filterData;
-  if (!filterType?.length && !filterStatus?.length && !filterRating?.length)
+  const { filterType, filterStatus } = filterData;
+  if (!filterType?.length && !filterStatus?.length)
     return null;
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
@@ -446,15 +432,6 @@ const ActiveFiltersDisplay = ({
           <TbX
             className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
             onClick={() => onRemoveFilter("filterStatus", item.value)}
-          />
-        </Tag>
-      ))}
-      {filterRating?.map((item) => (
-        <Tag key={`rating-${item.value}`} prefix>
-          Rating: {item.label}{" "}
-          <TbX
-            className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
-            onClick={() => onRemoveFilter("filterRating", item.value)}
           />
         </Tag>
       ))}
@@ -538,6 +515,7 @@ const RequestAndFeedbackListing = () => {
   const {
     requestFeedbacksData = { data: [], counts: {} },
     departmentsData = [],
+    ParentCategories: CategoriesData = [], // ADDED
   } = useSelector(masterSelector, shallowEqual);
 
   const [initialLoading, setInitialLoading] = useState(true);
@@ -574,6 +552,18 @@ const RequestAndFeedbackListing = () => {
   const isDataReady = !initialLoading;
   const tableLoading = initialLoading || isSubmitting || isDeleting;
 
+  // ADDED: Memoized category options from API
+  const categoryOptions = useMemo(
+    () =>
+      Array.isArray(CategoriesData)
+        ? CategoriesData?.map((c: ApiLookupItem) => ({
+            value: String(c.id),
+            label: c.name,
+          }))
+        : [],
+    [CategoriesData]
+  );
+
   useEffect(() => {
     const fetchData = async () => {
       setInitialLoading(true);
@@ -582,6 +572,7 @@ const RequestAndFeedbackListing = () => {
           dispatch(getRequestFeedbacksAction()),
           dispatch(getAllUsersAction()),
           dispatch(getDepartmentsAction()),
+          dispatch(getParentCategoriesAction()), // ADDED
         ]);
       } catch (error) {
         console.error("Failed to load initial data", error);
@@ -630,7 +621,7 @@ const RequestAndFeedbackListing = () => {
       mobile_no: "",
       company_name: "",
       type: "Request",
-      category: "",
+      category_id: "", // MODIFIED
       department_id: "",
       feedback_details: "",
       status: "Pending",
@@ -659,7 +650,7 @@ const RequestAndFeedbackListing = () => {
         mobile_no: item.mobile_no,
         company_name: item.company_name || "",
         type: item.type,
-        category: item.category,
+        category_id: String(item.category_id), // MODIFIED
         department_id: String(item.department_id),
         feedback_details: item.feedback_details,
         status: item.status,
@@ -846,11 +837,20 @@ const RequestAndFeedbackListing = () => {
   };
 
   const { pageData, total } = useMemo(() => {
-    let processedData: RequestFeedbackItem[] = cloneDeep(
+    const dataWithNames: RequestFeedbackItem[] = cloneDeep(
       Array.isArray(requestFeedbacksData?.data)
         ? requestFeedbacksData?.data
         : []
-    );
+    ).map((item: RequestFeedbackItem) => ({
+      ...item,
+      categoryName:
+        item.category?.name ||
+        categoryOptions.find((c) => c.value === String(item.category_id))
+          ?.label ||
+        "N/A",
+    }));
+
+    let processedData = dataWithNames;
     if (filterCriteria.filterType?.length)
       processedData = processedData.filter((item) =>
         filterCriteria.filterType!.some((f) => f.value === item.type)
@@ -858,12 +858,6 @@ const RequestAndFeedbackListing = () => {
     if (filterCriteria.filterStatus?.length)
       processedData = processedData.filter((item) =>
         filterCriteria.filterStatus!.some((f) => f.value === item.status)
-      );
-    if (filterCriteria.filterRating?.length)
-      processedData = processedData.filter((item) =>
-        filterCriteria.filterRating!.some(
-          (f) => f.value === String(item.rating)
-        )
       );
     if (tableData.query) {
       const q = tableData.query.toLowerCase().trim();
@@ -879,9 +873,9 @@ const RequestAndFeedbackListing = () => {
         if (key === "created_at" || key === "updated_at")
           return order === "asc"
             ? new Date(aVal as string).getTime() -
-                new Date(bVal as string).getTime()
+            new Date(bVal as string).getTime()
             : new Date(bVal as string).getTime() -
-                new Date(aVal as string).getTime();
+            new Date(aVal as string).getTime();
         return order === "asc"
           ? String(aVal ?? "").localeCompare(String(bVal ?? ""))
           : String(bVal ?? "").localeCompare(String(aVal ?? ""));
@@ -895,7 +889,7 @@ const RequestAndFeedbackListing = () => {
       pageData: processedData.slice(startIndex, startIndex + pageSize),
       total: currentTotal,
     };
-  }, [requestFeedbacksData?.data, tableData, filterCriteria]);
+  }, [requestFeedbacksData?.data, tableData, filterCriteria, categoryOptions]);
 
   const activeFilterCount = useMemo(
     () =>
@@ -914,17 +908,12 @@ const RequestAndFeedbackListing = () => {
         cell: (props: CellContext<RequestFeedbackItem, unknown>) => (
           <div className="flex items-center gap-2">
             <div className="flex flex-col gap-0.5 text-xs">
-                {(props.row.original as any)?.customer_code && (
+              {(props.row.original as any)?.customer_code && (
                 <span className="font-semibold text-sm">
                   {(props.row.original as any).customer_code} |{' '}
                 </span>
-                )}
-                <span className="font-semibold text-sm">{props.row.original.name}</span>
-              {/* <span className="text-gray-600 dark:text-gray-400">
-                {props.row.original.customer_id === "0"
-                  ? "Guest"
-                  : `ID: ${props.row.original.customer_id}`}
-              </span> */}
+              )}
+              <span className="font-semibold text-sm">{props.row.original.name}</span>
               <span className="text-gray-600 dark:text-gray-400">
                 {props.row.original.email || "N/A"}
               </span>
@@ -945,11 +934,11 @@ const RequestAndFeedbackListing = () => {
       },
       {
         header: "Category",
-        accessorKey: "category",
+        accessorKey: "category_id", // MODIFIED
         size: 180,
         cell: (props) => (
-          <div className="truncate w-44" title={props.getValue() as string}>
-            {(props.getValue() as string) || "N/A"}
+          <div className="truncate w-44" title={props.row.original.categoryName}>
+            {props.row.original.categoryName || "N/A"}
           </div>
         ),
       },
@@ -1006,285 +995,99 @@ const RequestAndFeedbackListing = () => {
     useState<ColumnDef<RequestFeedbackItem>[]>(columns);
 
   const DrawerFormContent = () => {
-    const typeValue = useWatch({ control, name: "type" });
-    const categoryOptions =
-      typeValue === "Feedback"
-        ? CATEGORY_OPTIONS_FEEDBACK
-        : CATEGORY_OPTIONS_REQUEST;
-
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         <FormItem
-          label={
-            <div>
-              Name<span className="text-red-500"> *</span>
-            </div>
-          }
+          label={<div>Name<span className="text-red-500"> *</span></div>}
           invalid={!!errors.name}
           errorMessage={errors.name?.message}
         >
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                prefix={<TbUserCircle />}
-                placeholder="Full Name"
-              />
-            )}
-          />
+          <Controller name="name" control={control} render={({ field }) => <Input {...field} prefix={<TbUserCircle />} placeholder="Full Name" />} />
         </FormItem>
         <FormItem
-          label={
-            <div>
-              Email<span className="text-red-500"> *</span>
-            </div>
-          }
+          label={<div>Email<span className="text-red-500"> *</span></div>}
           invalid={!!errors.email}
           errorMessage={errors.email?.message}
         >
-          <Controller
-            name="email"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                type="email"
-                prefix={<TbMail />}
-                placeholder="example@domain.com"
-              />
-            )}
-          />
+          <Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" prefix={<TbMail />} placeholder="example@domain.com" />} />
         </FormItem>
         <FormItem
-          label={
-            <div>
-              Mobile No.<span className="text-red-500"> *</span>
-            </div>
-          }
+          label={<div>Mobile No.<span className="text-red-500"> *</span></div>}
           invalid={!!errors.mobile_no}
           errorMessage={errors.mobile_no?.message}
         >
-          <Controller
-            name="mobile_no"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                type="tel"
-                prefix={<TbPhone />}
-                placeholder="+XX XXXXXXXXXX"
-              />
-            )}
-          />
+          <Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} type="tel" prefix={<TbPhone />} placeholder="+XX XXXXXXXXXX" />} />
         </FormItem>
         <FormItem label="Company Name">
-          <Controller
-            name="company_name"
-            control={control}
-            render={({ field }) => (
-              <Input
-                {...field}
-                prefix={<TbBuilding />}
-                placeholder="Your Company"
-              />
-            )}
-          />
+          <Controller name="company_name" control={control} render={({ field }) => <Input {...field} prefix={<TbBuilding />} placeholder="Your Company" />} />
         </FormItem>
         <FormItem
-          label={
-            <div>
-              Type<span className="text-red-500"> *</span>
-            </div>
-          }
+          label={<div>Type<span className="text-red-500"> *</span></div>}
           invalid={!!errors.type}
           errorMessage={errors.type?.message}
         >
-          <Controller
-            name="type"
-            control={control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select Type"
-                options={TYPE_OPTIONS}
-                value={TYPE_OPTIONS.find((o) => o.value === field.value)}
-                onChange={(opt) => field.onChange(opt?.value)}
-                prefix={<TbMessageDots />}
-              />
-            )}
-          />
+          <Controller name="type" control={control} render={({ field }) => <Select placeholder="Select Type" options={TYPE_OPTIONS} value={TYPE_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbMessageDots />} />} />
         </FormItem>
+        {/* MODIFIED: Using dynamic categoryOptions */}
         <FormItem
-          label={
-            <div>
-              Category<span className="text-red-500"> *</span>
-            </div>
-          }
-          invalid={!!errors.category}
-          errorMessage={errors.category?.message}
+          label={<div>Category<span className="text-red-500"> *</span></div>}
+          invalid={!!errors.category_id}
+          errorMessage={errors.category_id?.message}
         >
-          <Controller
-            name="category"
-            control={control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select Category"
-                options={categoryOptions}
-                value={categoryOptions.find((o) => o.value === field.value)}
-                onChange={(opt) => field.onChange(opt?.value)}
-                prefix={<TbCategory />}
-              />
-            )}
-          />
+          <Controller name="category_id" control={control} render={({ field }) => <Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory />} />} />
         </FormItem>
         <FormItem
-          label={
-            <div>
-              Department<span className="text-red-500"> *</span>
-            </div>
-          }
+          label={<div>Department<span className="text-red-500"> *</span></div>}
           className="md:col-span-2"
           invalid={!!errors.department_id}
           errorMessage={errors.department_id?.message}
         >
-          <Controller
-            name="department_id"
-            control={control}
-            render={({ field }) => (
-              <Select
-                placeholder="Select Department"
-                options={departmentOptions}
-                value={departmentOptions.find((o) => o.value === field.value)}
-                onChange={(opt) => field.onChange(opt?.value)}
-                prefix={<TbBuildingStore />}
-              />
-            )}
-          />
+          <Controller name="department_id" control={control} render={({ field }) => <Select placeholder="Select Department" options={departmentOptions} value={departmentOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbBuildingStore />} />} />
         </FormItem>
         <FormItem
-          label={
-            <div>
-              Description<span className="text-red-500"> *</span>
-            </div>
-          }
+          label={<div>Description<span className="text-red-500"> *</span></div>}
           className="md:col-span-2"
           invalid={!!errors.feedback_details}
           errorMessage={errors.feedback_details?.message}
         >
-          <Controller
-            name="feedback_details"
-            control={control}
-            render={({ field }) => (
-              <Input
-                textArea
-                {...field}
-                rows={5}
-                placeholder="Describe your feedback or request in detail..."
-              />
-            )}
-          />
+          <Controller name="feedback_details" control={control} render={({ field }) => <Input textArea {...field} rows={5} placeholder="Describe your feedback or request in detail..." />} />
         </FormItem>
-        {typeValue === "Feedback" && (
-          <FormItem
-            label="Rating"
-            className="md:col-span-2"
-            invalid={!!errors.rating}
-            errorMessage={errors.rating?.message}
-          >
-            <Controller
-              name="rating"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Rating (Optional)"
-                  options={RATING_OPTIONS}
-                  value={RATING_OPTIONS.find((o) => o.value === field.value)}
-                  onChange={(opt) => field.onChange(opt?.value)}
-                  isClearable
-                  prefix={<TbStar />}
-                />
-              )}
-            />
-          </FormItem>
-        )}
+        <FormItem
+          label="Rating"
+          className="md:col-span-2"
+          invalid={!!errors.rating}
+          errorMessage={errors.rating?.message}
+        >
+          <Controller name="rating" control={control} render={({ field }) => <Select placeholder="Select Rating (Optional)" options={RATING_OPTIONS} value={RATING_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbStar />} />} />
+        </FormItem>
         <FormItem label="Attachment (Optional)" className="md:col-span-2">
-          <Controller
-            name="attachment"
-            control={control}
-            render={({ field: { onChange, name, ref, onBlur } }) => (
-              <Input
-                type="file"
-                name={name}
-                ref={ref}
-                onBlur={onBlur}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  onChange(file);
-                  setSelectedFile(file || null);
-                  if (file) setRemoveExistingAttachment(false);
-                }}
-                prefix={<TbPaperclip />}
-              />
-            )}
-          />
-          {editingItem?.attachment && !selectedFile && (
-            <div className="mt-2 text-sm text-gray-500 flex items-center justify-between">
-              <span className="truncate max-w-[calc(100%-100px)]">
-                Current:{" "}
-                <a
-                  href={itemPathUtil(editingItem.attachment)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
+          <Controller name="attachment" control={control} render={({ field: { onChange, name, ref, onBlur } }) => (<Input type="file" name={name} ref={ref} onBlur={onBlur} onChange={(e) => { const file = e.target.files?.[0]; onChange(file); setSelectedFile(file || null); if (file) setRemoveExistingAttachment(false); }} prefix={<TbPaperclip />} />)} />
+          {editingItem?.attachment && !selectedFile && !removeExistingAttachment && (
+            <div className="mt-2 text-sm text-gray-500">
+              <div className="flex items-center justify-between">
+                <a href={itemPathUtil(editingItem.icon_full_path) || '#'} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate max-w-[calc(100%-100px)]">
                   {editingItem.attachment.split("/").pop()}
                 </a>
-              </span>
-              {!removeExistingAttachment && (
-                <Button
-                  size="xs"
-                  variant="plain"
-                  className="text-red-500"
-                  onClick={() => setRemoveExistingAttachment(true)}
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
-          )}
-          {selectedFile && (
-            <div className="mt-1 text-xs text-gray-500">
-              New file: {selectedFile.name}
-            </div>
-          )}
-        </FormItem>
-        {editingItem && (
-          <FormItem
-            label={
-              <div>
-                Status<span className="text-red-500"> *</span>
+                <Button size="xs" variant="plain" className="text-red-500" onClick={() => setRemoveExistingAttachment(true)}>Remove</Button>
               </div>
-            }
-            className="md:col-span-2"
-            invalid={!!errors.status}
-            errorMessage={errors.status?.message}
-          >
-            <Controller
-              name="status"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Status"
-                  options={STATUS_OPTIONS}
-                  value={STATUS_OPTIONS.find((o) => o.value === field.value)}
-                  onChange={(opt) => field.onChange(opt?.value)}
-                  prefix={<TbToggleRight />}
-                />
+              {isImageFile(editingItem.attachment) && (
+                <div className="mt-2 p-2 border border-gray-200 dark:border-gray-600 rounded-md inline-block">
+                  <img src={editingItem.icon_full_path!} alt="Attachment Preview" className="h-24 w-auto rounded-md object-cover" />
+                </div>
               )}
-            />
-          </FormItem>
-        )}
+            </div>
+          )}
+          {selectedFile && (<div className="mt-1 text-xs text-gray-500">New file: {selectedFile.name}</div>)}
+          {removeExistingAttachment && <div className="mt-1 text-xs text-red-500">Current attachment will be removed.</div>}
+        </FormItem>
+        <FormItem
+          label={<div>Status<span className="text-red-500"> *</span></div>}
+          className="md:col-span-2"
+          invalid={!!errors.status}
+          errorMessage={errors.status?.message}
+        >
+          <Controller name="status" control={control} render={({ field }) => (<Select placeholder="Select Status" options={STATUS_OPTIONS} value={STATUS_OPTIONS.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbToggleRight />} />)} />
+        </FormItem>
       </div>
     );
   };
@@ -1314,146 +1117,55 @@ const RequestAndFeedbackListing = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-4 gap-2">
             <Tooltip title="Click to show all entries">
               <div onClick={() => handleCardClick("all")}>
-                <Card
-                  bodyClass="flex gap-2 p-2"
-                  className="rounded-md border border-blue-200 cursor-pointer hover:shadow-lg"
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                    <TbUserQuestion size={24} />
-                  </div>
-                  <div>
-                    <div className="text-blue-500">
-                      {renderCardContent(requestFeedbacksData?.counts?.total)}
-                    </div>
-                    <span className="font-semibold text-xs">Total</span>
-                  </div>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 cursor-pointer hover:shadow-lg">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUserQuestion size={24} /></div>
+                  <div><div className="text-blue-500">{renderCardContent(requestFeedbacksData?.counts?.total)}</div><span className="font-semibold text-xs">Total</span></div>
                 </Card>
               </div>
             </Tooltip>
             <Tooltip title="Click to show Pending entries">
               <div onClick={() => handleCardClick("Pending")}>
-                <Card
-                  bodyClass="flex gap-2 p-2"
-                  className="rounded-md border border-amber-200 cursor-pointer hover:shadow-lg"
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500">
-                    <TbProgressHelp size={24} />
-                  </div>
-                  <div>
-                    <div className="text-amber-500">
-                      {renderCardContent(requestFeedbacksData?.counts?.pending)}
-                    </div>
-                    <span className="font-semibold text-xs">Pending</span>
-                  </div>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-amber-200 cursor-pointer hover:shadow-lg">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbProgressHelp size={24} /></div>
+                  <div><div className="text-amber-500">{renderCardContent(requestFeedbacksData?.counts?.pending)}</div><span className="font-semibold text-xs">Pending</span></div>
                 </Card>
               </div>
             </Tooltip>
             <Tooltip title="Click to show In Progress entries">
               <div onClick={() => handleCardClick("In progress")}>
-                <Card
-                  bodyClass="flex gap-2 p-2"
-                  className="rounded-md border border-cyan-200 cursor-pointer hover:shadow-lg"
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-cyan-100 text-cyan-500">
-                    <TbProgress size={24} />
-                  </div>
-                  <div>
-                    <div className="text-cyan-500">
-                      {renderCardContent(
-                        requestFeedbacksData?.counts?.in_progress
-                      )}
-                    </div>
-                    <span className="font-semibold text-xs">In Progress</span>
-                  </div>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-cyan-200 cursor-pointer hover:shadow-lg">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-cyan-100 text-cyan-500"><TbProgress size={24} /></div>
+                  <div><div className="text-cyan-500">{renderCardContent(requestFeedbacksData?.counts?.in_progress)}</div><span className="font-semibold text-xs">In Progress</span></div>
                 </Card>
               </div>
             </Tooltip>
             <Tooltip title="Click to show Resolved entries">
               <div onClick={() => handleCardClick("Resolved")}>
-                <Card
-                  bodyClass="flex gap-2 p-2"
-                  className="rounded-md border border-emerald-200 cursor-pointer hover:shadow-lg"
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500">
-                    <TbProgressCheck size={24} />
-                  </div>
-                  <div>
-                    <div className="text-emerald-500">
-                      {renderCardContent(
-                        requestFeedbacksData?.counts?.resolved
-                      )}
-                    </div>
-                    <span className="font-semibold text-xs">Resolved</span>
-                  </div>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-emerald-200 cursor-pointer hover:shadow-lg">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbProgressCheck size={24} /></div>
+                  <div><div className="text-emerald-500">{renderCardContent(requestFeedbacksData?.counts?.resolved)}</div><span className="font-semibold text-xs">Resolved</span></div>
                 </Card>
               </div>
             </Tooltip>
             <Tooltip title="Click to show Rejected entries">
               <div onClick={() => handleCardClick("Rejected")}>
-                <Card
-                  bodyClass="flex gap-2 p-2"
-                  className="rounded-md border border-red-200 cursor-pointer hover:shadow-lg"
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                    <TbProgressX size={24} />
-                  </div>
-                  <div>
-                    <div className="text-red-500">
-                      {renderCardContent(
-                        requestFeedbacksData?.counts?.rejected
-                      )}
-                    </div>
-                    <span className="font-semibold text-xs">Rejected</span>
-                  </div>
+                <Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 cursor-pointer hover:shadow-lg">
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbProgressX size={24} /></div>
+                  <div><div className="text-red-500">{renderCardContent(requestFeedbacksData?.counts?.rejected)}</div><span className="font-semibold text-xs">Rejected</span></div>
                 </Card>
               </div>
             </Tooltip>
           </div>
           <div className="mb-4">
-            <ItemTableTools
-              onClearFilters={onClearFilters}
-              onSearchChange={(q) =>
-                setTableData((p) => ({ ...p, query: q, pageIndex: 1 }))
-              }
-              onFilter={() => setIsFilterDrawerOpen(true)}
-              columns={columns}
-              filteredColumns={filteredColumns}
-              setFilteredColumns={setFilteredColumns}
-              activeFilterCount={activeFilterCount}
-              isDataReady={isDataReady}
-            />
+            <ItemTableTools onClearFilters={onClearFilters} onSearchChange={(q) => setTableData((p) => ({ ...p, query: q, pageIndex: 1 }))} onFilter={() => setIsFilterDrawerOpen(true)} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
           </div>
-          <ActiveFiltersDisplay
-            filterData={filterCriteria}
-            onRemoveFilter={handleRemoveFilter}
-            onClearAll={onClearFilters}
-          />
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4">
-            <DataTable
-              columns={filteredColumns}
-              data={pageData}
-              loading={tableLoading}
-              pagingData={{
-                total,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
-              onPaginationChange={(p) =>
-                setTableData((prev) => ({ ...prev, pageIndex: p }))
-              }
-              onSelectChange={(s) =>
-                setTableData((prev) => ({ ...prev, pageSize: s, pageIndex: 1 }))
-              }
-              onSort={(s) => setTableData((prev) => ({ ...prev, sort: s }))}
-            />
+            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={(p) => setTableData((prev) => ({ ...prev, pageIndex: p }))} onSelectChange={(s) => setTableData((prev) => ({ ...prev, pageSize: s, pageIndex: 1 }))} onSort={(s) => setTableData((prev) => ({ ...prev, sort: s }))} />
           </div>
         </AdaptiveCard>
       </Container>
-      <RequestFeedbacksSelectedFooter
-        selectedItems={selectedItems}
-        onDeleteSelected={handleDeleteSelected}
-        isDeleting={isDeleting}
-      />
+      <RequestFeedbacksSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
       <Drawer
         title={editingItem ? "Edit Entry" : "Add New Entry"}
         isOpen={isAddDrawerOpen || isEditDrawerOpen}
@@ -1462,260 +1174,60 @@ const RequestAndFeedbackListing = () => {
         width={520}
         footer={
           <div className="text-right w-full">
-            <Button
-              size="sm"
-              className="mr-2"
-              onClick={editingItem ? closeEditDrawer : closeAddDrawer}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="requestFeedbackForm"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!isValid || isSubmitting}
-            >
-              {isSubmitting
-                ? editingItem
-                  ? "Saving..."
-                  : "Adding..."
-                : editingItem
-                ? "Save Changes"
-                : "Submit"}
+            <Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting}>Cancel</Button>
+            <Button size="sm" variant="solid" form="requestFeedbackForm" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>
+              {isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save Changes" : "Submit")}
             </Button>
           </div>
         }
       >
-        <Form
-          id="requestFeedbackForm"
-          onSubmit={handleSubmit(onSubmitHandler)}
-          className="flex flex-col gap-4"
-        >
+        <Form id="requestFeedbackForm" onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col gap-4">
           <DrawerFormContent />
         </Form>
       </Drawer>
 
-      <Dialog
-        isOpen={!!viewingItem}
-        onClose={closeViewDialog}
-        onRequestClose={closeViewDialog}
-        width={600}
-      >
+      <Dialog isOpen={!!viewingItem} onClose={closeViewDialog} onRequestClose={closeViewDialog} width={600}>
         <div className="p-1">
-          <h5 className="mb-6 border-b pb-4 dark:border-gray-600">
-            Details for Entry #{viewingItem?.id}
-          </h5>
+          <h5 className="mb-6 border-b pb-4 dark:border-gray-600">Details for Entry #{viewingItem?.id}</h5>
           {viewingItem && (
             <div className="space-y-3 text-sm">
-              <div className="flex">
-                <span className="font-semibold w-1/3 text-gray-700">ID:</span>
-                <span className="w-2/3">{viewingItem.id}</span>
-              </div>
-              <div className="flex">
-                <span className="font-semibold w-1/3 text-gray-700">Name:</span>
-                <span className="w-2/3">{viewingItem.name}</span>
-              </div>
-              <div className="flex">
-                <span className="font-semibold w-1/3 text-gray-700">
-                  Email:
-                </span>
-                <span className="w-2/3">{viewingItem.email}</span>
-              </div>
-              <div className="flex">
-                <span className="font-semibold w-1/3 text-gray-700">
-                  Mobile No:
-                </span>
-                <span className="w-2/3">{viewingItem.mobile_no || "N/A"}</span>
-              </div>
-              <div className="flex">
-                <span className="font-semibold w-1/3 text-gray-700">
-                  Company:
-                </span>
-                <span className="w-2/3">
-                  {viewingItem.company_name || "N/A"}
-                </span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-semibold w-1/3 text-gray-700">Type:</span>
-                <Tag className="capitalize">{viewingItem.type}</Tag>
-              </div>
-              <div className="flex">
-                <span className="font-semibold w-1/3 text-gray-700">
-                  Category:
-                </span>
-                <span className="w-2/3">{viewingItem.category || "N/A"}</span>
-              </div>
-              <div className="flex">
-                <span className="font-semibold w-1/3 text-gray-700">
-                  Department:
-                </span>
-                <span className="w-2/3">
-                  {viewingItem.department?.name || "N/A"}
-                </span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-semibold w-1/3 text-gray-700">
-                  Status:
-                </span>
-                <Tag
-                  className={classNames(
-                    "capitalize",
-                    statusColors[viewingItem.status] || "bg-gray-200"
-                  )}
-                >
-                  {viewingItem.status}
-                </Tag>
-              </div>
-              <div className="flex items-center">
-                <span className="font-semibold w-1/3 text-gray-700">
-                  Rating:
-                </span>
-                <span className="w-2/3 flex items-center gap-1">
-                  {viewingItem.rating ? (
-                    <>
-                      <TbStar className="text-amber-500" /> {viewingItem.rating}{" "}
-                      Stars
-                    </>
-                  ) : (
-                    "N/A"
-                  )}
-                </span>
-              </div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">ID:</span><span className="w-2/3">{viewingItem.id}</span></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Name:</span><span className="w-2/3">{viewingItem.name}</span></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Email:</span><span className="w-2/3">{viewingItem.email}</span></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Mobile No:</span><span className="w-2/3">{viewingItem.mobile_no || "N/A"}</span></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Company:</span><span className="w-2/3">{viewingItem.company_name || "N/A"}</span></div>
+              <div className="flex items-center"><span className="font-semibold w-1/3 text-gray-700">Type:</span><Tag className="capitalize">{viewingItem.type}</Tag></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Category:</span><span className="w-2/3">{viewingItem.categoryName || "N/A"}</span></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Department:</span><span className="w-2/3">{viewingItem.department?.name || "N/A"}</span></div>
+              <div className="flex items-center"><span className="font-semibold w-1/3 text-gray-700">Status:</span><Tag className={classNames("capitalize", statusColors[viewingItem.status] || "bg-gray-200")}>{viewingItem.status}</Tag></div>
+              <div className="flex items-center"><span className="font-semibold w-1/3 text-gray-700">Rating:</span><span className="w-2/3 flex items-center gap-1">{viewingItem.rating ? (<><TbStar className="text-amber-500" /> {viewingItem.rating}{" "}Stars</>) : ("N/A")}</span></div>
               {viewingItem.attachment && (
                 <div className="flex items-start">
                   <span className="font-semibold w-1/3 pt-1">Attachment:</span>
                   <span className="w-2/3">
-                    <a
-                      href={itemPathUtil(viewingItem.attachment)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
+                    <a href={itemPathUtil(viewingItem.attachment)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                       {viewingItem.attachment.split("/").pop()}
                     </a>
                   </span>
                 </div>
               )}
-              <div className="flex flex-col">
-                <span className="font-semibold mb-1">Description:</span>
-                <p className="w-full bg-gray-50 dark:bg-gray-700/60 p-3 rounded whitespace-pre-wrap break-words">
-                  {viewingItem.feedback_details}
-                </p>
-              </div>
-              <div className="flex">
-                <span className="font-semibold w-1/3 text-gray-700">
-                  Reported On:
-                </span>
-                <span className="w-2/3">
-                  {new Date(viewingItem.created_at).toLocaleString()}
-                </span>
-              </div>
+              <div className="flex flex-col"><span className="font-semibold mb-1">Description:</span><p className="w-full bg-gray-50 dark:bg-gray-700/60 p-3 rounded whitespace-pre-wrap break-words">{viewingItem.feedback_details}</p></div>
+              <div className="flex"><span className="font-semibold w-1/3 text-gray-700">Reported On:</span><span className="w-2/3">{new Date(viewingItem.created_at).toLocaleString()}</span></div>
             </div>
           )}
-          <div className="text-right mt-6">
-            <Button variant="solid" onClick={closeViewDialog}>
-              Close
-            </Button>
-          </div>
+          <div className="text-right mt-6"><Button variant="solid" onClick={closeViewDialog}>Close</Button></div>
         </div>
       </Dialog>
 
-      <Drawer
-        title="Filters"
-        isOpen={isFilterDrawerOpen}
-        onClose={() => setIsFilterDrawerOpen(false)}
-        width={400}
-        footer={
-          <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              variant="solid"
-              form="filterReqFeedbackForm"
-              type="submit"
-            >
-              Apply
-            </Button>
-          </div>
-        }
-      >
-        <Form
-          id="filterReqFeedbackForm"
-          onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormItem label="Type">
-            <Controller
-              name="filterType"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Any Type"
-                  options={TYPE_OPTIONS}
-                  value={field.value || []}
-                  onChange={(val: any) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Status">
-            <Controller
-              name="filterStatus"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Any Status"
-                  options={STATUS_OPTIONS}
-                  value={field.value || []}
-                  onChange={(val: any) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem label="Rating">
-            <Controller
-              name="filterRating"
-              control={filterFormMethods.control}
-              render={({ field }) => (
-                <Select
-                  isMulti
-                  placeholder="Any Rating"
-                  options={RATING_OPTIONS}
-                  value={field.value || []}
-                  onChange={(val: any) => field.onChange(val || [])}
-                />
-              )}
-            />
-          </FormItem>
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} width={400} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button><Button size="sm" variant="solid" form="filterReqFeedbackForm" type="submit">Apply</Button></div>}>
+        <Form id="filterReqFeedbackForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
+          <FormItem label="Type"><Controller name="filterType" control={filterFormMethods.control} render={({ field }) => <Select isMulti placeholder="Any Type" options={TYPE_OPTIONS} value={field.value || []} onChange={(val: any) => field.onChange(val || [])} />} /></FormItem>
+          <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => <Select isMulti placeholder="Any Status" options={STATUS_OPTIONS} value={field.value || []} onChange={(val: any) => field.onChange(val || [])} />} /></FormItem>
         </Form>
       </Drawer>
 
-      <ConfirmDialog
-        isOpen={singleDeleteConfirmOpen}
-        type="danger"
-        title="Delete Entry"
-        onClose={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-        onConfirm={onConfirmSingleDelete}
-        loading={isDeleting}
-        onCancel={() => {
-          setSingleDeleteConfirmOpen(false);
-          setItemToDelete(null);
-        }}
-      >
-        <p>
-          Are you sure you want to delete the entry from "
-          <strong>{itemToDelete?.name}</strong>"? This action cannot be undone.
-        </p>
+      <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Entry" onClose={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }} onConfirm={onConfirmSingleDelete} loading={isDeleting} onCancel={() => { setSingleDeleteConfirmOpen(false); setItemToDelete(null); }}>
+        <p>Are you sure you want to delete the entry from "<strong>{itemToDelete?.name}</strong>"? This action cannot be undone.</p>
       </ConfirmDialog>
     </>
   );
