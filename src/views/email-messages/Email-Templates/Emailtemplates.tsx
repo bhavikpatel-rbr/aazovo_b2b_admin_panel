@@ -1494,7 +1494,7 @@ const EmailTemplatesListing = () => {
       formState: { errors: currentErrors },
       watch: currentWatch,
     } = currentFormMethods;
-    const watchedCategoryIdInForm = currentWatch("category_id");
+    // const watchedCategoryIdInForm = currentWatch("category_id");
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         <FormItem
@@ -1604,7 +1604,7 @@ const EmailTemplatesListing = () => {
                 isClearable
                 prefix={<TbApps />}
                 isDisabled={
-                  !watchedCategoryIdInForm ||
+                  
                   subCategoryOptionsForForm.length === 0
                 }
                 loading={initialLoading}
