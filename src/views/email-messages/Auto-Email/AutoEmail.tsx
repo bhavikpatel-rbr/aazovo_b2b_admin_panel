@@ -309,9 +309,11 @@ const AutoEmailListing = () => {
 
     const userOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((u: ApiUser) => ({ value: String(u.id), label: u.name })) : [], [usersData]);
 
+    // src/views/your-path/AutoEmailTemplatesListing.tsx
+
     const EMAIL_TYPE_OPTIONS = useMemo(() =>
         (autoEmailTemplatesData as any)?.data && Array.isArray((autoEmailTemplatesData as any).data)
-            ? (autoEmailTemplatesData as any).data.map((template: any) => ({ value: template.email_type, label: template.email_type }))
+            ? (autoEmailTemplatesData as any).data.map((template: any) => ({ value: String(template.id), label: template.email_type }))
             : [],
         [autoEmailTemplatesData]);
 
