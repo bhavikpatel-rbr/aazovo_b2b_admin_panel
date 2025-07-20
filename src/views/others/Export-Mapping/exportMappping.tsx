@@ -268,20 +268,28 @@ const ExportMapping = () => {
     const [activeFilters, setActiveFilters] = useState<Partial<ExportMappingFilterSchema>>({});
     const [isDeleteAllConfirmOpen, setIsDeleteAllConfirmOpen] = useState(false);
     const [isDeletingAll, setIsDeletingAll] = useState(false);
+    const [isLoading, setisLoading] = useState(true);
     const tableLoading = masterLoadingStatus === 'loading';
     const isDataReady = masterLoadingStatus === 'idle';
 
-    useEffect(() => { dispatch(getExportMappingsAction()) }, [dispatch]);
+    useEffect(() => {  
+        
+        dispatch(getExportMappingsAction()).then(()=>setisLoading(false)).catch(()=>setisLoading('failed')).finally(()=>setisLoading(false))
+    
+    }, [dispatch]);
+console.log("setisLoading",isLoading);
 
     useEffect(() => {
-        if (masterLoadingStatus === 'idle' && apiExportMappings?.data) {
+        console.log("masterLoadingStatus",isLoading);
+       
+        if (!isLoading && apiExportMappings?.data) {
             const transformedData = (apiExportMappings.data as ApiExportMapping[]).map(transformApiDataToExportMappingItem).filter((item): item is ExportMappingItem => item !== null);
             setExportMappings(transformedData || []);
-        } else if (masterLoadingStatus === 'failed') {
+        } else if (isLoading === 'failed') {
             toast.push(<Notification title="Failed to Load Data" type="danger" duration={4000}>There was an error fetching the export logs.</Notification>);
             setExportMappings([]);
         }
-    }, [apiExportMappings?.data, masterLoadingStatus]);
+    }, [apiExportMappings?.data, isLoading]);
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         if (!isDataReady) { return { pageData: [], total: 0, allFilteredAndSortedData: [] } }
@@ -405,7 +413,7 @@ const ExportMapping = () => {
                             onClearFilters={onClearFiltersAndReload}
                             onExport={handleOpenExportReasonModal}
                             onDeleteAll={handleDeleteAllClick}
-                            isDataReady={isDataReady}
+                            isDataReady={isLoading}
                             activeFilterCount={activeFilterCount}
                             activeFilters={activeFilters}
                             searchInputValue={tableData.query}
@@ -420,7 +428,7 @@ const ExportMapping = () => {
                             columns={filteredColumns}
                             data={pageData}
                             noData={pageData.length <= 0}
-                            loading={tableLoading || isDeletingAll}
+                            loading={isLoading || isDeletingAll}
                             pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             onPaginationChange={handlePaginationChange}
                             onSelectChange={handleSelectChange}
