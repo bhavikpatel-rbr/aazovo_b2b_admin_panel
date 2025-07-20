@@ -18,7 +18,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DebounceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog } from '@/components/ui'
+import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog, Skeleton } from '@/components/ui' // Import Skeleton
 
 // Icons
 import { TbPencil, TbTrash, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbFile, TbFileCheck, TbFileX, TbUserCircle } from 'react-icons/tb'
@@ -83,7 +83,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }) => {
     );
 };
 
-const PaymentTermTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, termNameOptions, columns, filteredColumns, setFilteredColumns, searchInputValue }, ref) => {
+const PaymentTermTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, termNameOptions, columns, filteredColumns, setFilteredColumns, searchInputValue, isDataReady }, ref) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const { control, handleSubmit, setValue } = useForm<PaymentTermFilterSchema>({ defaultValues: { names: [], status: [] }, });
     useEffect(() => { setValue('names', activeFilters.names || []); setValue('status', activeFilters.status || []); }, [activeFilters, setValue]);
@@ -100,9 +100,9 @@ const PaymentTermTableTools = React.forwardRef(({ onSearchChange, onApplyFilters
                         {(columns || []).map((col) => col.header && (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)} disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>Export</Button>
             </div>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterPaymentTermForm">Apply</Button></div>}>
                 <Form id="filterPaymentTermForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -118,6 +118,7 @@ PaymentTermTableTools.displayName = 'PaymentTermTableTools';
 // --- MAIN PAYMENT TERMS COMPONENT ---
 const PaymentTerms = () => {
     const dispatch = useAppDispatch();
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingPaymentTerm, setEditingPaymentTerm] = useState<PaymentTermItem | null>(null);
@@ -132,16 +133,42 @@ const PaymentTerms = () => {
     const [isImageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageToView, setImageToView] = useState<string | null>(null);
 
-    const { PaymentTermsData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+    const { PaymentTermsData = [] } = useSelector(masterSelector, shallowEqual);
+    const isDataReady = !initialLoading;
     const termNameOptionsForFilter = useMemo(() => Array.isArray(PaymentTermsData) ? [...new Set(PaymentTermsData.map(term => term.term_name))].sort().map(name => ({ value: name, label: name })) : [], [PaymentTermsData]);
     
-    useEffect(() => { dispatch(getPaymentTermAction()); }, [dispatch]);
+    const refreshData = useCallback(async () => {
+        setInitialLoading(true);
+        try {
+            await dispatch(getPaymentTermAction());
+        } catch (error) {
+            console.error("Failed to refresh data:", error);
+            toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload payment terms.</Notification>);
+        } finally {
+            setInitialLoading(false);
+        }
+    }, [dispatch]);
+    
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
 
     const formMethods = useForm<PaymentTermFormData>({ resolver: zodResolver(paymentTermFormSchema), defaultValues: { term_name: "", status: 'Active' }, mode: "onChange" });
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
     const openImageViewer = (imageUrl: string | null | undefined) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
     const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
+
+    const openEditDrawer = useCallback((term: PaymentTermItem) => {
+        setEditingPaymentTerm(term);
+        formMethods.reset({ term_name: term.term_name, status: term.status || 'Active' });
+        setIsEditDrawerOpen(true);
+    }, [formMethods]);
+
+    const handleDeleteClick = useCallback((term: PaymentTermItem) => {
+        setTermToDelete(term);
+        setSingleDeleteConfirmOpen(true);
+    }, []);
 
     const columns: ColumnDef<PaymentTermItem>[] = useMemo(() => [
         { header: "Term Name", accessorKey: "term_name", enableSorting: true, size: 360 },
@@ -152,16 +179,6 @@ const PaymentTerms = () => {
         size: 200,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const date = updated_at ? new Date(updated_at) : null;
-          const formattedDate = date
-            ? `${date.getDate()} ${date.toLocaleString("en-US", {
-                month: "short",
-              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
-            : "N/A";
           return (
             <div className="flex items-center gap-2">
               <Avatar
@@ -186,8 +203,8 @@ const PaymentTerms = () => {
         },
       },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 80, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
-        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
-    ], []);
+        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip><Tooltip title="Delete"><div className="text-lg p-1.5 cursor-pointer hover:text-red-500" onClick={() => handleDeleteClick(props.row.original)}><TbTrash /></div></Tooltip></div>) },
+    ], [openEditDrawer, handleDeleteClick]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<PaymentTermItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns); }, [columns]);
@@ -231,20 +248,57 @@ const PaymentTerms = () => {
         setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as string[] | undefined; if (!currentValues) return prev; const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } return newFilters; });
         handleSetTableData({ pageIndex: 1 });
     }, [handleSetTableData]);
-    const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getPaymentTermAction()); };
+    const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); refreshData() }, [tableData, refreshData]);
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
     const handleCardClick = (status: 'Active' | 'Inactive' | 'All') => { handleSetTableData({ query: '', pageIndex: 1 }); if (status === 'All') { setActiveFilters({}); } else { setActiveFilters({ status: [status] }); } };
 
     const openAddDrawer = () => { formMethods.reset({ term_name: "", status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
-    const onAddPaymentTermSubmit = async (data: PaymentTermFormData) => { setIsSubmitting(true); try { await dispatch(addPaymentTermAction(data)).unwrap(); toast.push(<Notification title="Payment Term Added" type="success">{`Term "${data.term_name}" was successfully added.`}</Notification>); closeAddDrawer(); dispatch(getPaymentTermAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
+    const onAddPaymentTermSubmit = async (data: PaymentTermFormData) => { 
+        setIsSubmitting(true); 
+        try { 
+            await dispatch(addPaymentTermAction(data)).unwrap(); 
+            toast.push(<Notification title="Payment Term Added" type="success">{`Term "${data.term_name}" was successfully added.`}</Notification>); 
+            closeAddDrawer(); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Add Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsSubmitting(false); 
+        } 
+    };
     
-    const openEditDrawer = (term: PaymentTermItem) => { setEditingPaymentTerm(term); formMethods.reset({ term_name: term.term_name, status: term.status || 'Active' }); setIsEditDrawerOpen(true); };
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingPaymentTerm(null); };
-    const onEditPaymentTermSubmit = async (data: PaymentTermFormData) => { if (!editingPaymentTerm?.id) return; setIsSubmitting(true); try { await dispatch(editPaymentTermAction({ id: editingPaymentTerm.id, ...data })).unwrap(); toast.push(<Notification title="Payment Term Updated" type="success">{`"${data.term_name}" was successfully updated.`}</Notification>); closeEditDrawer(); dispatch(getPaymentTermAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
+    const onEditPaymentTermSubmit = async (data: PaymentTermFormData) => { 
+        if (!editingPaymentTerm?.id) return; 
+        setIsSubmitting(true); 
+        try { 
+            await dispatch(editPaymentTermAction({ id: editingPaymentTerm.id, ...data })).unwrap(); 
+            toast.push(<Notification title="Payment Term Updated" type="success">{`"${data.term_name}" was successfully updated.`}</Notification>); 
+            closeEditDrawer(); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Update Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsSubmitting(false); 
+        } 
+    };
     
-    const handleDeleteClick = (term: PaymentTermItem) => { setTermToDelete(term); setSingleDeleteConfirmOpen(true); };
-    const onConfirmSingleDelete = async () => { if (!termToDelete?.id) return; setIsDeleting(true); try { await dispatch(deletePaymentTermAction({ id: termToDelete.id })).unwrap(); toast.push(<Notification title="Payment Term Deleted" type="success">{`"${termToDelete.term_name}" was successfully deleted.`}</Notification>); dispatch(getPaymentTermAction()); } catch (error: any) { toast.push(<Notification title="Failed to Delete Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setTermToDelete(null); } };
+    const onConfirmSingleDelete = async () => { 
+        if (!termToDelete?.id) return; 
+        setIsDeleting(true); 
+        try { 
+            await dispatch(deletePaymentTermAction({ id: termToDelete.id })).unwrap(); 
+            toast.push(<Notification title="Payment Term Deleted" type="success">{`"${termToDelete.term_name}" was successfully deleted.`}</Notification>); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Delete Term" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsDeleting(false); 
+            setSingleDeleteConfirmOpen(false); 
+            setTermToDelete(null); 
+        } 
+    };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
@@ -261,6 +315,13 @@ const PaymentTerms = () => {
     const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
     const cardBodyClass = "flex items-center gap-2 p-2";
 
+    const renderCardContent = (count: number) => {
+        if (initialLoading) {
+            return <Skeleton width={40} height={20} />;
+        }
+        return <h6 className="text-sm">{count}</h6>;
+    };
+
     return (
         <>
             <Container className="h-auto">
@@ -270,17 +331,17 @@ const PaymentTerms = () => {
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Term</Button>
                     </div>
                     <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
-                        <Tooltip title="Click to show all terms"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{(PaymentTermsData || []).length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show active terms"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{(PaymentTermsData || []).filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show inactive terms"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{(PaymentTermsData || []).filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show all terms"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div>{renderCardContent(PaymentTermsData.length)}<span className="text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active terms"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div>{renderCardContent(PaymentTermsData.filter(d => d.status === 'Active').length)}<span className="text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show inactive terms"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div>{renderCardContent(PaymentTermsData.filter(d => d.status === 'Inactive').length)}<span className="text-xs">Inactive</span></div></Card></div></Tooltip>
                     </div>
                     <div className="mb-4">
-                        <PaymentTermTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} termNameOptions={termNameOptionsForFilter} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} searchInputValue={tableData?.query} />
+                        <PaymentTermTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} termNameOptions={termNameOptionsForFilter} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} searchInputValue={tableData?.query} isDataReady={isDataReady} />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching term(s).</div>}
                     <div className="flex-grow overflow-auto">
-                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
+                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={initialLoading || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
                     </div>
                 </AdaptiveCard>
             </Container>
