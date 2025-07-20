@@ -882,7 +882,7 @@ export const deleteAllBlogsAction = createAsyncThunk<any, any>(
 export const getProductslistingAction = createAsyncThunk("auth/Productslist",
   async (param, { rejectWithValue, dispatch }) => {
     try {
-      
+
       const response: AxiosResponse<any> = await getProductslistAsync(param)
       if (response?.data?.status === true) {
         return response?.data
@@ -4228,7 +4228,7 @@ export const getOpportunitieslistingAction = createAsyncThunk(
   "auth/getOpportunitieslisting",
   async (params, { rejectWithValue, dispatch }) => {
     try {
-      
+
       const response: AxiosResponse<any> = await getOpportunitieslistAsync(params)
       if (response?.data?.status === true) {
         return response?.data?.data

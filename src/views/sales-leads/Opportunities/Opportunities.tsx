@@ -136,7 +136,7 @@ import {
   getAllUsersAction,
   getAutoMatchDataAction,
   getLeadOpportunitiesAction,
-  getOpportunitiesAction,
+  getOpportunitieslistingAction, // UPDATED: Changed to server-side action
   submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
@@ -915,20 +915,23 @@ const ViewOpportunitiesDialog: React.FC<{
     };
 
     fetchOpportunities();
-  }, [lead.id]);
+  }, [lead.id, dispatch]);
   const columns = useMemo(() => [
     {
       header: 'Listing',
       accessorKey: 'product_name',
-      cell: ({ row }) => {
+      cell: ({ row }: { row: { original: any } }) => {
         const { want_to, product_name, brand_name, color, device_condition } = row.original;
-        const intent = want_to as WallIntent;
+        const intentTagColor: Record<string, string> = {
+            Buy: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-200',
+            Sell: 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-200',
+        };
         return (
           <div>
             <p className="font-semibold text-gray-900 dark:text-gray-100">{product_name}</p>
             <p className="text-xs text-gray-600 dark:text-gray-300">{brand_name}</p>
             <div className="flex items-center flex-wrap gap-1 mt-2">
-              <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[intent] || ''}`}>{want_to}</Tag>
+              <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[want_to] || ''}`}>{want_to}</Tag>
               <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{device_condition}</Tag>
               <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{color}</Tag>
             </div>
@@ -939,7 +942,7 @@ const ViewOpportunitiesDialog: React.FC<{
     {
       header: 'Member',
       accessorKey: 'member_name',
-      cell: ({ row }) => {
+      cell: ({ row }: { row: { original: any } }) => {
         const { member_name, member_code, country_name } = row.original;
         return (
           <div>
@@ -953,7 +956,7 @@ const ViewOpportunitiesDialog: React.FC<{
     {
       header: 'Details',
       accessorKey: 'qty',
-      cell: ({ row }) => {
+      cell: ({ row }: { row: { original: any } }) => {
         const { qty, price } = row.original;
         return (
           <div>
@@ -966,7 +969,7 @@ const ViewOpportunitiesDialog: React.FC<{
     {
       header: 'Leads',
       accessorKey: 'leads_count',
-      cell: ({ row }) => <span className="font-semibold">{row.original.leads_count}</span>
+      cell: ({ row }: { row: { original: any } }) => <span className="font-semibold">{row.original.leads_count}</span>
     },
   ], []);
   return (
@@ -3194,14 +3197,14 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
 const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  // SERVER-SIDE CHANGE: Switched from 'Opportunities' to 'opportunitiesList' to get paginated data
   const {
     autoMatchData,
-    Opportunities: rawOpportunitiesData,
+    Opportunitieslist,
     getAllUserData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
-
-  const [opportunities, setOpportunities] = useState<OpportunityItem[]>([]);
+  
   const [tableQueries, setTableQueries] = useState<
     Record<string, TableQueries>
   >({});
@@ -3215,7 +3218,6 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   
   const initialFilterState = useMemo(() => ({
     statuses: [],
-   
     assignedTo: [],
     memberTypes: [],
     continents: [],
@@ -3308,46 +3310,78 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     [getAllUserData]
   );
 
+  // SERVER-SIDE CHANGE: This effect now orchestrates the server-side data fetching.
   useEffect(() => {
-    dispatch(getOpportunitiesAction());
-    dispatch(getAllUsersAction());
-    dispatch(getAutoMatchDataAction());
-  }, [dispatch]);
+    const fetchInitialData = () => {
+        dispatch(getAllUsersAction());
+        dispatch(getAutoMatchDataAction());
+    };
+    
+    const fetchOpportunitiesData = () => {
+        if (currentTab === TABS.AUTO_MATCH) {
+            // Auto-match tab uses a different data source and is handled client-side
+            return;
+        }
 
-  const rawOpportunities = useMemo(
-    () =>
-      rawOpportunitiesData && Array.isArray(rawOpportunitiesData)
-        ? rawOpportunitiesData
-        : [],
-    [rawOpportunitiesData]
-  );
+        const tableData = tableQueries[currentTab];
+        if (!tableData) return;
 
-  useEffect(() => {
-    const mappedOpportunities = rawOpportunities.map(
-      (apiItem: ApiOpportunityItem): OpportunityItem => {
+        // Construct the payload for the API call from table queries and filters
+        const payload = {
+            page: tableData.pageIndex,
+            per_page: tableData.pageSize,
+            sort_field: (tableData.sort as ColumnSort).key,
+            sort_order: (tableData.sort as ColumnSort).order,
+            search: tableData.query,
+            status: filters.statuses,
+            assigned_to: filters.assignedTo,
+            member_type: filters.memberTypes,
+            continent: filters.continents,
+            country: filters.countries,
+            state: filters.states,
+            city: filters.cities,
+            pincode: filters.pincodes,
+            kyc_verified: filters.kycVerified,
+            category: filters.categories,
+            sub_category: filters.subCategories,
+            brand: filters.brands,
+            product: filters.products,
+            product_status: filters.productStatuses,
+            product_spec: filters.productSpecs,
+            want_to: filters.wantTo,
+        };
+
+        if (currentTab === TABS.SELLER) {
+            payload.want_to = ['Sell'];
+        } else if (currentTab === TABS.BUYER) {
+            payload.want_to = ['Buy'];
+        }
+
+        dispatch(getOpportunitieslistingAction(payload));
+    };
+
+    fetchInitialData();
+    fetchOpportunitiesData();
+  }, [dispatch, currentTab, tableQueries, filters]);
+  
+
+  const mappedOpportunities = useMemo(() => {
+    // This function maps raw API data to the component's internal data structure.
+    const mapItem = (apiItem: ApiOpportunityItem): OpportunityItem => {
         let uiStatus: OpportunityItem["status"] = "pending";
         if (apiItem.status?.toLowerCase() === "pending") uiStatus = "pending";
-        else if (apiItem.status?.toLowerCase() === "active")
-          uiStatus = "active";
-        else if (
-          apiItem.status?.toLowerCase() === "on hold" ||
-          apiItem.status?.toLowerCase() === "on_hold"
-        )
-          uiStatus = "on_hold";
-        else if (apiItem.status?.toLowerCase() === "closed")
-          uiStatus = "closed";
+        else if (apiItem.status?.toLowerCase() === "active") uiStatus = "active";
+        else if (apiItem.status?.toLowerCase() === "on hold" || apiItem.status?.toLowerCase() === "on_hold") uiStatus = "on_hold";
+        else if (apiItem.status?.toLowerCase() === "closed") uiStatus = "closed";
         else if (apiItem.status) uiStatus = apiItem.status.toLowerCase();
+        
         let uiOppStatus: OpportunityItem["opportunity_status"] = "New";
-        if (apiItem.opportunity_status?.toLowerCase() === "new")
-          uiOppStatus = "New";
-        else if (apiItem.opportunity_status?.toLowerCase() === "shortlisted")
-          uiOppStatus = "Shortlisted";
-        else if (apiItem.opportunity_status?.toLowerCase() === "converted")
-          uiOppStatus = "Converted";
-        else if (apiItem.opportunity_status?.toLowerCase() === "rejected")
-          uiOppStatus = "Rejected";
-        else if (apiItem.opportunity_status)
-          uiOppStatus = apiItem.opportunity_status;
+        if (apiItem.opportunity_status?.toLowerCase() === "new") uiOppStatus = "New";
+        else if (apiItem.opportunity_status?.toLowerCase() === "shortlisted") uiOppStatus = "Shortlisted";
+        else if (apiItem.opportunity_status?.toLowerCase() === "converted") uiOppStatus = "Converted";
+        else if (apiItem.opportunity_status?.toLowerCase() === "rejected") uiOppStatus = "Rejected";
+        else if (apiItem.opportunity_status) uiOppStatus = apiItem.opportunity_status;
+        
         return {
           id: String(apiItem.id),
           opportunity_id: apiItem.opportunity_id || `OPP-${apiItem.id}`,
@@ -3362,24 +3396,16 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           product_category: apiItem.product_category || undefined,
           product_subcategory: apiItem.product_subcategory || undefined,
           brand: apiItem.brand || undefined,
-          product_specs:
-            apiItem.product_specs_name || apiItem.product_specs || undefined,
-          qty:
-            (typeof apiItem.qty === "string"
-              ? parseInt(apiItem.qty, 10)
-              : apiItem.qty) ?? undefined,
-          product_status_listing:
-            apiItem.product_status || apiItem.product_status_listing,
+          product_specs: apiItem.product_specs_name || apiItem.product_specs || undefined,
+          qty: (typeof apiItem.qty === "string" ? parseInt(apiItem.qty, 10) : apiItem.qty) ?? undefined,
+          product_status_listing: apiItem.product_status || apiItem.product_status_listing,
           want_to: apiItem.want_to || undefined,
           company_name: apiItem.company_name || "N/A",
           company_id: apiItem.company_id || undefined,
           customer_name: apiItem.customer_name || "N/A",
           member_id: apiItem.member_id || undefined,
           email: apiItem.email || undefined,
-          mobile_no:
-            apiItem.phonecode && apiItem.mobile_no
-              ? `${apiItem.phonecode}${apiItem.mobile_no}`
-              : apiItem.mobile_no || undefined,
+          mobile_no: apiItem.phonecode && apiItem.mobile_no ? `${apiItem.phonecode}${apiItem.mobile_no}` : apiItem.mobile_no || undefined,
           member_type: apiItem.member_type || "Standard",
           matches_found_count: apiItem.matches_found_count ?? undefined,
           updated_at: apiItem.updated_at || undefined,
@@ -3390,17 +3416,10 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           updated_by_role: apiItem.updated_by_role || "Auto-Update",
           device_condition: apiItem.device_condition || undefined,
           device_type: apiItem.device_type || undefined,
-          product_image_url:
-            apiItem.product_image_url ||
-            `https://placehold.co/100x100/e2e8f0/64748b?text=${(
-              apiItem.product_name || "P"
-            )
-              .substring(0, 2)
-              .toUpperCase()}`,
+          product_image_url: apiItem.product_image_url || `https://placehold.co/100x100/e2e8f0/64748b?text=${(apiItem.product_name || "P").substring(0, 2).toUpperCase()}`,
           company_code: apiItem.company_code || `C-${apiItem.company_id}`,
           company_verified: apiItem.company_verified ?? Math.random() > 0.5,
-          company_billing_enabled:
-            apiItem.company_billing_enabled ?? Math.random() > 0.7,
+          company_billing_enabled: apiItem.company_billing_enabled ?? Math.random() > 0.7,
           member_code: apiItem.member_code || `M-${apiItem.member_id}`,
           member_verified: apiItem.member_verified ?? false,
           country: apiItem.country || "USA",
@@ -3412,10 +3431,15 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           pincode: apiItem.pincode || undefined,
           favouriteBrands: apiItem.member?.favourite_brands_list?.map(b => b.name) || [],
         };
-      }
-    );
-    setOpportunities(mappedOpportunities);
-  }, [rawOpportunities]);
+    };
+    
+    const allOpportunities = Opportunitieslist?.data?.map(mapItem) || [];
+    const paginatedOpportunities = Opportunitieslist?.data?.map(mapItem) || [];
+
+    return { allOpportunities, paginatedOpportunities };
+
+  }, [Opportunitieslist]);
+
 
   useEffect(() => {
     const initialTableQuery = {
@@ -3449,27 +3473,27 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   }, [currentTab, isDashboard]);
   
   const filterOptions = useMemo(() => {
-        const createUniqueOptions = (key: keyof OpportunityItem) =>
-            Array.from(new Set(opportunities.map((item) => item[key]).filter(Boolean)))
+        const createUniqueOptions = (key: keyof OpportunityItem, source: OpportunityItem[]) =>
+            Array.from(new Set(source.map((item) => item[key]).filter(Boolean)))
                  .map(value => ({ value: String(value), label: String(value) }));
 
         return {
-            memberTypeOptions: createUniqueOptions('member_type'),
-            continentOptions: createUniqueOptions('continent'),
-            countryOptions: createUniqueOptions('country'),
-            categoryOptions: createUniqueOptions('product_category'),
-            subCategoryOptions: createUniqueOptions('product_subcategory'),
-            brandOptions: createUniqueOptions('brand'),
-            productOptions: createUniqueOptions('product_name'),
-            productStatusOptions: createUniqueOptions('product_status_listing'),
-            productSpecOptions: createUniqueOptions('product_specs'),
+            memberTypeOptions: createUniqueOptions('member_type', mappedOpportunities.allOpportunities),
+            continentOptions: createUniqueOptions('continent', mappedOpportunities.allOpportunities),
+            countryOptions: createUniqueOptions('country', mappedOpportunities.allOpportunities),
+            categoryOptions: createUniqueOptions('product_category', mappedOpportunities.allOpportunities),
+            subCategoryOptions: createUniqueOptions('product_subcategory', mappedOpportunities.allOpportunities),
+            brandOptions: createUniqueOptions('brand', mappedOpportunities.allOpportunities),
+            productOptions: createUniqueOptions('product_name', mappedOpportunities.allOpportunities),
+            productStatusOptions: createUniqueOptions('product_status_listing', mappedOpportunities.allOpportunities),
+            productSpecOptions: createUniqueOptions('product_specs', mappedOpportunities.allOpportunities),
             kycVerifiedOptions: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }],
             wantToOptions: [{ value: 'Buy', label: 'Buyer' }, { value: 'Sell', label: 'Seller' }],
         };
-    }, [opportunities]);
+    }, [mappedOpportunities.allOpportunities]);
 
   const statusCounts = useMemo(() => {
-    return (opportunities || []).reduce(
+    return (mappedOpportunities.allOpportunities || []).reduce(
       (acc, opp) => {
         acc.total++;
         if (opp.status === "active") acc.active++;
@@ -3479,7 +3503,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
       },
       { total: 0, active: 0, pending: 0, on_hold: 0 }
     );
-  }, [opportunities]);
+  }, [mappedOpportunities.allOpportunities]);
 
   const activeFilterCount = useMemo(() => {
     return Object.values(filters).reduce((count, value) => {
@@ -3550,111 +3574,56 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     return transformedData;
   }, [autoMatchData]);
 
-  const filteredOpportunities = useMemo(() => {
+  // SERVER-SIDE CHANGE: This hook now handles both client-side (for AUTO_MATCH) and server-side data.
+  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
+    // Client-side logic for the AUTO_MATCH tab remains
     if (currentTab === TABS.AUTO_MATCH) {
-      let data = [...autoSpbTableData];
+      let processedData = [...autoSpbTableData];
       if (currentTableData.query) {
         const query = currentTableData.query.toLowerCase();
-        data = data.filter(
+        processedData = processedData.filter(
           (item) =>
-            Object.values(item).some((value) =>
-              String(value).toLowerCase().includes(query)
-            ) ||
-            item._rawSpbBuyItems?.some((subItem) =>
-              Object.values(subItem).some((val) =>
-                String(val).toLowerCase().includes(query)
-              )
-            ) ||
-            item._rawSpbSellItems?.some((subItem) =>
-              Object.values(subItem).some((val) =>
-                String(val).toLowerCase().includes(query)
-              )
-            )
+            Object.values(item).some((value) => String(value).toLowerCase().includes(query)) ||
+            item._rawSpbBuyItems?.some((subItem) => Object.values(subItem).some((val) => String(val).toLowerCase().includes(query))) ||
+            item._rawSpbSellItems?.some((subItem) => Object.values(subItem).some((val) => String(val).toLowerCase().includes(query)))
         );
       }
-      return data;
-    }
-    
-    let data = [...opportunities];
+      
+      const { order, key } = currentTableData.sort as unknown as OnSortParamTanstack;
+      if (order && key) {
+        processedData.sort((a, b) => {
+            const aVal = a[key as keyof OpportunityItem];
+            const bVal = b[key as keyof OpportunityItem];
+            if (key === 'created_date' || key === 'updated_at') {
+                return order === 'asc' ? new Date(aVal as string).getTime() - new Date(bVal as string).getTime() : new Date(bVal as string).getTime() - new Date(aVal as string).getTime();
+            }
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return order === 'asc' ? aVal - bVal : bVal - aVal;
+            }
+            return order === 'asc' ? String(aVal ?? '').localeCompare(String(bVal ?? '')) : String(bVal ?? '').localeCompare(String(aVal ?? ''));
+        });
+      }
 
-    if (currentTab === TABS.SELLER) {
-      data = data.filter((op) => op.want_to === "Sell");
-    } else if (currentTab === TABS.BUYER) {
-      data = data.filter((op) => op.want_to === "Buy");
+      const dataTotal = processedData.length;
+      const pageIndex = currentTableData.pageIndex as number;
+      const pageSize = currentTableData.pageSize as number;
+      const startIndex = (pageIndex - 1) * pageSize;
+      return {
+        pageData: processedData.slice(startIndex, startIndex + pageSize),
+        total: dataTotal,
+        allFilteredAndSortedData: processedData,
+      };
     }
 
-    if (currentTableData.query) {
-      const query = currentTableData.query.toLowerCase();
-      data = data.filter((item) =>
-        Object.values(item).some((value) => String(value).toLowerCase().includes(query))
-      );
-    }
-
-    // Apply filters from the drawer
-    if (filters.statuses.length > 0) data = data.filter(item => filters.statuses.includes(item.status));
-    
-    if (filters.assignedTo.length > 0) data = data.filter(item => filters.assignedTo.includes(Number(item.assigned_to)));
-    if (filters.memberTypes.length > 0) data = data.filter(item => filters.memberTypes.includes(item.member_type));
-    if (filters.continents.length > 0) data = data.filter(item => item.continent && filters.continents.includes(item.continent));
-    if (filters.countries.length > 0) data = data.filter(item => item.country && filters.countries.includes(item.country));
-    if (filters.states) data = data.filter(item => item.state?.toLowerCase().includes(filters.states.toLowerCase()));
-    if (filters.cities) data = data.filter(item => item.city?.toLowerCase().includes(filters.cities.toLowerCase()));
-    if (filters.pincodes) data = data.filter(item => item.pincode?.includes(filters.pincodes));
-    if (filters.kycVerified) {
-        const isVerified = filters.kycVerified === 'yes';
-        data = data.filter(item => item.member_verified === isVerified);
-    }
-    if (filters.categories.length > 0) data = data.filter(item => item.product_category && filters.categories.includes(item.product_category));
-    if (filters.subCategories.length > 0) data = data.filter(item => item.product_subcategory && filters.subCategories.includes(item.product_subcategory));
-    if (filters.brands.length > 0) data = data.filter(item => item.brand && filters.brands.includes(item.brand));
-    if (filters.products.length > 0) data = data.filter(item => filters.products.includes(item.product_name));
-    if (filters.productStatuses.length > 0) data = data.filter(item => item.product_status_listing && filters.productStatuses.includes(item.product_status_listing));
-    if (filters.productSpecs.length > 0) data = data.filter(item => item.product_specs && filters.productSpecs.includes(item.product_specs));
-    if (filters.wantTo.length > 0) data = data.filter(item => item.want_to && filters.wantTo.includes(item.want_to));
-
-    return data;
-  }, [
-    currentTab,
-    opportunities,
-    autoSpbTableData,
-    currentTableData.query,
-    filters,
-  ]);
-
-  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData = [...filteredOpportunities];
-    const { order, key } =
-      currentTableData.sort as unknown as OnSortParamTanstack;
-    if (order && key && processedData.length > 0) {
-      processedData.sort((a, b) => {
-        const aVal = a[key as keyof OpportunityItem];
-        const bVal = b[key as keyof OpportunityItem];
-        if (key === "created_date" || key === "updated_at") {
-          return order === "asc"
-            ? new Date(aVal as string).getTime() -
-                new Date(bVal as string).getTime()
-            : new Date(bVal as string).getTime() -
-                new Date(aVal as string).getTime();
-        }
-        if (typeof aVal === "number" && typeof bVal === "number") {
-          return order === "asc" ? aVal - bVal : bVal - aVal;
-        }
-        return order === "asc"
-          ? String(aVal ?? "").localeCompare(String(bVal ?? ""))
-          : String(bVal ?? "").localeCompare(String(aVal ?? ""));
-      });
-    }
-    const allData = processedData;
-    const dataTotal = allData.length;
-    const pageIndex = currentTableData.pageIndex as number;
-    const pageSize = currentTableData.pageSize as number;
-    const startIndex = (pageIndex - 1) * pageSize;
+    // Server-side logic for all other tabs
     return {
-      pageData: allData.slice(startIndex, startIndex + pageSize),
-      total: dataTotal,
-      allFilteredAndSortedData: allData,
+      pageData: mappedOpportunities.paginatedOpportunities,
+      total: Opportunitieslist?.total || 0,
+      allFilteredAndSortedData: mappedOpportunities.allOpportunities, // Used for export
     };
-  }, [filteredOpportunities, currentTableData]);
+
+  }, [currentTab, autoSpbTableData, currentTableData, Opportunitieslist, mappedOpportunities]);
+
   const handleOpenExportReasonModal = () => {
     if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
       toast.push(
@@ -3678,6 +3647,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     } catch (error: any) {
       /* silent fail */
     }
+    // SERVER-SIDE CHANGE: Export now uses `allFilteredAndSortedData` which should contain all records from the server for the current filter.
     const success = exportToCsvOpportunities(
       "opportunities_export.csv",
       allFilteredAndSortedData
@@ -3762,15 +3732,14 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     [currentTab]
   );
   const handleDeleteSelected = useCallback(() => {
+    // This action would now likely require a server-side delete action.
+    // For now, it will only remove items from the current view.
     const selectedIds = new Set(currentSelectedItems.map((i) => i.id));
     if (currentTab !== TABS.AUTO_MATCH) {
-      setOpportunities((prevAll) =>
-        prevAll.filter((i) => !selectedIds.has(i.id))
-      );
       toast.push(
-        <Notification title="Records Deleted" type="success">
+        <Notification title="Action Required" type="info">
           {" "}
-          {`${selectedIds.size} record(s) deleted.`}{" "}
+          Please implement server-side deletion for selected records.{" "}
         </Notification>
       );
     } else {
@@ -4277,10 +4246,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     getRowCanExpand: () => !isDashboard,
   });
 
-  const isLoading =
-    currentTab === TABS.AUTO_MATCH
-      ? masterLoadingStatus === "loading"
-      : masterLoadingStatus === "loading";
+  const isLoading = masterLoadingStatus === "loading";
 
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
