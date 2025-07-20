@@ -390,7 +390,7 @@ const JobPostsListing = () => {
     const navigate = useNavigate();
     const { jobPostsData = { data: [], counts: {} }, departmentsData = { data: [] }, getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData.data.map((dept: JobDepartmentListItem) => ({ value: String(dept.id), label: dept.name })) : [], [departmentsData?.data]);
-    const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: user.name })) : [], [getAllUserData]);
+    const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: `(${user.employee_id}) - ${user.name || 'N/A'}`})) : [], [getAllUserData]);
 console.log("departmentsData",departmentsData?.data);
 
     const [initialLoading, setInitialLoading] = useState(true);
