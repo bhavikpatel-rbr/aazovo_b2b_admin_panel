@@ -140,7 +140,7 @@ const emailTemplateFormSchema = z.object({
   name: z.string().min(1, "Name is required.").max(100, "Name cannot exceed 100 characters."),
   template_id: z.string().min(1, "Template ID is required.").max(50, "Template ID cannot exceed 50 characters.").regex(/^[A-Za-z0-9_.-]+$/, "ID can only contain alphanumeric, underscore, dot, or hyphen."),
   category_id: z.string().min(1, "Category is required."),
-  sub_category_id: z.string().nullable().optional(),
+  sub_category_id: z.any().nullable().optional(),
   brand_id: z.string().nullable().optional(),
   role_id: z.string().nullable().optional(),
   department_id: z.string().nullable().optional(),
