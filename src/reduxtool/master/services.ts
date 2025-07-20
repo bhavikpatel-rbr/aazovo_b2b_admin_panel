@@ -1985,7 +1985,7 @@ export const getAutoMatchDataAsync = async () => {
 }
 export const getAllproductAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/master/product`)
+    const response = await axiosInstance.post(`${config.apiURL}/master/product/get`)
     return response
   } catch (err) {
     return isAxiosError(err)
