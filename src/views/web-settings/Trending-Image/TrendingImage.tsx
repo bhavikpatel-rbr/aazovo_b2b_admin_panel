@@ -1,5 +1,3 @@
-// src/views/your-path/TrendingImages.tsx
-
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import cloneDeep from 'lodash/cloneDeep'
 import { useForm, Controller } from 'react-hook-form'
@@ -17,20 +15,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import StickyFooter from '@/components/shared/StickyFooter'
 import DebouceInput from '@/components/shared/DebouceInput'
-import Avatar from '@/components/ui/Avatar'
-import {
-    Dialog,
-    Drawer,
-    Form,
-    FormItem,
-    Input,
-    Select,
-    Tag,
-    Card,
-    Dropdown,
-    Checkbox,
-    Skeleton, // Import Skeleton
-} from '@/components/ui'
+import { Drawer, Form, FormItem, Input, Select, Tag, Card, Dropdown, Checkbox, Avatar, Dialog } from '@/components/ui'
 
 // Icons
 import {
@@ -41,10 +26,8 @@ import {
     TbFilter,
     TbPlus,
     TbCloudUpload,
-    TbPhoto,
     TbReload,
     TbUser,
-    TbFileText,
     TbMessageStar,
     TbMessageCheck,
     TbMessage2X,
@@ -59,6 +42,7 @@ import type { TableQueries } from '@/@types/common'
 
 // Redux
 import { useAppDispatch } from '@/reduxtool/store'
+import { useSelector } from 'react-redux'
 import {
     getTrendingImagesAction,
     addTrendingImageAction,
@@ -69,9 +53,18 @@ import {
     submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
-import { useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
+
+// --- Utility Functions ---
+function formatCustomDateTime(dateString: string | null | undefined): string {
+    if (!dateString) return 'N/A';
+    try {
+        const date = new Date(dateString);
+        return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+    } catch (e) {
+        return 'Invalid Date';
+    }
+}
 
 // --- Constants & Types ---
 const pageNameOptionsConst = [ { value: 'Home Page', label: 'Home Page' }, { value: 'Engineering Page', label: 'Engineering Page' }, { value: 'Plastic Page', label: 'Plastic Page' }, ];
@@ -80,12 +73,10 @@ const apiStatusOptions: { value: 'Active' | 'Inactive'; label: string }[] = [ { 
 const statusColor: Record<'Active' | 'Inactive', string> = { Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700", Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700" };
 
 export type ProductOption = { value: string; label: string; id?: string | number, name?: string };
-// --- CHANGE 1: Update the type to include product_names ---
 export type TrendingPageImageItem = 
 { id: string | number;
     page_name: string; status: 'Active' | 'Inactive'; 
     product_ids?: string; 
-    product_names?: Record<string, number> | []; // Added this line to match API response
     created_at: string; 
     updated_at?: string; updated_by_name?: string; updated_by_role?: string; updated_by_user?: { name: string; roles: { display_name: string }[], profile_pic_path: string | null } | null; [key: string]: any; };
 
@@ -106,16 +97,13 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters.") });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- CHANGE 2: Update the export function to use product_names ---
-function exportTrendingImagesToCsv(filename: string, rows: TrendingPageImageItem[]) {
+// --- Utility Functions ---
+function exportTrendingImagesToCsv(filename: string, rows: TrendingPageImageItem[], productNameMap: Map<string, string>) {
     if (!rows || !rows.length) return false;
     const CSV_HEADERS = [ 'ID', 'Page Name', 'Status', 'Product IDs', 'Product Names', 'Created At', 'Updated By', 'Updated Role', 'Updated At', ];
     const preparedRows = rows.map(row => {
-        const productNamesData = row.product_names;
-        const productNames = (productNamesData && typeof productNamesData === 'object' && !Array.isArray(productNamesData))
-            ? Object.keys(productNamesData).join('; ')
-            : 'N/A';
-
+        const productIds = row.product_ids?.split(',') || [];
+        const productNames = productIds.map(id => productNameMap.get(id) || `ID:${id}`).join('; ');
         return {
             ...row,
             productNames,
@@ -155,12 +143,14 @@ function exportTrendingImagesToCsv(filename: string, rows: TrendingPageImageItem
     toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
     return false;
 }
+function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(' ') }
+
 
 // --- Child Components ---
-const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => (
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => (
     <div className="flex items-center justify-center">
-        <Tooltip title="Edit"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400" role="button" tabIndex={0} onClick={onEdit}><TbPencil /></div></Tooltip>
-        <Tooltip title="Delete"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400" role="button" tabIndex={0} onClick={onDelete}><TbTrash /></div></Tooltip>
+        <Tooltip title="Edit"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+        <Tooltip title="Delete"><div className="text-lg p-1.5 rounded-md transition-colors duration-150 ease-in-out cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
     </div>
 );
 
@@ -171,7 +161,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
     return ( <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4"> <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span> {filters.map((filter) => (<Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500"> {(keyToLabelMap as any)[filter.key]}: {filter.label} <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter(filter.key, filter.value)} /> </Tag>))} <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button> </div> );
 };
 
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearAll, allColumns, visibleColumnKeys, setVisibleColumnKeys, activeFilterCount, isDataReady }: { onSearchChange: (q: string) => void; onFilter: () => void; onExport: () => void; onClearAll: () => void; allColumns: ColumnDef<TrendingPageImageItem>[]; visibleColumnKeys: string[]; setVisibleColumnKeys: (keys: string[]) => void; activeFilterCount: number; isDataReady: boolean }) => {
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearAll, allColumns, visibleColumnKeys, setVisibleColumnKeys, activeFilterCount }: { onSearchChange: (q: string) => void; onFilter: () => void; onExport: () => void; onClearAll: () => void; allColumns: ColumnDef<TrendingPageImageItem>[]; visibleColumnKeys: string[]; setVisibleColumnKeys: (keys: string[]) => void; activeFilterCount: number; }) => {
     const toggleColumn = (checked: boolean, columnKey: string) => { if (checked) { setVisibleColumnKeys([...visibleColumnKeys, columnKey]); } else { setVisibleColumnKeys(visibleColumnKeys.filter((key) => key !== columnKey)); } };
     const isColumnVisible = (columnKey: string) => visibleColumnKeys.includes(columnKey);
     return (
@@ -184,9 +174,9 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearAll, allCol
                         {allColumns.filter(c => (c.accessorKey || c.id) && c.header).map(col => { const key = (col.accessorKey || col.id) as string; return (<div key={key} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={key} checked={isColumnVisible(key)} onChange={(c) => toggleColumn(c, key)} />{col.header}</div>)})}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearAll} disabled={!isDataReady} />
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearAll} />
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
             </div>
         </div>
     )
@@ -211,9 +201,9 @@ const SelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: { selec
 
 // --- Main Component: Trending Images ---
 const TrendingImages = () => {
-    // ... (rest of the state declarations are unchanged)
     const dispatch = useAppDispatch();
-    const [initialLoading, setInitialLoading] = useState(true);
+    const { trendingImagesData = [], productsMasterData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
+
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<TrendingPageImageItem | null>(null);
@@ -222,171 +212,97 @@ const TrendingImages = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'updated_at' }, query: '' });
-    const [selectedItems, setSelectedItems] = useState<TrendingPageImageItem[]>([])
-    const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
-    const [isImageViewerOpen, setIsImageViewerOpen] = useState(false)
-    const [imageToView, setImageToView] = useState<string | null>(null)
-    const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false)
-    const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false)
+    const [selectedItems, setSelectedItems] = useState<TrendingPageImageItem[]>([]);
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const [activeFilters, setActiveFilters] = useState<Partial<FilterFormData>>({});
+    const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
+    const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+    const [isImageViewerOpen, setIsImageViewerOpen] = useState(false)
+    const [imageToView, setImageToView] = useState<string | null>(null)
 
-    const { trendingImagesData = [], productsMasterData = [] } = useSelector(masterSelector);
-    const isDataReady = !initialLoading;
-    
-    const productSelectOptions: ProductOption[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: ProductOption) => ({ value: String(p.id), label: `${p.name}`.trim() })) : [], [productsMasterData]);
-    // The productNameMap is still useful for the export function, so we keep it.
-    const productNameMap = useMemo(() => new Map(productSelectOptions.map(opt => [opt.value, opt.label])), [productSelectOptions]);
-    const dynamicPageNameOptions = useMemo(() => Array.from(new Set((Array.isArray(trendingImagesData) ? trendingImagesData : []).map(p => p.page_name))).map(name => ({ value: name, label: name })), [trendingImagesData]);
-    const addPageNameOptions = useMemo(() => {
-        const existingPageNames = new Set( (Array.isArray(trendingImagesData) ? trendingImagesData : []).map(item => item.page_name) );
-        return pageNameOptionsConst.filter(option => !existingPageNames.has(option.value));
-    }, [trendingImagesData]);
+    useEffect(() => { dispatch(getTrendingImagesAction()); dispatch(getAllProductAction()); }, [dispatch]);
 
-    const refreshData = useCallback(async () => {
-        setInitialLoading(true);
-        try {
-            await Promise.all([
-                dispatch(getTrendingImagesAction()),
-                dispatch(getAllProductAction())
-            ]);
-        } catch (error) {
-            console.error("Failed to refresh data:", error);
-            toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload data.</Notification>);
-        } finally {
-            setInitialLoading(false);
-        }
-    }, [dispatch]);
-    
-    useEffect(() => {
-        refreshData();
-    }, [refreshData]);
-    useEffect(() => { return () => { if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl) } }, [imagePreviewUrl]);
-    
     const addFormMethods = useForm<TrendingPageImageFormData>({ resolver: zodResolver(trendingPageImageFormSchema), defaultValues: { page_name: pageNameValues[0], trendingProducts: [], status: 'Active' }, mode: 'onChange' });
     const editFormMethods = useForm<TrendingPageImageFormData>({ resolver: zodResolver(trendingPageImageFormSchema), mode: 'onChange' });
     const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: activeFilters });
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" } });
-
+    
+    const productSelectOptions: ProductOption[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: ProductOption) => ({ value: String(p.id), label: `${p.name}`.trim() })) : [], [productsMasterData]);
+    const productNameMap = useMemo(() => new Map(productSelectOptions.map(opt => [opt.value, opt.label])), [productSelectOptions]);
+    const dynamicPageNameOptions = useMemo(() => Array.from(new Set((Array.isArray(trendingImagesData) ? trendingImagesData : []).map(p => p.page_name))).map(name => ({ value: name, label: name })), [trendingImagesData]);
+const addPageNameOptions = useMemo(() => {
+    // Get a Set of all page names that are already in use
+    const existingPageNames = new Set(
+        (Array.isArray(trendingImagesData) ? trendingImagesData : []).map(item => item.page_name)
+    );
+    // Return only the options that are NOT in the existing set
+    return pageNameOptionsConst.filter(option => !existingPageNames.has(option.value));
+}, [trendingImagesData]);
     const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
-        // ... (this logic is unchanged)
-        const sourceData: TrendingPageImageItem[] = Array.isArray(trendingImagesData) ? trendingImagesData : []
-        let processedData: TrendingPageImageItem[] = cloneDeep(sourceData)
-        
-        const initialCounts = {
-            total: sourceData.length,
-            active: sourceData.filter(i => i.status === 'Active').length,
-            inactive: sourceData.filter(i => i.status === 'Inactive').length,
-        };
+        const sourceData: TrendingPageImageItem[] = Array.isArray(trendingImagesData) ? trendingImagesData : [];
+        let processedData: TrendingPageImageItem[] = cloneDeep(sourceData);
+
+        const initialCounts = { total: sourceData.length, active: sourceData.filter(i => i.status === 'Active').length, inactive: sourceData.filter(i => i.status === 'Inactive').length, };
 
         if (activeFilters.filterPageNames?.length) {
             const selected = new Set(activeFilters.filterPageNames.map(opt => opt.value));
             processedData = processedData.filter(item => selected.has(item.page_name));
         }
         if (activeFilters.filterStatus?.length) {
-            const selected = new Set(activeFilters.filterStatus.map(s => s.value));
+            const selected = new Set(activeFilters.filterStatus.map(opt => opt.value));
             processedData = processedData.filter(item => selected.has(item.status));
         }
-
         if (tableData.query) {
-            const query = tableData.query.toLowerCase().trim()
-            processedData = processedData.filter(item => String(item.links || '').toLowerCase().includes(query) || String(item.id).toLowerCase().includes(query))
+            const query = tableData.query.toLowerCase().trim();
+            processedData = processedData.filter(item => String(item.page_name).toLowerCase().includes(query) || String(item.id).toLowerCase().includes(query));
         }
 
-        const { order, key } = tableData.sort
+        const { order, key } = tableData.sort;
         if (order && key) {
             processedData.sort((a, b) => {
-                let aValue: any = (a as any)[key], bValue: any = (b as any)[key]
-                if (key === 'created_at' || key === 'updated_at') {
-                    aValue = a[key] ? new Date(a[key]).getTime() : 0
-                    bValue = b[key] ? new Date(b[key]).getTime() : 0
-                }
-                if (aValue < bValue) return order === 'asc' ? -1 : 1
-                if (aValue > bValue) return order === 'asc' ? 1 : -1
-                return 0
-            })
+                let aValue: any = a[key as keyof TrendingPageImageItem] ?? '', bValue: any = b[key as keyof TrendingPageImageItem] ?? '';
+                if (key === 'created_at' || key === 'updated_at') { aValue = aValue ? new Date(aValue).getTime() : 0; bValue = bValue ? new Date(bValue).getTime() : 0; }
+                if (typeof aValue === 'number' && typeof bValue === 'number') return order === "asc" ? aValue - bValue : bValue - aValue;
+                return order === "asc" ? String(aValue).localeCompare(String(bValue)) : String(bValue).localeCompare(String(aValue));
+            });
         }
-
-        return {
-            pageData: processedData.slice((tableData.pageIndex - 1) * tableData.pageSize, tableData.pageIndex * tableData.pageSize),
-            total: processedData.length,
-            allFilteredAndSortedData: processedData,
-            counts: initialCounts,
-        }
+        
+        return { pageData: processedData.slice((tableData.pageIndex - 1) * tableData.pageSize, tableData.pageIndex * tableData.pageSize), total: processedData.length, allFilteredAndSortedData: processedData, counts: initialCounts };
     }, [trendingImagesData, tableData, activeFilters]);
 
     const activeFilterCount = useMemo(() => Object.values(activeFilters).flat().length, [activeFilters]);
-    const tableLoading = initialLoading || isSubmitting || isDeleting;
+    const tableLoading = masterLoadingStatus === 'loading' || isSubmitting || isDeleting;
 
     // --- Handlers ---
-    // ... (most handlers are unchanged)
-    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); setSelectedItems([]); }, []);
-    const onClearAllFilters = useCallback(() => {
-        setActiveFilters({});
-        handleSetTableData({ query: '', pageIndex: 1 });
-        filterFormMethods.reset({});
-        refreshData();
-    }, [handleSetTableData, filterFormMethods, refreshData]);
+    const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData(prev => ({ ...prev, ...data })); setSelectedItems([]); }, []);
+    const onClearAllFilters = useCallback(() => { setActiveFilters({}); filterFormMethods.reset({}); handleSetTableData({ query: '', pageIndex: 1 }); }, [handleSetTableData, filterFormMethods]);
     const handleCardClick = useCallback((status?: 'Active' | 'Inactive') => { handleSetTableData({ pageIndex: 1, query: '' }); if (!status) { setActiveFilters({}); } else { const option = apiStatusOptions.find(o => o.value === status); setActiveFilters(option ? { filterStatus: [option] } : {}); } }, [handleSetTableData]);
-    const handleRemoveFilter = useCallback((key: keyof FilterFormData, valueToRemove: string) => { setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = (prev[key] || []) as { value: string }[]; const newValues = currentValues.filter(item => item.value !== valueToRemove); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete (newFilters as any)[key]; } return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
-    const openAddDrawer = () => { addFormMethods.reset({ page_name: pageNameValues[0], trendingProducts: [], status: 'Active' }); setImagePreviewUrl(null); setIsAddDrawerOpen(true) }
-    const closeAddDrawer = () => { setIsAddDrawerOpen(false); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(null); }
-    const onAddItemSubmit = async (data: TrendingPageImageFormData) => { if (!data.imageFile) { addFormMethods.setError('imageFile', { type: 'manual', message: 'Image is required.' }); return; } setIsSubmitting(true); const formData = new FormData(); formData.append('links', data.links || ''); formData.append('status', data.status); formData.append('images', data.imageFile); try { await dispatch(addTrendingImageAction(formData)).unwrap(); toast.push(<Notification title="Item Added" type="success" />); closeAddDrawer(); refreshData(); } catch (error: any) { toast.push(<Notification title="Failed to Add" type="danger">{error?.message || 'Could not add item.'}</Notification>); } finally { setIsSubmitting(false); } }
-    const openEditDrawer = (item: TrendingPageImageItem) => { setEditingItem(item); const productIds = item.product_ids?.split(',').map(id => id.trim()).filter(Boolean) || []; editFormMethods.reset({ page_name: item.page_name, trendingProducts: productIds, status: item.status }); setImagePreviewUrl(null); setIsEditDrawerOpen(true); };
-    const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingItem(null); if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl); setImagePreviewUrl(null); };
-    const onEditItemSubmit = async (data: TrendingPageImageFormData) => { if (!editingItem) return; setIsSubmitting(true); const formData = new FormData(); formData.append('_method', 'PUT'); formData.append('links', data.links || ''); formData.append('status', data.status); if (data.imageFile) formData.append('images', data.imageFile); try { await dispatch(editTrendingImageAction({ id: editingItem.id, formData })).unwrap(); toast.push(<Notification title="Item Updated" type="success" />); closeEditDrawer(); refreshData(); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error?.message || 'Could not update item.'}</Notification>); } finally { setIsSubmitting(false); } }
+    const handleRemoveFilter = useCallback((key: keyof FilterFormData, valueToRemove: string) => { setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = (prev[key] || []) as { value: string }[]; const newValues = currentValues.filter(item => item.value !== valueToRemove); if (newValues.length > 0) (newFilters as any)[key] = newValues; else delete (newFilters as any)[key]; return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
+    const openAddDrawer = () => { addFormMethods.reset({ page_name: pageNameValues[0], trendingProducts: [], status: 'Active' }); setIsAddDrawerOpen(true); }
+    const closeAddDrawer = () => setIsAddDrawerOpen(false);
+    const onAddItemSubmit = async (data: TrendingPageImageFormData) => { setIsSubmitting(true); try { const payload = { ...data, product_ids: data.trendingProducts?.join(','), img_1: "{}", img_2: "{}", img_3: "{}", summary_text: "{}", multimedia_content: "{}" }; delete (payload as any).trendingProducts; await dispatch(addTrendingImageAction(payload)).unwrap(); toast.push(<Notification title="Group Added" type="success" />); closeAddDrawer(); dispatch(getTrendingImagesAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add" type="danger">{error?.data?.message || 'Error'}</Notification>); } finally { setIsSubmitting(false); } };
+    const openEditDrawer = (item: TrendingPageImageItem) => { setEditingItem(item); const productIds = item.product_ids?.split(',').map(id => id.trim()).filter(Boolean) || []; editFormMethods.reset({ page_name: item.page_name, trendingProducts: productIds, status: item.status }); setIsEditDrawerOpen(true); };
+    const closeEditDrawer = () => { setEditingItem(null); setIsEditDrawerOpen(false); };
+    const onEditItemSubmit = async (data: TrendingPageImageFormData) => { if (!editingItem) return; setIsSubmitting(true); try { const payload = { ...editingItem, ...data, product_ids: data.trendingProducts?.join(','), status: data.status }; delete (payload as any).trendingProducts; await dispatch(editTrendingImageAction(payload)).unwrap(); toast.push(<Notification title="Group Updated" type="success" />); closeEditDrawer(); dispatch(getTrendingImagesAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error?.data?.message || 'Error'}</Notification>); } finally { setIsSubmitting(false); } };
     const handleDeleteClick = (item: TrendingPageImageItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); };
-    const onConfirmSingleDelete = async () => { if (!itemToDelete) return; setIsDeleting(true); try { await dispatch(deleteTrendingImageAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Item Deleted" type="success" />); setSelectedItems(p => p.filter(i => i.id !== itemToDelete!.id)); refreshData(); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Could not delete item.'}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setItemToDelete(null); } };
-    const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); try { await dispatch(deleteMultipleTrendingImagesAction({ ids: selectedItems.map(i => i.id).join(',') })).unwrap(); toast.push(<Notification title="Items Deleted" type="success" />); setSelectedItems([]); refreshData(); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Failed to delete.'}</Notification>); } finally { setIsDeleting(false); } };
+    const onConfirmSingleDelete = async () => { if (!itemToDelete) return; setIsDeleting(true); try { await dispatch(deleteTrendingImageAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Item Deleted" type="success" />); setSelectedItems(p => p.filter(i => i.id !== itemToDelete.id)); dispatch(getTrendingImagesAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setItemToDelete(null); } };
+    const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); try { await dispatch(deleteMultipleTrendingImagesAction({ ids: selectedItems.map(i => i.id).join(',') })).unwrap(); toast.push(<Notification title="Items Deleted" type="success" />); setSelectedItems([]); dispatch(getTrendingImagesAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsDeleting(false); } };
     const handleOpenExportModal = () => { if (!allFilteredAndSortedData?.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: '' }); setIsExportReasonModalOpen(true); };
-    const handleConfirmExport = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `trending_images_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Trending Images", file_name: fileName })).unwrap(); toast.push(<Notification title="Reason Submitted" type="success" />); exportTrendingImagesToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (e: any) { toast.push(<Notification title="Export Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsSubmittingExportReason(false); } };
+    const handleConfirmExport = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `trending-images_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Trending Images", file_name: fileName })).unwrap(); toast.push(<Notification title="Reason Submitted" type="success" />); exportTrendingImagesToCsv(fileName, allFilteredAndSortedData, productNameMap); setIsExportReasonModalOpen(false); } catch (e: any) { toast.push(<Notification title="Export Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsSubmittingExportReason(false); } };
     const openImageViewer = useCallback((src: string | null) => { if (src) { setImageToView(src); setIsImageViewerOpen(true); } }, []);
     
-    // --- CHANGE 3: Update the column definition to use product_names ---
     const baseColumns: ColumnDef<TrendingPageImageItem>[] = useMemo(() => [
-        { header: 'Image', accessorKey: 'images_full_path', enableSorting: false, size: 80, cell: (props) => (<Avatar size={40} shape="circle" src={props.row.original.images_full_path || undefined} icon={!props.row.original.images_full_path ? <TbPhoto /> : undefined} onClick={() => openImageViewer(props.row.original.images_full_path)} className={props.row.original.images_full_path ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500' : ''} />)},
         { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 250, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
-        { 
-            header: 'Trending Products', 
-            id: 'trending_products', 
-            size: 350, 
-            cell: (props) => { 
-                const productNamesData = props.row.original.product_names;
-                // Check if productNamesData is a non-empty object
-                const names = (productNamesData && typeof productNamesData === 'object' && !Array.isArray(productNamesData)) 
-                    ? Object.keys(productNamesData) 
-                    : [];
-
-                if (names.length === 0) {
-                    return <span className="text-gray-400">None</span>;
-                }
-                
-                const display = names.slice(0, 3).join(', '); 
-                const remaining = names.length - 3; 
-                return (
-                    <Tooltip title={names.join(', ')}>
-                        <span>{display}{remaining > 0 && ` +${remaining} more`}</span>
-                    </Tooltip>
-                ); 
-            }
-        },
+        { header: 'Trending Products', id: 'trending_products', size: 350, cell: (props) => { const ids = props.row.original.product_ids?.split(',').map(id => id.trim()) || []; if (ids.length === 0) return <span className="text-gray-400">None</span>; const names = ids.map(id => productNameMap.get(id) || `ID:${id}`); const display = names.slice(0, 3).join(', '); const remaining = names.length - 3; return (<Tooltip title={names.join(', ')}><span>{display}{remaining > 0 && ` +${remaining} more`}</span></Tooltip>); }},
         { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div><div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div></div></div>); } },
-        { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={`${statusColor[props.row.original.status]} capitalize font-semibold`}>{props.row.original.status}</Tag>)},
+        { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={`${statusColor[props.row.original.status]} capitalize font-semibold`}>{props.row.original.status}</Tag>)},
         { header: 'Actions', id: 'action', meta: { cellClass: 'text-center' }, size: 80, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
-    ], [openImageViewer, openEditDrawer, handleDeleteClick]); // removed productNameMap dependency
+    ], [productNameMap, openImageViewer]);
 
     const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(() => baseColumns.map(c => (c.accessorKey || c.id) as string));
     const visibleColumns = useMemo(() => baseColumns.filter(c => visibleColumnKeys.includes((c.accessorKey || c.id) as string)), [baseColumns, visibleColumnKeys]);
 
-    const renderCardContent = (content: number) => {
-      if (initialLoading) {
-        return <Skeleton width={40} height={20} />;
-      }
-      return <h6 className="text-sm">{content}</h6>
-    }
-    
     return (
-        // The JSX return block remains unchanged
         <>
             <Container className="h-auto">
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
@@ -394,25 +310,26 @@ const TrendingImages = () => {
                         <h5 className="mb-2 sm:mb-0">Trending Images</h5>
                         <div>
                             <Link to='/task/task-list/create'><Button className="mr-2" icon={<TbUser />}>Assign to Task</Button></Link>
-                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
+                            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                        <Tooltip title="Click to show all items"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbMessageStar size={24} /></div><div>{renderCardContent(counts.total)}<span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show Active items"><div className="cursor-pointer" onClick={() => handleCardClick('Active')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMessageCheck size={24} /></div><div>{renderCardContent(counts.active)}<span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show Inactive items"><div className="cursor-pointer" onClick={() => handleCardClick('Inactive')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbMessage2X size={24} /></div><div>{renderCardContent(counts.inactive)}<span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show all items"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMessageStar size={24} /></div><div><h6 className="text-blue-500">{counts.total}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show Active items"><div className="cursor-pointer" onClick={() => handleCardClick('Active')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMessageCheck size={24} /></div><div><h6 className="text-green-500">{counts.active}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show Inactive items"><div className="cursor-pointer" onClick={() => handleCardClick('Inactive')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMessage2X size={24} /></div><div><h6 className="text-red-500">{counts.inactive}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
                     </div>
-                    <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} allColumns={baseColumns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
+                    <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} allColumns={baseColumns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} activeFilterCount={activeFilterCount} />
                     <div className="mt-4"><ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFilters} /></div>
                     {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching item(s).</div>}
                     <div className="mt-4 flex-grow overflow-y-auto">
-                        <DataTable selectable columns={visibleColumns} data={pageData} noData={!isDataReady && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} checkboxChecked={(row) => selectedItems.some(s => s.id === row.id)} onPaginationChange={(p) => handleSetTableData({ pageIndex: p })} onSelectChange={(s) => handleSetTableData({ pageSize: s, pageIndex: 1 })} onSort={(s) => handleSetTableData({ sort: s })} onCheckBoxChange={(c,r) => setSelectedItems(p => c ? [...p, r] : p.filter(i => i.id !== r.id))} onIndeterminateCheckBoxChange={(c,rs) => { const rIds = new Set(rs.map(r=>r.original.id)); setSelectedItems(p => c ? [...p, ...rs.map(r=>r.original).filter(r => !p.some(i => i.id === r.id))] : p.filter(i => !rIds.has(i.id)))}} />
+                        <DataTable selectable columns={visibleColumns} data={pageData} noData={!tableLoading && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} checkboxChecked={(row) => selectedItems.some(s => s.id === row.id)} onPaginationChange={(p) => handleSetTableData({ pageIndex: p })} onSelectChange={(s) => handleSetTableData({ pageSize: s, pageIndex: 1 })} onSort={(s) => handleSetTableData({ sort: s })} onCheckBoxChange={(c,r) => setSelectedItems(p => c ? [...p,r] : p.filter(i => i.id !== r.id))} onIndeterminateCheckBoxChange={(c,rs) => { const rIds = new Set(rs.map(r=>r.original.id)); setSelectedItems(p => c ? [...p, ...rs.map(r=>r.original).filter(r => !p.some(i => i.id === r.id))] : p.filter(i => !rIds.has(i.id)))}} />
                     </div>
                 </AdaptiveCard>
             </Container>
 
             <SelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
 
+            {/* Add Drawer */}
             <Drawer title="Add Trending Image Group" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} width={480} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="addPageImageForm" type="submit" loading={isSubmitting} disabled={!addFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Adding...' : 'Save'}</Button></div>}>
                 <Form id="addPageImageForm" onSubmit={addFormMethods.handleSubmit(onAddItemSubmit)} className="flex flex-col gap-4">
                      <FormItem label="Page Name" invalid={!!addFormMethods.formState.errors.page_name} errorMessage={addFormMethods.formState.errors.page_name?.message}>
@@ -420,6 +337,7 @@ const TrendingImages = () => {
                 name="page_name" 
                 control={addFormMethods.control} 
                 render={({ field }) => (
+                    // Use the new filtered options list here
                     <Select 
                         placeholder="Select page" 
                         options={addPageNameOptions} 
@@ -434,6 +352,7 @@ const TrendingImages = () => {
                 </Form>
             </Drawer>
 
+            {/* Edit Drawer */}
             <Drawer title="Edit Trending Image Group" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={480} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editPageImageForm" type="submit" loading={isSubmitting} disabled={!editFormMethods.formState.isValid || isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</Button></div>}>
                 <Form id="editPageImageForm" onSubmit={editFormMethods.handleSubmit(onEditItemSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Page Name" invalid={!!editFormMethods.formState.errors.page_name} errorMessage={editFormMethods.formState.errors.page_name?.message}>
@@ -441,6 +360,7 @@ const TrendingImages = () => {
                 name="page_name" 
                 control={editFormMethods.control} 
                 render={({ field }) => (
+                    // The Edit drawer still uses the full, original list
                     <Select 
                         placeholder="Select page" 
                         options={addPageNameOptions} 
@@ -471,6 +391,7 @@ const TrendingImages = () => {
             
             <Dialog isOpen={isImageViewerOpen} onClose={() => setIsImageViewerOpen(false)} onRequestClose={() => setIsImageViewerOpen(false)} width={600}><div className="flex justify-center items-center p-4">{imageToView ? <img src={imageToView} alt="Full View" style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }} /> : <p>No image.</p>}</div></Dialog>
 
+            {/* Filter Drawer */}
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} width={400} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearAllFilters}>Clear</Button><Button size="sm" variant="solid" form="filterForm" type="submit">Apply</Button></div>}>
               <Form id="filterForm" onSubmit={filterFormMethods.handleSubmit((data) => { setActiveFilters(data); handleSetTableData({ pageIndex: 1 }); setIsFilterDrawerOpen(false); })} className="flex flex-col gap-4">
                   <FormItem label="Page Name"><Controller name="filterPageNames" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select pages..." options={dynamicPageNameOptions} value={field.value || []} onChange={(v) => field.onChange(v || [])} />)} /></FormItem>
