@@ -1,5 +1,3 @@
-// src/views/your-path/OffersDemands.tsx
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import dayjs from "dayjs";
@@ -31,6 +29,7 @@ import {
   Input,
   Select,
   Tag,
+  Skeleton, // Added Skeleton
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Dialog from "@/components/ui/Dialog";
@@ -109,7 +108,7 @@ import type {
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 
-interface TableQueries extends CommonTableQueries {}
+interface TableQueries extends CommonTableQueries { }
 
 // --- Form Schemas ---
 const exportReasonSchema = z.object({
@@ -1544,8 +1543,6 @@ const ActionColumn = React.memo(
           <TbTagStarred size={18} />{" "}
           <span className="text-xs">Add Active Log</span>
         </Dropdown.Item>
-        {/* <Dropdown.Item onClick={() => onOpenModal("document", rowData)} className="flex items-center gap-2"><TbDownload size={18} /> <span className="text-xs">Download Document</span></Dropdown.Item>
-      <Dropdown.Item onClick={onDelete} className="flex items-center gap-2 text-red-600 hover:text-red-700"><TbTrash size={18} /> <span className="text-xs">Delete</span></Dropdown.Item> */}
       </Dropdown>
     </div>
   )
@@ -1564,26 +1561,28 @@ const ItemTable = React.memo(
     onSort,
     onRowSelect,
     onAllRowSelect,
+    selectable = true,
   }: {
     columns: ColumnDef<OfferDemandItem>[];
     data: OfferDemandItem[];
     loading: boolean;
     pagingData: { total: number; pageIndex: number; pageSize: number };
-    selectedItems: OfferDemandItem[];
+    selectedItems?: OfferDemandItem[];
     onPaginationChange: (page: number) => void;
     onSelectChange: (value: number) => void;
     onSort: (sort: OnSortParam) => void;
-    onRowSelect: (checked: boolean, row: OfferDemandItem) => void;
-    onAllRowSelect: (checked: boolean, rows: Row<OfferDemandItem>[]) => void;
+    onRowSelect?: (checked: boolean, row: OfferDemandItem) => void;
+    onAllRowSelect?: (checked: boolean, rows: Row<OfferDemandItem>[]) => void;
+    selectable?: boolean;
   }) => (
     <DataTable
-      selectable
+      selectable={selectable}
       columns={columns}
       data={data}
       loading={loading}
       pagingData={pagingData}
       checkboxChecked={(row) =>
-        selectedItems.some((selected) => selected.id === row.id)
+        selectedItems?.some((selected) => selected.id === row.id) ?? false
       }
       onPaginationChange={onPaginationChange}
       onSelectChange={onSelectChange}
@@ -1890,6 +1889,8 @@ const OffersDemands = () => {
     demandsError,
     getAllUserData,
   } = useSelector(masterSelector, shallowEqual);
+
+  const [initialLoading, setInitialLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState<string>(TABS.ALL);
   const initialTableQueries: TableQueries = {
     pageIndex: 1,
@@ -2090,7 +2091,6 @@ const OffersDemands = () => {
 
   const fetchData = useCallback(() => {
     const params = prepareApiParams(currentTableConfig, filterCriteria);
-    dispatch(getAllUsersAction());
     const shouldFetchOffers =
       currentTab === TABS.OFFER ||
       (currentTab === TABS.ALL &&
@@ -2114,8 +2114,28 @@ const OffersDemands = () => {
   ]);
 
   useEffect(() => {
+    const fetchInitialData = async () => {
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+            dispatch(getAllUsersAction()),
+            fetchData()
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    fetchInitialData();
+  }, [dispatch]);
+  
+  useEffect(() => {
+    if (initialLoading) return;
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, initialLoading]);
+
+
   useEffect(() => {
     if (offersStatus === "failed" && offersError)
       toast.push(
@@ -2136,16 +2156,10 @@ const OffersDemands = () => {
   const { pageData, totalItems } = useMemo(() => {
     let itemsToDisplay: OfferDemandItem[] = [];
     let currentTotal = 0;
-    const safeOffersItems = Array.isArray(offersStoreData)
-      ? offersStoreData
-      : [];
-    const safeDemandsItems = Array.isArray(demandsStoreData)
-      ? demandsStoreData
-      : [];
-    const safeOffersTotal =
-      typeof offersStoreData?.total === "number" ? offersStoreData.total : 0;
-    const safeDemandsTotal =
-      typeof demandsStoreData?.total === "number" ? demandsStoreData.total : 0;
+    const safeOffersItems = Array.isArray(offersStoreData?.data) ? offersStoreData.data : [];
+    const safeDemandsItems = Array.isArray(demandsStoreData?.data) ? demandsStoreData.data : [];
+    const safeOffersTotal = typeof offersStoreData?.total === 'number' ? offersStoreData.total : 0;
+    const safeDemandsTotal = typeof demandsStoreData?.total === 'number' ? demandsStoreData.total : 0;
 
     const itemTypeFilter =
       filterCriteria.quickFilters?.type === "item"
@@ -2548,7 +2562,7 @@ const OffersDemands = () => {
     ]
   );
 
-   const handleCopy = useCallback((text: string, successMessage: string) => {
+  const handleCopy = useCallback((text: string, successMessage: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
       toast.push(
@@ -2611,9 +2625,6 @@ const OffersDemands = () => {
                   group.groupName === "Group B";
                 if (isSpecialGroup && group.items?.[0]) {
                   const fullText = group.items[0];
-                  console.log("row.original",row.original);
-                  
-                  // MODIFICATION START
                   const messageToCopy = `Offer ID: ${row.original.originalApiItem.id}\nOffer Name: ${row.original.name}\n\nMessage:\n${fullText}`;
                   return (
                     <div
@@ -2642,7 +2653,6 @@ const OffersDemands = () => {
                       </div>
                     </div>
                   );
-                  // MODIFICATION END
                 }
                 return (
                   <div key={index} className="text-xs">
@@ -2695,34 +2705,6 @@ const OffersDemands = () => {
           );
         },
       },
-      // {
-      //   header: 'Updated Info',
-      //   accessorKey: 'updated_at',
-      //   enableSorting: true,
-      //   size: 220,
-      //   cell: props => {
-      //     const { updated_at, updated_by_user } = props.row.original;
-      //     return (
-      //       <div className="flex items-center gap-2">
-      //         <Tooltip title="View Profile Picture">
-      //           <Avatar
-      //             src={updated_by_user?.profile_pic_path}
-      //             shape="circle"
-      //             size="sm"
-      //             icon={<TbUserCircle />}
-      //             className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-      //             onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
-      //           />
-      //         </Tooltip>
-      //         <div>
-      //           <span className='font-semibold'>{updated_by_user?.name || 'N/A'}</span>
-      //           <div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div>
-      //           <div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div>
-      //         </div>
-      //       </div>
-      //     );
-      //   }
-      // },
       {
         header: "Actions",
         id: "action",
@@ -2739,7 +2721,7 @@ const OffersDemands = () => {
         ),
       },
     ],
-    [handleEdit, handleDeleteClick, handleOpenModal, openImageViewer]
+    [handleEdit, handleDeleteClick, handleOpenModal, openImageViewer, handleCopy]
   );
 
   const [filteredColumns, setFilteredColumns] =
@@ -2767,8 +2749,8 @@ const OffersDemands = () => {
     return count;
   }, [filterCriteria]);
 
-  const isLoadingO = offersStatus === "loading" || offersStatus === "idle";
-  const isLoadingD = demandsStatus === "loading" || demandsStatus === "idle";
+  const isLoadingO = offersStatus === "loading";
+  const isLoadingD = demandsStatus === "loading";
   let isOverallLoading = false;
   if (currentTab === TABS.OFFER) isOverallLoading = isLoadingO;
   else if (currentTab === TABS.DEMAND) isOverallLoading = isLoadingD;
@@ -2782,25 +2764,23 @@ const OffersDemands = () => {
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
 
-  if (
-    (isOverallLoading || dataForExportLoading) &&
-    pageData.length === 0 &&
-    !currentTableConfig.query &&
-    Object.values(filterCriteria).every(
-      (v) => !v || (Array.isArray(v) && v.length === 0)
-    )
-  ) {
-    return (
-      <Container className="h-full">
-        <div className="h-full flex flex-col items-center justify-center">
-          <Spinner size="xl" />
-          <p className="mt-2">
-            {dataForExportLoading ? "Preparing export..." : "Loading Data..."}
-          </p>
-        </div>
-      </Container>
-    );
-  }
+  const renderCardContent = (content: number | undefined, colorClass: string) => {
+      if (initialLoading) {
+          return <Skeleton width={40} height={24} />;
+      }
+      return <h6 className={colorClass}>{content ?? 0}</h6>;
+  };
+  
+  const skeletonColumns: ColumnDef<OfferDemandItem>[] = useMemo(() =>
+      columns.map((column) => ({
+          ...column,
+          cell: () => <Skeleton height={48} className="my-2" />,
+      })),
+  [columns]);
+
+  const skeletonData = useMemo(() =>
+      Array.from({ length: currentTableConfig.pageSize as number }, (_, i) => ({ id: `skeleton-${i}` }) as any),
+  [currentTableConfig.pageSize]);
 
   return (
     <>
@@ -2809,12 +2789,12 @@ const OffersDemands = () => {
           <div className="lg:flex items-center justify-between mb-4">
             <h5 className="mb-4 lg:mb-0">Offers & Demands</h5>
             <div className="flex flex-col md:flex-row gap-2">
-              {/* <Button icon={<TbRefresh />} onClick={() => fetchData()} title="Refresh Data">Refresh</Button> */}
               <Button
                 variant="solid"
                 icon={<TbPlus />}
                 onClick={() => navigate("/sales-leads/offers/create")}
                 block
+                disabled={initialLoading}
               >
                 Add Offer
               </Button>
@@ -2823,120 +2803,61 @@ const OffersDemands = () => {
                 variant="solid"
                 onClick={() => navigate("/sales-leads/demands/create")}
                 block
+                disabled={initialLoading}
               >
                 Add Demand
               </Button>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-            <Tooltip title="Click to show all items">
-              <div onClick={onClearFilters}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-blue-200")}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                    <TbListDetails size={24} />
+              <Tooltip title="Click to show all items">
+                  <div onClick={onClearFilters}>
+                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
+                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={24} /></div>
+                          <div>{renderCardContent(offerDemandCounts?.total, "text-blue-500")}<span className="font-semibold text-xs">Total</span></div>
+                      </Card>
                   </div>
-                  <div>
-                    <h6 className="text-blue-500">
-                      {offerDemandCounts?.total ?? 0}
-                    </h6>
-                    <span className="font-semibold text-xs">Total</span>
+              </Tooltip>
+              <Tooltip title="Click to show only offers">
+                  <div onClick={() => handleCardClick("item", "Offer")}>
+                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
+                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbArrowUpRight size={24} /></div>
+                          <div>{renderCardContent(offerDemandCounts?.offers, "text-green-500")}<span className="font-semibold text-xs">Offers</span></div>
+                      </Card>
                   </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show only offers">
-              <div onClick={() => handleCardClick("item", "Offer")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-green-300")}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                    <TbArrowUpRight size={24} />
+              </Tooltip>
+              <Tooltip title="Click to show only demands">
+                  <div onClick={() => handleCardClick("item", "Demand")}>
+                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
+                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbArrowDownLeft size={24} /></div>
+                          <div>{renderCardContent(offerDemandCounts?.demands, "text-violet-500")}<span className="font-semibold text-xs">Demands</span></div>
+                      </Card>
                   </div>
-                  <div>
-                    <h6 className="text-green-500">
-                      {offerDemandCounts?.offers ?? 0}
-                    </h6>
-                    <span className="font-semibold text-xs">Offers</span>
+              </Tooltip>
+              <Tooltip title="Click to show items created today">
+                  <div onClick={() => handleCardClick("item", "Today")}>
+                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-amber-300")}>
+                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbClockHour4 size={24} /></div>
+                          <div>{renderCardContent(offerDemandCounts?.today, "text-amber-500")}<span className="font-semibold text-xs">Today</span></div>
+                      </Card>
                   </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show only demands">
-              <div onClick={() => handleCardClick("item", "Demand")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-violet-200")}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                    <TbArrowDownLeft size={24} />
+              </Tooltip>
+              <Tooltip title="Click to show offers created today">
+                  <div onClick={() => handleCardClick("item", "Today")}>
+                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-teal-200")}>
+                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500"><TbCalendarUp size={24} /></div>
+                          <div>{renderCardContent(offerDemandCounts?.today_offers, "text-teal-500")}<span className="font-semibold text-xs">Today Offers</span></div>
+                      </Card>
                   </div>
-                  <div>
-                    <h6 className="text-violet-500">
-                      {offerDemandCounts?.demands ?? 0}
-                    </h6>
-                    <span className="font-semibold text-xs">Demands</span>
+              </Tooltip>
+              <Tooltip title="Click to show demands created today">
+                  <div onClick={() => handleCardClick("item", "Today")}>
+                      <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-rose-200")}>
+                          <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500"><TbCalendarDown size={24} /></div>
+                          <div>{renderCardContent(offerDemandCounts?.today_demands, "text-rose-500")}<span className="font-semibold text-xs">Today Demands</span></div>
+                      </Card>
                   </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show items created today">
-              <div onClick={() => handleCardClick("item", "Today")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-amber-300")}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500">
-                    <TbClockHour4 size={24} />
-                  </div>
-                  <div>
-                    <h6 className="text-amber-500">
-                      {offerDemandCounts?.today ?? 0}
-                    </h6>
-                    <span className="font-semibold text-xs">Today</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show offers created today">
-              <div onClick={() => handleCardClick("item", "Today")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-teal-200")}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-teal-100 text-teal-500">
-                    <TbCalendarUp size={24} />
-                  </div>
-                  <div>
-                    <h6 className="text-teal-500">
-                      {offerDemandCounts?.today_offers ?? 0}
-                    </h6>
-                    <span className="font-semibold text-xs">Today Offers</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show demands created today">
-              <div onClick={() => handleCardClick("item", "Today")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(cardClass, "border-rose-200")}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-rose-100 text-rose-500">
-                    <TbCalendarDown size={24} />
-                  </div>
-                  <div>
-                    <h6 className="text-rose-500">
-                      {offerDemandCounts?.today_demands ?? 0}
-                    </h6>
-                    <span className="font-semibold text-xs">Today Demands</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
+              </Tooltip>
           </div>
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
@@ -2950,6 +2871,7 @@ const OffersDemands = () => {
                       ? "border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
                   )}
+                  disabled={initialLoading}
                 >
                   {tabKey === TABS.ALL ? "All Items" : `${tabKey} Listing`}
                 </button>
@@ -2973,25 +2895,42 @@ const OffersDemands = () => {
             filterData={filterCriteria}
             onRemoveFilter={handleRemoveFilter}
             onClearAll={onClearFilters}
-            allUsers={getAllUserData}
+            allUsers={getAllUserData || []}
           />
           <div className="flex-grow overflow-auto">
-            <ItemTable
-              columns={filteredColumns}
-              data={pageData}
-              loading={isOverallLoading || dataForExportLoading}
-              pagingData={{
-                total: totalItems,
-                pageIndex: currentTableConfig.pageIndex as number,
-                pageSize: currentTableConfig.pageSize as number,
-              }}
-              selectedItems={currentSelectedItems}
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handlePageSizeChange}
-              onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
-            />
+              {initialLoading ? (
+                  <ItemTable
+                      columns={skeletonColumns}
+                      data={skeletonData}
+                      loading={false}
+                      pagingData={{
+                          total: currentTableConfig.pageSize as number,
+                          pageIndex: 1,
+                          pageSize: currentTableConfig.pageSize as number,
+                      }}
+                      selectable={false}
+                      onPaginationChange={() => {}}
+                      onSelectChange={() => {}}
+                      onSort={() => {}}
+                  />
+              ) : (
+                  <ItemTable
+                      columns={filteredColumns}
+                      data={pageData}
+                      loading={isOverallLoading || dataForExportLoading}
+                      pagingData={{
+                          total: totalItems,
+                          pageIndex: currentTableConfig.pageIndex as number,
+                          pageSize: currentTableConfig.pageSize as number,
+                      }}
+                      selectedItems={currentSelectedItems}
+                      onPaginationChange={handlePaginationChange}
+                      onSelectChange={handlePageSizeChange}
+                      onSort={handleSort}
+                      onRowSelect={handleRowSelect}
+                      onAllRowSelect={handleAllRowSelect}
+                  />
+              )}
           </div>
         </AdaptiveCard>
         <ItemSelected
