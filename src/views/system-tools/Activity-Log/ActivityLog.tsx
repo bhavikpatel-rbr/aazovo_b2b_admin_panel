@@ -1,5 +1,3 @@
-// The code you provided is the final, corrected version.
-// It is well-structured and effectively implements all the required features.
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
@@ -8,7 +6,6 @@ import { z } from "zod";
 import classNames from "classnames";
 
 // UI Components
-
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
@@ -31,6 +28,7 @@ import {
   Tag,
   Dropdown,
   Checkbox,
+  Skeleton,
 } from "@/components/ui";
 
 // Icons
@@ -143,6 +141,66 @@ const exportReasonSchema = z.object({
   reason: z.string().min(10, "Reason must be at least 10 characters.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
+
+// --- Skeleton Component for Initial Loading ---
+const ActivityLogSkeleton = () => (
+    <Container className="h-auto">
+      <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
+        <div className="lg:flex items-center justify-between mb-4">
+          <Skeleton height={28} width={200} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6 gap-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Card key={index} bodyClass="flex gap-2 p-3 items-center">
+              <Skeleton variant="circle" height={48} width={48} />
+              <div className="w-full">
+                <Skeleton height={24} width="50%" />
+                <Skeleton height={16} width="80%" className="mt-1" />
+              </div>
+            </Card>
+          ))}
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
+          <div className="flex-grow"><Skeleton height={40} /></div>
+          <div className="flex flex-col sm:flex-row gap-1.5 w-full sm:w-auto">
+            <Skeleton height={40} width={40} />
+            <Skeleton height={40} width={40} />
+            <Skeleton height={40} width={100} />
+            <Skeleton height={40} width={100} />
+          </div>
+        </div>
+        <div className="my-4 h-4" />
+        <div className="mt-1 flex-grow overflow-y-auto">
+          <div className="flex gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
+            <Skeleton height={20} width="20%" />
+            <Skeleton height={20} width="15%" />
+            <Skeleton height={20} width="15%" />
+            <Skeleton height={20} width="30%" />
+            <Skeleton height={20} width="15%" />
+            <Skeleton height={20} width="10%" />
+          </div>
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 10 }).map((_, index) => (
+               <div key={index} className="flex gap-4 items-center">
+                 <div className="flex items-center gap-2 w-[20%]">
+                   <Skeleton variant="circle" height={32} width={32} />
+                   <div className="w-full">
+                     <Skeleton height={16} />
+                     <Skeleton height={12} className="mt-1" />
+                   </div>
+                 </div>
+                 <div className="w-[15%]"><Skeleton height={24} /></div>
+                 <div className="w-[15%]"><Skeleton height={16} /></div>
+                 <div className="w-[30%]"><Skeleton height={16} /></div>
+                 <div className="w-[15%]"><Skeleton height={16} /></div>
+                 <div className="w-[10%]"><Skeleton height={24} /></div>
+               </div>
+            ))}
+          </div>
+        </div>
+      </AdaptiveCard>
+    </Container>
+  );
 
 // --- Utility & Child Components ---
 function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
@@ -294,6 +352,7 @@ const ItemTableTools = ({
   filteredColumns,
   setFilteredColumns,
   activeFilterCount,
+  isDataReady,
 }: {
   onSearchChange: (q: string) => void;
   searchValue: string;
@@ -304,6 +363,7 @@ const ItemTableTools = ({
   filteredColumns: ColumnDef<ChangeLogItem>[];
   setFilteredColumns: (cols: ColumnDef<ChangeLogItem>[]) => void;
   activeFilterCount: number;
+  isDataReady: boolean;
 }) => {
   const toggleColumn = (checked: boolean, colId: string | number) => {
     const id = String(colId);
@@ -356,11 +416,13 @@ const ItemTableTools = ({
           title="Clear Filters & Reload"
           icon={<TbReload />}
           onClick={onClearAll}
+          disabled={!isDataReady}
         />
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
           className="w-full sm:w-auto"
+          disabled={!isDataReady}
         >
           Filter{" "}
           {activeFilterCount > 0 && (
@@ -373,6 +435,7 @@ const ItemTableTools = ({
           icon={<TbCloudUpload />}
           onClick={onExport}
           className="w-full sm:w-auto"
+          disabled={!isDataReady}
         >
           Export
         </Button>
@@ -385,9 +448,9 @@ const ItemTableTools = ({
 const ActivityLog = () => {
   const dispatch = useAppDispatch();
   const { activityLogsData, status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
-const location = useLocation()
-console.log("location",location?.state?.userId);
+  const location = useLocation()
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [viewingItem, setViewingItem] = useState<ChangeLogItem | null>(null);
   const [blockItem, setBlockItem] = useState<ChangeLogItem | null>(null);
@@ -397,22 +460,35 @@ console.log("location",location?.state?.userId);
   const [isProcessingBlock, setIsProcessingBlock] = useState(false);
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "timestamp" }, query: "" });
   const [activeFilters, setActiveFilters] = useState<Partial<FilterFormData>>({});
+  const isDataReady = !initialLoading;
 
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: activeFilters });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" } });
 
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
 
+  const refreshData = useCallback(async () => {
+      setInitialLoading(true);
+      try {
+          await dispatch(getActivityLogAction(location?.state?.userId || 0));
+      } catch (error) {
+          console.error("Failed to fetch activity logs:", error);
+          toast.push(<Notification title="Data Fetch Failed" type="danger">Could not load activity logs.</Notification>);
+      } finally {
+          setInitialLoading(false);
+      }
+  }, [dispatch, location?.state?.userId]);
+
   const onClearAllFilters = useCallback(() => {
     setActiveFilters({});
     filterFormMethods.reset({});
     handleSetTableData({ query: "", pageIndex: 1 });
-    dispatch(getActivityLogAction({ params: {} }));
-  }, [dispatch, filterFormMethods, handleSetTableData]);
+    refreshData();
+  }, [filterFormMethods, handleSetTableData, refreshData]);
 
   useEffect(() => {
-    dispatch(getActivityLogAction( location?.state?.userId || 0));
-  }, [dispatch]);
+    refreshData();
+  }, [refreshData]);
 
   useEffect(() => {
     filterFormMethods.reset(activeFilters);
@@ -433,11 +509,9 @@ console.log("location",location?.state?.userId);
     if (activeFilters.filterEntity?.length) { const s = new Set(activeFilters.filterEntity.map((o) => o.value)); processedData = processedData.filter((i) => s.has(i.entity)); }
     if (activeFilters.filterBlockStatus?.length) { const s = new Set(activeFilters.filterBlockStatus.map((o) => parseInt(o.value, 10))); processedData = processedData.filter((i) => s.has(i.is_blocked ?? 0)); }
     if (activeFilters.filterUserName) { const q = activeFilters.filterUserName.toLowerCase(); processedData = processedData.filter((i) => (i.user?.name || i.userName || "").toLowerCase().includes(q)); }
-    // --- MODIFIED: Date range filter logic is now safe from state mutation ---
     if (activeFilters.filterDateRange && (activeFilters.filterDateRange[0] || activeFilters.filterDateRange[1])) {
       const [start, end] = activeFilters.filterDateRange;
       const s = start ? start.getTime() : null;
-      // Create a copy of the end date to avoid mutating the state object.
       const e = end ? (() => { const d = new Date(end); d.setHours(23, 59, 59, 999); return d.getTime(); })() : null;
       processedData = processedData.filter((i) => {
         const t = new Date(i.updated_at).getTime();
@@ -472,10 +546,9 @@ console.log("location",location?.state?.userId);
   }, [mappedData, tableData, activeFilters, activityLogsData?.counts]);
 
   const activeFilterCount = useMemo(() => Object.values(activeFilters).filter(v => v && (!Array.isArray(v) || v.length > 0)).length, [activeFilters]);
-  const tableLoading = masterLoadingStatus === "loading" || masterLoadingStatus === "pending";
+  const tableLoading = masterLoadingStatus === "loading" || masterLoadingStatus === "pending" || isProcessingBlock;
 
   const handleCardClick = (filterType: "action" | "date" | "all", value?: string) => {
-    // Setting a card filter always resets other filters
     let newFilters: Partial<FilterFormData> = {};
     if (filterType === "all") {
       setActiveFilters({});
@@ -516,7 +589,6 @@ console.log("location",location?.state?.userId);
   }, [handleSetTableData]);
 
   const openViewDialog = useCallback((item: ChangeLogItem) => setViewingItem(item), []);
-  // --- MODIFIED: Renamed and simplified to handle both block and unblock ---
   const openBlockOrUnblockDialog = useCallback((item: ChangeLogItem) => {
     setBlockItem(item);
     setBlockConfirmationOpen(true);
@@ -525,13 +597,12 @@ console.log("location",location?.state?.userId);
   const handleConfirmBlock = async () => {
     if (!blockItem?.id || !blockItem?.ip) { toast.push(<Notification title="Error" type="danger">ID or IP Address is missing.</Notification>); setBlockConfirmationOpen(false); return; }
     setIsProcessingBlock(true);
-    // --- MODIFIED: Dynamic text for notifications ---
     const isUnblocking = blockItem.is_blocked === 1;
     const actionText = isUnblocking ? 'Unblock' : 'Block';
     try {
       await dispatch(blockUserAction({ activity_log_id: blockItem.id, ip: blockItem.ip })).unwrap();
       toast.push(<Notification title="Success" type="success">{`User/IP ${actionText.toLowerCase()} request sent.`}</Notification>);
-      dispatch(getActivityLogAction({ params: {} }));
+      refreshData();
     }
     catch (error: any) {
       toast.push(<Notification title={`${actionText} Failed`} type="danger">{error.message || `Could not ${actionText.toLowerCase()} the user/IP.`}</Notification>);
@@ -705,6 +776,24 @@ console.log("location",location?.state?.userId);
       </div>
     );
   };
+  
+  const renderCardContent = (
+    content: string | number | undefined,
+    colorClass: string
+  ) => {
+    if (initialLoading) {
+      return <Skeleton width={50} height={24} />;
+    }
+    return (
+      <h6 className={colorClass}>
+        {content ?? "..."}
+      </h6>
+    );
+  };
+
+  if (initialLoading) {
+    return <ActivityLogSkeleton />;
+  }
 
   return (
     <>
@@ -714,14 +803,14 @@ console.log("location",location?.state?.userId);
             <h5 className="mb-4 lg:mb-0">Activity Log</h5>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6 gap-3">
-            <Tooltip title="Click to clear all filters"><div className={cardClass} onClick={() => handleCardClick("all")}><Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border-blue-200 dark:border-blue-700"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-blue-100 text-blue-500 dark:bg-blue-500/20 dark:text-blue-300"><TbActivity size={24} /></div><div><h6 className="text-blue-500 dark:text-blue-300">{counts.total ?? "..."}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to filter by today's logs"><div className={cardClass} onClick={() => handleCardClick("date", "today")}><Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border-green-300 dark:border-green-700"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-green-100 text-green-500 dark:bg-green-500/20 dark:text-green-300"><TbCalendarWeek size={24} /></div><div><h6 className="text-green-500 dark:text-green-300">{counts.today ?? "..."}</h6><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to filter by Failed Login action"><div className={cardClass} onClick={() => handleCardClick("action", "Failed Login")}><Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border-pink-200 dark:border-pink-700"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-pink-100 text-pink-500 dark:bg-pink-500/20 dark:text-pink-300"><TbLogin size={24} /></div><div><h6 className="text-pink-500 dark:text-pink-300">{counts.failed_login ?? "..."}</h6><span className="font-semibold text-xs">Failed Login</span></div></Card></div></Tooltip>
-            <Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border border-violet-300 dark:border-violet-700 cursor-default"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-violet-100 text-violet-500 dark:bg-violet-500/20 dark:text-violet-300"><TbCloudPin size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-300">{counts.unique_ip ?? "..."}</h6><span className="font-semibold text-xs">Unique IP</span></div></Card>
-            <Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border border-orange-200 dark:border-orange-700 cursor-default"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-orange-100 text-orange-500 dark:bg-orange-500/20 dark:text-orange-300"><TbCloudCog size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-300">{counts.distinact_ip ?? "..."}</h6><span className="font-semibold text-xs">Distinct IP</span></div></Card>
-            <Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border border-red-200 dark:border-red-700 cursor-default"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300"><TbCloudExclamation size={24} /></div><div><h6 className="text-red-500 dark:text-red-300">{counts.suspicious_ip ?? "..."}</h6><span className="font-semibold text-xs">Suspicious</span></div></Card>
+            <Tooltip title="Click to clear all filters"><div className={cardClass} onClick={() => handleCardClick("all")}><Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border-blue-200 dark:border-blue-700"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-blue-100 text-blue-500 dark:bg-blue-500/20 dark:text-blue-300"><TbActivity size={24} /></div><div>{renderCardContent(counts.total, "text-blue-500 dark:text-blue-300")}<span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by today's logs"><div className={cardClass} onClick={() => handleCardClick("date", "today")}><Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border-green-300 dark:border-green-700"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-green-100 text-green-500 dark:bg-green-500/20 dark:text-green-300"><TbCalendarWeek size={24} /></div><div>{renderCardContent(counts.today, "text-green-500 dark:text-green-300")}<span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by Failed Login action"><div className={cardClass} onClick={() => handleCardClick("action", "Failed Login")}><Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border-pink-200 dark:border-pink-700"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-pink-100 text-pink-500 dark:bg-pink-500/20 dark:text-pink-300"><TbLogin size={24} /></div><div>{renderCardContent(counts.failed_login, "text-pink-500 dark:text-pink-300")}<span className="font-semibold text-xs">Failed Login</span></div></Card></div></Tooltip>
+            <Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border border-violet-300 dark:border-violet-700 cursor-default"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-violet-100 text-violet-500 dark:bg-violet-500/20 dark:text-violet-300"><TbCloudPin size={24} /></div><div>{renderCardContent(counts.unique_ip, "text-violet-500 dark:text-violet-300")}<span className="font-semibold text-xs">Unique IP</span></div></Card>
+            <Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border border-orange-200 dark:border-orange-700 cursor-default"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-orange-100 text-orange-500 dark:bg-orange-500/20 dark:text-orange-300"><TbCloudCog size={24} /></div><div>{renderCardContent(counts.distinact_ip, "text-orange-500 dark:text-orange-300")}<span className="font-semibold text-xs">Distinct IP</span></div></Card>
+            <Card bodyClass="flex gap-2 p-3 items-center" className="rounded-lg border border-red-200 dark:border-red-700 cursor-default"><div className="h-12 w-12 rounded-lg flex items-center justify-center bg-red-100 text-red-500 dark:bg-red-500/20 dark:text-red-300"><TbCloudExclamation size={24} /></div><div>{renderCardContent(counts.suspicious_ip, "text-red-500 dark:text-red-300")}<span className="font-semibold text-xs">Suspicious</span></div></Card>
           </div>
-          <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} searchValue={tableData.query} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+          <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} searchValue={tableData.query} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady}/>
           <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFilters} />
           <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">{total !== mappedData.length && (<span>Showing <strong>{total}</strong> matching results of <strong>{mappedData.length}</strong></span>)}</div>
           <div className="mt-1 flex-grow overflow-y-auto">
@@ -738,7 +827,6 @@ console.log("location",location?.state?.userId);
               Log Details
             </h3>
             <div className="space-y-2 text-sm">
-              {/* We explicitly render each field for clarity and control */}
               <DetailRow label="Timestamp">{formatTimestamp(viewingItem.updated_at)}</DetailRow>
               <DetailRow label="User">
                 {viewingItem.user ? (
@@ -752,22 +840,15 @@ console.log("location",location?.state?.userId);
                 )}
               </DetailRow>
               <DetailRow label="Action">{getActionLabel(viewingItem.action)}</DetailRow>
-
               <DetailRow label="Entity">{getEntityLabel(viewingItem.entity)}</DetailRow>
-
               <DetailRow label="Description">{viewingItem.description}</DetailRow>
-
             </div>
-
-          
           </div>)}
-          {/* {viewingItem && (<div className="space-y-3 text-sm">{(Object.keys(viewingItem) as Array<keyof ChangeLogItem>).map((key) => { let label = key.replace(/_/g, " ").replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase()); let value: any = viewingItem[key]; if ((key === "timestamp" || key === "updated_at") && value) value = new Date(value).toLocaleString(); else if (key === "user" && value) value = `${(value as User).name} (${(value as User).roles?.[0]?.display_name || "N/A"})`; else if (key === "action") value = CHANGE_TYPE_OPTIONS.find((o) => o.value === value)?.label || value; else if (key === "entity") value = ENTITY_TYPE_OPTIONS.find((o) => o.value === value)?.label || value; else if (key === "details" && value && typeof value === "string") { try { const p = JSON.parse(value); if (typeof p === "object" && p !== null) return (<div key={key} className="flex flex-col"><span className="font-semibold">{label}:</span><pre className="text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-1 whitespace-pre-wrap max-h-60 overflow-auto">{JSON.stringify(p, null, 2) || "-"}</pre></div>); } catch { } } return (<div key={key} className="flex"><span className="font-semibold w-1/3 md:w-1/4">{label}:</span><span className="w-2/3 md:w-3/4 break-words">{value === null || value === undefined || value === "" ? "-" : String(value)}</span></div>); })}</div>)} */}
           <div className="text-right mt-6">
             <Button variant="solid" onClick={() => setViewingItem(null)}>Close</Button>
           </div>
         </div>
       </Dialog>
-      {/* --- MODIFIED: Confirmation dialog is now dynamic for both Block and Unblock actions --- */}
       <ConfirmDialog
         isOpen={blockConfirmationOpen}
         type={blockItem?.is_blocked === 1 ? 'success' : 'danger'}
@@ -802,7 +883,6 @@ console.log("location",location?.state?.userId);
           <Button size="sm" variant="solid" form="exportLogsReasonForm" type="submit" loading={isSubmittingExportReason} disabled={!exportReasonFormMethods.formState.isValid}>Submit & Export</Button>
         </div>
       </Dialog>
-
       <Dialog
         isOpen={isImageViewerOpen}
         onClose={closeImageViewer}
