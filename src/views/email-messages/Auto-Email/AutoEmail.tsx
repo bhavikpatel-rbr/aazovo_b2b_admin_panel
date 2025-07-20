@@ -1,68 +1,68 @@
 // src/views/your-path/AutoEmailTemplatesListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import classNames from "classnames";
 import dayjs from "dayjs";
+import cloneDeep from "lodash/cloneDeep";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
+import DebounceInput from "@/components/shared/DebouceInput";
+import StickyFooter from "@/components/shared/StickyFooter";
+import { Avatar, Card, Checkbox, Dialog, Drawer, Dropdown, Form, FormItem, Input, Skeleton, Tag } from "@/components/ui"; // Skeleton Imported
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
-import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog, Skeleton } from "@/components/ui"; // Skeleton Imported
+import toast from "@/components/ui/toast";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
 import {
-    TbPencil,
-    TbTrash,
-    TbChecks,
-    TbSearch,
-    TbFilter,
-    TbPlus,
-    TbCloudUpload,
-    TbMailForward,
-    TbUsers,
-    TbToggleRight,
-    TbReload,
-    TbMailOpened,
-    TbSend,
-    TbMailbox,
     TbAlignBoxCenterBottom,
-    TbMailOff,
+    TbChecks,
+    TbCloudUpload,
     TbColumns,
-    TbX,
+    TbFilter,
+    TbMailbox,
+    TbMailForward,
+    TbMailOff,
+    TbMailOpened,
+    TbPencil,
+    TbPlus,
+    TbReload,
+    TbSearch,
+    TbSend,
+    TbToggleRight,
+    TbTrash,
     TbUserCircle,
+    TbUsers,
+    TbX,
 } from "react-icons/tb";
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import type { ColumnDef, OnSortParam, Row } from "@/components/shared/DataTable";
 
 // Redux
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import {
+    addAutoEmailAction,
+    deleteAllAutoEmailsAction,
+    deleteAutoEmailAction,
+    editAutoEmailAction,
+    getAutoEmailsAction,
+    getAutoEmailTemplatesAction,
+    getUsersAction,
+    submitExportReasonAction,
+} from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
-import {
-    getAutoEmailsAction,
-    addAutoEmailAction,
-    editAutoEmailAction,
-    submitExportReasonAction,
-    getUsersAction,
-    deleteAutoEmailAction,
-    deleteAllAutoEmailsAction,
-    getAutoEmailTemplatesAction,
-} from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // Utils
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
@@ -282,9 +282,9 @@ const AutoEmailsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting 
 // --- MAIN COMPONENT ---
 const AutoEmailListing = () => {
     const dispatch = useAppDispatch();
-    const { 
-        autoEmailsData = { data: [], counts: {} }, 
-        usersData = [], 
+    const {
+        autoEmailsData = { data: [], counts: {} },
+        usersData = [],
         autoEmailTemplatesData = { data: [] },
     } = useSelector(masterSelector, shallowEqual);
 
@@ -303,25 +303,25 @@ const AutoEmailListing = () => {
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'updated_at' }, query: '' });
     const [selectedItems, setSelectedItems] = useState<AutoEmailItem[]>([]);
     const [itemToDelete, setItemToDelete] = useState<AutoEmailItem | null>(null);
-    
+
     const isDataReady = !initialLoading;
     const tableLoading = initialLoading || isSubmitting || isDeleting;
 
     const userOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((u: ApiUser) => ({ value: String(u.id), label: u.name })) : [], [usersData]);
-    
-    const EMAIL_TYPE_OPTIONS = useMemo(() => 
-        (autoEmailTemplatesData as any)?.data && Array.isArray((autoEmailTemplatesData as any).data) 
-            ? (autoEmailTemplatesData as any).data.map((template: any) => ({ value: template.email_type, label: template.email_type })) 
-            : [],
-    [autoEmailTemplatesData]);
 
-    useEffect(() => { 
+    const EMAIL_TYPE_OPTIONS = useMemo(() =>
+        (autoEmailTemplatesData as any)?.data && Array.isArray((autoEmailTemplatesData as any).data)
+            ? (autoEmailTemplatesData as any).data.map((template: any) => ({ value: template.email_type, label: template.email_type }))
+            : [],
+        [autoEmailTemplatesData]);
+
+    useEffect(() => {
         const fetchData = async () => {
             setInitialLoading(true);
             try {
                 await Promise.all([
-                    dispatch(getAutoEmailsAction()), 
-                    dispatch(getUsersAction()), 
+                    dispatch(getAutoEmailsAction()),
+                    dispatch(getUsersAction()),
                     dispatch(getAutoEmailTemplatesAction())
                 ]);
             } catch (error) {
@@ -497,7 +497,14 @@ const AutoEmailListing = () => {
     }, [selectedItems]);
 
     const columns: ColumnDef<AutoEmailItem>[] = useMemo(() => [
-        { header: "Email Type", accessorKey: "emailTypeDisplay", enableSorting: true, size: 250 },
+        {
+            header: "Email Type", accessorKey: "email_type_name", enableSorting: true, size: 250,
+            cell: props => (
+                <div className="flex -space-x-2 rtl:space-x-reverse">
+                    <div>{props?.row?.original?.type?.email_type}</div>
+                </div>
+            )
+        },
         {
             header: "User(s)", accessorKey: "usersDisplay", enableSorting: false, size: 250, cell: props => (
                 <div className="flex -space-x-2 rtl:space-x-reverse">
