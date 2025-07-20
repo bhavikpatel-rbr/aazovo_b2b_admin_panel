@@ -171,7 +171,7 @@ export interface MemberFormSchema {
   instagram_profile?: string;
   is_blacklisted?: boolean;
   dealing_in_bulk?: string | { label: string; value: string };
-  member_profiles?: {
+  dynamic_member_profiles?: {
     db_id?: number; // Add this to store the database ID of the profile
     member_type?: { label: string; value: string | number };
     brands?: Array<{ label: string; value: string | number }>;
@@ -508,8 +508,7 @@ const transformApiToFormSchema = (
     dealing_in_bulk: formData.dealing_in_bulk || "No",
     remarks: formData.remarks || "",
 
-    dynamic_member_profiles:
-      formData.dynamic_member_profiles?.map((apiProfile: any) => {
+    dynamic_member_profiles: formData.dynamic_member_profiles?.map((apiProfile: any) => {
         const createSelectOptions = (idJsonString: string, names: string[]) => {
           try {
             if (
@@ -625,8 +624,8 @@ const preparePayloadForApi = (
     is_blacklisted: formData.is_blacklisted ? "1" : "0",
   };
 
-  if (formData.member_profiles) {
-    payload.dynamic_member_profiles = formData.member_profiles.map(formProfile => {
+  if (formData.dynamic_member_profiles) {
+    payload.dynamic_member_profiles = formData.dynamic_member_profiles.map(formProfile => {
       const apiProfile: any = {
         id: formProfile.db_id,
         member_type_id: getValue(formProfile.member_type),
@@ -1957,7 +1956,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "member_profiles" as "member_profiles",
+    name: "dynamic_member_profiles" as "dynamic_member_profiles",
   });
 
   // Mock options if data not available, replace with real data from selectors
@@ -2235,14 +2234,14 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
             <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
               <FormItem
                 label={`Member Type ${index + 1}`}
-                invalid={!!errors.member_profiles?.[index]?.member_type}
+                invalid={!!errors.dynamic_member_profiles?.[index]?.member_type}
                 errorMessage={
-                  errors.member_profiles?.[index]?.member_type
+                  errors.dynamic_member_profiles?.[index]?.member_type
                     ?.message as string
                 }
               >
                 <Controller
-                  name={`member_profiles.${index}.member_type`}
+                  name={`dynamic_member_profiles.${index}.member_type`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -2256,13 +2255,13 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               </FormItem>
               <FormItem
                 label="Select Brand(s)"
-                invalid={!!errors.member_profiles?.[index]?.brands}
+                invalid={!!errors.dynamic_member_profiles?.[index]?.brands}
                 errorMessage={
-                  errors.member_profiles?.[index]?.brands?.message as string
+                  errors.dynamic_member_profiles?.[index]?.brands?.message as string
                 }
               >
                 <Controller
-                  name={`member_profiles.${index}.brands`}
+                  name={`dynamic_member_profiles.${index}.brands`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -2277,14 +2276,14 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               </FormItem>
               {/* <FormItem
                 label="Select Category(s)"
-                invalid={!!errors.member_profiles?.[index]?.categories}
+                invalid={!!errors.dynamic_member_profiles?.[index]?.categories}
                 errorMessage={
-                  errors.member_profiles?.[index]?.categories
+                  errors.dynamic_member_profiles?.[index]?.categories
                     ?.message as string
                 }
               >
                 <Controller
-                  name={`member_profiles.${index}.categories`}
+                  name={`dynamic_member_profiles.${index}.categories`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -2299,14 +2298,14 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               </FormItem> */}
               <FormItem
                 label="Select Sub Category(s)"
-                invalid={!!errors.member_profiles?.[index]?.sub_categories}
+                invalid={!!errors.dynamic_member_profiles?.[index]?.sub_categories}
                 errorMessage={
-                  errors.member_profiles?.[index]?.sub_categories
+                  errors.dynamic_member_profiles?.[index]?.sub_categories
                     ?.message as string
                 }
               >
                 <Controller
-                  name={`member_profiles.${index}.sub_categories`}
+                  name={`dynamic_member_profiles.${index}.sub_categories`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -3194,7 +3193,7 @@ const MemberCreate = () => {
     instagram_profile: "",
     is_blacklisted: false,
     dealing_in_bulk: undefined,
-    member_profiles: [],
+    dynamic_member_profiles: [],
   });
 
   useEffect(() => {
