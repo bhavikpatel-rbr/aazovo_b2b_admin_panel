@@ -615,7 +615,7 @@ const preparePayloadForApi = (
     interested_category_ids: formData.interested_category_ids?.map(c => getValue(c)) || [],
     interested_subcategory_ids: formData.interested_subcategory_ids?.map(sc => getValue(sc)) || [],
     member_grade: getValue(formData.member_grade) || null,
-    relationship_manager: getValue(formData.relationship_manager_id) || null,
+    relationship_manager_id: getValue(formData.relationship_manager_id) || null,
     dealing_in_bulk: formData.dealing_in_bulk || "No",
     remarks: formData.remarks || "",
     product_upload_permission: formData.product_upload_permission ? "1" : "0",
