@@ -11,7 +11,7 @@ import React, {
 } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import dayjs from "dayjs";
+import dayjs from "dayjs"; // Import dayjs
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -94,9 +94,9 @@ import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
   addProductAction,
   addNotificationAction,
-  addScheduleAction,
-  addTaskAction,
-  addAllActionAction,
+  addScheduleAction, // Added
+  addTaskAction, // Added
+  addAllActionAction, // Added
   changeProductStatusAction,
   deleteAllProductsAction,
   deleteProductAction,
@@ -106,7 +106,7 @@ import {
   getParentCategoriesAction,
   getCountriesAction,
   getDomainsAction,
-  getProductslistingAction,
+  getProductslistingAction, // MODIFIED: Assuming this is your action name
   getSubcategoriesByCategoryIdAction,
   getUnitAction,
   submitExportReasonAction,
@@ -117,16 +117,8 @@ import { useNavigate } from "react-router-dom";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
 
-// --- FULL SCREEN LOADER COMPONENT ---
-const FullScreenLoader: React.FC = () => {
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center">
-            <Spinner size="40px" color="white" />
-        </div>
-    );
-};
-
 // --- Type Definitions ---
+// ... (existing type definitions are correct)
 type ApiProductItem = {
   id: number;
   category_id: string | number | null;
@@ -163,8 +155,8 @@ type ApiProductItem = {
   updated_at: string;
   icon_full_path?: string;
   thumb_image_full_path?: string;
-  supplier_product_code: string | null;
-  product_keywords: string | null;
+  supplier_product_code: string | null; // New field
+  product_keywords: string | null; // New field
   product_images_array?: {
     id?: number;
     image: string;
@@ -210,6 +202,7 @@ export type ProductItem = {
   countryId: number | null;
   countryName?: string;
   domainIds: number[];
+  // domainNames?: string[];
   color: string | null;
   hsnCode: string | null;
   shelfLife: string | null;
@@ -225,7 +218,7 @@ export type ProductItem = {
   icon: string | null;
   iconFullPath: string | null;
   thumbImage: string | null;
-  thumb_image_full_path: string | null;
+  thumbImageFullPath: string | null;
   productImages: ProductGalleryImageItem[];
   metaTitle: string | null;
   metaDescription: string | null;
@@ -234,8 +227,8 @@ export type ProductItem = {
   updatedAt: string;
   subject: string | null;
   type: string | null;
-  supplierProductCode: string | null;
-  productKeywords: string | null;
+  supplierProductCode: string | null; // New field
+  productKeywords: string | null; // New field
 };
 type ImportType = "products" | "keywords";
 type ExportType = "products" | "keywords";
@@ -307,11 +300,73 @@ const priorityOptions = [
   { value: "high", label: "High" },
 ];
 const eventTypeOptions = [
-    { value: 'Meeting', label: 'Meeting' },
-    { value: 'Demo', label: 'Product Demo' },
-    { value: 'IntroCall', label: 'Introductory Call' },
-    { value: 'FollowUpCall', label: 'Follow-up Call' },
-    { value: 'Other', label: 'Other' },
+  { value: "Meeting", label: "Meeting" },
+  { value: "Demo", label: "Product Demo" },
+  { value: "IntroCall", label: "Introductory Call" },
+  { value: "FollowUpCall", label: "Follow-up Call" },
+  { value: "QBR", label: "Quarterly Business Review (QBR)" },
+  { value: "CheckIn", label: "Customer Check-in" },
+  { value: "LogEmail", label: "Log an Email" },
+  { value: "Milestone", label: "Project Milestone" },
+  { value: "Task", label: "Task" },
+  { value: "FollowUp", label: "General Follow-up" },
+  { value: "ProjectKickoff", label: "Project Kick-off" },
+  { value: "OnboardingSession", label: "Onboarding Session" },
+  { value: "Training", label: "Training Session" },
+  { value: "SupportCall", label: "Support Call" },
+  { value: "Reminder", label: "Reminder" },
+  { value: "Note", label: "Add a Note" },
+  { value: "FocusTime", label: "Focus Time (Do Not Disturb)" },
+  { value: "StrategySession", label: "Strategy Session" },
+  { value: "TeamMeeting", label: "Team Meeting" },
+  { value: "PerformanceReview", label: "Performance Review" },
+  { value: "Lunch", label: "Lunch / Break" },
+  { value: "Appointment", label: "Personal Appointment" },
+  { value: "Other", label: "Other" },
+  { value: "ProjectKickoff", label: "Project Kick-off" },
+  { value: "InternalSync", label: "Internal Team Sync" },
+  { value: "ClientUpdateMeeting", label: "Client Update Meeting" },
+  { value: "RequirementsGathering", label: "Requirements Gathering" },
+  { value: "UAT", label: "User Acceptance Testing (UAT)" },
+  { value: "GoLive", label: "Go-Live / Deployment Date" },
+  { value: "ProjectSignOff", label: "Project Sign-off" },
+  { value: "PrepareReport", label: "Prepare Report" },
+  { value: "PresentFindings", label: "Present Findings" },
+  { value: "TroubleshootingCall", label: "Troubleshooting Call" },
+  { value: "BugReplication", label: "Bug Replication Session" },
+  { value: "IssueEscalation", label: "Escalate Issue" },
+  { value: "ProvideUpdate", label: "Provide Update on Ticket" },
+  { value: "FeatureRequest", label: "Log Feature Request" },
+  { value: "IntegrationSupport", label: "Integration Support Call" },
+  { value: "DataMigration", label: "Data Migration/Import Task" },
+  { value: "ColdCall", label: "Cold Call" },
+  { value: "DiscoveryCall", label: "Discovery Call" },
+  { value: "QualificationCall", label: "Qualification Call" },
+  { value: "SendFollowUpEmail", label: "Send Follow-up Email" },
+  { value: "LinkedInMessage", label: "Log LinkedIn Message" },
+  { value: "ProposalReview", label: "Proposal Review Meeting" },
+  { value: "ContractSent", label: "Contract Sent" },
+  { value: "NegotiationCall", label: "Negotiation Call" },
+  { value: "TrialSetup", label: "Product Trial Setup" },
+  { value: "TrialCheckIn", label: "Trial Check-in Call" },
+  { value: "WelcomeCall", label: "Welcome Call" },
+  { value: "ImplementationSession", label: "Implementation Session" },
+  { value: "UserTraining", label: "User Training Session" },
+  { value: "AdminTraining", label: "Admin Training Session" },
+  { value: "MonthlyCheckIn", label: "Monthly Check-in" },
+  { value: "HealthCheck", label: "Customer Health Check" },
+  { value: "FeedbackSession", label: "Feedback Session" },
+  { value: "RenewalDiscussion", label: "Renewal Discussion" },
+  { value: "UpsellOpportunity", label: "Upsell/Cross-sell Call" },
+  { value: "CaseStudyInterview", label: "Case Study Interview" },
+  { value: "InvoiceDue", label: "Invoice Due" },
+  { value: "SendInvoice", label: "Send Invoice" },
+  { value: "PaymentReminder", label: "Send Payment Reminder" },
+  { value: "ChaseOverduePayment", label: "Chase Overdue Payment" },
+  { value: "ConfirmPayment", label: "Confirm Payment Received" },
+  { value: "ContractRenewalDue", label: "Contract Renewal Due" },
+  { value: "DiscussBilling", label: "Discuss Billing/Invoice" },
+  { value: "SendQuote", label: "Send Quote/Estimate" },
 ];
 
 // --- MODAL DIALOG COMPONENTS (NEW/REFINED) ---
@@ -336,7 +391,7 @@ const SendEmailDialog: React.FC<{ item: ProductItem; onClose: () => void }> = ({
     }
     const mailtoLink = `mailto:${item.email}?subject=${encodeURIComponent(
       data.subject
-    )}&body=${encodeURIComponent(data.message.replace(/<[^>]*>?/gm, ""))}`;
+    )}&body=${encodeURIComponent(data.message.replace(/<[^>]*>?/gm, ""))}`; // Strip HTML for body
     window.open(mailtoLink, "_self");
     toast.push(<Notification type="success" title="Opening Email Client" />);
     onClose();
@@ -973,27 +1028,55 @@ const ProductsModals: React.FC<ProductsModalsProps> = ({
   return <>{renderModalContent()}</>;
 };
 
+// ... (Rest of the file remains the same)
 // --- Form & Filter Schemas ---
 const productFormSchema = z.object({
+  // Re-ordered and updated based on new requirements
   status: z.enum(["Active", "Inactive", "Pending", "Draft", "Rejected"]),
-  category_id: z.number({ invalid_type_error: "Category is required." }).positive("Category is required.").nullable(),
+  category_id: z
+    .number({ invalid_type_error: "Category is required." })
+    .positive("Category is required.")
+    .nullable(),
   sub_category_id: z.number().positive().nullable().optional(),
-  brand_id: z.number({ invalid_type_error: "Brand is required." }).positive("Brand is required.").nullable(),
+  brand_id: z
+    .number({ invalid_type_error: "Brand is required." })
+    .positive("Brand is required.")
+    .nullable(),
   name: z.string().min(1, "Product name is required.").max(255),
   slug: z.string().min(1, "Slug is required.").max(255),
   sku_code: z.string().max(50).optional().nullable(),
   hsn_code: z.string().max(50).optional().nullable(),
-  supplier_product_code: z.string().max(100).optional().nullable(),
-  country_id: z.number({ invalid_type_error: "Country is required." }).positive("Country is required.").nullable(),
-  unit_id: z.number({ invalid_type_error: "Unit is required." }).positive("Unit is required.").nullable(),
+  supplier_product_code: z.string().max(100).optional().nullable(), // New field
+  country_id: z
+    .number({ invalid_type_error: "Country is required." })
+    .positive("Country is required.")
+    .nullable(),
+  unit_id: z
+    .number({ invalid_type_error: "Unit is required." })
+    .positive("Unit is required.")
+    .nullable(),
   color: z.string().max(50).optional().nullable(),
   shelf_life: z.string().max(50).optional().nullable(),
   packaging_type: z.string().max(100).optional().nullable(),
   packaging_size: z.string().max(100).optional().nullable(),
-  tax_rate: z.string().max(20).refine((val) => !val || val.trim() === "" || !isNaN(parseFloat(val)), { message: "Tax rate must be a number",}).optional().nullable(),
+  tax_rate: z
+    .string()
+    .max(20)
+    .refine((val) => !val || val.trim() === "" || !isNaN(parseFloat(val)), {
+      message: "Tax rate must be a number",
+    })
+    .optional()
+    .nullable(),
   procurement_lead_time: z.string().max(50).optional().nullable(),
-  product_keywords: z.string().min(1, "Product keywords are required.").max(500),
-  thumb_image_input: z.union([z.instanceof(File), z.null()]).optional().nullable(),
+  product_keywords: z.string().min(1, "Product keywords are required.").max(500), // New mandatory field
+
+  // Media (handled via custom validation)
+  thumb_image_input: z
+    .union([z.instanceof(File), z.null()])
+    .optional()
+    .nullable(),
+
+  // Other fields
   description: z.string().optional().nullable(),
   short_description: z.string().optional().nullable(),
   payment_term: z.string().optional().nullable(),
@@ -1010,18 +1093,25 @@ const filterFormSchema = z.object({
   filterCategoryIds: z.array(z.number()).optional(),
   filterSubCategoryIds: z.array(z.number()).optional(),
   filterBrandIds: z.array(z.number()).optional(),
-  filterStatuses: z.array(z.enum(["active", "inactive", "pending", "draft", "rejected"])).optional(),
+  filterStatuses: z
+    .array(z.enum(["active", "inactive", "pending", "draft", "rejected"]))
+    .optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 const exportReasonSchema = z.object({
-  reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."),
+  reason: z
+    .string()
+    .min(10, "Reason for export is required minimum 10 characters.")
+    .max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- Constants ---
-const PRODUCT_THUMB_IMAGE_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "/storage/product_thumbs/";
-const PRODUCT_IMAGES_BASE_URL = import.meta.env.VITE_API_URL_STORAGE || "/storage/product_gallery/";
+const PRODUCT_THUMB_IMAGE_BASE_URL =
+  import.meta.env.VITE_API_URL_STORAGE || "/storage/product_thumbs/";
+const PRODUCT_IMAGES_BASE_URL =
+  import.meta.env.VITE_API_URL_STORAGE || "/storage/product_gallery/";
 const TABS = { ALL: "all", PENDING: "pending" };
 const FORM_TABS = {
   GENERAL: "general",
@@ -1030,10 +1120,14 @@ const FORM_TABS = {
   META: "meta",
 };
 const productStatusColor: Record<ProductStatus, string> = {
-  active: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
-  inactive: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-100",
-  pending: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
-  draft: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100",
+  active:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+  inactive:
+    "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-100", // Changed Inactive to Slate
+  pending:
+    "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100",
+  draft:
+    "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-100", // Changed Draft to Violet
   rejected: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-100",
 };
 const uiProductStatusOptions: { value: ProductStatus; label: string }[] = [
@@ -1043,13 +1137,107 @@ const uiProductStatusOptions: { value: ProductStatus; label: string }[] = [
   { value: "draft", label: "Draft" },
   { value: "rejected", label: "Rejected" },
 ];
-const apiProductStatusOptions: { value: "Active" | "Inactive" | "Pending" | "Draft" | "Rejected"; label: string; }[] = [
+const apiProductStatusOptions: {
+  value: "Active" | "Inactive" | "Pending" | "Draft" | "Rejected";
+  label: string;
+}[] = [
     { value: "Active", label: "Active" },
     { value: "Inactive", label: "Inactive" },
     { value: "Pending", label: "Pending" },
     { value: "Draft", label: "Draft" },
     { value: "Rejected", label: "Rejected" },
   ];
+
+// --- CSV Exporter Logic ---
+const downloadCsv = (filename: string, csvContent: string) => {
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.push(<Notification title="Export Successful" type="success" />);
+  } else {
+    toast.push(<Notification title="Export Failed" type="danger" />);
+  }
+};
+function exportProductsToCsv(rows: ProductItem[]) {
+  const CSV_HEADERS = [
+    "ID",
+    "Name",
+    "Slug",
+    "SKU",
+    "Status",
+    "Category",
+    "Sub-Category",
+    "Brand",
+    "Unit",
+    "Country",
+    "Color",
+    "HSN Code",
+    "Tax Rate",
+    "Short Description",
+    "Description",
+    "Created At",
+    "Updated At",
+  ];
+  const csvContent = [
+    CSV_HEADERS.join(","),
+    ...rows.map((row) =>
+      [
+        row.id,
+        row.name,
+        row.slug,
+        row.skuCode,
+        row.status,
+        row.categoryName,
+        row.subCategoryName,
+        row.brandName,
+        row.unitName,
+        row.countryName,
+        row.color,
+        row.hsnCode,
+        row.taxRate,
+        row.shortDescription,
+        row.description,
+        new Date(row.createdAt).toLocaleString(),
+        new Date(row.updatedAt).toLocaleString(),
+      ]
+        .map((value) => {
+          const strValue = String(value ?? "").replace(/"/g, '""');
+          return `"${strValue}"`;
+        })
+        .join(",")
+    ),
+  ].join("\n");
+  downloadCsv(
+    `products-export_${new Date().toISOString().split("T")[0]}.csv`,
+    csvContent
+  );
+}
+function exportKeywordsToCsv(rows: ProductItem[]) {
+  const CSV_HEADERS = ["ID", "Name", "SKU", "Meta Keywords"];
+  const csvContent = [
+    CSV_HEADERS.join(","),
+    ...rows.map((row) =>
+      [row.id, row.name, row.skuCode, row.metaKeyword]
+        .map((value) => {
+          const strValue = String(value ?? "").replace(/"/g, '""');
+          return `"${strValue}"`;
+        })
+        .join(",")
+    ),
+  ].join("\n");
+  downloadCsv(
+    `product-keywords-export_${new Date().toISOString().split("T")[0]}.csv`,
+    csvContent
+  );
+}
 
 // --- Helper and Memoized Components ---
 const ActionColumn = React.memo(
@@ -1097,12 +1285,44 @@ const ActionColumn = React.memo(
           </Tooltip>
         }
       >
-        <Dropdown.Item onClick={() => onOpenModal("email", rowData)} className="flex items-center gap-2"><TbMail size={18} /> <span className="text-xs">Send Email</span></Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("whatsapp", rowData)} className="flex items-center gap-2"><TbBrandWhatsapp size={18} /> <span className="text-xs">Send Whatsapp</span></Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("notification", rowData)} className="flex items-center gap-2"><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("task", rowData)} className="flex items-center gap-2"><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("calendar", rowData)} className="flex items-center gap-2"><TbCalendarEvent size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
-        <Dropdown.Item onClick={() => onOpenModal("active", rowData)} className="flex items-center gap-2"><TbTagStarred size={18} /> <span className="text-xs">Add Active</span></Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("email", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbMail size={18} /> <span className="text-xs">Send Email</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("whatsapp", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBrandWhatsapp size={18} />{" "}
+          <span className="text-xs">Send Whatsapp</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("notification", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbBell size={18} /> <span className="text-xs">Add Notification</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("task", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbUser size={18} /> <span className="text-xs">Assign Task</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("calendar", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbCalendarEvent size={18} />{" "}
+          <span className="text-xs">Add Schedule</span>
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => onOpenModal("active", rowData)}
+          className="flex items-center gap-2"
+        >
+          <TbTagStarred size={18} /> <span className="text-xs">Add Active</span>
+        </Dropdown.Item>
       </Dropdown>
     </div>
   )
@@ -1110,13 +1330,12 @@ const ActionColumn = React.memo(
 const ProductSearch = React.memo(
   React.forwardRef<
     HTMLInputElement,
-    { value: string, onInputChange: (value: string) => void }
-  >(({ value, onInputChange }, ref) => (
+    { onInputChange: (value: string) => void }
+  >(({ onInputChange }, ref) => (
     <DebouceInput
       ref={ref}
       className="w-full"
       placeholder="Quick Search..."
-      value={value}
       suffix={<TbSearch className="text-lg" />}
       onChange={(e) => onInputChange(e.target.value)}
     />
@@ -1126,7 +1345,6 @@ ProductSearch.displayName = "ProductSearch";
 
 const ProductTableTools = ({
   onSearchChange,
-  searchQuery,
   onFilter,
   onClearFilters,
   columns,
@@ -1135,7 +1353,6 @@ const ProductTableTools = ({
   activeFilterCount,
 }: {
   onSearchChange: (query: string) => void;
-  searchQuery: string;
   onFilter: () => void;
   onClearFilters: () => void;
   columns: ColumnDef<ProductItem>[];
@@ -1176,7 +1393,7 @@ const ProductTableTools = ({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
       <div className="flex-grow">
-        <ProductSearch value={searchQuery} onInputChange={onSearchChange} />
+        <ProductSearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
         <Dropdown
@@ -1419,9 +1636,9 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = React.memo(
 const Products = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  // MODIFICATION: Changed selector to get ProductslistData
   const {
-    ProductslistData: ProductsData, // CORRECTED
-    loading,
+    ProductslistData,
     domainsData = [],
     ParentCategories: GlobalCategoriesData = [],
     subCategoriesForSelectedCategoryData = [],
@@ -1431,10 +1648,10 @@ const Products = () => {
     getAllUserData = [],
     status: masterLoadingStatus,
   } = useSelector(masterSelector);
-  
+
+  // MODIFIED: Fetch master data on initial component mount
   useEffect(() => {
     dispatch(getDomainsAction());
-    dispatch(getProductslistingAction());
     dispatch(getParentCategoriesAction());
     dispatch(getBrandAction());
     dispatch(getUnitAction());
@@ -1442,10 +1659,15 @@ const Products = () => {
     dispatch(getAllUsersAction());
   }, [dispatch]);
 
+
   const [currentListTab, setCurrentListTab] = useState<string>(TABS.ALL);
-  const [currentFormTab, setCurrentFormTab] = useState<string>(FORM_TABS.GENERAL);
+  const [currentFormTab, setCurrentFormTab] = useState<string>(
+    FORM_TABS.GENERAL
+  );
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(
+    null
+  );
   const [isViewDetailModalOpen, setIsViewDetailModalOpen] = useState(false);
   const [productToView, setProductToView] = useState<ProductItem | null>(null);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -1453,103 +1675,262 @@ const Products = () => {
   const [tableData, setTableData] = useState<TableQueries>({
     pageIndex: 1,
     pageSize: 10,
-    sort: { order: "desc", key: "id" },
+    sort: { order: "", key: "" },
     query: "",
   });
 
-  const [modalState, setModalState] = useState<ProductsModalState>({ isOpen: false, type: null, data: null });
-  const handleOpenModal = useCallback((type: ProductsModalType, itemData: ProductItem) => {
-    if (type === "whatsapp") {
-      const phone = itemData.contactNumber?.replace(/\D/g, "");
-      if (!phone) {
-        toast.push(<Notification type="danger" title="Invalid Phone Number" />);
+  // MODIFIED: This effect now triggers API calls for products based on table state
+  useEffect(() => {
+    const fetchData = () => {
+      const apiParams: Record<string, any> = {
+        page: tableData.pageIndex,
+        per_page: tableData.pageSize,
+        search: tableData.query,
+        sort_key: tableData.sort.key,
+        sort_order: tableData.sort.order,
+        name_or_sku: filterCriteria.filterNameOrSku,
+        'category_ids[]': filterCriteria.filterCategoryIds,
+        'sub_category_ids[]': filterCriteria.filterSubCategoryIds,
+        'brand_ids[]': filterCriteria.filterBrandIds,
+        status: filterCriteria.filterStatuses?.map(s => s.charAt(0).toUpperCase() + s.slice(1))?.[0] // API might need "Active", not ["Active"] and only one status
+      };
+
+      if (currentListTab === TABS.PENDING) {
+        apiParams.status = "Pending";
+      }
+
+      // Clean up empty/null values before sending to API
+      const cleanedParams = Object.fromEntries(
+        Object.entries(apiParams).filter(
+          ([_, v]) => v != null && v !== "" && (!Array.isArray(v) || v.length > 0)
+        )
+      );
+
+      // MODIFIED: Use the correct action name
+      dispatch(getProductslistingAction(cleanedParams));
+    };
+    fetchData();
+  }, [dispatch, tableData, filterCriteria, currentListTab]);
+
+  // --- MODAL STATE MANAGEMENT (NEW) ---
+  const [modalState, setModalState] = useState<ProductsModalState>({
+    isOpen: false,
+    type: null,
+    data: null,
+  });
+  const handleOpenModal = useCallback(
+    (type: ProductsModalType, itemData: ProductItem) => {
+      if (type === "whatsapp") {
+        const phone = itemData.contactNumber?.replace(/\D/g, "");
+        if (!phone) {
+          toast.push(
+            <Notification type="danger" title="Invalid Phone Number" />
+          );
+          return;
+        }
+        const fullPhone = `${itemData.contactNumberCode?.replace(
+          "+",
+          ""
+        )}${phone}`;
+        const message = `Hi, I'm interested in your product: ${itemData.name}.`;
+        const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(
+          message
+        )}`;
+        window.open(url, "_blank");
+        toast.push(
+          <Notification type="success" title="Redirecting to WhatsApp" />
+        );
         return;
       }
-      const fullPhone = `${itemData.contactNumberCode?.replace("+", "")}${phone}`;
-      const message = `Hi, I'm interested in your product: ${itemData.name}.`;
-      const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`;
-      window.open(url, "_blank");
-      toast.push(<Notification type="success" title="Redirecting to WhatsApp" />);
-      return;
-    }
-    setModalState({ isOpen: true, type, data: itemData });
+      setModalState({ isOpen: true, type, data: itemData });
+    },
+    []
+  );
+  const handleCloseModal = useCallback(() => {
+    setModalState({ isOpen: false, type: null, data: null });
   }, []);
-  const handleCloseModal = useCallback(() => setModalState({ isOpen: false, type: null, data: null }), []);
 
-  const [exportModalType, setExportModalType] = useState<ExportType | null>(null);
-  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
-  const [importModalType, setImportModalType] = useState<ImportType | null>(null);
+  const [exportModalType, setExportModalType] = useState<ExportType | null>(
+    null
+  );
+  const [isSubmittingExportReason, setIsSubmittingExportReason] =
+    useState(false);
+  const [importModalType, setImportModalType] = useState<ImportType | null>(
+    null
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [selectedItems, setSelectedItems] = useState<ProductItem[]>([]);
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
   const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
-  const [thumbImagePreviewUrl, setThumbImagePreviewUrl] = useState<string | null>(null);
+  const [thumbImagePreviewUrl, setThumbImagePreviewUrl] = useState<
+    string | null
+  >(null);
   const [newThumbImageFile, setNewThumbImageFile] = useState<File | null>(null);
-  const [galleryImages, setGalleryImages] = useState<ProductGalleryImageItem[]>([]);
-  
-  const categoryOptions = useMemo(() => Array.isArray(GlobalCategoriesData) ? GlobalCategoriesData.map((c: any) => ({ value: c.id, label: c.name })) : [], [GlobalCategoriesData]);
-  const brandOptions = useMemo(() => BrandData && BrandData.length > 0 ? BrandData?.map((b: any) => ({ value: b.id, label: b.name })) || [] : [], [BrandData]);
-  const unitOptions = useMemo(() => unitData?.data?.map((u: any) => ({ value: u.id, label: u.name })) || [], [unitData?.data]);
-  const countryOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: c.id, label: c.name })) : [], [CountriesData]);
-  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData?.map((u: any) => ({ value: u.id, label: u.name })) || [] : [], [getAllUserData]);
-  
-  const [subcategoryOptions, setSubcategoryOptions] = useState<{ value: number; label: string }[]>([]);
-  const [isChangeStatusDialogOpen, setIsChangeStatusDialogOpen] = useState(false);
-  const [productForStatusChange, setProductForStatusChange] = useState<ProductItem | null>(null);
-  const [selectedNewStatus, setSelectedNewStatus] = useState<ProductStatus | "">("");
+  const [galleryImages, setGalleryImages] = useState<ProductGalleryImageItem[]>(
+    []
+  );
 
-  const formMethods = useForm<ProductFormData>({ resolver: zodResolver(productFormSchema), mode: "onTouched" });
-  const { watch: watchForm, setValue: setFormValue, reset: resetForm, getValues: getFormValues, control: formControl, formState: { errors: formErrors }, } = formMethods;
-  const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
-  const { watch: watchFilter, reset: resetFilterForm, setValue: setFilterFormValue, getValues: getFilterValues, control: filterFormControl } = filterFormMethods;
-  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
+  const categoryOptions = useMemo(
+    () =>
+      Array.isArray(GlobalCategoriesData)
+        ? GlobalCategoriesData.map((c: any) => ({ value: c.id, label: c.name }))
+        : [],
+    [GlobalCategoriesData]
+  );
+  const brandOptions = useMemo(
+    () =>
+      BrandData && BrandData.length > 0
+        ? BrandData?.map((b: any) => ({ value: b.id, label: b.name })) || []
+        : [],
+    [BrandData]
+  );
+  const unitOptions = useMemo(
+    () => unitData?.data?.map((u: any) => ({ value: u.id, label: u.name })) || [],
+    [unitData?.data]
+  );
+  const countryOptions = useMemo(
+    () =>
+      Array.isArray(CountriesData)
+        ? CountriesData.map((c: any) => ({ value: c.id, label: c.name }))
+        : [],
+    [CountriesData]
+  );
+  const getAllUserDataOptions = useMemo(
+    () =>
+      Array.isArray(getAllUserData)
+        ? getAllUserData?.map((u: any) => ({ value: u.id, label: u.name })) ||
+        []
+        : [],
+    [getAllUserData]
+  );
+  const [subcategoryOptions, setSubcategoryOptions] = useState<
+    { value: number; label: string }[]
+  >([]);
+  const [isChangeStatusDialogOpen, setIsChangeStatusDialogOpen] =
+    useState(false);
+  const [productForStatusChange, setProductForStatusChange] =
+    useState<ProductItem | null>(null);
+  const [selectedNewStatus, setSelectedNewStatus] = useState<
+    ProductStatus | ""
+  >("");
+
+  const formMethods = useForm<ProductFormData>({
+    resolver: zodResolver(productFormSchema),
+    mode: "onTouched",
+  });
+  const {
+    watch: watchForm,
+    setValue: setFormValue,
+    reset: resetForm,
+    getValues: getFormValues,
+    control: formControl,
+    formState: {
+      errors: formErrors,
+    },
+  } = formMethods;
+  const filterFormMethods = useForm<FilterFormData>({
+    resolver: zodResolver(filterFormSchema),
+    defaultValues: filterCriteria,
+  });
+  const {
+    watch: watchFilter,
+    reset: resetFilterForm,
+    setValue: setFilterFormValue,
+    getValues: getFilterValues,
+    control: filterFormControl,
+  } = filterFormMethods;
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({
+    resolver: zodResolver(exportReasonSchema),
+    defaultValues: { reason: "" },
+    mode: "onChange",
+  });
 
   useEffect(() => {
     if (masterLoadingStatus !== "loading") {
-      setSubcategoryOptions(subCategoriesForSelectedCategoryData?.map((sc: any) => ({ value: sc.id, label: sc.name, })) || []);
+      setSubcategoryOptions(
+        subCategoriesForSelectedCategoryData?.map((sc: any) => ({
+          value: sc.id,
+          label: sc.name,
+        })) || []
+      );
     }
   }, [subCategoriesForSelectedCategoryData, masterLoadingStatus]);
-  
   const watchedFormCategoryId = watchForm("category_id");
   const isInitializingFormRef = useRef(false);
   useEffect(() => {
     const currentSubCatIdInForm = getFormValues("sub_category_id");
-    if (watchedFormCategoryId && typeof watchedFormCategoryId === "number" && watchedFormCategoryId > 0) {
+    if (
+      watchedFormCategoryId &&
+      typeof watchedFormCategoryId === "number" &&
+      watchedFormCategoryId > 0
+    ) {
       if (!isInitializingFormRef.current) {
         dispatch(getSubcategoriesByCategoryIdAction(watchedFormCategoryId));
-        if (currentSubCatIdInForm !== undefined && currentSubCatIdInForm !== null) {
-          const editingProductHasSameCategory = editingProduct?.categoryId === watchedFormCategoryId;
-          const editingProductHasThisSubCategory = editingProduct?.subCategoryId === currentSubCatIdInForm;
-          if (!editingProductHasSameCategory || (editingProductHasSameCategory && !editingProductHasThisSubCategory)) {
-            setFormValue("sub_category_id", undefined, { shouldValidate: true, shouldDirty: true });
+        if (
+          currentSubCatIdInForm !== undefined &&
+          currentSubCatIdInForm !== null
+        ) {
+          const editingProductHasSameCategory =
+            editingProduct?.categoryId === watchedFormCategoryId;
+          const editingProductHasThisSubCategory =
+            editingProduct?.subCategoryId === currentSubCatIdInForm;
+          if (
+            !editingProductHasSameCategory ||
+            (editingProductHasSameCategory && !editingProductHasThisSubCategory)
+          ) {
+            setFormValue("sub_category_id", undefined, {
+              shouldValidate: true,
+              shouldDirty: true,
+            });
           }
         }
       }
-    } else if (!watchedFormCategoryId && currentSubCatIdInForm !== undefined && currentSubCatIdInForm !== null) {
+    } else if (
+      !watchedFormCategoryId &&
+      currentSubCatIdInForm !== undefined &&
+      currentSubCatIdInForm !== null
+    ) {
       if (!isInitializingFormRef.current) {
         setSubcategoryOptions([]);
-        setFormValue("sub_category_id", undefined, { shouldValidate: true, shouldDirty: true });
+        setFormValue("sub_category_id", undefined, {
+          shouldValidate: true,
+          shouldDirty: true,
+        });
       }
     }
-  }, [watchedFormCategoryId, dispatch, setFormValue, getFormValues, editingProduct]);
-  
+  }, [
+    watchedFormCategoryId,
+    dispatch,
+    setFormValue,
+    getFormValues,
+    editingProduct,
+  ]);
   const watchedFilterCategoryIds = watchFilter("filterCategoryIds");
   useEffect(() => {
     if (isFilterDrawerOpen) {
       if (watchedFilterCategoryIds && watchedFilterCategoryIds.length === 1) {
-        dispatch(getSubcategoriesByCategoryIdAction(watchedFilterCategoryIds[0]));
+        dispatch(
+          getSubcategoriesByCategoryIdAction(watchedFilterCategoryIds[0])
+        );
       } else {
         setSubcategoryOptions([]);
         const currentFilterSubCatIds = getFilterValues("filterSubCategoryIds");
         if (currentFilterSubCatIds && currentFilterSubCatIds.length > 0) {
-          setFilterFormValue("filterSubCategoryIds", [], { shouldValidate: true });
+          setFilterFormValue("filterSubCategoryIds", [], {
+            shouldValidate: true,
+          });
         }
       }
     }
-  }, [watchedFilterCategoryIds, isFilterDrawerOpen, dispatch, getFilterValues, setFilterFormValue]);
-  
+  }, [
+    watchedFilterCategoryIds,
+    isFilterDrawerOpen,
+    dispatch,
+    getFilterValues,
+    setFilterFormValue,
+  ]);
   useEffect(() => {
     return () => {
       if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:")) {
@@ -1563,30 +1944,103 @@ const Products = () => {
     };
   }, [thumbImagePreviewUrl, galleryImages]);
 
-  // --- REFACTORED --- New central useEffect for data fetching
-  useEffect(() => {
-      const fetchProducts = () => {
-          const params: any = {
-              page: tableData.pageIndex,
-              per_page: tableData.pageSize,
-              search: tableData.query || undefined,
-              sort_key: tableData.sort.key || undefined,
-              sort_order: tableData.sort.order || undefined,
-              name_or_sku: filterCriteria.filterNameOrSku || undefined,
-              category_ids: filterCriteria.filterCategoryIds,
-              sub_category_ids: filterCriteria.filterSubCategoryIds,
-              brand_ids: filterCriteria.filterBrandIds,
-              status: filterCriteria.filterStatuses ? filterCriteria.filterStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(',') : undefined,
-          };
-          Object.keys(params).forEach(key => (params[key] === undefined || params[key]?.length === 0) && delete params[key]);
-          dispatch(getProductslistingAction(params)); // CORRECTED
-      };
-      fetchProducts();
-  }, [dispatch, tableData, filterCriteria]);
+  // MODIFICATION: Destructure the new, nested API response structure
+  const {
+    data: paginatedData = {},
+    counts: countsData = {},
+  } = ProductslistData || {};
+
+  const { data: rawProductsData = [] } = paginatedData;
+
+  const paginationInfo = useMemo(() => ({
+    total: paginatedData.total || 0,
+    active: countsData.active || 0,
+    inactive: countsData.inactive || 0,
+    pending: countsData.pending || 0,
+    rejected: countsData.rejected || 0, // Assuming these might exist
+    draft: countsData.draft || 0,
+  }), [paginatedData, countsData]);
 
   const mappedProducts: ProductItem[] = useMemo(() => {
-    if (!Array.isArray(ProductsData?.data?.data)) return [];
-    return ProductsData.data?.data?.map((apiItem: ApiProductItem): ProductItem => ({
+    if (!Array.isArray(rawProductsData)) return [];
+    return rawProductsData.map((apiItem: ApiProductItem): ProductItem => {
+      let iconFullPath: string | null = null;
+      if (apiItem.icon_full_path) iconFullPath = apiItem.icon_full_path;
+      else if (apiItem.icon)
+        iconFullPath = `${PRODUCT_IMAGES_BASE_URL}${apiItem.icon}`;
+      let thumbImageFullPath: string | null = null;
+      if (apiItem.thumb_image_full_path)
+        thumbImageFullPath = apiItem.thumb_image_full_path;
+      else if (apiItem.thumb_image)
+        thumbImageFullPath = `${PRODUCT_THUMB_IMAGE_BASE_URL}${apiItem.thumb_image}`;
+      const parsedDomainIds = apiItem.domain_ids
+        ? apiItem.domain_ids
+          .split(",")
+          .map((id) => parseInt(id.trim(), 10))
+          .filter((id) => !isNaN(id))
+        : [];
+      const gallery: ProductGalleryImageItem[] = [];
+      if (
+        apiItem.product_images_array &&
+        Array.isArray(apiItem.product_images_array)
+      ) {
+        apiItem.product_images_array.forEach((imgObj) => {
+          if (imgObj && imgObj) {
+            gallery.push({
+              serverPath: imgObj as any,
+              previewUrl: imgObj as any,
+              isNew: false,
+              isDeleted: false,
+            });
+          }
+        });
+      } else if (
+        typeof apiItem.product_images === "string" &&
+        apiItem.product_images.trim() !== ""
+      ) {
+        try {
+          const imagesData = JSON.parse(apiItem.product_images);
+          if (Array.isArray(imagesData)) {
+            imagesData.forEach((imgEntry: any) => {
+              if (typeof imgEntry === "string") {
+                gallery.push({
+                  serverPath: imgEntry,
+                  previewUrl: `${PRODUCT_IMAGES_BASE_URL}${imgEntry}`,
+                  isNew: false,
+                  isDeleted: false,
+                });
+              } else if (
+                typeof imgEntry === "object" &&
+                imgEntry.image_full_path
+              ) {
+                gallery.push({
+                  id: imgEntry.id,
+                  serverPath: imgEntry.image,
+                  previewUrl: imgEntry.image_full_path,
+                  isNew: false,
+                  isDeleted: false,
+                });
+              }
+            });
+          }
+        } catch (e) {
+          console.error(
+            "Failed to parse product_images JSON string for product ID:",
+            apiItem.id,
+            apiItem.product_images,
+            e
+          );
+        }
+      }
+      const localSubcategoryOptions =
+        subCategoriesForSelectedCategoryData?.map((sc: any) => ({
+          value: sc.id,
+          label: sc.name,
+        })) || [];
+      const subCategoryNameFromOptions = localSubcategoryOptions.find(
+        (sc) => sc.value === Number(apiItem.sub_category_id)
+      )?.label;
+      return {
         id: apiItem.id,
         name: apiItem.name,
         email: "product.support@example.com",
@@ -1598,16 +2052,29 @@ const Products = () => {
         skuCode: apiItem.sku_code,
         status: (apiItem.status?.toLowerCase() || "draft") as ProductStatus,
         categoryId: apiItem.category_id ? Number(apiItem.category_id) : null,
-        categoryName: apiItem.category?.name,
-        subCategoryId: apiItem.sub_category_id ? Number(apiItem.sub_category_id) : null,
-        subCategoryName: apiItem.sub_category?.name,
+        categoryName:
+          apiItem.category?.name ||
+          categoryOptions.find((c) => c.value === Number(apiItem.category_id))
+            ?.label,
+        subCategoryId: apiItem.sub_category_id
+          ? Number(apiItem.sub_category_id)
+          : null,
+        subCategoryName:
+          apiItem.sub_category?.name || subCategoryNameFromOptions,
         brandId: apiItem.brand_id ? Number(apiItem.brand_id) : null,
-        brandName: apiItem.brand?.name,
+        brandName:
+          apiItem.brand?.name ||
+          brandOptions.find((b) => b.value === Number(apiItem.brand_id))?.label,
         unitId: apiItem.unit_id ? Number(apiItem.unit_id) : null,
-        unitName: apiItem.unit_obj?.name,
+        unitName:
+          apiItem.unit_obj?.name ||
+          unitOptions.find((u) => u.value === Number(apiItem.unit_id))?.label,
         countryId: apiItem.country_id ? Number(apiItem.country_id) : null,
-        countryName: apiItem.country_obj?.name,
-        domainIds: apiItem.domain_ids ? apiItem.domain_ids.split(",").map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id)) : [],
+        countryName:
+          apiItem.country_obj?.name ||
+          countryOptions.find((c) => c.value === Number(apiItem.country_id))
+            ?.label,
+        domainIds: parsedDomainIds,
         color: apiItem.color,
         hsnCode: apiItem.hsn_code,
         shelfLife: apiItem.shelf_life,
@@ -1621,27 +2088,30 @@ const Products = () => {
         deliveryDetails: apiItem.delivery_details,
         productSpecification: apiItem.product_specification,
         icon: apiItem.icon,
-        iconFullPath: apiItem.icon_full_path || (apiItem.icon ? `${PRODUCT_IMAGES_BASE_URL}${apiItem.icon}` : null),
+        iconFullPath,
         thumbImage: apiItem.thumb_image,
-        thumb_image_full_path: apiItem.thumb_image_full_path || (apiItem.thumb_image ? `${PRODUCT_THUMB_IMAGE_BASE_URL}${apiItem.thumb_image}` : null),
-        productImages: (apiItem.product_images_array || []).map(img => ({
-            id: img.id,
-            previewUrl: img.image_full_path,
-            serverPath: img.image,
-            isNew: false,
-            isDeleted: false
-        })),
+        thumbImageFullPath,
+        productImages: gallery,
         metaTitle: apiItem.meta_title,
         metaDescription: apiItem.meta_descr,
         metaKeyword: apiItem.meta_keyword,
-        supplierProductCode: apiItem.supplier_product_code,
-        productKeywords: apiItem.product_keywords,
+        supplierProductCode: apiItem.supplier_product_code, // New mapping
+        productKeywords: apiItem.product_keywords, // New mapping
         createdAt: apiItem.created_at,
         updatedAt: apiItem.updated_at,
-    }));
-  }, [ProductsData?.data?.data]);
+      };
+    });
+  }, [
+    rawProductsData,
+    categoryOptions,
+    brandOptions,
+    unitOptions,
+    countryOptions,
+    subCategoriesForSelectedCategoryData,
+  ]);
 
-  const total = ProductsData?.counts?.total || 0;
+  const pageData = mappedProducts;
+  const total = paginationInfo.total;
   const allFilteredAndSortedData = mappedProducts;
 
   const activeFilterCount = useMemo(() => {
@@ -1659,7 +2129,10 @@ const Products = () => {
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     setSelectedItems([]);
   }, []);
-  const handleFormTabChange = useCallback((tabKey: string) => setCurrentFormTab(tabKey), []);
+  const handleFormTabChange = useCallback(
+    (tabKey: string) => setCurrentFormTab(tabKey),
+    []
+  );
 
   const openAddDrawer = useCallback(() => {
     isInitializingFormRef.current = true;
@@ -1695,134 +2168,221 @@ const Products = () => {
     });
     setSubcategoryOptions([]);
     setCurrentFormTab(FORM_TABS.GENERAL);
-    if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(thumbImagePreviewUrl);
+    if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:"))
+      URL.revokeObjectURL(thumbImagePreviewUrl);
     setThumbImagePreviewUrl(null);
     setNewThumbImageFile(null);
     galleryImages.forEach((img) => {
-      if (img.isNew && img.previewUrl && img.previewUrl.startsWith("blob:")) URL.revokeObjectURL(img.previewUrl);
+      if (img.isNew && img.previewUrl && img.previewUrl.startsWith("blob:"))
+        URL.revokeObjectURL(img.previewUrl);
     });
     setGalleryImages([]);
     setIsAddEditDrawerOpen(true);
     setTimeout(() => (isInitializingFormRef.current = false), 0);
   }, [resetForm, thumbImagePreviewUrl, galleryImages]);
-  
-  const openEditDrawer = useCallback(async (product: ProductItem) => {
-    isInitializingFormRef.current = true;
-    setEditingProduct(product);
-    if (product.categoryId) {
-      try {
-        await dispatch(getSubcategoriesByCategoryIdAction(product.categoryId)).unwrap();
-      } catch (e) {
-        console.error("Failed to preload subcategories for edit:", e);
+  const openEditDrawer = useCallback(
+    async (product: ProductItem) => {
+      isInitializingFormRef.current = true;
+      setEditingProduct(product);
+      if (product.categoryId) {
+        try {
+          await dispatch(
+            getSubcategoriesByCategoryIdAction(product.categoryId)
+          ).unwrap();
+        } catch (e) {
+          console.error("Failed to preload subcategories for edit:", e);
+        }
+      } else {
+        setSubcategoryOptions([]);
       }
-    } else {
-      setSubcategoryOptions([]);
-    }
-    resetForm({
-      status: apiProductStatusOptions.find((s) => s.value.toLowerCase() === product.status)?.value || "Draft",
-      category_id: product.categoryId,
-      sub_category_id: product.subCategoryId,
-      brand_id: product.brandId,
-      name: product.name,
-      slug: product.slug,
-      sku_code: product.skuCode || "",
-      hsn_code: product.hsnCode || "",
-      supplier_product_code: product.supplierProductCode || "",
-      country_id: product.countryId,
-      unit_id: product.unitId,
-      color: product.color || "",
-      shelf_life: product.shelfLife || "",
-      packaging_type: product.packagingType || "",
-      packaging_size: product.packagingSize || "",
-      tax_rate: String(product.taxRate || ""),
-      procurement_lead_time: product.procurementLeadTime || "",
-      product_keywords: product.productKeywords || "",
-      thumb_image_input: null,
-      description: product.description || "",
-      short_description: product.shortDescription || "",
-      payment_term: product.paymentTerm || "",
-      delivery_details: product.deliveryDetails || "",
-      product_specification: product.productSpecification || "",
-      meta_title: product.metaTitle || "",
-      meta_descr: product.metaDescription || "",
-      meta_keyword: product.metaKeyword || "",
-    });
-    setCurrentFormTab(FORM_TABS.GENERAL);
-    if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(thumbImagePreviewUrl);
-    setThumbImagePreviewUrl(product.thumb_image_full_path);
-    setNewThumbImageFile(null);
-    galleryImages.forEach((img) => {
-      if (img.isNew && img.previewUrl && img.previewUrl.startsWith("blob:")) URL.revokeObjectURL(img.previewUrl);
-    });
-    setGalleryImages(product.productImages?.map((img) => ({ ...img, isNew: false, isDeleted: false })) || []);
-    setIsAddEditDrawerOpen(true);
-    setTimeout(() => (isInitializingFormRef.current = false), 0);
-  }, [resetForm, thumbImagePreviewUrl, galleryImages, dispatch]);
-  
+      resetForm({
+        status:
+          apiProductStatusOptions.find(
+            (s) => s.value.toLowerCase() === product.status
+          )?.value || "Draft",
+        category_id: product.categoryId,
+        sub_category_id: product.subCategoryId,
+        brand_id: product.brandId,
+        name: product.name,
+        slug: product.slug,
+        sku_code: product.skuCode || "",
+        hsn_code: product.hsnCode || "",
+        supplier_product_code: product.supplierProductCode || "",
+        country_id: product.countryId,
+        unit_id: product.unitId,
+        color: product.color || "",
+        shelf_life: product.shelfLife || "",
+        packaging_type: product.packagingType || "",
+        packaging_size: product.packagingSize || "",
+        tax_rate: String(product.taxRate || ""),
+        procurement_lead_time: product.procurementLeadTime || "",
+        product_keywords: product.productKeywords || "",
+        thumb_image_input: null,
+        description: product.description || "",
+        short_description: product.shortDescription || "",
+        payment_term: product.paymentTerm || "",
+        delivery_details: product.deliveryDetails || "",
+        product_specification: product.productSpecification || "",
+        meta_title: product.metaTitle || "",
+        meta_descr: product.metaDescription || "",
+        meta_keyword: product.metaKeyword || "",
+      });
+      setCurrentFormTab(FORM_TABS.GENERAL);
+      if (thumbImagePreviewUrl && thumbImagePreviewUrl.startsWith("blob:"))
+        URL.revokeObjectURL(thumbImagePreviewUrl);
+      setThumbImagePreviewUrl(product.thumbImageFullPath);
+      setNewThumbImageFile(null);
+      galleryImages.forEach((img) => {
+        if (img.isNew && img.previewUrl && img.previewUrl.startsWith("blob:"))
+          URL.revokeObjectURL(img.previewUrl);
+      });
+      setGalleryImages(
+        product.productImages?.map((img) => ({
+          ...img,
+          isNew: false,
+          isDeleted: false,
+        })) || []
+      );
+      setIsAddEditDrawerOpen(true);
+      setTimeout(() => (isInitializingFormRef.current = false), 0);
+    },
+    [resetForm, thumbImagePreviewUrl, galleryImages, dispatch]
+  );
   const closeAddEditDrawer = useCallback(() => {
     setIsAddEditDrawerOpen(false);
     setEditingProduct(null);
     resetForm();
   }, [resetForm]);
 
-  const onProductFormSubmit = useCallback(async (data: ProductFormData) => {
-    setIsSubmittingForm(true);
-    if (!editingProduct && !newThumbImageFile) {
-      toast.push(<Notification type="danger" title="Validation Error">Thumbnail image is required.</Notification>);
-      setCurrentFormTab(FORM_TABS.MEDIA);
-      setIsSubmittingForm(false);
-      return;
-    }
-    if (editingProduct && !newThumbImageFile && !thumbImagePreviewUrl) {
-      toast.push(<Notification type="danger" title="Validation Error">Thumbnail image is required.</Notification>);
-      setCurrentFormTab(FORM_TABS.MEDIA);
-      setIsSubmittingForm(false);
-      return;
-    }
-    const formData = new FormData();
-    if (editingProduct) formData.append("_method", "PUT");
-    (Object.keys(data) as Array<keyof ProductFormData>).forEach((key) => {
-      const value = data[key];
-      if (key === "thumb_image_input") return;
-      if (value !== null && value !== undefined && String(value).trim() !== "") {
-        formData.append(key, String(value));
-      } else if (value === null && ["category_id", "sub_category_id", "brand_id", "unit_id", "country_id"].includes(key)) {
-        formData.append(key, "");
-      }
-    });
-    if (newThumbImageFile) formData.append("thumb_image", newThumbImageFile);
-    else if (editingProduct && !thumbImagePreviewUrl && editingProduct.thumbImage) formData.append("delete_thumb_image", "1");
-    let imageIndex = 0;
-    galleryImages.forEach((img) => {
-      if (img.file && img.isNew && !img.isDeleted) {
-        formData.append(`product_images[${imageIndex}]`, img.file);
-        imageIndex++;
-      } else if (img.id && img.isDeleted) {
-        formData.append("deleted_image_ids[]", String(img.id));
-      }
-    });
-    try {
-      if (editingProduct) {
-        await dispatch(editProductAction({ id: editingProduct.id, formData })).unwrap();
-        toast.push(<Notification type="success" title="Product Updated">Product "{data.name}" updated successfully.</Notification>);
-      } else {
-        await dispatch(addProductAction(formData)).unwrap();
-        toast.push(<Notification type="success" title="Product Added">Product "{data.name}" added successfully.</Notification>);
-      }
-      closeAddEditDrawer();
-      dispatch(getProductslistingAction()); // CORRECTED
-    } catch (error: any) {
-      const errorMsg = error?.response?.data?.message || error?.message || (editingProduct ? "Could not update product." : "Could not add product.");
-      toast.push(<Notification type="danger" title="Operation Failed">{errorMsg}</Notification>);
-      if (error?.response?.data?.errors) console.error("Backend validation errors:", error.response.data.errors);
-    } finally {
-      setIsSubmittingForm(false);
-    }
-  }, [editingProduct, dispatch, closeAddEditDrawer, newThumbImageFile, galleryImages, thumbImagePreviewUrl]);
+  const onProductFormSubmit = useCallback(
+    async (data: ProductFormData) => {
+      setIsSubmittingForm(true);
 
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; item: ProductItem | null; isBulk: boolean; }>({ isOpen: false, item: null, isBulk: false });
-  const handleDeleteProductClick = useCallback((product: ProductItem) => setDeleteConfirm({ isOpen: true, item: product, isBulk: false }), []);
-  const handleDeleteSelectedProductsClick = useCallback(() => { if (selectedItems.length > 0) setDeleteConfirm({ isOpen: true, item: null, isBulk: true }); }, [selectedItems]);
+      // Custom validation for thumbnail image
+      if (!editingProduct && !newThumbImageFile) {
+        toast.push(
+          <Notification type="danger" title="Validation Error">
+            Thumbnail image is required.
+          </Notification>
+        );
+        setCurrentFormTab(FORM_TABS.MEDIA);
+        setIsSubmittingForm(false);
+        return;
+      }
+      if (editingProduct && !newThumbImageFile && !thumbImagePreviewUrl) {
+        toast.push(
+          <Notification type="danger" title="Validation Error">
+            Thumbnail image is required.
+          </Notification>
+        );
+        setCurrentFormTab(FORM_TABS.MEDIA);
+        setIsSubmittingForm(false);
+        return;
+      }
+
+      const formData = new FormData();
+      if (editingProduct) formData.append("_method", "PUT");
+      (Object.keys(data) as Array<keyof ProductFormData>).forEach((key) => {
+        const value = data[key];
+        if (key === "thumb_image_input") return;
+        if (
+          value !== null &&
+          value !== undefined &&
+          String(value).trim() !== ""
+        ) {
+          formData.append(key, String(value));
+        } else if (
+          value === null &&
+          [
+            "category_id",
+            "sub_category_id",
+            "brand_id",
+            "unit_id",
+            "country_id",
+          ].includes(key)
+        ) {
+          formData.append(key, "");
+        }
+      });
+      if (newThumbImageFile) formData.append("thumb_image", newThumbImageFile);
+      else if (
+        editingProduct &&
+        !thumbImagePreviewUrl &&
+        editingProduct.thumbImage
+      )
+        formData.append("delete_thumb_image", "1");
+      let imageIndex = 0;
+      galleryImages.forEach((img) => {
+        if (img.file && img.isNew && !img.isDeleted) {
+          formData.append(`product_images[${imageIndex}]`, img.file);
+          imageIndex++;
+        } else if (img.id && img.isDeleted) {
+          formData.append("deleted_image_ids[]", String(img.id));
+        }
+      });
+      try {
+        if (editingProduct) {
+          await dispatch(
+            editProductAction({ id: editingProduct.id, formData })
+          ).unwrap();
+          toast.push(
+            <Notification type="success" title="Product Updated">
+              Product "{data.name}" updated successfully.
+            </Notification>
+          );
+        } else {
+          await dispatch(addProductAction(formData)).unwrap();
+          toast.push(
+            <Notification type="success" title="Product Added">
+              Product "{data.name}" added successfully.
+            </Notification>
+          );
+        }
+        closeAddEditDrawer();
+        // No manual refetch needed due to useEffect hook
+      } catch (error: any) {
+        const errorMsg =
+          error?.response?.data?.message ||
+          error?.message ||
+          (editingProduct
+            ? "Could not update product."
+            : "Could not add product.");
+        toast.push(
+          <Notification type="danger" title="Operation Failed">
+            {errorMsg}
+          </Notification>
+        );
+        if (error?.response?.data?.errors)
+          console.error(
+            "Backend validation errors:",
+            error.response.data.errors
+          );
+      } finally {
+        setIsSubmittingForm(false);
+      }
+    },
+    [
+      editingProduct,
+      dispatch,
+      closeAddEditDrawer,
+      newThumbImageFile,
+      galleryImages,
+      thumbImagePreviewUrl,
+    ]
+  );
+
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    item: ProductItem | null;
+    isBulk: boolean;
+  }>({ isOpen: false, item: null, isBulk: false });
+  const handleDeleteProductClick = useCallback((product: ProductItem) => {
+    setDeleteConfirm({ isOpen: true, item: product, isBulk: false });
+  }, []);
+  const handleDeleteSelectedProductsClick = useCallback(() => {
+    if (selectedItems.length > 0)
+      setDeleteConfirm({ isOpen: true, item: null, isBulk: true });
+  }, [selectedItems]);
   const onConfirmDelete = useCallback(async () => {
     const { item, isBulk } = deleteConfirm;
     if (!item && !isBulk) return;
@@ -1830,16 +2390,30 @@ const Products = () => {
     try {
       if (isBulk) {
         const idsToDelete = selectedItems.map((p) => p.id);
-        await dispatch(deleteAllProductsAction({ ids: idsToDelete.join(",") })).unwrap();
-        toast.push(<Notification type="success" title="Products Deleted">{selectedItems.length} products deleted.</Notification>);
+        await dispatch(
+          deleteAllProductsAction({ ids: idsToDelete.join(",") })
+        ).unwrap();
+        toast.push(
+          <Notification type="success" title="Products Deleted">
+            {selectedItems.length} products deleted.
+          </Notification>
+        );
         setSelectedItems([]);
       } else if (item) {
         await dispatch(deleteProductAction(item.id)).unwrap();
-        toast.push(<Notification type="success" title="Product Deleted">Product "{item.name}" deleted.</Notification>);
+        toast.push(
+          <Notification type="success" title="Product Deleted">
+            Product "{item.name}" deleted.
+          </Notification>
+        );
       }
-      dispatch(getProductslistingAction()); // CORRECTED
+      // No manual refetch needed
     } catch (error: any) {
-      toast.push(<Notification type="danger" title="Delete Failed">{error.message || "Could not delete."}</Notification>);
+      toast.push(
+        <Notification type="danger" title="Delete Failed">
+          {error.message || "Could not delete."}
+        </Notification>
+      );
     } finally {
       setIsSubmittingForm(false);
       setDeleteConfirm({ isOpen: false, item: null, isBulk: false });
@@ -1854,13 +2428,29 @@ const Products = () => {
   const onConfirmChangeStatus = useCallback(async () => {
     if (!productForStatusChange || !selectedNewStatus) return;
     setIsSubmittingForm(true);
-    const apiStatus = apiProductStatusOptions.find((opt) => opt.value.toLowerCase() === selectedNewStatus.toLowerCase())?.value || selectedNewStatus;
+    const apiStatus =
+      apiProductStatusOptions.find(
+        (opt) => opt.value.toLowerCase() === selectedNewStatus.toLowerCase()
+      )?.value || selectedNewStatus;
     try {
-      await dispatch(changeProductStatusAction({ id: productForStatusChange.id, status: apiStatus })).unwrap();
-      toast.push(<Notification type="success" title="Status Updated" duration={2000}>Product status changed to {selectedNewStatus}.</Notification>);
-      dispatch(getProductslistingAction()); // CORRECTED
+      await dispatch(
+        changeProductStatusAction({
+          id: productForStatusChange.id,
+          status: apiStatus,
+        })
+      ).unwrap();
+      toast.push(
+        <Notification type="success" title="Status Updated" duration={2000}>
+          Product status changed to {selectedNewStatus}.
+        </Notification>
+      );
+      // No manual refetch needed
     } catch (error: any) {
-      toast.push(<Notification type="danger" title="Status Update Failed">{error.message || "Could not update status."}</Notification>);
+      toast.push(
+        <Notification type="danger" title="Status Update Failed">
+          {error.message || "Could not update status."}
+        </Notification>
+      );
     } finally {
       setIsSubmittingForm(false);
       setIsChangeStatusDialogOpen(false);
@@ -1868,51 +2458,104 @@ const Products = () => {
     }
   }, [dispatch, productForStatusChange, selectedNewStatus]);
 
-  const openViewDetailModal = useCallback((product: ProductItem) => navigate(`/product-management/product/${product.id}`), [navigate]);
-  const closeViewDetailModal = useCallback(() => { setIsViewDetailModalOpen(false); setProductToView(null); }, []);
-  const openImageViewer = useCallback((imageUrl: string | null) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } }, []);
-  const closeImageViewer = useCallback(() => { setImageViewerOpen(false); setImageToView(null); }, []);
+  const openViewDetailModal = useCallback((product: ProductItem) => {
+    navigate(`/product-management/product/${product.id}`);
+  }, [navigate]);
 
-  const handleOpenExportReasonModal = useCallback((type: ExportType) => {
-    if (!allFilteredAndSortedData || allFilteredAndSortedData.length === 0) {
-      toast.push(<Notification title="No data to export" type="info" />);
-      return;
+  const closeViewDetailModal = useCallback(() => {
+    setIsViewDetailModalOpen(false);
+    setProductToView(null);
+  }, []);
+  const openImageViewer = useCallback((imageUrl: string | null) => {
+    if (imageUrl) {
+      setImageToView(imageUrl);
+      setImageViewerOpen(true);
     }
-    exportReasonFormMethods.reset({ reason: "" });
-    setExportModalType(type);
-  }, [allFilteredAndSortedData, exportReasonFormMethods]);
-  
-  const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
-    if (!exportModalType) return;
-    setIsSubmittingExportReason(true);
-    const moduleName = exportModalType === "products" ? "Products" : "Product Keywords";
-    try {
-      const fileName = `products_export_${new Date().toISOString().split("T")[0]}.csv`;
-      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      toast.push(<Notification title="Export reason logged" type="info" duration={2000} />);
-      if (exportModalType === "products") {
-        exportProductsToCsv(allFilteredAndSortedData);
-      } else if (exportModalType === "keywords") {
-        exportKeywordsToCsv(allFilteredAndSortedData);
+  }, []);
+  const closeImageViewer = useCallback(() => {
+    setImageViewerOpen(false);
+    setImageToView(null);
+  }, []);
+
+  const handleOpenExportReasonModal = useCallback(
+    (type: ExportType) => {
+      if (!allFilteredAndSortedData || allFilteredAndSortedData.length === 0) {
+        toast.push(<Notification title="No data to export" type="info" />);
+        return;
       }
-      setExportModalType(null);
-    } catch (error: any) {
-      toast.push(<Notification title="Operation Failed" type="danger">{error.message || "Could not complete export."}</Notification>);
-    } finally {
-      setIsSubmittingExportReason(false);
-    }
-  }, [dispatch, allFilteredAndSortedData, exportModalType]);
+      exportReasonFormMethods.reset({ reason: "" });
+      setExportModalType(type);
+    },
+    [allFilteredAndSortedData, exportReasonFormMethods]
+  );
+  const handleConfirmExportWithReason = useCallback(
+    async (data: ExportReasonFormData) => {
+      if (!exportModalType) return;
+      setIsSubmittingExportReason(true);
+      const moduleName =
+        exportModalType === "products" ? "Products" : "Product Keywords";
+      try {
+        const fileName = `products_export_${new Date().toISOString().split("T")[0]
+          }.csv`;
+        await dispatch(
+          submitExportReasonAction({
+            reason: data.reason,
+            module: moduleName,
+            file_name: fileName,
+          })
+        ).unwrap();
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        toast.push(
+          <Notification
+            title="Export reason logged"
+            type="info"
+            duration={2000}
+          />
+        );
+        if (exportModalType === "products") {
+          exportProductsToCsv(allFilteredAndSortedData);
+        } else if (exportModalType === "keywords") {
+          exportKeywordsToCsv(allFilteredAndSortedData);
+        }
+        setExportModalType(null);
+      } catch (error: any) {
+        toast.push(
+          <Notification title="Operation Failed" type="danger">
+            {error.message || "Could not complete export."}
+          </Notification>
+        );
+      } finally {
+        setIsSubmittingExportReason(false);
+      }
+    },
+    [dispatch, allFilteredAndSortedData, exportModalType]
+  );
 
-  const openImportModal = useCallback((type: ImportType) => setImportModalType(type), []);
-  const closeImportModal = useCallback(() => { setImportModalType(null); setSelectedFile(null); }, []);
+  const openImportModal = useCallback(
+    (type: ImportType) => setImportModalType(type),
+    []
+  );
+  const closeImportModal = useCallback(() => {
+    setImportModalType(null);
+    setSelectedFile(null);
+  }, []);
   const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.type === "text/csv" || file.name.endsWith(".csv") || file.type === "application/vnd.ms-excel" || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+      if (
+        file.type === "text/csv" ||
+        file.name.endsWith(".csv") ||
+        file.type === "application/vnd.ms-excel" ||
+        file.type ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ) {
         setSelectedFile(file);
       } else {
-        toast.push(<Notification title="Invalid File Type" type="danger">Please upload a CSV or Excel file.</Notification>);
+        toast.push(
+          <Notification title="Invalid File Type" type="danger">
+            Please upload a CSV or Excel file.
+          </Notification>
+        );
         setSelectedFile(null);
         if (e.target) e.target.value = "";
       }
@@ -1927,142 +2570,413 @@ const Products = () => {
     const formData = new FormData();
     formData.append("file", selectedFile);
     try {
-      console.log(`Simulating import for "${importModalType}" with file:`, selectedFile.name);
+      console.log(
+        `Simulating import for "${importModalType}" with file:`,
+        selectedFile.name
+      );
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      toast.push(<Notification title="Import Initiated" type="success">File uploaded. {importModalType === "products" ? "Products" : "Keywords"} are being processed.</Notification>);
-      dispatch(getProductslistingAction()); // CORRECTED
+      toast.push(
+        <Notification title="Import Initiated" type="success">
+          File uploaded.{" "}
+          {importModalType === "products" ? "Products" : "Keywords"} are being
+          processed.
+        </Notification>
+      );
+      // No manual refetch needed
       closeImportModal();
     } catch (apiError: any) {
-      toast.push(<Notification title="Import Failed" type="danger">{apiError.message || `An error occurred during ${importModalType} import.`}</Notification>);
+      toast.push(
+        <Notification title="Import Failed" type="danger">
+          {apiError.message ||
+            `An error occurred during ${importModalType} import.`}
+        </Notification>
+      );
     } finally {
       setIsImporting(false);
     }
-  }, [selectedFile, importModalType, dispatch, closeImportModal]);
+  }, [selectedFile, importModalType, closeImportModal]);
 
-  const handlePaginationChange = useCallback((page: number) => setTableData((prev) => ({ ...prev, pageIndex: page })), []);
+  const handlePaginationChange = useCallback(
+    (page: number) => setTableData((prev) => ({ ...prev, pageIndex: page })),
+    []
+  );
   const handlePageSizeChange = useCallback((value: number) => {
     setTableData((prev) => ({ ...prev, pageSize: value, pageIndex: 1 }));
     setSelectedItems([]);
   }, []);
-  const handleSort = useCallback((sort: OnSortParam) => setTableData((prev) => ({ ...prev, sort, pageIndex: 1 })), []);
-  const handleSearchChange = useCallback((query: string) => setTableData((prev) => ({ ...prev, query, pageIndex: 1 })), []);
-  const handleRowSelect = useCallback((checked: boolean, row: ProductItem) => setSelectedItems((prev) => checked ? [...prev, row] : prev.filter((i) => i.id !== row.id)), []);
-  const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<ProductItem>[]) => {
-    const currentVisibleIds = new Set(currentRows.map((r) => r.original.id));
-    if (checked) {
-      setSelectedItems((prev) => {
-        const newItems = currentRows.map((r) => r.original).filter((item) => !prev.some((p) => p.id === item.id));
-        return [...prev, ...newItems];
-      });
-    } else {
-      setSelectedItems((prev) => prev.filter((item) => !currentVisibleIds.has(item.id)));
-    }
-  }, []);
+  const handleSort = useCallback(
+    (sort: OnSortParam) =>
+      setTableData((prev) => ({ ...prev, sort, pageIndex: 1 })),
+    []
+  );
+  const handleSearchChange = useCallback(
+    (query: string) =>
+      setTableData((prev) => ({ ...prev, query, pageIndex: 1 })),
+    []
+  );
+  const handleRowSelect = useCallback(
+    (checked: boolean, row: ProductItem) =>
+      setSelectedItems((prev) =>
+        checked
+          ? prev.some((i) => i.id === row.id)
+            ? prev
+            : [...prev, row]
+          : prev.filter((i) => i.id !== row.id)
+      ),
+    []
+  );
+  const handleAllRowSelect = useCallback(
+    (checked: boolean, currentRows: Row<ProductItem>[]) => {
+      const currentVisibleIds = new Set(currentRows.map((r) => r.original.id));
+      if (checked) {
+        setSelectedItems((prev) => {
+          const newItems = currentRows
+            .map((r) => r.original)
+            .filter((item) => !prev.some((p) => p.id === item.id));
+          return [...prev, ...newItems];
+        });
+      } else {
+        setSelectedItems((prev) =>
+          prev.filter((item) => !currentVisibleIds.has(item.id))
+        );
+      }
+    },
+    []
+  );
 
   const openFilterDrawer = useCallback(() => {
     resetFilterForm(filterCriteria);
     setIsFilterDrawerOpen(true);
   }, [resetFilterForm, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
-    setFilterCriteria(data);
-    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
-    closeFilterDrawer();
-  }, [closeFilterDrawer]);
-  
+  const onApplyFiltersSubmit = useCallback(
+    (data: FilterFormData) => {
+      setFilterCriteria(data);
+      setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+      closeFilterDrawer();
+    },
+    [closeFilterDrawer]
+  );
+
   const onClearFilters = useCallback(() => {
-    setFilterCriteria({});
     resetFilterForm({});
+    setFilterCriteria({});
+    setFilterFormValue("filterSubCategoryIds", []);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     closeFilterDrawer();
-  }, [resetFilterForm, closeFilterDrawer, dispatch]);
+  }, [resetFilterForm, setFilterFormValue, closeFilterDrawer]);
 
   const handleCardClick = (status: ProductStatus | "all") => {
     onClearFilters();
     if (status !== "all") {
       setFilterCriteria({ filterStatuses: [status] });
     }
+    handleListTabChange(TABS.ALL); // Switch to all tab to see the filter result
   };
 
-  const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => {
-    setFilterCriteria((prev) => {
-      const newFilters = { ...prev };
-      const currentValues = prev[key] as any[] | string | undefined;
-      if (Array.isArray(currentValues)) {
-        const newValues = currentValues.filter((item) => item !== value);
-        (newFilters as any)[key] = newValues.length > 0 ? newValues : undefined;
-      } else {
-        (newFilters as any)[key] = undefined;
-      }
-      return newFilters;
-    });
-    setTableData((prev) => ({ ...prev, pageIndex: 1 }));
-  }, []);
+  const handleRemoveFilter = useCallback(
+    (key: keyof FilterFormData, value: any) => {
+      setFilterCriteria((prev) => {
+        const newFilters = { ...prev };
+        const currentValues = prev[key] as any[] | string | undefined;
 
-  const columns: ColumnDef<ProductItem>[] = useMemo(() => [
-    { header: "ID", accessorKey: "id", size: 60, meta: { tdClass: "text-center", thClass: "text-center" }, cell: ({ getValue }) => getValue().toString().padStart(6, "0") },
-    { header: "Product", id: "productInfo", size: 300, cell: (props: CellContext<ProductItem, any>) => (
-        <div className="flex items-center gap-3">
-          <Avatar size={30} shape="circle" src={props.row.original.thumb_image_full_path || undefined} icon={<TbBox />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => props.row.original.thumb_image_full_path && openImageViewer(props.row.original.thumb_image_full_path)}></Avatar>
-          <Tooltip title={props.row.original.name}>
-            <div className="truncate">
-              <span className="font-semibold hover:text-blue-600 cursor-pointer" onClick={() => openViewDetailModal(props.row.original)}>{props.row.original.name}</span>
-              <div className="text-xs text-gray-500">SKU: {props.row.original.skuCode || "-"}</div>
-            </div>
-          </Tooltip>
-        </div>
-    )},
-    { header: "Category", accessorKey: "categoryName", cell: (props) => props.row.original.categoryName || "-" },
-    { header: "Sub Cat", accessorKey: "subCategoryName", cell: (props) => props.row.original.subCategoryName || "-" },
-    { header: "Brand", accessorKey: "brandName", cell: (props) => props.row.original.brandName || "-" },
-    { header: "Status", accessorKey: "status", cell: (props: CellContext<ProductItem, any>) => (<Tag className={`${productStatusColor[props.row.original.status] || "bg-gray-200"} capitalize font-semibold border-0`}>{props.row.original.status}</Tag>)},
-    { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center" }, cell: (props: CellContext<ProductItem, any>) => (
-        <ActionColumn
-          rowData={props.row.original}
-          onEdit={() => openEditDrawer(props.row.original)}
-          onViewDetail={() => openViewDetailModal(props.row.original)}
-          onDelete={() => handleDeleteProductClick(props.row.original)}
-          onChangeStatus={() => handleChangeStatusClick(props.row.original)}
-          onOpenModal={handleOpenModal}
-        />
-    )},
-  ], [openImageViewer, openEditDrawer, openViewDetailModal, handleDeleteProductClick, handleChangeStatusClick, handleOpenModal]);
+        if (Array.isArray(currentValues)) {
+          const newValues = currentValues.filter((item) => item !== value);
+          (newFilters as any)[key] =
+            newValues.length > 0 ? newValues : undefined;
+        } else {
+          (newFilters as any)[key] = undefined;
+        }
+        return newFilters;
+      });
+      setTableData((prev) => ({ ...prev, pageIndex: 1 }));
+    },
+    []
+  );
 
-  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<ProductItem>[]>(columns);
-  useEffect(() => { setFilteredColumns(columns); }, [columns]);
+  const columns: ColumnDef<ProductItem>[] = useMemo(
+    () => [
+      {
+        header: "ID",
+        accessorKey: "id",
+        size: 60,
+        meta: { tdClass: "text-center", thClass: "text-center" },
+        cell: ({ getValue }) => getValue().toString().padStart(6, "0"),
+      },
+      {
+        header: "Product",
+        id: "productInfo",
+        size: 300,
+        cell: (props: CellContext<ProductItem, any>) => (
+          <div className="flex items-center gap-3">
+            <Avatar
+              size={30}
+              shape="circle"
+              src={props.row.original.thumbImageFullPath || undefined}
+              icon={<TbBox />}
+              className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
+              onClick={() =>
+                props.row.original.thumbImageFullPath &&
+                openImageViewer(props.row.original.thumbImageFullPath)
+              }
+            ></Avatar>
+            <Tooltip title={props.row.original.name}>
+              <div className="truncate">
+                <span
+                  className="font-semibold hover:text-blue-600 cursor-pointer"
+                  onClick={() => openViewDetailModal(props.row.original)}
+                >
+                  {props.row.original.name}
+                </span>
+                <div className="text-xs text-gray-500">
+                  SKU: {props.row.original.skuCode || "-"}
+                </div>
+              </div>
+            </Tooltip>
+          </div>
+        ),
+      },
+      {
+        header: "Category",
+        accessorKey: "categoryName",
+        cell: (props) => props.row.original.categoryName || "-",
+      },
+      {
+        header: "Sub Cat",
+        accessorKey: "subCategoryName",
+        cell: (props) => props.row.original.subCategoryName || "-",
+      },
+      {
+        header: "Brand",
+        accessorKey: "brandName",
+        cell: (props) => props.row.original.brandName || "-",
+      },
+      {
+        header: "Status",
+        accessorKey: "status",
+        cell: (props: CellContext<ProductItem, any>) => (
+          <Tag
+            className={`${productStatusColor[props.row.original.status] || "bg-gray-200"
+              } capitalize font-semibold border-0`}
+          >
+            {props.row.original.status}
+          </Tag>
+        ),
+      },
+      {
+        header: "Actions",
+        id: "action",
+        size: 130,
+        meta: { HeaderClass: "text-center" },
+        cell: (props: CellContext<ProductItem, any>) => (
+          <ActionColumn
+            rowData={props.row.original}
+            onEdit={() => openEditDrawer(props.row.original)}
+            onViewDetail={() => openViewDetailModal(props.row.original)}
+            onDelete={() => handleDeleteProductClick(props.row.original)}
+            onChangeStatus={() => handleChangeStatusClick(props.row.original)}
+            onOpenModal={handleOpenModal}
+          />
+        ),
+      },
+    ],
+    [
+      openImageViewer,
+      openEditDrawer,
+      openViewDetailModal,
+      handleDeleteProductClick,
+      handleChangeStatusClick,
+      handleOpenModal,
+    ]
+  );
 
-  const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const [filteredColumns, setFilteredColumns] =
+    useState<ColumnDef<ProductItem>[]>(columns);
+  useEffect(() => {
+    setFilteredColumns(columns);
+  }, [columns]);
+
+  const isLoadingData =
+    masterLoadingStatus === "pending" || masterLoadingStatus === "loading";
+  const cardClass =
+    "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex items-center gap-2 p-2";
+
+  if (isLoadingData && !rawProductsData?.length) {
+    return (
+      <Container className="h-full">
+        <div className="h-full flex flex-col items-center justify-center">
+          <Spinner size="xl" /> <p className="mt-2">Loading Products...</p>
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <>
-      {loading && !isAddEditDrawerOpen && <FullScreenLoader />}
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-0">
             <h5 className="mb-4 lg:mb-0">Products</h5>
             <div className="flex items-center gap-2">
               <Dropdown title="More Options" className="mr-2">
-                <Dropdown.Item eventKey="Export Product" onClick={() => handleOpenExportReasonModal("products")}>Export Products</Dropdown.Item>
-                <Dropdown.Item eventKey="Import Product" onClick={() => openImportModal("products")}>Import Products</Dropdown.Item>
-                <Dropdown.Item eventKey="Export Keywords" onClick={() => handleOpenExportReasonModal("keywords")}>Export Keywords</Dropdown.Item>
-                <Dropdown.Item eventKey="Import Keywords" onClick={() => openImportModal("keywords")}>Import Keywords</Dropdown.Item>
+                <Dropdown.Item
+                  eventKey="Export Product"
+                  onClick={() => handleOpenExportReasonModal("products")}
+                >
+                  Export Products
+                </Dropdown.Item>
+                <Dropdown.Item
+                  eventKey="Import Product"
+                  onClick={() => openImportModal("products")}
+                >
+                  Import Products
+                </Dropdown.Item>
+                <Dropdown.Item
+                  eventKey="Export Keywords"
+                  onClick={() => handleOpenExportReasonModal("keywords")}
+                >
+                  Export Keywords
+                </Dropdown.Item>
+                <Dropdown.Item
+                  eventKey="Import Keywords"
+                  onClick={() => openImportModal("keywords")}
+                >
+                  Import Keywords
+                </Dropdown.Item>
               </Dropdown>
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+                Add New
+              </Button>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 mb-2 mt-4 gap-2 ">
-            <Tooltip title="Click to show all products"><div onClick={() => handleCardClick("all")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBrandProducthunt size={24} /></div><div><h6 className="text-blue-500">{ProductsData?.counts?.total}</h6><span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show active products"><div onClick={() => handleCardClick("active")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={24} /></div><div><h6 className="text-green-500">{ProductsData?.counts?.active || 0}</h6><span className="font-semibold text-[11px]">Active</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show inactive products"><div onClick={() => handleCardClick("inactive")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-slate-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-slate-100 text-slate-500"><TbCancel size={24} /></div><div><h6 className="text-slate-500">{ProductsData?.counts?.inactive || 0}</h6><span className="font-semibold text-[11px]">Inactive</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show pending products"><div onClick={() => handleCardClick("pending")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbProgress size={24} /></div><div><h6 className="text-orange-500">{ProductsData?.counts?.pending || 0}</h6><span className="font-semibold text-[11px]">Pending</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show rejected products"><div onClick={() => handleCardClick("rejected")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCircleX size={24} /></div><div><h6 className="text-red-500">{ProductsData?.counts?.rejected || 0}</h6><span className="font-semibold text-[11px]">Rejected</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show draft products"><div onClick={() => handleCardClick("draft")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbRefresh size={24} /></div><div><h6 className="text-violet-500">{ProductsData?.counts?.draft || 0}</h6><span className="font-semibold text-[11px]">Draft</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show all products">
+              <div onClick={() => handleCardClick("all")}>
+                <Card
+                  bodyClass={cardBodyClass}
+                  className={classNames(cardClass, "border-blue-200")}
+                >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                    <TbBrandProducthunt size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-blue-500">{paginationInfo.total}</h6>
+                    <span className="font-semibold text-[11px]">Total</span>
+                  </div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show active products">
+              <div onClick={() => handleCardClick("active")}>
+                <Card
+                  bodyClass={cardBodyClass}
+                  className={classNames(cardClass, "border-green-300")}
+                >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                    <TbCircleCheck size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-green-500">
+                      {paginationInfo.active}
+                    </h6>
+                    <span className="font-semibold text-[11px]">Active</span>
+                  </div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show inactive products">
+              <div onClick={() => handleCardClick("inactive")}>
+                <Card
+                  bodyClass={cardBodyClass}
+                  className={classNames(cardClass, "border-slate-300")}
+                >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-slate-100 text-slate-500">
+                    <TbCancel size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-slate-500">
+                      {paginationInfo.inactive}
+                    </h6>
+                    <span className="font-semibold text-[11px]">Inactive</span>
+                  </div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show pending products">
+              <div onClick={() => handleCardClick("pending")}>
+                <Card
+                  bodyClass={cardBodyClass}
+                  className={classNames(cardClass, "border-orange-200")}
+                >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
+                    <TbProgress size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-orange-500">
+                      {paginationInfo.pending}
+                    </h6>
+                    <span className="font-semibold text-[11px]">Pending</span>
+                  </div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show rejected products">
+              <div onClick={() => handleCardClick("rejected")}>
+                <Card
+                  bodyClass={cardBodyClass}
+                  className={classNames(cardClass, "border-red-200")}
+                >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500">
+                    <TbCircleX size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-red-500">
+                      {paginationInfo.rejected}
+                    </h6>
+                    <span className="font-semibold text-[11px]">Rejected</span>
+                  </div>
+                </Card>
+              </div>
+            </Tooltip>
+            <Tooltip title="Click to show draft products">
+              <div onClick={() => handleCardClick("draft")}>
+                <Card
+                  bodyClass={cardBodyClass}
+                  className={classNames(cardClass, "border-violet-200")}
+                >
+                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                    <TbRefresh size={24} />
+                  </div>
+                  <div>
+                    <h6 className="text-violet-500">
+                      {paginationInfo.draft}
+                    </h6>
+                    <span className="font-semibold text-[11px]">Draft</span>
+                  </div>
+                </Card>
+              </div>
+            </Tooltip>
+          </div>
+          <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
+            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+              {[TABS.ALL, TABS.PENDING].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => handleListTabChange(tab)}
+                  className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize ${currentListTab === tab
+                    ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                    }`}
+                >
+                  {tab.replace("_", " ")} Products
+                </button>
+              ))}
+            </nav>
           </div>
           <div className="my-4">
             <ProductTableTools
               onSearchChange={handleSearchChange}
-              searchQuery={tableData.query}
               onFilter={openFilterDrawer}
               onClearFilters={onClearFilters}
               columns={columns}
@@ -2081,9 +2995,8 @@ const Products = () => {
           <div className="flex-grow overflow-y-auto">
             <DataTable
               columns={filteredColumns}
-              data={mappedProducts}
-              loading={loading}
-              noData={!loading && mappedProducts.length === 0}
+              data={pageData}
+              loading={isLoadingData}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
@@ -2113,12 +3026,651 @@ const Products = () => {
         bodyClass="flex flex-col h-full pt-0"
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2" type="button" onClick={closeAddEditDrawer} disabled={isSubmittingForm}>Cancel</Button>
-            <Button size="sm" variant="solid" form="productForm" type="submit" loading={isSubmittingForm}>{isSubmittingForm ? (editingProduct ? "Saving..." : "Adding...") : "Save"}</Button>
+            <Button
+              size="sm"
+              className="mr-2"
+              type="button"
+              onClick={closeAddEditDrawer}
+              disabled={isSubmittingForm}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="productForm"
+              type="submit"
+              loading={isSubmittingForm}
+            >
+              {isSubmittingForm
+                ? editingProduct
+                  ? "Saving..."
+                  : "Adding..."
+                : "Save"}
+            </Button>
           </div>
         }
       >
-        {/* The entire Form JSX for Add/Edit Drawer remains here, unchanged */}
+        <Form
+          id="productForm"
+          onSubmit={formMethods.handleSubmit(onProductFormSubmit)}
+          className="flex flex-col gap-y-0 h-full"
+        >
+          <div className="border-b border-gray-200 dark:border-gray-700 sticky top-0 pt-3 bg-white dark:bg-gray-800 z-10 px-4">
+            <nav className=" flex space-x-6" aria-label="Tabs">
+              {[
+                FORM_TABS.GENERAL,
+                FORM_TABS.DESCRIPTION,
+                FORM_TABS.MEDIA,
+                FORM_TABS.META,
+              ].map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => handleFormTabChange(tab)}
+                  className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm capitalize flex items-center gap-2 ${currentFormTab === tab
+                    ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                    }`}
+                >
+                  {tab === FORM_TABS.GENERAL && <TbSettings />}
+                  {tab === FORM_TABS.DESCRIPTION && <TbFileText />}
+                  {tab === FORM_TABS.MEDIA && <TbPhoto />}
+                  {tab === FORM_TABS.META && <TbClipboardText />}
+                  {tab.replace("_", " ")}
+                </button>
+              ))}
+            </nav>
+          </div>
+          <div className="flex-grow overflow-y-auto pt-4 px-4 pb-4">
+            {currentFormTab === FORM_TABS.GENERAL && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-0">
+                {/* --- Field Order Changed --- */}
+                <FormItem
+                  label={
+                    <div>
+                      Status<span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.status}
+                  errorMessage={formErrors.status?.message}
+                >
+                  <Controller
+                    name="status"
+                    control={formControl}
+                    render={({ field }) => (
+                      <UiSelect
+                        options={apiProductStatusOptions}
+                        value={apiProductStatusOptions.find(
+                          (o) => o.value === field.value
+                        )}
+                        onChange={(opt) => field.onChange(opt?.value)}
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Category<span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.category_id}
+                  errorMessage={formErrors.category_id?.message}
+                >
+                  <Controller
+                    name="category_id"
+                    control={formControl}
+                    render={({ field }) => (
+                      <UiSelect
+                        options={categoryOptions}
+                        value={categoryOptions.find(
+                          (o) => o.value === field.value
+                        )}
+                        onChange={(opt) => field.onChange(opt?.value)}
+                        isClearable
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Sub Category"
+                  invalid={!!formErrors.sub_category_id}
+                  errorMessage={
+                    formErrors.sub_category_id?.message as string | undefined
+                  }
+                >
+                  <Controller
+                    name="sub_category_id"
+                    control={formControl}
+                    render={({ field }) => (
+                      <UiSelect
+                        options={subcategoryOptions}
+                        value={subcategoryOptions.find(
+                          (o) => o.value === field.value
+                        )}
+                        onChange={(opt) => field.onChange(opt?.value)}
+                        isClearable
+                        isDisabled={
+                          !watchedFormCategoryId ||
+                          (subcategoryOptions.length === 0 &&
+                            masterLoadingStatus !== "loading")
+                        }
+                        placeholder={
+                          !watchedFormCategoryId
+                            ? "Select category first"
+                            : masterLoadingStatus === "loading" &&
+                              !subcategoryOptions.length
+                              ? "Loading subcategories..."
+                              : subcategoryOptions.length === 0
+                                ? "No subcategories"
+                                : "Select subcategory"
+                        }
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Brand<span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.brand_id}
+                  errorMessage={formErrors.brand_id?.message}
+                >
+                  <Controller
+                    name="brand_id"
+                    control={formControl}
+                    render={({ field }) => (
+                      <UiSelect
+                        options={brandOptions}
+                        value={brandOptions.find(
+                          (o) => o.value === field.value
+                        )}
+                        onChange={(opt) => field.onChange(opt?.value)}
+                        isClearable
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Product Name<span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.name}
+                  errorMessage={formErrors.name?.message}
+                >
+                  <Controller
+                    name="name"
+                    control={formControl}
+                    render={({ field }) => <Input {...field} />}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Slug/URL<span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.slug}
+                  errorMessage={formErrors.slug?.message}
+                >
+                  <Controller
+                    name="slug"
+                    control={formControl}
+                    render={({ field }) => <Input {...field} />}
+                  />
+                </FormItem>
+                <FormItem
+                  label="SKU Code"
+                  invalid={!!formErrors.sku_code}
+                  errorMessage={formErrors.sku_code?.message}
+                >
+                  <Controller
+                    name="sku_code"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="HSN Code"
+                  invalid={!!formErrors.hsn_code}
+                  errorMessage={formErrors.hsn_code?.message}
+                >
+                  <Controller
+                    name="hsn_code"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Supplier Product Code (SPC)"
+                  invalid={!!formErrors.supplier_product_code}
+                  errorMessage={formErrors.supplier_product_code?.message}
+                >
+                  <Controller
+                    name="supplier_product_code"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Country
+                      <span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.country_id}
+                  errorMessage={formErrors.country_id?.message}
+                >
+                  <Controller
+                    name="country_id"
+                    control={formControl}
+                    render={({ field }) => (
+                      <UiSelect
+                        options={countryOptions}
+                        value={countryOptions.find(
+                          (o) => o.value === field.value
+                        )}
+                        onChange={(opt) => field.onChange(opt?.value)}
+                        isClearable
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Unit<span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.unit_id}
+                  errorMessage={formErrors.unit_id?.message}
+                >
+                  <Controller
+                    name="unit_id"
+                    control={formControl}
+                    render={({ field }) => (
+                      <UiSelect
+                        options={unitOptions}
+                        value={unitOptions.find((o) => o.value === field.value)}
+                        onChange={(opt) => field.onChange(opt?.value)}
+                        isClearable
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Colors Available"
+                  invalid={!!formErrors.color}
+                  errorMessage={formErrors.color?.message}
+                >
+                  <Controller
+                    name="color"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Shelf Life"
+                  invalid={!!formErrors.shelf_life}
+                  errorMessage={formErrors.shelf_life?.message}
+                >
+                  <Controller
+                    name="shelf_life"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Packaging Type"
+                  invalid={!!formErrors.packaging_type}
+                  errorMessage={formErrors.packaging_type?.message}
+                >
+                  <Controller
+                    name="packaging_type"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Packaging Size"
+                  invalid={!!formErrors.packaging_size}
+                  errorMessage={formErrors.packaging_size?.message}
+                >
+                  <Controller
+                    name="packaging_size"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Tax Rate (%)"
+                  invalid={!!formErrors.tax_rate}
+                  errorMessage={formErrors.tax_rate?.message}
+                >
+                  <Controller
+                    name="tax_rate"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input type="text" {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Procurement Lead Time"
+                  invalid={!!formErrors.procurement_lead_time}
+                  errorMessage={formErrors.procurement_lead_time?.message}
+                >
+                  <Controller
+                    name="procurement_lead_time"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label={
+                    <div>
+                      Product Keywords (AutoListing)
+                      <span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  invalid={!!formErrors.product_keywords}
+                  errorMessage={formErrors.product_keywords?.message}
+                  className="md:col-span-2"
+                >
+                  <Controller
+                    name="product_keywords"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input
+                        textArea
+                        {...field}
+                        rows={3}
+                        placeholder="e.g., keyword one, keyword two"
+                        value={field.value ?? ""}
+                      />
+                    )}
+                  />
+                </FormItem>
+              </div>
+            )}
+            {currentFormTab === FORM_TABS.DESCRIPTION && (
+              <div className="flex flex-col gap-y-4">
+                <FormItem
+                  label="Description"
+                  invalid={!!formErrors.description}
+                  errorMessage={formErrors.description?.message}
+                >
+                  <Controller
+                    name="description"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input
+                        textArea
+                        {...field}
+                        rows={8}
+                        value={field.value ?? ""}
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Short Description"
+                  invalid={!!formErrors.short_description}
+                  errorMessage={formErrors.short_description?.message}
+                >
+                  <Controller
+                    name="short_description"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input
+                        textArea
+                        {...field}
+                        rows={4}
+                        value={field.value ?? ""}
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Payment Term"
+                  invalid={!!formErrors.payment_term}
+                  errorMessage={formErrors.payment_term?.message}
+                >
+                  <Controller
+                    name="payment_term"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input
+                        textArea
+                        {...field}
+                        rows={3}
+                        value={field.value ?? ""}
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Delivery Details"
+                  invalid={!!formErrors.delivery_details}
+                  errorMessage={formErrors.delivery_details?.message}
+                >
+                  <Controller
+                    name="delivery_details"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input
+                        textArea
+                        {...field}
+                        rows={3}
+                        value={field.value ?? ""}
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Product Specification"
+                  invalid={!!formErrors.product_specification}
+                  errorMessage={formErrors.product_specification?.message}
+                >
+                  <Controller
+                    name="product_specification"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input
+                        textArea
+                        {...field}
+                        rows={5}
+                        value={field.value ?? ""}
+                      />
+                    )}
+                  />
+                </FormItem>
+              </div>
+            )}
+            {currentFormTab === FORM_TABS.MEDIA && (
+              <div>
+                <FormItem
+                  label={
+                    <div>
+                      Thumbnail Image (Max 1MB, 600x600 recommended)
+                      <span className="text-red-500"> * </span>
+                    </div>
+                  }
+                  className="mb-4"
+                  invalid={!!formErrors.thumb_image_input}
+                  errorMessage={
+                    formErrors.thumb_image_input?.message as string | undefined
+                  }
+                >
+                  <Controller
+                    name="thumb_image_input"
+                    control={formControl}
+                    render={({ field: { onChange, onBlur, name, ref } }) => (
+                      <Input
+                        type="file"
+                        name={name}
+                        ref={ref}
+                        onBlur={onBlur}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          onChange(file);
+                          setNewThumbImageFile(file);
+                          if (
+                            thumbImagePreviewUrl &&
+                            thumbImagePreviewUrl.startsWith("blob:")
+                          )
+                            URL.revokeObjectURL(thumbImagePreviewUrl);
+                          setThumbImagePreviewUrl(
+                            file
+                              ? URL.createObjectURL(file)
+                              : editingProduct?.thumbImageFullPath || null
+                          );
+                        }}
+                        accept="image/*"
+                      />
+                    )}
+                  />
+                  {thumbImagePreviewUrl && (
+                    <div className="mt-2 relative w-32 h-32">
+                      <Avatar
+                        src={thumbImagePreviewUrl}
+                        size={120}
+                        shape="rounded"
+                        className="w-full h-full"
+                      />
+                    </div>
+                  )}
+                </FormItem>
+                <label className="form-label block mb-2">
+                  Product Gallery Images (Max 5, 1024x1024 recommended)
+                </label>
+                <Input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    const currentNonDeletedCount = galleryImages.filter(
+                      (img) => !img.isDeleted
+                    ).length;
+                    const newImages = files
+                      .slice(0, 5 - currentNonDeletedCount)
+                      .map((file) => ({
+                        file,
+                        previewUrl: URL.createObjectURL(file),
+                        isNew: true,
+                        isDeleted: false,
+                      }));
+                    setGalleryImages((prev) => [
+                      ...prev.filter((img) => !img.isDeleted),
+                      ...newImages,
+                    ]);
+                    if (e.target) e.target.value = "";
+                    setFormValue("name", getFormValues("name"), {
+                      shouldDirty: true,
+                    });
+                  }}
+                  disabled={
+                    galleryImages.filter((img) => !img.isDeleted).length >= 5
+                  }
+                />
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {galleryImages
+                    .filter((img) => !img.isDeleted)
+                    .map((image) => (
+                      <div
+                        key={image.id || image.previewUrl}
+                        className="relative group w-32 h-32"
+                      >
+                        <Avatar
+                          src={image.previewUrl}
+                          size={120}
+                          shape="rounded"
+                          className="w-full h-full"
+                        />
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+            {currentFormTab === FORM_TABS.META && (
+              <div className="flex flex-col gap-y-4">
+                <FormItem
+                  label="Meta Tag Title"
+                  invalid={!!formErrors.meta_title}
+                  errorMessage={formErrors.meta_title?.message}
+                >
+                  <Controller
+                    name="meta_title"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input {...field} value={field.value ?? ""} />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Meta Tag Description"
+                  invalid={!!formErrors.meta_descr}
+                  errorMessage={formErrors.meta_descr?.message}
+                >
+                  <Controller
+                    name="meta_descr"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input
+                        textArea
+                        {...field}
+                        rows={4}
+                        value={field.value ?? ""}
+                      />
+                    )}
+                  />
+                </FormItem>
+                <FormItem
+                  label="Meta Tag Keywords"
+                  invalid={!!formErrors.meta_keyword}
+                  errorMessage={formErrors.meta_keyword?.message}
+                >
+                  <Controller
+                    name="meta_keyword"
+                    control={formControl}
+                    render={({ field }) => (
+                      <Input
+                        textArea
+                        {...field}
+                        rows={3}
+                        placeholder="keyword1, keyword2"
+                        value={field.value ?? ""}
+                      />
+                    )}
+                  />
+                </FormItem>
+              </div>
+            )}
+          </div>
+        </Form>
       </Drawer>
       <Drawer
         title="Filters"
@@ -2127,12 +3679,21 @@ const Products = () => {
         onRequestClose={closeFilterDrawer}
         footer={
           <div className="text-right w-full">
-            <Button size="sm" className="mr-2" onClick={onClearFilters}>Clear</Button>
-            <Button size="sm" variant="solid" form="filterProductForm" type="submit">Apply</Button>
+            <Button size="sm" className="mr-2" onClick={onClearFilters}>
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              variant="solid"
+              form="filterProductForm"
+              type="submit"
+            >
+              Apply
+            </Button>
           </div>
         }
       >
-    <Form
+        <Form
           id="filterProductForm"
           onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)}
           className="flex flex-col gap-4"
@@ -2444,10 +4005,10 @@ const Products = () => {
         {productToView ? (
           <div className="max-h-[79vh] flex flex-col">
             <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-3 sticky top-0 bg-white dark:bg-slate-800 z-10">
-              {productToView.thumb_image_full_path && (
+              {productToView.thumbImageFullPath && (
                 <Avatar
                   size="lg"
-                  src={productToView.thumb_image_full_path}
+                  src={productToView.thumbImageFullPath}
                   icon={<TbBox />}
                 />
               )}
@@ -2525,10 +4086,6 @@ const Products = () => {
                     label="Country of Origin"
                     value={productToView.countryName || "-"}
                   />
-                  {/* <DialogDetailRow
-                    label="Domains"
-                    value={productToView.domainNames?.join(", ") || "-"}
-                  /> */}
                 </div>
               </Card>
               <Card>
