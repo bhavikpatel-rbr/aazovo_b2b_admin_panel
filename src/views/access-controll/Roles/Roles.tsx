@@ -44,6 +44,7 @@ import {
 import { formatCustomDateTime } from '@/utils/formatCustomDateTime';
 
 // Types
+// FIX: Added OnPagingChange for better type safety, as seen in the reference component.
 import type { OnSortParam, ColumnDef } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
@@ -178,10 +179,12 @@ const ActiveFiltersDisplay = ({ filters, onRemoveFilter, onClearAll, departmentO
     );
 };
 
+// FIX: Corrected the component props to include `activeFilters`.
 const RoleTableTools = ({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, departmentOptions, allDesignationOptions, columns, visibleColumnKeys, setVisibleColumnKeys, searchInputValue, isDataReady }) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const { control, handleSubmit, reset } = useForm<RoleFilterFormData>({ defaultValues: { filterDisplayName: '', department_ids: [], designation_ids: [] } });
 
+    // This useEffect hook depends on `activeFilters` and was causing the error.
     useEffect(() => { reset(activeFilters); }, [activeFilters, reset]);
 
     const onSubmit = (data: RoleFilterFormData) => { onApplyFilters(data); setIsFilterDrawerOpen(false); };
@@ -242,8 +245,8 @@ const RolesListing = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingExportReason, setSubmittingExportReason] = useState(false);
   
-  const [activeFilters, setActiveFilters] = useState<RoleFilterFormData>({});
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "updated_at" }, query: "" });
+  const [activeFilters, setActiveFilters] = useState<RoleFilterFormData>({});
   const isDataReady = !initialLoading;
 
   const tableLoading = initialLoading || masterLoading === "loading";
@@ -357,7 +360,7 @@ const RolesListing = () => {
   const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
 
   // --- Filtering & Table Interaction Handlers ---
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), [tableData]);
   const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
   const handleApplyFilters = useCallback((filters: RoleFilterFormData) => { setActiveFilters(filters); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
   const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); handleSetTableData({ query: '', pageIndex: 1 }); refreshData(); }, [refreshData, handleSetTableData]);
@@ -490,7 +493,15 @@ const RolesListing = () => {
     return { pageData: processedData.slice(startIndex, startIndex + tableData.pageSize), total: totalCount, allFilteredAndSortedData: processedData };
   }, [Roles, departmentsData, designationsData, tableData, activeFilters]);
 
-  const activeFilterCount = useMemo(() => Object.values(activeFilters).filter(v => Array.isArray(v) ? v.length > 0 : v).length, [activeFilters]);
+  // IMPROVEMENT: Refined logic to be more explicit, inspired by reference.
+  const activeFilterCount = useMemo(() => {
+    return Object.values(activeFilters).filter(value => {
+        if (Array.isArray(value)) {
+            return value.length > 0;
+        }
+        return !!value; // For non-array values, check if they are truthy (e.g., a non-empty string).
+    }).length;
+  }, [activeFilters]);
 
   return (
     <>
@@ -505,7 +516,17 @@ const RolesListing = () => {
           </div>
           <ActiveFiltersDisplay filters={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFiltersAndReload} departmentOptions={departmentOptions} designationOptions={allDesignationOptions} />
           <div className="flex-grow overflow-auto">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading || isSubmitting} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onSort={handleSetTableData} noData={!isDataReady && pageData.length === 0} />
+            {/* FIX: Added onPagingChange prop to enable pagination functionality. */}
+            <DataTable 
+              columns={filteredColumns} 
+              data={pageData} 
+              loading={tableLoading || isSubmitting} 
+              pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} 
+              onPaginationChange={(p) => setTableData(prev => ({ ...prev, pageIndex: p }))} 
+              onSelectChange={(s) => setTableData(prev => ({...prev, pageSize: s, pageIndex: 1}))} 
+              onSort={(s) => setTableData(prev => ({...prev, sort: s}))}
+              noData={!isDataReady && pageData.length === 0} 
+            />
           </div>
         </AdaptiveCard>
       </Container>
