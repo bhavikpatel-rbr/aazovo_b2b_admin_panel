@@ -111,6 +111,7 @@ import {
   getPriceListAction,
   getProductsAction,
   getProductsDataAsync,
+  getProductslistingAction,
   getProductSpecificationsAction,
   getReportingTo,
   getRequestFeedbacksAction,
@@ -370,6 +371,10 @@ const masterSlice = createSlice({
     builder.addCase(getProductsAction.fulfilled, (state, { payload }) => ({
       ...state,
       ProductsData: payload,
+    }));
+    builder.addCase(getProductslistingAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      ProductslistData: payload,
     }));
     // builder.addCase(addPriceListAction.fulfilled, (state, { payload }) => ({
     //   ...state,

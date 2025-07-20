@@ -531,6 +531,30 @@ export const deleteAllBrandListAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+
+
+export const getProductslistAsync = async (params: any) => {
+  try {
+     const queryParams = new URLSearchParams();
+
+    if (params) {
+      // Iterate over the params object and append them to the query string
+      // if they have a valid value.
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await axiosInstance.get(`${config.apiURL}/master/product?${queryParams.toString()}`);
+
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const getProductAsync = async () => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/master/product/get`)

@@ -106,7 +106,7 @@ import {
   getParentCategoriesAction,
   getCountriesAction,
   getDomainsAction,
-  getProductsAction,
+  getProductslistingAction, // MODIFIED: Assuming this is your action name
   getSubcategoriesByCategoryIdAction,
   getUnitAction,
   submitExportReasonAction,
@@ -1636,8 +1636,9 @@ const DialogDetailRow: React.FC<DialogDetailRowProps> = React.memo(
 const Products = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  // MODIFICATION: Changed selector to get ProductslistData
   const {
-    ProductsData = [],
+    ProductslistData,
     domainsData = [],
     ParentCategories: GlobalCategoriesData = [],
     subCategoriesForSelectedCategoryData = [],
@@ -1647,8 +1648,9 @@ const Products = () => {
     getAllUserData = [],
     status: masterLoadingStatus,
   } = useSelector(masterSelector);
+
+  // MODIFIED: Fetch master data on initial component mount
   useEffect(() => {
-    dispatch(getProductsAction());
     dispatch(getDomainsAction());
     dispatch(getParentCategoriesAction());
     dispatch(getBrandAction());
@@ -1656,6 +1658,7 @@ const Products = () => {
     dispatch(getCountriesAction());
     dispatch(getAllUsersAction());
   }, [dispatch]);
+
 
   const [currentListTab, setCurrentListTab] = useState<string>(TABS.ALL);
   const [currentFormTab, setCurrentFormTab] = useState<string>(
@@ -1675,6 +1678,39 @@ const Products = () => {
     sort: { order: "", key: "" },
     query: "",
   });
+
+  // MODIFIED: This effect now triggers API calls for products based on table state
+  useEffect(() => {
+    const fetchData = () => {
+      const apiParams: Record<string, any> = {
+        page: tableData.pageIndex,
+        per_page: tableData.pageSize,
+        search: tableData.query,
+        sort_key: tableData.sort.key,
+        sort_order: tableData.sort.order,
+        name_or_sku: filterCriteria.filterNameOrSku,
+        'category_ids[]': filterCriteria.filterCategoryIds,
+        'sub_category_ids[]': filterCriteria.filterSubCategoryIds,
+        'brand_ids[]': filterCriteria.filterBrandIds,
+        status: filterCriteria.filterStatuses?.map(s => s.charAt(0).toUpperCase() + s.slice(1))?.[0] // API might need "Active", not ["Active"] and only one status
+      };
+
+      if (currentListTab === TABS.PENDING) {
+        apiParams.status = "Pending";
+      }
+
+      // Clean up empty/null values before sending to API
+      const cleanedParams = Object.fromEntries(
+        Object.entries(apiParams).filter(
+          ([_, v]) => v != null && v !== "" && (!Array.isArray(v) || v.length > 0)
+        )
+      );
+
+      // MODIFIED: Use the correct action name
+      dispatch(getProductslistingAction(cleanedParams));
+    };
+    fetchData();
+  }, [dispatch, tableData, filterCriteria, currentListTab]);
 
   // --- MODAL STATE MANAGEMENT (NEW) ---
   const [modalState, setModalState] = useState<ProductsModalState>({
@@ -1735,11 +1771,7 @@ const Products = () => {
   const [galleryImages, setGalleryImages] = useState<ProductGalleryImageItem[]>(
     []
   );
-  // const domainOptions = useMemo(
-  //   () =>
-  //     domainsData?.map((d: any) => ({ value: d.id, label: d.domain })) || [],
-  //   [domainsData?.data]
-  // );
+
   const categoryOptions = useMemo(
     () =>
       Array.isArray(GlobalCategoriesData)
@@ -1796,8 +1828,6 @@ const Products = () => {
     control: formControl,
     formState: {
       errors: formErrors,
-      isValid: isFormValid,
-      isDirty: isFormDirty,
     },
   } = formMethods;
   const filterFormMethods = useForm<FilterFormData>({
@@ -1914,9 +1944,26 @@ const Products = () => {
     };
   }, [thumbImagePreviewUrl, galleryImages]);
 
+  // MODIFICATION: Destructure the new, nested API response structure
+  const {
+    data: paginatedData = {},
+    counts: countsData = {},
+  } = ProductslistData || {};
+
+  const { data: rawProductsData = [] } = paginatedData;
+
+  const paginationInfo = useMemo(() => ({
+    total: paginatedData.total || 0,
+    active: countsData.active || 0,
+    inactive: countsData.inactive || 0,
+    pending: countsData.pending || 0,
+    rejected: countsData.rejected || 0, // Assuming these might exist
+    draft: countsData.draft || 0,
+  }), [paginatedData, countsData]);
+
   const mappedProducts: ProductItem[] = useMemo(() => {
-    if (!Array.isArray(ProductsData?.data)) return [];
-    return ProductsData?.data.map((apiItem: ApiProductItem): ProductItem => {
+    if (!Array.isArray(rawProductsData)) return [];
+    return rawProductsData.map((apiItem: ApiProductItem): ProductItem => {
       let iconFullPath: string | null = null;
       if (apiItem.icon_full_path) iconFullPath = apiItem.icon_full_path;
       else if (apiItem.icon)
@@ -1932,9 +1979,6 @@ const Products = () => {
           .map((id) => parseInt(id.trim(), 10))
           .filter((id) => !isNaN(id))
         : [];
-      // const domainNames = parsedDomainIds
-      //   .map((id) => domainOptions.find((d) => d.value === id)?.label)
-      //   .filter(Boolean) as string[];
       const gallery: ProductGalleryImageItem[] = [];
       if (
         apiItem.product_images_array &&
@@ -2031,7 +2075,6 @@ const Products = () => {
           countryOptions.find((c) => c.value === Number(apiItem.country_id))
             ?.label,
         domainIds: parsedDomainIds,
-        // domainNames,
         color: apiItem.color,
         hsnCode: apiItem.hsn_code,
         shelfLife: apiItem.shelf_life,
@@ -2059,8 +2102,7 @@ const Products = () => {
       };
     });
   }, [
-    ProductsData?.data,
-    // domainOptions,
+    rawProductsData,
     categoryOptions,
     brandOptions,
     unitOptions,
@@ -2068,91 +2110,9 @@ const Products = () => {
     subCategoriesForSelectedCategoryData,
   ]);
 
-  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    let processedData: ProductItem[] = cloneDeep(mappedProducts);
-
-    if (currentListTab === TABS.PENDING) {
-      processedData = processedData.filter((p) => p.status === "pending");
-    }
-    if (tableData.query) {
-      const query = tableData.query.toLowerCase();
-      processedData = processedData.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          (p.skuCode && p.skuCode.toLowerCase().includes(query)) ||
-          (p.categoryName && p.categoryName.toLowerCase().includes(query)) ||
-          (p.brandName && p.brandName.toLowerCase().includes(query))
-      );
-    }
-
-    if (filterCriteria.filterNameOrSku) {
-      const query = filterCriteria.filterNameOrSku.toLowerCase();
-      processedData = processedData.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          (p.skuCode && p.skuCode.toLowerCase().includes(query))
-      );
-    }
-    if (filterCriteria.filterCategoryIds?.length) {
-      const ids = new Set(filterCriteria.filterCategoryIds);
-      processedData = processedData.filter(
-        (p) => p.categoryId !== null && ids.has(p.categoryId)
-      );
-    }
-    if (filterCriteria.filterSubCategoryIds?.length) {
-      const ids = new Set(filterCriteria.filterSubCategoryIds);
-      processedData = processedData.filter(
-        (p) => p.subCategoryId !== null && ids.has(p.subCategoryId)
-      );
-    }
-    if (filterCriteria.filterBrandIds?.length) {
-      const ids = new Set(filterCriteria.filterBrandIds);
-      processedData = processedData.filter(
-        (p) => p.brandId !== null && ids.has(p.brandId)
-      );
-    }
-    if (filterCriteria.filterStatuses?.length) {
-      const statuses = new Set(filterCriteria.filterStatuses);
-      processedData = processedData.filter((p) => statuses.has(p.status));
-    }
-
-    const { order, key } = tableData.sort as OnSortParam;
-    if (order && key && processedData.length > 0) {
-      processedData.sort((a, b) => {
-        const aVal = a[key as keyof ProductItem];
-        const bVal = b[key as keyof ProductItem];
-        if (aVal === null || aVal === undefined)
-          return order === "asc" ? -1 : 1;
-        if (bVal === null || bVal === undefined)
-          return order === "asc" ? 1 : -1;
-        if (typeof aVal === "number" && typeof bVal === "number")
-          return order === "asc" ? aVal - bVal : bVal - aVal;
-        if (
-          ["name", "skuCode", "categoryName", "brandName", "slug"].includes(key)
-        ) {
-          const strA = String(aVal).toLowerCase();
-          const strB = String(bVal).toLowerCase();
-          return order === "asc"
-            ? strA.localeCompare(strB)
-            : strB.localeCompare(strA);
-        }
-        const strA = String(aVal);
-        const strB = String(bVal);
-        return order === "asc"
-          ? strA.localeCompare(strB)
-          : strB.localeCompare(strA);
-      });
-    }
-    const currentTotal = processedData.length;
-    const pageIndex = tableData.pageIndex as number;
-    const pageSize = tableData.pageSize as number;
-    const startIndex = (pageIndex - 1) * pageSize;
-    return {
-      pageData: processedData.slice(startIndex, startIndex + pageSize),
-      total: currentTotal,
-      allFilteredAndSortedData: processedData,
-    };
-  }, [mappedProducts, tableData, filterCriteria, currentListTab]);
+  const pageData = mappedProducts;
+  const total = paginationInfo.total;
+  const allFilteredAndSortedData = mappedProducts;
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -2379,7 +2339,7 @@ const Products = () => {
           );
         }
         closeAddEditDrawer();
-        dispatch(getProductsAction());
+        // No manual refetch needed due to useEffect hook
       } catch (error: any) {
         const errorMsg =
           error?.response?.data?.message ||
@@ -2447,7 +2407,7 @@ const Products = () => {
           </Notification>
         );
       }
-      dispatch(getProductsAction());
+      // No manual refetch needed
     } catch (error: any) {
       toast.push(
         <Notification type="danger" title="Delete Failed">
@@ -2484,7 +2444,7 @@ const Products = () => {
           Product status changed to {selectedNewStatus}.
         </Notification>
       );
-      dispatch(getProductsAction());
+      // No manual refetch needed
     } catch (error: any) {
       toast.push(
         <Notification type="danger" title="Status Update Failed">
@@ -2500,7 +2460,8 @@ const Products = () => {
 
   const openViewDetailModal = useCallback((product: ProductItem) => {
     navigate(`/product-management/product/${product.id}`);
-  }, []);
+  }, [navigate]);
+
   const closeViewDetailModal = useCallback(() => {
     setIsViewDetailModalOpen(false);
     setProductToView(null);
@@ -2621,7 +2582,7 @@ const Products = () => {
           processed.
         </Notification>
       );
-      dispatch(getProductsAction());
+      // No manual refetch needed
       closeImportModal();
     } catch (apiError: any) {
       toast.push(
@@ -2633,7 +2594,7 @@ const Products = () => {
     } finally {
       setIsImporting(false);
     }
-  }, [selectedFile, importModalType, dispatch, closeImportModal]);
+  }, [selectedFile, importModalType, closeImportModal]);
 
   const handlePaginationChange = useCallback(
     (page: number) => setTableData((prev) => ({ ...prev, pageIndex: page })),
@@ -2703,8 +2664,7 @@ const Products = () => {
     setFilterFormValue("filterSubCategoryIds", []);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     closeFilterDrawer();
-    dispatch(getProductsAction());
-  }, [resetFilterForm, setFilterFormValue, closeFilterDrawer, dispatch]);
+  }, [resetFilterForm, setFilterFormValue, closeFilterDrawer]);
 
   const handleCardClick = (status: ProductStatus | "all") => {
     onClearFilters();
@@ -2838,12 +2798,11 @@ const Products = () => {
 
   const isLoadingData =
     masterLoadingStatus === "pending" || masterLoadingStatus === "loading";
-  const tableIsProcessing = isSubmittingForm || isImporting;
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex items-center gap-2 p-2";
 
-  if (isLoadingData && !ProductsData?.data?.length) {
+  if (isLoadingData && !rawProductsData?.length) {
     return (
       <Container className="h-full">
         <div className="h-full flex flex-col items-center justify-center">
@@ -2902,7 +2861,7 @@ const Products = () => {
                     <TbBrandProducthunt size={24} />
                   </div>
                   <div>
-                    <h6 className="text-blue-500">{mappedProducts.length}</h6>
+                    <h6 className="text-blue-500">{paginationInfo.total}</h6>
                     <span className="font-semibold text-[11px]">Total</span>
                   </div>
                 </Card>
@@ -2919,10 +2878,7 @@ const Products = () => {
                   </div>
                   <div>
                     <h6 className="text-green-500">
-                      {
-                        mappedProducts.filter((p) => p.status === "active")
-                          .length
-                      }
+                      {paginationInfo.active}
                     </h6>
                     <span className="font-semibold text-[11px]">Active</span>
                   </div>
@@ -2940,10 +2896,7 @@ const Products = () => {
                   </div>
                   <div>
                     <h6 className="text-slate-500">
-                      {
-                        mappedProducts.filter((p) => p.status === "inactive")
-                          .length
-                      }
+                      {paginationInfo.inactive}
                     </h6>
                     <span className="font-semibold text-[11px]">Inactive</span>
                   </div>
@@ -2961,10 +2914,7 @@ const Products = () => {
                   </div>
                   <div>
                     <h6 className="text-orange-500">
-                      {
-                        mappedProducts.filter((p) => p.status === "pending")
-                          .length
-                      }
+                      {paginationInfo.pending}
                     </h6>
                     <span className="font-semibold text-[11px]">Pending</span>
                   </div>
@@ -2982,10 +2932,7 @@ const Products = () => {
                   </div>
                   <div>
                     <h6 className="text-red-500">
-                      {
-                        mappedProducts.filter((p) => p.status === "rejected")
-                          .length
-                      }
+                      {paginationInfo.rejected}
                     </h6>
                     <span className="font-semibold text-[11px]">Rejected</span>
                   </div>
@@ -3003,10 +2950,7 @@ const Products = () => {
                   </div>
                   <div>
                     <h6 className="text-violet-500">
-                      {
-                        mappedProducts.filter((p) => p.status === "draft")
-                          .length
-                      }
+                      {paginationInfo.draft}
                     </h6>
                     <span className="font-semibold text-[11px]">Draft</span>
                   </div>
@@ -3021,8 +2965,8 @@ const Products = () => {
                   key={tab}
                   onClick={() => handleListTabChange(tab)}
                   className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm capitalize ${currentListTab === tab
-                      ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                    ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
                     }`}
                 >
                   {tab.replace("_", " ")} Products
@@ -3052,7 +2996,7 @@ const Products = () => {
             <DataTable
               columns={filteredColumns}
               data={pageData}
-              loading={isLoadingData && ProductsData?.data?.length > 0}
+              loading={isLoadingData}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
@@ -3125,8 +3069,8 @@ const Products = () => {
                   type="button"
                   onClick={() => handleFormTabChange(tab)}
                   className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm capitalize flex items-center gap-2 ${currentFormTab === tab
-                      ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                    ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
                     }`}
                 >
                   {tab === FORM_TABS.GENERAL && <TbSettings />}
@@ -4142,10 +4086,6 @@ const Products = () => {
                     label="Country of Origin"
                     value={productToView.countryName || "-"}
                   />
-                  {/* <DialogDetailRow
-                    label="Domains"
-                    value={productToView.domainNames?.join(", ") || "-"}
-                  /> */}
                 </div>
               </Card>
               <Card>
