@@ -18,7 +18,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DebounceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog } from '@/components/ui'
+import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog, Skeleton } from '@/components/ui' // Import Skeleton
 
 // Icons
 import { TbPencil, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbFile, TbFileCheck, TbFileX, TbUserCircle, TbPhoto } from 'react-icons/tb'
@@ -86,7 +86,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, countryO
     );
 };
 
-const ProductSpecificationTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, specNameOptions, countryOptions, columns, filteredColumns, setFilteredColumns, searchInputValue }, ref) => {
+const ProductSpecificationTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, specNameOptions, countryOptions, columns, filteredColumns, setFilteredColumns, searchInputValue, isDataReady }, ref) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const { control, handleSubmit, setValue } = useForm<ProductSpecificationFilterSchema>({ defaultValues: { names: [], countryIds: [], status: [] } });
     useEffect(() => { setValue('names', activeFilters.names || []); setValue('countryIds', activeFilters.countryIds || []); setValue('status', activeFilters.status || []); }, [activeFilters, setValue]);
@@ -103,9 +103,9 @@ const ProductSpecificationTableTools = React.forwardRef(({ onSearchChange, onApp
                         {columns.map((col) => col.header && (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)} disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>Export</Button>
             </div>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterProductSpecForm">Apply</Button></div>}>
                 <Form id="filterProductSpecForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -122,6 +122,7 @@ ProductSpecificationTableTools.displayName = 'ProductSpecificationTableTools';
 // --- MAIN PRODUCT SPECIFICATION COMPONENT ---
 const ProductSpecification = () => {
     const dispatch = useAppDispatch();
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<ProductSpecificationItem | null>(null);
@@ -134,11 +135,31 @@ const ProductSpecification = () => {
     const [imageToView, setImageToView] = useState<string | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
-    const { ProductSpecificationsData = [], CountriesData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+    const { ProductSpecificationsData = [], CountriesData = [] } = useSelector(masterSelector, shallowEqual);
+    const isDataReady = !initialLoading;
+
     const countryOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((country: Country) => ({ value: String(country.id), label: country.name })) : [], [CountriesData]);
     const specNameFilterOptions = useMemo(() => Array.isArray(ProductSpecificationsData) ? [...new Set(ProductSpecificationsData.map(item => item.name))].sort().map(name => ({ value: name, label: name })) : [], [ProductSpecificationsData]);
     
-    useEffect(() => { dispatch(getProductSpecificationsAction()); dispatch(getCountriesAction()); }, [dispatch]);
+    const refreshData = useCallback(async () => {
+        setInitialLoading(true);
+        try {
+            await Promise.all([
+                dispatch(getProductSpecificationsAction()),
+                dispatch(getCountriesAction())
+            ]);
+        } catch (error) {
+            console.error("Failed to refresh data:", error);
+            toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload data.</Notification>);
+        } finally {
+            setInitialLoading(false);
+        }
+    }, [dispatch]);
+
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
+
     useEffect(() => { return () => { if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl) } }, [imagePreviewUrl]);
     
     const formMethods = useForm<ProductSpecificationFormData>({ resolver: zodResolver(productSpecificationFormSchema), mode: "onChange" });
@@ -146,6 +167,19 @@ const ProductSpecification = () => {
 
     const openImageViewer = (imageUrl: string | null | undefined) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
     const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
+
+    const openEditDrawer = useCallback((item: ProductSpecificationItem) => {
+        setEditingItem(item);
+        formMethods.reset({
+            name: item.name,
+            country_id: String(item.country_id),
+            note_details: item.note_details || '',
+            status: item.status || 'Active',
+            flag_icon: null
+        });
+        setImagePreviewUrl(item.icon_full_path || null);
+        setIsEditDrawerOpen(true);
+    }, [formMethods]);
 
     const columns: ColumnDef<ProductSpecificationItem>[] = useMemo(() => [
         { header: 'Flag Icon', accessorKey: 'icon_full_path', enableSorting: false, size: 80, cell: (props) => { const { icon_full_path } = props.row.original; return icon_full_path ? (<Avatar src={icon_full_path} size={30} shape="circle" icon={<TbPhoto />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(icon_full_path)} />) : (<span className="text-gray-400">-</span>); } },
@@ -158,16 +192,6 @@ const ProductSpecification = () => {
         size: 200,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const date = updated_at ? new Date(updated_at) : null;
-          const formattedDate = date
-            ? `${date.getDate()} ${date.toLocaleString("en-US", {
-                month: "short",
-              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
-            : "N/A";
           return (
             <div className="flex items-center gap-2">
               <Avatar
@@ -193,7 +217,7 @@ const ProductSpecification = () => {
       },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
-    ], []);
+    ], [openEditDrawer]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<ProductSpecificationItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns); }, [columns]);
@@ -246,7 +270,7 @@ const ProductSpecification = () => {
         setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as string[] | undefined; if (!currentValues) return prev; const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } return newFilters; });
         handleSetTableData({ pageIndex: 1 });
     }, [handleSetTableData]);
-    const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getProductSpecificationsAction()); };
+    const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); refreshData() }, [tableData, refreshData]);
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
     const handleCardClick = (status: 'Active' | 'Inactive' | 'All') => { handleSetTableData({ query: '', pageIndex: 1 }); if (status === 'All') { setActiveFilters({}); } else { setActiveFilters({ status: [status] }); } };
 
@@ -260,16 +284,10 @@ const ProductSpecification = () => {
             await dispatch(addProductSpecificationAction(formData)).unwrap();
             toast.push(<Notification title="Spec Added" type="success">{`Specification "${data.name}" added.`}</Notification>);
             closeAddDrawer();
-            dispatch(getProductSpecificationsAction());
+            refreshData();
         } catch (error: any) { toast.push(<Notification title="Failed to Add" type="danger">{error.message || 'Could not add specification.'}</Notification>); } finally { setIsSubmitting(false); }
     };
     
-    const openEditDrawer = (item: ProductSpecificationItem) => {
-        setEditingItem(item);
-        formMethods.reset({ name: item.name, country_id: String(item.country_id), note_details: item.note_details || '', status: item.status || 'Active', flag_icon: null });
-        setImagePreviewUrl(item.icon_full_path || null);
-        setIsEditDrawerOpen(true);
-    };
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingItem(null); };
     const onEditSubmit = async (data: ProductSpecificationFormData) => {
         if (!editingItem?.id) return;
@@ -281,7 +299,7 @@ const ProductSpecification = () => {
             await dispatch(editProductSpecificationAction({ id: editingItem.id, formData })).unwrap();
             toast.push(<Notification title="Spec Updated" type="success">{`Specification "${data.name}" updated.`}</Notification>);
             closeEditDrawer();
-            dispatch(getProductSpecificationsAction());
+            refreshData();
         } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message || 'Could not update specification.'}</Notification>); } finally { setIsSubmitting(false); }
     };
 
@@ -300,6 +318,13 @@ const ProductSpecification = () => {
     const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
     const cardBodyClass = "flex items-center gap-2 p-2";
 
+    const renderCardContent = (count: number) => {
+        if (initialLoading) {
+            return <Skeleton width={40} height={20} />;
+        }
+        return <h6 className="text-sm">{count}</h6>;
+    };
+
     return (
         <>
             <Container className="h-auto">
@@ -309,17 +334,17 @@ const ProductSpecification = () => {
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Spec</Button>
                     </div>
                     <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
-                        <Tooltip title="Click to show all specs"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{ProductSpecificationsData.length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show active specs"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{ProductSpecificationsData.length > 0 && ProductSpecificationsData.filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show inactive specs"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{ProductSpecificationsData.length > 0 && ProductSpecificationsData.filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show all specs"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div>{renderCardContent(ProductSpecificationsData.length)}<span className="text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active specs"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div>{renderCardContent(ProductSpecificationsData.filter(d => d.status === 'Active').length)}<span className="text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show inactive specs"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div>{renderCardContent(ProductSpecificationsData.filter(d => d.status === 'Inactive').length)}<span className="text-xs">Inactive</span></div></Card></div></Tooltip>
                     </div>
                     <div className="mb-4">
-                        <ProductSpecificationTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} specNameOptions={specNameFilterOptions} countryOptions={countryOptions} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} searchInputValue={tableData?.query} />
+                        <ProductSpecificationTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} specNameOptions={specNameFilterOptions} countryOptions={countryOptions} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} searchInputValue={tableData?.query} isDataReady={isDataReady} />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} countryOptions={countryOptions} />
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching specification(s).</div>}
                     <div className="flex-grow overflow-auto">
-                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={masterLoadingStatus === "loading" || isSubmitting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
+                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={initialLoading || isSubmitting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
                     </div>
                 </AdaptiveCard>
             </Container>
