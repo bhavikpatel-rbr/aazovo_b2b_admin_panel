@@ -75,7 +75,7 @@ const wallItemFormSchema = z.object({
 type SingleWallItemFormData = z.infer<typeof singleWallItemSchema>;
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 type OptionType<T = string | number> = { value: T; label: string };
-const intentOptions: OptionType<WallIntent>[] = [{ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" }];
+const intentOptions: OptionType<WallIntent>[] = [{ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }];
 const productStatusOptions: OptionType[] = [{ value: "Active", label: "Active" }, { value: "Non-active", label: "Non-active" }];
 const statusOptions: OptionType[] = [{ value: "Pending", label: "Pending" }, { value: "Active", label: "Active" }, { value: "Rejected", label: "Rejected" }, { value: "inactive", label: "Inactive" }];
 const dummyCartoonTypes: OptionType[] = [{ value: "Master Cartoon", label: "Master Cartoon" }, { value: "Non Masster Cartoon", label: "Non Masster Cartoon" }];
