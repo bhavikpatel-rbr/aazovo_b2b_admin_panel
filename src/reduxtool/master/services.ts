@@ -1620,9 +1620,17 @@ export const deleteAllHomeCategoryAsync = async (unitData: any) => {
   }
 }
 
-export const getRowDataAsync = async () => {
+export const getRowDataAsync = async (params: any) => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/row_data`)
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const response = await axiosInstance.get(`${config.apiURL}/row_data?${queryParams.toString()}`);
     return response
   } catch (err) {
     return isAxiosError(err)

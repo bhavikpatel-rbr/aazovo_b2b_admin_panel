@@ -2659,9 +2659,9 @@ export const deleteAllHomeCategoryAction = createAsyncThunk<any, any>(
 
 export const getRowDataAction = createAsyncThunk(
   "auth/getRowData",
-  async (_, { rejectWithValue, dispatch }) => {
+  async (param, { rejectWithValue, dispatch }) => {
     try {
-      const response: AxiosResponse<any> = await getRowDataAsync()
+      const response: AxiosResponse<any> = await getRowDataAsync(param)
       if (response?.data?.status === true) {
         return response?.data
       }

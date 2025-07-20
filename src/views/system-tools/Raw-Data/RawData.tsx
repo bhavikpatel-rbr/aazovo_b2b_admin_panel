@@ -122,6 +122,8 @@ export type RowDataItem = {
   brand?: { id: number; name: string } | null;
   updated_by_name?: string;
   updated_by_role?: string;
+  updated_by_user?: { name: string; roles?: { display_name: string }[] } | null;
+  created_by_user?: { name: string } | null;
 };
 
 // --- Zod Schema for Add/Edit Form ---
@@ -206,7 +208,7 @@ const exportReasonSchema = z.object({
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 // --- CSV Exporter ---
-type RowDataExportItem = Omit<RowDataItem, "created_at" | "updated_at" | "country" | "category" | "brand"> & {
+type RowDataExportItem = Omit<RowDataItem, "created_at" | "updated_at" | "country" | "category" | "brand" | "created_by_user" | "updated_by_user"> & {
   countryNameDisplay?: string;
   categoryNameDisplay?: string;
   brandNameDisplay?: string;
@@ -358,8 +360,9 @@ const RowDataSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: 
 
 const RowDataListing = () => {
   const dispatch = useAppDispatch();
-  const { rowData = [], CountriesData = [], ParentCategories = [], BrandData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
-  
+  // Expect rowData to have { data, total, counts } from the API
+  const { rowData = { data: [], total: 0, counts: {} }, CountriesData = [], ParentCategories = [], BrandData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+
   const [initialLoading, setInitialLoading] = useState(true);
   const [countryOptions, setCountryOptions] = useState<SelectOption[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
@@ -391,28 +394,69 @@ const RowDataListing = () => {
     const date = new Date(dateString);
     return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
   };
+  
+  const getApiParams = (forExport = false) => {
+      const params: any = {
+          sort_by: tableData.sort.key,
+          sort_order: tableData.sort.order,
+          search: tableData.query,
+          country_id: filterCriteria.filterCountry?.map((c) => c.value).join(','),
+          category_id: filterCriteria.filterCategory?.map((c) => c.value).join(','),
+          brand_id: filterCriteria.filterBrand?.map((b) => b.value).join(','),
+          status: filterCriteria.filterStatus?.map((s) => s.value).join(','),
+          quality: filterCriteria.filterQuality?.map((q) => q.value).join(','),
+          special_filter: filterCriteria.specialFilter,
+      };
 
-  const refreshData = useCallback(async () => {
-      setInitialLoading(true);
-      try {
-          await Promise.all([
-              dispatch(getRowDataAction()),
-              dispatch(getCountriesAction()),
-              dispatch(getParentCategoriesAction()),
-              dispatch(getBrandAction())
-          ]);
-      } catch (error) {
-          console.error("Failed to refresh data:", error);
-          toast.push(<Notification title="Data Load Failed" type="danger">Could not load initial data.</Notification>);
-      } finally {
-          setInitialLoading(false);
+      if (forExport) {
+          params.export = true;
+      } else {
+          params.page = tableData.pageIndex;
+          params.per_page = tableData.pageSize;
       }
+
+      // Clean up empty/undefined params before returning
+      Object.keys(params).forEach((key) => {
+          const value = params[key];
+          if (value === undefined || value === null || value === '') {
+              delete params[key];
+          }
+      });
+      return params;
+  };
+
+
+  const refreshAfterAction = () => {
+      // Re-fetch data for the current page after an add/edit/delete operation
+      dispatch(getRowDataAction(getApiParams()));
+  }
+
+  // Effect for fetching one-time lookup data on mount
+  useEffect(() => {
+    const fetchLookups = async () => {
+        setInitialLoading(true);
+        try {
+            await Promise.all([
+                dispatch(getCountriesAction()),
+                dispatch(getParentCategoriesAction()),
+                dispatch(getBrandAction()),
+            ]);
+        } catch (error) {
+            console.error("Failed to load lookup data:", error);
+            toast.push(<Notification title="Data Load Failed" type="danger">Could not load initial lookup data.</Notification>);
+        } finally {
+            setInitialLoading(false);
+        }
+    };
+    fetchLookups();
   }, [dispatch]);
 
+  // Effect for fetching table data whenever filters, pagination, or sorting changes
   useEffect(() => {
-    refreshData();
-  }, [refreshData]);
-
+    if (!isDataReady) return; // Don't fetch until lookups are ready
+    dispatch(getRowDataAction(getApiParams()));
+  }, [dispatch, tableData, filterCriteria, isDataReady]);
+  
   useEffect(() => { setCountryOptions(Array.isArray(CountriesData) ? CountriesData.map((c: CountryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [CountriesData]);
   useEffect(() => { setCategoryOptions(Array.isArray(ParentCategories) ? ParentCategories.map((c: CategoryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [ParentCategories]);
   useEffect(() => { setBrandOptions(Array.isArray(BrandData) ? BrandData.map((b: BrandListItem) => ({ value: String(b.id), label: b.name })) : []) }, [BrandData]);
@@ -431,47 +475,49 @@ const RowDataListing = () => {
   const openViewDialog = useCallback((item: RowDataItem) => setViewingItem(item), []);
   const closeViewDialog = useCallback(() => setViewingItem(null), []);
 
-  const onSubmitHandler = async (data: RowDataFormData) => { setIsSubmitting(true); const apiPayload = { ...data, email: data.email === "" ? null : data.email, company_name: data.company_name === "" ? null : data.company_name, city: data.city === "" ? null : data.city, remarks: data.remarks === "" ? null : data.remarks, }; try { if (editingItem) { await dispatch(editRowDataAction({ id: editingItem.id, ...apiPayload })).unwrap(); toast.push(<Notification title="Raw Data Updated" type="success" duration={2000} />); closeEditDrawer(); } else { await dispatch(addRowDataAction(apiPayload)).unwrap(); toast.push(<Notification title="Raw Data Added" type="success" duration={2000} />); closeAddDrawer(); } refreshData(); } catch (e: any) { toast.push(<Notification title={(editingItem ? "Update" : "Add") + " Failed"} type="danger" duration={3000}>{(e as Error).message || "An error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
+  const onSubmitHandler = async (data: RowDataFormData) => { setIsSubmitting(true); const apiPayload = { ...data, email: data.email === "" ? null : data.email, company_name: data.company_name === "" ? null : data.company_name, city: data.city === "" ? null : data.city, remarks: data.remarks === "" ? null : data.remarks, }; try { if (editingItem) { await dispatch(editRowDataAction({ id: editingItem.id, ...apiPayload })).unwrap(); toast.push(<Notification title="Raw Data Updated" type="success" duration={2000} />); closeEditDrawer(); } else { await dispatch(addRowDataAction(apiPayload)).unwrap(); toast.push(<Notification title="Raw Data Added" type="success" duration={2000} />); closeAddDrawer(); } refreshAfterAction(); } catch (e: any) { toast.push(<Notification title={(editingItem ? "Update" : "Add") + " Failed"} type="danger" duration={3000}>{(e as Error).message || "An error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
   const handleDeleteClick = useCallback((item: RowDataItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
-  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteRowDataAction({ id: String(itemToDelete.id) })).unwrap(); toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`Entry "${itemToDelete.name || itemToDelete.mobile_no}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); refreshData(); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message || "Could not delete item."}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete, refreshData]);
-  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const validItems = selectedItems.filter((item) => item.id); if (validItems.length === 0) { setIsDeleting(false); return; } const idsToDelete = validItems.map((item) => String(item.id)); try { await dispatch(deleteAllRowDataAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`${validItems.length} item(s) deleted.`}</Notification>); setSelectedItems([]); refreshData(); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message || "Failed to delete selected items."}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems, refreshData]);
+  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteRowDataAction({ id: String(itemToDelete.id) })).unwrap(); toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`Entry "${itemToDelete.name || itemToDelete.mobile_no}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); refreshAfterAction(); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message || "Could not delete item."}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete]);
+  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const validItems = selectedItems.filter((item) => item.id); if (validItems.length === 0) { setIsDeleting(false); return; } const idsToDelete = validItems.map((item) => String(item.id)); try { await dispatch(deleteAllRowDataAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`${validItems.length} item(s) deleted.`}</Notification>); setSelectedItems([]); refreshAfterAction(); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message || "Failed to delete selected items."}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
   const handleBlacklistClick = useCallback((item: RowDataItem) => { setItemToBlacklist(item); setBlacklistConfirmOpen(true); }, []);
-  const onConfirmBlacklist = async () => { if (!itemToBlacklist) return; setIsBlacklisting(true); setBlacklistConfirmOpen(false); const payload: any = { ...itemToBlacklist, status: "Blacklist", country_id: String(itemToBlacklist.country_id), category_id: String(itemToBlacklist.category_id), brand_id: String(itemToBlacklist.brand_id), }; delete payload.country; delete payload.category; delete payload.brand; try { await dispatch(editRowDataAction(payload)).unwrap(); toast.push(<Notification title="Raw Data Blacklisted" type="warning" duration={2000}>{`Entry "${itemToBlacklist.name || itemToBlacklist.mobile_no}" blacklisted.`}</Notification>); refreshData(); } catch (e: any) { toast.push(<Notification title="Blacklist Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>); } finally { setIsBlacklisting(false); setItemToBlacklist(null); } };
+  const onConfirmBlacklist = async () => { if (!itemToBlacklist) return; setIsBlacklisting(true); setBlacklistConfirmOpen(false); const payload: any = { ...itemToBlacklist, status: "Blacklist", country_id: String(itemToBlacklist.country_id), category_id: String(itemToBlacklist.category_id), brand_id: String(itemToBlacklist.brand_id), }; delete payload.country; delete payload.category; delete payload.brand; try { await dispatch(editRowDataAction(payload)).unwrap(); toast.push(<Notification title="Raw Data Blacklisted" type="warning" duration={2000}>{`Entry "${itemToBlacklist.name || itemToBlacklist.mobile_no}" blacklisted.`}</Notification>); refreshAfterAction(); } catch (e: any) { toast.push(<Notification title="Blacklist Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>); } finally { setIsBlacklisting(false); setItemToBlacklist(null); } };
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-
-  const onClearFilters = useCallback(() => {
-    const defaultFilters = {};
-    filterFormMethods.reset(defaultFilters);
-    setFilterCriteria(defaultFilters);
-    setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
-    setIsFilterDrawerOpen(false);
-    refreshData();
-  }, [filterFormMethods, refreshData]);
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
     setFilterCriteria(prev => ({ ...data, specialFilter: prev.specialFilter }));
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
     closeFilterDrawer();
   }, [closeFilterDrawer]);
+  
+  const onClearFilters = useCallback(() => {
+    const defaultFilters = {};
+    filterFormMethods.reset(defaultFilters);
+    setFilterCriteria(defaultFilters);
+    setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
+    setIsFilterDrawerOpen(false);
+  }, [filterFormMethods]);
 
   const handleCardClick = (value?: 'all' | 'today' | 'duplicate' | string) => {
-    onClearFilters();
+    let newFilters: FilterFormData = {};
     if (value && value !== 'all') {
       if (value === 'today' || value === 'duplicate') {
-        setFilterCriteria({ specialFilter: value });
-        return;
-      }
-      const qualityOption = QUALITY_LEVELS_UI.find(opt => opt.value === value);
-      if (qualityOption) {
-        setFilterCriteria({ filterQuality: [qualityOption] });
-        return;
-      }
-      const statusOption = STATUS_OPTIONS_UI.find(opt => opt.value === value);
-      if (statusOption) {
-        setFilterCriteria({ filterStatus: [statusOption] });
+        newFilters = { specialFilter: value };
+      } else {
+        const qualityOption = QUALITY_LEVELS_UI.find(opt => opt.value === value);
+        if (qualityOption) {
+            newFilters = { filterQuality: [qualityOption] };
+        } else {
+            const statusOption = STATUS_OPTIONS_UI.find(opt => opt.value === value);
+            if (statusOption) {
+                newFilters = { filterStatus: [statusOption] };
+            }
+        }
       }
     }
+    filterFormMethods.reset(newFilters);
+    setFilterCriteria(newFilters);
+    setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" })); // Reset pagination & search
   };
 
   const handleRemoveFilter = (key: keyof FilterFormData, value: string) => {
@@ -491,51 +537,8 @@ const RowDataListing = () => {
     setTableData(prev => ({ ...prev, pageIndex: 1 }));
   };
 
-  const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
-    const sourceData: RowDataItem[] = Array.isArray(rowData?.data) ? rowData?.data : [];
-    let processedData: RowDataItem[] = cloneDeep(sourceData);
-
-    if (filterCriteria.specialFilter === 'today') {
-      const todayStr = new Date().toISOString().split('T')[0];
-      processedData = processedData.filter(item => item.created_at && item.created_at.startsWith(todayStr));
-    } else if (filterCriteria.specialFilter === 'duplicate') {
-      const mobileCounts = sourceData.reduce((acc, item) => {
-        if (item.mobile_no) {
-          acc[item.mobile_no] = (acc[item.mobile_no] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-      const duplicateMobiles = new Set(Object.keys(mobileCounts).filter(mobile => mobileCounts[mobile] > 1));
-      processedData = processedData.filter(item => item.mobile_no && duplicateMobiles.has(item.mobile_no));
-    }
-
-    if (filterCriteria.filterCountry?.length) processedData = processedData.filter((item) => filterCriteria.filterCountry!.some((fc) => fc.value === String(item.country_id)));
-    if (filterCriteria.filterCategory?.length) processedData = processedData.filter((item) => filterCriteria.filterCategory!.some((fc) => fc.value === String(item.category_id)));
-    if (filterCriteria.filterBrand?.length) processedData = processedData.filter((item) => filterCriteria.filterBrand!.some((fb) => fb.value === String(item.brand_id)));
-    if (filterCriteria.filterStatus?.length) processedData = processedData.filter((item) => filterCriteria.filterStatus!.some((fs) => fs.value === item.status));
-    if (filterCriteria.filterQuality?.length) processedData = processedData.filter((item) => filterCriteria.filterQuality!.some((fq) => fq.value === item.quality));
-
-    if (tableData.query && tableData.query.trim() !== "") {
-      const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item) => String(item.id).toLowerCase().includes(query) || item.mobile_no.toLowerCase().includes(query) || (item.email && item.email.toLowerCase().includes(query)) || item.name.toLowerCase().includes(query) || (item.company_name && item.company_name.toLowerCase().includes(query)) || (item.city && item.city.toLowerCase().includes(query)) || (item.country?.name?.toLowerCase() || String(item.country_id)).includes(query) || (item.category?.name?.toLowerCase() || String(item.category_id)).includes(query) || (item.brand?.name?.toLowerCase() || String(item.brand_id)).includes(query) || (item.updated_by_name?.toLowerCase() ?? "").includes(query));
-    }
-    const { order, key } = tableData.sort as OnSortParam;
-    const validSortKeys: (keyof RowDataItem | "countryName" | "categoryName" | "brandName")[] = ["id", "name", "mobile_no", "email", "status", "quality", "created_at", "updated_at", "country_id", "category_id", "brand_id", "updated_by_name"];
-    if (order && key && validSortKeys.includes(String(key) as any)) {
-      processedData.sort((a, b) => {
-        let aVal: any, bVal: any;
-        if (key === "created_at" || key === "updated_at") { const dateA = a[key as "created_at" | "updated_at"] ? new Date(a[key as "created_at" | "updated_at"]!).getTime() : 0; const dateB = b[key as "created_at" | "updated_at"] ? new Date(b[key as "created_at" | "updated_at"]!).getTime() : 0; return order === "asc" ? dateA - dateB : dateB - dateA; }
-        else if (key === "country_id") { aVal = a.country?.name; bVal = b.country?.name; }
-        else if (key === "category_id") { aVal = a.category?.name; bVal = b.category?.name; }
-        else if (key === "brand_id") { aVal = a.brand?.name; bVal = b.brand?.name; }
-        else { aVal = a[key as keyof RowDataItem] ?? ""; bVal = b[key as keyof RowDataItem] ?? ""; }
-        if (typeof aVal === "number" && typeof bVal === "number") return order === "asc" ? aVal - bVal : bVal - aVal;
-        return order === "asc" ? String(aVal ?? "").localeCompare(String(bVal ?? "")) : String(bVal ?? "").localeCompare(String(aVal ?? ""));
-      });
-    }
-    const currentTotal = processedData.length; const pageIndex = tableData.pageIndex as number; const pageSize = tableData.pageSize as number; const startIndex = (pageIndex - 1) * pageSize;
-    return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
-  }, [rowData?.data, tableData, filterCriteria]);
+  const pageData = rowData?.data?.data || [];
+  const total = rowData?.data?.total || 0;
 
   const activeFilterCount = useMemo(() => {
     const normalFilterCount = Object.values(filterCriteria)
@@ -545,8 +548,39 @@ const RowDataListing = () => {
     return normalFilterCount + specialFilterCount;
   }, [filterCriteria]);
 
-  const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
-  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const moduleName = "Raw Data Management"; const date = new Date().toISOString().split("T")[0]; const fileName = `raw-data_${date}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap(); toast.push(<Notification title="Export Reason Submitted" type="success" />); exportRowDataToCsvLogic(fileName, allFilteredAndSortedData, countryOptions, categoryOptions, brandOptions); toast.push(<Notification title="Data Exported" type="success">Row data exported.</Notification>); setIsExportReasonModalOpen(false); } catch (error: any) { toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />); } finally { setIsSubmittingExportReason(false); } };
+  const handleOpenExportReasonModal = () => { if (!total || total === 0) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
+  
+  const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Raw Data Management";
+    const date = new Date().toISOString().split("T")[0];
+    const fileName = `raw-data_${date}.csv`;
+
+    try {
+        await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+        toast.push(<Notification title="Export Reason Submitted" type="success" />);
+        toast.push(<Notification title="Preparing Export" type="info" duration={4000}>Fetching all matching data. This may take a moment...</Notification>);
+        
+        // Assume getRowDataAction with export params returns all matching data
+        const resultAction = await dispatch(getRowDataAction(getApiParams(true))).unwrap();
+        const allDataToExport = resultAction.data;
+
+        if (!allDataToExport || allDataToExport.length === 0) {
+            toast.push(<Notification title="No Data" type="info">Nothing to export for the current filters.</Notification>);
+            return;
+        }
+
+        exportRowDataToCsvLogic(fileName, allDataToExport, countryOptions, categoryOptions, brandOptions);
+        toast.push(<Notification title="Data Exported" type="success">Raw data exported successfully.</Notification>);
+        setIsExportReasonModalOpen(false);
+
+    } catch (error: any) {
+        toast.push(<Notification title="Operation Failed" type="danger" message={error.message || "Could not complete export."} />);
+    } finally {
+        setIsSubmittingExportReason(false);
+    }
+  };
+
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
   const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
   const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); setSelectedItems([]); }, [handleSetTableData]);
@@ -554,20 +588,16 @@ const RowDataListing = () => {
   const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
   const handleRowSelect = useCallback((checked: boolean, row: RowDataItem) => { setSelectedItems((prev) => { if (checked) return prev.some((item) => item.id === row.id) ? prev : [...prev, row]; return prev.filter((item) => item.id !== row.id); }); }, []);
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<RowDataItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) { setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => r.id && !pSIds.has(r.id)); return [...pS, ...nRTA]; }); } else { const cPRIds = new Set(cPOR.map((r) => r.id).filter((id) => id !== undefined)); setSelectedItems((pS) => pS.filter((i) => i.id && !cPRIds.has(i.id))); } }, []);
-
-  const mobileNoCount: Record<string, number> = {};
-  pageData.forEach((item) => { if (item.mobile_no) { mobileNoCount[item.mobile_no] = (mobileNoCount[item.mobile_no] || 0) + 1; } });
-
+  
   const columns: ColumnDef<RowDataItem>[] = useMemo(() => [
-    { header: "Name", accessorKey: "name", enableSorting: true, size: 160, cell: (props) => { const mobileNo = props.row.original.mobile_no; const isDuplicate = mobileNo && mobileNoCount[mobileNo] > 1; return (<><span className="text-xs font-semibold">ROW-{props.row.original.id.toString().padStart(7, '0')} <br/> {props.row.original.name}</span><br/><div className="text-xs">{props.row.original.mobile_no}{isDuplicate && (<Tag className="bg-red-200 text-red-600 text-xs w-fit px-2 py-0.5 rounded-md border border-red-300 dark:border-red-700">Duplicate</Tag>)}</div></>) }, },
+    { header: "Name", accessorKey: "name", enableSorting: true, size: 160, cell: (props) => (<><span className="text-xs font-semibold">ROW-{props.row.original.id.toString().padStart(7, '0')} <br/> {props.row.original.name}</span><br/><div className="text-xs">{props.row.original.mobile_no}</div></>) },
     { header: "Country", accessorKey: "country_id", enableSorting: true, size: 160, cell: (props) => props.row.original.country?.name || String(props.getValue()), },
     { header: "Category", accessorKey: "category_id", enableSorting: true, size: 170, cell: (props) => props.row.original.category?.name || String(props.getValue()), },
     { header: "Brand", accessorKey: "brand_id", enableSorting: true, size: 160, cell: (props) => props.row.original.brand?.name || String(props.getValue()), },
     { header: "Quality", accessorKey: "quality", enableSorting: true, size: 100, cell: (props) => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find((q) => q.value === qVal); return (<Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100 border border-green-300 dark:border-green-700", qVal === "B" && "bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-100 border border-orange-300 dark:border-orange-700", qVal === "C" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100 border border-yellow-300 dark:border-yellow-700" , qVal === "D" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700")}>Grade: {qOpt?.label.split(" ")[1] || qVal}</Tag>); }, },
     { header: "Status", accessorKey: "status", enableSorting: true, size: 110, cell: (props) => { const sVal = props.getValue<string>(); const sOpt = STATUS_OPTIONS_UI.find((s) => s.value === sVal); return (<Tag className={classNames("capitalize", statusColors[sVal])}>{sOpt?.label || sVal}</Tag>); }, },
-    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, cell: (props) => { const { updated_at, name, roles } = props?.row?.original.updated_by_user; return (<div className="text-xs"><span>{name || "N/A"}{roles && (<><br /><b>{roles[0]?.display_name}</b></>)}</span><br /><span>{formatDate(updated_at)}</span></div>); }, },
     { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn item={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onBlacklist={() => handleBlacklistClick(props.row.original)} />), },
-  ], [openEditDrawer, openViewDialog, handleDeleteClick, handleBlacklistClick, countryOptions, categoryOptions, brandOptions, mobileNoCount, formatDate]);
+  ], [openEditDrawer, openViewDialog, handleDeleteClick, handleBlacklistClick, countryOptions, categoryOptions, brandOptions]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<RowDataItem>[]>(columns);
 
@@ -597,7 +627,7 @@ const RowDataListing = () => {
     try {
       await dispatch(importRowDataAction(formData)).unwrap();
       toast.push(<Notification title="Import Initiated" type="success" duration={2000}>File uploaded. Processing will continue.</Notification>);
-      refreshData();
+      refreshAfterAction();
       closeImportModal();
     } catch (apiError: any) {
       toast.push(<Notification title="Import Failed" type="danger" duration={3000}>{apiError.message || "Failed to import data."}</Notification>);
@@ -676,7 +706,7 @@ const RowDataListing = () => {
             else if (key === "quality") value = QUALITY_LEVELS_UI.find((q) => q.value === value)?.label || String(value);
             else if (key === "status") value = STATUS_OPTIONS_UI.find((s) => s.value === value)?.label || String(value);
             else if ((key === "created_at" || key === "updated_at") && value) { value = formatDate(value); }
-            else if (key === "created_by" || key === "updated_by" ){ return }
+            else if (key === "created_by" || key === "updated_by" ){ return null }
             else if( key === "created_by_user" ) value = value?.name
             else if( key === "updated_by_user" ) value = value?.name
             value = value === null || value === undefined || value === "" ? (<span className="text-gray-400">-</span>) : (String(value));
