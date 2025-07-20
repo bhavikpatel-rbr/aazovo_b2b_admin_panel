@@ -40,6 +40,7 @@ import {
   Select,
   Spinner,
   Table,
+  Skeleton, // Added Skeleton
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Notification from "@/components/ui/Notification";
@@ -2691,14 +2692,14 @@ const ExpandedOpportunityDetails: React.FC<{
               text={item.member_type}
               className="ml-5 text-indigo-600 dark:text-indigo-400 font-medium"
             />
-            <InfoLine icon={<TbFlag size={14} />} text={item.country} />
+            <InfoLine icon={<TbFlag size={13} />} text={item.country} />
             <InfoLine
-              icon={<TbBriefcase size={14} />}
+              icon={<TbBriefcase size={13} />}
               text={item.member_business_type}
             />
             {item.email && (
               <InfoLine
-                icon={<TbMail size={14} />}
+                icon={<TbMail size={13} />}
                 text={
                   <a
                     href={`mailto:${item.email}`}
@@ -2711,7 +2712,7 @@ const ExpandedOpportunityDetails: React.FC<{
             )}
             {item.mobile_no && (
               <InfoLine
-                icon={<TbPhone size={14} />}
+                icon={<TbPhone size={13} />}
                 text={
                   <div className="flex items-center gap-1.5">
                     <span>{item.mobile_no}</span>
@@ -3197,6 +3198,7 @@ const ExpandedAutoSpbDetails: React.FC<ExpandedAutoSpbDetailsProps> = ({
 const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const [initialLoading, setInitialLoading] = useState(true);
   // SERVER-SIDE CHANGE: Switched from 'Opportunities' to 'opportunitiesList' to get paginated data
   const {
     autoMatchData,
@@ -3312,57 +3314,70 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   // SERVER-SIDE CHANGE: This effect now orchestrates the server-side data fetching.
   useEffect(() => {
-    const fetchInitialData = () => {
-        dispatch(getAllUsersAction());
-        dispatch(getAutoMatchDataAction());
-    };
-    
-    const fetchOpportunitiesData = () => {
-        if (currentTab === TABS.AUTO_MATCH) {
-            // Auto-match tab uses a different data source and is handled client-side
-            return;
-        }
-
-        const tableData = tableQueries[currentTab];
+    const fetchOpportunitiesData = (tab: string) => {
+        const tableData = tableQueries[tab];
         if (!tableData) return;
 
-        // Construct the payload for the API call from table queries and filters
-        const payload = {
+        const payload: any = {
             page: tableData.pageIndex,
             per_page: tableData.pageSize,
             sort_field: (tableData.sort as ColumnSort).key,
             sort_order: (tableData.sort as ColumnSort).order,
             search: tableData.query,
-            status: filters.statuses,
-            assigned_to: filters.assignedTo,
-            member_type: filters.memberTypes,
-            continent: filters.continents,
-            country: filters.countries,
+            status: filters.statuses.join(','),
+            assigned_to: filters.assignedTo.join(','),
+            member_type: filters.memberTypes.join(','),
+            continent: filters.continents.join(','),
+            country: filters.countries.join(','),
             state: filters.states,
             city: filters.cities,
             pincode: filters.pincodes,
             kyc_verified: filters.kycVerified,
-            category: filters.categories,
-            sub_category: filters.subCategories,
-            brand: filters.brands,
-            product: filters.products,
-            product_status: filters.productStatuses,
-            product_spec: filters.productSpecs,
-            want_to: filters.wantTo,
+            category: filters.categories.join(','),
+            sub_category: filters.subCategories.join(','),
+            brand: filters.brands.join(','),
+            product: filters.products.join(','),
+            product_status: filters.productStatuses.join(','),
+            product_spec: filters.productSpecs.join(','),
         };
-
-        if (currentTab === TABS.SELLER) {
-            payload.want_to = ['Sell'];
-        } else if (currentTab === TABS.BUYER) {
-            payload.want_to = ['Buy'];
+        
+        let want_to_filter = [...filters.wantTo];
+        if (tab === TABS.SELLER) {
+            want_to_filter = ['Sell'];
+        } else if (tab === TABS.BUYER) {
+            want_to_filter = ['Buy'];
         }
+        payload.want_to = want_to_filter.join(',');
 
         dispatch(getOpportunitieslistingAction(payload));
     };
-
-    fetchInitialData();
-    fetchOpportunitiesData();
-  }, [dispatch, currentTab, tableQueries, filters]);
+    
+    if(!initialLoading) {
+      if (currentTab === TABS.AUTO_MATCH) {
+          dispatch(getAutoMatchDataAction());
+          return;
+      }
+      fetchOpportunitiesData(currentTab);
+    }
+  }, [dispatch, currentTab, tableQueries, filters, initialLoading]);
+  
+  useEffect(() => {
+      const fetchInitialData = async () => {
+          setInitialLoading(true);
+          try {
+              await Promise.all([
+                  dispatch(getAllUsersAction()),
+                  dispatch(getAutoMatchDataAction()),
+                  dispatch(getOpportunitieslistingAction({ page: 1, per_page: 10 }))
+              ]);
+          } catch (error) {
+              console.error("Failed to fetch initial data:", error);
+          } finally {
+              setInitialLoading(false);
+          }
+      };
+      fetchInitialData();
+  }, [dispatch]);
   
 
   const mappedOpportunities = useMemo(() => {
@@ -4252,6 +4267,29 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex items-center gap-3 p-3";
 
+  const renderCardContent = (content: number | undefined) => {
+    if (initialLoading) {
+      return <Skeleton width={40} height={24} />;
+    }
+    return <h6 className="text-base font-semibold">{content ?? 0}</h6>;
+  };
+  
+  const skeletonColumns: ColumnDef<OpportunityItem>[] = useMemo(() =>
+    columns.map((column) => {
+        if (column.id === 'expander' || column.id === 'select') {
+            return { ...column, cell: () => null };
+        }
+        return {
+            ...column,
+            cell: () => <Skeleton height={40} className="my-2" />,
+        };
+    }),
+  [columns]);
+
+  const skeletonData = useMemo(() =>
+    Array.from({ length: currentTableData.pageSize as number }, (_, i) => ({ id: `skeleton-${i}` }) as any),
+  [currentTableData.pageSize]);
+
   return (
     <>
       <Container className="h-auto">
@@ -4265,112 +4303,56 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           {!isDashboard && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <Tooltip title="Click to show all opportunities">
-                {" "}
                 <div onClick={() => handleCardClick("all")}>
-                  {" "}
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(
-                      cardClass,
-                      "border-blue-200 dark:border-blue-700"
-                    )}
-                  >
-                    {" "}
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200 dark:border-blue-700")}>
                     <div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100">
-                      {" "}
-                      <TbUsers size={24} />{" "}
-                    </div>{" "}
+                      <TbUsers size={24} />
+                    </div>
                     <div>
-                      {" "}
-                      <h6 className="text-base font-semibold">
-                        {" "}
-                        {statusCounts.total}{" "}
-                      </h6>{" "}
-                      <span className="text-xs">Total</span>{" "}
-                    </div>{" "}
-                  </Card>{" "}
-                </div>{" "}
+                      {renderCardContent(statusCounts.total)}
+                      <span className="text-xs">Total</span>
+                    </div>
+                  </Card>
+                </div>
               </Tooltip>
               <Tooltip title="Click to show active opportunities">
-                {" "}
                 <div onClick={() => handleCardClick("active")}>
-                  {" "}
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(
-                      cardClass,
-                      "border-emerald-200 dark:border-emerald-700"
-                    )}
-                  >
-                    {" "}
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200 dark:border-emerald-700")}>
                     <div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100">
-                      {" "}
-                      <TbCircleCheck size={24} />{" "}
-                    </div>{" "}
+                      <TbCircleCheck size={24} />
+                    </div>
                     <div>
-                      {" "}
-                      <h6 className="text-base font-semibold">
-                        {" "}
-                        {statusCounts.active}{" "}
-                      </h6>{" "}
-                      <span className="text-xs">Active</span>{" "}
-                    </div>{" "}
-                  </Card>{" "}
-                </div>{" "}
+                      {renderCardContent(statusCounts.active)}
+                      <span className="text-xs">Active</span>
+                    </div>
+                  </Card>
+                </div>
               </Tooltip>
               <Tooltip title="Click to show pending opportunities">
-                {" "}
                 <div onClick={() => handleCardClick("pending")}>
-                  {" "}
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(
-                      cardClass,
-                      "border-yellow-200 dark:border-yellow-700"
-                    )}
-                  >
-                    {" "}
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200 dark:border-yellow-700")}>
                     <div className="p-2 rounded-md bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100">
-                      {" "}
-                      <TbClockHour4 size={24} />{" "}
-                    </div>{" "}
+                      <TbClockHour4 size={24} />
+                    </div>
                     <div>
-                      {" "}
-                      <h6 className="text-base font-semibold">
-                        {" "}
-                        {statusCounts.pending}{" "}
-                      </h6>{" "}
-                      <span className="text-xs">Pending</span>{" "}
-                    </div>{" "}
-                  </Card>{" "}
-                </div>{" "}
+                      {renderCardContent(statusCounts.pending)}
+                      <span className="text-xs">Pending</span>
+                    </div>
+                  </Card>
+                </div>
               </Tooltip>
               <Tooltip title="Click to show on-hold opportunities">
-                {" "}
                 <div onClick={() => handleCardClick("on_hold")}>
-                  {" "}
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(
-                      cardClass,
-                      "border-gray-200 dark:border-gray-600"
-                    )}
-                  >
-                    {" "}
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-gray-200 dark:border-gray-600")}>
                     <div className="p-2 rounded-md bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100">
-                      {" "}
-                      <TbMinus size={24} />{" "}
-                    </div>{" "}
+                      <TbMinus size={24} />
+                    </div>
                     <div>
-                      {" "}
-                      <h6 className="text-base font-semibold">
-                        {" "}
-                        {statusCounts.on_hold}{" "}
-                      </h6>{" "}
-                      <span className="text-xs">On Hold</span>{" "}
-                    </div>{" "}
-                  </Card>{" "}
-                </div>{" "}
+                      {renderCardContent(statusCounts.on_hold)}
+                      <span className="text-xs">On Hold</span>
+                    </div>
+                  </Card>
+                </div>
               </Tooltip>
             </div>
           )}
@@ -4391,9 +4373,9 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                         ? "border-primary-500 text-primary-600 dark:border-primary-400 dark:text-primary-400"
                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
                     )}
+                    disabled={initialLoading}
                   >
-                    {" "}
-                    {tab.replace("_opportunities", "").replace("_", " ")}{" "}
+                    {tab.replace("_opportunities", "").replace("_", " ")}
                   </button>
                 )
               )}
@@ -4420,44 +4402,60 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
             />
           )}
           <div className="flex-grow overflow-auto">
-            <DataTableComponent
-              selectable={!isDashboard}
-              columns={columns}
-              data={pageData}
-              loading={isLoading}
-              pagingData={{
-                total,
-                pageIndex: currentTableData.pageIndex as number,
-                pageSize: currentTableData.pageSize as number,
-              }}
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort}
-              onCheckBoxChange={handleRowSelect}
-              onIndeterminateCheckBoxChange={handleAllRowSelect}
-              checkboxChecked={(row: OpportunityItem) =>
-                currentSelectedItems.some(
-                  (selected: OpportunityItem) => selected.id === row.id
-                )
-              }
-              state={{ expanded, columnVisibility }}
-              onExpandedChange={setExpanded}
-              onColumnVisibilityChange={setColumnVisibility}
-              getRowCanExpand={() => !isDashboard}
-              renderRowSubComponent={({ row }: { row: Row<OpportunityItem> }) =>
-                currentTab === TABS.AUTO_MATCH ? (
-                  <ExpandedAutoSpbDetails
-                    row={row}
-                  />
-                ) : (
-                  <ExpandedOpportunityDetails
-                    row={row}
-                    currentTab={currentTab}
-                  />
-                )
-              }
-              noData={!isLoading && pageData.length === 0}
-            />
+            {initialLoading ? (
+               <DataTableComponent
+                  columns={skeletonColumns}
+                  data={skeletonData}
+                  selectable={false}
+                  pagingData={{
+                      total: currentTableData.pageSize as number,
+                      pageIndex: 1,
+                      pageSize: currentTableData.pageSize as number,
+                  }}
+                  onPaginationChange={() => {}}
+                  onSelectChange={() => {}}
+                  onSort={() => {}}
+               />
+            ) : (
+              <DataTableComponent
+                selectable={!isDashboard}
+                columns={columns}
+                data={pageData}
+                loading={isLoading && !initialLoading}
+                pagingData={{
+                  total,
+                  pageIndex: currentTableData.pageIndex as number,
+                  pageSize: currentTableData.pageSize as number,
+                }}
+                onPaginationChange={handlePaginationChange}
+                onSelectChange={handleSelectChange}
+                onSort={handleSort}
+                onCheckBoxChange={handleRowSelect}
+                onIndeterminateCheckBoxChange={handleAllRowSelect}
+                checkboxChecked={(row: OpportunityItem) =>
+                  currentSelectedItems.some(
+                    (selected: OpportunityItem) => selected.id === row.id
+                  )
+                }
+                state={{ expanded, columnVisibility }}
+                onExpandedChange={setExpanded}
+                onColumnVisibilityChange={setColumnVisibility}
+                getRowCanExpand={() => !isDashboard}
+                renderRowSubComponent={({ row }: { row: Row<OpportunityItem> }) =>
+                  currentTab === TABS.AUTO_MATCH ? (
+                    <ExpandedAutoSpbDetails
+                      row={row}
+                    />
+                  ) : (
+                    <ExpandedOpportunityDetails
+                      row={row}
+                      currentTab={currentTab}
+                    />
+                  )
+                }
+                noData={!isLoading && pageData.length === 0}
+              />
+            )}
           </div>
         </AdaptiveCard>
         {!isDashboard && (
