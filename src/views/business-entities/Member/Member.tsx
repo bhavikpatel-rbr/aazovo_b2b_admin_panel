@@ -907,7 +907,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
             <span><b>Business Type: </b>{business_type || 'N/A'}</span>
             <span className="flex items-center gap-1 truncate">
               <Tooltip title="View Dynamic Profiles"><TbInfoCircle size={16} className="text-blue-500 cursor-pointer flex-shrink-0" onClick={() => setIsOpen(true)} /></Tooltip>
-              <b>Brands: </b><span className="truncate">{brandDisplay}</span>
+              <b>View Dynamic Profiles</b>
             </span>
             <span><b>Interested: </b>{interested_in || 'N/A'}</span>
             <Dialog width={620} isOpen={isOpen} onClose={() => setIsOpen(false)}>

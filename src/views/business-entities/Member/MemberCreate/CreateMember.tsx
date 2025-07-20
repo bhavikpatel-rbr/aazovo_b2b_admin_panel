@@ -164,7 +164,7 @@ export interface MemberFormSchema {
   favourite_product_id?: Array<{ label: string; value: string }>;
   business_opportunity?: Array<{ label: string; value: string }>;
   member_grade?: string | { label: string; value: string };
-  relationship_manager?: string | { label: string; value: string };
+  relationship_manager_id?: string | { label: string; value: string };
   remarks?: string;
   linkedin_profile?: string;
   facebook_profile?: string;
@@ -246,7 +246,7 @@ interface ApiSingleCustomerItem {
   favourite_products?: string;
   business_opportunity?: string;
   member_grade?: string;
-  relationship_manager?: string;
+  relationship_manager_id?: string;
   remarks?: string;
   linkedin_profile?: string;
   facebook_profile?: string;
@@ -500,10 +500,10 @@ const transformApiToFormSchema = (
       allSubCategories
     ),
     member_grade: toSelectOption(formData.member_grade),
-    relationship_manager: formData.relationship_manager
+    relationship_manager: formData.relationship_manager_id
       ? {
-        value: String(formData.relationship_manager.id),
-        label: formData.relationship_manager.name,
+        value: String(formData.relationship_manager_id.id),
+        label: formData.relationship_manager_id.name,
       }
       : undefined,
     dealing_in_bulk: formData.dealing_in_bulk || "No",
@@ -615,7 +615,7 @@ const preparePayloadForApi = (
     interested_category_ids: formData.interested_category_ids?.map(c => getValue(c)) || [],
     interested_subcategory_ids: formData.interested_subcategory_ids?.map(sc => getValue(sc)) || [],
     member_grade: getValue(formData.member_grade) || null,
-    relationship_manager: getValue(formData.relationship_manager) || null,
+    relationship_manager: getValue(formData.relationship_manager_id) || null,
     dealing_in_bulk: formData.dealing_in_bulk || "No",
     remarks: formData.remarks || "",
     product_upload_permission: formData.product_upload_permission ? "1" : "0",
@@ -2173,16 +2173,17 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
         </FormItem>
         <FormItem
           label="Relationship Manager"
-          invalid={!!errors.relationship_manager}
-          errorMessage={errors.relationship_manager?.message as string}
+          invalid={!!errors.relationship_manager_id}
+          errorMessage={errors.relationship_manager_id?.message as string}
         >
           <Controller
-            name="relationship_manager"
+            name="relationship_manager_id"
             control={control}
             render={({ field }) => (
               <Select
                 {...field}
                 placeholder="Select RM"
+                value={managerOptions.find((o) => o.value === field.value)}
                 options={managerOptions}
                 isClearable
               />
@@ -3187,7 +3188,7 @@ const MemberCreate = () => {
     favourite_product_id: [],
     business_opportunity: [],
     member_grade: undefined,
-    relationship_manager: undefined,
+    relationship_manager_id: undefined,
     remarks: "",
     linkedin_profile: "",
     facebook_profile: "",
