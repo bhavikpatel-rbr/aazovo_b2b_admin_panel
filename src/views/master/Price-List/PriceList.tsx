@@ -1064,12 +1064,16 @@ const PriceList = () => {
     [BrandData]
   );
   const getAllUserDataOptions = useMemo(
+
     () =>
       Array.isArray(getAllUserData)
-        ? getAllUserData.map((b) => ({ value: b.id, label: b.name }))
+        ? getAllUserData.map((b) => ({ value: b.id, label:`(${b.employee_id}) - ${b.name || 'N/A'}`  }))
         : [],
     [getAllUserData]
   );
+
+  console.log("getAllUserData",getAllUserData);
+  
 
   useEffect(() => {
     dispatch(getPriceListAction());
