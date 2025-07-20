@@ -1,3 +1,5 @@
+// src/views/members/MemberFormPage.tsx
+
 import { useAppDispatch } from "@/reduxtool/store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
@@ -442,27 +444,24 @@ const transformApiToFormSchema = (
     name: formData.name || "",
     email: formData.email || "",
     mobile_no: formData.number || "",
-    contact_country_code: createCountryCodeOption(formData.customer_code),
+    contact_country_code: createCountryCodeOption(formData.number_code),
     company_name_temp: formData.company_temp || "",
     company_name: formData.company_actual || "",
     status: toSelectOption(formData.status),
 
-    // The code expects resolved objects (e.g., formData.country). The sample JSON has only IDs.
-    // We'll keep the existing logic, which safely results in an empty field if the object isn't present.
-    // The user can then select the value from the dropdown.
     continent_id: formData.continent
       ? { value: String(formData.continent.id), label: formData.continent.name }
-      : undefined,
+      : { value: String(formData.continent_id), label: 'Loading...' },
     country_id: formData.country
       ? { value: String(formData.country.id), label: formData.country.name }
-      : undefined,
+      : { value: String(formData.country_id), label: 'Loading...' },
     state: formData.state || "",
     city: formData.city || "",
     pincode: formData.pincode || "",
     address: formData.address || "",
 
     // Contact & Social Info
-    whatsapp_number: formData.whatsApp_no || formData.whatsapp_no || "",
+    whatsapp_number: formData.whatsapp_no || "",
     whatsapp_country_code: createCountryCodeOption(
       formData.whatsapp_country_code
     ),
@@ -475,9 +474,8 @@ const transformApiToFormSchema = (
     alternate_email: formData.alternate_email || "",
     botim: formData.botim || "",
     skype: formData.skype || "",
-    we_chat: formData.we_chat || formData.wechat || "",
-    linkedin_profile:
-      formData.linkedin_profile || formData.linkedIn_profile || "",
+    we_chat: formData.we_chat || "",
+    linkedin_profile: formData.linkedin_profile || "",
     facebook_profile: formData.facebook_profile || "",
     instagram_profile: formData.instagram_profile || "",
     website: formData.website || "",
@@ -571,25 +569,24 @@ const transformApiToFormSchema = (
   };
 };
 
-
-// In src/views/members/MemberFormPage.tsx
-
 const preparePayloadForApi = (
   formData: Partial<MemberFormSchema>,
   isEditMode: boolean
 ): any => {
   const getValue = (field: any) => (typeof field === 'object' && field !== null && 'value' in field ? field.value : field);
 
+  console.log(formData,'formData');
+  
   const payload: any = {
-    // ... (all other personal/contact/etc. fields remain the same as before) ...
+    ...formData,
     id: formData.id,
     name: formData.name || "",
     number: formData.mobile_no || "",
-    customer_code: getValue(formData.contact_country_code) || null,
+    number_code: getValue(formData.contact_country_code) || null,
     email: formData.email || "",
     company_temp: formData.company_name_temp || "",
-    company_actual: formData.company_name || "",
-    company_code: formData.company_code || null, // New field added to payload
+    company_actual: getValue(formData.company_name) || "",
+    company_code: formData.company_code || null,
     status: getValue(formData.status) || null,
     continent_id: getValue(formData.continent_id) || null,
     country_id: getValue(formData.country_id) || null,
@@ -597,20 +594,20 @@ const preparePayloadForApi = (
     city: formData.city || "",
     pincode: formData.pincode || "",
     address: formData.address || "",
-    whatsApp_no: formData.whatsapp_number || "",
+    whatsapp_no: formData.whatsapp_number || null,
     whatsapp_country_code: getValue(formData.whatsapp_country_code) || null,
-    alternate_contact_number: formData.alternate_contact_number || "",
+    alternate_contact_number: formData.alternate_contact_number || null,
     alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,
-    landline_number: formData.landline_number || "",
-    fax_number: formData.fax_number || "",
-    alternate_email: formData.alternate_email || "",
-    botim: formData.botim || "",
-    skype: formData.skype || "",
-    wechat: formData.we_chat || "",
-    linkedIn_profile: formData.linkedin_profile || "",
-    facebook_profile: formData.facebook_profile || "",
-    instagram_profile: formData.instagram_profile || "",
-    website: formData.website || "",
+    landline_number: formData.landline_number || null,
+    fax_number: formData.fax_number || null,
+    alternate_email: formData.alternate_email || null,
+    // botim: formData.botim || null,
+    // skype: formData.skype || null,
+    // we_chat: formData.we_chat || null,
+    linkedin_profile: formData.linkedin_profile || null,
+    facebook_profile: formData.facebook_profile || null,
+    // instagram_profile: formData.instagram_profile || null,
+    website: formData.website || null,
     business_opportunity: formData.business_opportunity?.map(p => getValue(p)) || [],
     business_type: getValue(formData.business_type) || null,
     favourite_product_id: formData.favourite_product_id?.map(p => getValue(p)) || [],
@@ -622,38 +619,30 @@ const preparePayloadForApi = (
     dealing_in_bulk: formData.dealing_in_bulk || "No",
     remarks: formData.remarks || "",
     product_upload_permission: formData.product_upload_permission ? "1" : "0",
-    wall_enquiry_permission: getValue(formData.wall_enquiry_permission) || null, // Updated
-    trade_inquiry_allowed: getValue(formData.trade_inquiry_allowed) || null, // Updated
+    wall_enquiry_permission: getValue(formData.wall_enquiry_permission) || null,
+    trade_inquiry_allowed: getValue(formData.trade_inquiry_allowed) || null,
     membership_plan: formData.membership_plan_text || "",
     upgrade_your_plan: getValue(formData.upgrade_plan) || null,
     is_blacklisted: formData.is_blacklisted ? "1" : "0",
   };
 
-  // --- START: CORRECTED DYNAMIC MEMBER PROFILE PAYLOAD PREPARATION ---
   if (formData.member_profiles) {
     payload.dynamic_member_profiles = formData.member_profiles.map(formProfile => {
       const apiProfile: any = {
-        // Include the database ID if it exists (for updates)
         id: formProfile.db_id,
         member_type_id: getValue(formProfile.member_type),
         brand_id: formProfile.brands?.map(b => getValue(b)) || [],
         category_id: formProfile.categories?.map(c => getValue(c)) || [],
         sub_category_id: formProfile.sub_categories?.map(sc => getValue(sc)) || [],
       };
-
-      // The backend should ignore the 'id' field if it's undefined (for new profiles)
       if (apiProfile.id === undefined) {
         delete apiProfile.id;
       }
-
       return apiProfile;
     });
   }
-  // --- END: CORRECTED DYNAMIC MEMBER PROFILE PAYLOAD PREPARATION ---
 
-  if (!isEditMode && formData.password) {
-    payload.password = formData.password;
-  } else if (isEditMode && formData.password) {
+  if ((!isEditMode && formData.password) || (isEditMode && formData.password)) {
     payload.password = formData.password;
   }
 
@@ -3125,7 +3114,9 @@ const MemberCreate = () => {
   // --- START: CORRECTED STATE MANAGEMENT ---
   const {
     ParentCategories = [],
-    subCategoriesForSelectedCategoryData = []
+    subCategoriesForSelectedCategoryData = [],
+    CountriesData = [],
+    ContinentsData = []
   } = useSelector(masterSelector, shallowEqual);
 
   const [initialData, setInitialData] = useState<Partial<MemberFormSchema> | null>(null);
@@ -3232,7 +3223,7 @@ const MemberCreate = () => {
             // After fetching member, fetch their actual company info
             await dispatch(getActualCompanyAction(id));
 
-            const apiMemberData: ApiSingleCustomerItem = response;
+            const apiMemberData: any = response;
 
             // Pass the master data arrays to the transformer function for lookups
             const transformed = transformApiToFormSchema(
@@ -3240,6 +3231,21 @@ const MemberCreate = () => {
               ParentCategories,
               subCategoriesForSelectedCategoryData
             );
+            
+            // Post-transformation processing to resolve IDs to full objects for Selects
+            if (apiMemberData.country_id && CountriesData.length) {
+                const country = CountriesData.find(c => String(c.id) === String(apiMemberData.country_id));
+                if (country) {
+                    transformed.country_id = { value: String(country.id), label: country.name };
+                }
+            }
+             if (apiMemberData.continent_id && ContinentsData.length) {
+                const continent = ContinentsData.find(c => String(c.id) === String(apiMemberData.continent_id));
+                if (continent) {
+                    transformed.continent_id = { value: String(continent.id), label: continent.name };
+                }
+            }
+
 
             setInitialData({ ...emptyForm, ...transformed });
           } else {
@@ -3267,7 +3273,7 @@ const MemberCreate = () => {
       };
 
       // Only fetch data if master data is available, to avoid race conditions
-      if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0) {
+      if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0 && CountriesData.length > 0 && ContinentsData.length > 0) {
         fetchMemberData();
       }
     } else {
@@ -3280,7 +3286,9 @@ const MemberCreate = () => {
     navigate,
     dispatch,
     ParentCategories,
-    subCategoriesForSelectedCategoryData
+    subCategoriesForSelectedCategoryData,
+    CountriesData,
+    ContinentsData
   ]);
   // --- END: CORRECTED useEffect ---
 
@@ -3294,7 +3302,7 @@ const MemberCreate = () => {
       isEditMode
     );
 
-    console.log(payload, "Payload to be sent to API", formValues);
+    console.log("Payload to be sent to API:", payload);
 
     try {
       if (isEditMode && id) {
