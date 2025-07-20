@@ -508,7 +508,7 @@ const MemberViewPage = () => {
                             <Tag className={`mt-2 ${statusColorMap[currentStatus] || ''} capitalize`}>{memberData.status}</Tag>
                             <div className="text-sm mt-2 space-y-1">
                                 <div className="flex items-center gap-2"><TbMail className="text-gray-400" /><p>{memberData.email || 'N/A'}</p></div>
-                                <div className="flex items-center gap-2"><TbPhone className="text-gray-400" /><p>{memberData.number_code} {memberData.number}</p></div>
+                                <div className="flex items-center gap-2"><TbPhone className="text-gray-400" /><p>{memberData.customer_code} {memberData.number}</p></div>
                                 <div className="flex items-center gap-2"><TbGlobe className="text-gray-400" /><p>{memberData.country?.name || 'N/A'}</p></div>
                             </div>
                         </div>

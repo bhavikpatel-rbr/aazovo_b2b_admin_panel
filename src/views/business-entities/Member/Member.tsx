@@ -90,7 +90,7 @@ export type FormItem = {
   customer_code: string;
   interested_in: string | null;
   number: string;
-  number_code: string;
+  customer_code: string;
   email: string;
   company_temp: string | null;
   company_actual: string | null;
@@ -194,7 +194,7 @@ const transformApiData = (apiResponse: any): { status: boolean; message: string;
         customer_code: apiItem.customer_code,
         interested_in: apiItem.interested_for,
         number: apiItem.mobile_no,
-        number_code: apiItem.phonecode,
+        customer_code: apiItem.phonecode,
         email: apiItem.email,
         company_temp: apiItem.company_name_tmp,
         company_actual: apiItem.company_name,
@@ -245,7 +245,7 @@ function exportToCsv(filename: string, rows: FormItem[]) {
   if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return false; }
   const CSV_HEADERS = ["Member ID", "Member Code", "Name", "Email", "Contact", "Status", "Company (Temp)", "Company (Actual)", "Business Type", "Business Opportunity", "Member Grade", "Interested In", "Country", "Profile Completion (%)", "Joined Date"];
   const preparedRows = rows.map(row => ({
-    id: row.id, customer_code: row.customer_code, name: row.name, email: row.email, contact: `${row.number_code || ''} ${row.number || ''}`.trim(), status: row.status, company_temp: row.company_temp || 'N/A', company_actual: row.company_actual || 'N/A', business_type: row.business_type || 'N/A', business_opportunity: row.business_opportunity || 'N/A', member_grade: row.member_grade || 'N/A', interested_in: row.interested_in || 'N/A', country: row.country?.name || 'N/A', profile_completion: row.profile_completion, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A'
+    id: row.id, customer_code: row.customer_code, name: row.name, email: row.email, contact: `${row.customer_code || ''} ${row.number || ''}`.trim(), status: row.status, company_temp: row.company_temp || 'N/A', company_actual: row.company_actual || 'N/A', business_type: row.business_type || 'N/A', business_opportunity: row.business_opportunity || 'N/A', member_grade: row.member_grade || 'N/A', interested_in: row.interested_in || 'N/A', country: row.country?.name || 'N/A', profile_completion: row.profile_completion, created_at: row.created_at ? dayjs(row.created_at).format('DD MMM YYYY') : 'N/A'
   }));
   const csvContent = [CSV_HEADERS.join(','), ...preparedRows.map(row => CSV_HEADERS.map(header => { const key = header.toLowerCase().replace(/ \(.+\)/, '').replace(/ /g, '_') as keyof typeof row; const cell = row[key] ?? ''; const cellString = String(cell).replace(/"/g, '""'); return `"${cellString}"`; }).join(','))].join('\n');
   const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
@@ -334,7 +334,7 @@ const ViewMemberDetailDialog: React.FC<{ member: FormItem; onClose: () => void; 
         <Card className="mb-4" bordered>
           <h6 className="mb-2 font-semibold">Contact Information</h6>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6">
-            {renderDetailItem("Primary Number", `${getDisplayValue(member.number_code)} ${getDisplayValue(member.number)}`)}
+            {renderDetailItem("Primary Number", `${getDisplayValue(member.customer_code)} ${getDisplayValue(member.number)}`)}
             {renderDetailItem("Email", getDisplayValue(member.email))}
             {renderDetailItem("WhatsApp", `${getDisplayValue(member.whatsapp_country_code)} ${getDisplayValue(member.whatsApp_no)}`)}
             {renderDetailItem("Alternate Number", `${getDisplayValue(member.alternate_contact_number_code)} ${getDisplayValue(member.alternate_contact_number)}`)}
@@ -709,7 +709,7 @@ const ActionColumn = ({ rowData, onOpenModal }: { rowData: FormItem; onOpenModal
       toast.push(<Notification type="warning" title="Missing Number" children="Primary contact number is not available." />);
       return;
     }
-    const fullNumber = (member.number_code || '').replace(/\D/g, '') + member.number.replace(/\D/g, '');
+    const fullNumber = (member.customer_code || '').replace(/\D/g, '') + member.number.replace(/\D/g, '');
     window.open(`https://wa.me/${fullNumber}`, '_blank');
   };
 
@@ -851,7 +851,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
           </div>
           <div className="text-xs text-gray-500 pl-10">
             <div>{row.original.email}</div>
-            <div>{row.original.number_code} {row.original.number}</div>
+            <div>{row.original.customer_code} {row.original.number}</div>
             <div>{row.original.country?.name}</div>
           </div>
         </div>
@@ -864,9 +864,9 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
 
         return (
           <div className="text-xs">
-            <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+            {company_actual && <div className="font-semibold text-emerald-600 dark:text-emerald-400">
               <b>Actual: </b>{company_code} | {company_actual}
-            </div>
+            </div>}
             <div className="font-semibold text-amber-600 dark:text-amber-400">
               <b>Temp: </b>{company_temp || "N/A"}
             </div>

@@ -119,7 +119,7 @@ interface ApiSingleCustomerItem {
   name?: string;
   email?: string;
   number?: string;
-  number_code?: string;
+  customer_code?: string;
   company_temp?: string;
   company_actual?: string;
   status?: string;
@@ -170,7 +170,7 @@ const transformApiToFormSchema = (formData: ApiSingleCustomerItem): Partial<Memb
         name: formData.name || "",
         email: formData.email || "",
         mobile_no: formData.number || "",
-        contact_country_code: createCountryCodeOption(formData.number_code),
+        contact_country_code: createCountryCodeOption(formData.customer_code),
         company_name_temp: formData.company_temp || "",
         company_name: formData.company_actual || "",
         status: toSelectOption(formData.status),
@@ -234,7 +234,7 @@ const preparePayloadForApi = (formData: Partial<MemberFormSchema>, isEditMode: b
         id: formData.id,
         name: formData.name || "",
         number: formData.mobile_no || "",
-        number_code: getValue(formData.contact_country_code) || null,
+        customer_code: getValue(formData.contact_country_code) || null,
         email: formData.email || "",
         company_temp: formData.company_name_temp || "",
         company_actual: formData.company_name || "",

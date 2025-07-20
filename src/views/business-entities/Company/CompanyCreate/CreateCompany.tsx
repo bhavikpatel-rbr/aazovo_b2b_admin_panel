@@ -1842,7 +1842,7 @@ const preparePayloadForApiAdd = (formData: MemberAddFormSchema): any => {
     password: formData.password,
     status: getValue(formData.status),
     number: formData.mobile_no,
-    number_code: getValue(formData.contact_country_code),
+    customer_code: getValue(formData.contact_country_code),
     country_id: getValue(formData.country_id),
     interested_category_ids: formData.interested_category_ids.map(c => getValue(c)),
     role_type: '0', // Assuming '0' corresponds to 'Member' role
