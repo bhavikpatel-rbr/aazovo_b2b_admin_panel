@@ -1,16 +1,16 @@
 // src/views/your-path/SubscribersListing.tsx
 
-import React, { useState, useMemo, useCallback, Ref, useEffect, ChangeEvent } from "react";
-import cloneDeep from "lodash/cloneDeep";
-import classNames from "classnames";
-import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import classNames from "classnames";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import cloneDeep from "lodash/cloneDeep";
+import React, { ChangeEvent, Ref, useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
@@ -18,96 +18,78 @@ dayjs.extend(isSameOrAfter);
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebounceInput from "@/components/shared/DebouceInput";
-import Select from "@/components/ui/Select";
 import {
+  Button,
+  Card,
+  Checkbox,
+  Dialog,
   Drawer,
+  Dropdown,
   Form,
   FormItem,
   Input,
-  Tag,
-  Dialog,
-  Dropdown,
-  Card,
-  Button,
-  Tooltip,
   Notification,
-  Checkbox,
-  Skeleton, // Skeleton Imported
+  Skeleton,
+  Tag,
+  Tooltip,
 } from "@/components/ui";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
 import Avatar from "@/components/ui/Avatar";
 import DatePicker from "@/components/ui/DatePicker";
+import Select from "@/components/ui/Select";
+import toast from "@/components/ui/toast";
 
 // Icons
-import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbPencil,
-  TbTrash,
-  TbChecks,
-  TbEye,
-  TbSearch,
-  TbFilter,
-  TbPlus,
-  TbUserCircle,
-  TbMail,
-  TbPhone,
-  TbBuilding,
-  TbMessageDots,
-  TbStar,
-  TbPaperclip,
-  TbToggleRight,
-  TbReload,
-  TbUser,
   TbBrandWhatsapp,
-  TbBell,
-  TbCalendarEvent,
-  TbColumns,
-  TbX,
-  TbCategory,
-  TbBuildingStore,
-  TbUserQuestion,
-  TbProgressCheck,
-  TbProgress,
-  TbProgressX,
-  TbProgressHelp,
-  TbCaravan,
-  TbUserStar,
-  TbMailForward,
   TbCalendarCancel,
-  TbCloudUpload,
+  TbCaravan,
   TbCloudDownload,
+  TbCloudUpload,
+  TbColumns,
+  TbFileText,
+  TbFilter,
+  TbMail,
+  TbMailForward,
+  TbPencil,
+  TbPhone,
+  TbPlus,
+  TbReload,
+  TbSearch,
+  TbTrash,
+  TbUserCircle,
+  TbUserStar,
+  TbWorld,
+  TbX
 } from "react-icons/tb";
 
 // Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-  CellContext,
-  RowSelectionState,
-} from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import { SelectOption } from "../RequestFeedback/RequestAndFeedback"; // Adjust import path
+import type {
+  CellContext,
+  ColumnDef,
+  OnSortParam,
+  RowSelectionState
+} from "@/components/shared/DataTable";
+import { SelectOption } from "../RequestFeedback/RequestAndFeedback";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  addSubscriberAction,
-  editSubscriberAction,
-  getSubscribersAction,
-  submitExportReasonAction,
   addNotificationAction,
   addScheduleAction,
+  addSubscriberAction,
+  editSubscriberAction,
   getAllUsersAction,
+  getSubscribersAction,
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { useSelector, shallowEqual } from "react-redux";
+import { useAppDispatch } from "@/reduxtool/store";
 import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { shallowEqual, useSelector } from "react-redux";
 
 // --- Define Types ---
 export type ApiSubscriberItem = {
@@ -121,7 +103,7 @@ export type ApiSubscriberItem = {
   status: string;
   subscription_types?: string[] | null;
   source?: string | null;
-  note?: string | null;
+  remarks?: string | null; // CORRECTED
   reason?: string | null;
   updated_by_user?: {
     name: string;
@@ -513,7 +495,7 @@ const SubscribersListing = () => {
   const { control, handleSubmit, reset, formState: { errors, isValid } } = formMethods;
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema) });
-  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
   const handleOpenModal = useCallback((type: ModalType, itemData: SubscriberItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
   const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
@@ -524,7 +506,7 @@ const SubscribersListing = () => {
       return {
         id: apiItem.id, email: apiItem.email, name: apiItem.name || "", mobile_no: apiItem.mobile || "",
         subscribedDate: new Date(apiItem.created_at), subscriptionTypes: apiItem.subscription_types || [],
-        source: apiItem.source || "", status: apiItem.status, remarks: apiItem.note || "",
+        source: apiItem.source || "", status: apiItem.status, remarks: apiItem.remarks || "", // CORRECTED
         raw_created_at: apiItem.created_at, raw_updated_at: apiItem.updated_at,
         updated_by_user: apiItem.updated_by_user,
       };
@@ -551,7 +533,7 @@ const SubscribersListing = () => {
     let apiPayload = {
       email: data.email, name: data.name || null, mobile: data.mobile_no || null,
       subscription_types: data.subscriptionTypes, source: data.source || null,
-      status: data.status, note: data.remarks || null,
+      status: data.status, remarks: data.remarks || null, // CORRECTED
     };
     try {
       if (editingItem) {
