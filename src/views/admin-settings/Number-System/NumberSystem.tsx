@@ -1,33 +1,33 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
-import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import cloneDeep from "lodash/cloneDeep";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Tooltip from "@/components/ui/Tooltip";
+import DebouceInput from "@/components/shared/DebouceInput";
+import { Avatar, Card, Checkbox, Dialog, Drawer, Dropdown, Form, FormItem, Input, Select, Skeleton, Tag } from "@/components/ui"; // Import Skeleton
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import DebouceInput from "@/components/shared/DebouceInput";
-import { Drawer, Form, FormItem, Input, Select, Tag, Card, Dropdown, Checkbox, Avatar, Dialog } from "@/components/ui";
+import Tooltip from "@/components/ui/Tooltip";
 
 // Icons
-import { TbPencil, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbMessageStar, TbMessageCheck, TbMessage2X, TbColumns, TbX, TbUserCircle, TbTrash } from "react-icons/tb";
+import { TbCloudUpload, TbColumns, TbFilter, TbMessage2X, TbMessageCheck, TbMessageStar, TbPencil, TbPlus, TbReload, TbSearch, TbUserCircle, TbX } from "react-icons/tb";
 
 // Types
-import type { OnSortParam, ColumnDef, Row } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
+import type { ColumnDef } from "@/components/shared/DataTable";
 
 // Redux
+import { masterSelector } from "@/reduxtool/master/masterSlice";
+import { addNumberSystemAction, deleteNumberSystemAction, editNumberSystemAction, getCountriesAction, getNumberSystemsAction, submitExportReasonAction } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
-import { getNumberSystemsAction, addNumberSystemAction, editNumberSystemAction, getCountriesAction, submitExportReasonAction, deleteNumberSystemAction } from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
 
 // --- Utility Functions ---
 function formatCustomDateTime(dateString: string | null | undefined): string {
@@ -55,13 +55,9 @@ const numberSystemFormSchema = z.object({
   status: z.enum(["Active", "Inactive"], { required_error: "Status is required." }),
   prefix: z.string().max(10, "Prefix too long (max 10 chars).").optional().or(z.literal("")),
   customer_code_starting: z.coerce.number().int().min(0, "Start Number must be non-negative."),
-  // REMOVED: current_customer_code
   non_kyc_customer_code_starting: z.coerce.number().int().min(0, "Temp Start Number must be non-negative."),
-  // REMOVED: non_kyc_current_customer_code
   company_code_starting: z.coerce.number().int().min(0, "Verified Company Start Number must be non-negative."),
-  // REMOVED: current_company_code
   non_kyc_company_code_starting: z.coerce.number().int().min(0, "Temporary Company Start Number must be non-negative."),
-  // REMOVED: non_kyc_current_company_code
   country_ids: z.array(z.string()).min(1, "At least one country must be selected."),
 });
 type NumberSystemFormData = z.infer<typeof numberSystemFormSchema>;
@@ -91,7 +87,7 @@ function exportNumberSystemsToCsv(filename: string, rows: NumberSystemItem[]) {
 }
 function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(' ') }
 
-const ActionColumn = ({ onEdit }: { onEdit: () => void }) => (<div className="flex items-center justify-center gap-1"><Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400" role="button" onClick={onEdit}><TbPencil /></div></Tooltip></div>);
+const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void, onDelete: () => void; }) => (<div className="flex items-center justify-center gap-1"><Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400" role="button" onClick={onEdit}><TbPencil /></div></Tooltip></div>);
 
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, countryOptions }: { filterData: Partial<FilterFormData>; onRemoveFilter: (key: keyof FilterFormData, value: string) => void; onClearAll: () => void; countryOptions: CountryOption[] }) => {
     const countryMap = useMemo(() => new Map(countryOptions.map(c => [c.value, c.label])), [countryOptions]);
@@ -101,7 +97,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, countryO
     return (<div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4"><span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>{filters.map((filter) => (<Tag key={`${filter.key}-${filter.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">{(keyToLabelMap as any)[filter.key]}: {filter.label}<TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter(filter.key, filter.value)} /></Tag>))}<Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button></div>);
 };
 
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearAll, allColumns, visibleColumnKeys, setVisibleColumnKeys, activeFilterCount }: { onSearchChange: (q: string) => void; onFilter: () => void; onExport: () => void; onClearAll: () => void; allColumns: ColumnDef<NumberSystemItem>[]; visibleColumnKeys: string[]; setVisibleColumnKeys: (keys: string[]) => void; activeFilterCount: number; }) => {
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearAll, allColumns, visibleColumnKeys, setVisibleColumnKeys, activeFilterCount, isDataReady }: { onSearchChange: (q: string) => void; onFilter: () => void; onExport: () => void; onClearAll: () => void; allColumns: ColumnDef<NumberSystemItem>[]; visibleColumnKeys: string[]; setVisibleColumnKeys: (keys: string[]) => void; activeFilterCount: number; isDataReady: boolean; }) => {
     const toggleColumn = (checked: boolean, columnKey: string) => { if (checked) { setVisibleColumnKeys([...visibleColumnKeys, columnKey]); } else { setVisibleColumnKeys(visibleColumnKeys.filter((key) => key !== columnKey)); } };
     const isColumnVisible = (columnKey: string) => visibleColumnKeys.includes(columnKey);
     return (
@@ -114,32 +110,21 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearAll, allCol
                         {allColumns.filter(c => (c.accessorKey || c.id) && c.header).map(col => { const key = (col.accessorKey || col.id) as string; return (<div key={key} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={key} checked={isColumnVisible(key)} onChange={(c) => toggleColumn(c, key)} />{col.header}</div>)})}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearAll} />
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearAll} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
             </div>
         </div>
     )
 };
 
-const SelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: { selectedItems: NumberSystemItem[], onDeleteSelected: () => void; isDeleting: boolean; }) => {
-    const [deleteOpen, setDeleteOpen] = useState(false);
-    if (selectedItems.length === 0) return null;
-    return (
-        <>
-            <StickyFooter className="flex items-center justify-between py-4 bg-white dark:bg-gray-800" stickyClass="-mx-4 sm:-mx-8 border-t border-gray-200 dark:border-gray-700 px-8">
-                <div className="flex items-center justify-between w-full px-4 sm:px-8"><span className="flex items-center gap-2"><span className="text-lg text-primary-600 dark:text-primary-400"><TbChecks /></span><span className="font-semibold flex items-center gap-1 text-sm sm:text-base"><span className="heading-text">{selectedItems.length}</span><span>System{selectedItems.length > 1 ? 's' : ''} selected</span></span></span><Button size="sm" variant="plain" className="text-red-600 hover:text-red-500" onClick={() => setDeleteOpen(true)} loading={isDeleting}>Delete Selected</Button></div>
-            </StickyFooter>
-            <ConfirmDialog isOpen={deleteOpen} type="danger" title={`Delete ${selectedItems.length} System${selectedItems.length > 1 ? 's' : ''}`} onCancel={() => setDeleteOpen(false)} onClose={() => setDeleteOpen(false)} onConfirm={() => { onDeleteSelected(); setDeleteOpen(false); }} loading={isDeleting}><p>Are you sure you want to delete the selected numbering system{selectedItems.length > 1 ? 's' : ''}? This action cannot be undone.</p></ConfirmDialog>
-        </>
-    );
-};
-
 // --- Main Component: NumberSystems ---
 const NumberSystems = () => {
   const dispatch = useAppDispatch();
-  const { numberSystemsData: rawNumberSystemsData = [], CountriesData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+  const { numberSystemsData: rawNumberSystemsData = [], CountriesData = [] } = useSelector(masterSelector, shallowEqual);
 
+  // --- UI & Local State ---
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<NumberSystemItem | null>(null);
@@ -148,16 +133,44 @@ const NumberSystems = () => {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "updated_at" }, query: "" });
-  const [selectedItems, setSelectedItems] = useState<NumberSystemItem[]>([]);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<Partial<FilterFormData>>({});
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
+  const isDataReady = !initialLoading;
 
-  useEffect(() => { dispatch(getNumberSystemsAction()); dispatch(getCountriesAction()); }, [dispatch]);
+  // --- Data & Table State ---
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "updated_at" }, query: "" });
+  const [selectedItems, setSelectedItems] = useState<NumberSystemItem[]>([]);
+  const [activeFilters, setActiveFilters] = useState<Partial<FilterFormData>>({});
+
+  // --- Initial Data Fetch ---
+  const refreshData = useCallback(async () => {
+      setInitialLoading(true);
+      try {
+          await Promise.all([
+              dispatch(getNumberSystemsAction()),
+              dispatch(getCountriesAction())
+          ]);
+      } catch (error) {
+          console.error("Failed to refresh data:", error);
+          toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload data.</Notification>);
+      } finally {
+          setInitialLoading(false);
+      }
+  }, [dispatch]);
+
+  useEffect(() => {
+      refreshData();
+  }, [refreshData]);
   
+  // --- Form Hooks ---
+  const defaultFormValues: NumberSystemFormData = { name: "", prefix: "", status: "Active", customer_code_starting: 0, non_kyc_customer_code_starting: 0, company_code_starting: 0, non_kyc_company_code_starting: 0, country_ids: [], };
+  const formMethods = useForm<NumberSystemFormData>({ resolver: zodResolver(numberSystemFormSchema), defaultValues: defaultFormValues, mode: "onChange" });
+  const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: activeFilters });
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" } });
+
+  // --- Data Transformation & Memoization ---
   const countryOptions: CountryOption[] = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: CountryListItem) => ({ value: String(c.id), label: c.name })) : [], [CountriesData]);
   const numberSystemsData: NumberSystemItem[] = useMemo(() => Array.isArray(rawNumberSystemsData) ? rawNumberSystemsData.map((item: any) => ({ ...item, status: item.status || "Inactive", updated_by_name: item.updated_by_user?.name || item.updated_by_name, updated_by_role: item.updated_by_user?.roles?.[0]?.display_name || item.updated_by_role })) : [], [rawNumberSystemsData]);
 
@@ -174,11 +187,6 @@ const NumberSystems = () => {
     const countryNameMap = new Map(countryOptions.map(c => [c.value, c.label]));
     return Array.from(usedCountryIds).map(id => ({ value: id, label: countryNameMap.get(id) || `ID:${id}` })).filter(Boolean).sort((a, b) => a.label.localeCompare(b.label));
   }, [numberSystemsData, countryOptions]);
-
-  const defaultFormValues: NumberSystemFormData = { name: "", prefix: "", status: "Active", customer_code_starting: 0, current_customer_code: 0, non_kyc_customer_code_starting: 0, non_kyc_current_customer_code: 0, company_code_starting: 0, current_company_code: 0, non_kyc_company_code_starting: 0, non_kyc_current_company_code: 0, country_ids: [], };
-  const formMethods = useForm<NumberSystemFormData>({ resolver: zodResolver(numberSystemFormSchema), defaultValues: defaultFormValues, mode: "onChange" });
-  const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: activeFilters });
-  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" } });
 
   const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
     let processedData: NumberSystemItem[] = cloneDeep(numberSystemsData);
@@ -212,70 +220,56 @@ const NumberSystems = () => {
   }, [numberSystemsData, tableData, activeFilters]);
 
   const activeFilterCount = useMemo(() => Object.values(activeFilters).flat().length, [activeFilters]);
-  const tableLoading = masterLoadingStatus === "loading" || isSubmitting;
+  const tableLoading = initialLoading || isSubmitting || isDeleting;
 
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
-  const onClearAllFilters = useCallback(() => { setActiveFilters({}); filterFormMethods.reset({}); handleSetTableData({ query: '', pageIndex: 1 }); }, [handleSetTableData, filterFormMethods]);
+  // --- Handlers ---
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData(prev => ({ ...prev, ...data })); setSelectedItems([]); }, []);
+  const onClearAllFiltersAndReload = useCallback(() => { setActiveFilters({}); filterFormMethods.reset({}); handleSetTableData({ query: '', pageIndex: 1 }); refreshData(); }, [handleSetTableData, filterFormMethods, refreshData]);
   const handleCardClick = useCallback((status?: 'Active' | 'Inactive') => { handleSetTableData({ pageIndex: 1, query: '' }); if (!status) { setActiveFilters({}); } else { const option = apiStatusOptions.find(o => o.value === status); setActiveFilters(option ? { filterStatus: [option] } : {}); } }, [handleSetTableData]);
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, valueToRemove: string) => { setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = (prev[key] || []) as {value: string}[]; const newValues = currentValues.filter(item => item.value !== valueToRemove); if (newValues.length > 0) (newFilters as any)[key] = newValues; else delete (newFilters as any)[key]; return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
   const openAddDrawer = () => { formMethods.reset(defaultFormValues); setIsAddDrawerOpen(true); };
   const closeAddDrawer = () => setIsAddDrawerOpen(false);
   
-  const openEditDrawer = (item: NumberSystemItem) => { setEditingItem(item); const countryIds = item.country_ids?.split(',').map(id => id.trim()).filter(Boolean) || []; formMethods.reset({ name: item.name, status: item.status, prefix: item.prefix || "", country_ids: countryIds, customer_code_starting: Number(item.customer_code_starting || 0), current_customer_code: Number(item.current_customer_code || 0), non_kyc_customer_code_starting: Number(item.non_kyc_customer_code_starting || 0), non_kyc_current_customer_code: Number(item.non_kyc_current_customer_code || 0), company_code_starting: Number(item.company_code_starting || 0), current_company_code: Number(item.current_company_code || 0), non_kyc_company_code_starting: Number(item.non_kyc_company_code_starting || 0), non_kyc_current_company_code: Number(item.non_kyc_current_company_code || 0) }); setIsEditDrawerOpen(true); };
+  const openEditDrawer = (item: NumberSystemItem) => { setEditingItem(item); const countryIds = item.country_ids?.split(',').map(id => id.trim()).filter(Boolean) || []; formMethods.reset({ name: item.name, status: item.status, prefix: item.prefix || "", country_ids: countryIds, customer_code_starting: Number(item.customer_code_starting || 0), non_kyc_customer_code_starting: Number(item.non_kyc_customer_code_starting || 0), company_code_starting: Number(item.company_code_starting || 0), non_kyc_company_code_starting: Number(item.non_kyc_company_code_starting || 0) }); setIsEditDrawerOpen(true); };
   const closeEditDrawer = () => { setEditingItem(null); setIsEditDrawerOpen(false); };
   const onSubmitHandler = async (data: NumberSystemFormData) => {
     setIsSubmitting(true);
-    
-    // Base payload from form data
-    const apiPayload: any = {
-        name: data.name,
-        status: data.status,
-        prefix: data.prefix || null,
-        country_ids: data.country_ids.join(','),
-        customer_code_starting: String(data.customer_code_starting),
-        non_kyc_customer_code_starting: String(data.non_kyc_customer_code_starting),
-        company_code_starting: String(data.company_code_starting),
-        non_kyc_company_code_starting: String(data.non_kyc_company_code_starting),
-    };
-
+    const apiPayload: any = { name: data.name, status: data.status, prefix: data.prefix || null, country_ids: data.country_ids.join(','), customer_code_starting: String(data.customer_code_starting), non_kyc_customer_code_starting: String(data.non_kyc_customer_code_starting), company_code_starting: String(data.company_code_starting), non_kyc_company_code_starting: String(data.non_kyc_company_code_starting), };
     try {
         if (editingItem) {
-            // EDIT: Add existing current codes back to the payload
             apiPayload.id = editingItem.id;
             apiPayload.current_customer_code = String(editingItem.current_customer_code || 0);
             apiPayload.non_kyc_current_customer_code = String(editingItem.non_kyc_current_customer_code || 0);
             apiPayload.current_company_code = String(editingItem.current_company_code || 0);
             apiPayload.non_kyc_current_company_code = String(editingItem.non_kyc_current_company_code || 0);
-
             await dispatch(editNumberSystemAction(apiPayload)).unwrap();
             toast.push(<Notification title="System Updated" type="success" />);
             closeEditDrawer();
         } else {
-            // ADD: Statically add "0" for current codes
             apiPayload.current_customer_code = "0";
             apiPayload.non_kyc_current_customer_code = "0";
             apiPayload.current_company_code = "0";
             apiPayload.non_kyc_current_company_code = "0";
-
             await dispatch(addNumberSystemAction(apiPayload)).unwrap();
             toast.push(<Notification title="System Added" type="success" />);
             closeAddDrawer();
         }
-        dispatch(getNumberSystemsAction());
+        refreshData();
     } catch (error: any) {
         toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger">{error?.message || 'Error'}</Notification>);
     } finally {
         setIsSubmitting(false);
     }
-};
+  };
   const handleDeleteClick = (item: NumberSystemItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); };
-  const onConfirmSingleDelete = async () => { if (!itemToDelete) return; setIsDeleting(true); try { await dispatch(deleteNumberSystemAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="System Deleted" type="success" />); setSelectedItems(p => p.filter(i => i.id !== itemToDelete.id)); dispatch(getNumberSystemsAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setItemToDelete(null); } };
-  const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); try { await dispatch(deleteNumberSystemAction({ ids: selectedItems.map(i => i.id).join(',') })).unwrap(); toast.push(<Notification title="Systems Deleted" type="success" />); setSelectedItems([]); dispatch(getNumberSystemsAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsDeleting(false); } };
+  const onConfirmSingleDelete = async () => { if (!itemToDelete) return; setIsDeleting(true); try { await dispatch(deleteNumberSystemAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="System Deleted" type="success" />); setSelectedItems(p => p.filter(i => i.id !== itemToDelete.id)); refreshData(); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setItemToDelete(null); } };
+  const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); try { await dispatch(deleteNumberSystemAction({ ids: selectedItems.map(i => i.id).join(',') })).unwrap(); toast.push(<Notification title="Systems Deleted" type="success" />); setSelectedItems([]); refreshData(); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsDeleting(false); } };
   const onApplyFiltersSubmit = (data: FilterFormData) => { setActiveFilters({ filterCountryIds: data.filterCountryIds || [], filterStatus: data.filterStatus || [] }); handleSetTableData({ pageIndex: 1 }); setIsFilterDrawerOpen(false); };
   const handleOpenExportModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
   const handleConfirmExport = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `numbering-systems_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Numbering Systems', file_name: fileName })).unwrap(); toast.push(<Notification title="Reason Submitted" type="success" />); exportNumberSystemsToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (e: any) { toast.push(<Notification title="Export Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsSubmittingExportReason(false); } };
   const openImageViewer = (src: string | null) => { if (src) { setImageToView(src); setIsImageViewerOpen(true); } };
   
+  // --- Column Definitions ---
   const baseColumns: ColumnDef<NumberSystemItem>[] = useMemo(() => [
       { header: "Name", accessorKey: "name", enableSorting: true, size: 160, cell: (props) => <span className="font-semibold">{props.row.original.name}</span> },
       { header: "Countries", accessorKey: "country_ids", id: "countriesCount", enableSorting: true, size: 360, cell: (props) => { const ids = props.row.original.country_ids?.split(',').map(id => id.trim()).filter(Boolean) || []; if (ids.length === 0) return <Tag>N/A</Tag>; const names = ids.map(id => countryOptions.find(c => c.value === id)?.label || `ID:${id}`); return (<div className="flex flex-wrap gap-1">{names.slice(0, 2).map((n, i) => <Tag key={i} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{n}</Tag>)}{names.length > 2 && <Tooltip title={names.join(', ')}><Tag className="bg-gray-200 dark:bg-gray-500">+{names.length - 2} more</Tag></Tooltip>}</div>); }},
@@ -287,7 +281,8 @@ const NumberSystems = () => {
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(() => baseColumns.map(c => (c.accessorKey || c.id) as string));
   const visibleColumns = useMemo(() => baseColumns.filter(c => visibleColumnKeys.includes((c.accessorKey || c.id) as string)), [baseColumns, visibleColumnKeys]);
  
- const renderDrawerForm = (isEdit: boolean) => {
+  // --- Reusable Drawer Form Renderer ---
+  const renderDrawerForm = (isEdit: boolean) => {
     const applicableCountryOptions = isEdit ? countryOptions : addCountryOptions;
     return (
         <div className="space-y-1">
@@ -331,6 +326,14 @@ const NumberSystems = () => {
         </div>
     )
   };
+  
+  // --- Card Content Renderer with Skeleton ---
+  const renderCardContent = (content: number | undefined) => {
+    if (initialLoading) {
+      return <Skeleton width={50} height={20} />;
+    }
+    return <h6>{content ?? 0}</h6>;
+  };
 
   return (
     <>
@@ -338,15 +341,15 @@ const NumberSystems = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Numbering System</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <Tooltip title="Click to show all systems"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMessageStar size={24} /></div><div><h6 className="text-blue-500">{counts.total}</h6><span className="font-semibold text-xs">Total Systems</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show Active systems"><div className="cursor-pointer" onClick={() => handleCardClick('Active')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMessageCheck size={24} /></div><div><h6 className="text-green-500">{counts.active}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show Inactive systems"><div className="cursor-pointer" onClick={() => handleCardClick('Inactive')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMessage2X size={24} /></div><div><h6 className="text-red-500">{counts.inactive}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show all systems"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMessageStar size={24} /></div><div><div className="text-blue-500">{renderCardContent(counts.total)}</div><span className="font-semibold text-xs">Total Systems</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show Active systems"><div className="cursor-pointer" onClick={() => handleCardClick('Active')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMessageCheck size={24} /></div><div><div className="text-green-500">{renderCardContent(counts.active)}</div><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show Inactive systems"><div className="cursor-pointer" onClick={() => handleCardClick('Inactive')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMessage2X size={24} /></div><div><div className="text-red-500">{renderCardContent(counts.inactive)}</div><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
           </div>
-          <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} allColumns={baseColumns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} activeFilterCount={activeFilterCount} />
-          <div className="mt-4"><ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFilters} countryOptions={countryOptions} /></div>
+          <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFiltersAndReload} allColumns={baseColumns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
+          <div className="mt-4"><ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFiltersAndReload} countryOptions={countryOptions} /></div>
           {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching system(s).</div>}
           <div className="mt-2 flex-grow overflow-y-auto">
             <DataTable selectable columns={visibleColumns} data={pageData} noData={!tableLoading && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onPaginationChange={(p) => handleSetTableData({ pageIndex: p })} onSelectChange={(s) => handleSetTableData({ pageSize: s, pageIndex: 1 })} onSort={(s) => handleSetTableData({ sort: s })} checkboxChecked={(row) => selectedItems.some(s => s.id === row.id)} onCheckBoxChange={(c,r) => setSelectedItems(p => c ? [...p,r] : p.filter(i => i.id !== r.id))} onIndeterminateCheckBoxChange={(c,rs) => { const rIds = new Set(rs.map(r=>r.original.id)); setSelectedItems(p => c ? [...p, ...rs.map(r=>r.original).filter(r => !p.some(i => i.id === r.id))] : p.filter(i => !rIds.has(i.id)))}}/>
@@ -354,13 +357,12 @@ const NumberSystems = () => {
         </AdaptiveCard>
       </Container>
       
-      <SelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
-      
+      {/* --- Modals, Drawers & Footers --- */}
       <Drawer title={editingItem ? "Edit Number System" : "Add New Number System"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} width={700} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="numberSystemForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? (editingItem ? "Saving..." : "Adding...") : "Save"}</Button></div>}>
         <Form id="numberSystemForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-2 relative pb-20">{renderDrawerForm(!!editingItem)}{editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="mt-3 mb-3 font-semibold text-primary">Latest Update:</b><br /><p className="font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p></div><div className='text-right'><br/><span className="font-semibold">Created At:</span>{" "}<span>{formatCustomDateTime(editingItem.created_at)}</span><br /><span className="font-semibold">Updated At:</span>{" "}<span>{formatCustomDateTime(editingItem.updated_at)}</span></div></div></div>)}</Form>
       </Drawer>
 
-      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} width={400} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearAllFilters}>Clear</Button><Button size="sm" variant="solid" form="filterNumberSystemForm" type="submit">Apply</Button></div>}>
+      <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} width={400} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={() => { onClearAllFiltersAndReload(); setIsFilterDrawerOpen(false); }}>Clear</Button><Button size="sm" variant="solid" form="filterNumberSystemForm" type="submit">Apply</Button></div>}>
         <Form id="filterNumberSystemForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Countries"><Controller name="filterCountryIds" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Filter by countries..." options={countriesOptionsForFilter} value={field.value || []} onChange={(v) => field.onChange(v || [])} />)} /></FormItem>
           <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Filter by status..." options={apiStatusOptions} value={field.value || []} onChange={(v) => field.onChange(v || [])} />)} /></FormItem>
