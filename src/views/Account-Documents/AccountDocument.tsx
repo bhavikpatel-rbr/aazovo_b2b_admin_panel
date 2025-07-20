@@ -940,7 +940,7 @@ const ViewDocumentDialog = ({
                         <DetailItem label="Email" value={member.email} />
                         <DetailItem
                           label="Phone"
-                          value={`${member.number_code || ""} ${
+                          value={`${member.customer_code || ""} ${
                             member.number || ""
                           }`.trim()}
                         />
@@ -1404,7 +1404,7 @@ const SendEmailAction = ({ document, onClose }: { document: any; onClose: () => 
 const SendWhatsAppAction = ({ document, onClose }: { document: any; onClose: () => void }) => {
   useEffect(() => {
     const phone = document?.company?.primary_contact_number?.replace(/\D/g, '') || document?.member?.number?.replace(/\D/g, '');
-    const countryCode = document?.company?.primary_contact_number_code?.replace(/\D/g, '') || document?.member?.number_code?.replace(/\D/g, '');
+    const countryCode = document?.company?.primary_contact_number_code?.replace(/\D/g, '') || document?.member?.customer_code?.replace(/\D/g, '');
 
     if (!phone || !countryCode) {
       toast.push(

@@ -1842,7 +1842,7 @@ const preparePayloadForApiAdd = (formData: MemberAddFormSchema): any => {
     password: formData.password,
     status: getValue(formData.status),
     number: formData.mobile_no,
-    number_code: getValue(formData.contact_country_code),
+    customer_code: getValue(formData.contact_country_code),
     country_id: getValue(formData.country_id),
     interested_category_ids: formData.interested_category_ids.map(c => getValue(c)),
     role_type: '0', // Assuming '0' corresponds to 'Member' role
@@ -1969,7 +1969,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
     return Array.isArray(data)
       ? data.map((m: any) => ({
         value: String(m.id),
-        label: `(${m.member_code}) - ${m.name || 'N/A'}`,
+        label: `(${m.customer_code}) - ${m.name || 'N/A'}`,
         status: m.status,
       }))
       : [];
@@ -2405,7 +2405,7 @@ const CompanyCreate = () => {
         try {
           const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
           if (actionResult) {
-            const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.member_code}) - ${m.name}` }));
+            const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.customer_code}) - ${m.name}` }));
 
             const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
             const employeeList = Array.isArray(employeeDataSource) ? employeeDataSource : [];
