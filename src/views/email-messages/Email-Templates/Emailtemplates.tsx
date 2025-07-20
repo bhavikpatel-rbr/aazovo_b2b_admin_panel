@@ -70,6 +70,7 @@ import {
   getDepartmentsAction,
   getDesignationsAction,
   submitExportReasonAction,
+  getParentCategoriesAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import dayjs from "dayjs";
@@ -276,7 +277,7 @@ const EmailTemplatesListing = () => {
   const dispatch = useAppDispatch();
   const {
     emailTemplatesData: rawEmailTemplatesData = {},
-    CategoriesData = [],
+    ParentCategories: CategoriesData = [],
     subCategoriesForSelectedCategoryData,
     aetSubCategories = [],
     BrandData = [],
@@ -314,7 +315,7 @@ const EmailTemplatesListing = () => {
   const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [designationsData?.data]);
 
   const [subCategoryOptionsForForm, setSubcategoryOptions] = useState<{ value: number; label: string }[]>([]);
-  
+
   useEffect(() => {
     if (subCategoriesForSelectedCategoryData) {
       setSubcategoryOptions(subCategoriesForSelectedCategoryData?.map((sc: any) => ({ value: sc.id, label: sc.name, })) || []);
@@ -323,22 +324,23 @@ const EmailTemplatesListing = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-        setInitialLoading(true);
-        try {
-            await Promise.all([
-                dispatch(getEmailTemplatesAction()),
-                dispatch(getCategoriesAction()),
-                dispatch(getBrandAction()),
-                dispatch(getRolesAction()),
-                dispatch(getDepartmentsAction()),
-                dispatch(getDesignationsAction()),
-            ]);
-        } catch (error) {
-            console.error("Failed to fetch initial data", error);
-            toast.push(<Notification type="danger" title="Error">Failed to load initial data.</Notification>)
-        } finally {
-            setInitialLoading(false);
-        }
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          dispatch(getEmailTemplatesAction()),
+          dispatch(getCategoriesAction()),
+          dispatch(getBrandAction()),
+          dispatch(getRolesAction()),
+          dispatch(getDepartmentsAction()),
+          dispatch(getDesignationsAction()),
+          dispatch(getParentCategoriesAction()),
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch initial data", error);
+        toast.push(<Notification type="danger" title="Error">Failed to load initial data.</Notification>)
+      } finally {
+        setInitialLoading(false);
+      }
     };
     fetchData();
   }, [dispatch]);
@@ -354,7 +356,7 @@ const EmailTemplatesListing = () => {
   useEffect(() => {
     if (selectedCategoryIdForForm && (isAddDrawerOpen || isEditDrawerOpen)) {
       setSubcategoryOptions([]);
-      dispatch(getSubcategoriesByCategoryIdAction(selectedCategoryIdForForm));
+      dispatch(getSubcategoriesByCategoryIdAction(0));
       setValue("sub_category_id", null, { shouldValidate: true, shouldDirty: true });
     }
   }, [selectedCategoryIdForForm, dispatch, isAddDrawerOpen, isEditDrawerOpen, setValue]);
@@ -363,7 +365,7 @@ const EmailTemplatesListing = () => {
     reset({ name: "", template_id: "", category_id: categoryOptions[0]?.value || "", sub_category_id: null, brand_id: null, role_id: null, department_id: null, designation_id: null, title: "", status: "Active", variables: [], });
     variablesFieldArray.replace([]);
     setEditingTemplate(null);
-    if (categoryOptions[0]?.value) { dispatch(getSubcategoriesByCategoryIdAction(categoryOptions[0].value)); }
+    if (categoryOptions[0]?.value) { dispatch(getSubcategoriesByCategoryIdAction(0)); }
     setIsAddDrawerOpen(true);
   }, [reset, categoryOptions, variablesFieldArray, dispatch]);
 
