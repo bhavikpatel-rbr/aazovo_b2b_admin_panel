@@ -2586,7 +2586,8 @@ export const getOpportunitieslistAsync = async (params: any) => {
       });
     }
 
-    const response = await axiosInstance.get(`${config.apiURL}/opportunity?${queryParams.toString()}`);
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity?${queryParams.toString()}`);
+
     return response
   } catch (err) {
     return isAxiosError(err)
