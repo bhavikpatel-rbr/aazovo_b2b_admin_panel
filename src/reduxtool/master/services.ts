@@ -18,7 +18,7 @@ interface ApiParams {
 }
 export const getLeadAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/lead/lead`)
+    const response = await axiosInstance.get(`${config.apiURL}/lead/lead?per_page=10000000000`)
     return response
   } catch (err) {
     return isAxiosError(err)
