@@ -18,7 +18,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DebounceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog } from '@/components/ui'
+import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog, Skeleton } from '@/components/ui' // Import Skeleton
 
 // Icons
 import { TbPencil, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbFile, TbFileCheck, TbFileX, TbUserCircle } from 'react-icons/tb'
@@ -74,7 +74,7 @@ function exportToCsvUnit(filename: string, rows: UnitItem[]) {
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, categoryOptions }) => {
     const activeNames = filterData.names || []; const activeCategories = filterData.categoryIds || []; const activeStatuses = filterData.status || []; const hasActiveFilters = activeNames.length > 0 || activeCategories.length > 0 || activeStatuses.length > 0;
     if (!hasActiveFilters) return null;
-    const getCategoryName = (id: string) => categoryOptions.find(opt => opt.value === id)?.label || id;
+    const getCategoryName = (id: string) => categoryOptions.find(opt => opt.value === Number(id))?.label || id;
     return (
         <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
             <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
@@ -86,7 +86,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, category
     );
 };
 
-const UnitTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, unitNameOptions, categoryOptions, columns, filteredColumns, setFilteredColumns, searchInputValue }, ref) => {
+const UnitTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, unitNameOptions, categoryOptions, columns, filteredColumns, setFilteredColumns, searchInputValue, isDataReady }, ref) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const { control, handleSubmit, setValue } = useForm<UnitFilterSchema>({ defaultValues: { names: [], categoryIds: [], status: [] }, });
     useEffect(() => { setValue('names', activeFilters.names || []); setValue('categoryIds', activeFilters.categoryIds || []); setValue('status', activeFilters.status || []); }, [activeFilters, setValue]);
@@ -103,9 +103,9 @@ const UnitTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onCle
                         {columns.map((col) => col.header && (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)} disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>Export</Button>
             </div>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterUnitForm">Apply</Button></div>}>
                 <Form id="filterUnitForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -123,6 +123,7 @@ UnitTableTools.displayName = 'UnitTableTools';
 // --- MAIN UNITS COMPONENT ---
 const Units = () => {
     const dispatch = useAppDispatch();
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingUnit, setEditingUnit] = useState<UnitItem | null>(null);
@@ -134,18 +135,46 @@ const Units = () => {
     const [isImageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageToView, setImageToView] = useState<string | null>(null);
 
-    const { unitData = [], ParentCategories = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+    const { unitData = { data: [] }, ParentCategories = [] } = useSelector(masterSelector, shallowEqual);
+    const isDataReady = !initialLoading;
     
     const categoryOptionsForSelect = useMemo(() => Array.isArray(ParentCategories) ? ParentCategories.map((cat: Category) => ({ value: cat.id, label: cat.name })) : [], [ParentCategories]);
     const unitNameOptionsForFilter = useMemo(() => Array.isArray(unitData?.data) ? [...new Set(unitData?.data.map(doc => doc.name))].sort().map(name => ({ value: name, label: name })) : [], [unitData?.data]);
 
-    useEffect(() => { dispatch(getUnitAction()); dispatch(getParentCategoriesAction()); }, [dispatch]);
+    const refreshData = useCallback(async () => {
+        setInitialLoading(true);
+        try {
+            await Promise.all([
+                dispatch(getUnitAction()),
+                dispatch(getParentCategoriesAction())
+            ]);
+        } catch (error) {
+            console.error("Failed to refresh data:", error);
+            toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload unit data.</Notification>);
+        } finally {
+            setInitialLoading(false);
+        }
+    }, [dispatch]);
+
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
 
     const formMethods = useForm<UnitFormData>({ resolver: zodResolver(unitFormSchema), defaultValues: { name: "", category_ids: [], status: 'Active' }, mode: "onChange" });
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
     const openImageViewer = (imageUrl: string | null | undefined) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
     const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
+
+    const openEditDrawer = useCallback((unit: UnitItem) => {
+        setEditingUnit(unit);
+        formMethods.reset({
+            name: unit.name,
+            category_ids: unit.categories.map(c => c.id),
+            status: unit.status || 'Active'
+        });
+        setIsEditDrawerOpen(true);
+    }, [formMethods]);
 
     const columns: ColumnDef<UnitItem>[] = useMemo(() => [
         { header: "Unit Name", accessorKey: "name", enableSorting: true, size: 200 },
@@ -157,16 +186,6 @@ const Units = () => {
         size: 200,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const date = updated_at ? new Date(updated_at) : null;
-          const formattedDate = date
-            ? `${date.getDate()} ${date.toLocaleString("en-US", {
-                month: "short",
-              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
-            : "N/A";
           return (
             <div className="flex items-center gap-2">
               <Avatar
@@ -192,7 +211,7 @@ const Units = () => {
       },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
-    ], [categoryOptionsForSelect]);
+    ], [openEditDrawer]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<UnitItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns); }, [columns]);
@@ -221,7 +240,7 @@ const Units = () => {
         const pageSize = tableData.pageSize as number;
         const startIndex = (pageIndex - 1) * pageSize;
         if (!Array.isArray(processedData)) {
-          processedData = Object.values(processedData); // or convert properly
+          processedData = Object.values(processedData); 
         }
         return { pageData: processedData.slice(startIndex, startIndex + pageSize), total: currentTotal, allFilteredAndSortedData: processedData };
     }, [unitData?.data, tableData, activeFilters]);
@@ -240,7 +259,7 @@ const Units = () => {
         setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as string[] | undefined; if (!currentValues) return prev; const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } return newFilters; });
         handleSetTableData({ pageIndex: 1 });
     }, [handleSetTableData]);
-    const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getUnitAction()); };
+    const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); refreshData(); }, [tableData, refreshData]);
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
 
     const handleCardClick = (status: 'Active' | 'Inactive' | 'All') => {
@@ -251,10 +270,35 @@ const Units = () => {
 
     const openAddDrawer = () => { formMethods.reset({ name: "", category_ids: [], status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
-    const onAddUnitSubmit = async (data: UnitFormData) => { setIsSubmitting(true); try { await dispatch(addUnitAction({ name: data.name, category_id: data.category_ids, status: data.status })).unwrap(); toast.push(<Notification title="Unit Added" type="success">{`Unit "${data.name}" was successfully added.`}</Notification>); closeAddDrawer(); dispatch(getUnitAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add Unit" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
-    const openEditDrawer = (unit: UnitItem) => { setEditingUnit(unit); formMethods.reset({ name: unit.name, category_ids: unit.categories.map(c => c.id), status: unit.status || 'Active' }); setIsEditDrawerOpen(true); };
+    const onAddUnitSubmit = async (data: UnitFormData) => { 
+        setIsSubmitting(true); 
+        try { 
+            await dispatch(addUnitAction({ name: data.name, category_id: data.category_ids, status: data.status })).unwrap(); 
+            toast.push(<Notification title="Unit Added" type="success">{`Unit "${data.name}" was successfully added.`}</Notification>); 
+            closeAddDrawer(); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Add Unit" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsSubmitting(false); 
+        } 
+    };
+    
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingUnit(null); };
-    const onEditUnitSubmit = async (data: UnitFormData) => { if (!editingUnit?.id) return; setIsSubmitting(true); try { await dispatch(editUnitAction({ id: editingUnit.id, name: data.name, category_id: data.category_ids, status: data.status })).unwrap(); toast.push(<Notification title="Unit Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); closeEditDrawer(); dispatch(getUnitAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update Unit" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
+    const onEditUnitSubmit = async (data: UnitFormData) => { 
+        if (!editingUnit?.id) return; 
+        setIsSubmitting(true); 
+        try { 
+            await dispatch(editUnitAction({ id: editingUnit.id, name: data.name, category_id: data.category_ids, status: data.status })).unwrap(); 
+            toast.push(<Notification title="Unit Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); 
+            closeEditDrawer(); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Update Unit" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsSubmitting(false); 
+        } 
+    };
     
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
@@ -273,6 +317,13 @@ const Units = () => {
     const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
     const cardBodyClass = "flex items-center gap-2 p-2";
 
+    const renderCardContent = (count: number | undefined) => {
+        if (initialLoading) {
+            return <Skeleton width={40} height={20} />;
+        }
+        return <h6 className="text-sm">{typeof count === 'number' ? count : 0}</h6>;
+    };
+
     return (
         <>
             <Container className="h-auto">
@@ -284,9 +335,9 @@ const Units = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
-                        <Tooltip title="Click to show all units"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{unitData?.data.length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show active units"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{unitData?.data.length > 0 && unitData?.data.filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show inactive units"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{unitData?.data.length > 0 && unitData?.data.filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show all units"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div>{renderCardContent(unitData?.data?.length)}<span className="text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active units"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div>{renderCardContent(unitData?.data?.filter(d => d.status === 'Active').length)}<span className="text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show inactive units"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div>{renderCardContent(unitData?.data?.filter(d => d.status === 'Inactive').length)}<span className="text-xs">Inactive</span></div></Card></div></Tooltip>
                     </div>
                     <div className="mb-4">
                         <UnitTableTools
@@ -302,6 +353,7 @@ const Units = () => {
                             filteredColumns={filteredColumns}
                             setFilteredColumns={setFilteredColumns}
                             searchInputValue={tableData?.query}
+                            isDataReady={isDataReady}
                         />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} categoryOptions={categoryOptionsForSelect} />
@@ -311,7 +363,7 @@ const Units = () => {
                             columns={filteredColumns}
                             data={pageData}
                             noData={pageData.length <= 0}
-                            loading={masterLoadingStatus === "loading" || isSubmitting}
+                            loading={initialLoading || isSubmitting}
                             pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             onPaginationChange={handlePaginationChange}
                             onSelectChange={handleSelectPageSizeChange}

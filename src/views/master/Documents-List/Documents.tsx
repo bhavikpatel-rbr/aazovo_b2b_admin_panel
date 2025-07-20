@@ -29,6 +29,7 @@ import {
   Card,
   Avatar,
   Dialog,
+  Skeleton, // Import Skeleton
 } from "@/components/ui";
 
 // Icons
@@ -264,6 +265,7 @@ const DocumentTableTools = React.forwardRef(
       filteredColumns,
       setFilteredColumns,
       searchInputValue,
+      isDataReady,
     },
     ref
   ) => {
@@ -346,10 +348,12 @@ const DocumentTableTools = React.forwardRef(
             title="Clear Filters & Reload"
             icon={<TbReload />}
             onClick={onClearFilters}
+            disabled={!isDataReady}
           />
           <Button
             icon={<TbFilter />}
             onClick={() => setIsFilterDrawerOpen(true)}
+            disabled={!isDataReady}
           >
             Filter
             {activeFilterCount > 0 && (
@@ -358,7 +362,7 @@ const DocumentTableTools = React.forwardRef(
               </span>
             )}
           </Button>
-          <Button icon={<TbCloudUpload />} onClick={onExport}>
+          <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>
             Export
           </Button>
         </div>
@@ -454,6 +458,7 @@ const Documents = () => {
   const [editingDocument, setEditingDocument] = useState<DocumentItem | null>(
     null
   );
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
@@ -478,8 +483,10 @@ const Documents = () => {
   const {
     DocumentListData = [],
     DocumentTypeData = [],
-    status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
+
+  const isDataReady = !initialLoading && !isSubmitting && !isDeleting;
+  
   const documentTypeOptionsForSelect = useMemo(
     () =>
       Array.isArray(DocumentTypeData)
@@ -500,10 +507,25 @@ const Documents = () => {
     [DocumentListData]
   );
 
-  useEffect(() => {
-    dispatch(getDocumentListAction());
-    dispatch(getDocumentTypeAction());
-  }, [dispatch]);
+  const refreshData = useCallback(async () => {
+    setInitialLoading(true);
+    try {
+        await Promise.all([
+            dispatch(getDocumentListAction()),
+            dispatch(getDocumentTypeAction())
+        ]);
+    } catch (error) {
+        console.error("Failed to refresh data:", error);
+        toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload document data.</Notification>);
+    } finally {
+        setInitialLoading(false);
+    }
+}, [dispatch]);
+
+useEffect(() => {
+    refreshData();
+}, [refreshData]);
+
 
   const formMethods = useForm<DocumentFormData>({
     resolver: zodResolver(documentFormSchema),
@@ -548,16 +570,6 @@ const Documents = () => {
         size: 200,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const date = updated_at ? new Date(updated_at) : null;
-          const formattedDate = date
-            ? `${date.getDate()} ${date.toLocaleString("en-US", {
-                month: "short",
-              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
-            : "N/A";
           return (
             <div className="flex items-center gap-2">
               <Avatar
@@ -612,6 +624,14 @@ const Documents = () => {
                 onClick={() => openEditDrawer(props.row.original)}
               >
                 <TbPencil />
+              </div>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <div
+                  className="text-lg p-1.5 cursor-pointer hover:text-red-500"
+                  onClick={() => handleDeleteClick(props.row.original)}
+              >
+                  <TbTrash />
               </div>
             </Tooltip>
           </div>
@@ -725,7 +745,6 @@ const Documents = () => {
     [handleSetTableData]
   );
 
-  // --- CORRECTED: handleSearchChange with functional update ---
   const handleSearchChange = useCallback((query: string) => {
     setTableData((prev) => ({
       ...prev,
@@ -762,7 +781,7 @@ const Documents = () => {
   const onClearFiltersAndReload = () => {
     setActiveFilters({});
     setTableData({ ...tableData, query: "", pageIndex: 1 });
-    dispatch(getDocumentListAction());
+    refreshData();
   };
   const handleClearAllFilters = useCallback(
     () => onClearFiltersAndReload(),
@@ -932,6 +951,13 @@ const Documents = () => {
     }
   };
 
+  const renderCardContent = (count: number) => {
+    if (initialLoading) {
+        return <Skeleton width={40} height={20} />;
+    }
+    return <h6 className="text-sm">{count}</h6>;
+  };
+
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex items-center gap-2 p-2";
@@ -964,7 +990,7 @@ const Documents = () => {
                     <TbFile size={20} />
                   </div>
                   <div>
-                    <h6 className="text-sm">{DocumentListData.length}</h6>
+                    {renderCardContent(DocumentListData.length)}
                     <span className="text-xs">Total</span>
                   </div>
                 </Card>
@@ -980,11 +1006,7 @@ const Documents = () => {
                     <TbFileCheck size={20} />
                   </div>
                   <div>
-                    <h6 className="text-sm">
-                      {DocumentListData.length > 0 &&
-                        DocumentListData?.filter((d) => d.status === "Active")
-                          .length}
-                    </h6>
+                    {renderCardContent(DocumentListData?.filter((d) => d.status === "Active").length)}
                     <span className="text-xs">Active</span>
                   </div>
                 </Card>
@@ -1000,11 +1022,7 @@ const Documents = () => {
                     <TbFileX size={20} />
                   </div>
                   <div>
-                    <h6 className="text-sm">
-                      {DocumentListData.length > 0 &&
-                        DocumentListData?.filter((d) => d.status === "Inactive")
-                          .length}
-                    </h6>
+                  {renderCardContent(DocumentListData?.filter((d) => d.status === "Inactive").length)}
                     <span className="text-xs">Inactive</span>
                   </div>
                 </Card>
@@ -1025,7 +1043,7 @@ const Documents = () => {
               filteredColumns={filteredColumns}
               searchInputValue={tableData?.query}
               setFilteredColumns={setFilteredColumns}
-              // searchInputValue={tableData.query}
+              isDataReady={isDataReady}
             />
           </div>
           <ActiveFiltersDisplay
@@ -1044,9 +1062,7 @@ const Documents = () => {
               columns={filteredColumns}
               data={pageData}
               noData={pageData.length <= 0}
-              loading={
-                masterLoadingStatus === "loading" || isSubmitting || isDeleting
-              }
+              loading={initialLoading || isSubmitting || isDeleting}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,

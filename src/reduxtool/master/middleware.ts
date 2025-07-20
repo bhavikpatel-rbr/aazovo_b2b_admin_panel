@@ -1146,7 +1146,7 @@ export const getCategoriesAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getcategoryAsync()
       if (response?.data?.status) {
-        return response?.data?.data?.data
+        return response?.data?.data
       }
 
       return rejectWithValue(response)
@@ -1161,7 +1161,7 @@ export const getParentCategoriesAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getParentcategoryAsync()
       if (response?.data?.status) {
-        return response?.data?.data?.data
+        return response?.data?.data
       }
 
       return rejectWithValue(response)

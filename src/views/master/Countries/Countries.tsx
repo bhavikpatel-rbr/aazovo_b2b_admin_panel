@@ -18,7 +18,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DebounceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog } from '@/components/ui'
+import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog, Skeleton } from '@/components/ui' // Import Skeleton
 
 // Icons
 import { TbPencil, TbTrash, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbWorld, TbWorldCheck, TbWorldX, TbUserCircle } from 'react-icons/tb'
@@ -103,7 +103,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }) => {
     );
 };
 
-const CountryTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, countryNameOptions, regionOptions, countryIsoOptions, columns, filteredColumns, setFilteredColumns, searchInputValue }, ref) => {
+const CountryTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, countryNameOptions, regionOptions, countryIsoOptions, columns, filteredColumns, setFilteredColumns, searchInputValue, isDataReady }, ref) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const { control, handleSubmit, setValue } = useForm<CountryFilterSchema>({ defaultValues: { names: [], regions: [], isoCodes: [], status: [] }, });
     useEffect(() => { setValue('names', activeFilters.names || []); setValue('regions', activeFilters.regions || []); setValue('isoCodes', activeFilters.isoCodes || []); setValue('status', activeFilters.status || []); }, [activeFilters, setValue]);
@@ -120,9 +120,9 @@ const CountryTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, on
                         {columns.map((col) => col.header && (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)} disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>Export</Button>
             </div>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterCountryForm">Apply</Button></div>}>
                 <Form id="filterCountryForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -143,6 +143,7 @@ const Countries = () => {
     const formMethods = useForm<CountryFormData>({ resolver: zodResolver(countryFormSchema), defaultValues: { name: "", region: "", iso_code: "", phone_code: "", flag: null, status: 'Active' }, mode: "onChange" });
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingCountry, setEditingCountry] = useState<CountryItem | null>(null);
@@ -154,12 +155,14 @@ const Countries = () => {
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [activeFilters, setActiveFilters] = useState<Partial<CountryFilterSchema>>({});
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
-    const [isImageViewerOpen, setImageViewerOpen] = useState(false);
+    const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [imageToView, setImageToView] = useState<string | null>(null);
     const [addFormFlagPreviewUrl, setAddFormFlagPreviewUrl] = useState<string | null>(null);
     const [editFormFlagPreviewUrl, setEditFormFlagPreviewUrl] = useState<string | null>(null);
 
-    const { CountriesData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+    const { CountriesData = [] } = useSelector(masterSelector, shallowEqual);
+
+    const isDataReady = !initialLoading;
     
     const totalCount = useMemo(() => CountriesData.length, [CountriesData]);
     const activeCount = useMemo(() => CountriesData.length > 0 && CountriesData?.filter((c: CountryItem) => c.status === 'Active').length, [CountriesData]);
@@ -169,7 +172,21 @@ const Countries = () => {
     const countryIsoOptionsForFilter = useMemo(() => Array.isArray(CountriesData) ? [...new Set(CountriesData?.map(c => c.iso_code))].sort().map(iso => ({ value: iso, label: iso })) : [], [CountriesData]);
     const regionOptions = useMemo(() => Array.isArray(CountriesData) ? [...new Set(CountriesData?.map(c => c.region).filter(Boolean))].sort().map(region => ({ value: region as string, label: region as string })) : [], [CountriesData]);
 
-    useEffect(() => { dispatch(getCountriesAction()); }, [dispatch]);
+    const refreshData = useCallback(async () => {
+        setInitialLoading(true);
+        try {
+            await dispatch(getCountriesAction());
+        } catch (error) {
+            console.error("Failed to refresh data:", error);
+            toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload country data.</Notification>);
+        } finally {
+            setInitialLoading(false);
+        }
+    }, [dispatch]);
+
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
 
     useEffect(() => {
         return () => {
@@ -224,16 +241,6 @@ const Countries = () => {
         size: 200,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const date = updated_at ? new Date(updated_at) : null;
-          const formattedDate = date
-            ? `${date.getDate()} ${date.toLocaleString("en-US", {
-                month: "short",
-              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
-            : "N/A";
           return (
             <div className="flex items-center gap-2">
               <Avatar
@@ -258,7 +265,7 @@ const Countries = () => {
         },
       },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
-        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
+        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip><Tooltip title="Delete"><div className="text-lg p-1.5 cursor-pointer hover:text-red-500" onClick={() => handleDeleteClick(props.row.original)}><TbTrash /></div></Tooltip></div>) },
     ], [openImageViewer, openEditDrawer, handleDeleteClick]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<CountryItem>[]>(columns);
@@ -315,8 +322,8 @@ const Countries = () => {
     const onClearFiltersAndReload = useCallback(() => {
         setActiveFilters({});
         setTableData(prev => ({ ...prev, query: '', pageIndex: 1 }));
-        dispatch(getCountriesAction());
-    }, [dispatch]);
+        refreshData();
+    }, [refreshData]);
     
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
 
@@ -360,7 +367,7 @@ const Countries = () => {
             await dispatch(addCountryAction(formData as any)).unwrap(); 
             toast.push(<Notification title="Country Added" type="success">{`Country "${data.name}" was successfully added.`}</Notification>); 
             closeAddDrawer(); 
-            dispatch(getCountriesAction()); 
+            refreshData(); 
         } catch (error: any) { 
             toast.push(<Notification title="Failed to Add Country" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
         } finally { 
@@ -386,7 +393,7 @@ const Countries = () => {
             await dispatch(editCountryAction({ id: editingCountry.id, data: formData })).unwrap(); 
             toast.push(<Notification title="Country Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); 
             closeEditDrawer(); 
-            dispatch(getCountriesAction()); 
+            refreshData(); 
         } catch (error: any) { 
             toast.push(<Notification title="Failed to Update Country" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
         } finally { 
@@ -394,7 +401,21 @@ const Countries = () => {
         } 
     };
     
-    const onConfirmSingleDelete = async () => { if (!countryToDelete?.id) return; setIsDeleting(true); try { await dispatch(deleteCountryAction({ id: countryToDelete.id })).unwrap(); toast.push(<Notification title="Country Deleted" type="success">{`"${countryToDelete.name}" was successfully deleted.`}</Notification>); dispatch(getCountriesAction()); } catch (error: any) { toast.push(<Notification title="Failed to Delete Country" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setCountryToDelete(null); } };
+    const onConfirmSingleDelete = async () => { 
+        if (!countryToDelete?.id) return; 
+        setIsDeleting(true); 
+        try { 
+            await dispatch(deleteCountryAction({ id: countryToDelete.id })).unwrap(); 
+            toast.push(<Notification title="Country Deleted" type="success">{`"${countryToDelete.name}" was successfully deleted.`}</Notification>); 
+            refreshData();
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Delete Country" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsDeleting(false); 
+            setSingleDeleteConfirmOpen(false); 
+            setCountryToDelete(null); 
+        } 
+    };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
@@ -411,6 +432,13 @@ const Countries = () => {
     const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
     const cardBodyClass = "flex items-center gap-2 p-2";
 
+    const renderCardContent = (count: number | false) => {
+        if (initialLoading) {
+            return <Skeleton width={40} height={20} />;
+        }
+        return <h6 className="text-sm">{typeof count === 'number' ? count : 0}</h6>;
+    };
+
     return (
         <>
             <Container className="h-auto">
@@ -422,17 +450,17 @@ const Countries = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                        <Tooltip title="Click to show all countries"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbWorld size={20} /></div><div><h6 className="text-sm">{totalCount}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show active countries"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbWorldCheck size={20} /></div><div><h6 className="text-sm">{activeCount}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show inactive countries"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbWorldX size={20} /></div><div><h6 className="text-sm">{inactiveCount}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show all countries"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbWorld size={20} /></div><div>{renderCardContent(totalCount)}<span className="text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active countries"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbWorldCheck size={20} /></div><div>{renderCardContent(activeCount)}<span className="text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show inactive countries"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbWorldX size={20} /></div><div>{renderCardContent(inactiveCount)}<span className="text-xs">Inactive</span></div></Card></div></Tooltip>
                     </div>
                     <div className="mb-4">
-                        <CountryTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} countryNameOptions={countryNameOptionsForFilter} regionOptions={regionOptions} countryIsoOptions={countryIsoOptionsForFilter} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} searchInputValue={tableData?.query} />
+                        <CountryTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} countryNameOptions={countryNameOptionsForFilter} regionOptions={regionOptions} countryIsoOptions={countryIsoOptionsForFilter} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} searchInputValue={tableData?.query} isDataReady={isDataReady} />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching countr(y/ies).</div>}
                     <div className="flex-grow overflow-auto">
-                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
+                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={initialLoading || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
                     </div>
                 </AdaptiveCard>
             </Container>
