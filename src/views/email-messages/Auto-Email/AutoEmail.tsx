@@ -508,12 +508,12 @@ const AutoEmailListing = () => {
         {
             header: "User(s)", accessorKey: "usersDisplay", enableSorting: false, size: 250, cell: props => (
                 <div className="flex -space-x-2 rtl:space-x-reverse">
-                    {props.row.original.usersDisplay?.slice(0, 3).map(user => (
+                    {props.row.original.users?.slice(0, 3).map(user => (
                         <Tooltip key={user.id} title={user.name}><Avatar src={user.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} /></Tooltip>
                     ))}
-                    {props.row.original.usersDisplay && props.row.original.usersDisplay.length > 3 && (
-                        <Tooltip title={`${props.row.original.usersDisplay.length - 3} more`}>
-                            <Avatar shape="circle" size="sm" className="bg-blue-100 text-blue-600">+{props.row.original.usersDisplay.length - 3}</Avatar>
+                    {props.row.original.users && props.row.original.users.length > 3 && (
+                        <Tooltip title={`${props.row.original.users.length - 3} more`}>
+                            <Avatar shape="circle" size="sm" className="bg-blue-100 text-blue-600">{props.row.original.users.length - 3}</Avatar>
                         </Tooltip>
                     )}
                 </div>
