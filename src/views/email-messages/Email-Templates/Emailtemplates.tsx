@@ -19,7 +19,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog, Skeleton } from "@/components/ui"; // Skeleton Imported
 
 // Icons
 import {
@@ -105,7 +105,7 @@ export type EmailTemplateItem = {
   role?: { id: string | number; name: string };
   department?: { id: string | number; name: string };
   designation?: { id: string | number; name: string };
-  updated_by_user?: { name: string; roles: { display_name: string }[] } | null;
+  updated_by_user?: { name: string; roles: { display_name: string }[], profile_pic_path?: string } | null;
   created_by_user?: { name: string; roles: { display_name: string }[] } | null;
   // UI Display helpers
   categoryName?: string;
@@ -183,7 +183,7 @@ type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLI
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 ItemSearch.displayName = "ItemSearch";
 
-const EmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+const EmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
@@ -192,6 +192,7 @@ const EmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport, onClearF
   filteredColumns: ColumnDef<EmailTemplateItem>[];
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<EmailTemplateItem>[]>>;
   activeFilterCount: number;
+  isDataReady: boolean;
 }) => {
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
@@ -233,11 +234,11 @@ const EmailTemplatesTableTools = ({ onSearchChange, onFilter, onExport, onClearF
             })}
           </div>
         </Dropdown>
-        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" disabled={!isDataReady}></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
           Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
         </Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
@@ -282,9 +283,9 @@ const EmailTemplatesListing = () => {
     Roles = [],
     departmentsData = [],
     designationsData = [],
-    status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplateItem | null>(null);
@@ -299,13 +300,16 @@ const EmailTemplatesListing = () => {
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "updated_at" }, query: "" });
   const [selectedItems, setSelectedItems] = useState<EmailTemplateItem[]>([]);
 
+  const isDataReady = !initialLoading;
+  const tableLoading = initialLoading || isSubmitting || isDeleting;
+
   const emailTemplatesData = useMemo(() => (rawEmailTemplatesData as any)?.data || [], [rawEmailTemplatesData]);
   const counts = useMemo(() => (rawEmailTemplatesData as any)?.counts || {}, [rawEmailTemplatesData]);
 
   const categoryOptions = useMemo(() => Array.isArray(CategoriesData) ? CategoriesData?.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) : [], [CategoriesData]);
   const allSubCategoryOptionsForFilter = useMemo(() => Array.isArray(aetSubCategories) ? aetSubCategories.map((sc: ApiLookupItem) => ({ value: String(sc.id), label: sc.name })) : [], [aetSubCategories]);
   const brandOptions = useMemo(() => Array.isArray(BrandData) ? BrandData.map((b: ApiLookupItem) => ({ value: String(b.id), label: b.name })) : [], [BrandData]);
-  const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: ApiLookupItem) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
+  const roleOptions = useMemo(() => Array.isArray(Roles) ? (Roles as any[]).map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
   const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
   const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: ApiLookupItem) => ({ value: String(d.id), label: d.name })) : [], [designationsData?.data]);
 
@@ -316,14 +320,27 @@ const EmailTemplatesListing = () => {
       setSubcategoryOptions(subCategoriesForSelectedCategoryData?.map((sc: any) => ({ value: sc.id, label: sc.name, })) || []);
     }
   }, [subCategoriesForSelectedCategoryData]);
+
   useEffect(() => {
-    dispatch(getEmailTemplatesAction());
-    dispatch(getCategoriesAction());
-    dispatch(getBrandAction());
-    dispatch(getRolesAction());
-    dispatch(getDepartmentsAction());
-    dispatch(getDesignationsAction());
-    // dispatch(getSubcategoriesByCategoryIdAction());
+    const fetchData = async () => {
+        setInitialLoading(true);
+        try {
+            await Promise.all([
+                dispatch(getEmailTemplatesAction()),
+                dispatch(getCategoriesAction()),
+                dispatch(getBrandAction()),
+                dispatch(getRolesAction()),
+                dispatch(getDepartmentsAction()),
+                dispatch(getDesignationsAction()),
+            ]);
+        } catch (error) {
+            console.error("Failed to fetch initial data", error);
+            toast.push(<Notification type="danger" title="Error">Failed to load initial data.</Notification>)
+        } finally {
+            setInitialLoading(false);
+        }
+    };
+    fetchData();
   }, [dispatch]);
 
   const formMethods = useForm<EmailTemplateFormData>({ resolver: zodResolver(emailTemplateFormSchema), mode: "onChange" });
@@ -352,7 +369,6 @@ const EmailTemplatesListing = () => {
 
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
-  // --- REFACTORED Edit Drawer Logic ---
   const openEditDrawer = useCallback((template: EmailTemplateItem) => {
     setEditingTemplate(template);
     setIsEditDrawerOpen(true);
@@ -499,7 +515,7 @@ const EmailTemplatesListing = () => {
         );
       }
     }, { header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
-  ], [openEditDrawer, handleDeleteClick]);
+  ], [openEditDrawer, handleDeleteClick, openImageViewer]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<EmailTemplateItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
@@ -513,7 +529,7 @@ const EmailTemplatesListing = () => {
         <FormItem label={<div>Template ID<span className="text-red-500"> * </span></div>} invalid={!!currentErrors.template_id} errorMessage={currentErrors.template_id?.message}><Controller name="template_id" control={currentControl} render={({ field }) => (<Input {...field} prefix={<TbKey />} placeholder="e.g., WELCOME_EMAIL_V1" />)} /></FormItem>
         <FormItem label={<div>Title (Email Subject / Header)<span className="text-red-500"> * </span></div>} className="md:col-span-2" invalid={!!currentErrors.title} errorMessage={currentErrors.title?.message}><Controller name="title" control={currentControl} render={({ field }) => (<Input {...field} prefix={<TbFileDescription />} placeholder="Actual Email Title/Subject" />)} /></FormItem>
         <FormItem label={<div>Category<span className="text-red-500"> * </span></div>} invalid={!!currentErrors.category_id} errorMessage={currentErrors.category_id?.message}><Controller name="category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory2 />} />)} /></FormItem>
-        <FormItem label="SubCategory" invalid={!!currentErrors.sub_category_id} errorMessage={currentErrors.sub_category_id?.message}><Controller name="sub_category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select SubCategory" options={subCategoryOptionsForForm} value={subCategoryOptionsForForm.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbApps />} isDisabled={!watchedCategoryIdInForm || subCategoryOptionsForForm.length === 0} loading={masterLoadingStatus === "loading"} />)} /></FormItem>
+        <FormItem label="SubCategory" invalid={!!currentErrors.sub_category_id} errorMessage={currentErrors.sub_category_id?.message}><Controller name="sub_category_id" control={currentControl} render={({ field }) => (<Select placeholder="Select SubCategory" options={subCategoryOptionsForForm} value={subCategoryOptionsForForm.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbApps />} isDisabled={!watchedCategoryIdInForm || subCategoryOptionsForForm.length === 0} loading={initialLoading} />)} /></FormItem>
         <FormItem label="Brand" invalid={!!currentErrors.brand_id} errorMessage={currentErrors.brand_id?.message}><Controller name="brand_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Brand" options={brandOptions} value={brandOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbBuildingArch />} />)} /></FormItem>
         <FormItem label="Role" invalid={!!currentErrors.role_id} errorMessage={currentErrors.role_id?.message}><Controller name="role_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Role" options={roleOptions} value={roleOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbUsersGroup />} />)} /></FormItem>
         <FormItem label="Department" invalid={!!currentErrors.department_id} errorMessage={currentErrors.department_id?.message}><Controller name="department_id" control={currentControl} render={({ field }) => (<Select placeholder="Select Department" options={departmentOptions} value={departmentOptions.find(o => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} isClearable prefix={<TbBuildingCommunity />} />)} /></FormItem>
@@ -527,19 +543,26 @@ const EmailTemplatesListing = () => {
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
 
+  const renderCardContent = (content: number | undefined) => {
+    if (initialLoading) {
+      return <Skeleton width={40} height={20} />;
+    }
+    return <h6 className="font-bold">{content ?? 0}</h6>;
+  };
+
   return (
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Email Templates</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
           </div>
           <div className="grid grid-cols-4 mb-4 gap-2">
-            <Tooltip title="Click to show all templates"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbAlignBoxCenterBottom size={24} /></div><div><h6 className="text-blue-500">{counts.total ?? '0'}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show active templates"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBuildingCog size={24} /></div><div><h6 className="text-violet-500">{counts.active ?? '0'}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show inactive templates"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBuildingOff size={24} /></div><div><h6 className="text-red-500">{counts.inactive ?? '0'}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
-            <Tooltip title="Total times templates were used"><Card bodyClass={cardBodyClass} className="rounded-md border border-green-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMailForward size={24} /></div><div><h6 className="text-green-500">{counts.total_used_count ?? '0'}</h6><span className="font-semibold text-xs">Count Used</span></div></Card></Tooltip>
+            <Tooltip title="Click to show all templates"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbAlignBoxCenterBottom size={24} /></div><div><div className="text-blue-500">{renderCardContent(counts.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show active templates"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBuildingCog size={24} /></div><div><div className="text-violet-500">{renderCardContent(counts.active)}</div><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show inactive templates"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBuildingOff size={24} /></div><div><div className="text-red-500">{renderCardContent(counts.inactive)}</div><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
+            <Tooltip title="Total times templates were used"><Card bodyClass={cardBodyClass} className="rounded-md border border-green-200 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMailForward size={24} /></div><div><div className="text-green-500">{renderCardContent(counts.total_used_count)}</div><span className="font-semibold text-xs">Count Used</span></div></Card></Tooltip>
           </div>
           <div className="mb-4">
             <EmailTemplatesTableTools
@@ -551,11 +574,12 @@ const EmailTemplatesListing = () => {
               filteredColumns={filteredColumns}
               setFilteredColumns={setFilteredColumns}
               activeFilterCount={activeFilterCount}
+              isDataReady={isDataReady}
             />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4">
-            <EmailTemplatesTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
+            <EmailTemplatesTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>

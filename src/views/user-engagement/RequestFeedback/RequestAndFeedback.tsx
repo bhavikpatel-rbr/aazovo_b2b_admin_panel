@@ -284,11 +284,12 @@ const RequestAndFeedbackListing = () => {
     dispatch(getDepartmentsAction());
   }, [dispatch]);
 
+  
   useEffect(() => {
-    if (departmentsData && Array.isArray(departmentsData)) {
-      setDepartmentOptions(departmentsData.map((dept: any) => ({ value: String(dept.id), label: dept.name })));
+    if (departmentsData?.data && Array.isArray(departmentsData?.data)) {
+      setDepartmentOptions(departmentsData?.data.map((dept: any) => ({ value: String(dept.id), label: dept.name })));
     }
-  }, [departmentsData]);
+  }, [departmentsData?.data]);
 
   const formMethods = useForm<RequestFeedbackFormData>({ resolver: zodResolver(requestFeedbackFormSchema), mode: "onChange" });
   const { control, handleSubmit, reset, formState: { errors, isValid } } = formMethods;
@@ -402,7 +403,7 @@ const RequestAndFeedbackListing = () => {
 
   const columns: ColumnDef<RequestFeedbackItem>[] = useMemo(() => [
     // REQUIREMENT: Listing Column - Member info
-    { header: "Member Info", accessorKey: "name", size: 200, cell: (props: CellContext<RequestFeedbackItem, unknown>) => (<div className="flex items-center gap-2"><div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-sm">{props.row.original.name || "N/A"}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.customer_id === "0" ? "Guest" : `ID: ${props.row.original.customer_id}`}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.email || "N/A"}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.mobile_no || "N/A"}</span></div></div>), },
+    { header: "Member Info", accessorKey: "name", size: 200, cell: (props: CellContext<RequestFeedbackItem, unknown>) => (<div className="flex items-center gap-2"><div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-sm">{props.row.original?.member_code || "N/A" + '|' + props.row.original.name || "N/A"}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.customer_id === "0" ? "Guest" : `ID: ${props.row.original.customer_id}`}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.email || "N/A"}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.mobile_no || "N/A"}</span></div></div>), },
     // REQUIREMENT: Listing Column - Type
     { header: "Type", accessorKey: "type", size: 100, cell: (props) => (<Tag className="capitalize">{props.getValue() || "N/A"}</Tag>), },
     // REQUIREMENT: Listing Column - Categories
