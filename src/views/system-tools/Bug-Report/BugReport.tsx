@@ -36,6 +36,7 @@ import {
   FormItem,
   Input,
   Select,
+  Skeleton,
   Tag,
   Tooltip,
 } from "@/components/ui";
@@ -88,7 +89,7 @@ import {
   getAllUsersAction,
   getBugReportsAction,
   submitExportReasonAction,
-  addTaskAction, // --- MODIFIED: Import addTaskAction ---
+  addTaskAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 
@@ -104,6 +105,7 @@ export type BugReportItem = {
   mobile_no?: string;
   report: string;
   attachment?: string | null;
+  attachment_full_path?: string;
   status: BugReportStatusApi;
   severity?: BugReportSeverity;
   created_at?: string;
@@ -156,7 +158,6 @@ const scheduleSchema = z.object({
 });
 type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
-// --- MODIFIED: Add Task schema and type ---
 const taskValidationSchema = z.object({
   task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
   assign_to: z.array(z.string()).min(1, 'At least one assignee is required.'),
@@ -173,81 +174,7 @@ const taskPriorityOptions: SelectOption[] = [
 ];
 
 const eventTypeOptions: SelectOption[] = [
-  // Customer Engagement & Sales
-  { value: 'Meeting', label: 'Meeting' },
-  { value: 'Demo', label: 'Product Demo' },
-  { value: 'IntroCall', label: 'Introductory Call' },
-  { value: 'FollowUpCall', label: 'Follow-up Call' },
-  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-  { value: 'CheckIn', label: 'Customer Check-in' },
-  { value: 'LogEmail', label: 'Log an Email' },
-
-  // Project & Task Management
-  { value: 'Milestone', label: 'Project Milestone' },
-  { value: 'Task', label: 'Task' },
-  { value: 'FollowUp', label: 'General Follow-up' },
-  { value: 'ProjectKickoff', label: 'Project Kick-off' },
-
-  // Customer Onboarding & Support
-  { value: 'OnboardingSession', label: 'Onboarding Session' },
-  { value: 'Training', label: 'Training Session' },
-  { value: 'SupportCall', label: 'Support Call' },
-
-  // General & Administrative
-  { value: 'Reminder', label: 'Reminder' },
-  { value: 'Note', label: 'Add a Note' },
-  { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' },
-  { value: 'StrategySession', label: 'Strategy Session' },
-  { value: 'TeamMeeting', label: 'Team Meeting' },
-  { value: 'PerformanceReview', label: 'Performance Review' },
-  { value: 'Lunch', label: 'Lunch / Break' },
-  { value: 'Appointment', label: 'Personal Appointment' },
-  { value: 'Other', label: 'Other' },
-  { value: 'ProjectKickoff', label: 'Project Kick-off' },
-  { value: 'InternalSync', label: 'Internal Team Sync' },
-  { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' },
-  { value: 'RequirementsGathering', label: 'Requirements Gathering' },
-  { value: 'UAT', label: 'User Acceptance Testing (UAT)' },
-  { value: 'GoLive', label: 'Go-Live / Deployment Date' },
-  { value: 'ProjectSignOff', label: 'Project Sign-off' },
-  { value: 'PrepareReport', label: 'Prepare Report' },
-  { value: 'PresentFindings', label: 'Present Findings' },
-  { value: 'TroubleshootingCall', label: 'Troubleshooting Call' },
-  { value: 'BugReplication', label: 'Bug Replication Session' },
-  { value: 'IssueEscalation', label: 'Escalate Issue' },
-  { value: 'ProvideUpdate', label: 'Provide Update on Ticket' },
-  { value: 'FeatureRequest', label: 'Log Feature Request' },
-  { value: 'IntegrationSupport', label: 'Integration Support Call' },
-  { value: 'DataMigration', label: 'Data Migration/Import Task' },
-  { value: 'ColdCall', label: 'Cold Call' },
-  { value: 'DiscoveryCall', label: 'Discovery Call' },
-  { value: 'QualificationCall', label: 'Qualification Call' },
-  { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' },
-  { value: 'LinkedInMessage', label: 'Log LinkedIn Message' },
-  { value: 'ProposalReview', label: 'Proposal Review Meeting' },
-  { value: 'ContractSent', label: 'Contract Sent' },
-  { value: 'NegotiationCall', label: 'Negotiation Call' },
-  { value: 'TrialSetup', label: 'Product Trial Setup' },
-  { value: 'TrialCheckIn', label: 'Trial Check-in Call' },
-  { value: 'WelcomeCall', label: 'Welcome Call' },
-  { value: 'ImplementationSession', label: 'Implementation Session' },
-  { value: 'UserTraining', label: 'User Training Session' },
-  { value: 'AdminTraining', label: 'Admin Training Session' },
-  { value: 'MonthlyCheckIn', label: 'Monthly Check-in' },
-  { value: 'QBR', label: 'Quarterly Business Review (QBR)' },
-  { value: 'HealthCheck', label: 'Customer Health Check' },
-  { value: 'FeedbackSession', label: 'Feedback Session' },
-  { value: 'RenewalDiscussion', label: 'Renewal Discussion' },
-  { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' },
-  { value: 'CaseStudyInterview', label: 'Case Study Interview' },
-  { value: 'InvoiceDue', label: 'Invoice Due' },
-  { value: 'SendInvoice', label: 'Send Invoice' },
-  { value: 'PaymentReminder', label: 'Send Payment Reminder' },
-  { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' },
-  { value: 'ConfirmPayment', label: 'Confirm Payment Received' },
-  { value: 'ContractRenewalDue', label: 'Contract Renewal Due' },
-  { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' },
-  { value: 'SendQuote', label: 'Send Quote/Estimate' },
+  { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'QBR', label: 'Quarterly Business Review (QBR)' }, { value: 'CheckIn', label: 'Customer Check-in' }, { value: 'LogEmail', label: 'Log an Email' }, { value: 'Milestone', label: 'Project Milestone' }, { value: 'Task', label: 'Task' }, { value: 'FollowUp', label: 'General Follow-up' }, { value: 'ProjectKickoff', label: 'Project Kick-off' }, { value: 'OnboardingSession', label: 'Onboarding Session' }, { value: 'Training', label: 'Training Session' }, { value: 'SupportCall', label: 'Support Call' }, { value: 'Reminder', label: 'Reminder' }, { value: 'Note', label: 'Add a Note' }, { value: 'FocusTime', label: 'Focus Time (Do Not Disturb)' }, { value: 'StrategySession', label: 'Strategy Session' }, { value: 'TeamMeeting', label: 'Team Meeting' }, { value: 'PerformanceReview', label: 'Performance Review' }, { value: 'Lunch', label: 'Lunch / Break' }, { value: 'Appointment', label: 'Personal Appointment' }, { value: 'Other', label: 'Other' }, { value: 'InternalSync', label: 'Internal Team Sync' }, { value: 'ClientUpdateMeeting', label: 'Client Update Meeting' }, { value: 'RequirementsGathering', label: 'Requirements Gathering' }, { value: 'UAT', label: 'User Acceptance Testing (UAT)' }, { value: 'GoLive', label: 'Go-Live / Deployment Date' }, { value: 'ProjectSignOff', label: 'Project Sign-off' }, { value: 'PrepareReport', label: 'Prepare Report' }, { value: 'PresentFindings', label: 'Present Findings' }, { value: 'TroubleshootingCall', label: 'Troubleshooting Call' }, { value: 'BugReplication', label: 'Bug Replication Session' }, { value: 'IssueEscalation', label: 'Escalate Issue' }, { value: 'ProvideUpdate', label: 'Provide Update on Ticket' }, { value: 'FeatureRequest', label: 'Log Feature Request' }, { value: 'IntegrationSupport', label: 'Integration Support Call' }, { value: 'DataMigration', label: 'Data Migration/Import Task' }, { value: 'ColdCall', label: 'Cold Call' }, { value: 'DiscoveryCall', label: 'Discovery Call' }, { value: 'QualificationCall', label: 'Qualification Call' }, { value: 'SendFollowUpEmail', label: 'Send Follow-up Email' }, { value: 'LinkedInMessage', label: 'Log LinkedIn Message' }, { value: 'ProposalReview', label: 'Proposal Review Meeting' }, { value: 'ContractSent', label: 'Contract Sent' }, { value: 'NegotiationCall', label: 'Negotiation Call' }, { value: 'TrialSetup', label: 'Product Trial Setup' }, { value: 'TrialCheckIn', label: 'Trial Check-in Call' }, { value: 'WelcomeCall', label: 'Welcome Call' }, { value: 'ImplementationSession', label: 'Implementation Session' }, { value: 'UserTraining', label: 'User Training Session' }, { value: 'AdminTraining', label: 'Admin Training Session' }, { value: 'MonthlyCheckIn', label: 'Monthly Check-in' }, { value: 'HealthCheck', label: 'Customer Health Check' }, { value: 'FeedbackSession', label: 'Feedback Session' }, { value: 'RenewalDiscussion', label: 'Renewal Discussion' }, { value: 'UpsellOpportunity', label: 'Upsell/Cross-sell Call' }, { value: 'CaseStudyInterview', label: 'Case Study Interview' }, { value: 'InvoiceDue', label: 'Invoice Due' }, { value: 'SendInvoice', label: 'Send Invoice' }, { value: 'PaymentReminder', label: 'Send Payment Reminder' }, { value: 'ChaseOverduePayment', label: 'Chase Overdue Payment' }, { value: 'ConfirmPayment', label: 'Confirm Payment Received' }, { value: 'ContractRenewalDue', label: 'Contract Renewal Due' }, { value: 'DiscussBilling', label: 'Discuss Billing/Invoice' }, { value: 'SendQuote', label: 'Send Quote/Estimate' },
 ]
 
 // --- Helper Functions and Reusable Components ---
@@ -291,7 +218,6 @@ const itemPath = (filename: any) => {
   return filename ? `${baseUrl}/storage/attachments/bug_reports/${filename}` : "#";
 };
 
-// --- MODIFIED: Added more actions ---
 const ActionColumn = ({ 
     onEdit, 
     onViewDetail, 
@@ -343,7 +269,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
   );
 };
 
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, searchVal, columns, filteredColumns, setFilteredColumns, activeFilterCount }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; searchVal: string; columns: ColumnDef<BugReportItem>[]; filteredColumns: ColumnDef<BugReportItem>[]; setFilteredColumns: (cols: ColumnDef<BugReportItem>[]) => void; activeFilterCount: number; }) => {
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, searchVal, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; searchVal: string; columns: ColumnDef<BugReportItem>[]; filteredColumns: ColumnDef<BugReportItem>[]; setFilteredColumns: (cols: ColumnDef<BugReportItem>[]) => void; activeFilterCount: number; isDataReady: boolean; }) => {
   const toggleColumn = (checked: boolean, colHeader: string) => {
     const newCols = checked
       ? [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a, b) => columns.indexOf(a as any) - columns.indexOf(b as any))
@@ -358,9 +284,9 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, se
         <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
           <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.filter(c => c.id !== 'select' && c.header).map(col => (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}</div>
         </Dropdown>
-        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" disabled={!isDataReady}></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
@@ -477,7 +403,6 @@ const BugReportScheduleDialog: React.FC<{ bugReport: BugReportItem; onClose: () 
   );
 };
 
-// --- MODIFIED: New Dialog component for Assigning Task ---
 const AssignTaskDialog = ({ 
     isOpen, 
     onClose, 
@@ -559,6 +484,7 @@ const BugReportListing = () => {
 
   const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: b.name })) : [], [getAllUserData]);
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BugReportItem | null>(null);
@@ -581,14 +507,28 @@ const BugReportListing = () => {
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<BugReportItem>[]>([]);
-  // --- MODIFIED: Add state for task assignment ---
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [taskTargetItem, setTaskTargetItem] = useState<BugReportItem | null>(null);
+  const isDataReady = !initialLoading;
+
+  const refreshData = useCallback(async () => {
+    setInitialLoading(true);
+    try {
+        await Promise.all([
+            dispatch(getAllUsersAction()),
+            dispatch(getBugReportsAction())
+        ]);
+    } catch (error) {
+        console.error("Failed to refresh data:", error);
+        toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload bug reports.</Notification>);
+    } finally {
+        setInitialLoading(false);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
-    dispatch(getAllUsersAction());
-    dispatch(getBugReportsAction());
-  }, [dispatch]);
+    refreshData();
+  }, [refreshData]);
 
   const bugReportsData: BugReportItem[] = useMemo(() => {
     if (!Array.isArray(rawBugReportsData?.data)) return [];
@@ -611,7 +551,6 @@ const BugReportListing = () => {
   const openScheduleModal = useCallback((item: BugReportItem) => { setScheduleItem(item); setIsScheduleModalOpen(true); }, []);
   const closeScheduleModal = useCallback(() => { setScheduleItem(null); setIsScheduleModalOpen(false); }, []);
 
-  // --- MODIFIED: Add handlers for new actions ---
   const openAssignToTaskModal = useCallback((item: BugReportItem) => {
     setTaskTargetItem(item);
     setIsTaskModalOpen(true);
@@ -652,7 +591,6 @@ const BugReportListing = () => {
     }
   };
 
-
   const onSubmitHandler = async (data: BugReportFormData) => {
     setIsSubmitting(true);
     const formDataPayload = new FormData();
@@ -673,7 +611,7 @@ const BugReportListing = () => {
         toast.push(<Notification title="Bug Report Submitted" type="success">Thank you for your report!</Notification>);
         closeAddDrawer();
       }
-      dispatch(getBugReportsAction());
+      refreshData();
     } catch (error: any) {
       toast.push(<Notification title={editingItem ? "Update Failed" : "Submission Failed"} type="danger" children={(error as Error).message || "Operation failed."} />);
     } finally {
@@ -694,7 +632,7 @@ const BugReportListing = () => {
     try {
       await dispatch(editBugReportAction({ id: item.id, formData })).unwrap();
       toast.push(<Notification title="Status Changed" type="success">{`Report status changed to ${newStatus}.`}</Notification>);
-      dispatch(getBugReportsAction());
+      refreshData();
       if (viewingItem?.id === item.id) {
         setViewingItem((prev) => prev ? { ...prev, status: newStatus } : null);
       }
@@ -703,7 +641,7 @@ const BugReportListing = () => {
     } finally {
       setIsChangingStatus(false);
     }
-  }, [dispatch, viewingItem]);
+  }, [dispatch, viewingItem, refreshData]);
 
   const handleDeleteClick = useCallback((item: BugReportItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
   const onConfirmSingleDelete = useCallback(async () => {
@@ -714,14 +652,14 @@ const BugReportListing = () => {
       await dispatch(deleteBugReportAction({ id: itemToDelete.id })).unwrap();
       toast.push(<Notification title="Report Deleted" type="success">{`Report by "${itemToDelete.name}" deleted.`}</Notification>);
       setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id));
-      dispatch(getBugReportsAction());
+      refreshData();
     } catch (error: any) {
       toast.push(<Notification title="Delete Failed" type="danger" children={(error as Error).message} />);
     } finally {
       setIsDeleting(false);
       setItemToDelete(null);
     }
-  }, [dispatch, itemToDelete]);
+  }, [dispatch, itemToDelete, refreshData]);
 
   const handleDeleteSelected = useCallback(async () => {
     if (selectedItems.length === 0) return;
@@ -731,19 +669,19 @@ const BugReportListing = () => {
       await dispatch(deleteAllBugReportsAction({ ids: idsToDelete.join(",") })).unwrap();
       toast.push(<Notification title="Deletion Successful" type="success">{`${idsToDelete.length} report(s) deleted.`}</Notification>);
       setSelectedItems([]);
-      dispatch(getBugReportsAction());
+      refreshData();
     } catch (error: any) {
       toast.push(<Notification title="Deletion Failed" type="danger" children={(error as Error).message} />);
     } finally {
       setIsDeleting(false);
     }
-  }, [dispatch, selectedItems]);
+  }, [dispatch, selectedItems, refreshData]);
 
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria({ filterStatus: data.filterStatus || [], filterReportedBy: data.filterReportedBy || "" }); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [closeFilterDrawer, handleSetTableData]);
-  const onClearFilters = useCallback(() => { setFilterCriteria({}); filterFormMethods.reset({ filterStatus: [], filterReportedBy: "" }); handleSetTableData({ query: "", pageIndex: 1 }), dispatch(getBugReportsAction()) }, [filterFormMethods, handleSetTableData]);
+  const onClearFilters = useCallback(() => { setFilterCriteria({}); filterFormMethods.reset({ filterStatus: [], filterReportedBy: "" }); handleSetTableData({ query: "", pageIndex: 1 }); refreshData() }, [filterFormMethods, handleSetTableData, refreshData]);
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => { setFilterCriteria(prev => { const newFilters = { ...prev }; if (key === 'filterStatus') { const currentValues = prev.filterStatus || []; const newValues = currentValues.filter(item => item !== value); newValues.length > 0 ? newFilters.filterStatus = newValues : delete newFilters.filterStatus; } else { delete newFilters[key]; } return newFilters; }); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
   const handleCardClick = (status?: BugReportStatusApi) => { setFilterCriteria(status ? { filterStatus: [status] } : {}); handleSetTableData({ pageIndex: 1, query: '' }); };
 
@@ -832,17 +770,7 @@ const BugReportListing = () => {
   );
 
   const renderViewDetails = (item: BugReportItem) => (
-    // <div className="p-1 space-y-5">
-    //   <div className="flex items-center justify-between"><div className="flex items-start"><TbInfoCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</h6><Tag className={classNames("capitalize text-sm", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{item.status}</Tag></div></div><Dropdown renderTitle={<Button size="xs" variant="twoTone" disabled={isChangingStatus}>Change Status</Button>}>{BUG_REPORT_STATUS_OPTIONS.map(opt => (<Dropdown.Item key={opt.value} onClick={() => handleChangeStatus(item, opt.value)}>Mark as {opt.label}</Dropdown.Item>))}</Dropdown></div>
-    //   <div className="flex items-start"><TbUserCircle className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Name</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.name}</p></div></div>
-    //   <div className="flex items-start"><TbMail className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Email</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.email}</p></div></div>
-    //   {item.mobile_no && (<div className="flex items-start"><TbPhone className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Mobile No.</h6><p className="text-gray-800 dark:text-gray-100 text-base">{item.mobile_no}</p></div></div>)}
-    //   <div className="flex items-start"><TbFileDescription className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Report Description</h6><p className="text-gray-800 dark:text-gray-100 text-base whitespace-pre-wrap">{item.report}</p></div></div>
-    //   {item.attachment && (<div className="flex items-start"><TbPaperclip className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Attachment</h6><a href={item.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline break-all text-base">{item.attachment}</a></div></div>)}
-    //   {item.created_at && (<div className="flex items-start"><TbCalendarEvent className="text-xl mr-3 mt-1 text-gray-500 dark:text-gray-400" /><div><h6 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Reported On</h6><p className="text-gray-800 dark:text-gray-100 text-base">{new Date(item.created_at).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p></div></div>)}
-    // </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-lg border-emerald-300">
-        {/* Status */}
         <div className="flex items-start">
           <TbInfoCircle className="text-xl mr-2 mt-1 text-gray-500 dark:text-gray-400" />
           <p className="text-sm text-gray-800 dark:text-gray-100">
@@ -852,8 +780,6 @@ const BugReportListing = () => {
             </Tag>
           </p>
         </div>
-
-        {/* Change Status Button */}
         <div className="flex justify-end items-start">
           <Dropdown
             renderTitle={
@@ -869,24 +795,18 @@ const BugReportListing = () => {
             ))}
           </Dropdown>
         </div>
-
-        {/* Name */}
         <div className="flex items-start">
           <TbUserCircle className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
           <p className="text-sm text-gray-800 dark:text-gray-100">
             <span className="font-semibold text-gray-500 dark:text-gray-400">Name:</span> {item.name}
           </p>
         </div>
-
-        {/* Email */}
         <div className="flex items-start">
           <TbMail className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
           <p className="text-sm text-gray-800 dark:text-gray-100">
             <span className="font-semibold text-gray-500 dark:text-gray-400">Email:</span> {item.email}
           </p>
         </div>
-
-        {/* Mobile No. */}
         {item.mobile_no && (
           <div className="flex items-start">
             <TbPhone className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
@@ -895,8 +815,6 @@ const BugReportListing = () => {
             </p>
           </div>
         )}
-
-        {/* Reported On */}
         {item.created_at && (
           <div className="flex items-start">
             <TbCalendarEvent className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
@@ -913,8 +831,6 @@ const BugReportListing = () => {
             </p>
           </div>
         )}
-
-        {/* Attachment */}
         {item.attachment && (
           <div className="flex items-start col-span-full">
             <TbPaperclip className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
@@ -926,8 +842,6 @@ const BugReportListing = () => {
             </p>
           </div>
         )}
-
-        {/* Report Description */}
         <div className="flex items-start col-span-full">
           <TbFileDescription className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
           <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
@@ -937,24 +851,31 @@ const BugReportListing = () => {
       </div>
   );
 
-  const tableLoading = masterLoadingStatus === "pending" || isSubmitting || isDeleting || isChangingStatus;
+  const tableLoading = initialLoading || isSubmitting || isDeleting || isChangingStatus;
+
+  const renderCardContent = (content: string | number | undefined, colorClass: string) => {
+    if (initialLoading) {
+      return <Skeleton width={40} height={24} />;
+    }
+    return <h6 className={colorClass}>{content ?? '...'}</h6>;
+  };
 
   return (
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Bug Reports</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button></div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Bug Reports</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button></div>
           <div className="grid grid-cols-5 gap-2 w-full sm:w-auto mb-4 gap-4">
-            <Tooltip title="View All Reports (Clear Filters)"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBug size={24} /></div><div><h6 className="text-blue-500">{rawBugReportsData?.counts?.total ?? "..."}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Filter by Status: New"><div className="cursor-pointer" onClick={() => handleCardClick("New")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-pink-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbMailPlus size={24} /></div><div><h6 className="text-pink-500">{rawBugReportsData?.counts?.new ?? "..."}</h6><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
-            <Tooltip title="Filter by Status: Under Review"><div className="cursor-pointer" onClick={() => handleCardClick("Under Review")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-orange-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbLoader size={24} /></div><div><h6 className="text-orange-500">{rawBugReportsData?.counts?.under_review ?? "..."}</h6><span className="font-semibold text-xs">Under Review</span></div></Card></div></Tooltip>
-            <Tooltip title="Filter by Status: Resolved"><div className="cursor-pointer" onClick={() => handleCardClick("Resolved")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-green-300"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={24} /></div><div><h6 className="text-green-500">{rawBugReportsData?.counts?.resolved ?? "..."}</h6><span className="font-semibold text-xs">Resolved</span></div></Card></div></Tooltip>
-            <Tooltip title="Filter by Status: Unresolved"><div className="cursor-pointer" onClick={() => handleCardClick("Unresolved")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCircleX size={24} /></div><div><h6 className="text-red-500">{rawBugReportsData?.counts?.unresolved ?? "..."}</h6><span className="font-semibold text-xs">Unresolved</span></div></Card></div></Tooltip>
+            <Tooltip title="View All Reports (Clear Filters)"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbBug size={24} /></div><div>{renderCardContent(rawBugReportsData?.counts?.total, "text-blue-500")}<span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Filter by Status: New"><div className="cursor-pointer" onClick={() => handleCardClick("New")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-pink-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbMailPlus size={24} /></div><div>{renderCardContent(rawBugReportsData?.counts?.new, "text-pink-500")}<span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
+            <Tooltip title="Filter by Status: Under Review"><div className="cursor-pointer" onClick={() => handleCardClick("Under Review")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-orange-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbLoader size={24} /></div><div>{renderCardContent(rawBugReportsData?.counts?.under_review, "text-orange-500")}<span className="font-semibold text-xs">Under Review</span></div></Card></div></Tooltip>
+            <Tooltip title="Filter by Status: Resolved"><div className="cursor-pointer" onClick={() => handleCardClick("Resolved")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-green-300"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={24} /></div><div>{renderCardContent(rawBugReportsData?.counts?.resolved, "text-green-500")}<span className="font-semibold text-xs">Resolved</span></div></Card></div></Tooltip>
+            <Tooltip title="Filter by Status: Unresolved"><div className="cursor-pointer" onClick={() => handleCardClick("Unresolved")}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCircleX size={24} /></div><div>{renderCardContent(rawBugReportsData?.counts?.unresolved, "text-red-500")}<span className="font-semibold text-xs">Unresolved</span></div></Card></div></Tooltip>
           </div>
-          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} searchVal={tableData.query as string} columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+          <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} searchVal={tableData.query as string} columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching report(s).</div>}
-          <div className="mt-4"><DataTable columns={filteredColumns} noData={!tableLoading && pageData.length === 0} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectable checkboxChecked={(row: BugReportItem) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} /></div>
+          <div className="mt-4"><DataTable columns={filteredColumns} noData={!isDataReady && pageData.length === 0} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectable checkboxChecked={(row: BugReportItem) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} /></div>
         </AdaptiveCard>
       </Container>
       <BugReportsSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
@@ -976,7 +897,6 @@ const BugReportListing = () => {
         <BugReportNotificationDialog bugReport={notificationItem} onClose={closeNotificationModal} getAllUserDataOptions={getAllUserDataOptions} />
         )}
       {isScheduleModalOpen && scheduleItem && (<BugReportScheduleDialog bugReport={scheduleItem} onClose={closeScheduleModal} />)}
-      {/* --- MODIFIED: Add the new Assign Task Dialog --- */}
       <AssignTaskDialog
         isOpen={isTaskModalOpen}
         onClose={closeAssignToTaskModal}
