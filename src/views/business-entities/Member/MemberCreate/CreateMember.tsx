@@ -500,12 +500,11 @@ const transformApiToFormSchema = (
       allSubCategories
     ),
     member_grade: toSelectOption(formData.member_grade),
-    relationship_manager: formData.relationship_manager_id
+    relationship_manager_id: formData.relationship_manager
       ? {
-        value: String(formData.relationship_manager_id.id),
-        label: formData.relationship_manager_id.name,
-      }
-      : undefined,
+        value: formData.relationship_manager.id,
+        label: formData.relationship_manager.name,
+      } : undefined,
     dealing_in_bulk: formData.dealing_in_bulk || "No",
     remarks: formData.remarks || "",
 
@@ -575,8 +574,8 @@ const preparePayloadForApi = (
 ): any => {
   const getValue = (field: any) => (typeof field === 'object' && field !== null && 'value' in field ? field.value : field);
 
-  console.log(formData,'formData');
-  
+  console.log(formData, 'formData');
+
   const payload: any = {
     ...formData,
     id: formData.id,
@@ -2183,7 +2182,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               <Select
                 {...field}
                 placeholder="Select RM"
-                value={managerOptions.find((o) => o.value === field.value)}
+                // value={managerOptions.find((o) => o.value === field.value)}
                 options={managerOptions}
                 isClearable
               />
@@ -2404,7 +2403,7 @@ const PersonalDetailsComponent = ({
             name="name"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Member’s full name" {...field} onInput={(e:any) => { if (e.target.value) e.target.value = e.target.value.toUppercash() }} />
+              <Input placeholder="Member’s full name" {...field} onInput={(e: any) => { if (e.target.value) e.target.value = e.target.value.toUppercash() }} />
             )}
           />
         </FormItem>
@@ -2963,7 +2962,7 @@ const MemberFormComponent = (props: {
             (typeof val === "object" && !!val?.value),
           { message: "Country is required" }
         ),
-         continent_id: z
+      continent_id: z
         .union([
           z.string(),
           z.object({ value: z.string().min(1), label: z.string() }),
@@ -3232,19 +3231,19 @@ const MemberCreate = () => {
               ParentCategories,
               subCategoriesForSelectedCategoryData
             );
-            
+
             // Post-transformation processing to resolve IDs to full objects for Selects
             if (apiMemberData.country_id && CountriesData.length) {
-                const country = CountriesData.find(c => String(c.id) === String(apiMemberData.country_id));
-                if (country) {
-                    transformed.country_id = { value: String(country.id), label: country.name };
-                }
+              const country = CountriesData.find(c => String(c.id) === String(apiMemberData.country_id));
+              if (country) {
+                transformed.country_id = { value: String(country.id), label: country.name };
+              }
             }
-             if (apiMemberData.continent_id && ContinentsData.length) {
-                const continent = ContinentsData.find(c => String(c.id) === String(apiMemberData.continent_id));
-                if (continent) {
-                    transformed.continent_id = { value: String(continent.id), label: continent.name };
-                }
+            if (apiMemberData.continent_id && ContinentsData.length) {
+              const continent = ContinentsData.find(c => String(c.id) === String(apiMemberData.continent_id));
+              if (continent) {
+                transformed.continent_id = { value: String(continent.id), label: continent.name };
+              }
             }
 
 
