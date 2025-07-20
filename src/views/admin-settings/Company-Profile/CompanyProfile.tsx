@@ -10,7 +10,7 @@ import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import toast from "@/components/ui/toast";
 import StickyFooter from "@/components/shared/StickyFooter";
-import { Form, FormItem, Input } from "@/components/ui";
+import { Form, FormItem, Input, Skeleton } from "@/components/ui";
 
 // Icons
 import {
@@ -133,6 +133,57 @@ const companyProfileSchema = z.object({
     .min(1, "Notification Email is required."),
 });
 type CompanyProfileFormData = z.infer<typeof companyProfileSchema>;
+
+// --- Skeleton Component for Initial Loading ---
+const CompanyProfileSkeleton = () => (
+    <Container>
+        <AdaptiveCard>
+            <div className="p-4 pt-2 md:p-6 md:pt-4 border-b border-gray-200 dark:border-gray-700">
+                <Skeleton height={28} width={250} />
+                <Skeleton height={16} width={400} className="mt-2" />
+            </div>
+            <div className="p-4 md:p-6 space-y-8">
+                {/* Logo Skeletons */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div>
+                        <Skeleton height={20} width={150} className="mb-2" />
+                        <div className="flex gap-2 items-end">
+                            <Skeleton height={80} width={200} />
+                            <Skeleton height={40} className="flex-grow" />
+                        </div>
+                    </div>
+                    <div>
+                        <Skeleton height={20} width={200} className="mb-2" />
+                        <div className="flex gap-2 items-end">
+                            <Skeleton height={80} width={200} />
+                            <Skeleton height={40} className="flex-grow" />
+                        </div>
+                    </div>
+                </div>
+                {/* Company Info Skeletons */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div className="md:col-span-4"><Skeleton height={20} width={120} className="mb-2" /><Skeleton height={40} /></div>
+                    <div className="md:col-span-4"><Skeleton height={20} width={80} className="mb-2" /><Skeleton height={78} /></div>
+                    <div><Skeleton height={20} width={100} className="mb-2" /><Skeleton height={40} /></div>
+                    <div><Skeleton height={20} width={120} className="mb-2" /><Skeleton height={40} /></div>
+                    <div><Skeleton height={20} width={110} className="mb-2" /><Skeleton height={40} /></div>
+                    <div><Skeleton height={20} width={130} className="mb-2" /><Skeleton height={40} /></div>
+                </div>
+                {/* Social Media Skeletons */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                    <div><Skeleton height={20} width={80} className="mb-2" /><Skeleton height={40} /></div>
+                    <div><Skeleton height={20} width={90} className="mb-2" /><Skeleton height={40} /></div>
+                    <div><Skeleton height={20} width={80} className="mb-2" /><Skeleton height={40} /></div>
+                    <div><Skeleton height={20} width={80} className="mb-2" /><Skeleton height={40} /></div>
+                    <div><Skeleton height={20} width={90} className="mb-2" /><Skeleton height={40} /></div>
+                </div>
+            </div>
+        </AdaptiveCard>
+        <StickyFooter className="flex items-center justify-end py-4 px-6" stickyClass="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 mt-3 rounded-xl">
+            <Skeleton height={36} width={130} />
+        </StickyFooter>
+    </Container>
+);
 
 // --- Main CompanyProfile Component ---
 const CompanyProfile = () => {
@@ -278,12 +329,7 @@ const CompanyProfile = () => {
   };
 
   if (isLoadingInitial) {
-    return (
-      <Container className="h-full flex justify-center items-center">
-        <TbLoader className="animate-spin text-4xl text-gray-500" />
-        <p className="ml-2">Loading Company Profile...</p>
-      </Container>
-    );
+    return <CompanyProfileSkeleton />;
   }
 
   if (!currentProfileUI) {
