@@ -924,6 +924,7 @@ const RequestAndFeedbackListing = () => {
           </div>
         ),
       },
+      
       {
         header: "Type",
         accessorKey: "type",
