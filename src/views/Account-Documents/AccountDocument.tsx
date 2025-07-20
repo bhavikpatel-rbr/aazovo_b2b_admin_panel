@@ -2178,7 +2178,7 @@ const AccountDocument = () => {
   const getAllUserDataOptions = useMemo(
     () =>
       Array.isArray(getAllUserData)
-        ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name }))
+        ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}`}))
         : [],
     [getAllUserData]
   );

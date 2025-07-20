@@ -688,7 +688,7 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
   
-  const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: u.id, label: u.name })) : [], [getAllUserData]);
+  const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: u.id, label: `(${u.employee_id}) - ${u.name || 'N/A'}` })) : [], [getAllUserData]);
 
   return (<MemberListContext.Provider value={{ memberList, setSelectedMembers, selectedMembers, userOptions }}>{children}</MemberListContext.Provider>);
 };

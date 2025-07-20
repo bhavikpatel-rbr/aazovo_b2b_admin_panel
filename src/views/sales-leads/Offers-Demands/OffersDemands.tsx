@@ -2005,7 +2005,7 @@ const OffersDemands = () => {
       Array.isArray(getAllUserData)
         ? getAllUserData.map((user: any) => ({
             value: String(user.id),
-            label: user.name,
+            label: `(${user.employee_id}) - ${user.name || 'N/A'}`,
           }))
         : [],
     [getAllUserData]
