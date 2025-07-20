@@ -268,28 +268,20 @@ const ExportMapping = () => {
     const [activeFilters, setActiveFilters] = useState<Partial<ExportMappingFilterSchema>>({});
     const [isDeleteAllConfirmOpen, setIsDeleteAllConfirmOpen] = useState(false);
     const [isDeletingAll, setIsDeletingAll] = useState(false);
-    const [isLoading, setisLoading] = useState(true);
     const tableLoading = masterLoadingStatus === 'loading';
     const isDataReady = masterLoadingStatus === 'idle';
 
-    useEffect(() => {  
-        
-        dispatch(getExportMappingsAction()).then(()=>setisLoading(false)).catch(()=>setisLoading('failed')).finally(()=>setisLoading(false))
-    
-    }, [dispatch]);
-console.log("setisLoading",isLoading);
+    useEffect(() => { dispatch(getExportMappingsAction()) }, [dispatch]);
 
     useEffect(() => {
-        console.log("masterLoadingStatus",isLoading);
-       
-        if (!isLoading && apiExportMappings?.data) {
+        if (masterLoadingStatus === 'idle' && apiExportMappings?.data) {
             const transformedData = (apiExportMappings.data as ApiExportMapping[]).map(transformApiDataToExportMappingItem).filter((item): item is ExportMappingItem => item !== null);
             setExportMappings(transformedData || []);
-        } else if (isLoading === 'failed') {
+        } else if (masterLoadingStatus === 'failed') {
             toast.push(<Notification title="Failed to Load Data" type="danger" duration={4000}>There was an error fetching the export logs.</Notification>);
             setExportMappings([]);
         }
-    }, [apiExportMappings?.data, isLoading]);
+    }, [apiExportMappings?.data, masterLoadingStatus]);
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         if (!isDataReady) { return { pageData: [], total: 0, allFilteredAndSortedData: [] } }
@@ -413,7 +405,7 @@ console.log("setisLoading",isLoading);
                             onClearFilters={onClearFiltersAndReload}
                             onExport={handleOpenExportReasonModal}
                             onDeleteAll={handleDeleteAllClick}
-                            isDataReady={isLoading}
+                            isDataReady={isDataReady}
                             activeFilterCount={activeFilterCount}
                             activeFilters={activeFilters}
                             searchInputValue={tableData.query}
@@ -428,7 +420,7 @@ console.log("setisLoading",isLoading);
                             columns={filteredColumns}
                             data={pageData}
                             noData={pageData.length <= 0}
-                            loading={isLoading || isDeletingAll}
+                            loading={tableLoading || isDeletingAll}
                             pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             onPaginationChange={handlePaginationChange}
                             onSelectChange={handleSelectChange}
