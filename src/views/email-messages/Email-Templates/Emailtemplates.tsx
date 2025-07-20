@@ -371,11 +371,13 @@ const EmailTemplatesListing = () => {
 
   const openEditDrawer = useCallback((template: EmailTemplateItem) => {
     setEditingTemplate(template);
+    console.log("Editing Template:", template);
     setIsEditDrawerOpen(true);
   }, []);
 
   useEffect(() => {
     if (isEditDrawerOpen && editingTemplate) {
+      console.log("Populating form for editing template:", editingTemplate);
       const populateForm = async () => {
         const initialCategoryId = String(editingTemplate.category_id);
         try {
@@ -390,7 +392,7 @@ const EmailTemplatesListing = () => {
           name: editingTemplate.name,
           template_id: editingTemplate.template_id,
           category_id: initialCategoryId,
-          sub_category_id: editingTemplate.sub_category_id ? String(editingTemplate.sub_category_id) : null,
+          sub_category_id: editingTemplate.sub_category_id,
           brand_id: editingTemplate.brand_id ? String(editingTemplate.brand_id) : null,
           role_id: editingTemplate.role_id ? String(editingTemplate.role_id) : null,
           department_id: editingTemplate.department_id ? String(editingTemplate.department_id) : null,
