@@ -80,10 +80,12 @@ const apiStatusOptions: { value: 'Active' | 'Inactive'; label: string }[] = [ { 
 const statusColor: Record<'Active' | 'Inactive', string> = { Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700", Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700" };
 
 export type ProductOption = { value: string; label: string; id?: string | number, name?: string };
+// --- CHANGE 1: Update the type to include product_names ---
 export type TrendingPageImageItem = 
 { id: string | number;
     page_name: string; status: 'Active' | 'Inactive'; 
     product_ids?: string; 
+    product_names?: Record<string, number> | []; // Added this line to match API response
     created_at: string; 
     updated_at?: string; updated_by_name?: string; updated_by_role?: string; updated_by_user?: { name: string; roles: { display_name: string }[], profile_pic_path: string | null } | null; [key: string]: any; };
 
@@ -104,13 +106,16 @@ type FilterFormData = z.infer<typeof filterFormSchema>;
 const exportReasonSchema = z.object({ reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters.") });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- Utility Functions ---
-function exportTrendingImagesToCsv(filename: string, rows: TrendingPageImageItem[], productNameMap: Map<string, string>) {
+// --- CHANGE 2: Update the export function to use product_names ---
+function exportTrendingImagesToCsv(filename: string, rows: TrendingPageImageItem[]) {
     if (!rows || !rows.length) return false;
     const CSV_HEADERS = [ 'ID', 'Page Name', 'Status', 'Product IDs', 'Product Names', 'Created At', 'Updated By', 'Updated Role', 'Updated At', ];
     const preparedRows = rows.map(row => {
-        const productIds = row.product_ids?.split(',') || [];
-        const productNames = productIds.map(id => productNameMap.get(id) || `ID:${id}`).join('; ');
+        const productNamesData = row.product_names;
+        const productNames = (productNamesData && typeof productNamesData === 'object' && !Array.isArray(productNamesData))
+            ? Object.keys(productNamesData).join('; ')
+            : 'N/A';
+
         return {
             ...row,
             productNames,
@@ -206,6 +211,7 @@ const SelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: { selec
 
 // --- Main Component: Trending Images ---
 const TrendingImages = () => {
+    // ... (rest of the state declarations are unchanged)
     const dispatch = useAppDispatch();
     const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -229,6 +235,7 @@ const TrendingImages = () => {
     const isDataReady = !initialLoading;
     
     const productSelectOptions: ProductOption[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: ProductOption) => ({ value: String(p.id), label: `${p.name}`.trim() })) : [], [productsMasterData]);
+    // The productNameMap is still useful for the export function, so we keep it.
     const productNameMap = useMemo(() => new Map(productSelectOptions.map(opt => [opt.value, opt.label])), [productSelectOptions]);
     const dynamicPageNameOptions = useMemo(() => Array.from(new Set((Array.isArray(trendingImagesData) ? trendingImagesData : []).map(p => p.page_name))).map(name => ({ value: name, label: name })), [trendingImagesData]);
     const addPageNameOptions = useMemo(() => {
@@ -262,6 +269,7 @@ const TrendingImages = () => {
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" } });
 
     const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
+        // ... (this logic is unchanged)
         const sourceData: TrendingPageImageItem[] = Array.isArray(trendingImagesData) ? trendingImagesData : []
         let processedData: TrendingPageImageItem[] = cloneDeep(sourceData)
         
@@ -311,6 +319,7 @@ const TrendingImages = () => {
     const tableLoading = initialLoading || isSubmitting || isDeleting;
 
     // --- Handlers ---
+    // ... (most handlers are unchanged)
     const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); setSelectedItems([]); }, []);
     const onClearAllFilters = useCallback(() => {
         setActiveFilters({});
@@ -330,17 +339,41 @@ const TrendingImages = () => {
     const onConfirmSingleDelete = async () => { if (!itemToDelete) return; setIsDeleting(true); try { await dispatch(deleteTrendingImageAction({ id: itemToDelete.id })).unwrap(); toast.push(<Notification title="Item Deleted" type="success" />); setSelectedItems(p => p.filter(i => i.id !== itemToDelete!.id)); refreshData(); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Could not delete item.'}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setItemToDelete(null); } };
     const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); try { await dispatch(deleteMultipleTrendingImagesAction({ ids: selectedItems.map(i => i.id).join(',') })).unwrap(); toast.push(<Notification title="Items Deleted" type="success" />); setSelectedItems([]); refreshData(); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e?.message || 'Failed to delete.'}</Notification>); } finally { setIsDeleting(false); } };
     const handleOpenExportModal = () => { if (!allFilteredAndSortedData?.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: '' }); setIsExportReasonModalOpen(true); };
-    const handleConfirmExport = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `trending_images_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Trending Images", file_name: fileName })).unwrap(); toast.push(<Notification title="Reason Submitted" type="success" />); exportTrendingImagesToCsv(fileName, allFilteredAndSortedData, productNameMap); setIsExportReasonModalOpen(false); } catch (e: any) { toast.push(<Notification title="Export Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsSubmittingExportReason(false); } };
+    const handleConfirmExport = async (data: ExportReasonFormData) => { setIsSubmittingExportReason(true); const fileName = `trending_images_${new Date().toISOString().split('T')[0]}.csv`; try { await dispatch(submitExportReasonAction({ reason: data.reason, module: "Trending Images", file_name: fileName })).unwrap(); toast.push(<Notification title="Reason Submitted" type="success" />); exportTrendingImagesToCsv(fileName, allFilteredAndSortedData); setIsExportReasonModalOpen(false); } catch (e: any) { toast.push(<Notification title="Export Failed" type="danger">{e?.message || 'Error'}</Notification>); } finally { setIsSubmittingExportReason(false); } };
     const openImageViewer = useCallback((src: string | null) => { if (src) { setImageToView(src); setIsImageViewerOpen(true); } }, []);
     
+    // --- CHANGE 3: Update the column definition to use product_names ---
     const baseColumns: ColumnDef<TrendingPageImageItem>[] = useMemo(() => [
         { header: 'Image', accessorKey: 'images_full_path', enableSorting: false, size: 80, cell: (props) => (<Avatar size={40} shape="circle" src={props.row.original.images_full_path || undefined} icon={!props.row.original.images_full_path ? <TbPhoto /> : undefined} onClick={() => openImageViewer(props.row.original.images_full_path)} className={props.row.original.images_full_path ? 'cursor-pointer hover:ring-2 hover:ring-indigo-500' : ''} />)},
         { header: 'Page Name', accessorKey: 'page_name', enableSorting: true, size: 250, cell: (props) => <span className="font-semibold">{props.row.original.page_name}</span> },
-        { header: 'Trending Products', id: 'trending_products', size: 350, cell: (props) => { const ids = props.row.original.product_ids?.split(',').map(id => id.trim()) || []; if (ids.length === 0) return <span className="text-gray-400">None</span>; const names = ids.map(id => productNameMap.get(id) || `ID:${id}`); const display = names.slice(0, 3).join(', '); const remaining = names.length - 3; return (<Tooltip title={names.join(', ')}><span>{display}{remaining > 0 && ` +${remaining} more`}</span></Tooltip>); }},
+        { 
+            header: 'Trending Products', 
+            id: 'trending_products', 
+            size: 350, 
+            cell: (props) => { 
+                const productNamesData = props.row.original.product_names;
+                // Check if productNamesData is a non-empty object
+                const names = (productNamesData && typeof productNamesData === 'object' && !Array.isArray(productNamesData)) 
+                    ? Object.keys(productNamesData) 
+                    : [];
+
+                if (names.length === 0) {
+                    return <span className="text-gray-400">None</span>;
+                }
+                
+                const display = names.slice(0, 3).join(', '); 
+                const remaining = names.length - 3; 
+                return (
+                    <Tooltip title={names.join(', ')}>
+                        <span>{display}{remaining > 0 && ` +${remaining} more`}</span>
+                    </Tooltip>
+                ); 
+            }
+        },
         { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path || undefined} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path || null)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs"><b>{updated_by_user?.roles?.[0]?.display_name || ''}</b></div><div className="text-xs text-gray-500">{formatCustomDateTime(updated_at)}</div></div></div>); } },
         { header: 'Status', accessorKey: 'status', enableSorting: true, size: 100, cell: (props) => (<Tag className={`${statusColor[props.row.original.status]} capitalize font-semibold`}>{props.row.original.status}</Tag>)},
         { header: 'Actions', id: 'action', meta: { cellClass: 'text-center' }, size: 80, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
-    ], [productNameMap, openImageViewer, openEditDrawer, handleDeleteClick]);
+    ], [openImageViewer, openEditDrawer, handleDeleteClick]); // removed productNameMap dependency
 
     const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(() => baseColumns.map(c => (c.accessorKey || c.id) as string));
     const visibleColumns = useMemo(() => baseColumns.filter(c => visibleColumnKeys.includes((c.accessorKey || c.id) as string)), [baseColumns, visibleColumnKeys]);
@@ -353,6 +386,7 @@ const TrendingImages = () => {
     }
     
     return (
+        // The JSX return block remains unchanged
         <>
             <Container className="h-auto">
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
