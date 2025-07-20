@@ -359,8 +359,8 @@ const EmployeesListing = () => {
 
     // Data Formatting
     useEffect(() => {
-        if (Employees?.data?.data) {
-            const formattedData = Employees.data.data.map((emp: any) => ({
+        if (Employees?.data) {
+            const formattedData = Employees.data.map((emp: any) => ({
                 id: String(emp.id),
                 employeeId: emp.employee_id || 'N/A',
                 status: (emp.status?.toLowerCase().replace(' ', '_') || 'inactive') as EmployeeStatus,
