@@ -91,6 +91,7 @@ import {
   getAllUsersAction,
   getBrandAction,
   getCategoriesAction,
+  getParentCategoriesAction,
   getPriceListAction,
   getSubcategoriesByCategoryIdAction,
   submitExportReasonAction,
@@ -1023,7 +1024,7 @@ const PriceList = () => {
   const {
     priceListData = { data: [], counts: {} },
     productsMasterData = [],
-    CategoriesData: GlobalCategoriesData = [],
+    ParentCategories = [],
     subCategoriesForSelectedCategoryData = [],
     BrandData = [],
     getAllUserData = [],
@@ -1043,11 +1044,13 @@ const PriceList = () => {
   );
   const categoryOptions = useMemo(
     () =>
-      Array.isArray(GlobalCategoriesData)
-        ? GlobalCategoriesData.map((c) => ({ value: c.id, label: c.name }))
+      Array.isArray(ParentCategories)
+        ? ParentCategories.map((c) => ({ value: c.id, label: c.name }))
         : [],
-    [GlobalCategoriesData]
+    [ParentCategories]
   );
+  console.log("ParentCategories",ParentCategories);
+  
   const subCategoryOptions = useMemo(
     () =>
       Array.isArray(subCategoriesForSelectedCategoryData)
@@ -1079,7 +1082,7 @@ const PriceList = () => {
           await Promise.all([
               dispatch(getPriceListAction()),
               dispatch(getAllProductAction()),
-              dispatch(getCategoriesAction()),
+              dispatch(getParentCategoriesAction()),
               dispatch(getBrandAction()),
               dispatch(getAllUsersAction()),
           ]);
