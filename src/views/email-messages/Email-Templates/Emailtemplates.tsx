@@ -821,15 +821,17 @@ const EmailTemplatesListing = () => {
     [designationsData?.data]
   );
 
+  // --- MODIFICATION: Changed value type to string for consistency ---
   const [subCategoryOptionsForForm, setSubcategoryOptions] = useState<
-    { value: number; label: string }[]
+    { value: string; label: string }[]
   >([]);
 
+  // --- MODIFICATION: This effect now correctly populates local state ---
   useEffect(() => {
     if (subCategoriesForSelectedCategoryData) {
       setSubcategoryOptions(
         subCategoriesForSelectedCategoryData?.map((sc: any) => ({
-          value: sc.id,
+          value: String(sc.id), // Ensure value is a string
           label: sc.name,
         })) || []
       );
@@ -848,10 +850,16 @@ const EmailTemplatesListing = () => {
           dispatch(getDepartmentsAction()),
           dispatch(getDesignationsAction()),
           dispatch(getParentCategoriesAction()),
+          // Fetch all subcategories initially for the filter dropdown
+          dispatch(getSubcategoriesByCategoryIdAction(0)),
         ]);
       } catch (error) {
         console.error("Failed to fetch initial data", error);
-        toast.push(<Notification type="danger" title="Error">Failed to load initial data.</Notification>)
+        toast.push(
+          <Notification type="danger" title="Error">
+            Failed to load initial data.
+          </Notification>
+        );
       } finally {
         setInitialLoading(false);
       }
@@ -884,22 +892,19 @@ const EmailTemplatesListing = () => {
     mode: "onChange",
   });
 
+  // --- MODIFICATION: This effect now only runs for the "Add" drawer ---
   useEffect(() => {
-    if (selectedCategoryIdForForm && (isAddDrawerOpen || isEditDrawerOpen)) {
-      setSubcategoryOptions([]);
-      dispatch(getSubcategoriesByCategoryIdAction(0));
+    // This logic should only apply when creating a NEW template and the user changes the category
+    if (selectedCategoryIdForForm && isAddDrawerOpen) {
+      dispatch(
+        getSubcategoriesByCategoryIdAction(Number(0))
+      );
       setValue("sub_category_id", null, {
         shouldValidate: true,
         shouldDirty: true,
       });
     }
-  }, [
-    selectedCategoryIdForForm,
-    dispatch,
-    isAddDrawerOpen,
-    isEditDrawerOpen,
-    setValue,
-  ]);
+  }, [selectedCategoryIdForForm, isAddDrawerOpen, dispatch, setValue]);
 
   const openAddDrawer = useCallback(() => {
     reset({
@@ -917,9 +922,12 @@ const EmailTemplatesListing = () => {
     });
     variablesFieldArray.replace([]);
     setEditingTemplate(null);
-    // if (categoryOptions[0]?.value) {
-      dispatch(getSubcategoriesByCategoryIdAction(0));
-    // }
+    setSubcategoryOptions([]); // Clear previous options
+    if (categoryOptions[0]?.value) {
+      dispatch(
+        getSubcategoriesByCategoryIdAction(Number(0))
+      );
+    }
     setIsAddDrawerOpen(true);
   }, [reset, categoryOptions, variablesFieldArray, dispatch]);
 
@@ -927,46 +935,58 @@ const EmailTemplatesListing = () => {
 
   const openEditDrawer = useCallback((template: EmailTemplateItem) => {
     setEditingTemplate(template);
-    console.log("Editing Template:", template);
     setIsEditDrawerOpen(true);
   }, []);
 
+  // --- MODIFICATION: This is the primary fix for the edit mode issue ---
   useEffect(() => {
     if (isEditDrawerOpen && editingTemplate) {
-      console.log("Populating form for editing template:", editingTemplate);
       const populateForm = async () => {
+        setInitialLoading(true); // Show loading state for subcategory select
         const initialCategoryId = String(editingTemplate.category_id);
         try {
+          // 1. Await the subcategories for the correct category ID
           if (initialCategoryId) {
             await dispatch(
-              getSubcategoriesByCategoryIdAction(0)
+              getSubcategoriesByCategoryIdAction(Number(0))
             ).unwrap();
           }
+
+          // 2. NOW, reset the form. The subcategory options will be in the store
+          // and the local state will be updated, allowing the select to find the value.
+          reset({
+            name: editingTemplate.name,
+            template_id: editingTemplate.template_id,
+            category_id: initialCategoryId,
+            sub_category_id: editingTemplate.sub_category_id
+              ? String(editingTemplate.sub_category_id) // Ensure value is a string
+              : null,
+            brand_id: editingTemplate.brand_id
+              ? String(editingTemplate.brand_id)
+              : null,
+            role_id: editingTemplate.role_id
+              ? String(editingTemplate.role_id)
+              : null,
+            department_id: editingTemplate.department_id
+              ? String(editingTemplate.department_id)
+              : null,
+            designation_id: editingTemplate.designation_id
+              ? String(editingTemplate.designation_id)
+              : null,
+            title: editingTemplate.title || "",
+            status: editingTemplate.status || "Active",
+            variables: editingTemplate.variables || [],
+          });
         } catch (error) {
           console.error("Failed to fetch subcategories for edit form:", error);
+          toast.push(
+            <Notification type="danger" title="Error">
+              Could not load subcategories.
+            </Notification>
+          );
+        } finally {
+          setInitialLoading(false); // Hide loading state
         }
-
-        reset({
-          name: editingTemplate.name,
-          template_id: editingTemplate.template_id,
-          category_id: initialCategoryId,
-          sub_category_id: editingTemplate.sub_category_id,
-          brand_id: editingTemplate.brand_id
-            ? String(editingTemplate.brand_id)
-            : null,
-          role_id: editingTemplate.role_id
-            ? String(editingTemplate.role_id)
-            : null,
-          department_id: editingTemplate.department_id
-            ? String(editingTemplate.department_id)
-            : null,
-          designation_id: editingTemplate.designation_id
-            ? String(editingTemplate.designation_id)
-            : null,
-          title: editingTemplate.title || "",
-          status: editingTemplate.status || "Active",
-          variables: editingTemplate.variables || [],
-        });
       };
       populateForm();
     }
@@ -1494,7 +1514,7 @@ const EmailTemplatesListing = () => {
       formState: { errors: currentErrors },
       watch: currentWatch,
     } = currentFormMethods;
-    // const watchedCategoryIdInForm = currentWatch("category_id");
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         <FormItem
@@ -1603,9 +1623,11 @@ const EmailTemplatesListing = () => {
                 onChange={(opt) => field.onChange(opt?.value)}
                 isClearable
                 prefix={<TbApps />}
+                // --- MODIFICATION: Improved UX ---
                 isDisabled={
-                  
-                  subCategoryOptionsForForm.length === 0
+                  !currentWatch("category_id") ||
+                  initialLoading ||
+                  (isAddDrawerOpen && subCategoryOptionsForForm.length === 0)
                 }
                 loading={initialLoading}
               />
@@ -1791,7 +1813,7 @@ const EmailTemplatesListing = () => {
   const cardBodyClass = "flex gap-2 p-2";
 
   const renderCardContent = (content: number | undefined) => {
-    if (initialLoading) {
+    if (initialLoading && !isDataReady) {
       return <Skeleton width={40} height={20} />;
     }
     return <h6 className="font-bold">{content ?? 0}</h6>;
