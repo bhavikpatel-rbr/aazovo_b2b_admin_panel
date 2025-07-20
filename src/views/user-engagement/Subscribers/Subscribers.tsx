@@ -1,4 +1,11 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  Ref,
+  useEffect,
+  ChangeEvent,
+} from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -55,17 +62,15 @@ import {
   TbUserStar,
   TbMailForward,
   TbCalendarCancel,
-  TbAlignBoxCenterBottom,
-  TbMailbox,
-  TbSend,
   TbEye,
-  TbBell,
-  TbCalendarClock,
   TbColumns,
   TbX,
-  TbStar,
   TbWorld,
   TbFileText,
+  TbCloudDownload,
+  TbBrandWhatsapp,
+  TbBell,
+  TbCalendarClock,
 } from "react-icons/tb";
 
 // Types
@@ -74,6 +79,7 @@ import type {
   ColumnDef,
   Row,
   CellContext,
+  RowSelectionState,
 } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 import { SelectOption } from "../RequestFeedback/RequestAndFeedback"; // Adjust import path
@@ -91,7 +97,6 @@ import {
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { useSelector, shallowEqual } from "react-redux";
-import { BsThreeDotsVertical } from "react-icons/bs";
 
 // --- Define Types ---
 export type ApiSubscriberItem = {
@@ -103,10 +108,9 @@ export type ApiSubscriberItem = {
   updated_at?: string;
   member_id?: number | string | null;
   status: string;
-  subscription_type?: string | null;
+  subscription_types?: string[] | null; // Changed from subscription_type
   source?: string | null;
-  rating?: number | string | null;
-  note?: string | null;
+  note?: string | null; // This will map to 'remarks'
   reason?: string | null;
   updated_by_user?: {
     name: string;
@@ -114,22 +118,22 @@ export type ApiSubscriberItem = {
     profile_pic_path?: string | null;
   };
 };
+
 export type SubscriberItem = {
   id: number | string;
   email: string;
   name: string;
   mobile_no: string;
   subscribedDate: Date;
-  subscriptionType: string;
+  subscriptionTypes: string[]; // Changed from subscriptionType
   source: string;
   status: string;
-  rating: number | null;
-  note: string;
-  unsubscribeReason: string;
+  remarks: string; // Changed from note
   raw_created_at: string;
   raw_updated_at?: string;
   updated_by_user?: ApiSubscriberItem["updated_by_user"];
 };
+
 export type ModalType = "notification" | "schedule";
 export interface ModalState {
   isOpen: boolean;
@@ -144,20 +148,21 @@ const filterFormSchema = z.object({
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
+// --- NEW Constants ---
 export const SUBSCRIPTION_TYPE_OPTIONS: SelectOption[] = [
+  { label: "Inquiry Alerts", value: "Inquiry Alerts" },
   { label: "Newsletter", value: "Newsletter" },
-  { label: "Promotions", value: "Promotions" },
+  { label: "Trade Alerts", value: "Trade Alerts" },
+  { label: "Promotional", value: "Promotional" },
   { label: "Product Updates", value: "Product Updates" },
-  { label: "Others", value: "Others" },
 ];
 const subscriptionTypeValues = SUBSCRIPTION_TYPE_OPTIONS.map(
   (opt) => opt.value
 ) as [string, ...string[]];
 
 export const STATUS_OPTIONS: SelectOption[] = [
-  { label: "Active", value: "Active" },
+  { label: "Subscribed", value: "Subscribed" },
   { label: "Unsubscribed", value: "Unsubscribed" },
-  { label: "Bounced", value: "Bounced" },
 ];
 const statusValues = STATUS_OPTIONS.map((opt) => opt.value) as [
   string,
@@ -170,46 +175,27 @@ export const FILTER_STATUS_OPTIONS: SelectOption[] = [
 ];
 
 export const statusColors: Record<string, string> = {
-  Active:
+  Subscribed:
     "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
   Unsubscribed: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
-  Bounced:
-    "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
   default: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
 };
 
-const addEditSubscriberFormSchema = z
-  .object({
-    email: z
-      .string()
-      .min(1, "Email is required.")
-      .email("Invalid email address."),
-    name: z.string().min(1, "Name is required.").max(100),
-    mobile_no: z.string().min(1, "Mobile number is required.").max(20),
-    subscribedDate: z.date({
-      required_error: "Subscription date is required.",
-    }),
-    subscriptionType: z.enum(subscriptionTypeValues, {
-      required_error: "Subscription type is required.",
-    }),
-    source: z.string().min(1, "Source is required.").max(100),
-    status: z.enum(statusValues, { required_error: "Status is required." }),
-    rating: z.preprocess(
-      (val) =>
-        val === "" || val === null || val === undefined ? null : Number(val),
-      z.number().min(1).max(5).optional().nullable()
-    ),
-    note: z.string().max(1000).optional().nullable(),
-    unsubscribeReason: z.string().max(255).optional().nullable(),
-  })
-  .refine(
-    (data) =>
-      !(data.status === "Unsubscribed" && !data.unsubscribeReason?.trim()),
-    {
-      message: "Unsubscribe reason is required if status is 'Unsubscribed'.",
-      path: ["unsubscribeReason"],
-    }
-  );
+// --- UPDATED Schema for Add/Edit Form ---
+const addEditSubscriberFormSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required.")
+    .email("Invalid email address."),
+  name: z.string().max(100).optional().nullable(),
+  mobile_no: z.string().max(20).optional().nullable(),
+  subscriptionTypes: z
+    .array(z.string())
+    .min(1, "At least one subscription type is required."),
+  source: z.string().max(100).optional().nullable(),
+  status: z.enum(statusValues, { required_error: "Status is required." }),
+  remarks: z.string().max(1000).optional().nullable(),
+});
 type AddEditSubscriberFormData = z.infer<typeof addEditSubscriberFormSchema>;
 
 const exportReasonSchema = z.object({
@@ -233,72 +219,8 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 const eventTypeOptions = [
   { value: "Meeting", label: "Meeting" },
-  { value: "Demo", label: "Product Demo" },
-  { value: "IntroCall", label: "Introductory Call" },
   { value: "FollowUpCall", label: "Follow-up Call" },
-  { value: "QBR", label: "Quarterly Business Review (QBR)" },
-  { value: "CheckIn", label: "Customer Check-in" },
-  { value: "LogEmail", label: "Log an Email" },
-  { value: "Milestone", label: "Project Milestone" },
-  { value: "Task", label: "Task" },
-  { value: "FollowUp", label: "General Follow-up" },
-  { value: "ProjectKickoff", label: "Project Kick-off" },
-  { value: "OnboardingSession", label: "Onboarding Session" },
-  { value: "Training", label: "Training Session" },
-  { value: "SupportCall", label: "Support Call" },
-  { value: "Reminder", label: "Reminder" },
-  { value: "Note", label: "Add a Note" },
-  { value: "FocusTime", label: "Focus Time (Do Not Disturb)" },
-  { value: "StrategySession", label: "Strategy Session" },
-  { value: "TeamMeeting", label: "Team Meeting" },
-  { value: "PerformanceReview", label: "Performance Review" },
-  { value: "Lunch", label: "Lunch / Break" },
-  { value: "Appointment", label: "Personal Appointment" },
   { value: "Other", label: "Other" },
-  { value: "ProjectKickoff", label: "Project Kick-off" },
-  { value: "InternalSync", label: "Internal Team Sync" },
-  { value: "ClientUpdateMeeting", label: "Client Update Meeting" },
-  { value: "RequirementsGathering", label: "Requirements Gathering" },
-  { value: "UAT", label: "User Acceptance Testing (UAT)" },
-  { value: "GoLive", label: "Go-Live / Deployment Date" },
-  { value: "ProjectSignOff", label: "Project Sign-off" },
-  { value: "PrepareReport", label: "Prepare Report" },
-  { value: "PresentFindings", label: "Present Findings" },
-  { value: "TroubleshootingCall", label: "Troubleshooting Call" },
-  { value: "BugReplication", label: "Bug Replication Session" },
-  { value: "IssueEscalation", label: "Escalate Issue" },
-  { value: "ProvideUpdate", label: "Provide Update on Ticket" },
-  { value: "FeatureRequest", label: "Log Feature Request" },
-  { value: "IntegrationSupport", label: "Integration Support Call" },
-  { value: "DataMigration", label: "Data Migration/Import Task" },
-  { value: "ColdCall", label: "Cold Call" },
-  { value: "DiscoveryCall", label: "Discovery Call" },
-  { value: "QualificationCall", label: "Qualification Call" },
-  { value: "SendFollowUpEmail", label: "Send Follow-up Email" },
-  { value: "LinkedInMessage", label: "Log LinkedIn Message" },
-  { value: "ProposalReview", label: "Proposal Review Meeting" },
-  { value: "ContractSent", label: "Contract Sent" },
-  { value: "NegotiationCall", label: "Negotiation Call" },
-  { value: "TrialSetup", label: "Product Trial Setup" },
-  { value: "TrialCheckIn", label: "Trial Check-in Call" },
-  { value: "WelcomeCall", label: "Welcome Call" },
-  { value: "ImplementationSession", label: "Implementation Session" },
-  { value: "UserTraining", label: "User Training Session" },
-  { value: "AdminTraining", label: "Admin Training Session" },
-  { value: "MonthlyCheckIn", label: "Monthly Check-in" },
-  { value: "HealthCheck", label: "Customer Health Check" },
-  { value: "FeedbackSession", label: "Feedback Session" },
-  { value: "RenewalDiscussion", label: "Renewal Discussion" },
-  { value: "UpsellOpportunity", label: "Upsell/Cross-sell Call" },
-  { value: "CaseStudyInterview", label: "Case Study Interview" },
-  { value: "InvoiceDue", label: "Invoice Due" },
-  { value: "SendInvoice", label: "Send Invoice" },
-  { value: "PaymentReminder", label: "Send Payment Reminder" },
-  { value: "ChaseOverduePayment", label: "Chase Overdue Payment" },
-  { value: "ConfirmPayment", label: "Confirm Payment Received" },
-  { value: "ContractRenewalDue", label: "Contract Renewal Due" },
-  { value: "DiscussBilling", label: "Discuss Billing/Invoice" },
-  { value: "SendQuote", label: "Send Quote/Estimate" },
 ];
 
 // --- CSV Exporter Utility ---
@@ -308,12 +230,10 @@ const CSV_HEADERS = [
   "Email",
   "Mobile No",
   "Subscribed Date",
-  "Subscription Type",
+  "Subscription Types",
   "Source",
   "Status",
-  "Rating",
-  "Notes",
-  "Unsubscribe Reason",
+  "Remarks",
 ];
 const CSV_KEYS: (keyof SubscriberItem)[] = [
   "id",
@@ -321,12 +241,10 @@ const CSV_KEYS: (keyof SubscriberItem)[] = [
   "email",
   "mobile_no",
   "subscribedDate",
-  "subscriptionType",
+  "subscriptionTypes",
   "source",
   "status",
-  "rating",
-  "note",
-  "unsubscribeReason",
+  "remarks",
 ];
 function exportSubscribersToCsv(filename: string, rows: SubscriberItem[]) {
   if (!rows || !rows.length) {
@@ -349,6 +267,8 @@ function exportSubscribersToCsv(filename: string, rows: SubscriberItem[]) {
             cell = "";
           } else if (cell instanceof Date) {
             cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
+          } else if (Array.isArray(cell)) {
+            cell = cell.join("; "); // Join array for CSV
           } else {
             cell = String(cell).replace(/"/g, '""');
           }
@@ -512,6 +432,7 @@ const AddNotificationDialog = ({
     </Dialog>
   );
 };
+
 const AddScheduleDialog: React.FC<{
   document: SubscriberItem;
   onClose: () => void;
@@ -670,6 +591,7 @@ const AddScheduleDialog: React.FC<{
     </Dialog>
   );
 };
+
 const SubscriberModals = ({
   modalState,
   onClose,
@@ -696,6 +618,7 @@ const SubscriberModals = ({
       return null;
   }
 };
+
 type SubscriberSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
@@ -707,7 +630,7 @@ const SubscriberSearch = React.forwardRef<
   <DebouceInput
     ref={ref}
     className="w-full"
-    placeholder="Quick Search (ID, Email, Name, Mobile)..."
+    placeholder="Quick Search (Email, Name, Mobile)..."
     suffix={<TbSearch className="text-lg" />}
     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
       onInputChange(e.target.value)
@@ -715,10 +638,12 @@ const SubscriberSearch = React.forwardRef<
   />
 ));
 SubscriberSearch.displayName = "SubscriberSearch";
+
 const SubscriberTableTools = ({
   onSearchChange,
   onFilter,
   onExport,
+  onImport,
   onClearFilters,
   columns,
   filteredColumns,
@@ -728,6 +653,7 @@ const SubscriberTableTools = ({
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onImport: () => void;
   onClearFilters: () => void;
   columns: ColumnDef<SubscriberItem>[];
   filteredColumns: ColumnDef<SubscriberItem>[];
@@ -738,6 +664,7 @@ const SubscriberTableTools = ({
 }) => {
   const isColumnVisible = (colId: string) =>
     filteredColumns.some((c) => (c.id || c.accessorKey) === colId);
+
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
       const originalColumn = columns.find(
@@ -781,7 +708,8 @@ const SubscriberTableTools = ({
             {columns.map((col) => {
               const id = col.id || (col.accessorKey as string);
               return (
-                col.header && (
+                col.header &&
+                typeof col.header === "string" && (
                   <div
                     key={id}
                     className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"
@@ -814,6 +742,13 @@ const SubscriberTableTools = ({
           )}
         </Button>
         <Button
+          icon={<TbCloudDownload />}
+          onClick={onImport}
+          className="w-full sm:w-auto"
+        >
+          Import
+        </Button>
+        <Button
           icon={<TbCloudUpload />}
           onClick={onExport}
           className="w-full sm:w-auto"
@@ -825,6 +760,7 @@ const SubscriberTableTools = ({
   );
 };
 SubscriberTableTools.displayName = "SubscriberTableTools";
+
 const ActiveFiltersDisplay = ({
   filterData,
   onRemoveFilter,
@@ -913,6 +849,8 @@ const SubscribersListing = () => {
   });
   const [imageView, setImageView] = useState("");
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const openImageViewer = useCallback((path: string | null | undefined) => {
     if (path) {
@@ -962,9 +900,7 @@ const SubscribersListing = () => {
     handleSubmit,
     reset,
     formState: { errors, isValid },
-    watch,
   } = formMethods;
-  const currentStatusWatch = watch("status");
   const exportReasonFormMethods = useForm<ExportReasonFormData>({
     resolver: zodResolver(exportReasonSchema),
     defaultValues: { reason: "" },
@@ -998,12 +934,7 @@ const SubscribersListing = () => {
       return [];
     return rawApiSubscribers.data
       .map((apiItem: ApiSubscriberItem): SubscriberItem | null => {
-        if (
-          !apiItem ||
-          !apiItem.created_at ||
-          !apiItem.email ||
-          !apiItem.status
-        )
+        if (!apiItem || !apiItem.created_at || !apiItem.email || !apiItem.status)
           return null;
         return {
           id: apiItem.id,
@@ -1011,17 +942,10 @@ const SubscribersListing = () => {
           name: apiItem.name || "",
           mobile_no: apiItem.mobile || "",
           subscribedDate: new Date(apiItem.created_at),
-          subscriptionType:
-            apiItem.subscription_type || SUBSCRIPTION_TYPE_OPTIONS[0].value,
+          subscriptionTypes: apiItem.subscription_types || [],
           source: apiItem.source || "",
           status: apiItem.status,
-          rating: apiItem.rating
-            ? typeof apiItem.rating === "string"
-              ? parseInt(apiItem.rating, 10)
-              : apiItem.rating
-            : null,
-          note: apiItem.note || "",
-          unsubscribeReason: apiItem.reason || "",
+          remarks: apiItem.note || "",
           raw_created_at: apiItem.created_at,
           raw_updated_at: apiItem.updated_at,
           updated_by_user: apiItem.updated_by_user,
@@ -1035,13 +959,10 @@ const SubscribersListing = () => {
       email: "",
       name: "",
       mobile_no: "",
-      subscribedDate: new Date(),
-      subscriptionType: SUBSCRIPTION_TYPE_OPTIONS[0].value,
+      subscriptionTypes: [],
       source: "",
       status: STATUS_OPTIONS[0].value,
-      rating: null,
-      note: "",
-      unsubscribeReason: "",
+      remarks: "",
     }),
     []
   );
@@ -1057,13 +978,10 @@ const SubscribersListing = () => {
         email: item.email,
         name: item.name,
         mobile_no: item.mobile_no,
-        subscribedDate: item.subscribedDate,
-        subscriptionType: item.subscriptionType,
+        subscriptionTypes: item.subscriptionTypes,
         source: item.source,
         status: item.status,
-        rating: item.rating,
-        note: item.note,
-        unsubscribeReason: item.unsubscribeReason,
+        remarks: item.remarks,
       });
       setIsAddEditDrawerOpen(true);
     },
@@ -1075,46 +993,24 @@ const SubscribersListing = () => {
   }, []);
 
   const onSubmitHandler = async (data: AddEditSubscriberFormData) => {
-    let apiPayload = {};
     setIsSubmitting(true);
-    if (editingItem) {
-      apiPayload = {
-        _method: "PUT",
-        email: data.email,
-        name: data.name,
-        mobile: data.mobile_no,
-        created_at: dayjs(data.subscribedDate).toISOString(),
-        subscription_type: data.subscriptionType,
-        source: data.source,
-        status: data.status,
-        rating: data.rating ? Number(data.rating) : null,
-        note: data.note || null,
-        reason:
-          data.status === "Unsubscribed"
-            ? data.unsubscribeReason || null
-            : null,
-      };
-    } else {
-      apiPayload = {
-        email: data.email,
-        name: data.name,
-        mobile: data.mobile_no,
-        created_at: dayjs(data.subscribedDate).toISOString(),
-        subscription_type: data.subscriptionType,
-        source: data.source,
-        status: data.status,
-        rating: data.rating ? Number(data.rating) : null,
-        note: data.note || null,
-        reason:
-          data.status === "Unsubscribed"
-            ? data.unsubscribeReason || null
-            : null,
-      };
-    }
+    let apiPayload = {
+      email: data.email,
+      name: data.name || null,
+      mobile: data.mobile_no || null,
+      subscription_types: data.subscriptionTypes,
+      source: data.source || null,
+      status: data.status,
+      note: data.remarks || null, // API field is 'note', maps to our 'remarks'
+    };
+
     try {
       if (editingItem) {
         await dispatch(
-          editSubscriberAction({ id: editingItem.id, formData: apiPayload })
+          editSubscriberAction({
+            id: editingItem.id,
+            formData: { ...apiPayload, _method: "PUT" },
+          })
         ).unwrap();
         toast.push(<Notification title="Subscriber Updated" type="success" />);
       } else {
@@ -1140,23 +1036,27 @@ const SubscribersListing = () => {
       setIsSubmitting(false);
     }
   };
+
   const handleDeleteClick = useCallback((item: SubscriberItem) => {
     setItemToDelete(item);
     setSingleDeleteConfirmOpen(true);
   }, []);
+
   const onConfirmSingleDelete = useCallback(async () => {
     if (!itemToDelete) return;
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Replace with actual delete API call
+      // await dispatch(deleteSubscriberAction(itemToDelete.id)).unwrap();
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Mock delay
       toast.push(
         <Notification
           title="Subscriber Deleted"
           type="success"
-        >{`Subscriber "${itemToDelete.name}" deleted.`}</Notification>
+        >{`Subscriber "${itemToDelete.email}" deleted.`}</Notification>
       );
-      dispatch(getSubscribersAction());
+      dispatch(getSubscribersAction()); // Refresh data
     } catch (e: any) {
       toast.push(
         <Notification title="Delete Failed" type="danger">
@@ -1168,6 +1068,7 @@ const SubscribersListing = () => {
       setItemToDelete(null);
     }
   }, [dispatch, itemToDelete]);
+
   const openFilterDrawer = useCallback(() => {
     filterFormMethods.reset(filterCriteria);
     setIsFilterDrawerOpen(true);
@@ -1188,16 +1089,13 @@ const SubscribersListing = () => {
     const defaultFilters = filterFormSchema.parse({});
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
+    setRowSelection({});
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
   }, [filterFormMethods]);
+
   const handleCardClick = (status: string) => {
     onClearFilters();
-    const statusOption = FILTER_STATUS_OPTIONS.find(
-      (opt) => opt.value === status
-    );
-    if (statusOption) {
-      setFilterCriteria({ status: statusOption.value });
-    }
+    setFilterCriteria({ status: status });
   };
   const handleRemoveFilter = (key: keyof FilterFormData) => {
     setFilterCriteria((prev) => ({ ...prev, [key]: undefined }));
@@ -1247,7 +1145,7 @@ const SubscribersListing = () => {
       order &&
       key &&
       processedData.length > 0 &&
-      processedData[0].hasOwnProperty(key)
+      Object.prototype.hasOwnProperty.call(processedData[0], key)
     ) {
       processedData.sort((a, b) => {
         let aVal = a[key as keyof SubscriberItem] as any;
@@ -1324,6 +1222,40 @@ const SubscribersListing = () => {
     },
     [dispatch, allFilteredAndSortedData]
   );
+
+  const handleBulkEmail = () => {
+    toast.push(
+      <Notification title="Action Triggered" type="info">
+        Sending email to {Object.keys(rowSelection).length} selected subscribers...
+      </Notification>
+    );
+  };
+  const handleBulkWhatsApp = () => {
+    toast.push(
+      <Notification title="Action Triggered" type="info">
+        Sending WhatsApp to {Object.keys(rowSelection).length} selected subscribers...
+      </Notification>
+    );
+  };
+  const handleFileImport = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      console.log("Selected file:", e.target.files[0]);
+      toast.push(
+        <Notification title="File Selected" type="info">
+          {e.target.files[0].name}
+        </Notification>
+      );
+    }
+  };
+  const processAndUploadImport = () => {
+    toast.push(
+      <Notification title="Import Started" type="success">
+        File is being processed.
+      </Notification>
+    );
+    setIsImportModalOpen(false);
+  };
+
   const handlePaginationChange = useCallback(
     (page: number) => handleSetTableData({ pageIndex: page }),
     [handleSetTableData]
@@ -1352,20 +1284,38 @@ const SubscribersListing = () => {
   const columns: ColumnDef<SubscriberItem>[] = useMemo(
     () => [
       {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={table.getIsAllRowsSelected()}
+            indeterminate={table.getIsSomeRowsSelected()}
+            onChange={table.getToggleAllRowsSelectedHandler()}
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            disabled={!row.getCanSelect()}
+            onChange={row.getToggleSelectedHandler()}
+          />
+        ),
+      },
+      {
         header: "Subscriber Info",
-        accessorKey: "name",
+        accessorKey: "email",
         id: "subscriberInfo",
         cell: (props) => {
           const rowData = props.row.original;
           return (
             <div className="flex items-center gap-2">
               <Avatar size="sm" shape="circle" className="mr-1">
-                {rowData.name?.[0]?.toUpperCase()}
+                {rowData.email?.[0]?.toUpperCase()}
               </Avatar>
               <div className="flex flex-col gap-0.5">
-                <span className="font-semibold">{rowData.name}</span>
-                <div className="text-xs text-gray-500">{rowData.email}</div>
-                <div className="text-xs text-gray-500">{rowData.mobile_no}</div>
+                <span className="font-semibold">{rowData.email}</span>
+                <div className="text-xs text-gray-500">
+                  {rowData.name || "No name provided"}
+                </div>
               </div>
             </div>
           );
@@ -1373,14 +1323,22 @@ const SubscribersListing = () => {
       },
       {
         header: "Type",
-        accessorKey: "subscriptionType",
-        id: "subscriptionType",
-        enableSorting: true,
-        cell: (props) => (
-          <Tag className="capitalize whitespace-nowrap">
-            {(props.getValue() as string) || "N/A"}
-          </Tag>
-        ),
+        accessorKey: "subscriptionTypes",
+        id: "subscriptionTypes",
+        enableSorting: false,
+        cell: (props) => {
+          const types = props.getValue() as string[];
+          if (!types || types.length === 0) return "N/A";
+          return (
+            <div className="flex flex-wrap gap-1 max-w-[200px]">
+              {types.map((type) => (
+                <Tag key={type} className="capitalize whitespace-nowrap">
+                  {type}
+                </Tag>
+              ))}
+            </div>
+          );
+        },
       },
       {
         header: "Status",
@@ -1390,7 +1348,7 @@ const SubscribersListing = () => {
           const statusVal = props.getValue() as string;
           return (
             <Tag
-              className={`capitalize whitespace-nowrap  text-center ${
+              className={`capitalize whitespace-nowrap text-center ${
                 statusColors[statusVal] || statusColors.default
               }`}
             >
@@ -1400,7 +1358,7 @@ const SubscribersListing = () => {
         },
       },
       {
-        header: "Subscribed Date",
+        header: "Subscription Date",
         accessorKey: "subscribedDate",
         id: "subscribedDate",
         enableSorting: true,
@@ -1456,9 +1414,8 @@ const SubscribersListing = () => {
         header: "Action",
         id: "action",
         size: 120,
-        meta: { HeaderClass: "text-center" },
         cell: (props: CellContext<SubscriberItem, unknown>) => (
-          <div className="flex gap-1 items-center justify-center pr-1.5">
+          <div className="flex gap-2 items-center justify-center">
             <Tooltip title="Edit Subscriber">
               <div
                 className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600"
@@ -1468,23 +1425,7 @@ const SubscribersListing = () => {
                 <TbPencil />
               </div>
             </Tooltip>
-            {/* <Tooltip title="Send Test Email">
-              <div
-                className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600"
-                role="button"
-              >
-                <TbMailForward size={18} />
-              </div>
-            </Tooltip>
-            <Tooltip title="Add to Campaign">
-              <div
-                className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600"
-                role="button"
-              >
-                <TbAlignBoxCenterBottom size={17} />
-              </div>
-            </Tooltip> */}
-            {/* <Tooltip title="Delete">
+            <Tooltip title="Delete">
               <div
                 className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600"
                 role="button"
@@ -1492,12 +1433,12 @@ const SubscribersListing = () => {
               >
                 <TbTrash size={18} />
               </div>
-            </Tooltip> */}
+            </Tooltip>
           </div>
         ),
       },
     ],
-    [openEditDrawer, handleDeleteClick, openImageViewer]
+    [openEditDrawer, handleViewClick, handleDeleteClick, openImageViewer]
   );
 
   const [filteredColumns, setFilteredColumns] =
@@ -1517,10 +1458,12 @@ const SubscribersListing = () => {
     if (filterCriteria.status && filterCriteria.status !== "") count++;
     return count;
   }, [filterCriteria]);
+
   const counts = rawApiSubscribers?.counts || {};
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
+  const selectedRowCount = Object.keys(rowSelection).length;
 
   return (
     <>
@@ -1575,8 +1518,8 @@ const SubscribersListing = () => {
                 </Card>
               </div>
             </Tooltip>
-            <Tooltip title="Click to show active subscribers">
-              <div onClick={() => handleCardClick("Active")}>
+            <Tooltip title="Click to show subscribed users">
+              <div onClick={() => handleCardClick("Subscribed")}>
                 <Card
                   bodyClass={cardBodyClass}
                   className={classNames(
@@ -1589,14 +1532,14 @@ const SubscribersListing = () => {
                   </div>
                   <div>
                     <h6 className="text-green-500 dark:text-green-200">
-                      {counts?.active || 0}
+                      {counts?.subscribed || 0}
                     </h6>
-                    <span className="font-semibold text-xs">Active</span>
+                    <span className="font-semibold text-xs">Subscribed</span>
                   </div>
                 </Card>
               </div>
             </Tooltip>
-            <Tooltip title="Click to show unsubscribed">
+            <Tooltip title="Click to show unsubscribed users">
               <div onClick={() => handleCardClick("Unsubscribed")}>
                 <Card
                   bodyClass={cardBodyClass}
@@ -1618,21 +1561,45 @@ const SubscribersListing = () => {
               </div>
             </Tooltip>
           </div>
-          <SubscriberTableTools
-            onClearFilters={onClearFilters}
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal}
-            columns={columns}
-            filteredColumns={filteredColumns}
-            setFilteredColumns={setFilteredColumns}
-            activeFilterCount={activeFilterCount}
-          />
+
+          {selectedRowCount > 0 ? (
+            <div className="flex justify-between items-center w-full mb-4 px-2 py-2 rounded-md bg-gray-100 dark:bg-gray-700">
+              <div className="font-semibold text-sm">
+                {selectedRowCount} item{selectedRowCount > 1 ? "s" : ""} selected
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" icon={<TbMail />} onClick={handleBulkEmail}>
+                  Send Email
+                </Button>
+                <Button
+                  size="sm"
+                  icon={<TbBrandWhatsapp />}
+                  onClick={handleBulkWhatsApp}
+                >
+                  Send WhatsApp
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <SubscriberTableTools
+              onClearFilters={onClearFilters}
+              onSearchChange={handleSearchChange}
+              onFilter={openFilterDrawer}
+              onImport={() => setIsImportModalOpen(true)}
+              onExport={handleOpenExportReasonModal}
+              columns={columns}
+              filteredColumns={filteredColumns}
+              setFilteredColumns={setFilteredColumns}
+              activeFilterCount={activeFilterCount}
+            />
+          )}
+
           <ActiveFiltersDisplay
             filterData={filterCriteria}
             onRemoveFilter={handleRemoveFilter}
             onClearAll={onClearFilters}
           />
+
           <div className="mt-4 flex-grow overflow-auto">
             <DataTable
               columns={filteredColumns}
@@ -1646,6 +1613,9 @@ const SubscribersListing = () => {
               onPaginationChange={handlePaginationChange}
               onSelectChange={handleSelectChange}
               onSort={handleSort}
+              onRowSelectionChange={setRowSelection}
+              rowSelection={rowSelection}
+              enableRowSelection
               noData={!tableIsLoading && pageData.length === 0}
             />
           </div>
@@ -1676,13 +1646,7 @@ const SubscribersListing = () => {
               loading={isSubmitting}
               disabled={!isValid || isSubmitting}
             >
-              {isSubmitting
-                ? editingItem
-                  ? "Saving..."
-                  : "Adding..."
-                : editingItem
-                ? "Save"
-                : "Save"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         }
@@ -1715,11 +1679,7 @@ const SubscribersListing = () => {
             />
           </FormItem>
           <FormItem
-            label={
-              <div>
-                Name<span className="text-red-500"> *</span>
-              </div>
-            }
+            label="Name"
             invalid={!!errors.name}
             errorMessage={errors.name?.message}
           >
@@ -1729,7 +1689,7 @@ const SubscribersListing = () => {
               render={({ field }) => (
                 <Input
                   {...field}
-                  placeholder="Enter Name"
+                  placeholder="Enter Name (Optional)"
                   prefix={<TbUserCircle />}
                 />
               )}
@@ -1737,11 +1697,7 @@ const SubscribersListing = () => {
           </FormItem>
           <div className="md:grid grid-cols-2 gap-3">
             <FormItem
-              label={
-                <div>
-                  Mobile No.<span className="text-red-500"> *</span>
-                </div>
-              }
+              label="Mobile No."
               invalid={!!errors.mobile_no}
               errorMessage={errors.mobile_no?.message}
             >
@@ -1752,66 +1708,14 @@ const SubscribersListing = () => {
                   <Input
                     {...field}
                     type="tel"
-                    placeholder="Enter Mobile No."
+                    placeholder="Enter Mobile No. (Optional)"
                     prefix={<TbPhone />}
                   />
                 )}
               />
             </FormItem>
             <FormItem
-              label={
-                <div>
-                  Subscription Date<span className="text-red-500"> *</span>
-                </div>
-              }
-              invalid={!!errors.subscribedDate}
-              errorMessage={errors.subscribedDate?.message}
-            >
-              <Controller
-                name="subscribedDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    placeholder="Pick Subscription Date"
-                    value={field.value}
-                  />
-                )}
-              />
-            </FormItem>
-          </div>
-          <div className="md:grid grid-cols-2 gap-3">
-            <FormItem
-              label={
-                <div>
-                  Subscription Type<span className="text-red-500"> *</span>
-                </div>
-              }
-              invalid={!!errors.subscriptionType}
-              errorMessage={errors.subscriptionType?.message}
-            >
-              <Controller
-                name="subscriptionType"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    placeholder="Select Subscription Type"
-                    options={SUBSCRIPTION_TYPE_OPTIONS}
-                    value={SUBSCRIPTION_TYPE_OPTIONS.find(
-                      (opt) => opt.value === field.value
-                    )}
-                    onChange={(opt) => field.onChange(opt?.value)}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label={
-                <div>
-                  Source<span className="text-red-500"> *</span>
-                </div>
-              }
+              label="Source"
               invalid={!!errors.source}
               errorMessage={errors.source?.message}
             >
@@ -1821,104 +1725,76 @@ const SubscribersListing = () => {
                 render={({ field }) => (
                   <Input
                     {...field}
-                    placeholder="Enter Source (e.g., Website, Facebook)"
+                    placeholder="e.g., Website (Optional)"
                     prefix={<TbWorld />}
                   />
                 )}
               />
             </FormItem>
           </div>
-          <div className="md:grid grid-cols-2 gap-3">
-            <FormItem
-              label={
-                <div>
-                  Status<span className="text-red-500"> *</span>
-                </div>
-              }
-              invalid={!!errors.status}
-              errorMessage={errors.status?.message}
-            >
-              <Controller
-                name="status"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    placeholder="Select Status"
-                    options={STATUS_OPTIONS}
-                    value={STATUS_OPTIONS.find(
-                      (opt) => opt.value === field.value
-                    )}
-                    onChange={(opt) => field.onChange(opt?.value)}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Rating (1-5)"
-              invalid={!!errors.rating}
-              errorMessage={errors.rating?.message}
-            >
-              <Controller
-                name="rating"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    type="number"
-                    min="1"
-                    max="5"
-                    placeholder="Enter Rating (Optional)"
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : Number(e.target.value)
-                      )
-                    }
-                    prefix={<TbStar />}
-                  />
-                )}
-              />
-            </FormItem>
-          </div>
-          {currentStatusWatch === "Unsubscribed" && (
-            <FormItem
-              label={
-                <div>
-                  Unsubscribe Reason<span className="text-red-500"> *</span>
-                </div>
-              }
-              invalid={!!errors.unsubscribeReason}
-              errorMessage={errors.unsubscribeReason?.message}
-            >
-              <Controller
-                name="unsubscribeReason"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    placeholder="Describe unsubscribe reason"
-                    textArea
-                    rows={3}
-                  />
-                )}
-              />
-            </FormItem>
-          )}
           <FormItem
-            label="Notes"
-            invalid={!!errors.note}
-            errorMessage={errors.note?.message}
+            label={
+              <div>
+                Subscription Type<span className="text-red-500"> *</span>
+              </div>
+            }
+            invalid={!!errors.subscriptionTypes}
+            errorMessage={errors.subscriptionTypes?.message}
           >
             <Controller
-              name="note"
+              name="subscriptionTypes"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select Type(s)"
+                  options={SUBSCRIPTION_TYPE_OPTIONS}
+                  value={SUBSCRIPTION_TYPE_OPTIONS.filter((opt) =>
+                    field.value?.includes(opt.value)
+                  )}
+                  onChange={(options: any) =>
+                    field.onChange(options?.map((o: any) => o.value) || [])
+                  }
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label={
+              <div>
+                Status<span className="text-red-500"> *</span>
+              </div>
+            }
+            invalid={!!errors.status}
+            errorMessage={errors.status?.message}
+          >
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Status"
+                  options={STATUS_OPTIONS}
+                  value={STATUS_OPTIONS.find((opt) => opt.value === field.value)}
+                  onChange={(opt) => field.onChange(opt?.value)}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Remarks"
+            invalid={!!errors.remarks}
+            errorMessage={errors.remarks?.message}
+          >
+            <Controller
+              name="remarks"
               control={control}
               render={({ field }) => (
                 <Input
                   {...field}
-                  placeholder="Write a note (Optional)"
+                  placeholder="Write a remark (Optional)"
                   textArea
-                  rows={3}
+                  rows={4}
                   prefix={<TbFileText />}
                 />
               )}
@@ -1993,6 +1869,42 @@ const SubscribersListing = () => {
         </Form>
       </Drawer>
 
+      <Dialog
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onRequestClose={() => setIsImportModalOpen(false)}
+      >
+        <h5 className="mb-4">Import Subscribers</h5>
+        <p className="mb-4">
+          Select a CSV or Excel file. Please ensure the file columns match the
+          required format.
+        </p>
+        <div className="mb-4">
+          <a
+            href="/subscriber-import-template.csv"
+            download
+            className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
+          >
+            <TbCloudDownload /> Download Template
+          </a>
+        </div>
+        <FormItem label="Upload File">
+          <Input
+            type="file"
+            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+            onChange={handleFileImport}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={() => setIsImportModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="solid" onClick={processAndUploadImport}>
+            Import Data
+          </Button>
+        </div>
+      </Dialog>
+
       <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
@@ -2014,10 +1926,8 @@ const SubscribersListing = () => {
       >
         <p>
           Are you sure you want to delete the subscriber "
-          <strong>
-            {itemToDelete?.name} ({itemToDelete?.email})
-          </strong>
-          "? This action cannot be undone.
+          <strong>{itemToDelete?.email}</strong>"? This action cannot be
+          undone.
         </p>
       </ConfirmDialog>
 
@@ -2090,11 +2000,11 @@ const SubscribersListing = () => {
           {imageView ? (
             <img
               src={imageView}
-              alt="User"
+              alt="User Profile"
               className="max-w-full max-h-[80vh]"
             />
           ) : (
-            <p>No image.</p>
+            <p>No image available.</p>
           )}
         </div>
       </Dialog>
