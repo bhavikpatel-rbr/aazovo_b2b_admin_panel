@@ -221,7 +221,7 @@ const employeeFormValidationSchema = z.object({
     registration: z.object({
         fullName: z.string().min(1, 'Full Name is required'),
         dateOfJoining: z.date({ required_error: "Date of joining is required." }),
-        mobileNumber: z.string().min(7, 'Mobile number must be at least 7 digits').regex(/^\d+$/, "Invalid phone number"),
+        mobileNumber: z.string().min(10, 'Mobile number must be at least 10 digits').regex(/^\d+$/, "Invalid phone number"),
         mobileNumberCode: requiredSelectSchema,
         email: z.string().min(1, 'Email is required').email('Invalid email format'),
         experience: z.string().min(1, 'Experience is required'),

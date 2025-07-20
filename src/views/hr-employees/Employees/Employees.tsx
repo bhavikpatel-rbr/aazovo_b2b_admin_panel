@@ -372,7 +372,7 @@ const EmployeesListing = () => {
                 roles: Array.isArray(emp.roles) ? emp.roles.map((r: any) => r.display_name) : [],
                 avatar: emp.profile_pic_path ? emp.profile_pic_path.replace(/([^:]\/)\/+/g, "$1") : null,
                 createdAt: new Date(emp.created_at),
-                joiningDate: emp.date_of_joining ? new Date(emp.date_of_joining) : null,
+                joiningDate: emp.created_at ? new Date(emp.created_at) : null,
             }));
             setEmployees(formattedData);
             setEmployeesCount(Employees?.counts || {});
@@ -432,7 +432,7 @@ const EmployeesListing = () => {
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
     // Data for UI Selects
-    const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: String(u.id), label: u.name })) : [], [getAllUserData]);
+    const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: String(u.id), label: `(${u.employee_id}) - ${u.name || 'N/A'}` })) : [], [getAllUserData]);
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: any) => ({ value: d.name, label: d.name })) : [], [departmentsData?.data]);
     const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: any) => ({ value: d.name, label: d.name })) : [], [designationsData?.data]);
