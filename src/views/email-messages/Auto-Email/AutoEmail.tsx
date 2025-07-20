@@ -98,6 +98,8 @@ const autoEmailStatusColor: Record<string, string> = {
     Inactive: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100',
     default: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
 };
+const MAX_AVATARS_IN_STACK = 4;
+
 
 // --- ZOD SCHEMAS ---
 const autoEmailFormSchema = z.object({
@@ -259,7 +261,6 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
     );
 };
 
-// --- NEW COMPONENT: TableSkeleton ---
 const TableSkeleton = ({ columns, rows = 5 }: { columns: ColumnDef<any>[], rows?: number }) => (
     <div className="w-full">
         {Array.from({ length: rows }).map((_, i) => (
@@ -275,8 +276,6 @@ const TableSkeleton = ({ columns, rows = 5 }: { columns: ColumnDef<any>[], rows?
     </div>
 );
 
-
-// --- NEW COMPONENT: UserListModal ---
 const UserListModal = ({ isOpen, onClose, users, searchTerm, setSearchTerm }: {
     isOpen: boolean; onClose: () => void; users: ApiUser[]; searchTerm: string; setSearchTerm: (term: string) => void;
 }) => {
@@ -364,8 +363,6 @@ const AutoEmailListing = () => {
     const [selectedItems, setSelectedItems] = useState<AutoEmailItem[]>([]);
     const [itemToDelete, setItemToDelete] = useState<AutoEmailItem | null>(null);
     const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
-
-    // New state for UserListModal
     const [isUserListModalOpen, setIsUserListModalOpen] = useState(false);
     const [selectedUsersForModal, setSelectedUsersForModal] = useState<ApiUser[]>([]);
     const [userSearchTerm, setUserSearchTerm] = useState('');
@@ -427,7 +424,6 @@ const AutoEmailListing = () => {
     }, [editFormMethods]);
     const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
 
-    // Handlers for UserListModal
     const openUserListModal = useCallback((users: ApiUser[]) => {
         setSelectedUsersForModal(users);
         setUserSearchTerm('');
@@ -574,7 +570,7 @@ const AutoEmailListing = () => {
 
     const columns: ColumnDef<AutoEmailItem>[] = useMemo(() => [
         {
-            header: "Email Type", accessorKey: "emailTypeDisplay", enableSorting: true, size: 250,
+            header: "Email Type", accessorKey: "emailTypeDisplay", enableSorting: true, size: 280,
             cell: props => {
                 const { emailTypeDisplay, email_type } = props.row.original;
                 return (
@@ -589,35 +585,40 @@ const AutoEmailListing = () => {
             }
         },
         {
-            header: "User(s)", accessorKey: "usersDisplay", enableSorting: false, size: 280,
+            header: "Assigned Users", accessorKey: "usersDisplay", enableSorting: false, size: 250,
             cell: props => {
                 const users = props.row.original.usersDisplay;
-                if (!users || users.length === 0) return <Tag>No Users</Tag>;
-                const primaryUser = users[0];
-                const otherUsers = users.slice(1);
+                if (!users || users.length === 0) return <Tag>No Users Assigned</Tag>;
+
+                const tooltipContent = users.map(u => u.name).join(', ');
 
                 return (
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => openUserListModal(users)}>
-                        <Avatar src={primaryUser.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} />
-                        <div className="flex flex-col">
-                            <span className="font-semibold heading-text">{primaryUser.name}</span>
-                            {otherUsers.length > 0 ? (
-                                <div className="flex items-center -space-x-2 rtl:space-x-reverse mt-1">
-                                    {otherUsers.slice(0, 3).map(user => (
-                                        <Tooltip key={user.id} title={user.name}><Avatar src={user.profile_pic_path} shape="circle" size="xs" icon={<TbUserCircle />} /></Tooltip>
-                                    ))}
-                                    {otherUsers.length > 3 && (
-                                        <Tooltip title={`${otherUsers.length - 3} more`}>
-                                            <Avatar shape="circle" size="xs" className="bg-gray-200 text-gray-600 text-xs font-bold">+{otherUsers.length - 3}</Avatar>
-                                        </Tooltip>
-                                    )}
-                                    <span className="text-xs text-gray-500 ml-3">and {otherUsers.length} other{otherUsers.length > 1 ? 's' : ''}</span>
-                                </div>
-                            ) : (
-                                <span className="text-xs text-gray-500">{primaryUser.email}</span>
+                    <Tooltip title={tooltipContent}>
+                        <div
+                            className="flex items-center cursor-pointer"
+                            onClick={() => openUserListModal(users)}
+                        >
+                            <div className="flex -space-x-2 rtl:space-x-reverse">
+                                {users.slice(0, MAX_AVATARS_IN_STACK).map(user => (
+                                    <Avatar
+                                        key={user.id}
+                                        src={user.profile_pic_path}
+                                        shape="circle" size="sm" icon={<TbUserCircle />}
+                                        className="border-2 border-white dark:border-gray-800"
+                                    />
+                                ))}
+                            </div>
+                            {users.length > MAX_AVATARS_IN_STACK && (
+                                <Avatar
+                                    shape="circle" size="sm"
+                                    className="bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-200 border-2 border-white dark:border-gray-800 text-xs font-bold"
+                                >
+                                    +{users.length - MAX_AVATARS_IN_STACK}
+                                </Avatar>
                             )}
+                            <span className="ml-2 font-semibold text-sm text-gray-600 dark:text-gray-300">{users.length} User{users.length > 1 ? 's' : ''}</span>
                         </div>
-                    </div>
+                    </Tooltip>
                 );
             }
         },
