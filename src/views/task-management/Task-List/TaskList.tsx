@@ -26,7 +26,7 @@ import {
     FormItem as UiFormItem,
 } from '@/components/ui/Form'
 import Badge from '@/components/ui/Badge'
-import { DatePicker, Dialog, Dropdown, Select, Input, Drawer, Checkbox } from '@/components/ui'
+import { DatePicker, Dialog, Dropdown, Select, Input, Drawer, Checkbox, Skeleton } from '@/components/ui' // Skeleton Imported
 
 // Icons
 import {
@@ -75,8 +75,8 @@ import {
     getAllUsersAction,
     deleteTaskAction,
     updateTaskStatusAPI,
-    addAllActionAction, // ADDED: For activity/active logging
-    // @ts-ignore - Assuming this action exists for bulk delete
+    addAllActionAction,
+    // @ts-ignore
     // deleteAllTasksAction,
 } from '@/reduxtool/master/middleware'
 
@@ -389,14 +389,12 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                         <TbCalendarEvent className="text-lg text-gray-500" />{' '}
                         <strong>Created:</strong>{' '}
                         {formatCustomDateTime(task.createdDate)}
-                        {/* {task.createdDate.toLocaleString()} */}
                     </p>
                     {task.dueDate && (
                         <p className="text-sm flex items-center gap-1.5">
                             <TbCalendarEvent className="text-lg text-gray-500" />{' '}
                             <strong>Due:</strong> 
                             {formatCustomDateTime(task.dueDate)}
-                            {/* {task.dueDate.toLocaleString()} */}
                         </p>
                     )}
                     {task.updated_at && (
@@ -404,7 +402,6 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                             <TbCalendarEvent className="text-lg text-gray-500" />{' '}
                             <strong>Last Updated:</strong>{' '}
                              {formatCustomDateTime(task.updated_at)}
-                            {/* {new Date(task.updated_at).toLocaleString()} */}
                         </p>
                     )}
                 </div>
@@ -477,9 +474,6 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
                                         </span>
                                         <span className="text-xs text-gray-400 dark:text-gray-500">
                                             {formatCustomDateTime(comment.created_at)}
-                                            {/* {new Date(
-                                                comment.created_at,
-                                            ).toLocaleString()} */}
                                         </span>
                                     </div>
                                     <p className="text-gray-600 dark:text-gray-300 text-xs mt-0.5">
@@ -528,7 +522,6 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
 
 // --- Reusable Components ---
 
-// UPDATED: ActionColumn now calls onOpenModal for 'activity'
 export const ActionColumn = ({
     onEdit,
     onView,
@@ -1339,11 +1332,11 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
 
     const {
         AllTaskData = [],
-        status: masterLoadingStatus = 'idle',
         getAllUserData = [],
     } = useSelector(masterSelector, shallowEqual)
 
-    const [isLoading, setIsLoading] = useState(false)
+    const [initialLoading, setInitialLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [tasks, setTasks] = useState<TaskItem[]>([])
     const [tableData, setTableData] = useState<TableQueries>({
         pageIndex: 1,
@@ -1377,6 +1370,10 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const [isSubmittingAction, setIsSubmittingAction] = useState(false);
     const [userData, setUserData] = useState<any>(null);
+    
+    const isDataReady = !initialLoading;
+    const tableLoading = initialLoading || isSubmitting || isDeleting || isUpdating;
+
 
     const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
 
@@ -1387,13 +1384,21 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
        }, []);
 
     useEffect(() => {
-        dispatch(getAllTaskAction())
-        
-    }, [ ])
+        const fetchData = async () => {
+            setInitialLoading(true);
+            try {
+                await dispatch(getAllTaskAction());
+            } catch (error) {
+                console.error("Failed to fetch tasks", error);
+                toast.push(<Notification title="Error" type="danger">Could not load tasks.</Notification>);
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+        fetchData();
+    }, [dispatch])
 
      useEffect(() => {
-        console.log("AllTaskData?.length",AllTaskData?.length);
-        
         if (AllTaskData?.length > 0) {
              const transformed = AllTaskData.map(transformApiTaskToTaskItem)
             setTasks(transformed)
@@ -2026,7 +2031,9 @@ console.log("phone",phone);
     )
 
     return {
-        isLoading: isLoading || isUpdating,
+        initialLoading,
+        isDataReady,
+        tableLoading,
         isDeleting,
         isSubmittingAction,
         tasks,
@@ -2081,146 +2088,88 @@ console.log("phone",phone);
 
 // --- StatusSummaryCards Component ---
 interface StatusSummaryCardsProps {
-    tasks: TaskItem[]
-    onCardClick: (status: TaskStatus | 'all') => void
+    tasks: TaskItem[];
+    onCardClick: (status: TaskStatus | 'all') => void;
+    initialLoading: boolean;
 }
 
 const StatusSummaryCards: React.FC<StatusSummaryCardsProps> = ({
     tasks,
     onCardClick,
+    initialLoading,
 }) => {
     const stats = useMemo(() => {
-        const total = tasks.length
-        const pending = tasks.filter((t) => t.status === 'pending').length
-        const in_progress = tasks.filter(
-            (t) => t.status === 'in_progress',
-        ).length
-        const completed = tasks.filter((t) => t.status === 'completed').length
-        return { total, pending, in_progress, completed }
-    }, [tasks])
+        const total = tasks.length;
+        const pending = tasks.filter((t) => t.status === 'pending').length;
+        const in_progress = tasks.filter((t) => t.status === 'in_progress').length;
+        const completed = tasks.filter((t) => t.status === 'completed').length;
+        return { total, pending, in_progress, completed };
+    }, [tasks]);
 
-    const cardClass =
-        'rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg'
-    const cardBodyClass = 'flex items-center gap-4 p-4'
-    const iconWrapperClass = 'p-3 rounded-full'
+    const renderCardContent = (content: number) => {
+        if (initialLoading) {
+            return <Skeleton width={40} height={20} />;
+        }
+        return <h6 className="font-semibold">{content}</h6>;
+    };
+
+    const cardClass = 'rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg';
+    const cardBodyClass = 'flex items-center gap-4 p-4';
+    const iconWrapperClass = 'p-3 rounded-full';
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Tooltip title="Click to show all tasks">
                 <div onClick={() => onCardClick('all')}>
-                    <AdaptiveCard
-                        bodyClass={cardBodyClass}
-                        className={classNames(
-                            cardClass,
-                            'border-blue-200 dark:border-blue-700',
-                        )}
-                    >
-                        <div
-                            className={classNames(
-                                iconWrapperClass,
-                                'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100',
-                            )}
-                        >
+                    <AdaptiveCard bodyClass={cardBodyClass} className={classNames(cardClass, 'border-blue-200 dark:border-blue-700')}>
+                        <div className={classNames(iconWrapperClass, 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100')}>
                             <TbActivity size={24} />
                         </div>
-                        <div>
-                            <h6 className="font-semibold">{stats.total}</h6>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Total Tasks
-                            </p>
-                        </div>
+                        <div>{renderCardContent(stats.total)}<p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p></div>
                     </AdaptiveCard>
                 </div>
             </Tooltip>
             <Tooltip title="Click to show 'Pending' tasks">
                 <div onClick={() => onCardClick('pending')}>
-                    <AdaptiveCard
-                        bodyClass={cardBodyClass}
-                        className={classNames(
-                            cardClass,
-                            'border-amber-200 dark:border-amber-700',
-                        )}
-                    >
-                        <div
-                            className={classNames(
-                                iconWrapperClass,
-                                'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100',
-                            )}
-                        >
+                    <AdaptiveCard bodyClass={cardBodyClass} className={classNames(cardClass, 'border-amber-200 dark:border-amber-700')}>
+                        <div className={classNames(iconWrapperClass, 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100')}>
                             <TbBell size={24} />
                         </div>
-                        <div>
-                            <h6 className="font-semibold">{stats.pending}</h6>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Pending
-                            </p>
-                        </div>
+                        <div>{renderCardContent(stats.pending)}<p className="text-sm text-gray-500 dark:text-gray-400">Pending</p></div>
                     </AdaptiveCard>
                 </div>
             </Tooltip>
             <Tooltip title="Click to show 'In Progress' tasks">
                 <div onClick={() => onCardClick('in_progress')}>
-                    <AdaptiveCard
-                        bodyClass={cardBodyClass}
-                        className={classNames(
-                            cardClass,
-                            'border-sky-200 dark:border-sky-700',
-                        )}
-                    >
-                        <div
-                            className={classNames(
-                                iconWrapperClass,
-                                'bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-100',
-                            )}
-                        >
+                    <AdaptiveCard bodyClass={cardBodyClass} className={classNames(cardClass, 'border-sky-200 dark:border-sky-700')}>
+                        <div className={classNames(iconWrapperClass, 'bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-100')}>
                             <TbReload size={24} />
                         </div>
-                        <div>
-                            <h6 className="font-semibold">
-                                {stats.in_progress}
-                            </h6>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                In Progress
-                            </p>
-                        </div>
+                        <div>{renderCardContent(stats.in_progress)}<p className="text-sm text-gray-500 dark:text-gray-400">In Progress</p></div>
                     </AdaptiveCard>
                 </div>
             </Tooltip>
             <Tooltip title="Click to show 'Completed' tasks">
                 <div onClick={() => onCardClick('completed')}>
-                    <AdaptiveCard
-                        bodyClass={cardBodyClass}
-                        className={classNames(
-                            cardClass,
-                            'border-emerald-200 dark:border-emerald-700',
-                        )}
-                    >
-                        <div
-                            className={classNames(
-                                iconWrapperClass,
-                                'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100',
-                            )}
-                        >
+                    <AdaptiveCard bodyClass={cardBodyClass} className={classNames(cardClass, 'border-emerald-200 dark:border-emerald-700')}>
+                        <div className={classNames(iconWrapperClass, 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100')}>
                             <TbChecks size={24} />
                         </div>
-                        <div>
-                            <h6 className="font-semibold">{stats.completed}</h6>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Completed
-                            </p>
-                        </div>
+                        <div>{renderCardContent(stats.completed)}<p className="text-sm text-gray-500 dark:text-gray-400">Completed</p></div>
                     </AdaptiveCard>
                 </div>
             </Tooltip>
         </div>
-    )
-}
+    );
+};
 
 // --- Main TaskList Component ---
 const TaskList = ({ isDashboard }: { isDashboard: boolean }) => {
     const pageTitle = 'Task List'
     const {
-        isLoading,
+        initialLoading,
+        isDataReady,
+        tableLoading,
         isDeleting,
         isSubmittingAction,
         tasks,
@@ -2279,6 +2228,7 @@ const TaskList = ({ isDashboard }: { isDashboard: boolean }) => {
                     {!isDashboard && <StatusSummaryCards
                         tasks={tasks}
                         onCardClick={handleCardClick}
+                        initialLoading={initialLoading}
                     />}
 
                     <div className="mb-2">
@@ -2305,7 +2255,7 @@ const TaskList = ({ isDashboard }: { isDashboard: boolean }) => {
                         <TaskTable
                             columns={visibleColumns}
                             data={pageData}
-                            loading={isLoading}
+                            loading={tableLoading}
                             pagingData={{
                                 total,
                                 pageIndex: tableData.pageIndex as number,

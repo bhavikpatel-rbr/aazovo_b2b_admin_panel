@@ -273,7 +273,7 @@ const CreateTaskPage = () => {
           id: String(att.id),
           name: att.attachment_name,
           size: "N/A",
-          src: 'https://aazovo.codefriend.in/storage/' + att.attachment_path,
+          src: 'https://api.omcommunication.co/api/storage/' + att.attachment_path,
           type: att.attachment_type,
         }))
       );
