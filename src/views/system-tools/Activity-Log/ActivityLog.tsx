@@ -142,66 +142,6 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- Skeleton Component for Initial Loading ---
-const ActivityLogSkeleton = () => (
-    <Container className="h-auto">
-      <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-        <div className="lg:flex items-center justify-between mb-4">
-          <Skeleton height={28} width={200} />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 mb-6 gap-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Card key={index} bodyClass="flex gap-2 p-3 items-center">
-              <Skeleton variant="circle" height={48} width={48} />
-              <div className="w-full">
-                <Skeleton height={24} width="50%" />
-                <Skeleton height={16} width="80%" className="mt-1" />
-              </div>
-            </Card>
-          ))}
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 w-full">
-          <div className="flex-grow"><Skeleton height={40} /></div>
-          <div className="flex flex-col sm:flex-row gap-1.5 w-full sm:w-auto">
-            <Skeleton height={40} width={40} />
-            <Skeleton height={40} width={40} />
-            <Skeleton height={40} width={100} />
-            <Skeleton height={40} width={100} />
-          </div>
-        </div>
-        <div className="my-4 h-4" />
-        <div className="mt-1 flex-grow overflow-y-auto">
-          <div className="flex gap-4 p-4 border-b border-gray-200 dark:border-gray-700">
-            <Skeleton height={20} width="20%" />
-            <Skeleton height={20} width="15%" />
-            <Skeleton height={20} width="15%" />
-            <Skeleton height={20} width="30%" />
-            <Skeleton height={20} width="15%" />
-            <Skeleton height={20} width="10%" />
-          </div>
-          <div className="space-y-2 p-4">
-            {Array.from({ length: 10 }).map((_, index) => (
-               <div key={index} className="flex gap-4 items-center">
-                 <div className="flex items-center gap-2 w-[20%]">
-                   <Skeleton variant="circle" height={32} width={32} />
-                   <div className="w-full">
-                     <Skeleton height={16} />
-                     <Skeleton height={12} className="mt-1" />
-                   </div>
-                 </div>
-                 <div className="w-[15%]"><Skeleton height={24} /></div>
-                 <div className="w-[15%]"><Skeleton height={16} /></div>
-                 <div className="w-[30%]"><Skeleton height={16} /></div>
-                 <div className="w-[15%]"><Skeleton height={16} /></div>
-                 <div className="w-[10%]"><Skeleton height={24} /></div>
-               </div>
-            ))}
-          </div>
-        </div>
-      </AdaptiveCard>
-    </Container>
-  );
-
 // --- Utility & Child Components ---
 function exportChangeLogsToCsv(filename: string, rows: ChangeLogItem[]) {
   if (!rows || !rows.length) return false;
@@ -258,7 +198,6 @@ const ActionColumn = ({
         <TbEye />
       </button>
     </Tooltip>
-    {/* --- MODIFIED: This is now a toggle for Block/Unblock --- */}
     <Tooltip title={isBlocked ? "Unblock User/IP" : "Block User/IP"}>
       <button
         className={classNames("text-xl p-1 rounded-md", {
@@ -546,7 +485,7 @@ const ActivityLog = () => {
   }, [mappedData, tableData, activeFilters, activityLogsData?.counts]);
 
   const activeFilterCount = useMemo(() => Object.values(activeFilters).filter(v => v && (!Array.isArray(v) || v.length > 0)).length, [activeFilters]);
-  const tableLoading = masterLoadingStatus === "loading" || masterLoadingStatus === "pending" || isProcessingBlock;
+  const tableLoading = masterLoadingStatus === "pending" || isProcessingBlock;
 
   const handleCardClick = (filterType: "action" | "date" | "all", value?: string) => {
     let newFilters: Partial<FilterFormData> = {};
@@ -764,7 +703,6 @@ const ActivityLog = () => {
           );
         }
       } catch {
-        // If it's a string but not JSON, just display it as is.
         content = String(data);
       }
     }
@@ -791,10 +729,6 @@ const ActivityLog = () => {
     );
   };
 
-  if (initialLoading) {
-    return <ActivityLogSkeleton />;
-  }
-
   return (
     <>
       <Container className="h-auto">
@@ -814,7 +748,7 @@ const ActivityLog = () => {
           <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFilters} />
           <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">{total !== mappedData.length && (<span>Showing <strong>{total}</strong> matching results of <strong>{mappedData.length}</strong></span>)}</div>
           <div className="mt-1 flex-grow overflow-y-auto">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onPaginationChange={(p) => handleSetTableData({ pageIndex: p })} onSelectChange={(s) => handleSetTableData({ pageSize: s, pageIndex: 1 })} onSort={(s) => handleSetTableData({ sort: s })} noData={!tableLoading && pageData.length === 0} />
+            <DataTable columns={filteredColumns} data={pageData} loading={initialLoading || tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onPaginationChange={(p) => handleSetTableData({ pageIndex: p })} onSelectChange={(s) => handleSetTableData({ pageSize: s, pageIndex: 1 })} onSort={(s) => handleSetTableData({ sort: s })} noData={!initialLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
