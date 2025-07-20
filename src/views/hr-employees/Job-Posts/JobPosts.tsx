@@ -511,7 +511,7 @@ console.log("departmentsData",departmentsData?.data);
     
     const columns: ColumnDef<JobPostItem>[] = useMemo(() => [
         { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 20; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold cursor-help">{displayValue}</span></Tooltip>) } },
-        { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { const deptId = String(props.getValue()); const department = departmentOptions.find((opt) => opt.value === deptId); return department ? department.label : deptId } },
+        { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { return props?.row?.original?.job_department?.name || "" } },
         { header: 'Location', accessorKey: 'location', size: 130, enableSorting: true },
         { header: 'Vacancies', accessorKey: 'vacancies', size: 90, enableSorting: true, meta: { cellClass: 'text-center', headerClass: 'text-center' } },
         { header: 'Status', accessorKey: 'status', size: 100, enableSorting: true, cell: (props) => { const statusVal = props.getValue<JobPostStatusApi>(); return (<Tag className={classNames('capitalize whitespace-nowrap text-center', jobStatusColor[statusVal] || 'bg-gray-100 text-gray-600')}>{statusVal}</Tag>) } },
