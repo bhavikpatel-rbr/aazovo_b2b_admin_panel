@@ -482,7 +482,7 @@ const BugReportListing = () => {
   const dispatch = useAppDispatch();
   const { bugReportsData: rawBugReportsData = { data: [], counts: {} }, status: masterLoadingStatus = "idle", getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
 
-  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: b.name })) : [], [getAllUserData]);
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
