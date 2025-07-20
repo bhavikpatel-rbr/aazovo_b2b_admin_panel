@@ -16,8 +16,8 @@ import toast from "@/components/ui/toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-// --- MODIFIED: Added Dialog import ---
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
+// --- MODIFIED: Added Dialog and Skeleton import ---
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog, Skeleton } from "@/components/ui";
 
 // Icons
 import {
@@ -239,7 +239,7 @@ const DepartmentsSearch = React.forwardRef<
 ));
 DepartmentsSearch.displayName = "DepartmentsSearch";
 
-const DepartmentsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+const DepartmentsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
@@ -248,6 +248,7 @@ const DepartmentsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilt
   filteredColumns: ColumnDef<DepartmentItem>[];
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<DepartmentItem>[]>>;
   activeFilterCount: number;
+  isDataReady: boolean;
 }) => {
     const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
     const toggleColumn = (checked: boolean, colId: string) => {
@@ -289,11 +290,11 @@ const DepartmentsTableTools = ({ onSearchChange, onFilter, onExport, onClearFilt
                         })}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+                <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
                     Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
                 </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
             </div>
         </div>
     );
@@ -349,9 +350,9 @@ const DepartmentsTable = ({
 
 const DepartmentListing = () => {
   const dispatch = useAppDispatch();
-  const { departmentsData = { data: [], counts: {} }, status: masterLoadingStatus = "idle" } =
-    useSelector(masterSelector);
+  const { departmentsData = { data: [], counts: {} } } = useSelector(masterSelector);
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DepartmentItem | null>(null);
@@ -359,10 +360,11 @@ const DepartmentListing = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
-
-  // --- MODIFIED: Renamed state and handlers for clarity and consistency ---
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
+
+  const isDataReady = !initialLoading;
+  const tableLoading = initialLoading || isSubmitting;
 
   const openImageViewer = useCallback((src?: string) => {
     if (src) {
@@ -375,7 +377,6 @@ const DepartmentListing = () => {
     setIsImageViewerOpen(false);
     setViewerImageSrc(null);
   }, []);
-  // --- END MODIFICATION ---
 
   const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({
     filterNames: [],
@@ -393,18 +394,19 @@ const DepartmentListing = () => {
     []
   );
 
-  const openImageViewerModal = useCallback((src?: string) => {
-    if (src) {
-        setViewerImageSrc(src);
-    }
-  }, []);
-
-  const closeImageViewerModal = useCallback(() => {
-    setViewerImageSrc(null);
-  }, []);
-
   useEffect(() => {
-    dispatch(getDepartmentsAction());
+    const fetchData = async () => {
+        setInitialLoading(true);
+        try {
+            await dispatch(getDepartmentsAction());
+        } catch (error) {
+            console.error("Failed to fetch departments", error);
+            toast.push(<Notification title="Error" type="danger">Failed to load department data.</Notification>)
+        } finally {
+            setInitialLoading(false);
+        }
+    }
+    fetchData();
   }, [dispatch]);
 
   const addFormMethods = useForm<DepartmentFormData>({
@@ -784,7 +786,6 @@ const DepartmentListing = () => {
                       size="sm" 
                       icon={<TbUserCircle />} 
                       className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                      // --- MODIFIED: Use correct handler ---
                       onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
                   />
                   <div>
@@ -814,13 +815,20 @@ const DepartmentListing = () => {
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DepartmentItem>[]>(columns);
   useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
+  const renderCardContent = (content: number | undefined) => {
+    if (initialLoading) {
+        return <Skeleton width={40} height={20} />;
+    }
+    return <h6 className="font-bold">{content ?? 0}</h6>;
+  };
+
   return (
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Departments</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>
               Add New
             </Button>
           </div>
@@ -833,7 +841,7 @@ const DepartmentListing = () => {
                             <TbBuilding size={24} />
                         </div>
                         <div>
-                            <h6 className="text-blue-500 dark:text-blue-200">{departmentsData?.counts?.departments || 0}</h6>
+                            <div className="text-blue-500 dark:text-blue-200">{renderCardContent(departmentsData?.counts?.departments)}</div>
                             <span className="font-semibold text-xs">Total</span>
                         </div>
                     </Card>
@@ -846,7 +854,7 @@ const DepartmentListing = () => {
                             <TbUserScan size={24} />
                         </div>
                         <div>
-                            <h6 className="text-emerald-500 dark:text-emerald-200">{departmentsData?.counts?.active|| 0}</h6>
+                            <div className="text-emerald-500 dark:text-emerald-200">{renderCardContent(departmentsData?.counts?.active)}</div>
                             <span className="font-semibold text-xs">Active</span>
                         </div>
                     </Card>
@@ -859,7 +867,7 @@ const DepartmentListing = () => {
                             <TbInbox size={24} />
                         </div>
                         <div>
-                            <h6 className="text-red-500 dark:text-red-200">{departmentsData?.counts?.inactive || 0}</h6>
+                            <div className="text-red-500 dark:text-red-200">{renderCardContent(departmentsData?.counts?.inactive)}</div>
                             <span className="font-semibold text-xs">Inactive</span>
                         </div>
                     </Card>
@@ -870,7 +878,7 @@ const DepartmentListing = () => {
                 <TbUsers size={24} />
               </div>
               <div>
-                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.employees || 0}</h6>
+                <div className="text-green-500 dark:text-green-200">{renderCardContent(departmentsData?.counts?.employees)}</div>
                 <span className="font-semibold text-xs">Total Emp.</span>
               </div>
             </Card>
@@ -879,7 +887,7 @@ const DepartmentListing = () => {
                 <TbBriefcase size={24} />
               </div>
               <div>
-                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.job_posts || 0}</h6>
+                <div className="text-green-500 dark:text-green-200">{renderCardContent(departmentsData?.counts?.job_posts)}</div>
                 <span className="font-semibold text-xs">Total JobPost</span>
               </div>
             </Card>
@@ -888,7 +896,7 @@ const DepartmentListing = () => {
                 <TbFileLike size={24} />
               </div>
               <div>
-                <h6 className="text-green-500 dark:text-green-200">{departmentsData?.counts?.applicants || 0}</h6>
+                <div className="text-green-500 dark:text-green-200">{renderCardContent(departmentsData?.counts?.applicants)}</div>
                 <span className="font-semibold text-xs">Total Appl.</span>
               </div>
             </Card>
@@ -904,6 +912,7 @@ const DepartmentListing = () => {
                 filteredColumns={filteredColumns}
                 setFilteredColumns={setFilteredColumns}
                 activeFilterCount={activeFilterCount}
+                isDataReady={isDataReady}
             />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
@@ -911,7 +920,7 @@ const DepartmentListing = () => {
             <DepartmentsTable
               columns={filteredColumns}
               data={pageData}
-              loading={masterLoadingStatus === "loading" || isSubmitting}
+              loading={tableLoading}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
@@ -925,7 +934,6 @@ const DepartmentListing = () => {
         </AdaptiveCard>
       </Container>
       
-      {/* --- MODIFIED: Replaced custom div with proper Dialog component --- */}
       <Dialog
         isOpen={isImageViewerOpen}
         onClose={closeImageViewer}
@@ -947,7 +955,6 @@ const DepartmentListing = () => {
               )}
           </div>
       </Dialog>
-      {/* --- END MODIFICATION --- */}
 
       {[
         {
