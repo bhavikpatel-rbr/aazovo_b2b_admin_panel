@@ -74,7 +74,7 @@ import type {
   OnSortParam,
   RowSelectionState
 } from "@/components/shared/DataTable";
-import { SelectOption } from "../RequestFeedback/RequestAndFeedback"; // Adjust import path
+import { SelectOption } from "../RequestFeedback/RequestAndFeedback";
 
 // Redux
 import { masterSelector } from "@/reduxtool/master/masterSlice";
@@ -103,7 +103,7 @@ export type ApiSubscriberItem = {
   status: string;
   subscription_types?: string[] | null;
   source?: string | null;
-  note?: string | null;
+  remarks?: string | null; // CORRECTED
   reason?: string | null;
   updated_by_user?: {
     name: string;
@@ -506,7 +506,7 @@ const SubscribersListing = () => {
       return {
         id: apiItem.id, email: apiItem.email, name: apiItem.name || "", mobile_no: apiItem.mobile || "",
         subscribedDate: new Date(apiItem.created_at), subscriptionTypes: apiItem.subscription_types || [],
-        source: apiItem.source || "", status: apiItem.status, remarks: apiItem.note || "",
+        source: apiItem.source || "", status: apiItem.status, remarks: apiItem.remarks || "", // CORRECTED
         raw_created_at: apiItem.created_at, raw_updated_at: apiItem.updated_at,
         updated_by_user: apiItem.updated_by_user,
       };
@@ -533,7 +533,7 @@ const SubscribersListing = () => {
     let apiPayload = {
       email: data.email, name: data.name || null, mobile: data.mobile_no || null,
       subscription_types: data.subscriptionTypes, source: data.source || null,
-      status: data.status, note: data.remarks || null,
+      status: data.status, remarks: data.remarks || null, // CORRECTED
     };
     try {
       if (editingItem) {
