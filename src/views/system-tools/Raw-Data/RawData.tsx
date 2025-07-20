@@ -33,6 +33,7 @@ import {
   Card,
   Dropdown,
   Checkbox,
+  Skeleton,
 } from "@/components/ui";
 
 // Icons
@@ -258,7 +259,7 @@ type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLI
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 ItemSearch.displayName = "ItemSearch";
 
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
@@ -268,6 +269,7 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
   filteredColumns: ColumnDef<RowDataItem>[];
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<RowDataItem>[]>>;
   activeFilterCount: number;
+  isDataReady: boolean;
 }) => {
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
@@ -309,12 +311,12 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearF
             })}
           </div>
         </Dropdown>
-        <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} />
-        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+        <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
           Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
         </Button>
-        <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto">Import</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto" disabled={!isDataReady}>Import</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
@@ -344,7 +346,6 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   );
 };
 
-
 type RowDataSelectedFooterProps = { selectedItems: RowDataItem[]; onDeleteSelected: () => void; isDeleting: boolean; };
 const RowDataSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: RowDataSelectedFooterProps) => {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
@@ -358,6 +359,8 @@ const RowDataSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: 
 const RowDataListing = () => {
   const dispatch = useAppDispatch();
   const { rowData = [], CountriesData = [], ParentCategories = [], BrandData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+  
+  const [initialLoading, setInitialLoading] = useState(true);
   const [countryOptions, setCountryOptions] = useState<SelectOption[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
   const [brandOptions, setBrandOptions] = useState<SelectOption[]>([]);
@@ -381,6 +384,7 @@ const RowDataListing = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const isDataReady = !initialLoading;
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "N/A";
@@ -388,7 +392,26 @@ const RowDataListing = () => {
     return `${date.getDate()} ${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
   };
 
-  useEffect(() => { dispatch(getRowDataAction()); dispatch(getCountriesAction()); dispatch(getParentCategoriesAction()); dispatch(getBrandAction()); }, [dispatch]);
+  const refreshData = useCallback(async () => {
+      setInitialLoading(true);
+      try {
+          await Promise.all([
+              dispatch(getRowDataAction()),
+              dispatch(getCountriesAction()),
+              dispatch(getParentCategoriesAction()),
+              dispatch(getBrandAction())
+          ]);
+      } catch (error) {
+          console.error("Failed to refresh data:", error);
+          toast.push(<Notification title="Data Load Failed" type="danger">Could not load initial data.</Notification>);
+      } finally {
+          setInitialLoading(false);
+      }
+  }, [dispatch]);
+
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   useEffect(() => { setCountryOptions(Array.isArray(CountriesData) ? CountriesData.map((c: CountryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [CountriesData]);
   useEffect(() => { setCategoryOptions(Array.isArray(ParentCategories) ? ParentCategories.map((c: CategoryListItem) => ({ value: String(c.id), label: c.name })) : []) }, [ParentCategories]);
@@ -408,12 +431,12 @@ const RowDataListing = () => {
   const openViewDialog = useCallback((item: RowDataItem) => setViewingItem(item), []);
   const closeViewDialog = useCallback(() => setViewingItem(null), []);
 
-  const onSubmitHandler = async (data: RowDataFormData) => { setIsSubmitting(true); const apiPayload = { ...data, email: data.email === "" ? null : data.email, company_name: data.company_name === "" ? null : data.company_name, city: data.city === "" ? null : data.city, remarks: data.remarks === "" ? null : data.remarks, }; try { if (editingItem) { await dispatch(editRowDataAction({ id: editingItem.id, ...apiPayload })).unwrap(); toast.push(<Notification title="Raw Data Updated" type="success" duration={2000} />); closeEditDrawer(); dispatch(getRowDataAction()); } else { await dispatch(addRowDataAction(apiPayload)).unwrap(); toast.push(<Notification title="Raw Data Added" type="success" duration={2000} />); closeAddDrawer(); dispatch(getRowDataAction()); } dispatch(getRowDataAction()); } catch (e: any) { toast.push(<Notification title={(editingItem ? "Update" : "Add") + " Failed"} type="danger" duration={3000}>{(e as Error).message || "An error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
+  const onSubmitHandler = async (data: RowDataFormData) => { setIsSubmitting(true); const apiPayload = { ...data, email: data.email === "" ? null : data.email, company_name: data.company_name === "" ? null : data.company_name, city: data.city === "" ? null : data.city, remarks: data.remarks === "" ? null : data.remarks, }; try { if (editingItem) { await dispatch(editRowDataAction({ id: editingItem.id, ...apiPayload })).unwrap(); toast.push(<Notification title="Raw Data Updated" type="success" duration={2000} />); closeEditDrawer(); } else { await dispatch(addRowDataAction(apiPayload)).unwrap(); toast.push(<Notification title="Raw Data Added" type="success" duration={2000} />); closeAddDrawer(); } refreshData(); } catch (e: any) { toast.push(<Notification title={(editingItem ? "Update" : "Add") + " Failed"} type="danger" duration={3000}>{(e as Error).message || "An error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
   const handleDeleteClick = useCallback((item: RowDataItem) => { if (!item.id) return; setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
-  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteRowDataAction({ id: String(itemToDelete.id) })).unwrap(); toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`Entry "${itemToDelete.name || itemToDelete.mobile_no}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); dispatch(getRowDataAction()); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message || "Could not delete item."}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete]);
-  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const validItems = selectedItems.filter((item) => item.id); if (validItems.length === 0) { setIsDeleting(false); return; } const idsToDelete = validItems.map((item) => String(item.id)); try { await dispatch(deleteAllRowDataAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`${validItems.length} item(s) deleted.`}</Notification>); setSelectedItems([]); dispatch(getRowDataAction()); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message || "Failed to delete selected items."}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems]);
+  const onConfirmSingleDelete = useCallback(async () => { if (!itemToDelete?.id) return; setIsDeleting(true); setSingleDeleteConfirmOpen(false); try { await dispatch(deleteRowDataAction({ id: String(itemToDelete.id) })).unwrap(); toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`Entry "${itemToDelete.name || itemToDelete.mobile_no}" deleted.`}</Notification>); setSelectedItems((prev) => prev.filter((d) => d.id !== itemToDelete!.id)); refreshData(); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message || "Could not delete item."}</Notification>); } finally { setIsDeleting(false); setItemToDelete(null); } }, [dispatch, itemToDelete, refreshData]);
+  const handleDeleteSelected = useCallback(async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const validItems = selectedItems.filter((item) => item.id); if (validItems.length === 0) { setIsDeleting(false); return; } const idsToDelete = validItems.map((item) => String(item.id)); try { await dispatch(deleteAllRowDataAction({ ids: idsToDelete.join(",") })).unwrap(); toast.push(<Notification title="Raw Data Deleted" type="success" duration={2000}>{`${validItems.length} item(s) deleted.`}</Notification>); setSelectedItems([]); refreshData(); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger" duration={3000}>{(e as Error).message || "Failed to delete selected items."}</Notification>); } finally { setIsDeleting(false); } }, [dispatch, selectedItems, refreshData]);
   const handleBlacklistClick = useCallback((item: RowDataItem) => { setItemToBlacklist(item); setBlacklistConfirmOpen(true); }, []);
-  const onConfirmBlacklist = async () => { if (!itemToBlacklist) return; setIsBlacklisting(true); setBlacklistConfirmOpen(false); const payload: any = { ...itemToBlacklist, status: "Blacklist", country_id: String(itemToBlacklist.country_id), category_id: String(itemToBlacklist.category_id), brand_id: String(itemToBlacklist.brand_id), }; delete payload.country; delete payload.category; delete payload.brand; try { await dispatch(editRowDataAction(payload)).unwrap(); toast.push(<Notification title="Raw Data Blacklisted" type="warning" duration={2000}>{`Entry "${itemToBlacklist.name || itemToBlacklist.mobile_no}" blacklisted.`}</Notification>); dispatch(getRowDataAction()); } catch (e: any) { toast.push(<Notification title="Blacklist Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>); } finally { setIsBlacklisting(false); setItemToBlacklist(null); } };
+  const onConfirmBlacklist = async () => { if (!itemToBlacklist) return; setIsBlacklisting(true); setBlacklistConfirmOpen(false); const payload: any = { ...itemToBlacklist, status: "Blacklist", country_id: String(itemToBlacklist.country_id), category_id: String(itemToBlacklist.category_id), brand_id: String(itemToBlacklist.brand_id), }; delete payload.country; delete payload.category; delete payload.brand; try { await dispatch(editRowDataAction(payload)).unwrap(); toast.push(<Notification title="Raw Data Blacklisted" type="warning" duration={2000}>{`Entry "${itemToBlacklist.name || itemToBlacklist.mobile_no}" blacklisted.`}</Notification>); refreshData(); } catch (e: any) { toast.push(<Notification title="Blacklist Failed" type="danger" duration={3000}>{(e as Error).message}</Notification>); } finally { setIsBlacklisting(false); setItemToBlacklist(null); } };
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
 
@@ -423,16 +446,17 @@ const RowDataListing = () => {
     setFilterCriteria(defaultFilters);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     setIsFilterDrawerOpen(false);
-  }, [filterFormMethods]);
+    refreshData();
+  }, [filterFormMethods, refreshData]);
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => {
-    setFilterCriteria(prev => ({ ...data, specialFilter: prev.specialFilter })); // Keep special filter if it exists
+    setFilterCriteria(prev => ({ ...data, specialFilter: prev.specialFilter }));
     setTableData((prev) => ({ ...prev, pageIndex: 1 }));
     closeFilterDrawer();
   }, [closeFilterDrawer]);
 
   const handleCardClick = (value?: 'all' | 'today' | 'duplicate' | string) => {
-    onClearFilters(); // Clear all existing filters first
+    onClearFilters();
     if (value && value !== 'all') {
       if (value === 'today' || value === 'duplicate') {
         setFilterCriteria({ specialFilter: value });
@@ -471,7 +495,6 @@ const RowDataListing = () => {
     const sourceData: RowDataItem[] = Array.isArray(rowData?.data) ? rowData?.data : [];
     let processedData: RowDataItem[] = cloneDeep(sourceData);
 
-    // Special filters
     if (filterCriteria.specialFilter === 'today') {
       const todayStr = new Date().toISOString().split('T')[0];
       processedData = processedData.filter(item => item.created_at && item.created_at.startsWith(todayStr));
@@ -542,7 +565,7 @@ const RowDataListing = () => {
     { header: "Brand", accessorKey: "brand_id", enableSorting: true, size: 160, cell: (props) => props.row.original.brand?.name || String(props.getValue()), },
     { header: "Quality", accessorKey: "quality", enableSorting: true, size: 100, cell: (props) => { const qVal = props.getValue<string>(); const qOpt = QUALITY_LEVELS_UI.find((q) => q.value === qVal); return (<Tag className={classNames("capitalize", qVal === "A" && "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-100 border border-green-300 dark:border-green-700", qVal === "B" && "bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-100 border border-orange-300 dark:border-orange-700", qVal === "C" && "bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-100 border border-yellow-300 dark:border-yellow-700" , qVal === "D" && "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700")}>Grade: {qOpt?.label.split(" ")[1] || qVal}</Tag>); }, },
     { header: "Status", accessorKey: "status", enableSorting: true, size: 110, cell: (props) => { const sVal = props.getValue<string>(); const sOpt = STATUS_OPTIONS_UI.find((s) => s.value === sVal); return (<Tag className={classNames("capitalize", statusColors[sVal])}>{sOpt?.label || sVal}</Tag>); }, },
-    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, cell: (props) => { const { updated_at, name, roles } = props.row.original.updated_by_user; return (<div className="text-xs"><span>{name || "N/A"}{roles && (<><br /><b>{roles[0]?.display_name}</b></>)}</span><br /><span>{formatDate(updated_at)}</span></div>); }, },
+    { header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 170, cell: (props) => { const { updated_at, name, roles } = props?.row?.original.updated_by_user; return (<div className="text-xs"><span>{name || "N/A"}{roles && (<><br /><b>{roles[0]?.display_name}</b></>)}</span><br /><span>{formatDate(updated_at)}</span></div>); }, },
     { header: "Actions", id: "action", size: 130, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn item={props.row.original} onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} onBlacklist={() => handleBlacklistClick(props.row.original)} />), },
   ], [openEditDrawer, openViewDialog, handleDeleteClick, handleBlacklistClick, countryOptions, categoryOptions, brandOptions, mobileNoCount, formatDate]);
 
@@ -574,7 +597,7 @@ const RowDataListing = () => {
     try {
       await dispatch(importRowDataAction(formData)).unwrap();
       toast.push(<Notification title="Import Initiated" type="success" duration={2000}>File uploaded. Processing will continue.</Notification>);
-      dispatch(getRowDataAction());
+      refreshData();
       closeImportModal();
     } catch (apiError: any) {
       toast.push(<Notification title="Import Failed" type="danger" duration={3000}>{apiError.message || "Failed to import data."}</Notification>);
@@ -583,9 +606,16 @@ const RowDataListing = () => {
     }
   };
 
-  const tableLoading = masterLoadingStatus === "loading" || isSubmitting || isDeleting || isBlacklisting || isImporting;
+  const tableLoading = masterLoadingStatus === "pending" || isSubmitting || isDeleting || isBlacklisting || isImporting;
   const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
+
+  const renderCardContent = (content: number | string | undefined) => {
+    if (initialLoading) {
+      return <Skeleton width={50} height={20} />;
+    }
+    return <h6>{content ?? "..."}</h6>;
+  };
 
   return (
     <>
@@ -593,38 +623,38 @@ const RowDataListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Raw Data Management</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 mb-4 gap-2">
-            <Tooltip title="Click to show all data"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbDatabase size={24} /></div><div><h6 className="text-blue-500">{rowData?.counts?.total ?? "..."}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to filter by data added today"><div onClick={() => handleCardClick('today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendarWeek size={24} /></div><div><h6 className="text-violet-500">{rowData?.counts?.today ?? "..."}</h6><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to filter by duplicate mobile numbers"><div onClick={() => handleCardClick('duplicate')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbSquares size={24} /></div><div><h6 className="text-pink-500">{rowData?.counts?.duplicate ?? "..."}</h6><span className="font-semibold text-xs">Duplicate</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to filter by Grade A"><div onClick={() => handleCardClick('A')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><span className="text-xl font-bold">A</span></div><div><h6 className="text-green-500">{rowData?.counts?.grade_a ?? "..."}</h6><span className="font-semibold text-xs">Grade A</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to filter by Grade B"><div onClick={() => handleCardClick('B')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><span className="text-xl font-bold">B</span></div><div><h6 className="text-orange-500">{rowData?.counts?.grade_b ?? "..."}</h6><span className="font-semibold text-xs">Grade B</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to filter by Grade C"><div onClick={() => handleCardClick('C')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><span className="text-xl font-bold">C</span></div><div><h6 className="text-yellow-500">{rowData?.counts?.grade_c ?? "..."}</h6><span className="font-semibold text-xs">Grade C</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show all data"><div onClick={() => handleCardClick('all')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbDatabase size={24} /></div><div><div className="text-blue-500">{renderCardContent(rowData?.counts?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by data added today"><div onClick={() => handleCardClick('today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendarWeek size={24} /></div><div><div className="text-violet-500">{renderCardContent(rowData?.counts?.today)}</div><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by duplicate mobile numbers"><div onClick={() => handleCardClick('duplicate')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbSquares size={24} /></div><div><div className="text-pink-500">{renderCardContent(rowData?.counts?.duplicate)}</div><span className="font-semibold text-xs">Duplicate</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by Grade A"><div onClick={() => handleCardClick('A')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><span className="text-xl font-bold">A</span></div><div><div className="text-green-500">{renderCardContent(rowData?.counts?.grade_a)}</div><span className="font-semibold text-xs">Grade A</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by Grade B"><div onClick={() => handleCardClick('B')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><span className="text-xl font-bold">B</span></div><div><div className="text-orange-500">{renderCardContent(rowData?.counts?.grade_b)}</div><span className="font-semibold text-xs">Grade B</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to filter by Grade C"><div onClick={() => handleCardClick('C')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-yellow-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-yellow-100 text-yellow-500"><span className="text-xl font-bold">C</span></div><div><div className="text-yellow-500">{renderCardContent(rowData?.counts?.grade_c)}</div><span className="font-semibold text-xs">Grade C</span></div></Card></div></Tooltip>
             <Tooltip title="Click to filter by Grade D">
               <div onClick={() => handleCardClick('D')}>
                 <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}>
                     <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><span className="text-xl font-bold">D</span></div>
-                      <div><h6 className="text-yellow-500">{rowData?.counts
+                      <div><div className="text-yellow-500">{renderCardContent(rowData?.counts
                         ? rowData.counts.total - (
                             (rowData.counts.grade_a || 0) +
                             (rowData.counts.grade_b || 0) +
                             (rowData.counts.grade_c || 0)
                           )
-                        : "..."}
-                        </h6><span className="font-semibold text-xs">Grade D</span>
+                        : "...")}
+                        </div><span className="font-semibold text-xs">Grade D</span>
                       </div>
                   </Card>
                 </div>
               </Tooltip>
           </div>
           <div className="mb-4">
-            <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={openImportModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+            <ItemTableTools onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={openImportModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady}/>
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
           <div className="mt-4 flex-grow overflow-auto w-full">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectable checkboxChecked={(row: RowDataItem) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!tableLoading && pageData.length === 0} />
+            <DataTable columns={filteredColumns} data={pageData} loading={initialLoading || tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectable checkboxChecked={(row: RowDataItem) => selectedItems.some((selected) => selected.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!initialLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
