@@ -1,4 +1,3 @@
-// src/views/your-path/LeadsListing.tsx
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
@@ -35,6 +34,7 @@ import {
   Input,
   Select as UiSelect,
   Table,
+  Skeleton, // Added Skeleton
 } from "@/components/ui";
 import Notification from "@/components/ui/Notification";
 import Spinner from "@/components/ui/Spinner";
@@ -117,6 +117,12 @@ import { useAppDispatch } from "@/reduxtool/store";
 import { shallowEqual, useSelector } from "react-redux";
 import { encryptStorage } from "@/utils/secureLocalStorage";
 import { config } from "localforage";
+
+interface CommonTableQueries {
+    pageIndex?: number
+    pageSize?: number
+    query?: string
+}
 
 interface TableQueries extends OnSortParam, CommonTableQueries { }
 
@@ -615,7 +621,8 @@ const ConvertLeadToDealDialog: React.FC<{
     </Dialog>
   );
 };
-const intentTagColor = {
+type WallIntent = 'Sell' | 'Buy' | 'Exchange';
+const intentTagColor: Record<WallIntent, string> = {
   Sell: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
   Buy: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100",
   Exchange:
@@ -626,7 +633,7 @@ const ViewOpportunitiesDialog: React.FC<{
   onClose: () => void;
 }> = ({ lead, onClose }) => {
   const dispatch = useAppDispatch();
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -637,7 +644,6 @@ const ViewOpportunitiesDialog: React.FC<{
       }
       setIsLoading(true);
       try {
-        // In a real application, you would dispatch an action here:
         const actionResult = await dispatch(getLeadOpportunitiesAction({ id: lead.id, key: lead.lead_intent })).unwrap();
         if (actionResult?.data) {
           const formattedData = actionResult.data.map((item: any) => ({
@@ -656,10 +662,8 @@ const ViewOpportunitiesDialog: React.FC<{
           }));
           setData(formattedData);
         } else {
-          setData([]); // Ensure data is cleared if API returns nothing
+          setData([]);
         }
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        // setOpportunities(dummyOpportunities); // Using dummy data as the simulated response
       } catch (error) {
         console.error("Failed to fetch opportunities:", error);
         toast.push(
@@ -673,12 +677,13 @@ const ViewOpportunitiesDialog: React.FC<{
     };
 
     fetchOpportunities();
-  }, [lead.id]);
+  }, [lead.id, lead.lead_intent, dispatch]);
+
   const columns = useMemo(() => [
     {
       header: 'Listing',
       accessorKey: 'product_name',
-      cell: ({ row }) => {
+      cell: ({ row }: CellContext<any, any>) => {
         const { want_to, product_name, brand_name, color, device_condition } = row.original;
         const intent = want_to as WallIntent;
         return (
@@ -697,7 +702,7 @@ const ViewOpportunitiesDialog: React.FC<{
     {
       header: 'Member',
       accessorKey: 'member_name',
-      cell: ({ row }) => {
+      cell: ({ row }: CellContext<any, any>) => {
         const { member_name, member_code, country_name } = row.original;
         return (
           <div>
@@ -711,7 +716,7 @@ const ViewOpportunitiesDialog: React.FC<{
     {
       header: 'Details',
       accessorKey: 'qty',
-      cell: ({ row }) => {
+      cell: ({ row }: CellContext<any, any>) => {
         const { qty, price } = row.original;
         return (
           <div>
@@ -724,11 +729,11 @@ const ViewOpportunitiesDialog: React.FC<{
     {
       header: 'Leads',
       accessorKey: 'leads_count',
-      cell: ({ row }) => <span className="font-semibold">{row.original.leads_count}</span>
+      cell: ({ row }: CellContext<any, any>) => <span className="font-semibold">{row.original.leads_count}</span>
     },
   ], []);
-  return (
 
+  return (
     <Dialog
       isOpen={true}
       onClose={onClose}
@@ -737,15 +742,12 @@ const ViewOpportunitiesDialog: React.FC<{
       bodyOpenClassName="overflow-hidden"
     >
       <div className="flex flex-col h-full max-h-[80vh]">
-        {/* Dialog Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
             <TbBulb className="text-2xl text-amber-500" />
             <h5 className="mb-0">Opportunities for {lead.lead_number}</h5>
           </div>
         </div>
-
-        {/* Dialog Body */}
         <div className="flex-grow overflow-y-auto px-6 py-4">
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
@@ -756,22 +758,17 @@ const ViewOpportunitiesDialog: React.FC<{
               columns={columns}
               data={data}
               noData={data.length === 0}
-
             />
           )}
         </div>
-
-        {/* Dialog Footer */}
         <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
           <Button variant="solid" onClick={onClose}>Close</Button>
         </div>
       </div>
     </Dialog>
-
-
-
   );
 };
+
 const ViewLeadFormDialog: React.FC<{
   lead: LeadListItem;
   onClose: () => void;
@@ -1202,7 +1199,7 @@ const AssignTaskDialog: React.FC<{
             render={({ field }) => (
               <DatePicker
                 placeholder="Select date"
-                value={field.value}
+                value={field.value ?? undefined}
                 onChange={field.onChange}
               />
             )}
@@ -2035,15 +2032,16 @@ const LeadSelectedFooter = ({ selectedItems, onDeleteSelected }: any) => {
 };
 
 // --- Main LeadsListing Component ---
-const LeadsListing = ({ isDashboard }) => {
+const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const {
-    LeadsData = [],
+    LeadsData = { data: { data: [], counts: {} } },
     getAllUserData = [],
     status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isAssignDrawerOpen, setIsAssignDrawerOpen] = useState(false);
   const [isChangeStatusDrawerOpen, setIsChangeStatusDrawerOpen] =
@@ -2107,8 +2105,20 @@ const LeadsListing = ({ isDashboard }) => {
   );
 
   useEffect(() => {
-    dispatch(getLeadAction());
-    dispatch(getAllUsersAction());
+    const fetchData = async () => {
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          dispatch(getLeadAction()),
+          dispatch(getAllUsersAction()),
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    fetchData();
   }, [dispatch]);
 
   const mappedLeads: LeadListItem[] = useMemo(() => {
@@ -2276,21 +2286,13 @@ const LeadsListing = ({ isDashboard }) => {
 
   const handleStartProcess = useCallback(
     async (lead: LeadListItem) => {
-      console.log("lead",lead);
+      console.log("lead", lead);
 
       try {
-        // Dispatch the action to fetch the form ID associated with the lead.
-        // const resultAction = await dispatch(
-        //   getStartProcessAction({ module_id: lead.id, module_name: "Lead" })
-        // ).unwrap();
-
-        // Extract the form_id from the action's payload.
-        // This structure depends on your API response.
         const formId = lead?.formId;
         console.log(lead);
 
         if (formId) {
-          // Navigate to the dynamic form page with the lead ID and the retrieved form ID.
           navigate(`/start-process/${lead.id}/${formId}`);
         } else {
           toast.push(
@@ -2439,7 +2441,7 @@ const LeadsListing = ({ isDashboard }) => {
       setIsSubmittingDrawer(false);
     }
   }, [dispatch, editingLeadForDrawer, closeChangeStatusDrawer]);
-  const openViewDialog = useCallback((lead: LeadListItem) => { navigate(`/sales-leads/lead/view/${lead.id}`) },[]);
+  const openViewDialog = useCallback((lead: LeadListItem) => { navigate(`/sales-leads/lead/view/${lead.id}`) }, []);
   const closeViewDialog = useCallback(() => setLeadToView(null), []);
 
   const handleOpenExportModal = useCallback(() => {
@@ -2482,8 +2484,9 @@ const LeadsListing = ({ isDashboard }) => {
         <Notification
           title="Operation Failed"
           type="danger"
-          message={error.message || "Could not complete export."}
-        />
+        >
+          {String(error.message) || "Could not complete export."}
+        </Notification>
       );
     } finally {
       setIsSubmittingExportReason(false);
@@ -2559,7 +2562,7 @@ const LeadsListing = ({ isDashboard }) => {
   }, [filterFormMethods, handleSetTableData, dispatch]);
   const handleCardClick = (status: LeadStatus) => {
     onClearFilters();
-    setFilterCriteria({ filterStatuses: [status] });
+    setFilterCriteria({ ...filterFormSchema.parse({}), filterStatuses: [status] });
   };
   const handleRemoveFilter = useCallback(
     (key: keyof FilterFormData, value: string) => {
@@ -2584,7 +2587,7 @@ const LeadsListing = ({ isDashboard }) => {
         header: "Lead",
         accessorKey: "lead_number",
         size: 130,
-        cell: (props) => (
+        cell: (props: CellContext<LeadListItem, any>) => (
           <div className="flex flex-col gap-0.5 text-xs">
             <span>{props.getValue() as string}</span>
             <div>
@@ -2623,35 +2626,27 @@ const LeadsListing = ({ isDashboard }) => {
       {
         header: "Member",
         accessorKey: "customerName",
-        size: 200, // Increased size slightly for better readability
-        cell: (props) => { // Using props for simplicity, type is CellContext<LeadListItem, any>
+        size: 200,
+        cell: (props: CellContext<LeadListItem, any>) => {
           const { buyer, supplier } = props.row.original;
-
           return (
             <div className="flex flex-col gap-1.5">
-              {/* Buyer Section */}
               <div>
                 {buyer ? (
                   <>
                     <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Buyer : {buyer.member_code}</div>
                     <div className="text-sm truncate">{buyer.name}</div>
-                    {/* <div className="text-xs text-gray-500"> {buyer.member_code}</div> */}
                   </>
                 ) : (
                   <div className="text-xs text-gray-400 italic">No Buyer Info</div>
                 )}
               </div>
-
-              {/* Visual Separator */}
               {buyer && supplier && <hr className="border-t border-dashed border-gray-200 dark:border-gray-600 my-1" />}
-
-              {/* Supplier Section */}
               <div>
                 {supplier ? (
                   <>
                     <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Supplier : {supplier.member_code}</div>
                     <div className="text-sm truncate">{supplier.name}</div>
-                    {/* <div className="text-xs text-gray-500">code: {supplier.member_code}</div> */}
                   </>
                 ) : (
                   <div className="text-xs text-gray-400 italic">No Supplier Info</div>
@@ -2737,13 +2732,32 @@ const LeadsListing = ({ isDashboard }) => {
   }, [columns]);
 
   const tableIsLoading =
-    masterLoadingStatus === "loading" ||
-    masterLoadingStatus === "pending" ||
-    isSubmittingDrawer ||
-    isProcessingDelete;
+    (masterLoadingStatus === "loading" ||
+      masterLoadingStatus === "pending" ||
+      isSubmittingDrawer ||
+      isProcessingDelete) && !initialLoading;
+
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
+
+  // --- SKELETON LOGIC ---
+  const renderCardContent = (content: number | undefined, colorClass: string) => {
+    if (initialLoading) {
+      return <Skeleton width={40} height={20} />;
+    }
+    return <b className={colorClass}>{content ?? 0}</b>;
+  };
+
+  const skeletonColumns: ColumnDef<LeadListItem>[] = useMemo(() =>
+    columns.map((col) => ({
+      ...col,
+      cell: () => <Skeleton height={40} className="my-2" />,
+    })), [columns]);
+
+  const skeletonData = useMemo(() =>
+    Array.from({ length: tableData.pageSize }, (_, i) => ({ id: `skeleton-${i}` })),
+    [tableData.pageSize]);
 
   return (
     <>
@@ -2756,6 +2770,7 @@ const LeadsListing = ({ isDashboard }) => {
                 variant="solid"
                 icon={<TbPlus />}
                 onClick={handleOpenAddLeadPage}
+                disabled={initialLoading}
               >
                 Add New
               </Button>
@@ -2765,155 +2780,65 @@ const LeadsListing = ({ isDashboard }) => {
             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-8 mb-4 gap-2 ">
               <Tooltip title="Click to show all leads">
                 <div onClick={onClearFilters}>
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(cardClass, "border-blue-200")}
-                  >
-                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
-                      <TbTrophy size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <b className="text-blue-500">
-                        {LeadsData?.counts?.total ?? 0}
-                      </b>
-                      <span className="font-semibold text-[10px]">Total</span>
-                    </div>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
+                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbTrophy size={20} /></div>
+                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.total, "text-blue-500")}<span className="font-semibold text-[10px]">Total</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show leads from today">
                 <div onClick={() => { }}>
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(cardClass, "border-violet-200")}
-                  >
-                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                      <TbCalendar size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <b className="text-violet-500">
-                        {LeadsData?.counts?.today ?? 0}
-                      </b>
-                      <span className="font-semibold text-[10px]">Today</span>
-                    </div>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
+                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendar size={20} /></div>
+                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.today, "text-violet-500")}<span className="font-semibold text-[10px]">Today</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show active leads">
                 <div onClick={() => handleCardClick("New")}>
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(cardClass, "border-green-300")}
-                  >
-                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                      <TbCircleCheck size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <b className="text-green-500">
-                        {LeadsData?.counts?.active ?? 0}
-                      </b>
-                      <span className="font-semibold text-[10px]">Active</span>
-                    </div>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
+                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div>
+                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.active, "text-green-500")}<span className="font-semibold text-[10px]">Active</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show 'Deal Done' leads">
                 <div onClick={() => handleCardClick("Won")}>
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(cardClass, "border-green-300")}
-                  >
-                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500">
-                      <TbFlag size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <b className="text-green-500">
-                        {LeadsData?.counts?.deal_done ?? 0}
-                      </b>
-                      <span className="font-semibold text-[10px]">
-                        Deal Done
-                      </span>
-                    </div>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-300")}>
+                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbFlag size={20} /></div>
+                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.deal_done, "text-green-500")}<span className="font-semibold text-[10px]">Deal Done</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show 'Cancelled' leads">
                 <div onClick={() => handleCardClick("Lost")}>
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(cardClass, "border-red-200")}
-                  >
-                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500">
-                      <TbFlagX size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <b className="text-red-500">
-                        {LeadsData?.counts?.cancelled ?? 0}
-                      </b>
-                      <span className="font-semibold text-[10px]">
-                        Cancelled
-                      </span>
-                    </div>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}>
+                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbFlagX size={20} /></div>
+                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.cancelled, "text-red-500")}<span className="font-semibold text-[10px]">Cancelled</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show Product leads">
                 <div onClick={() => handleCardClick("Product Info")}>
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(cardClass, "border-violet-200")}
-                  >
-                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
-                      <TbBox size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <b className="text-violet-500">
-                        {LeadsData?.counts?.product_lead ?? 0}
-                      </b>
-                      <span className="font-semibold text-[10px]">
-                        Product Lead
-                      </span>
-                    </div>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200")}>
+                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div>
+                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.product_lead, "text-violet-500")}<span className="font-semibold text-[10px]">Product Lead</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show Wall leads">
                 <div onClick={() => handleCardClick("Wall Listing")}>
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(cardClass, "border-pink-200")}
-                  >
-                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
-                      <TbListDetails size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <b className="text-pink-500">
-                        {LeadsData?.counts?.wall_lead ?? 0}
-                      </b>
-                      <span className="font-semibold text-[10px]">
-                        Wall Lead
-                      </span>
-                    </div>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}>
+                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbListDetails size={20} /></div>
+                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.wall_lead, "text-pink-500")}<span className="font-semibold text-[10px]">Wall Lead</span></div>
                   </Card>
                 </div>
               </Tooltip>
               <Tooltip title="Click to show Manual leads">
                 <div onClick={() => handleCardClick("Manual Lead")}>
-                  <Card
-                    bodyClass={cardBodyClass}
-                    className={classNames(cardClass, "border-orange-200")}
-                  >
-                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500">
-                      <TbPennant size={20} />
-                    </div>
-                    <div className="flex flex-col">
-                      <b className="text-orange-500">
-                        {LeadsData?.counts?.manual_lead ?? 0}
-                      </b>
-                      <span className="font-semibold text-[10px]">
-                        Manual Lead
-                      </span>
-                    </div>
+                  <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200")}>
+                    <div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbPennant size={20} /></div>
+                    <div className="flex flex-col">{renderCardContent(LeadsData?.counts?.manual_lead, "text-orange-500")}<span className="font-semibold text-[10px]">Manual Lead</span></div>
                   </Card>
                 </div>
               </Tooltip>
@@ -2938,23 +2863,36 @@ const LeadsListing = ({ isDashboard }) => {
             onClearAll={onClearFilters}
           />
           <div className="flex-grow overflow-auto">
-            <LeadTable
-              columns={filteredColumns}
-              data={pageData}
-              loading={tableIsLoading}
-              pagingData={{
-                total,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
-              selectable
-              noData={!tableIsLoading && pageData.length === 0}
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handlePageSizeChange}
-              onSort={handleSort}
-              onRowSelect={handleRowSelect}
-              onAllRowSelect={handleAllRowSelect}
-            />
+            {initialLoading ? (
+              <LeadTable
+                columns={skeletonColumns}
+                data={skeletonData}
+                selectable={false}
+                pagingData={{
+                  total: tableData.pageSize as number,
+                  pageIndex: 1,
+                  pageSize: tableData.pageSize as number,
+                }}
+              />
+            ) : (
+              <LeadTable
+                columns={filteredColumns}
+                data={pageData}
+                loading={tableIsLoading}
+                pagingData={{
+                  total,
+                  pageIndex: tableData.pageIndex as number,
+                  pageSize: tableData.pageSize as number,
+                }}
+                selectable
+                noData={!tableIsLoading && pageData.length === 0}
+                onPaginationChange={handlePaginationChange}
+                onSelectChange={handlePageSizeChange}
+                onSort={handleSort}
+                onRowSelect={handleRowSelect}
+                onAllRowSelect={handleAllRowSelect}
+              />
+            )}
           </div>
         </AdaptiveCard>
       </Container>
@@ -3078,7 +3016,7 @@ const LeadsListing = ({ isDashboard }) => {
           </p>
           <FormItem
             label="Sales Person"
-            error={assignFormMethods.formState.errors.salesPersonId?.message}
+            errorMessage={assignFormMethods.formState.errors.salesPersonId?.message}
           >
             <Controller
               name="salesPersonId"
@@ -3089,7 +3027,7 @@ const LeadsListing = ({ isDashboard }) => {
                     value: sp.id,
                     label: sp.name,
                   }))}
-                  value={dummySalesPersons.find((sp) => sp.id === field.value)}
+                  value={dummySalesPersons.find((sp) => sp.id === field.value) ?? null}
                   onChange={(opt: any) => field.onChange(opt?.value)}
                   placeholder="Select Sales Person"
                 />
@@ -3135,7 +3073,7 @@ const LeadsListing = ({ isDashboard }) => {
           </p>
           <FormItem
             label="New Status"
-            error={statusFormMethods.formState.errors.newStatus?.message}
+            errorMessage={statusFormMethods.formState.errors.newStatus?.message}
           >
             <Controller
               name="newStatus"
@@ -3288,7 +3226,7 @@ const LeadsListing = ({ isDashboard }) => {
               control={filterFormMethods.control}
               render={({ field }) => (
                 <DatePicker.DatePickerRange
-                  value={field.value as any}
+                  value={field.value as [Date | null, Date | null] | null}
                   onChange={field.onChange}
                 />
               )}
