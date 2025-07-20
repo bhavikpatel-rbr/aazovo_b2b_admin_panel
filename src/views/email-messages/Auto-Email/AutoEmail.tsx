@@ -15,7 +15,7 @@ import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebounceInput from "@/components/shared/DebouceInput";
 import StickyFooter from "@/components/shared/StickyFooter";
-import { Avatar, Card, Checkbox, Dialog, Drawer, Dropdown, Form, FormItem, Input, Skeleton, Tag } from "@/components/ui"; // Skeleton Imported
+import { Avatar, Card, Checkbox, Dialog, Drawer, Dropdown, Form, FormItem, Input, Skeleton, Tag } from "@/components/ui";
 import Button from "@/components/ui/Button";
 import Notification from "@/components/ui/Notification";
 import Select from "@/components/ui/Select";
@@ -28,6 +28,7 @@ import {
     TbChecks,
     TbCloudUpload,
     TbColumns,
+    TbDotsVertical,
     TbFilter,
     TbMailbox,
     TbMailForward,
@@ -40,6 +41,7 @@ import {
     TbSend,
     TbToggleRight,
     TbTrash,
+    TbUser,
     TbUserCircle,
     TbUsers,
     TbX,
@@ -84,7 +86,7 @@ export type AutoEmailItem = {
     updated_by_user?: ApiUser;
     // For display purposes, derived in useMemo
     emailTypeDisplay?: string;
-    usersDisplay?: ApiUser[];
+    usersDisplay: ApiUser[];
 };
 
 // --- CONSTANTS ---
@@ -124,13 +126,9 @@ const parseUserIds = (userIds: string | null | undefined | string[]): string[] =
     if (Array.isArray(userIds)) return userIds.map(String);
     try {
         const parsed = JSON.parse(userIds);
-        if (Array.isArray(parsed)) {
-            return parsed.map(String);
-        }
+        if (Array.isArray(parsed)) { return parsed.map(String); }
     } catch (e) {
-        if (typeof userIds === 'string') {
-            return userIds.split(',').map(id => id.trim()).filter(Boolean);
-        }
+        if (typeof userIds === 'string') { return userIds.split(',').map(id => id.trim()).filter(Boolean); }
     }
     return [];
 };
@@ -152,10 +150,7 @@ function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[]) {
                 row.updated_by_user?.name || 'N/A',
                 row.updated_at ? formatCustomDateTime(row.updated_at) : 'N/A'
             ];
-            return cells.map(cell => {
-                let strCell = String(cell ?? '').replace(/"/g, '""');
-                return `"${strCell}"`;
-            }).join(separator);
+            return cells.map(cell => { let strCell = String(cell ?? '').replace(/"/g, '""'); return `"${strCell}"`; }).join(separator);
         })
     ].join('\n');
 
@@ -175,16 +170,23 @@ function exportAutoEmailsToCsv(filename: string, rows: AutoEmailItem[]) {
     toast.push(<Notification title="Export Failed" type="danger">Browser does not support this feature.</Notification>);
     return false;
 }
+
 const ActionColumn = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) => (
-    <div className="flex items-center justify-center gap-1.5">
-        <Tooltip title="Edit"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
-        <Tooltip title="Delete"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
-        <Tooltip title="Send Test Email"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600" role="button"><TbMailForward size={18} /></div></Tooltip>
-        <Tooltip title="View Template"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600" role="button"><TbAlignBoxCenterBottom size={17} /></div></Tooltip>
-        <Tooltip title="Email Log"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-gray-700" role="button"><TbMailbox size={18} /></div></Tooltip>
-        <Tooltip title="Send Now"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button"><TbSend size={18} /></div></Tooltip>
+    <div className="flex items-center justify-center gap-2">
+        <Tooltip title="Edit"><div className="p-1.5 rounded-md text-xl cursor-pointer select-none text-gray-500 hover:bg-gray-100 hover:text-emerald-600 dark:hover:bg-gray-700" role="button" onClick={onEdit}><TbPencil /></div></Tooltip>
+        <Tooltip title="Delete"><div className="p-1.5 rounded-md text-xl cursor-pointer select-none text-gray-500 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-700" role="button" onClick={onDelete}><TbTrash /></div></Tooltip>
+        <Dropdown
+            placement="bottom-end"
+            renderTitle={<div className="p-1.5 rounded-md text-xl cursor-pointer select-none text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-gray-700"><TbDotsVertical /></div>}
+        >
+            <Dropdown.Item eventKey="sendTest"> <div className="flex items-center gap-2"><TbMailForward /> Send Test Email</div> </Dropdown.Item>
+            <Dropdown.Item eventKey="viewTemplate"> <div className="flex items-center gap-2"><TbAlignBoxCenterBottom /> View Template</div> </Dropdown.Item>
+            <Dropdown.Item eventKey="emailLog"> <div className="flex items-center gap-2"><TbMailbox /> Email Log</div> </Dropdown.Item>
+            <Dropdown.Item eventKey="sendNow"> <div className="flex items-center gap-2"><TbSend /> Send Now</div> </Dropdown.Item>
+        </Dropdown>
     </div>
 );
+
 
 const AutoEmailSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void; }>(({ onInputChange }, ref) => (
     <DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />
@@ -257,6 +259,64 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
     );
 };
 
+// --- NEW COMPONENT: TableSkeleton ---
+const TableSkeleton = ({ columns, rows = 5 }: { columns: ColumnDef<any>[], rows?: number }) => (
+    <div className="w-full">
+        {Array.from({ length: rows }).map((_, i) => (
+            <div key={i} className="flex items-center p-4 border-b border-gray-200 dark:border-gray-700">
+                <div style={{ width: 40 }}><Skeleton variant="circle" height={20} width={20} /></div>
+                {columns.map((col) => (
+                    <div key={col.id || col.accessorKey as string} className="px-4" style={{ flex: `1 1 ${col.size}px`, maxWidth: col.size }}>
+                        <Skeleton height={20} />
+                    </div>
+                ))}
+            </div>
+        ))}
+    </div>
+);
+
+
+// --- NEW COMPONENT: UserListModal ---
+const UserListModal = ({ isOpen, onClose, users, searchTerm, setSearchTerm }: {
+    isOpen: boolean; onClose: () => void; users: ApiUser[]; searchTerm: string; setSearchTerm: (term: string) => void;
+}) => {
+    const filteredUsers = useMemo(() =>
+        users.filter(user =>
+            user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        ), [users, searchTerm]);
+
+    return (
+        <Dialog isOpen={isOpen} onClose={onClose} onRequestClose={onClose} width={500}>
+            <div className="p-4">
+                <h5 className="mb-4">Assigned Users ({users.length})</h5>
+                <DebounceInput
+                    className="w-full mb-4"
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    suffix={<TbSearch />}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <div className="max-h-[60vh] overflow-y-auto">
+                    {filteredUsers.length > 0 ? (
+                        filteredUsers.map(user => (
+                            <div key={user.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md">
+                                <Avatar src={user.profile_pic_path} shape="circle" icon={<TbUser />} />
+                                <div>
+                                    <p className="font-semibold text-gray-800 dark:text-gray-100">{user.name}</p>
+                                    <p className="text-sm text-gray-500">{user.email}</p>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center text-gray-500 py-6">No users found.</div>
+                    )}
+                </div>
+            </div>
+        </Dialog>
+    );
+};
+
 const AutoEmailsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: { selectedItems: AutoEmailItem[]; onDeleteSelected: () => void; isDeleting: boolean; }) => {
     const [confirmOpen, setConfirmOpen] = useState(false);
     if (selectedItems.length === 0) return null;
@@ -303,13 +363,18 @@ const AutoEmailListing = () => {
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'updated_at' }, query: '' });
     const [selectedItems, setSelectedItems] = useState<AutoEmailItem[]>([]);
     const [itemToDelete, setItemToDelete] = useState<AutoEmailItem | null>(null);
+    const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
+
+    // New state for UserListModal
+    const [isUserListModalOpen, setIsUserListModalOpen] = useState(false);
+    const [selectedUsersForModal, setSelectedUsersForModal] = useState<ApiUser[]>([]);
+    const [userSearchTerm, setUserSearchTerm] = useState('');
+
 
     const isDataReady = !initialLoading;
     const tableLoading = initialLoading || isSubmitting || isDeleting;
 
     const userOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((u: ApiUser) => ({ value: String(u.id), label: u.name })) : [], [usersData]);
-
-    // src/views/your-path/AutoEmailTemplatesListing.tsx
 
     const EMAIL_TYPE_OPTIONS = useMemo(() =>
         (autoEmailTemplatesData as any)?.data && Array.isArray((autoEmailTemplatesData as any).data)
@@ -362,6 +427,15 @@ const AutoEmailListing = () => {
     }, [editFormMethods]);
     const closeEditDrawer = useCallback(() => { setEditingItem(null); setIsEditDrawerOpen(false); }, []);
 
+    // Handlers for UserListModal
+    const openUserListModal = useCallback((users: ApiUser[]) => {
+        setSelectedUsersForModal(users);
+        setUserSearchTerm('');
+        setIsUserListModalOpen(true);
+    }, []);
+    const closeUserListModal = useCallback(() => setIsUserListModalOpen(false), []);
+
+
     const onSubmitHandler = async (data: AutoEmailFormData) => {
         setIsSubmitting(true);
         const apiPayload = { email_type: data.email_type, user_ids: data.user_ids, status: data.status };
@@ -392,7 +466,7 @@ const AutoEmailListing = () => {
 
         let processedData = cloneDeep(sourceDataWithDisplayNames);
         if (filterCriteria.filterEmailTypes?.length) { const v = filterCriteria.filterEmailTypes.map(et => et.value); processedData = processedData.filter(item => v.includes(String(item.email_type))); }
-        if (filterCriteria.filterUserIds?.length) { const v = new Set(filterCriteria.filterUserIds.map(u => u.value)); processedData = processedData.filter(item => item.user_ids.some(uid => v.has(uid))); }
+        if (filterCriteria.filterUserIds?.length) { const v = new Set(filterCriteria.filterUserIds.map(u => u.value)); processedData = processedData.filter(item => item.usersDisplay.some(u => v.has(String(u.id)))); }
         if (filterCriteria.filterStatus?.length) { const v = new Set(filterCriteria.filterStatus.map(s => s.value)); processedData = processedData.filter(item => v.has(String(item.status))); }
         if (tableData.query) { const q = tableData.query.toLowerCase().trim(); processedData = processedData.filter(item => String(item.id).toLowerCase().includes(q) || item.emailTypeDisplay?.toLowerCase().includes(q) || item.usersDisplay?.some(u => u.name.toLowerCase().includes(q)) || String(item.status).toLowerCase().includes(q)); }
 
@@ -401,7 +475,7 @@ const AutoEmailListing = () => {
             processedData.sort((a, b) => {
                 let aVal: any = a[key as keyof AutoEmailItem], bVal: any = b[key as keyof AutoEmailItem];
                 if (key === 'updated_at' || key === 'created_at') { return order === 'asc' ? new Date(aVal).getTime() - new Date(bVal).getTime() : new Date(bVal).getTime() - new Date(aVal).getTime(); }
-                return order === 'asc' ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
+                return order === 'asc' ? String(aVal ?? '').localeCompare(String(bVal ?? '')) : String(bVal ?? '').localeCompare(String(aVal ?? ''));
             });
         }
 
@@ -500,30 +574,57 @@ const AutoEmailListing = () => {
 
     const columns: ColumnDef<AutoEmailItem>[] = useMemo(() => [
         {
-            header: "Email Type", accessorKey: "email_type_name", enableSorting: true, size: 250,
-            cell: props => (
-                <div className="flex -space-x-2 rtl:space-x-reverse">
-                    <div>{props?.row?.original?.type?.email_type}</div>
-                </div>
-            )
+            header: "Email Type", accessorKey: "emailTypeDisplay", enableSorting: true, size: 250,
+            cell: props => {
+                const { emailTypeDisplay, email_type } = props.row.original;
+                return (
+                    <div className="flex items-center gap-3">
+                        <Avatar className="bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100" shape="circle" icon={<TbMailForward />} />
+                        <div>
+                            <span className="font-semibold heading-text">{emailTypeDisplay}</span>
+                            <p className="text-xs text-gray-500">Template ID: {email_type}</p>
+                        </div>
+                    </div>
+                );
+            }
         },
         {
-            header: "User(s)", accessorKey: "usersDisplay", enableSorting: false, size: 250, cell: props => (
-                <div className="flex -space-x-2 rtl:space-x-reverse">
-                    {props.row.original.users?.slice(0, 3).map(user => (
-                        <Tooltip key={user.id} title={user.name}><Avatar src={user.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} /></Tooltip>
-                    ))}
-                    {props.row.original.users && props.row.original.users.length > 3 && (
-                        <Tooltip title={`${props.row.original.users.length - 3} more`}>
-                            <Avatar shape="circle" size="sm" className="bg-blue-100 text-blue-600">{props.row.original.users.length - 3}</Avatar>
-                        </Tooltip>
-                    )}
-                </div>
-            )
+            header: "User(s)", accessorKey: "usersDisplay", enableSorting: false, size: 280,
+            cell: props => {
+                const users = props.row.original.usersDisplay;
+                if (!users || users.length === 0) return <Tag>No Users</Tag>;
+                const primaryUser = users[0];
+                const otherUsers = users.slice(1);
+
+                return (
+                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => openUserListModal(users)}>
+                        <Avatar src={primaryUser.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} />
+                        <div className="flex flex-col">
+                            <span className="font-semibold heading-text">{primaryUser.name}</span>
+                            {otherUsers.length > 0 ? (
+                                <div className="flex items-center -space-x-2 rtl:space-x-reverse mt-1">
+                                    {otherUsers.slice(0, 3).map(user => (
+                                        <Tooltip key={user.id} title={user.name}><Avatar src={user.profile_pic_path} shape="circle" size="xs" icon={<TbUserCircle />} /></Tooltip>
+                                    ))}
+                                    {otherUsers.length > 3 && (
+                                        <Tooltip title={`${otherUsers.length - 3} more`}>
+                                            <Avatar shape="circle" size="xs" className="bg-gray-200 text-gray-600 text-xs font-bold">+{otherUsers.length - 3}</Avatar>
+                                        </Tooltip>
+                                    )}
+                                    <span className="text-xs text-gray-500 ml-3">and {otherUsers.length} other{otherUsers.length > 1 ? 's' : ''}</span>
+                                </div>
+                            ) : (
+                                <span className="text-xs text-gray-500">{primaryUser.email}</span>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
         },
-        { header: "Status", accessorKey: "status", enableSorting: true, size: 120, cell: props => (<Tag className={classNames('capitalize', autoEmailStatusColor[String(props.getValue())] || autoEmailStatusColor.default)}>{props.getValue()}</Tag>) },
+        { header: "Status", accessorKey: "status", enableSorting: true, size: 120, cell: props => (<Tag className={classNames('capitalize font-semibold', autoEmailStatusColor[String(props.getValue())] || autoEmailStatusColor.default)}>{props.getValue()}</Tag>) },
         {
-            header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 220, cell: props => {
+            header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 220,
+            cell: props => {
                 const { updated_at, updated_by_user } = props.row.original;
                 return (
                     <div className="flex items-center gap-2">
@@ -538,15 +639,13 @@ const AutoEmailListing = () => {
             }
         },
         { header: "Actions", id: "actions", size: 120, cell: (props) => <ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} /> },
-    ], [openEditDrawer, openImageViewer, handleDeleteClick]);
+    ], [openEditDrawer, openImageViewer, handleDeleteClick, openUserListModal]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<AutoEmailItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
     const renderCardContent = (content: number | undefined) => {
-        if (initialLoading) {
-            return <Skeleton width={40} height={20} />;
-        }
+        if (initialLoading) { return <Skeleton width={40} height={20} />; }
         return <h6 className="font-bold">{content ?? 0}</h6>;
     };
 
@@ -566,11 +665,19 @@ const AutoEmailListing = () => {
                     </div>
                     <div className="mb-4"><AutoEmailTableTools onSearchChange={handleSearchChange} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} /></div>
                     <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-                    <div className="mt-4"><DataTable columns={filteredColumns} data={pageData} loading={tableLoading} selectable onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} /></div>
+                    <div className="mt-4">
+                        {tableLoading ? (
+                            <TableSkeleton columns={columns} />
+                        ) : (
+                            <DataTable columns={filteredColumns} data={pageData} selectable onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
+                        )}
+                    </div>
                 </AdaptiveCard>
             </Container>
 
             <AutoEmailsSelectedFooter selectedItems={selectedItems} onDeleteSelected={onDeleteSelected} isDeleting={isDeleting} />
+
+            <UserListModal isOpen={isUserListModalOpen} onClose={closeUserListModal} users={selectedUsersForModal} searchTerm={userSearchTerm} setSearchTerm={setUserSearchTerm} />
 
             <Dialog isOpen={isImageViewerOpen} onClose={closeImageViewer} onRequestClose={closeImageViewer} width={600}>
                 <div className="flex justify-center items-center p-4">{viewerImageSrc ? <img src={viewerImageSrc} alt="User" className="max-w-full max-h-[80vh]" /> : <p>No image.</p>}</div>
@@ -599,8 +706,8 @@ const AutoEmailListing = () => {
                 </Form>
             </Drawer>
 
-            <ConfirmDialog isOpen={!!itemToDelete} type="danger" title="Delete Configuration" onConfirm={onConfirmSingleDelete} onCancel={() => setItemToDelete(null)} onRequestClose={() => setItemToDelete(null)}>
-                <p>Are you sure you want to delete this auto email configuration?</p>
+            <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Configuration" onConfirm={onConfirmSingleDelete} onCancel={() => { setItemToDelete(null); setSingleDeleteConfirmOpen(false); }} onRequestClose={() => { setItemToDelete(null); setSingleDeleteConfirmOpen(false); }}>
+                <p>Are you sure you want to delete this auto email configuration for <strong>{itemToDelete?.emailTypeDisplay}</strong>?</p>
             </ConfirmDialog>
 
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText="Submit & Export" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
