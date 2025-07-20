@@ -1,3 +1,5 @@
+// src/views/your-path/Blogs.tsx
+
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
@@ -18,7 +20,7 @@ import DebouceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
 import Avatar from "@/components/ui/Avatar";
 import Tag from "@/components/ui/Tag";
-import { Card, Drawer, Form, FormItem, Input, Dropdown, Checkbox } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Dropdown, Checkbox, Skeleton } from "@/components/ui"; // Import Skeleton
 import Dialog from "@/components/ui/Dialog";
 import { RichTextEditor } from "@/components/shared";
 
@@ -216,8 +218,8 @@ function exportToCsvBlog(filename: string, rows: BlogItem[]): boolean {
   toast.push(<Notification title="Export Failed" type="danger">Browser does not support.</Notification>);
   return false;
 }
-function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(" "); }
 
+function classNames(...classes: (string | boolean | undefined)[]) { return classes.filter(Boolean).join(" "); }
 // --- ActiveFiltersDisplay ---
 const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
     filterData: Partial<FilterFormData>;
@@ -278,6 +280,7 @@ const BlogsTableTools = ({
   visibleColumnKeys,
   setVisibleColumnKeys,
   activeFilterCount,
+  isDataReady,
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
@@ -287,13 +290,12 @@ const BlogsTableTools = ({
   visibleColumnKeys: string[];
   setVisibleColumnKeys: (keys: string[]) => void;
   activeFilterCount: number;
+  isDataReady: boolean;
 }) => {
   const toggleColumn = (checked: boolean, columnKey: string) => {
     if (checked) {
-      // Add the key to the list of visible keys
       setVisibleColumnKeys([...visibleColumnKeys, columnKey]);
     } else {
-      // Remove the key from the list
       setVisibleColumnKeys(visibleColumnKeys.filter((key) => key !== columnKey));
     }
   };
@@ -339,11 +341,13 @@ const BlogsTableTools = ({
           title="Clear Filters & Reload"
           icon={<TbReload />}
           onClick={onClearFilters}
+          disabled={!isDataReady}
         ></Button>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
           className="w-full sm:w-auto"
+          disabled={!isDataReady}
         >
           Filter
           {activeFilterCount > 0 && (
@@ -356,6 +360,7 @@ const BlogsTableTools = ({
           icon={<TbCloudUpload />}
           onClick={onExport}
           className="w-full sm:w-auto"
+          disabled={!isDataReady}
         >
           Export
         </Button>
@@ -400,6 +405,7 @@ const Blogs = () => {
   const dispatch = useAppDispatch();
 
   // --- State Variables ---
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAddDrawerOpen, setAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setEditDrawerOpen] = useState(false);
   const [editingBlog, setEditingBlog] = useState<BlogItem | null>(null);
@@ -416,16 +422,29 @@ const Blogs = () => {
   const [activeFilters, setActiveFilters] = useState<Partial<FilterFormData>>({});
 
   // --- Redux Data ---
-  const { BlogsData, loading: masterLoading, error, itemBeingDeleted } = useSelector(masterSelector) as {
+  const { BlogsData = { data: [], counts: {} }, itemBeingDeleted } = useSelector(masterSelector) as {
     BlogsData?: { data: BlogItem[], counts: any };
-    loading?: boolean | string;
-    error?: any;
     itemBeingDeleted?: number | null;
   };
-  const tableLoading = masterLoading === true || masterLoading === "idle" || isSubmitting || isDeleting;
+
+  const isDataReady = !initialLoading;
 
   // --- Initial Data Fetch ---
-  useEffect(() => { dispatch(getBlogsAction()); }, [dispatch]);
+  const refreshData = useCallback(async () => {
+      setInitialLoading(true);
+      try {
+          await dispatch(getBlogsAction());
+      } catch (error) {
+          console.error("Failed to refresh data:", error);
+          toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload blogs.</Notification>);
+      } finally {
+          setInitialLoading(false);
+      }
+  }, [dispatch]);
+
+  useEffect(() => {
+      refreshData();
+  }, [refreshData]);
 
   // --- Form Hooks ---
   const defaultFormValues: BlogFormData = { title: "", slug: null, blog_descr: null, author: null, tags: null, icon: null, status: "Draft", meta_title: null, meta_descr: null, meta_keyword: null, };
@@ -446,14 +465,14 @@ const Blogs = () => {
   const closeImageViewer = () => { setIsImageViewerOpen(false); setImageToView(null); };
   
   // --- Form Submit Handlers ---
-  const onAddBlogSubmit: SubmitHandler<BlogFormData> = async (data) => { setIsSubmitting(true); const formDataToSend = new FormData(); Object.entries(data).forEach(([key, value]) => { if (key === 'icon' && value instanceof File) { formDataToSend.append(key, value); } else if (value !== null && value !== undefined) { formDataToSend.append(key, String(value)); } }); try { await dispatch(addBlogAction(formDataToSend)).unwrap(); toast.push(<Notification title="Blog Added" type="success">New blog created successfully.</Notification>); closeAddDrawer(); dispatch(getBlogsAction()); } catch (e: any) { toast.push(<Notification title="Add Failed" type="danger">{e.message || "Failed to add blog."}</Notification>); } finally { setIsSubmitting(false); } };
-  const onEditBlogSubmit = async (data: BlogFormData) => { if (!editingBlog) return; setIsSubmitting(true); const formData = new FormData(); formData.append("_method", "PUT"); (Object.keys(data) as Array<keyof BlogFormData>).forEach((key) => { const value = data[key]; if (key === 'icon' && value instanceof File) { formData.append(key, value); } else if (value !== null && value !== undefined) { formData.append(key, String(value)); } }); try { await dispatch(editBlogAction({ id: editingBlog.id, formData })).unwrap(); toast.push(<Notification title="Blog Updated" type="success">Blog "{data.title}" updated.</Notification>); closeEditDrawer(); dispatch(getBlogsAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message || "Could not update blog."}</Notification>); } finally { setIsSubmitting(false); } };
+  const onAddBlogSubmit: SubmitHandler<BlogFormData> = async (data) => { setIsSubmitting(true); const formDataToSend = new FormData(); Object.entries(data).forEach(([key, value]) => { if (key === 'icon' && value instanceof File) { formDataToSend.append(key, value); } else if (value !== null && value !== undefined) { formDataToSend.append(key, String(value)); } }); try { await dispatch(addBlogAction(formDataToSend)).unwrap(); toast.push(<Notification title="Blog Added" type="success">New blog created successfully.</Notification>); closeAddDrawer(); refreshData(); } catch (e: any) { toast.push(<Notification title="Add Failed" type="danger">{e.message || "Failed to add blog."}</Notification>); } finally { setIsSubmitting(false); } };
+  const onEditBlogSubmit = async (data: BlogFormData) => { if (!editingBlog) return; setIsSubmitting(true); const formData = new FormData(); formData.append("_method", "PUT"); (Object.keys(data) as Array<keyof BlogFormData>).forEach((key) => { const value = data[key]; if (key === 'icon' && value instanceof File) { formData.append(key, value); } else if (value !== null && value !== undefined) { formData.append(key, String(value)); } }); try { await dispatch(editBlogAction({ id: editingBlog.id, formData })).unwrap(); toast.push(<Notification title="Blog Updated" type="success">Blog "{data.title}" updated.</Notification>); closeEditDrawer(); refreshData(); } catch (error: any) { toast.push(<Notification title="Failed to Update" type="danger">{error.message || "Could not update blog."}</Notification>); } finally { setIsSubmitting(false); } };
   const onApplyFiltersSubmit = (data: FilterFormData) => { setActiveFilters(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); };
 
   // --- Delete Handlers ---
   const handleDeleteClick = (blog: BlogItem) => { setBlogToDelete(blog); setSingleDeleteConfirmOpen(true); };
-  const onConfirmSingleDelete = async () => { if (!blogToDelete?.id) return; setIsDeleting(true); try { await dispatch(deleteBlogAction({ id: blogToDelete.id })).unwrap(); toast.push(<Notification title="Blog Deleted" type="success">Blog "{blogToDelete.title}" deleted.</Notification>); dispatch(getBlogsAction()); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{e.message || "Failed to delete blog."}</Notification>); } finally { setBlogToDelete(null); setSingleDeleteConfirmOpen(false); setIsDeleting(false); } };
-  const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => item.id).join(","); try { await dispatch(deleteAllBlogsAction({ ids: idsToDelete })).unwrap(); toast.push(<Notification title="Blogs Deleted" type="success">{selectedItems.length} blog(s) deleted.</Notification>); setSelectedItems([]); dispatch(getBlogsAction()); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e.message || "Failed to delete selected blogs."}</Notification>); } finally { setIsDeleting(false); } };
+  const onConfirmSingleDelete = async () => { if (!blogToDelete?.id) return; setIsDeleting(true); try { await dispatch(deleteBlogAction({ id: blogToDelete.id })).unwrap(); toast.push(<Notification title="Blog Deleted" type="success">Blog "{blogToDelete.title}" deleted.</Notification>); refreshData(); } catch (e: any) { toast.push(<Notification title="Delete Failed" type="danger">{e.message || "Failed to delete blog."}</Notification>); } finally { setBlogToDelete(null); setSingleDeleteConfirmOpen(false); setIsDeleting(false); } };
+  const handleDeleteSelected = async () => { if (selectedItems.length === 0) return; setIsDeleting(true); const idsToDelete = selectedItems.map((item) => item.id).join(","); try { await dispatch(deleteAllBlogsAction({ ids: idsToDelete })).unwrap(); toast.push(<Notification title="Blogs Deleted" type="success">{selectedItems.length} blog(s) deleted.</Notification>); setSelectedItems([]); refreshData(); } catch (e: any) { toast.push(<Notification title="Deletion Failed" type="danger">{e.message || "Failed to delete selected blogs."}</Notification>); } finally { setIsDeleting(false); } };
   
   // --- Export Handler ---
   const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: "" }); setIsExportReasonModalOpen(true); };
@@ -471,8 +490,8 @@ const Blogs = () => {
   const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<BlogItem>[]) => { const currentPageRowOriginals = currentRows.map((r) => r.original); if (checked) { setSelectedItems((prevSelected) => { const prevSelectedIds = new Set(prevSelected.map((item) => item.id)); const newRowsToAdd = currentPageRowOriginals.filter((r) => !prevSelectedIds.has(r.id)); return [...prevSelected, ...newRowsToAdd]; }); } else { const currentPageRowIds = new Set(currentPageRowOriginals.map((r) => r.id)); setSelectedItems((prevSelected) => prevSelected.filter((item) => !currentPageRowIds.has(item.id))); } }, []);
 
   // --- Filter Handlers ---
-  const onClearFiltersAndReload = () => { setActiveFilters({}); handleSetTableData({ pageIndex: 1, query: "" }); dispatch(getBlogsAction()); };
-  const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), []);
+  const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); handleSetTableData({ pageIndex: 1, query: "" }); refreshData(); }, [refreshData, handleSetTableData]);
+  const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
 
   const handleCardClick = (filterType: 'status' | 'date' | 'all', value?: any) => {
     handleSetTableData({ pageIndex: 1, query: '' });
@@ -571,7 +590,6 @@ const Blogs = () => {
       { header: "Title", accessorKey: "title", enableSorting: true, size: 240, cell: (props) => <span>{props.getValue<string>()}</span>, },
       { header: "Author", accessorKey: "author", enableSorting: true, size: 150, cell: (props) => <span>{props.getValue<string>() || "N/A"}</span>, },
       { header: "Tags", accessorKey: "tags", enableSorting: true, size: 180, cell: (props) => { const tags = props.getValue<string | null>(); if (!tags) return <span>-</span>; return (<div className="flex flex-wrap gap-1 max-w-[170px]">{tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((t) => (<Tag key={t} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{t}</Tag>))}</div>); }, },
-      // { header: "Slug", accessorKey: "slug", enableSorting: true, size: 100 },
       {
               header: "Updated Info",
               accessorKey: "updated_at",
@@ -605,7 +623,7 @@ const Blogs = () => {
       { header: "Status", accessorKey: "status", enableSorting: true, size: 80, cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold border-0", blogStatusColor[status] || blogStatusColor.Draft)}>{status}</Tag>); }, },
       { header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 80, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />), },
     ],
-    []
+    [openEditDrawer, handleDeleteClick]
   );
 
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(() =>
@@ -617,6 +635,13 @@ const Blogs = () => {
     [baseColumns, visibleColumnKeys]
   );
 
+  const renderCardContent = (content: number | undefined) => {
+    if (initialLoading) {
+      return <Skeleton width={50} height={20} />;
+    }
+    return <h6 className="text-gray-700">{content ?? 0}</h6>;
+  };
+
   // --- Render ---
   return (
     <>
@@ -626,16 +651,16 @@ const Blogs = () => {
             <h5 className="mb-2 sm:mb-0">Blogs</h5>
             <div>
               <Link to="/task/task-list/create"><Button className="mr-2" icon={<TbUser />} clickFeedback={false}>Assign to Task</Button></Link>
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}>Add New</Button>
+              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 mb-4 gap-2">
-            <Tooltip title="Click to show all blogs"><div className="cursor-pointer" onClick={() => handleCardClick('all')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMessageStar size={24} /></div><div><h6 className="text-blue-500">{BlogsData?.counts?.total}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show blogs created today"><div className="cursor-pointer" onClick={() => handleCardClick('date')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbMessageShare size={24} /></div><div><h6 className="text-violet-500">{BlogsData?.counts?.today}</h6><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to clear filters"><div className="cursor-pointer" onClick={() => handleCardClick('all')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbMessageUser size={24} /></div><div><h6 className="text-orange-500">{BlogsData?.counts?.total_views}</h6><span className="font-semibold text-xs">Total Views</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show Published blogs"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Published')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMessageCheck size={24} /></div><div><h6 className="text-green-500">{BlogsData?.counts?.published}{' '}</h6><span className="font-semibold text-xs">Published</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show Unpublished blogs"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Unpublished')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMessage2X size={24} /></div><div><h6 className="text-red-500">{BlogsData?.counts?.unpublished}</h6><span className="font-semibold text-xs">Unpublished</span></div></Card></div></Tooltip>
-            <Tooltip title="Click to show Draft blogs"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Draft')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-gray-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500"><TbMessagePause size={24} /></div><div><h6 className="text-gray-500">{BlogsData?.counts?.draft}</h6><span className="font-semibold text-xs">Drafts</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show all blogs"><div className="cursor-pointer" onClick={() => handleCardClick('all')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMessageStar size={24} /></div><div><div className="text-blue-500">{renderCardContent(BlogsData?.counts?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show blogs created today"><div className="cursor-pointer" onClick={() => handleCardClick('date')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-violet-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbMessageShare size={24} /></div><div><div className="text-violet-500">{renderCardContent(BlogsData?.counts?.today)}</div><span className="font-semibold text-xs">Today</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to clear filters"><div className="cursor-pointer" onClick={() => handleCardClick('all')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-orange-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbMessageUser size={24} /></div><div><div className="text-orange-500">{renderCardContent(BlogsData?.counts?.total_views)}</div><span className="font-semibold text-xs">Total Views</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show Published blogs"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Published')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-green-300 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbMessageCheck size={24} /></div><div><div className="text-green-500">{renderCardContent(BlogsData?.counts?.published)}</div><span className="font-semibold text-xs">Published</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show Unpublished blogs"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Unpublished')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMessage2X size={24} /></div><div><div className="text-red-500">{renderCardContent(BlogsData?.counts?.unpublished)}</div><span className="font-semibold text-xs">Unpublished</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show Draft blogs"><div className="cursor-pointer" onClick={() => handleCardClick('status', 'Draft')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-gray-200 hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-500"><TbMessagePause size={24} /></div><div><div className="text-gray-500">{renderCardContent(BlogsData?.counts?.draft)}</div><span className="font-semibold text-xs">Drafts</span></div></Card></div></Tooltip>
           </div>
           <BlogsTableTools
             onSearchChange={handleSearchChange}
@@ -646,6 +671,7 @@ const Blogs = () => {
             visibleColumnKeys={visibleColumnKeys}
             setVisibleColumnKeys={setVisibleColumnKeys}
             activeFilterCount={activeFilterCount}
+            isDataReady={isDataReady}
           />
           <div className="mt-3">
             
@@ -656,7 +682,7 @@ const Blogs = () => {
             <BlogsTable
               columns={visibleColumns}
               data={pageData}
-              loading={tableLoading}
+              loading={initialLoading || isSubmitting || isDeleting}
               pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
               selectedItems={selectedItems}
               onPaginationChange={handlePaginationChange}
