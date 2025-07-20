@@ -359,8 +359,8 @@ const EmployeesListing = () => {
 
     // Data Formatting
     useEffect(() => {
-        if (Employees?.data?.data) {
-            const formattedData = Employees.data.data.map((emp: any) => ({
+        if (Employees?.data) {
+            const formattedData = Employees.data.map((emp: any) => ({
                 id: String(emp.id),
                 employeeId: emp.employee_id || 'N/A',
                 status: (emp.status?.toLowerCase().replace(' ', '_') || 'inactive') as EmployeeStatus,
@@ -455,7 +455,7 @@ const EmployeesListing = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
                         <Tooltip title="Click to show all employees"><div onClick={onClearFilters} className="cursor-pointer"><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsers size={24} /></div><div><div className="text-blue-500">{renderCardContent(employeesCount?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
                         <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbUserSquareRounded size={24} /></div><div><div className="text-violet-500">{renderCardContent(employeesCount?.this_month)}</div><span className="font-semibold text-xs">This Month</span></div></Card>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbUserBolt size={24} /></div><div><div className="text-pink-500">{renderCardContent(employeesCount?.avg_present_percent)}%</div><span className="font-semibold text-xs">Avg. Present</span></div></Card>
+                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbUserBolt size={24} /></div><div><div className="text-pink-500">{renderCardContent(employeesCount?.avg_present_percent)}</div><span className="font-semibold text-xs"> % Avg. Present</span></div></Card>
                         <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserExclamation size={24} /></div><div><div className="text-orange-500">{renderCardContent(employeesCount?.late_arrivals)}</div><span className="font-semibold text-xs">Late Arrivals</span></div></Card>
                         <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserScreen size={24} /></div><div><div className="text-green-500">{renderCardContent(employeesCount?.training_rate)}</div><span className="font-semibold text-xs">Training Rate</span></div></Card>
                         <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserShare size={24} /></div><div><div className="text-red-500">{renderCardContent(employeesCount?.offboarding)}</div><span className="font-semibold text-xs">Offboarding</span></div></Card>

@@ -1,3 +1,5 @@
+// src/views/your-path/AutoEmailTemplatesListing.tsx
+
 import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { useForm, Controller } from "react-hook-form";
@@ -18,7 +20,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import StickyFooter from "@/components/shared/StickyFooter";
 import DebounceInput from "@/components/shared/DebouceInput";
 import Select from "@/components/ui/Select";
-import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog } from "@/components/ui";
+import { Card, Drawer, Form, FormItem, Input, Tag, Checkbox, Dropdown, Avatar, Dialog, Skeleton } from "@/components/ui"; // Skeleton Imported
 
 // Icons
 import {
@@ -189,9 +191,9 @@ const AutoEmailSearch = React.forwardRef<HTMLInputElement, { onInputChange: (val
 ));
 AutoEmailSearch.displayName = 'AutoEmailSearch';
 
-const AutoEmailTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+const AutoEmailTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: {
     onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void;
-    columns: ColumnDef<AutoEmailItem>[]; filteredColumns: ColumnDef<AutoEmailItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<AutoEmailItem>[]>>; activeFilterCount: number;
+    columns: ColumnDef<AutoEmailItem>[]; filteredColumns: ColumnDef<AutoEmailItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<AutoEmailItem>[]>>; activeFilterCount: number; isDataReady: boolean;
 }) => {
     const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
     const toggleColumn = (checked: boolean, colId: string) => {
@@ -230,9 +232,9 @@ const AutoEmailTableTools = ({ onSearchChange, onFilter, onExport, onClearFilter
                         })}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+                <Button title="Clear Filters" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
             </div>
         </div>
     );
@@ -284,9 +286,9 @@ const AutoEmailListing = () => {
         autoEmailsData = { data: [], counts: {} }, 
         usersData = [], 
         autoEmailTemplatesData = { data: [] },
-        status: masterLoadingStatus = 'idle' 
     } = useSelector(masterSelector, shallowEqual);
 
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<AutoEmailItem | null>(null);
@@ -301,19 +303,35 @@ const AutoEmailListing = () => {
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'updated_at' }, query: '' });
     const [selectedItems, setSelectedItems] = useState<AutoEmailItem[]>([]);
     const [itemToDelete, setItemToDelete] = useState<AutoEmailItem | null>(null);
+    
+    const isDataReady = !initialLoading;
+    const tableLoading = initialLoading || isSubmitting || isDeleting;
 
     const userOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((u: ApiUser) => ({ value: String(u.id), label: u.name })) : [], [usersData]);
     
     const EMAIL_TYPE_OPTIONS = useMemo(() => 
-        autoEmailTemplatesData?.data && Array.isArray(autoEmailTemplatesData.data) 
-            ? autoEmailTemplatesData.data.map((template: any) => ({ value: template.email_type, label: template.email_type })) 
+        (autoEmailTemplatesData as any)?.data && Array.isArray((autoEmailTemplatesData as any).data) 
+            ? (autoEmailTemplatesData as any).data.map((template: any) => ({ value: template.email_type, label: template.email_type })) 
             : [],
     [autoEmailTemplatesData]);
 
     useEffect(() => { 
-        dispatch(getAutoEmailsAction()); 
-        dispatch(getUsersAction()); 
-        dispatch(getAutoEmailTemplatesAction());
+        const fetchData = async () => {
+            setInitialLoading(true);
+            try {
+                await Promise.all([
+                    dispatch(getAutoEmailsAction()), 
+                    dispatch(getUsersAction()), 
+                    dispatch(getAutoEmailTemplatesAction())
+                ]);
+            } catch (error) {
+                console.error("Failed to fetch initial data", error);
+                toast.push(<Notification type="danger" title="Error">Failed to load data.</Notification>);
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+        fetchData();
     }, [dispatch]);
 
     const addFormMethods = useForm<AutoEmailFormData>({ resolver: zodResolver(autoEmailFormSchema), mode: 'onChange' });
@@ -404,7 +422,7 @@ const AutoEmailListing = () => {
             if (statusOption) newFilters.filterStatus = [statusOption];
         }
         setFilterCriteria(newFilters);
-        filterFormMethods.reset(newFilters); // FIX: Sync filter drawer state
+        filterFormMethods.reset(newFilters);
         handleSetTableData({ pageIndex: 1, query: '' });
     };
 
@@ -413,7 +431,7 @@ const AutoEmailListing = () => {
             const newCriteria = { ...prev };
             const currentFilterArray = newCriteria[key] as { value: string | number }[] | undefined;
             if (currentFilterArray) (newCriteria as any)[key] = currentFilterArray.filter(item => item.value !== valueToRemove);
-            filterFormMethods.reset(newCriteria); // Sync filter drawer state
+            filterFormMethods.reset(newCriteria);
             return newCriteria;
         });
         handleSetTableData({ pageIndex: 1 });
@@ -436,7 +454,7 @@ const AutoEmailListing = () => {
         } finally { setIsSubmittingExportReason(false); }
     };
 
-    const handleDeleteClick = useCallback((item: AutoEmailItem) => { setItemToDelete(item); }, []);
+    const handleDeleteClick = useCallback((item: AutoEmailItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true) }, []);
     const onConfirmSingleDelete = useCallback(async () => {
         if (!itemToDelete) return;
         setIsDeleting(true);
@@ -445,6 +463,7 @@ const AutoEmailListing = () => {
             toast.push(<Notification title="Deleted" type="success" />);
             dispatch(getAutoEmailsAction());
             setItemToDelete(null);
+            setSingleDeleteConfirmOpen(false);
         } catch (e: any) {
             toast.push(<Notification title="Delete Failed" type="danger">{(e as Error).message}</Notification>);
         } finally { setIsDeleting(false); }
@@ -515,23 +534,30 @@ const AutoEmailListing = () => {
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<AutoEmailItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
+    const renderCardContent = (content: number | undefined) => {
+        if (initialLoading) {
+            return <Skeleton width={40} height={20} />;
+        }
+        return <h6 className="font-bold">{content ?? 0}</h6>;
+    };
+
     return (
         <>
             <Container className="h-auto">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                         <h5 className="mb-2 sm:mb-0">Automation Email</h5>
-                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button>
+                        <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 mb-4 gap-4">
-                        <Tooltip title="Click to show all configurations"><div onClick={() => handleCardClick('all')} className="cursor-pointer"><Card bodyClass="flex gap-2 p-3"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMailbox size={24} /></div><div><h6 className="text-blue-500">{autoEmailsData?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show Active configurations"><div onClick={() => handleCardClick('Active')} className="cursor-pointer"><Card bodyClass="flex gap-2 p-3"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbMailOpened size={24} /></div><div><h6 className="text-emerald-500">{autoEmailsData?.counts?.Active || 0}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show Inactive configurations"><div onClick={() => handleCardClick('Inactive')} className="cursor-pointer"><Card bodyClass="flex gap-2 p-3"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMailOff size={24} /></div><div><h6 className="text-red-500">{autoEmailsData?.counts?.Inactive || 0}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
-                        <Card bodyClass="flex gap-2 p-3" className="cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUsers size={24} /></div><div><h6 className="text-orange-500">{autoEmailsData?.counts?.total_users || 0}</h6><span className="font-semibold text-xs">Total Users</span></div></Card>
+                        <Tooltip title="Click to show all configurations"><div onClick={() => handleCardClick('all')} className="cursor-pointer"><Card bodyClass="flex gap-2 p-3"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbMailbox size={24} /></div><div><div className="text-blue-500">{renderCardContent(autoEmailsData?.counts?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show Active configurations"><div onClick={() => handleCardClick('Active')} className="cursor-pointer"><Card bodyClass="flex gap-2 p-3"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbMailOpened size={24} /></div><div><div className="text-emerald-500">{renderCardContent(autoEmailsData?.counts?.Active)}</div><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show Inactive configurations"><div onClick={() => handleCardClick('Inactive')} className="cursor-pointer"><Card bodyClass="flex gap-2 p-3"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbMailOff size={24} /></div><div><div className="text-red-500">{renderCardContent(autoEmailsData?.counts?.Inactive)}</div><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Card bodyClass="flex gap-2 p-3" className="cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUsers size={24} /></div><div><div className="text-orange-500">{renderCardContent(autoEmailsData?.counts?.total_users)}</div><span className="font-semibold text-xs">Total Users</span></div></Card>
                     </div>
-                    <div className="mb-4"><AutoEmailTableTools onSearchChange={handleSearchChange} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} /></div>
+                    <div className="mb-4"><AutoEmailTableTools onSearchChange={handleSearchChange} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportReasonModal} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} /></div>
                     <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-                    <div className="mt-4"><DataTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === 'loading'} selectable onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} /></div>
+                    <div className="mt-4"><DataTable columns={filteredColumns} data={pageData} loading={tableLoading} selectable onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} /></div>
                 </AdaptiveCard>
             </Container>
 

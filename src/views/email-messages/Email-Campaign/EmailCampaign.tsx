@@ -34,6 +34,7 @@ import {
   Tag,
   Checkbox,
   Dropdown,
+  Skeleton, // Skeleton Imported
 } from "@/components/ui";
 
 // Icons
@@ -480,7 +481,7 @@ const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(
 );
 ItemSearch.displayName = "ItemSearch";
 
-const EmailCampaignTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+const EmailCampaignTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
@@ -489,6 +490,7 @@ const EmailCampaignTableTools = ({ onSearchChange, onFilter, onExport, onClearFi
   filteredColumns: ColumnDef<EmailCampaignItem>[];
   setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<EmailCampaignItem>[]>>;
   activeFilterCount: number;
+  isDataReady: boolean;
 }) => {
     const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
     const toggleColumn = (checked: boolean, colId: string) => {
@@ -530,11 +532,11 @@ const EmailCampaignTableTools = ({ onSearchChange, onFilter, onExport, onClearFi
                         })}
                     </div>
                 </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" disabled={!isDataReady}></Button>
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
                     Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
                 </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
             </div>
         </div>
     );
@@ -970,9 +972,9 @@ const EmailCampaignListing = () => {
     emailCampaignsData = { data: [], counts: {} },
     mailTemplatesData = [],
     ProductsData = [], // This is already in the selector, used by both the form and the filter modal
-    status: masterLoadingStatus = "idle",
   } = useSelector(masterSelector, shallowEqual);
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [currentWizardStep, setCurrentWizardStep] = useState(1);
   const [editingItem, setEditingItem] = useState<EmailCampaignItem | null>(
@@ -1001,6 +1003,9 @@ const EmailCampaignListing = () => {
   const [isSubmittingExportReason, setIsSubmittingExportReason] =
     useState(false);
   const [isRecipientFilterModalOpen, setIsRecipientFilterModalOpen] = useState(false);
+
+  const isDataReady = !initialLoading;
+  const tableLoading = initialLoading || isSubmittingCampaign || isDeleting;
 
   const mailTemplateOptions = useMemo(
     () =>
@@ -1054,21 +1059,29 @@ const EmailCampaignListing = () => {
     mode: "onChange",
   });
 
-  // --- Effect to fetch transactional data ---
   useEffect(() => {
-    dispatch(getEmailCampaignsAction({ params: tableData }));
+    const fetchData = async () => {
+        setInitialLoading(true);
+        try {
+            await Promise.all([
+                dispatch(getEmailCampaignsAction({ params: tableData })),
+                dispatch(getMailTemplatesAction()),
+                dispatch(getProductsAction()),
+                dispatch(getContinentsAction()),
+                dispatch(getCountriesAction()),
+                dispatch(getCompanyAction()),
+                dispatch(getBrandAction()),
+                dispatch(getCategoriesAction())
+            ]);
+        } catch (error) {
+            console.error("Failed to load initial data for email campaigns", error);
+            toast.push(<Notification title="Error" type="danger">Failed to load essential data.</Notification>);
+        } finally {
+            setInitialLoading(false);
+        }
+    };
+    fetchData();
   }, [dispatch, tableData]);
-
-  // --- Effect to fetch all master data on component mount ---
-  useEffect(() => {
-    dispatch(getMailTemplatesAction());
-    dispatch(getProductsAction());
-    dispatch(getContinentsAction());
-    dispatch(getCountriesAction());
-    dispatch(getCompanyAction());
-    dispatch(getBrandAction());
-    dispatch(getCategoriesAction());
-  }, [dispatch]);
 
   const watchedTemplateId = watch("template_id");
 
@@ -2093,6 +2106,13 @@ const EmailCampaignListing = () => {
   const cardClass = "rounded-md transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-3";
 
+  const renderCardContent = (content: number | undefined) => {
+    if (initialLoading) {
+      return <Skeleton width={40} height={20} />;
+    }
+    return <h6 className="font-bold">{content ?? 0}</h6>;
+  };
+
   return (
     <>
       <Container className="h-auto">
@@ -2103,6 +2123,7 @@ const EmailCampaignListing = () => {
               variant="solid"
               icon={<TbPlus />}
               onClick={() => openCreateDrawer()}
+              disabled={!isDataReady}
             >
               Create New Campaign
             </Button>
@@ -2115,7 +2136,7 @@ const EmailCampaignListing = () => {
                     <TbCaravan size={24} />
                   </div>
                   <div>
-                    <h6 className="text-blue-500">{emailCampaignsData?.counts?.total || 0}</h6>
+                    <div className="text-blue-500">{renderCardContent(emailCampaignsData?.counts?.total)}</div>
                     <span className="font-semibold text-xs">Total</span>
                   </div>
                 </Card>
@@ -2128,7 +2149,7 @@ const EmailCampaignListing = () => {
                     <TbCalendarUser size={24} />
                   </div>
                   <div>
-                    <h6 className="text-orange-500">{emailCampaignsData?.counts?.subscriber || 0}</h6>
+                    <div className="text-orange-500">{renderCardContent(emailCampaignsData?.counts?.subscriber)}</div>
                     <span className="font-semibold text-xs">Subscribers</span>
                   </div>
                 </Card>
@@ -2141,7 +2162,7 @@ const EmailCampaignListing = () => {
                     <TbPencilCheck size={24} />
                   </div>
                   <div>
-                    <h6 className="text-violet-500">{emailCampaignsData?.counts?.draft || 0}</h6>
+                    <div className="text-violet-500">{renderCardContent(emailCampaignsData?.counts?.draft)}</div>
                     <span className="font-semibold text-xs">Draft</span>
                   </div>
                 </Card>
@@ -2154,7 +2175,7 @@ const EmailCampaignListing = () => {
                     <TbCalendarClock size={24} />
                   </div>
                   <div>
-                    <h6 className="text-pink-500">{emailCampaignsData?.counts?.scheduled || 0}</h6>
+                    <div className="text-pink-500">{renderCardContent(emailCampaignsData?.counts?.scheduled)}</div>
                     <span className="font-semibold text-xs">Scheduled</span>
                   </div>
                 </Card>
@@ -2167,7 +2188,7 @@ const EmailCampaignListing = () => {
                     <TbMailForward size={24} />
                   </div>
                   <div>
-                    <h6 className="text-green-500">{emailCampaignsData?.counts?.sent || 0}</h6>
+                    <div className="text-green-500">{renderCardContent(emailCampaignsData?.counts?.sent)}</div>
                     <span className="font-semibold text-xs">Sent</span>
                   </div>
                 </Card>
@@ -2180,7 +2201,7 @@ const EmailCampaignListing = () => {
                     <TbCalendarCancel size={24} />
                   </div>
                   <div>
-                    <h6 className="text-red-500">{emailCampaignsData?.counts?.cancelled || 0}</h6>
+                    <div className="text-red-500">{renderCardContent(emailCampaignsData?.counts?.cancelled)}</div>
                     <span className="font-semibold text-xs">Cancelled</span>
                   </div>
                 </Card>
@@ -2197,6 +2218,7 @@ const EmailCampaignListing = () => {
                 filteredColumns={filteredColumns}
                 setFilteredColumns={setFilteredColumns}
                 activeFilterCount={activeFilterCount}
+                isDataReady={isDataReady}
             />
           </div>
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} allStatusOptions={CAMPAIGN_STATUS_OPTIONS_FILTER} />
@@ -2204,11 +2226,7 @@ const EmailCampaignListing = () => {
             <EmailCampaignsTable
               columns={filteredColumns}
               data={pageData}
-              loading={
-                masterLoadingStatus === "loading" ||
-                isSubmittingCampaign ||
-                isDeleting
-              }
+              loading={tableLoading}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
