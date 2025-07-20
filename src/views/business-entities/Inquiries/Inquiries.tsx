@@ -605,7 +605,7 @@ const InquiryListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(u => ({ value: u.id, label: u.name })) : [], [getAllUserData]);
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(u => ({ value: u.id, label:`(${u.employee_id}) - ${u.name || 'N/A'}` })) : [], [getAllUserData]);
 
   useEffect(() => {
     dispatch(getDepartmentsAction());

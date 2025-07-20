@@ -1375,7 +1375,7 @@ export const useTaskListingLogic = ({ isDashboard }: { isDashboard?: boolean } =
     const tableLoading = initialLoading || isSubmitting || isDeleting || isUpdating;
 
 
-    const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+    const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
 
      useEffect(() => {
            const { useEncryptApplicationStorage } = config;

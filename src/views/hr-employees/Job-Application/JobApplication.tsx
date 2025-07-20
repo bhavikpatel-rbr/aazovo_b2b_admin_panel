@@ -175,7 +175,7 @@ const JobApplicationListing = () => {
         getAllUserData = [],
     } = useSelector(masterSelector, shallowEqual);
 
-    const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((user: UserItem) => ({ value: String(user.id), label: user.name, })) : [], [getAllUserData]);
+    const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((user: UserItem) => ({ value: String(user.id), label: `(${user.employee_id}) - ${user.name || 'N/A'}` })) : [], [getAllUserData]);
 
     const [initialLoading, setInitialLoading] = useState(true);
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'applicationDate' }, query: '' });
