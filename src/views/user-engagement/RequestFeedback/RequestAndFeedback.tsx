@@ -1,93 +1,98 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import classNames from "classnames";
+// src/views/your-path/MergedTaskList.tsx
+import React, { useState, useMemo, useCallback, Ref, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import cloneDeep from 'lodash/cloneDeep'
+import classNames from 'classnames'
+import { useForm, Controller, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import dayjs from 'dayjs'
 
 // UI Components
-import AdaptiveCard from "@/components/shared/AdaptiveCard";
-import Container from "@/components/shared/Container";
-import DataTable from "@/components/shared/DataTable";
-import DebounceInput from "@/components/shared/DebouceInput";
-import Select from "@/components/ui/Select";
+import AdaptiveCard from '@/components/shared/AdaptiveCard'
+import Container from '@/components/shared/Container'
+import DataTable from '@/components/shared/DataTable'
+import DebounceInput from '@/components/shared/DebouceInput'
+import Select from '@/components/ui/Select'
 import {
-  Drawer,
-  Form,
-  FormItem,
-  Input,
-  Tag,
-  Dialog,
-  Dropdown,
-  Card,
-  Button,
-  Tooltip,
-  Notification,
-  Checkbox,
-} from "@/components/ui";
-import toast from "@/components/ui/toast";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import StickyFooter from "@/components/shared/StickyFooter";
+    Drawer,
+    Form,
+    FormItem,
+    Input,
+    Tag,
+    Dialog,
+    Dropdown,
+    Card,
+    Button,
+    Tooltip,
+    Notification,
+    Checkbox,
+    Skeleton, // Skeleton Imported
+} from '@/components/ui'
+import toast from '@/components/ui/toast'
+import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import StickyFooter from '@/components/shared/StickyFooter'
 
 // Icons
-import { BsThreeDotsVertical } from "react-icons/bs";
+import { BsThreeDotsVertical } from 'react-icons/bs'
 import {
-  TbPencil,
-  TbTrash,
-  TbChecks,
-  TbEye,
-  TbSearch,
-  TbFilter,
-  TbPlus,
-  TbUserCircle,
-  TbMail,
-  TbPhone,
-  TbBuilding,
-  TbMessageDots,
-  TbStar,
-  TbPaperclip,
-  TbToggleRight,
-  TbReload,
-  TbUser,
-  TbBrandWhatsapp,
-  TbBell,
-  TbCalendarEvent,
-  TbColumns,
-  TbX,
-  TbCategory,
-  TbBuildingStore,
-  TbUserQuestion,
-  TbProgressCheck,
-  TbProgress,
-  TbProgressX,
-  TbProgressHelp,
-} from "react-icons/tb";
+    TbPencil,
+    TbTrash,
+    TbChecks,
+    TbEye,
+    TbSearch,
+    TbFilter,
+    TbPlus,
+    TbUserCircle,
+    TbMail,
+    TbPhone,
+    TbBuilding,
+    TbMessageDots,
+    TbStar,
+    TbPaperclip,
+    TbToggleRight,
+    TbReload,
+    TbUser,
+    TbBrandWhatsapp,
+    TbBell,
+    TbCalendarEvent,
+    TbColumns,
+    TbX,
+    TbCategory,
+    TbBuildingStore,
+    TbUserQuestion,
+    TbProgressCheck,
+    TbProgress,
+    TbProgressX,
+    TbProgressHelp,
+} from 'react-icons/tb'
 
 // Types
 import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-  CellContext,
-} from "@/components/shared/DataTable";
-import type { TableQueries } from "@/@types/common";
+    OnSortParam,
+    ColumnDef,
+    Row,
+    CellContext,
+} from '@/components/shared/DataTable'
+import type { TableQueries } from '@/@types/common'
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
-import { shallowEqual, useSelector } from "react-redux";
+import { useAppDispatch } from '@/reduxtool/store'
+import { shallowEqual, useSelector } from 'react-redux'
 import {
-  getRequestFeedbacksAction,
-  addRequestFeedbackAction,
-  editRequestFeedbackAction,
-  deleteRequestFeedbackAction,
-  deleteAllRequestFeedbacksAction,
-  addNotificationAction,
-  getAllUsersAction,
-  addScheduleAction,
-  addTaskAction,
-  getDepartmentsAction,
-} from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
+    getRequestFeedbacksAction,
+    addRequestFeedbackAction,
+    editRequestFeedbackAction,
+    deleteRequestFeedbackAction,
+    deleteAllRequestFeedbacksAction,
+    addNotificationAction,
+    getAllUsersAction,
+    addScheduleAction,
+    addTaskAction,
+    getDepartmentsAction,
+} from '@/reduxtool/master/middleware'
+import { masterSelector } from '@/reduxtool/master/masterSlice'
+import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
 
 // --- Define Types & Constants ---
 export type SelectOption = { value: any; label: string };
@@ -195,7 +200,6 @@ const itemPathUtil = (filename: string | null | undefined): string => {
 };
 
 // --- Action Column ---
-// REQUIREMENT: Simplified More options menu
 const ItemActionColumn = ({ onEdit, onViewDetail, onSendEmail, onSendWhatsapp, onAddNotification, onAssignTask, onAddSchedule, }: {
   onEdit: () => void;
   onViewDetail: () => void;
@@ -221,7 +225,7 @@ const ItemActionColumn = ({ onEdit, onViewDetail, onSendEmail, onSendWhatsapp, o
 // --- Table Tools & Search ---
 const ItemSearch = React.forwardRef<HTMLInputElement, { onInputChange: (value: string) => void; }>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 ItemSearch.displayName = "ItemSearch";
-const ItemTableTools = ({ onSearchChange, onFilter, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: { onSearchChange: (query: string) => void; onFilter: () => void; onClearFilters: () => void; columns: ColumnDef<RequestFeedbackItem>[]; filteredColumns: ColumnDef<RequestFeedbackItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<RequestFeedbackItem>[]>>; activeFilterCount: number; }) => {
+const ItemTableTools = ({ onSearchChange, onFilter, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: { onSearchChange: (query: string) => void; onFilter: () => void; onClearFilters: () => void; columns: ColumnDef<RequestFeedbackItem>[]; filteredColumns: ColumnDef<RequestFeedbackItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<RequestFeedbackItem>[]>>; activeFilterCount: number; isDataReady: boolean }) => {
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
@@ -241,8 +245,8 @@ const ItemTableTools = ({ onSearchChange, onFilter, onClearFilters, columns, fil
             {columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>); })}
           </div>
         </Dropdown>
-        <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters}></Button></Tooltip>
-        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+        <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady}></Button></Tooltip>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
       </div>
     </div>
   );
@@ -260,8 +264,9 @@ const RequestFeedbacksSelectedFooter = ({ selectedItems, onDeleteSelected, isDel
 
 const RequestAndFeedbackListing = () => {
   const dispatch = useAppDispatch();
-  const { requestFeedbacksData = { data: [], counts: {} }, status: masterLoadingStatus = "idle", departmentsData = [] } = useSelector(masterSelector, shallowEqual);
+  const { requestFeedbacksData = { data: [], counts: {} }, departmentsData = [] } = useSelector(masterSelector, shallowEqual);
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RequestFeedbackItem | null>(null);
@@ -278,12 +283,27 @@ const RequestAndFeedbackListing = () => {
   const [removeExistingAttachment, setRemoveExistingAttachment] = useState(false);
   const [departmentOptions, setDepartmentOptions] = useState<SelectOption[]>([]);
   
+  const isDataReady = !initialLoading;
+  const tableLoading = initialLoading || isSubmitting || isDeleting;
+  
   useEffect(() => {
-    dispatch(getRequestFeedbacksAction());
-    dispatch(getAllUsersAction());
-    dispatch(getDepartmentsAction());
+    const fetchData = async () => {
+        setInitialLoading(true);
+        try {
+            await Promise.all([
+                dispatch(getRequestFeedbacksAction()),
+                dispatch(getAllUsersAction()),
+                dispatch(getDepartmentsAction())
+            ]);
+        } catch (error) {
+            console.error("Failed to load initial data", error);
+            toast.push(<Notification title="Error" type="danger">Could not load necessary data.</Notification>)
+        } finally {
+            setInitialLoading(false);
+        }
+    };
+    fetchData();
   }, [dispatch]);
-
   
   useEffect(() => {
     if (departmentsData?.data && Array.isArray(departmentsData?.data)) {
@@ -366,7 +386,6 @@ const RequestAndFeedbackListing = () => {
   const handleSendWhatsapp = useCallback((item: RequestFeedbackItem) => { const phone = item.mobile_no?.replace(/\D/g, ""); if (phone) window.open(`https://wa.me/${phone}`, "_blank"); }, []);
   const openActionModal = (item: RequestFeedbackItem, type: 'notification' | 'task' | 'schedule') => {
     toast.push(<Notification title="Action" type="info">{`Opening ${type} modal for ${item.name}`}</Notification>);
-    // Future: Implement logic to open respective modal
   };
 
   const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); setTableData((prev) => ({ ...prev, pageIndex: 1 })); setIsFilterDrawerOpen(false); }, []);
@@ -402,30 +421,22 @@ const RequestAndFeedbackListing = () => {
   const activeFilterCount = useMemo(() => Object.values(filterCriteria).filter(value => Array.isArray(value) && value.length > 0).length, [filterCriteria]);
 
   const columns: ColumnDef<RequestFeedbackItem>[] = useMemo(() => [
-    // REQUIREMENT: Listing Column - Member info
-    { header: "Member Info", accessorKey: "name", size: 200, cell: (props: CellContext<RequestFeedbackItem, unknown>) => (<div className="flex items-center gap-2"><div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-sm">{props.row.original?.member_code || "N/A" + '|' + props.row.original.name || "N/A"}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.customer_id === "0" ? "Guest" : `ID: ${props.row.original.customer_id}`}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.email || "N/A"}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.mobile_no || "N/A"}</span></div></div>), },
-    // REQUIREMENT: Listing Column - Type
+    { header: "Member Info", accessorKey: "name", size: 200, cell: (props: CellContext<RequestFeedbackItem, unknown>) => (<div className="flex items-center gap-2"><div className="flex flex-col gap-0.5 text-xs"><span className="font-semibold text-sm">{(props.row.original as any)?.member_code || "N/A" + '|' + props.row.original.name || "N/A"}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.customer_id === "0" ? "Guest" : `ID: ${props.row.original.customer_id}`}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.email || "N/A"}</span><span className="text-gray-600 dark:text-gray-400">{props.row.original.mobile_no || "N/A"}</span></div></div>), },
     { header: "Type", accessorKey: "type", size: 100, cell: (props) => (<Tag className="capitalize">{props.getValue() || "N/A"}</Tag>), },
-    // REQUIREMENT: Listing Column - Categories
     { header: "Category", accessorKey: "category", size: 180, cell: (props) => (<div className="truncate w-44" title={props.getValue() as string}>{(props.getValue() as string) || "N/A"}</div>), },
-    // REQUIREMENT: Listing Column - Department
     { header: "Department", accessorKey: "department_id", size: 150, cell: (props) => props.row.original.department?.name || "N/A", },
-    // REQUIREMENT: Listing Column - Status
     { header: "Status", accessorKey: "status", size: 110, cell: (props) => { const s = props.getValue<RequestFeedbackStatus>(); return (<Tag className={classNames("capitalize whitespace-nowrap", statusColors[s] || "bg-gray-200")}>{s || "N/A"}</Tag>); }, },
-    // REQUIREMENT: Listing Column - action button
     { header: "Actions", id: "actions", meta: { headerClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => (<ItemActionColumn onEdit={() => openEditDrawer(props.row.original)} onViewDetail={() => openViewDialog(props.row.original)} onSendEmail={() => handleSendEmail(props.row.original)} onSendWhatsapp={() => handleSendWhatsapp(props.row.original)} onAddNotification={() => openActionModal(props.row.original, 'notification')} onAssignTask={() => openActionModal(props.row.original, 'task')} onAddSchedule={() => openActionModal(props.row.original, 'schedule')} />), },
   ], [openEditDrawer, openViewDialog, handleSendEmail, handleSendWhatsapp]);
 
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<RequestFeedbackItem>[]>(columns);
 
   const DrawerFormContent = () => {
-    // REQUIREMENT: Conditional logic for Categories and Rating
     const typeValue = useWatch({ control, name: 'type' });
     const categoryOptions = typeValue === 'Feedback' ? CATEGORY_OPTIONS_FEEDBACK : CATEGORY_OPTIONS_REQUEST;
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-        {/* REQUIREMENT: Add New Form Fields */}
         <FormItem label={<div>Name<span className="text-red-500"> *</span></div>} invalid={!!errors.name} errorMessage={errors.name?.message}><Controller name="name" control={control} render={({ field }) => <Input {...field} prefix={<TbUserCircle />} placeholder="Full Name" />} /></FormItem>
         <FormItem label={<div>Email<span className="text-red-500"> *</span></div>} invalid={!!errors.email} errorMessage={errors.email?.message}><Controller name="email" control={control} render={({ field }) => <Input {...field} type="email" prefix={<TbMail />} placeholder="example@domain.com" />} /></FormItem>
         <FormItem label={<div>Mobile No.<span className="text-red-500"> *</span></div>} invalid={!!errors.mobile_no} errorMessage={errors.mobile_no?.message}><Controller name="mobile_no" control={control} render={({ field }) => <Input {...field} type="tel" prefix={<TbPhone />} placeholder="+XX XXXXXXXXXX" />} /></FormItem>
@@ -441,19 +452,26 @@ const RequestAndFeedbackListing = () => {
     );
   };
 
+  const renderCardContent = (content: number | undefined) => {
+    if (initialLoading) {
+      return <Skeleton width={40} height={20} />;
+    }
+    return <h6 className="font-bold">{content ?? 0}</h6>;
+  };
+
   return (<>
     <Container className="h-auto"><AdaptiveCard className="h-full" bodyClass="h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Requests & Feedbacks</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button></div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Requests & Feedbacks</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button></div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-4 gap-2">
-        <Tooltip title="Click to show all entries"><div onClick={() => handleCardClick('all')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUserQuestion size={24} /></div><div><h6 className="text-blue-500">{requestFeedbacksData?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to show Pending entries"><div onClick={() => handleCardClick('Pending')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-amber-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbProgressHelp size={24} /></div><div><h6 className="text-amber-500">{requestFeedbacksData?.counts?.pending || 0}</h6><span className="font-semibold text-xs">Pending</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to show In Progress entries"><div onClick={() => handleCardClick('In progress')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-cyan-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-cyan-100 text-cyan-500"><TbProgress size={24} /></div><div><h6 className="text-cyan-500">{requestFeedbacksData?.counts?.in_progress || 0}</h6><span className="font-semibold text-xs">In Progress</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to show Resolved entries"><div onClick={() => handleCardClick('Resolved')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-emerald-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbProgressCheck size={24} /></div><div><h6 className="text-emerald-500">{requestFeedbacksData?.counts?.resolved || 0}</h6><span className="font-semibold text-xs">Resolved</span></div></Card></div></Tooltip>
-        <Tooltip title="Click to show Rejected entries"><div onClick={() => handleCardClick('Rejected')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbProgressX size={24} /></div><div><h6 className="text-red-500">{requestFeedbacksData?.counts?.rejected || 0}</h6><span className="font-semibold text-xs">Rejected</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show all entries"><div onClick={() => handleCardClick('all')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-blue-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUserQuestion size={24} /></div><div><div className="text-blue-500">{renderCardContent(requestFeedbacksData?.counts?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show Pending entries"><div onClick={() => handleCardClick('Pending')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-amber-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-amber-100 text-amber-500"><TbProgressHelp size={24} /></div><div><div className="text-amber-500">{renderCardContent(requestFeedbacksData?.counts?.pending)}</div><span className="font-semibold text-xs">Pending</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show In Progress entries"><div onClick={() => handleCardClick('In progress')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-cyan-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-cyan-100 text-cyan-500"><TbProgress size={24} /></div><div><div className="text-cyan-500">{renderCardContent(requestFeedbacksData?.counts?.in_progress)}</div><span className="font-semibold text-xs">In Progress</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show Resolved entries"><div onClick={() => handleCardClick('Resolved')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-emerald-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbProgressCheck size={24} /></div><div><div className="text-emerald-500">{renderCardContent(requestFeedbacksData?.counts?.resolved)}</div><span className="font-semibold text-xs">Resolved</span></div></Card></div></Tooltip>
+        <Tooltip title="Click to show Rejected entries"><div onClick={() => handleCardClick('Rejected')}><Card bodyClass="flex gap-2 p-2" className="rounded-md border border-red-200 cursor-pointer hover:shadow-lg"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbProgressX size={24} /></div><div><div className="text-red-500">{renderCardContent(requestFeedbacksData?.counts?.rejected)}</div><span className="font-semibold text-xs">Rejected</span></div></Card></div></Tooltip>
       </div>
-      <div className="mb-4"><ItemTableTools onClearFilters={onClearFilters} onSearchChange={(q) => setTableData(p => ({ ...p, query: q, pageIndex: 1 }))} onFilter={() => setIsFilterDrawerOpen(true)} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} /></div>
+      <div className="mb-4"><ItemTableTools onClearFilters={onClearFilters} onSearchChange={(q) => setTableData(p => ({ ...p, query: q, pageIndex: 1 }))} onFilter={() => setIsFilterDrawerOpen(true)} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} /></div>
       <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-      <div className="mt-4"><DataTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading"} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={(p) => setTableData(prev => ({ ...prev, pageIndex: p }))} onSelectChange={(s) => setTableData(prev => ({...prev, pageSize: s, pageIndex: 1}))} onSort={(s) => setTableData(prev => ({...prev, sort: s}))} /></div>
+      <div className="mt-4"><DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={(p) => setTableData(prev => ({ ...prev, pageIndex: p }))} onSelectChange={(s) => setTableData(prev => ({...prev, pageSize: s, pageIndex: 1}))} onSort={(s) => setTableData(prev => ({...prev, sort: s}))} /></div>
     </AdaptiveCard></Container>
     <RequestFeedbacksSelectedFooter selectedItems={selectedItems} onDeleteSelected={handleDeleteSelected} isDeleting={isDeleting} />
     <Drawer title={editingItem ? "Edit Entry" : "Add New Entry"} isOpen={isAddDrawerOpen || isEditDrawerOpen} onClose={editingItem ? closeEditDrawer : closeAddDrawer} onRequestClose={editingItem ? closeEditDrawer : closeAddDrawer} width={520} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={editingItem ? closeEditDrawer : closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="requestFeedbackForm" type="submit" loading={isSubmitting} disabled={!isValid || isSubmitting}>{isSubmitting ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save Changes" : "Submit")}</Button></div>}>
