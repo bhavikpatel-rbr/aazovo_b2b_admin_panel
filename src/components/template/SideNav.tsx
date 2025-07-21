@@ -65,9 +65,9 @@ const dispatch = useAppDispatch();
   };
   useEffect(() => {
         // This effect will run whenever the currentRouteKey changes,
-        // which happens when the user navigates to a new page.
+        // which happens when the user navigates to a new page.        
         dispatch(resetMasterState())
-    }, [currentRouteKey, dispatch])
+    }, [window.location.pathname, dispatch])
 
   const onDialogClose = () => {
     setIsLogoutDialogOpen(false);
