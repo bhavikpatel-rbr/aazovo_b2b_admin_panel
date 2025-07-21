@@ -514,15 +514,26 @@ const PriceListTableTools = forwardRef(
     }));
 
     const watchedCategoryIds = watch("categoryIds");
-    useEffect(() => {
-      if (
-        isFilterDrawerOpen &&
-        watchedCategoryIds &&
-        watchedCategoryIds.length > 0
-      ) {
-        dispatch(getSubcategoriesByCategoryIdAction(watchedCategoryIds[0]));
-      }
-    }, [watchedCategoryIds, isFilterDrawerOpen, dispatch]);
+
+     useEffect(() => {
+        // Only act if the filter drawer is open to avoid unnecessary API calls
+        if (!isFilterDrawerOpen) return;
+
+        // If one or more categories are selected
+        if (watchedCategoryIds && watchedCategoryIds.length > 0) {
+            // Join the array of IDs into a single comma-separated string
+            const categoryIdsString = watchedCategoryIds.join(',');
+            // Dispatch the action with the combined string
+            dispatch(getSubcategoriesByCategoryIdAction(categoryIdsString));
+        } else {
+            // If no categories are selected (or all are deselected)
+            // 1. Clear any existing sub-category selections in the form
+            setValue('subCategoryIds', []);
+            // 2. Dispatch an action to clear the sub-category options in the Redux store.
+            //    Sending an empty string is a good convention for the reducer to handle.
+            dispatch(getSubcategoriesByCategoryIdAction(''));
+        }
+    }, [watchedCategoryIds, isFilterDrawerOpen, dispatch, setValue]);
     const onSubmit = (data: PriceListFilterSchema) => {
       onApplyFilters(data);
       setIsFilterDrawerOpen(false);
