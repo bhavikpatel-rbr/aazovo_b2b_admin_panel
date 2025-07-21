@@ -2028,7 +2028,8 @@ export const editGlobalSettingAsync = async (settingId: number | string, formDat
 
 export const getMembersAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/customer`);
+    // const response = await axiosInstance.get(`${config.apiURL}/customer`);
+    const response =  undefined;
     return response;
   } catch (err) {
     return isAxiosError(err);
@@ -2278,8 +2279,9 @@ export const getMemberlistAsync = async (params: any) => {
 
 export const getMemberAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/customer`)
-    return response
+    // const response = await axiosInstance.get(`${config.apiURL}/customer`)
+    // return response
+    return undefined; // Placeholder for actual implementation
   } catch (err) {
     return isAxiosError(err)
   }
