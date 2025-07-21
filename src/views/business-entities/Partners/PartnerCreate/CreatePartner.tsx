@@ -285,7 +285,7 @@ export interface CompanyFormSchema {
   partner_logo?: File | string | null;
 
   partner_certificate?: CertificateItemFE[];
-  office_info?: BranchItemFE[];
+  partner_offices?: BranchItemFE[];
 
   agreement_file?: File | string | null;
   agreement_remark?: string;
@@ -417,7 +417,7 @@ interface ApiSingleCompanyItem {
   other_document_remark?: string;
   partner_team_members?: any[];
   partner_bank_details?: any[];
-  office_info?: any[];
+  partner_offices?: any[];
   partner_certificate?: any[];
   partner_references?: any[];
   billing_documents?: any[];
@@ -534,7 +534,7 @@ const transformApiToFormSchema = (
     })),
 
     partner_certificate: apiData.partner_certificate,
-    office_info: apiData.office_info?.map((b: any) => ({
+    partner_offices: apiData.partner_offices?.map((b: any) => ({
       office_type: toSelectObject(b.office_type),
       office_name: b.office_name,
       address: b.address,
@@ -683,18 +683,18 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     append(`billing_documents[${index}][document]`, doc.document);
   });
 
-  (data.office_info || []).forEach((office: any, index: number) => {
-    append(`office_info.${index}.office_type`, office.office_type)
-    append(`office_info.${index}.office_name`, office.office_name);
-    append(`office_info.${index}.country_id`, office.country_id);
-    append(`office_info.${index}.state`, office.state);
-    append(`office_info.${index}.city`, office.city);
-    append(`office_info.${index}.zip_code`, office.zip_code);
-    append(`office_info.${index}.gst_number`, office.gst_number);
-    append(`office_info.${index}.address`, office.address);
-    append(`office_info.${index}.contact_person`, office.contact_person);
-    append(`office_info.${index}.office_email`, office.office_email);
-    append(`office_info.${index}.office_phone`, office.office_phone);
+  (data.partner_offices || []).forEach((office: any, index: number) => {
+    append(`partner_offices[${index}][office_type]`, office.office_type);
+    append(`partner_offices[${index}][office_name]`, office.office_name);
+    append(`partner_offices[${index}][country_id]`, office.country_id);
+    append(`partner_offices[${index}][state]`, office.state);
+    append(`partner_offices[${index}][city]`, office.city);
+    append(`partner_offices[${index}][zip_code]`, office.zip_code);
+    append(`partner_offices[${index}][gst_number]`, office.gst_number);
+    append(`partner_offices[${index}][address]`, office.address);
+    append(`partner_offices[${index}][contact_person]`, office.contact_person);
+    append(`partner_offices[${index}][office_email]`, office.office_email);
+    append(`partner_offices[${index}][office_phone]`, office.office_phone);
   });
 
   return apiPayload;
@@ -805,7 +805,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
     fields: branchFields,
     append: appendBranch,
     remove: removeBranch,
-  } = useFieldArray({ control, name: "office_info" });
+  } = useFieldArray({ control, name: "partner_offices" });
   const companyLogoBrochureValue = watch("partner_logo");
   return (
     <Card id="companyDetails">
@@ -1265,13 +1265,13 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
         </Button>
       </div>
       {certFields.map((item, index) => {
-        const uploadCertificateValue = watch(`partner_certificate.${index}.upload_certificate`);
+        const uploadCertificateValue = watch(`partner_certificate[${index}][upload_certificate]`);
         return (
           <Card key={item.id} className="mb-4 rounded-md border border-black" bodyClass="p-4">
             <div className="grid md:grid-cols-10 gap-3 items-center">
               <FormItem label="Certificate ID" className="col-span-3">
                 <Controller
-                  name={`partner_certificate.${index}.certificate_id`}
+                  name={`partner_certificate[${index}][certificate_id]`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="e.g., 12345" {...field} />
@@ -1280,7 +1280,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               </FormItem>
               <FormItem label="Certificate Name" className="col-span-3">
                 <Controller
-                  name={`partner_certificate.${index}.certificate_name`}
+                  name={`partner_certificate[${index}][certificate_name]`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="e.g., ISO 9001" {...field} />
@@ -1289,7 +1289,7 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
               </FormItem>
               <FormItem label="Upload Certificate" className="col-span-3">
                 <Controller
-                  name={`partner_certificate.${index}.upload_certificate`}
+                  name={`partner_certificate[${index}][upload_certificate]`}
                   control={control}
                   render={({ field: { onChange, ref } }) => (
                     <Input
@@ -1350,20 +1350,20 @@ const CompanyDetailsSection = ({ control, errors, formMethods }: FormSectionBase
       {branchFields.map((item, index) => (
         <Card key={item.id} className="mb-4 border rounded-md border-black relative">
           <div className="grid md:grid-cols-4 gap-4 p-4">
-            <FormItem label="Office Type"><Controller name={`office_info.${index}.office_type`} control={control} render={({ field }) => <Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />} /></FormItem>
-            <FormItem label="Office Name"><Controller name={`office_info.${index}.office_name`} control={control} render={({ field }) => <Input placeholder="e.g. Main Office" {...field} />} /></FormItem>
-            <FormItem label="Contact Person"><Controller name={`office_info.${index}.contact_person`} control={control} render={({ field }) => <Input placeholder="Contact Person Name" {...field} />} /></FormItem>
-            <FormItem label="Office Email"><Controller name={`office_info.${index}.office_email`} control={control} render={({ field }) => <Input type="email" placeholder="office@example.com" {...field} />} /></FormItem>
-            <FormItem label="Office Phone" invalid={!!errors.office_info?.[index]?.office_phone}>
-                <Controller name={`office_info.${index}.office_phone`} control={control} render={({ field }) => <Input type="tel" placeholder="Office Phone" {...field} />} />
+            <FormItem label="Office Type"><Controller name={`partner_offices[${index}][office_type]`} control={control} render={({ field }) => <Select placeholder="Select Office Type" options={officeTypeOptions} {...field} />} /></FormItem>
+            <FormItem label="Office Name"><Controller name={`partner_offices[${index}][office_name]`} control={control} render={({ field }) => <Input placeholder="e.g. Main Office" {...field} />} /></FormItem>
+            <FormItem label="Contact Person"><Controller name={`partner_offices[${index}][contact_person]`} control={control} render={({ field }) => <Input placeholder="Contact Person Name" {...field} />} /></FormItem>
+            <FormItem label="Office Email"><Controller name={`partner_offices[${index}][office_email]`} control={control} render={({ field }) => <Input type="email" placeholder="office@example.com" {...field} />} /></FormItem>
+            <FormItem label="Office Phone" invalid={!!errors.partner_offices?.[index]?.office_phone}>
+                <Controller name={`partner_offices[${index}][office_phone]`} control={control} render={({ field }) => <Input type="tel" placeholder="Office Phone" {...field} />} />
             </FormItem>
-            <FormItem label="GST/REG Number"><Controller name={`office_info.${index}.gst_number`} control={control} render={({ field }) => <Input placeholder="GST or Registration Number" {...field} />} /></FormItem>
+            <FormItem label="GST/REG Number"><Controller name={`partner_offices[${index}][gst_number]`} control={control} render={({ field }) => <Input placeholder="GST or Registration Number" {...field} />} /></FormItem>
             <div className="col-span-4 grid md:grid-cols-4 gap-4 border-t pt-4 mt-2">
-              <FormItem label="Country"><Controller name={`office_info.${index}.country_id`} control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} /></FormItem>
-              <FormItem label="State"><Controller name={`office_info.${index}.state`} control={control} render={({ field }) => <Input placeholder="Enter state" {...field} />} /></FormItem>
-              <FormItem label="City"><Controller name={`office_info.${index}.city`} control={control} render={({ field }) => <Input placeholder="Enter city" {...field} />} /></FormItem>
-              <FormItem label="Post Code"><Controller name={`office_info.${index}.zip_code`} control={control} render={({ field }) => <Input placeholder="Post Code" {...field} />} /></FormItem>
-              <FormItem label="Address" className="md:col-span-4"><Controller name={`office_info.${index}.address`} control={control} render={({ field }) => <Input placeholder="Full Address" {...field} />} /></FormItem>
+              <FormItem label="Country"><Controller name={`partner_offices[${index}][country_id]`} control={control} render={({ field }) => <Select placeholder="Select Country" options={countryOptions} {...field} />} /></FormItem>
+              <FormItem label="State"><Controller name={`partner_offices[${index}][state]`} control={control} render={({ field }) => <Input placeholder="Enter state" {...field} />} /></FormItem>
+              <FormItem label="City"><Controller name={`partner_offices[${index}][city]`} control={control} render={({ field }) => <Input placeholder="Enter city" {...field} />} /></FormItem>
+              <FormItem label="Post Code"><Controller name={`partner_offices[${index}][zip_code]`} control={control} render={({ field }) => <Input placeholder="Post Code" {...field} />} /></FormItem>
+              <FormItem label="Address" className="md:col-span-4"><Controller name={`partner_offices[${index}][address]`} control={control} render={({ field }) => <Input placeholder="Full Address" {...field} />} /></FormItem>
             </div>
           </div>
           <div className="absolute right-2 top-2">
@@ -1763,14 +1763,14 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
       </div>
       {fields.map((item, index) => {
         const bankPhotoValue = watch(
-          `partner_bank_details.${index}.verification_photo`
+          `partner_bank_details[${index}][verification_photo]`
         );
         return (
           <Card key={item.id} className="mb-4 border-black relative rounded-md">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 items-start">
               <FormItem label={`Type`}>
                 <Controller
-                  name={`partner_bank_details.${index}.type`}
+                  name={`partner_bank_details[${index}][type]`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -1783,7 +1783,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               </FormItem>
               <FormItem label={`Account Number`}>
                 <Controller
-                  name={`partner_bank_details.${index}.bank_account_number`}
+                  name={`partner_bank_details[${index}][bank_account_number]`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="Account No." {...field} />
@@ -1792,7 +1792,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               </FormItem>
               <FormItem label={`Bank Name`}>
                 <Controller
-                  name={`partner_bank_details.${index}.bank_name`}
+                  name={`partner_bank_details[${index}][bank_name]`}
                   control={control}
                   render={({ field }) => (
                     <Input type="text" {...field} placeholder="Enter Bank Name" />
@@ -1801,7 +1801,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
               </FormItem>
               <FormItem label={`IFSC Code`}>
                 <Controller
-                  name={`partner_bank_details.${index}.ifsc_code`}
+                  name={`partner_bank_details[${index}][ifsc_code]`}
                   control={control}
                   render={({ field }) => (
                     <Input placeholder="IFSC" {...field} />
@@ -1813,7 +1813,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
                 className="md:col-span-2"
               >
                 <Controller
-                  name={`partner_bank_details.${index}.verification_photo`}
+                  name={`partner_bank_details[${index}][verification_photo]`}
                   control={control}
                   render={({ field: { onChange, ref } }) => (
                     <Input
@@ -1902,7 +1902,7 @@ const ReferenceSection = ({ control, formMethods }: FormSectionBaseProps) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4 p-4">
             <FormItem label="Person Name">
                 <Controller
-                    name={`partner_references.${index}.referenced_partner_id`}
+                    name={`partner_references[${index}][referenced_partner_id]`}
                     control={control}
                     render={({ field }) => {
                         // FIX: Ensure related fields are populated correctly when a partner is selected.
@@ -1914,15 +1914,15 @@ const ReferenceSection = ({ control, formMethods }: FormSectionBaseProps) => {
                                 if (selectedPartner) {
                                     // Find the company in the options list to get the full {label, value} object
                                     const companyToSet = companyOptions.find(c => c.label === selectedPartner.company_name);
-                                    setValue(`partner_references.${index}.email`, selectedPartner.primary_email_id || '');
-                                    setValue(`partner_references.${index}.number`, selectedPartner.primary_contact_number || '');
+                                    setValue(`partner_references[${index}][email]`, selectedPartner.primary_email_id || '');
+                                    setValue(`partner_references[${index}][number]`, selectedPartner.primary_contact_number || '');
                                     // Set the full object for the react-select component
-                                    setValue(`partner_references.${index}.company_id`, companyToSet, { shouldValidate: true });
+                                    setValue(`partner_references[${index}][company_id]`, companyToSet, { shouldValidate: true });
                                 }
                             } else {
-                                setValue(`partner_references.${index}.email`, '');
-                                setValue(`partner_references.${index}.number`, '');
-                                setValue(`partner_references.${index}.company_id`, undefined);
+                                setValue(`partner_references[${index}][email]`, '');
+                                setValue(`partner_references[${index}][number]`, '');
+                                setValue(`partner_references[${index}][company_id]`, undefined);
                             }
                         };
                         return <Select placeholder="Select Partner" options={partnerOptions} value={field.value} onChange={handlePartnerChange} />;
@@ -1930,11 +1930,11 @@ const ReferenceSection = ({ control, formMethods }: FormSectionBaseProps) => {
                 />
             </FormItem>
             <FormItem label="Company Name">
-              <Controller name={`partner_references.${index}.company_id`} control={control} render={({ field }) => <Select placeholder="Select Company" options={companyOptions} {...field} />} />
+              <Controller name={`partner_references[${index}][company_id]`} control={control} render={({ field }) => <Select placeholder="Select Company" options={companyOptions} {...field} />} />
             </FormItem>
-            <FormItem label="Email"><Controller name={`partner_references.${index}.email`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
-            <FormItem label="Contact Number"><Controller name={`partner_references.${index}.number`} control={control} render={({ field }) => <Input placeholder="Contact Number" {...field} />} /></FormItem>
-            <FormItem label="Remark" className="sm:col-span-full"><Controller name={`partner_references.${index}.remark`} control={control} render={({ field }) => <Input placeholder="Add remarks here..." {...field} />} /></FormItem>
+            <FormItem label="Email"><Controller name={`partner_references[${index}][email]`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
+            <FormItem label="Contact Number"><Controller name={`partner_references[${index}][number]`} control={control} render={({ field }) => <Input placeholder="Contact Number" {...field} />} /></FormItem>
+            <FormItem label="Remark" className="sm:col-span-full"><Controller name={`partner_references[${index}][remark]`} control={control} render={({ field }) => <Input placeholder="Add remarks here..." {...field} />} /></FormItem>
           </div>
           <div className="absolute right-2 top-2">
             <Button type="button" variant="plain" size="sm" icon={<TbTrash size={16} />} onClick={() => remove(index)}>Remove</Button>
@@ -1968,7 +1968,7 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
           <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: undefined, document: undefined })}>Add Document</Button>
         </div>
         {fields.map((item, index) => {
-          const documentValue = watch(`billing_documents.${index}.document`);
+          const documentValue = watch(`billing_documents[${index}][document]`);
           const isFileObject = documentValue instanceof File;
           return (
             // FIX: Improved UI for the "Other Documents" section.
@@ -1976,7 +1976,7 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                 <FormItem label="Document Name" className="md:col-span-1">
                   <Controller 
-                    name={`billing_documents.${index}.document_name`} 
+                    name={`billing_documents[${index}][document_name]`} 
                     control={control} 
                     render={({ field }) => <Select
                       options={documentTypes}
@@ -1988,7 +1988,7 @@ const AccessibilitySection = ({ control, formMethods }: FormSectionBaseProps) =>
                 <div className="md:col-span-2 grid grid-cols-2 gap-4 items-start">
                     <FormItem label="Upload Document" className="col-span-1">
                         <Controller 
-                            name={`billing_documents.${index}.document`} 
+                            name={`billing_documents[${index}][document]`} 
                             control={control} 
                             render={({ field: { onChange, ref } }) => <Input type="file" ref={ref} accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" onChange={(e) => onChange(e.target.files?.[0])} />} 
                         />
@@ -2041,11 +2041,11 @@ const MemberManagementSection = ({ control }: FormSectionBaseProps) => {
       {fields.map((item, index) => (
         <Card key={item.id} className="mb-4 border-black relative rounded-md">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-4 items-start">
-            <FormItem label="Person Name"><Controller name={`member.${index}.person_name`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} /></FormItem>
-            <FormItem label="Company Name"><Controller name={`member.${index}.company_name`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} /></FormItem>
-            <FormItem label="Email ID"><Controller name={`member.${index}.email`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
-            <FormItem label="Designation"><Controller name={`member.${index}.designation`} control={control} render={({ field }) => <Input placeholder="e.g., CEO" {...field} />} /></FormItem>
-            <FormItem label="Contact Number"><Controller name={`member.${index}.number`} control={control} render={({ field }) => <Input type="tel" placeholder="Contact Number" {...field} />} /></FormItem>
+            <FormItem label="Person Name"><Controller name={`member[${index}][person_name]`} control={control} render={({ field }) => <Input placeholder="Person Name" {...field} />} /></FormItem>
+            <FormItem label="Company Name"><Controller name={`member[${index}][company_name]`} control={control} render={({ field }) => <Input placeholder="Company Name" {...field} />} /></FormItem>
+            <FormItem label="Email ID"><Controller name={`member[${index}][email]`} control={control} render={({ field }) => <Input type="email" placeholder="Email ID" {...field} />} /></FormItem>
+            <FormItem label="Designation"><Controller name={`member[${index}][designation]`} control={control} render={({ field }) => <Input placeholder="e.g., CEO" {...field} />} /></FormItem>
+            <FormItem label="Contact Number"><Controller name={`member[${index}][number]`} control={control} render={({ field }) => <Input type="tel" placeholder="Contact Number" {...field} />} /></FormItem>
             <div className="absolute right-2 top-2">
               <Button type="button" variant="plain" size="sm" icon={<TbTrash size={16} />} className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10" onClick={() => remove(index)}>Remove</Button>
             </div>

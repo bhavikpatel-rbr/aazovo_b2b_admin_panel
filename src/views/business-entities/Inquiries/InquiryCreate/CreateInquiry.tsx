@@ -28,7 +28,7 @@ import {
   addInquiriesAction,
   editInquiriesAction,
   getDepartmentsAction,
-  getSalesPersonAction,
+  getUsersAction,
 } from "@/reduxtool/master/middleware";
 
 // Services
@@ -125,9 +125,9 @@ const transformApiDataToForm = (apiData: any): InquiryFormData => {
   return {
     id: apiData.id || null,
     company_name: apiData.company_name || "",
-    name: apiData.contact_person_name || apiData.name || "",
-    email: apiData.contact_person_email || apiData.email || "",
-    mobile_no: apiData.contact_person || apiData.mobile_no || "",
+    name: apiData.name || apiData.name || "",
+    email: apiData.email || "",
+    mobile_no: apiData.mobile_no || "",
     inquiry_type: apiData.inquiry_type || "",
     inquiry_subject: apiData.inquiry_subject || "",
     inquiry_priority: apiData.priority || apiData.inquiry_priority || "Medium",
@@ -163,10 +163,10 @@ const CreateInquiry = () => {
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]);
 
-  const { departmentsData, salesPerson = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+  const { departmentsData, usersData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
 
   const departmentOptions = useMemo(() => departmentsData?.data?.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) || [], [departmentsData]);
-  const salesPersonOptions = useMemo(() => Array.isArray(salesPerson) ? salesPerson.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: sp.name })) : [], [salesPerson]);
+  const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: sp.name })) : [], [usersData]);
 
   const inquiryTypeOptions = [
     { value: "New Product Inquiry", label: "New Product Inquiry" },
@@ -199,7 +199,7 @@ const CreateInquiry = () => {
     const fetchDropdownData = async () => {
       setInitialDataFetched(false);
       try {
-        await Promise.all([dispatch(getDepartmentsAction()), dispatch(getSalesPersonAction())]);
+        await Promise.all([dispatch(getDepartmentsAction()), dispatch(getUsersAction())]);
       } catch (error: any) {
         console.error("Failed to fetch dropdown data:", error);
         toast.push(<Notification title="Data Load Error" type="danger" duration={4000}>{error?.message || "Could not load selection options."}</Notification>);
@@ -303,9 +303,9 @@ const CreateInquiry = () => {
     const apiPayloadObject: any = {
       company_id: 1,
       company_name: data.company_name,
-      contact_person_name: data.name,
-      contact_person_email: data.email,
-      contact_person: data.mobile_no,
+      name: data.name,
+      email: data.email,
+      mobile_no: data.mobile_no,
       inquiry_type: data.inquiry_type,
       inquiry_subject: data.inquiry_subject,
       priority: data.inquiry_priority,
@@ -443,9 +443,9 @@ const CreateInquiry = () => {
                 <Controller name="assigned_to" control={control} render={({ field }) => (
                   <Select
                     placeholder="Select Assignee"
-                    options={salesPersonOptions}
-                    isLoading={masterLoadingStatus === "loading" && salesPersonOptions.length === 0}
-                    value={salesPersonOptions.find(o => o.value === field.value) || null}
+                    options={usersDataOptions}
+                    isLoading={masterLoadingStatus === "loading" && usersDataOptions.length === 0}
+                    value={usersDataOptions.find(o => o.value === field.value) || null}
                     onChange={opt => field.onChange(opt ? opt.value : null)}
                     isClearable
                   />
