@@ -13,7 +13,7 @@ import AdaptiveCard from '@/components/shared/AdaptiveCard';
 import { Button, Select, Input, Tag, Avatar, Dropdown, Tabs, Card, Spinner } from '@/components/ui';
 import UsersAvatarGroup from '@/components/shared/UsersAvatarGroup';
 import { HiOutlinePlus } from 'react-icons/hi';
-import { TbDownload, TbTrash, TbPaperclip } from 'react-icons/tb';
+import { TbDownload, TbTrash, TbPaperclip, TbNotebook } from 'react-icons/tb';
 import { BiChevronRight } from "react-icons/bi";
 import DatePicker from '@/components/ui/DatePicker';
 import Tooltip from '@/components/ui/Tooltip';
@@ -27,11 +27,11 @@ import { useAppDispatch } from '@/reduxtool/store';
 import { useSelector } from 'react-redux';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
 import {
-    addTaskAction,
-    editTaskAction,
-    getAllCompany,
-    getUsersAction,
-    getDepartmentsAction,
+  addTaskAction,
+  editTaskAction,
+  getAllCompany,
+  getUsersAction,
+  getDepartmentsAction,
 } from '@/reduxtool/master/middleware';
 
 // --- Type Definitions ---
@@ -40,67 +40,67 @@ interface FormUser { id: string; name: string; img: string; }
 interface ApiCompany { id: number | string; company_name: string; }
 
 interface OriginalDataUser {
-    id: number | string;
-    name: string;
-    profile_pic_path?: string | null;
-    profile_pic?: string | null;
+  id: number | string;
+  name: string;
+  profile_pic_path?: string | null;
+  profile_pic?: string | null;
 }
 
 interface OriginalDataActivityNote {
-    id: number | string;
-    task_id: string;
-    user_id: string;
-    activity_type: string;
-    activity_comment: string;
-    created_at: string;
-    updated_at: string;
-    user: OriginalDataUser;
+  id: number | string;
+  task_id: string;
+  user_id: string;
+  activity_type: string;
+  activity_comment: string;
+  created_at: string;
+  updated_at: string;
+  user: OriginalDataUser;
 }
 
 interface OriginalDataAttachment {
-    id: number | string;
-    attachment_name: string;
-    attachment_path: string;
-    attachment_type?: string;
+  id: number | string;
+  attachment_name: string;
+  attachment_path: string;
+  attachment_type?: string;
 }
 
 interface OriginalData {
-    id: number | string;
-    user_id: string;
-    task_title: string;
-    assign_to?: string[];
-    assign_to_users?: OriginalDataUser[];
-    module_id: string;
-    module_name: string;
-    company_ids?: string[];
-    member_ids?: string[];
-    linked_entity_id?: string;
-    status: string;
-    priority: string;
-    department_id: string;
-    due_data?: string | null;
-    note_remark: string;
-    additional_description?: string | null;
-    activity_type?: string;
-    activity_notes?: OriginalDataActivityNote[];
-    attachments?: OriginalDataAttachment[];
-    department_info?: { id: number | string; name: string; };
+  id: number | string;
+  user_id: string;
+  task_title: string;
+  assign_to?: string[];
+  assign_to_users?: OriginalDataUser[];
+  module_id: string;
+  module_name: string;
+  company_ids?: string[];
+  member_ids?: string[];
+  linked_entity_id?: string;
+  status: string;
+  priority: string;
+  department_id: string;
+  due_data?: string | null;
+  note_remark: string;
+  additional_description?: string | null;
+  activity_type?: string;
+  activity_notes?: OriginalDataActivityNote[];
+  attachments?: OriginalDataAttachment[];
+  department_info?: { id: number | string; name: string; };
 }
 
 interface TaskItemFromState {
-    id: string | number;
-    note?: string;
-    status?: string;
-    assignTo?: string[];
-    createdBy?: string;
-    createdDate?: string;
-    dueDate?: string | null;
-    priority?: string;
-    category?: string;
-    description?: string;
-    comments?: OriginalDataActivityNote[];
-    attachments?: OriginalDataAttachment[];
-    _originalData: OriginalData;
+  id: string | number;
+  note?: string;
+  status?: string;
+  assignTo?: string[];
+  createdBy?: string;
+  createdDate?: string;
+  dueDate?: string | null;
+  priority?: string;
+  category?: string;
+  description?: string;
+  comments?: OriginalDataActivityNote[];
+  attachments?: OriginalDataAttachment[];
+  _originalData: OriginalData;
 }
 // --- End Type Definitions ---
 
@@ -118,7 +118,7 @@ type TaskStatusDisplay = typeof taskStatusLabelsDisplay[number];
 const createTaskSchema = z.object({
   task_title: z.string().min(1, "Task title is required.").max(255),
   module_name: z.string().min(1, "Module name is required."),
-  module_id: z.string().min(1, "Module ID is required."),
+  module_id: z.string().optional(),
   assignedToIds: z.array(z.string()).min(1, "Assign to at least one member."),
   status: z.enum(taskStatusLabelsApi, { required_error: "Status is required." }), // Updated validation
   priority: z.enum(["Low", "Medium", "High", "Urgent"], { required_error: "Priority is required." }),
@@ -164,7 +164,7 @@ const CreateTaskPage = () => {
 
   const [loggedInUserData, setLoggedInUserData] = useState<any>(null);
   const { usersData = [], departmentsData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
-  
+
   const { control, handleSubmit, watch, setValue, reset, formState: { errors, isValid, isSubmitting } } = useForm<CreateTaskFormData>({
     resolver: zodResolver(createTaskSchema), mode: "onChange",
     defaultValues: {
@@ -190,7 +190,7 @@ const CreateTaskPage = () => {
   }, [dispatch]);
 
   const boardMembersOptions: FormUser[] = useMemo(() =>
-   usersData.length > 0 &&  usersData?.map((user: ApiUser) => ({
+    usersData.length > 0 && usersData?.map((user: ApiUser) => ({
       id: String(user.id), name: user.name, img: user.profile_pic_path || `/img/avatars/default-avatar.png`
     })), [usersData]);
 
@@ -208,7 +208,7 @@ const CreateTaskPage = () => {
 
   useEffect(() => {
     const taskData = taskToEditFromState;
-    
+
     if (isEditMode && taskData && taskData._originalData && String(taskData.id) === taskId && boardMembersOptions.length > 0) {
       const original = taskData._originalData;
       const assignedUserIds = (Array.isArray(original.assign_to_users)
@@ -218,21 +218,21 @@ const CreateTaskPage = () => {
       // --- UPDATED STATUS HANDLING FOR EDIT MODE ---
       let apiStatus: TaskStatusApi = "Not_Started";
       if (original.status) {
-          const statusLower = original.status.toLowerCase();
-          if (statusLower === "not started") apiStatus = "Not_Started";
-          else if (statusLower === "pending") apiStatus = "Pending";
-          else if (statusLower === "in progress") apiStatus = "In_Progress";
-          else if (statusLower === "on hold") apiStatus = "On_Hold";
-          else if (statusLower === "review") apiStatus = "Review";
-          else if (statusLower === "completed") apiStatus = "Completed";
-          else if (statusLower === "cancelled") apiStatus = "Cancelled";
-          else {
-              console.warn(`Status "${original.status}" from state not recognized, defaulting to Not Started.`);
-          }
+        const statusLower = original.status.toLowerCase();
+        if (statusLower === "not started") apiStatus = "Not_Started";
+        else if (statusLower === "pending") apiStatus = "Pending";
+        else if (statusLower === "in progress") apiStatus = "In_Progress";
+        else if (statusLower === "on hold") apiStatus = "On_Hold";
+        else if (statusLower === "review") apiStatus = "Review";
+        else if (statusLower === "completed") apiStatus = "Completed";
+        else if (statusLower === "cancelled") apiStatus = "Cancelled";
+        else {
+          console.warn(`Status "${original.status}" from state not recognized, defaulting to Not Started.`);
+        }
       }
-      
+
       const priorityValue = original.priority?.charAt(0).toUpperCase() + original.priority?.slice(1).toLowerCase();
-console.log("original",original.activity_notes[0]?.activity_type);
+      console.log("original", original.activity_notes[0]?.activity_type);
 
       reset({
         task_title: original.task_title || taskData.note || "",
@@ -254,26 +254,26 @@ console.log("original",original.activity_notes[0]?.activity_type);
 
 
       const commentsToSet = taskData.comments || original.activity_notes || [];
-      console.log("commentsToSet",commentsToSet);
-      
+      console.log("commentsToSet", commentsToSet);
+
       setComments(
         commentsToSet.map((note) => ({
           id: String(note.id),
           name: note.user?.name || note?.name,
           src: note.user?.profile_pic_path || note?.src || '/img/avatars/default-avatar.png',
           date: dayjs(note.created_at).toDate(),
-          message: note.activity_comment ||note?.message ,
+          message: note.activity_comment || note?.message,
           user_id: String(note.user_id),
         })).sort((a, b) => b.date.getTime() - a.date.getTime())
       );
-      
+
       const attachmentsToSet = taskData.attachments || original.attachments || [];
       setAttachments(
         attachmentsToSet.map((att) => ({
           id: String(att.id),
           name: att.attachment_name,
           size: "N/A",
-          src: 'https://aazovo.codefriend.in/storage/' + att.attachment_path,
+          src: 'https://api.omcommunication.co/api/storage/' + att.attachment_path,
           type: att.attachment_type,
         }))
       );
@@ -283,8 +283,8 @@ console.log("original",original.activity_notes[0]?.activity_type);
 
   useEffect(() => {
     if (watchedStatus) {
-        const displayStatus = watchedStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        setCurrentDisplayStatus(displayStatus as TaskStatusDisplay);
+      const displayStatus = watchedStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      setCurrentDisplayStatus(displayStatus as TaskStatusDisplay);
     }
   }, [watchedStatus]);
 
@@ -307,10 +307,10 @@ console.log("original",original.activity_notes[0]?.activity_type);
 
   const submitComment = () => {
     const activityType = watch('activity_type');
-    if (!activityType && isEditMode) { 
+    if (!activityType && isEditMode) {
     } else if (!activityType) {
-        toast.push(<Notification title="Missing Info" type="warning" duration={3000}>Please enter an activity type before commenting.</Notification>);
-        return;
+      toast.push(<Notification title="Missing Info" type="warning" duration={3000}>Please enter an activity type before commenting.</Notification>);
+      return;
     }
 
     if (commentInputRef.current?.value && loggedInUserData) {
@@ -323,7 +323,7 @@ console.log("original",original.activity_notes[0]?.activity_type);
         message: `${messagePrefix}${commentInputRef.current.value}`,
         user_id: loggedInUserData.id,
       };
-      setComments(prevComments => [newComment, ...prevComments].sort((a,b) => b.date.getTime() - a.date.getTime()));
+      setComments(prevComments => [newComment, ...prevComments].sort((a, b) => b.date.getTime() - a.date.getTime()));
       commentInputRef.current.value = '';
     }
   };
@@ -348,15 +348,15 @@ console.log("original",original.activity_notes[0]?.activity_type);
 
   const onSubmit = async (data: CreateTaskFormData) => {
     if (!loggedInUserData?.id) {
-        toast.push(<Notification title="Error" type="danger">User not identified.</Notification>); return;
+      toast.push(<Notification title="Error" type="danger">User not identified.</Notification>); return;
     }
     const formDataPayload = new FormData();
     formDataPayload.append("user_id", String(loggedInUserData.id));
     formDataPayload.append("task_title", data.task_title);
-    
+
     formDataPayload.append("module_name", data.module_name);
     formDataPayload.append("module_id", data.module_id);
-    
+
     data.assignedToIds.forEach(id => formDataPayload.append("assign_to[]", id));
     formDataPayload.append("status", data.status);
     formDataPayload.append("priority", data.priority);
@@ -366,51 +366,51 @@ console.log("original",original.activity_notes[0]?.activity_type);
     if (data.additional_description) formDataPayload.append("additional_description", data.additional_description);
 
     if (!isEditMode) {
-        if (data.activity_type && data.note_remark) {
-            formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
-            formDataPayload.append("activity_note[activity_type]", data.activity_type);
-            formDataPayload.append("activity_note[activity_comment]", data.note_remark);
-        } else {
-            formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
-            formDataPayload.append("activity_note[activity_type]", "created_task");
-            formDataPayload.append("activity_note[activity_comment]", `Task "${data.task_title}" created.`);
-        }
+      if (data.activity_type && data.note_remark) {
+        formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
+        formDataPayload.append("activity_note[activity_type]", data.activity_type);
+        formDataPayload.append("activity_note[activity_comment]", data.note_remark);
+      } else {
+        formDataPayload.append("activity_note[user_id]", String(loggedInUserData.id));
+        formDataPayload.append("activity_note[activity_type]", "created_task");
+        formDataPayload.append("activity_note[activity_comment]", `Task "${data.task_title}" created.`);
+      }
 
     } else {
-      formDataPayload.append("id",taskId );
-        const newUiComments = comments.filter(c => c.id.startsWith('temp-'));
-        newUiComments.forEach((comment, index) => {
-            const parts = comment.message.split(': ');
-            let activityTypeForComment = data.activity_type || "comment";
-            let messageContent = comment.message;
-            if (parts.length > 1 && parts[0].trim() !== "") {
-                activityTypeForComment = parts[0].trim();
-                messageContent = parts.slice(1).join(': ').trim();
-            }
+      formDataPayload.append("id", taskId);
+      const newUiComments = comments.filter(c => c.id.startsWith('temp-'));
+      newUiComments.forEach((comment, index) => {
+        const parts = comment.message.split(': ');
+        let activityTypeForComment = data.activity_type || "comment";
+        let messageContent = comment.message;
+        if (parts.length > 1 && parts[0].trim() !== "") {
+          activityTypeForComment = parts[0].trim();
+          messageContent = parts.slice(1).join(': ').trim();
+        }
 
-            formDataPayload.append(`new_activity_notes[${index}][user_id]`, String(comment.user_id));
-            formDataPayload.append(`new_activity_notes[${index}][activity_type]`, activityTypeForComment);
-            formDataPayload.append(`new_activity_notes[${index}][activity_comment]`, messageContent);
-        });
+        formDataPayload.append(`new_activity_notes[${index}][user_id]`, String(comment.user_id));
+        formDataPayload.append(`new_activity_notes[${index}][activity_type]`, activityTypeForComment);
+        formDataPayload.append(`new_activity_notes[${index}][activity_comment]`, messageContent);
+      });
     }
     attachments.filter(att => att.file).forEach((att, index) => {
-        formDataPayload.append(`attachments[${index}][user_id]`, String(loggedInUserData.id));
-        formDataPayload.append(`attachments[${index}][file_data]`, att.file!, att.name);
+      formDataPayload.append(`attachments[${index}][user_id]`, String(loggedInUserData.id));
+      formDataPayload.append(`attachments[${index}][file_data]`, att.file!, att.name);
     });
 
     try {
-        if (isEditMode && taskId) {
-            await dispatch(addTaskAction(formDataPayload )).unwrap();
-            toast.push(<Notification title="Task Updated" type="success" />);
-        } else {
-            await dispatch(addTaskAction(formDataPayload)).unwrap();
-            toast.push(<Notification title="Task Created" type="success" />);
-        }
-        navigate("/task/task-list");
+      if (isEditMode && taskId) {
+        await dispatch(addTaskAction(formDataPayload)).unwrap();
+        toast.push(<Notification title="Task Updated" type="success" />);
+      } else {
+        await dispatch(addTaskAction(formDataPayload)).unwrap();
+        toast.push(<Notification title="Task Created" type="success" />);
+      }
+      navigate("/task/task-list");
     } catch (error: any) {
-        const errorMessage = error?.data?.message || error?.message || "An error occurred.";
-        toast.push(<Notification title="Operation Failed" type="danger">{errorMessage}</Notification>);
-        console.error("Task submission error:", error);
+      const errorMessage = error?.data?.message || error?.message || "An error occurred.";
+      toast.push(<Notification title="Operation Failed" type="danger">{errorMessage}</Notification>);
+      console.error("Task submission error:", error);
     }
   };
 
@@ -419,7 +419,7 @@ console.log("original",original.activity_notes[0]?.activity_type);
   }));
   const availableMembersToAdd = useMemo(() =>
     boardMembersOptions.length > 0 && boardMembersOptions.filter(member => !assignedMembers.some(m => m.id === member.id)),
-  [boardMembersOptions, assignedMembers]);
+    [boardMembersOptions, assignedMembers]);
 
   if (masterLoadingStatus === 'loading' && !isEditMode && !usersData.length) {
     return <Container><div className="flex justify-center items-center h-60"><Spinner size="3rem" /></div></Container>;
@@ -464,29 +464,9 @@ console.log("original",original.activity_notes[0]?.activity_type);
                 </div>
                 {errors.assignedToIds && <p className="text-red-500 text-xs mt-1">{errors.assignedToIds.message}</p>}
               </div>
-            </div>
 
-            {/* Module Name */}
-            <div className="flex items-center">
-              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Module Name: <span className="text-red-500">*</span></label>
-              <div className="w-full">
-                <Controller name="module_name" control={control} render={({ field }) => <Input {...field} placeholder="E.g., Company, Lead" />} />
-                {errors.module_name && <p className="text-red-500 text-xs mt-1">{errors.module_name.message}</p>}
-              </div>
-            </div>
-
-            {/* Module ID */}
-            <div className="flex items-center">
-              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Module ID: <span className="text-red-500">*</span></label>
-              <div className="w-full">
-                <Controller name="module_id" control={control} render={({ field }) => <Input {...field} placeholder="Enter the ID of the related item" />} />
-                {errors.module_id && <p className="text-red-500 text-xs mt-1">{errors.module_id.message}</p>}
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="flex items-start">
-              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 pt-1">Status: <span className="text-red-500">*</span></label>
+              {/* Status */}
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[100px] shrink-0 pt-1">Status: <span className="text-red-500">*</span></label>
               <div className="w-full">
                 <Controller name="status" control={control}
                   render={({ field }) => (
@@ -501,6 +481,26 @@ console.log("original",original.activity_notes[0]?.activity_type);
                 {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status.message}</p>}
               </div>
             </div>
+
+            {/* Module Name */}
+            <div className="flex items-center">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Module Name: <span className="text-red-500">*</span></label>
+              <div className="w-full">
+                <Controller name="module_name" control={control} render={({ field }) => <Input {...field} placeholder="E.g., Company, Lead" />} />
+                {errors.module_name && <p className="text-red-500 text-xs mt-1">{errors.module_name.message}</p>}
+              </div>
+            </div>
+
+            {/* Module ID */}
+            {/* <div className="flex items-center">
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Module ID: <span className="text-red-500">*</span></label>
+              <div className="w-full">
+                <Controller name="module_id" control={control} render={({ field }) => <Input {...field} placeholder="Enter the ID of the related item" />} />
+                {errors.module_id && <p className="text-red-500 text-xs mt-1">{errors.module_id.message}</p>}
+              </div>
+            </div> */}
+
+
 
             {/* Priority */}
             <div className="flex items-center">
@@ -556,14 +556,59 @@ console.log("original",original.activity_notes[0]?.activity_type);
               </div>
             </div>
 
-            {/* Tabs for Activity & Attachments */}
-            <Tabs className="mt-3 col-span-2" defaultValue="activity">
-              <Tabs.TabList>
-                <TabNav value="activity" className='text-base'><b>Activity Notes</b></TabNav>
-                <TabNav value="attachments">Attachments</TabNav>
-              </Tabs.TabList>
-              <div className="p-4 rounded-b-md border border-t-0 dark:border-gray-700">
-                <Tabs.TabContent value="activity">
+
+            <div className="grid grid-cols-1 gap-6 mt-3 col-span-2">
+             
+              {/* --- Attachments Card --- */}
+              <Card>
+                <div className="p-4">
+                  <h6 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-4 border-b pb-3 dark:border-gray-600">
+                    <TbPaperclip className="text-xl" />
+                    <span>Attachments</span>
+                  </h6>
+
+                  <div className="mb-4">
+                    <label htmlFor="file-upload" className="w-full inline-flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:border-primary dark:hover:border-primary text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                      <TbPaperclip className="mr-2" /><span>Select or Drop files here</span>
+                      <input id="file-upload" type="file" multiple onChange={handleFileUpload} className="hidden" />
+                    </label>
+                  </div>
+                  {attachments.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {attachments.map(file => (
+                        <Card key={file.id} bodyClass="p-2" className="shadow-sm">
+                          {(file.file?.type?.startsWith('image/') || (!file.file && file.type?.startsWith('image/'))) ? (
+                            <img className="max-w-full h-24 object-contain rounded-md mx-auto mb-2" alt={file.name} src={file.src} />
+                          ) : (
+                            <div className="h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md mb-2 text-4xl text-gray-400 dark:text-gray-500"><TbPaperclip /></div>
+                          )}
+                          <div className="text-xs">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100 truncate" title={file.name}>{file.name}</div>
+                            <span className="text-gray-500 dark:text-gray-400">{file.size}</span>
+                          </div>
+                          <div className="mt-1 flex justify-end items-center">
+                            <Tooltip title="Download"><Button variant="plain" size="xs" icon={<TbDownload />} onClick={() => { if (file.src && !file.src.startsWith('blob:')) window.open(file.src, '_blank') }} disabled={file.src.startsWith('blob:')} /></Tooltip>
+                            <Tooltip title="Delete"><Button variant="plain" color="red-500" size="xs" icon={<TbTrash />} onClick={() => handleRemoveAttachment(file.id)} /></Tooltip>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2 items-center justify-center text-center py-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-md">
+                      <TbPaperclip size={40} className="text-gray-400 dark:text-gray-500" /><p className="font-semibold text-gray-600 dark:text-gray-300">No attachments yet.</p><p className="text-xs text-gray-500 dark:text-gray-400">Upload files using the area above.</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+               {/* --- Activity Notes Card --- */}
+              <Card>
+                <div className="p-4">
+                  <h6 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-4 border-b pb-3 dark:border-gray-600">
+                    <TbNotebook className="text-xl" />
+                    <span>Activity Notes</span>
+                  </h6>
+
                   <div className="flex items-center mb-5">
                     <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Activity Type:</label>
                     <div className="w-full">
@@ -588,48 +633,17 @@ console.log("original",original.activity_notes[0]?.activity_type);
                     </div>
                   )}
                   <div className="mb-3 flex gap-2 items-start">
-                    <Avatar shape="circle" src={loggedInUserData?.profile_image_path || "/img/avatars/thumb-1.jpg"} className="mt-1 shrink-0"/>
+                    <Avatar shape="circle" src={loggedInUserData?.profile_image_path || "/img/avatars/thumb-1.jpg"} className="mt-1 shrink-0" />
                     <div className="w-full relative">
-                      <Input ref={commentInputRef} textArea placeholder="Write comment..." rows={3}/>
+                      <Input ref={commentInputRef} textArea placeholder="Write comment..." rows={3} />
                       <div className="absolute bottom-2 right-2"><Button size="xs" variant="solid" onClick={submitComment} type="button">Send</Button></div>
                     </div>
                   </div>
-                </Tabs.TabContent>
-                <Tabs.TabContent value="attachments">
-                  <div className="mb-4">
-                    <label htmlFor="file-upload" className="w-full inline-flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:border-primary dark:hover:border-primary text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
-                      <TbPaperclip className="mr-2" /><span>Select or Drop files here</span>
-                      <input id="file-upload" type="file" multiple onChange={handleFileUpload} className="hidden" />
-                    </label>
-                  </div>
-                  {attachments.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {attachments.map(file => (
-                        <Card key={file.id} bodyClass="p-2" className="shadow-sm">
-                           {(file.file?.type?.startsWith('image/') || (!file.file && file.type?.startsWith('image/'))) ? (
-                            <img className="max-w-full h-24 object-contain rounded-md mx-auto mb-2" alt={file.name} src={file.src} />
-                          ) : (
-                            <div className="h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md mb-2 text-4xl text-gray-400 dark:text-gray-500"><TbPaperclip /></div>
-                          )}
-                          <div className="text-xs">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100 truncate" title={file.name}>{file.name}</div>
-                            <span className="text-gray-500 dark:text-gray-400">{file.size}</span>
-                          </div>
-                          <div className="mt-1 flex justify-end items-center">
-                            <Tooltip title="Download"><Button variant="plain" size="xs" icon={<TbDownload />} onClick={() => { if(file.src && !file.src.startsWith('blob:')) window.open(file.src, '_blank')}} disabled={file.src.startsWith('blob:')} /></Tooltip>
-                            <Tooltip title="Delete"><Button variant="plain" color="red-500" size="xs" icon={<TbTrash />} onClick={() => handleRemoveAttachment(file.id)} /></Tooltip>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2 items-center justify-center text-center py-6 border border-dashed border-gray-300 dark:border-gray-600 rounded-md">
-                      <TbPaperclip size={40} className="text-gray-400 dark:text-gray-500" /><p className="font-semibold text-gray-600 dark:text-gray-300">No attachments yet.</p><p className="text-xs text-gray-500 dark:text-gray-400">Upload files using the area above.</p>
-                    </div>
-                  )}
-                </Tabs.TabContent>
-              </div>
-            </Tabs>
+                  
+                </div>
+              </Card>
+
+            </div>
           </div>
 
           <div className="text-right mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">

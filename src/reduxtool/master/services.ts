@@ -18,7 +18,7 @@ interface ApiParams {
 }
 export const getLeadAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/lead/lead`)
+    const response = await axiosInstance.get(`${config.apiURL}/lead/lead?per_page=10000000000`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -531,6 +531,30 @@ export const deleteAllBrandListAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+
+
+export const getProductslistAsync = async (params: any) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      // Iterate over the params object and append them to the query string
+      // if they have a valid value.
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await axiosInstance.get(`${config.apiURL}/master/product?${queryParams.toString()}`);
+
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const getProductAsync = async () => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/master/product/get`)
@@ -1596,9 +1620,17 @@ export const deleteAllHomeCategoryAsync = async (unitData: any) => {
   }
 }
 
-export const getRowDataAsync = async () => {
+export const getRowDataAsync = async (params: any) => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/row_data`)
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+    const response = await axiosInstance.get(`${config.apiURL}/row_data?${queryParams.toString()}`);
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -1961,7 +1993,7 @@ export const getAutoMatchDataAsync = async () => {
 }
 export const getAllproductAsync = async () => {
   try {
-    const response = await axiosInstance.get(`${config.apiURL}/master/product`)
+    const response = await axiosInstance.post(`${config.apiURL}/master/product/get`)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2216,6 +2248,28 @@ export const deleteAllcompanyAsync = async (unitData: any) => {
 export const getAllProductsAsync = async () => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/master/product`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const getMemberlistAsync = async (params: any) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      // Iterate over the params object and append them to the query string
+      // if they have a valid value.
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await axiosInstance.get(`${config.apiURL}/customers?${queryParams.toString()}`);
+
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2524,6 +2578,29 @@ export const addWallItemAsync = async (unitData: FormData) => {
     return isAxiosError(err);
   }
 };
+
+
+export const getOpportunitieslistAsync = async (params: any) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      // Iterate over the params object and append them to the query string
+      // if they have a valid value.
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await axiosInstance.post(`${config.apiURL}/opportunity?${queryParams.toString()}`);
+
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 export const getOpportunitiesAsync = async () => {
   try {
@@ -2948,7 +3025,7 @@ export const getEmployeeListAsync = async () => {
 export const addEmployeeListAsync = async (payload) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
-    const response = await axiosInstance.post(`${config.apiURL}/employee`, payload,{
+    const response = await axiosInstance.post(`${config.apiURL}/employee`, payload, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -2962,7 +3039,7 @@ export const addEmployeeListAsync = async (payload) => {
 export const editEmployeeListAsync = async (payload: any) => {
   try {
     // For FormData, we need to set the correct headers (or let Axios set them automatically)
-    const response = await axiosInstance.post(`${config.apiURL}/employee/${payload.employeeId}`, payload.data,{
+    const response = await axiosInstance.post(`${config.apiURL}/employee/${payload.employeeId}`, payload.data, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -3153,7 +3230,7 @@ export const getAllDocumentsAsync = async () => {
 
 export const getAlertsActionAsync = async (data: object) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/alerts`,data)
+    const response = await axiosInstance.post(`${config.apiURL}/alerts`, data)
     return response?.data
   } catch (err) {
     return isAxiosError(err)
@@ -3338,9 +3415,9 @@ export const setenablebilling = async (id: object) => {
   }
 }
 
-export const setsavedoc = async (id:any, data: object) => {
+export const setsavedoc = async (id: any, data: object) => {
   try {
-    const response = await axiosInstance.post(`${config.apiURL}/save-docs/${id}`, data,{
+    const response = await axiosInstance.post(`${config.apiURL}/save-docs/${id}`, data, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -3352,7 +3429,7 @@ export const setsavedoc = async (id:any, data: object) => {
 }
 
 
-export const getmatchopp = async (id:any) => {
+export const getmatchopp = async (id: any) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/wall/match-opp/${id}`,)
     return response?.data
@@ -3360,7 +3437,7 @@ export const getmatchopp = async (id:any) => {
     return isAxiosError(err)
   }
 }
-export const getviewopp = async (id:any, key: any) => {
+export const getviewopp = async (id: any, key: any) => {
   try {
     const response = await axiosInstance.get(`${config.apiURL}/lead/view-opp/${id}/${key}`,)
     return response?.data

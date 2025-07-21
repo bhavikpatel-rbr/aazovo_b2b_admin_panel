@@ -315,7 +315,7 @@ const PartnerListProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [partnerList, setPartnerList] = useState<PartnerItem[]>(partnerData?.data ?? []);
   const [selectedPartners, setSelectedPartners] = useState<PartnerItem[]>([]);
   const [partnerCount, setPartnerCount] = useState(partnerData?.counts ?? {});
-  const getAllUserDataOptionsData = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: b.name })) : [], [getAllUserData]);
+  const getAllUserDataOptionsData = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
 
   useEffect(() => {
     dispatch(getCountriesAction());

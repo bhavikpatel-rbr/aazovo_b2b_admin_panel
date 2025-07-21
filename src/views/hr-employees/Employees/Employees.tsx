@@ -21,7 +21,8 @@ import {
   Input,
   Select as UiSelect,
   Checkbox,
-  DatePicker
+  DatePicker,
+  Skeleton // Skeleton Imported
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
@@ -277,7 +278,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
   );
 };
 
-const EmployeeTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; columns: ColumnDef<EmployeeItem>[]; filteredColumns: ColumnDef<EmployeeItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<EmployeeItem>[]>>; activeFilterCount: number; }) => {
+const EmployeeTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; columns: ColumnDef<EmployeeItem>[]; filteredColumns: ColumnDef<EmployeeItem>[]; setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<EmployeeItem>[]>>; activeFilterCount: number; isDataReady: boolean; }) => {
   const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => { if (checked) { const originalColumn = columns.find(c => (c.id || c.accessorKey) === colId); if (originalColumn) { setFilteredColumns(prev => { const newCols = [...prev, originalColumn]; newCols.sort((a, b) => { const indexA = columns.findIndex(c => (c.id || c.accessorKey) === (a.id || a.accessorKey)); const indexB = columns.findIndex(c => (c.id || c.accessorKey) === (b.id || b.accessorKey)); return indexA - indexB; }); return newCols; }); } } else { setFilteredColumns(prev => prev.filter(c => (c.id || c.accessorKey) !== colId)); } };
   return (
@@ -285,9 +286,9 @@ const EmployeeTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters
       <div className="flex-grow"><DebouceInput className="w-full" placeholder="Quick Search..." onChange={(e) => onSearchChange(e.target.value)} /></div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
         <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end"><div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.map((col) => { const id = col.id || col.accessorKey as string; return col.header && (<div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox></div>) })}</div></Dropdown>
-        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
-        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+        <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" disabled={!isDataReady}></Button>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>Filter {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
@@ -302,7 +303,7 @@ const EmployeesListing = () => {
     // Data & Loading State
     const [employees, setEmployees] = useState<EmployeeItem[]>([]);
     const [employeesCount, setEmployeesCount] = useState<any>({});
-    const [masterLoadingStatus, setMasterLoadingStatus] = useState<"idle" | "loading">("idle");
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [userData, setUserData] = useState<any>(null);
 
@@ -319,18 +320,34 @@ const EmployeesListing = () => {
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [viewerImageSrc, setViewerImageSrc] = useState<string | null>(null);
     
+    // Derived states
+    const isDataReady = !initialLoading;
+    const tableLoading = initialLoading || isSubmitting;
+
     // Forms
     const filterFormMethods = useForm<EmployeeFilterFormData>({ resolver: zodResolver(employeeFilterFormSchema) });
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), mode: 'onChange' });
 
     // Initial Data Fetch
     useEffect(() => {  
-        setMasterLoadingStatus('loading');
-        dispatch(getEmployeesListingAction()).finally(() => setMasterLoadingStatus('idle')); 
-        dispatch(getRolesAction()); 
-        dispatch(getDepartmentsAction()); 
-        dispatch(getDesignationsAction()); 
-        dispatch(getAllUsersAction()); 
+        const fetchData = async () => {
+            setInitialLoading(true);
+            try {
+                await Promise.all([
+                    dispatch(getEmployeesListingAction()),
+                    dispatch(getRolesAction()),
+                    dispatch(getDepartmentsAction()),
+                    dispatch(getDesignationsAction()),
+                    dispatch(getAllUsersAction())
+                ]);
+            } catch (error) {
+                console.error("Failed to fetch initial data", error);
+                toast.push(<Notification title="Error" type="danger">Failed to load necessary data.</Notification>)
+            } finally {
+                setInitialLoading(false);
+            }
+        }
+        fetchData();
     }, [dispatch]);
     
     // Get Logged In User Data
@@ -342,8 +359,8 @@ const EmployeesListing = () => {
 
     // Data Formatting
     useEffect(() => {
-        if (Employees?.data?.data) {
-            const formattedData = Employees.data.data.map((emp: any) => ({
+        if (Employees?.data) {
+            const formattedData = Employees.data.map((emp: any) => ({
                 id: String(emp.id),
                 employeeId: emp.employee_id || 'N/A',
                 status: (emp.status?.toLowerCase().replace(' ', '_') || 'inactive') as EmployeeStatus,
@@ -355,7 +372,7 @@ const EmployeesListing = () => {
                 roles: Array.isArray(emp.roles) ? emp.roles.map((r: any) => r.display_name) : [],
                 avatar: emp.profile_pic_path ? emp.profile_pic_path.replace(/([^:]\/)\/+/g, "$1") : null,
                 createdAt: new Date(emp.created_at),
-                joiningDate: emp.date_of_joining ? new Date(emp.date_of_joining) : null,
+                joiningDate: emp.created_at ? new Date(emp.created_at) : null,
             }));
             setEmployees(formattedData);
             setEmployeesCount(Employees?.counts || {});
@@ -415,7 +432,7 @@ const EmployeesListing = () => {
     useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
     // Data for UI Selects
-    const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: String(u.id), label: u.name })) : [], [getAllUserData]);
+    const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: String(u.id), label: `(${u.employee_id}) - ${u.name || 'N/A'}` })) : [], [getAllUserData]);
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: any) => ({ value: d.name, label: d.name })) : [], [departmentsData?.data]);
     const designationOptions = useMemo(() => Array.isArray(designationsData?.data) ? designationsData?.data.map((d: any) => ({ value: d.name, label: d.name })) : [], [designationsData?.data]);
@@ -423,22 +440,29 @@ const EmployeesListing = () => {
     const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out hover:shadow-lg";
     const cardBodyClass = "flex gap-2 p-2";
 
+    const renderCardContent = (content: number | undefined) => {
+        if (initialLoading) {
+            return <Skeleton width={40} height={20} />;
+        }
+        return <h6 className="font-bold">{content ?? 0}</h6>;
+    };
+
     return (
         <>
             <Container className="h-auto">
                 <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
-                    <div className="lg:flex items-center justify-between mb-4"><h5 className="mb-4 lg:mb-0">Employees Listing</h5><Button variant="solid" icon={<TbPlus />} onClick={() => navigate('/hr-employees/employees/add')}>Add New</Button></div>
+                    <div className="lg:flex items-center justify-between mb-4"><h5 className="mb-4 lg:mb-0">Employees Listing</h5><Button variant="solid" icon={<TbPlus />} onClick={() => navigate('/hr-employees/employees/add')} disabled={!isDataReady}>Add New</Button></div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-4 gap-2">
-                        <Tooltip title="Click to show all employees"><div onClick={onClearFilters} className="cursor-pointer"><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsers size={24} /></div><div><h6 className="text-blue-500">{employeesCount?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbUserSquareRounded size={24} /></div><div><h6 className="text-violet-500">{employeesCount?.this_month || 0}</h6><span className="font-semibold text-xs">This Month</span></div></Card>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbUserBolt size={24} /></div><div><h6 className="text-pink-500">{employeesCount?.avg_present_percent || 0}%</h6><span className="font-semibold text-xs">Avg. Present</span></div></Card>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserExclamation size={24} /></div><div><h6 className="text-orange-500">{employeesCount?.late_arrivals || 0}</h6><span className="font-semibold text-xs">Late Arrivals</span></div></Card>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserScreen size={24} /></div><div><h6 className="text-green-500">{employeesCount?.training_rate || 0}</h6><span className="font-semibold text-xs">Training Rate</span></div></Card>
-                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserShare size={24} /></div><div><h6 className="text-red-500">{employeesCount?.offboarding || 0}</h6><span className="font-semibold text-xs">Offboarding</span></div></Card>
+                        <Tooltip title="Click to show all employees"><div onClick={onClearFilters} className="cursor-pointer"><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbUsers size={24} /></div><div><div className="text-blue-500">{renderCardContent(employeesCount?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbUserSquareRounded size={24} /></div><div><div className="text-violet-500">{renderCardContent(employeesCount?.this_month)}</div><span className="font-semibold text-xs">This Month</span></div></Card>
+                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbUserBolt size={24} /></div><div><div className="text-pink-500">{renderCardContent(employeesCount?.avg_present_percent)}</div><span className="font-semibold text-xs"> % Avg. Present</span></div></Card>
+                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-orange-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbUserExclamation size={24} /></div><div><div className="text-orange-500">{renderCardContent(employeesCount?.late_arrivals)}</div><span className="font-semibold text-xs">Late Arrivals</span></div></Card>
+                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbUserScreen size={24} /></div><div><div className="text-green-500">{renderCardContent(employeesCount?.training_rate)}</div><span className="font-semibold text-xs">Training Rate</span></div></Card>
+                        <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200 cursor-default")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbUserShare size={24} /></div><div><div className="text-red-500">{renderCardContent(employeesCount?.offboarding)}</div><span className="font-semibold text-xs">Offboarding</span></div></Card>
                     </div>
-                    <div className="mb-4"><EmployeeTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} /></div>
+                    <div className="mb-4"><EmployeeTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} /></div>
                     <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
-                    <div className="flex-grow overflow-auto"><DataTable selectable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading"} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={masterLoadingStatus !== "loading" && pageData.length === 0} /></div>
+                    <div className="flex-grow overflow-auto"><DataTable selectable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} noData={!isDataReady && pageData.length === 0} /></div>
                 </AdaptiveCard>
             </Container>
             

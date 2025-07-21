@@ -30,6 +30,7 @@ import {
     Tag,
     Checkbox,
     Avatar,
+    Skeleton, // Skeleton is already imported
 } from '@/components/ui'
 
 // Icons
@@ -295,7 +296,7 @@ type ItemSearchProps = { onInputChange: (value: string) => void; ref?: Ref<HTMLI
 const ItemSearch = React.forwardRef<HTMLInputElement, ItemSearchProps>(({ onInputChange }, ref) => (<DebounceInput ref={ref} className="w-full" placeholder="Quick Search..." suffix={<TbSearch className="text-lg" />} onChange={(e) => onInputChange(e.target.value)} />));
 ItemSearch.displayName = 'ItemSearch'
 
-const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount }: {
+const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: {
     onSearchChange: (query: string) => void;
     onFilter: () => void;
     onExport: () => void;
@@ -304,6 +305,7 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
     filteredColumns: ColumnDef<JobPostItem>[];
     setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<JobPostItem>[]>>;
     activeFilterCount: number;
+    isDataReady: boolean;
 }) => {
     const isColumnVisible = (colId: string) => filteredColumns.some(c => (c.id || c.accessorKey) === colId);
     const toggleColumn = (checked: boolean, colId: string) => {
@@ -345,11 +347,11 @@ const ItemTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, co
                         })}
                     </div>
                 </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters" />
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">
+                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters" disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
                     Filter {activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}
                 </Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
             </div>
         </div>
     );
@@ -386,10 +388,12 @@ const JobPostsSelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }:
 const JobPostsListing = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const { jobPostsData = { data: [], counts: {} }, departmentsData = { data: [] }, getAllUserData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector, shallowEqual);
+    const { jobPostsData = { data: [], counts: {} }, departmentsData = { data: [] }, getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData.data.map((dept: JobDepartmentListItem) => ({ value: String(dept.id), label: dept.name })) : [], [departmentsData?.data]);
-    const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: user.name })) : [], [getAllUserData]);
+    const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: `(${user.employee_id}) - ${user.name || 'N/A'}`})) : [], [getAllUserData]);
+console.log("departmentsData",departmentsData?.data);
 
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<JobPostItem | null>(null);
@@ -402,6 +406,9 @@ const JobPostsListing = () => {
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
     const [imageViewerSrc, setImageViewerSrc] = useState<string | null>(null);
+
+    const isDataReady = !initialLoading;
+    const tableLoading = initialLoading || isSubmitting || isDeleting;
 
     const handleOpenModal = (type: ModalType, jobPostData: JobPostItem) => setModalState({ isOpen: true, type, data: jobPostData });
     const handleCloseModal = () => setModalState({ isOpen: false, type: null, data: null });
@@ -416,7 +423,24 @@ const JobPostsListing = () => {
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '' });
     const [selectedItems, setSelectedItems] = useState<JobPostItem[]>([]);
     
-    useEffect(() => { dispatch(getJobPostsAction()); dispatch(getDepartmentsAction()); dispatch(getAllUsersAction()); }, [dispatch]);
+    useEffect(() => {
+        const fetchData = async () => {
+            setInitialLoading(true);
+            try {
+                await Promise.all([
+                    dispatch(getJobPostsAction()),
+                    dispatch(getDepartmentsAction()),
+                    dispatch(getAllUsersAction())
+                ]);
+            } catch (error) {
+                console.error("Failed to fetch initial data", error);
+                toast.push(<Notification title="Data Fetch Failed" type="danger">Could not load required data.</Notification>);
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+        fetchData();
+    }, [dispatch]);
     
     const defaultFormValues: JobPostFormData = useMemo(() => ({ job_title: '', job_department_id: departmentOptions[0]?.value || '', description: '', location: '', experience: '', vacancies: '1', status: 'Active', job_plateforms: [{ portal: '', link: '', application_count: 0, id: null }] }), [departmentOptions]);
     const formMethods = useForm<JobPostFormData>({ resolver: zodResolver(jobPostFormSchema), defaultValues: defaultFormValues, mode: 'onChange' });
@@ -487,7 +511,7 @@ const JobPostsListing = () => {
     
     const columns: ColumnDef<JobPostItem>[] = useMemo(() => [
         { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 20; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold cursor-help">{displayValue}</span></Tooltip>) } },
-        { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { const deptId = String(props.getValue()); const department = departmentOptions.find((opt) => opt.value === deptId); return department ? department.label : deptId } },
+        { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { return props?.row?.original?.job_department?.name || "" } },
         { header: 'Location', accessorKey: 'location', size: 130, enableSorting: true },
         { header: 'Vacancies', accessorKey: 'vacancies', size: 90, enableSorting: true, meta: { cellClass: 'text-center', headerClass: 'text-center' } },
         { header: 'Status', accessorKey: 'status', size: 100, enableSorting: true, cell: (props) => { const statusVal = props.getValue<JobPostStatusApi>(); return (<Tag className={classNames('capitalize whitespace-nowrap text-center', jobStatusColor[statusVal] || 'bg-gray-100 text-gray-600')}>{statusVal}</Tag>) } },
@@ -529,7 +553,7 @@ const JobPostsListing = () => {
         return (<>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <FormItem label={<div>Job Title<span className="text-red-500"> *</span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.job_title} errorMessage={currentFormMethods.formState.errors.job_title?.message}><Controller name="job_title" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbBriefcase />} placeholder="e.g., Software Engineer" />)} /></FormItem>
-                <FormItem label={<div>Job Department<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.job_department_id} errorMessage={currentFormMethods.formState.errors.job_department_id?.message}><Controller name="job_department_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder={departmentOptions.length > 0 ? 'Select Department' : 'Loading...'} options={departmentOptions} value={departmentOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} disabled={departmentOptions.length === 0 && masterLoadingStatus === 'loading'} />)} /></FormItem>
+                <FormItem label={<div>Job Department<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.job_department_id} errorMessage={currentFormMethods.formState.errors.job_department_id?.message}><Controller name="job_department_id" control={currentFormMethods.control} render={({ field }) => (<Select placeholder={departmentOptions.length > 0 ? 'Select Department' : 'Loading...'} options={departmentOptions} value={departmentOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} disabled={initialLoading} />)} /></FormItem>
                 <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}><Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" options={JOB_POST_STATUS_OPTIONS_FORM} value={JOB_POST_STATUS_OPTIONS_FORM.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem>
                 <FormItem label="Location" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.location} errorMessage={currentFormMethods.formState.errors.location?.message}><Controller name="location" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbMapPin />} placeholder="e.g., Remote, New York" />)} /></FormItem>
                 <FormItem label="Experience Required" invalid={!!currentFormMethods.formState.errors.experience} errorMessage={currentFormMethods.formState.errors.experience?.message}><Controller name="experience" control={currentFormMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., 2+ Years, Entry Level" />)} /></FormItem>
@@ -554,17 +578,24 @@ const JobPostsListing = () => {
 
     const cardClass = "rounded-md transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
 
+    const renderCardContent = (content: number | undefined) => {
+        if (initialLoading) {
+            return <Skeleton width={50} height={20} />;
+        }
+        return <h6 className="font-bold">{content ?? 0}</h6>;
+    };
+
     return (
         <>
             <Container className="h-auto">
                 <AdaptiveCard className="h-full" bodyClass="h-full">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Job Posts</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button></div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4"><h5 className="mb-2 sm:mb-0">Job Posts</h5><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mb-4 gap-4">
-                        <Tooltip title="Click to show all job posts"><div onClick={() => handleCardClick('all')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-blue-200 dark:border-blue-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbBriefcase size={24} /></div><div><h6 className="text-blue-500 dark:text-blue-200">{jobPostsData?.counts?.total || 0}</h6><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show active job posts"><div onClick={() => handleCardClick('Active')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-violet-200 dark:border-violet-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbFileCheck size={24} /></div><div><h6 className="text-violet-500 dark:text-violet-200">{jobPostsData?.counts?.active || 0}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show Inactive/expired posts"><div onClick={() => handleCardClick('Inactive')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-red-200 dark:border-red-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbFileExcel size={24} /></div><div><h6 className="text-red-500 dark:text-red-200">{jobPostsData?.counts?.expired || 0}</h6><span className="font-semibold text-xs">Expired</span></div></Card></div></Tooltip>
-                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-orange-200 dark:border-orange-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbFileSmile size={24} /></div><div><h6 className="text-orange-500 dark:text-orange-200">{jobPostsData?.counts?.views || 0}</h6><span className="font-semibold text-xs">Total Views</span></div></Card>
-                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbFileLike size={24} /></div><div><h6 className="text-green-500 dark:text-green-200">{jobPostsData?.counts?.applicants || 0}</h6><span className="font-semibold text-xs">Applicants</span></div></Card>
+                        <Tooltip title="Click to show all job posts"><div onClick={() => handleCardClick('all')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-blue-200 dark:border-blue-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbBriefcase size={24} /></div><div><div className="text-blue-500 dark:text-blue-200">{renderCardContent(jobPostsData?.counts?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active job posts"><div onClick={() => handleCardClick('Active')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-violet-200 dark:border-violet-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbFileCheck size={24} /></div><div><div className="text-violet-500 dark:text-violet-200">{renderCardContent(jobPostsData?.counts?.active)}</div><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show Inactive posts"><div onClick={() => handleCardClick('Inactive')} className={cardClass}><Card bodyClass="flex gap-2 p-3" className="rounded-md border-red-200 dark:border-red-700"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbFileExcel size={24} /></div><div><div className="text-red-500 dark:text-red-200">{renderCardContent(jobPostsData?.counts?.expired)}</div><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-orange-200 dark:border-orange-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-orange-100 dark:bg-orange-500/20 text-orange-500 dark:text-orange-200"><TbFileSmile size={24} /></div><div><div className="text-orange-500 dark:text-orange-200">{renderCardContent(jobPostsData?.counts?.views)}</div><span className="font-semibold text-xs">Total Views</span></div></Card>
+                        <Card bodyClass="flex gap-2 p-3" className="rounded-md border border-green-200 dark:border-green-700 cursor-default"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbFileLike size={24} /></div><div><div className="text-green-500 dark:text-green-200">{renderCardContent(jobPostsData?.counts?.applicants)}</div><span className="font-semibold text-xs">Applicants</span></div></Card>
                     </div>
                     <div className="mb-4">
                         <ItemTableTools
@@ -576,10 +607,11 @@ const JobPostsListing = () => {
                             filteredColumns={filteredColumns}
                             setFilteredColumns={setFilteredColumns}
                             activeFilterCount={activeFilterCount}
+                            isDataReady={isDataReady}
                         />
                     </div>
                     <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} departmentOptions={departmentOptions} />
-                    <div className="mt-4"><JobPostsTable columns={filteredColumns} data={pageData} loading={masterLoadingStatus === 'loading' || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
+                    <div className="mt-4"><JobPostsTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} /></div>
                 </AdaptiveCard>
             </Container>
 
@@ -592,7 +624,7 @@ const JobPostsListing = () => {
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} footer={<div className="text-right w-full flex justify-end gap-2"><Button size="sm" onClick={onClearFilters} type="button">Clear</Button><Button size="sm" variant="solid" form="filterJobPostForm" type="submit">Apply</Button></div>}>
                 <Form id="filterJobPostForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
                     <FormItem label="Filter by Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Any Status" options={JOB_POST_STATUS_OPTIONS_FORM.map((s) => ({ value: s.value, label: s.label }))} value={field.value || []} onChange={(val) => field.onChange(val || [])} />)} /></FormItem>
-                    <FormItem label="Filter by Department"><Controller name="filterDepartment" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder={departmentOptions.length > 0 ? 'Any Department' : 'Loading...'} options={departmentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} disabled={departmentOptions.length === 0 && masterLoadingStatus === 'loading'} />)} /></FormItem>
+                    <FormItem label="Filter by Department"><Controller name="filterDepartment" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder={departmentOptions.length > 0 ? 'Any Department' : 'Loading...'} options={departmentOptions} value={field.value || []} onChange={(val) => field.onChange(val || [])} disabled={initialLoading} />)} /></FormItem>
                 </Form>
             </Drawer>
 

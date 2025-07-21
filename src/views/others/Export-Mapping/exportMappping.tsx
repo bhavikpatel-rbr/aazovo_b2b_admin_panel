@@ -33,6 +33,7 @@ import {
     FormItem,
     Input,
     Select,
+    Skeleton,
     Tag,
 } from '@/components/ui'
 import Button from '@/components/ui/Button'
@@ -119,15 +120,15 @@ const transformApiDataToExportMappingItem = (
     if (!apiData) return null
     try {
         return {
-            id: apiData.id,
+            id: apiData?.id,
             userId: null,
-            userName: apiData.user.name || 'System / Unknown',
-            userRole: apiData.user.roles[0]?.display_name || 'N/A',
-            exportFrom: apiData.exported_from || 'N/A',
-            fileName: apiData.file_name,
-            reason: apiData.reason,
-            exportDate: new Date(apiData.created_at),
-            profile_pic_path: apiData.user.profile_pic_path,
+            userName: apiData?.user?.name || 'System / Unknown',
+            userRole: apiData?.user?.roles[0]?.display_name || 'N/A',
+            exportFrom: apiData?.exported_from || 'N/A',
+            fileName: apiData?.file_name,
+            reason: apiData?.reason,
+            exportDate: new Date(apiData?.created_at),
+            profile_pic_path: apiData?.user?.profile_pic_path,
         }
     } catch (error) {
         console.error('Error transforming API data for ID:', apiData.id, error)
@@ -194,7 +195,7 @@ const ExportMappingTableTools = React.forwardRef(({
     const handleClearFormInDrawer = () => { onApplyFilters({}); setIsFilterDrawerOpen(false); };
     const userRoles = useMemo(() => { if (!isDataReady || !allExportMappings.length) return []; const roles = new Set(allExportMappings.map(item => item.userRole).filter(Boolean)); return Array.from(roles).sort().map(role => ({ value: role, label: role })); }, [allExportMappings, isDataReady]);
     const exportFromOptions = useMemo(() => { if (!isDataReady || !allExportMappings.length) return []; const froms = new Set(allExportMappings.map(item => item.exportFrom).filter(Boolean)); return Array.from(froms).sort().map(from => ({ value: from, label: from })); }, [allExportMappings, isDataReady]);
-    const fileExtensionsOptions = useMemo(() => [ { value: '.xlsx', label: 'Excel (.xlsx)' }, { value: '.json', label: 'JSON (.json)' }, { value: '.pdf', label: 'PDF (.pdf)' }, { value: '.log', label: 'Log (.log)' }, { value: '.bak', label: 'Backup (.bak)' },], []);
+    const fileExtensionsOptions = useMemo(() => [{ value: '.xlsx', label: 'Excel (.xlsx)' }, { value: '.json', label: 'JSON (.json)' }, { value: '.pdf', label: 'PDF (.pdf)' }, { value: '.log', label: 'Log (.log)' }, { value: '.bak', label: 'Backup (.bak)' },], []);
     const toggleColumn = (checked: boolean, colHeader: string) => { if (checked) { setFilteredColumns(currentCols => { const newVisibleHeaders = [...currentCols.map(c => c.header as string), colHeader]; return columns.filter(c => newVisibleHeaders.includes(c.header as string)); }); } else { setFilteredColumns(currentCols => currentCols.filter(c => c.header !== colHeader)); } };
     const isColumnVisible = (header: string) => filteredColumns.some(c => c.header === header);
 
@@ -259,7 +260,7 @@ const ExportMapping = () => {
     const dispatch = useAppDispatch();
     const csvLinkRef = useRef<any>(null);
     const [exportMappings, setExportMappings] = useState<ExportMappingItem[]>([]);
-    const { apiExportMappings = {}, status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
+    const { apiExportMappings = {} } = useSelector(masterSelector);
     const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
     const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
     const [exportData, setExportData] = useState<{ data: any[]; filename: string }>({ data: [], filename: '' });
@@ -268,20 +269,45 @@ const ExportMapping = () => {
     const [activeFilters, setActiveFilters] = useState<Partial<ExportMappingFilterSchema>>({});
     const [isDeleteAllConfirmOpen, setIsDeleteAllConfirmOpen] = useState(false);
     const [isDeletingAll, setIsDeletingAll] = useState(false);
-    const tableLoading = masterLoadingStatus === 'loading';
-    const isDataReady = masterLoadingStatus === 'idle';
+    const [tableLoading, setTableLoading] = useState(false);
+    const [countsLoading, setCountsLoading] = useState(true);
+    const [initialDataLoading, setInitialDataLoading] = useState(true); // Track initial data loading
 
-    useEffect(() => { dispatch(getExportMappingsAction()) }, [dispatch]);
+    const isDataReady = !tableLoading && !initialDataLoading; // Consider initialDataLoading
 
     useEffect(() => {
-        if (masterLoadingStatus === 'idle' && apiExportMappings?.data) {
-            const transformedData = (apiExportMappings.data as ApiExportMapping[]).map(transformApiDataToExportMappingItem).filter((item): item is ExportMappingItem => item !== null);
-            setExportMappings(transformedData || []);
-        } else if (masterLoadingStatus === 'failed') {
-            toast.push(<Notification title="Failed to Load Data" type="danger" duration={4000}>There was an error fetching the export logs.</Notification>);
-            setExportMappings([]);
+        const fetchData = async () => {
+            setInitialDataLoading(true);
+            setTableLoading(true);
+            try {
+                await dispatch(getExportMappingsAction()).unwrap();
+            } catch (error) {
+                console.error("Error fetching export mappings:", error);
+                toast.push(<Notification title="Failed to Load Data" type="danger" duration={4000}>There was an error fetching the export logs.</Notification>);
+                setExportMappings([]);
+            } finally {
+                setTableLoading(false);
+                setInitialDataLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (!initialDataLoading) {
+            // Only process data if initial data loading is complete
+            if (apiExportMappings?.data) {
+                const transformedData = (apiExportMappings.data as ApiExportMapping[]).map(transformApiDataToExportMappingItem).filter((item): item is ExportMappingItem => item !== null);
+                setExportMappings(transformedData || []);
+            }
         }
-    }, [apiExportMappings?.data, masterLoadingStatus]);
+    }, [apiExportMappings?.data, initialDataLoading]);
+
+    useEffect(() => {
+        setCountsLoading(initialDataLoading);
+    }, [initialDataLoading]);
+
 
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         if (!isDataReady) { return { pageData: [], total: 0, allFilteredAndSortedData: [] } }
@@ -301,6 +327,7 @@ const ExportMapping = () => {
         let count = 0; if (activeFilters.userRole?.length) count++; if (activeFilters.exportFrom?.length) count++; if (activeFilters.fileExtensions?.length) count++; if (activeFilters.exportDate) count++; return count;
     }, [activeFilters]);
 
+
     useEffect(() => { if (exportData.data.length > 0 && exportData.filename && csvLinkRef.current) { csvLinkRef.current.link.click(); setExportData({ data: [], filename: '' }); } }, [exportData]);
 
     const handleSetTableData = useCallback((data: Partial<TableQueries> | ((prevState: TableQueries) => TableQueries)) => { setTableData(prev => typeof data === 'function' ? data(prev) : { ...prev, ...data }); }, []);
@@ -313,7 +340,7 @@ const ExportMapping = () => {
         setActiveFilters(prev => { const newFilters = { ...prev }; if (key === 'exportDate') { delete newFilters.exportDate; } else { const currentValues = prev[key] as string[] | undefined; if (currentValues) { const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } } } return newFilters; });
         handleSetTableData({ pageIndex: 1 });
     }, [handleSetTableData]);
-    const onClearFiltersAndReload = () => { setActiveFilters({}); handleSetTableData({ pageIndex: 1, query: '' }); dispatch(getExportMappingsAction()); };
+    const onClearFiltersAndReload = () => { setActiveFilters({}); handleSetTableData({ pageIndex: 1, query: '' }); fetchData(); };
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
     const handleCardClick = (filterType: 'today' | 'topUser' | 'topModule' | 'total') => {
         setActiveFilters({});
@@ -329,34 +356,53 @@ const ExportMapping = () => {
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">There is no data to export.</Notification>); return; } exportReasonFormMethods.reset({ reason: '' }); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
         setIsSubmittingExportReason(true);
-        const fileName = `export_mappings_log_${new Date().toISOString().split('T')[0]}.csv`;
         try {
+            const fileName = `export_mappings_log_${new Date().toISOString().split('T')[0]}.csv`;
+            setTableLoading(true);
             await dispatch(submitExportReasonAction({ reason: data.reason, module: 'Export Mapping Log', file_name: fileName })).unwrap();
             toast.push(<Notification title="Export Reason Submitted" type="success" />);
             const dataToExport = allFilteredAndSortedData.map((item) => ({ id: item.id, userName: item.userName, userRole: item.userRole, exportFrom: item.exportFrom, fileName: item.fileName, reason: item.reason || '', exportDate: !isNaN(item.exportDate.getTime()) ? item.exportDate.toISOString() : 'Invalid Date', }));
             setExportData({ data: dataToExport, filename: fileName });
             setIsExportReasonModalOpen(false);
-            dispatch(getExportMappingsAction());
+            fetchData();
         } catch (error: any) {
             toast.push(<Notification title="Failed to Submit Reason" type="danger">{error.message}</Notification>);
-        } finally { setIsSubmittingExportReason(false); }
+        } finally {
+            setIsSubmittingExportReason(false);
+            setTableLoading(false);
+        }
     };
 
     const handleDeleteAllClick = () => {
         setIsDeleteAllConfirmOpen(true);
     };
 
+    const fetchData = useCallback(async () => {
+        setTableLoading(true);
+        try {
+            await dispatch(getExportMappingsAction()).unwrap();
+        } catch (error) {
+            console.error("Error fetching export mappings:", error);
+            toast.push(<Notification title="Failed to Load Data" type="danger" duration={4000}>There was an error fetching the export logs.</Notification>);
+            setExportMappings([]);
+        } finally {
+            setTableLoading(false);
+        }
+    }, [dispatch]);
+
     const onConfirmDeleteAll = async () => {
         setIsDeletingAll(true);
         try {
+            setTableLoading(true);
             await dispatch(deleteAllExportMappingsAction({ id: 1 })).unwrap();
             toast.push(<Notification title="All Logs Deleted" type="success">All export mapping logs have been successfully deleted.</Notification>);
-            dispatch(getExportMappingsAction()); // Re-fetch the now empty list
+            fetchData(); // Re-fetch the now empty list
         } catch (error: any) {
             toast.push(<Notification title="Deletion Failed" type="danger">{error.message || "Could not delete all logs."}</Notification>);
         } finally {
             setIsDeletingAll(false);
             setIsDeleteAllConfirmOpen(false);
+            setTableLoading(false);
         }
     };
 
@@ -380,6 +426,13 @@ const ExportMapping = () => {
     const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
     const cardBodyClass = "flex gap-2 p-2";
 
+    const renderCardContent = (count: number | undefined) => {
+        if (countsLoading) {
+            return <Skeleton width={50} height={20} />;
+        }
+        return count !== undefined ? String(count) : "N/A";
+    };
+
     return (
         <>
             <Container className="h-auto">
@@ -388,10 +441,58 @@ const ExportMapping = () => {
                         <h5 className="mb-4 lg:mb-0">Export Mapping Log</h5>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4 gap-4">
-                        <Tooltip title="Click to show all exports"><div onClick={() => handleCardClick('total')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbCloudUpload size={24} /></div><div><h6 className="text-blue-500">{apiExportMappings?.counts?.total}</h6><span className="font-semibold text-xs">Total Exports</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show today's exports"><div onClick={() => handleCardClick('today')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-300")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbCalendarUp size={24} /></div><div><h6 className="text-violet-500">{apiExportMappings?.counts?.today}</h6><span className="font-semibold text-xs">Exports Today</span></div></Card></div></Tooltip>
-                        <Tooltip title={`Click to search for user: ${apiExportMappings?.counts?.top_user || ''}`}><div onClick={() => handleCardClick('topUser')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbUserUp size={24} /></div><div><h6 className="text-pink-500 truncate">{apiExportMappings?.counts?.top_user || "N/A"}</h6><span className="font-semibold text-xs">Top User</span></div></Card></div></Tooltip>
-                        <Tooltip title={`Click to filter by module: ${apiExportMappings?.counts?.top_module || ''}`}><div onClick={() => handleCardClick('topModule')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbBookUpload size={24} /></div><div><h6 className="text-green-500 truncate">{apiExportMappings?.counts?.top_module || "N/A"}</h6><span className="font-semibold text-xs">Top Module</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show all exports">
+                            <div onClick={() => handleCardClick('total')}>
+                                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}>
+                                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500">
+                                        <TbCloudUpload size={24} />
+                                    </div>
+                                    <div>
+                                        <h6 className="text-blue-500">{renderCardContent(apiExportMappings?.counts?.total)}</h6>
+                                        <span className="font-semibold text-xs">Total Exports</span>
+                                    </div>
+                                </Card>
+                            </div>
+                        </Tooltip>
+                        <Tooltip title="Click to show today's exports">
+                            <div onClick={() => handleCardClick('today')}>
+                                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-300")}>
+                                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 text-violet-500">
+                                        <TbCalendarUp size={24} />
+                                    </div>
+                                    <div>
+                                        <h6 className="text-violet-500">{renderCardContent(apiExportMappings?.counts?.today)}</h6>
+                                        <span className="font-semibold text-xs">Exports Today</span>
+                                    </div>
+                                </Card>
+                            </div>
+                        </Tooltip>
+                        <Tooltip title={`Click to search for user: ${apiExportMappings?.counts?.top_user || ''}`}>
+                            <div onClick={() => { handleCardClick('topUser') }}>
+                                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-pink-200")}>
+                                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-pink-100 text-pink-500">
+                                        <TbUserUp size={24} />
+                                    </div>
+                                    <div>
+                                        <h6 className="text-pink-500 truncate">{countsLoading ? <Skeleton width={80} height={20} /> : (apiExportMappings?.counts?.top_user || "N/A")}</h6>
+                                        <span className="font-semibold text-xs">Top User</span>
+                                    </div>
+                                </Card>
+                            </div>
+                        </Tooltip>
+                        <Tooltip title={`Click to filter by module: ${apiExportMappings?.counts?.top_module || ''}`}>
+                            <div onClick={() => handleCardClick('topModule')}>
+                                <Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200")}>
+                                    <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 text-green-500">
+                                        <TbBookUpload size={24} />
+                                    </div>
+                                    <div>
+                                        <h6 className="text-green-500 truncate">{countsLoading ? <Skeleton width={80} height={20} /> : (apiExportMappings?.counts?.top_module || "N/A")}</h6>
+                                        <span className="font-semibold text-xs">Top Module</span>
+                                    </div>
+                                </Card>
+                            </div>
+                        </Tooltip>
                     </div>
                     <div className="mb-4">
                         <ExportMappingTableTools
@@ -436,12 +537,12 @@ const ExportMapping = () => {
                 </div>
             </Dialog>
             <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? 'Submitting...' : 'Submit & Export'} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}>
-                <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
-                    <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
-                        <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
-                    </FormItem>
-                </Form>
-            </ConfirmDialog>
+            <Form id="exportReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2">
+                <FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}>
+                    <Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} />
+                </FormItem>
+            </Form>
+        </ConfirmDialog >
 
             <ConfirmDialog
                 isOpen={isDeleteAllConfirmOpen}

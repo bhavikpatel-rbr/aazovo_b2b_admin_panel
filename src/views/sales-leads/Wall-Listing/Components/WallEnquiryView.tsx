@@ -74,7 +74,7 @@ interface ProductInfo {
 interface CustomerInfo {
     id: number;
     name: string;
-    member_code: string;
+    customer_code: string;
     interested_in: string;
     number: string;
     email: string;
@@ -282,7 +282,7 @@ const CompanyDetailsTabView = ({ customer }: { customer: CustomerInfo | null }) 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
             <InfoPair label="Customer Name" value={customer.name} />
             <InfoPair label="Company Name" value={customer.company_actual || customer.company_temp} />
-            <InfoPair label="Member Code" value={customer.member_code} />
+            <InfoPair label="Member Code" value={customer.customer_code} />
             <InfoPair label="Business Type" value={customer.business_type} />
             <InfoPair label="Status" value={<Tag className={`${getStatusClass(customer.status)} capitalize`}>{customer.status}</Tag>} />
           </div>
@@ -519,7 +519,7 @@ const WallEnquiryView = () => {
         setEnquiry(response);
 
         // --- MOCK IMPLEMENTATION ---
-        // const mockApiResponse: WallEnquiryApiResponse = {"status":true,"message":"WallEnquiry found","data":{"id":1,"want_to":"Sell","qty":"250","price":null,"status":"Active","product_status":"Active","device_condition":null,"location":null,"warranty":null,"payment_term":null,"shipping_options":null,"dispatch_mode":null,"delivery_details":null,"internal_remarks":null,"created_at":"2025-07-11T12:26:04.000000Z","updated_at":"2025-07-11T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","profile_pic_path":"https://aazovo.omcommunication.co/storage/users/profile_pics/686e018a3d879.jpg","email":"admin@admin.com"},"updated_by_user":{"id":1,"name":"Tushar Joshi","profile_pic_path":"https://aazovo.omcommunication.co/storage/users/profile_pics/686e018a3d879.jpg","email":"admin@admin.com"},"product":{"id":1,"name":"IPHONE 16E 5G 8GB 256GB","description":null,"status":"Active","thumb_image_full_path":"https://aazovo.omcommunication.co/product_thumb_images","category":{"id":1,"name":"ELECTRONICS"},"sub_category":{"id":5,"name":"MOBILE"},"brand":{"id":1,"name":"APPLE"}},"customer":{"id":14,"name":"MANISH SHARAMA","member_code":"7000003","interested_in":"For Sell","number":"7210619000","email":"tradelinkhub32@gmail.com","company_temp":"TRADELINK HUB","company_actual":"TRADELINK HUB","company_code":"100002","business_type":"Distributor","status":"Active","state":"","city":"","address":null,"website":null,"wall_listing_permission":null,"trade_inquiry_permission":null},"company":null,"get_leads":{"id":1,"lead_intent":"Buy","lead_status":"New","qty":100,"created_at":"2025-07-10T19:20:28.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","profile_pic_path":"https://aazovo.omcommunication.co/storage/users/profile_pics/686e018a3d879.jpg","email":"admin@admin.com"}}}};
+        // const mockApiResponse: WallEnquiryApiResponse = {"status":true,"message":"WallEnquiry found","data":{"id":1,"want_to":"Sell","qty":"250","price":null,"status":"Active","product_status":"Active","device_condition":null,"location":null,"warranty":null,"payment_term":null,"shipping_options":null,"dispatch_mode":null,"delivery_details":null,"internal_remarks":null,"created_at":"2025-07-11T12:26:04.000000Z","updated_at":"2025-07-11T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","profile_pic_path":"https://aazovo.omcommunication.co/storage/users/profile_pics/686e018a3d879.jpg","email":"admin@admin.com"},"updated_by_user":{"id":1,"name":"Tushar Joshi","profile_pic_path":"https://aazovo.omcommunication.co/storage/users/profile_pics/686e018a3d879.jpg","email":"admin@admin.com"},"product":{"id":1,"name":"IPHONE 16E 5G 8GB 256GB","description":null,"status":"Active","thumb_image_full_path":"https://aazovo.omcommunication.co/product_thumb_images","category":{"id":1,"name":"ELECTRONICS"},"sub_category":{"id":5,"name":"MOBILE"},"brand":{"id":1,"name":"APPLE"}},"customer":{"id":14,"name":"MANISH SHARAMA","customer_code":"7000003","interested_in":"For Sell","number":"7210619000","email":"tradelinkhub32@gmail.com","company_temp":"TRADELINK HUB","company_actual":"TRADELINK HUB","company_code":"100002","business_type":"Distributor","status":"Active","state":"","city":"","address":null,"website":null,"wall_listing_permission":null,"trade_inquiry_permission":null},"company":null,"get_leads":{"id":1,"lead_intent":"Buy","lead_status":"New","qty":100,"created_at":"2025-07-10T19:20:28.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","profile_pic_path":"https://aazovo.omcommunication.co/storage/users/profile_pics/686e018a3d879.jpg","email":"admin@admin.com"}}}};
         // setEnquiry(mockApiResponse.data);
 
       } catch (error: any) {

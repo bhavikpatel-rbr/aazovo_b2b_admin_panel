@@ -1,14 +1,16 @@
-import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
-import cloneDeep from "lodash/cloneDeep";
-import { useForm, Controller } from "react-hook-form";
+// src/views/your-path/SubscribersListing.tsx
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import classNames from "classnames";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import cloneDeep from "lodash/cloneDeep";
+import React, { ChangeEvent, Ref, useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import classNames from "classnames";
+import { z } from "zod";
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
@@ -16,82 +18,78 @@ dayjs.extend(isSameOrAfter);
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
-import Button from "@/components/ui/Button";
-import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
-import DebouceInput from "@/components/shared/DebouceInput";
-import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import DebounceInput from "@/components/shared/DebouceInput";
 import {
+  Button,
+  Card,
+  Checkbox,
+  Dialog,
   Drawer,
+  Dropdown,
   Form,
   FormItem,
   Input,
-  DatePicker,
-  Tooltip,
+  Notification,
+  Skeleton,
   Tag,
-  Select,
-  Card,
-  Dialog,
-  Checkbox,
+  Tooltip,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
-import Dropdown from "@/components/ui/Dropdown";
+import DatePicker from "@/components/ui/DatePicker";
+import Select from "@/components/ui/Select";
+import toast from "@/components/ui/toast";
 
 // Icons
 import {
-  TbSearch,
-  TbFilter,
+  TbBrandWhatsapp,
+  TbCalendarCancel,
+  TbCaravan,
+  TbCloudDownload,
   TbCloudUpload,
-  TbReload,
-  TbPlus,
+  TbColumns,
+  TbFileText,
+  TbFilter,
+  TbMail,
+  TbMailForward,
   TbPencil,
+  TbPhone,
+  TbPlus,
+  TbReload,
+  TbSearch,
   TbTrash,
   TbUserCircle,
-  TbMail,
-  TbPhone,
-  TbCaravan,
   TbUserStar,
-  TbMailForward,
-  TbCalendarCancel,
-  TbAlignBoxCenterBottom,
-  TbMailbox,
-  TbSend,
-  TbEye,
-  TbBell,
-  TbCalendarClock,
-  TbColumns,
-  TbX,
-  TbStar,
   TbWorld,
-  TbFileText,
+  TbX
 } from "react-icons/tb";
 
 // Types
-import type {
-  OnSortParam,
-  ColumnDef,
-  Row,
-  CellContext,
-} from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
-import { SelectOption } from "../RequestFeedback/RequestAndFeedback"; // Adjust import path
+import type {
+  CellContext,
+  ColumnDef,
+  OnSortParam,
+  RowSelectionState
+} from "@/components/shared/DataTable";
+import { SelectOption } from "../RequestFeedback/RequestAndFeedback";
 
 // Redux
-import { useAppDispatch } from "@/reduxtool/store";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import {
-  addSubscriberAction,
-  editSubscriberAction,
-  getSubscribersAction,
-  submitExportReasonAction,
   addNotificationAction,
   addScheduleAction,
+  addSubscriberAction,
+  editSubscriberAction,
   getAllUsersAction,
+  getSubscribersAction,
+  submitExportReasonAction,
 } from "@/reduxtool/master/middleware";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
-import { useSelector, shallowEqual } from "react-redux";
-import { BsThreeDotsVertical } from "react-icons/bs";
+import { useAppDispatch } from "@/reduxtool/store";
+import { formatCustomDateTime } from "@/utils/formatCustomDateTime";
+import { shallowEqual, useSelector } from "react-redux";
 
 // --- Define Types ---
 export type ApiSubscriberItem = {
@@ -103,10 +101,9 @@ export type ApiSubscriberItem = {
   updated_at?: string;
   member_id?: number | string | null;
   status: string;
-  subscription_type?: string | null;
+  subscription_types?: string[] | null;
   source?: string | null;
-  rating?: number | string | null;
-  note?: string | null;
+  remarks?: string | null; // CORRECTED
   reason?: string | null;
   updated_by_user?: {
     name: string;
@@ -114,22 +111,22 @@ export type ApiSubscriberItem = {
     profile_pic_path?: string | null;
   };
 };
+
 export type SubscriberItem = {
   id: number | string;
   email: string;
   name: string;
   mobile_no: string;
   subscribedDate: Date;
-  subscriptionType: string;
+  subscriptionTypes: string[];
   source: string;
   status: string;
-  rating: number | null;
-  note: string;
-  unsubscribeReason: string;
+  remarks: string;
   raw_created_at: string;
   raw_updated_at?: string;
   updated_by_user?: ApiSubscriberItem["updated_by_user"];
 };
+
 export type ModalType = "notification" | "schedule";
 export interface ModalState {
   isOpen: boolean;
@@ -145,19 +142,16 @@ const filterFormSchema = z.object({
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 export const SUBSCRIPTION_TYPE_OPTIONS: SelectOption[] = [
+  { label: "Inquiry Alerts", value: "Inquiry Alerts" },
   { label: "Newsletter", value: "Newsletter" },
-  { label: "Promotions", value: "Promotions" },
+  { label: "Trade Alerts", value: "Trade Alerts" },
+  { label: "Promotional", value: "Promotional" },
   { label: "Product Updates", value: "Product Updates" },
-  { label: "Others", value: "Others" },
 ];
-const subscriptionTypeValues = SUBSCRIPTION_TYPE_OPTIONS.map(
-  (opt) => opt.value
-) as [string, ...string[]];
 
 export const STATUS_OPTIONS: SelectOption[] = [
-  { label: "Active", value: "Active" },
+  { label: "Subscribed", value: "Subscribed" },
   { label: "Unsubscribed", value: "Unsubscribed" },
-  { label: "Bounced", value: "Bounced" },
 ];
 const statusValues = STATUS_OPTIONS.map((opt) => opt.value) as [
   string,
@@ -170,61 +164,30 @@ export const FILTER_STATUS_OPTIONS: SelectOption[] = [
 ];
 
 export const statusColors: Record<string, string> = {
-  Active:
-    "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
+  Subscribed: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100",
   Unsubscribed: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100",
-  Bounced:
-    "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100",
   default: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
 };
 
-const addEditSubscriberFormSchema = z
-  .object({
-    email: z
-      .string()
-      .min(1, "Email is required.")
-      .email("Invalid email address."),
-    name: z.string().min(1, "Name is required.").max(100),
-    mobile_no: z.string().min(1, "Mobile number is required.").max(20),
-    subscribedDate: z.date({
-      required_error: "Subscription date is required.",
-    }),
-    subscriptionType: z.enum(subscriptionTypeValues, {
-      required_error: "Subscription type is required.",
-    }),
-    source: z.string().min(1, "Source is required.").max(100),
-    status: z.enum(statusValues, { required_error: "Status is required." }),
-    rating: z.preprocess(
-      (val) =>
-        val === "" || val === null || val === undefined ? null : Number(val),
-      z.number().min(1).max(5).optional().nullable()
-    ),
-    note: z.string().max(1000).optional().nullable(),
-    unsubscribeReason: z.string().max(255).optional().nullable(),
-  })
-  .refine(
-    (data) =>
-      !(data.status === "Unsubscribed" && !data.unsubscribeReason?.trim()),
-    {
-      message: "Unsubscribe reason is required if status is 'Unsubscribed'.",
-      path: ["unsubscribeReason"],
-    }
-  );
+const addEditSubscriberFormSchema = z.object({
+  email: z.string().min(1, "Email is required.").email("Invalid email address."),
+  name: z.string().max(100).optional().nullable(),
+  mobile_no: z.string().max(20).optional().nullable(),
+  subscriptionTypes: z.array(z.string()).min(1, "At least one subscription type is required."),
+  source: z.string().max(100).optional().nullable(),
+  status: z.enum(statusValues, { required_error: "Status is required." }),
+  remarks: z.string().max(1000).optional().nullable(),
+});
 type AddEditSubscriberFormData = z.infer<typeof addEditSubscriberFormSchema>;
 
 const exportReasonSchema = z.object({
-  reason: z
-    .string()
-    .min(10, "Reason for export is required minimum 10 characters.")
-    .max(255, "Reason cannot exceed 255 characters."),
+  reason: z.string().min(10, "Reason for export is required minimum 10 characters.").max(255, "Reason cannot exceed 255 characters."),
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
 const scheduleSchema = z.object({
   event_title: z.string().min(3, "Title must be at least 3 characters."),
-  event_type: z
-    .string({ required_error: "Event type is required." })
-    .min(1, "Event type is required."),
+  event_type: z.string({ required_error: "Event type is required." }).min(1, "Event type is required."),
   date_time: z.date({ required_error: "Event date & time is required." }),
   remind_from: z.date().nullable().optional(),
   notes: z.string().optional(),
@@ -233,135 +196,29 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 const eventTypeOptions = [
   { value: "Meeting", label: "Meeting" },
-  { value: "Demo", label: "Product Demo" },
-  { value: "IntroCall", label: "Introductory Call" },
   { value: "FollowUpCall", label: "Follow-up Call" },
-  { value: "QBR", label: "Quarterly Business Review (QBR)" },
-  { value: "CheckIn", label: "Customer Check-in" },
-  { value: "LogEmail", label: "Log an Email" },
-  { value: "Milestone", label: "Project Milestone" },
-  { value: "Task", label: "Task" },
-  { value: "FollowUp", label: "General Follow-up" },
-  { value: "ProjectKickoff", label: "Project Kick-off" },
-  { value: "OnboardingSession", label: "Onboarding Session" },
-  { value: "Training", label: "Training Session" },
-  { value: "SupportCall", label: "Support Call" },
-  { value: "Reminder", label: "Reminder" },
-  { value: "Note", label: "Add a Note" },
-  { value: "FocusTime", label: "Focus Time (Do Not Disturb)" },
-  { value: "StrategySession", label: "Strategy Session" },
-  { value: "TeamMeeting", label: "Team Meeting" },
-  { value: "PerformanceReview", label: "Performance Review" },
-  { value: "Lunch", label: "Lunch / Break" },
-  { value: "Appointment", label: "Personal Appointment" },
   { value: "Other", label: "Other" },
-  { value: "ProjectKickoff", label: "Project Kick-off" },
-  { value: "InternalSync", label: "Internal Team Sync" },
-  { value: "ClientUpdateMeeting", label: "Client Update Meeting" },
-  { value: "RequirementsGathering", label: "Requirements Gathering" },
-  { value: "UAT", label: "User Acceptance Testing (UAT)" },
-  { value: "GoLive", label: "Go-Live / Deployment Date" },
-  { value: "ProjectSignOff", label: "Project Sign-off" },
-  { value: "PrepareReport", label: "Prepare Report" },
-  { value: "PresentFindings", label: "Present Findings" },
-  { value: "TroubleshootingCall", label: "Troubleshooting Call" },
-  { value: "BugReplication", label: "Bug Replication Session" },
-  { value: "IssueEscalation", label: "Escalate Issue" },
-  { value: "ProvideUpdate", label: "Provide Update on Ticket" },
-  { value: "FeatureRequest", label: "Log Feature Request" },
-  { value: "IntegrationSupport", label: "Integration Support Call" },
-  { value: "DataMigration", label: "Data Migration/Import Task" },
-  { value: "ColdCall", label: "Cold Call" },
-  { value: "DiscoveryCall", label: "Discovery Call" },
-  { value: "QualificationCall", label: "Qualification Call" },
-  { value: "SendFollowUpEmail", label: "Send Follow-up Email" },
-  { value: "LinkedInMessage", label: "Log LinkedIn Message" },
-  { value: "ProposalReview", label: "Proposal Review Meeting" },
-  { value: "ContractSent", label: "Contract Sent" },
-  { value: "NegotiationCall", label: "Negotiation Call" },
-  { value: "TrialSetup", label: "Product Trial Setup" },
-  { value: "TrialCheckIn", label: "Trial Check-in Call" },
-  { value: "WelcomeCall", label: "Welcome Call" },
-  { value: "ImplementationSession", label: "Implementation Session" },
-  { value: "UserTraining", label: "User Training Session" },
-  { value: "AdminTraining", label: "Admin Training Session" },
-  { value: "MonthlyCheckIn", label: "Monthly Check-in" },
-  { value: "HealthCheck", label: "Customer Health Check" },
-  { value: "FeedbackSession", label: "Feedback Session" },
-  { value: "RenewalDiscussion", label: "Renewal Discussion" },
-  { value: "UpsellOpportunity", label: "Upsell/Cross-sell Call" },
-  { value: "CaseStudyInterview", label: "Case Study Interview" },
-  { value: "InvoiceDue", label: "Invoice Due" },
-  { value: "SendInvoice", label: "Send Invoice" },
-  { value: "PaymentReminder", label: "Send Payment Reminder" },
-  { value: "ChaseOverduePayment", label: "Chase Overdue Payment" },
-  { value: "ConfirmPayment", label: "Confirm Payment Received" },
-  { value: "ContractRenewalDue", label: "Contract Renewal Due" },
-  { value: "DiscussBilling", label: "Discuss Billing/Invoice" },
-  { value: "SendQuote", label: "Send Quote/Estimate" },
 ];
 
 // --- CSV Exporter Utility ---
-const CSV_HEADERS = [
-  "ID",
-  "Name",
-  "Email",
-  "Mobile No",
-  "Subscribed Date",
-  "Subscription Type",
-  "Source",
-  "Status",
-  "Rating",
-  "Notes",
-  "Unsubscribe Reason",
-];
-const CSV_KEYS: (keyof SubscriberItem)[] = [
-  "id",
-  "name",
-  "email",
-  "mobile_no",
-  "subscribedDate",
-  "subscriptionType",
-  "source",
-  "status",
-  "rating",
-  "note",
-  "unsubscribeReason",
-];
+const CSV_HEADERS = ["ID", "Name", "Email", "Mobile No", "Subscribed Date", "Subscription Types", "Source", "Status", "Remarks"];
+const CSV_KEYS: (keyof SubscriberItem)[] = ["id", "name", "email", "mobile_no", "subscribedDate", "subscriptionTypes", "source", "status", "remarks"];
 function exportSubscribersToCsv(filename: string, rows: SubscriberItem[]) {
-  if (!rows || !rows.length) {
-    toast.push(
-      <Notification title="No Data" type="info" duration={2000}>
-        Nothing to export.
-      </Notification>
-    );
-    return false;
-  }
+  if (!rows || !rows.length) { toast.push(<Notification title="No Data" type="info" duration={2000}>Nothing to export.</Notification>); return false; }
   const separator = ",";
-  const csvContent =
-    CSV_HEADERS.join(separator) +
-    "\n" +
-    rows
-      .map((row) => {
-        return CSV_KEYS.map((k) => {
-          let cell = row[k] as any;
-          if (cell === null || cell === undefined) {
-            cell = "";
-          } else if (cell instanceof Date) {
-            cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss");
-          } else {
-            cell = String(cell).replace(/"/g, '""');
-          }
-          if (String(cell).search(/("|,|\n)/g) >= 0) {
-            cell = `"${cell}"`;
-          }
-          return cell;
-        }).join(separator);
-      })
-      .join("\n");
-  const blob = new Blob(["\ufeff" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+  const csvContent = CSV_HEADERS.join(separator) + "\n" + rows.map((row) => {
+    return CSV_KEYS.map((k) => {
+      let cell = row[k] as any;
+      if (cell === null || cell === undefined) { cell = ""; }
+      else if (cell instanceof Date) { cell = dayjs(cell).format("YYYY-MM-DD HH:mm:ss"); }
+      else if (Array.isArray(cell)) { cell = cell.join("; "); }
+      else { cell = String(cell).replace(/"/g, '""'); }
+      if (String(cell).search(/("|,|\n)/g) >= 0) { cell = `"${cell}"`; }
+      return cell;
+    }).join(separator);
+  }).join("\n");
+
+  const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   if (link.download !== undefined) {
     const url = URL.createObjectURL(blob);
@@ -374,394 +231,151 @@ function exportSubscribersToCsv(filename: string, rows: SubscriberItem[]) {
     URL.revokeObjectURL(url);
     return true;
   }
-  toast.push(
-    <Notification title="Export Failed" type="danger" duration={3000}>
-      Browser does not support this feature.
-    </Notification>
-  );
+  toast.push(<Notification title="Export Failed" type="danger" duration={3000}>Browser does not support this feature.</Notification>);
   return false;
 }
 
-const AddNotificationDialog = ({
-  document,
-  onClose,
-  getAllUserDataOptions,
-}: {
-  document: SubscriberItem;
-  onClose: () => void;
-  getAllUserDataOptions: SelectOption[];
-}) => {
-  const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
-  const notificationSchema = z.object({
-    notification_title: z
-      .string()
-      .min(3, "Title must be at least 3 characters long."),
-    send_users: z.array(z.number()).min(1, "Please select at least one user."),
-    message: z.string().min(10, "Message must be at least 10 characters long."),
-  });
-  type NotificationFormData = z.infer<typeof notificationSchema>;
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useForm<NotificationFormData>({
-    resolver: zodResolver(notificationSchema),
-    defaultValues: {
-      notification_title: `Regarding Subscriber: ${document.name}`,
-      send_users: [],
-      message: `This is a notification regarding subscriber "${document.name}" (${document.email}).`,
-    },
-    mode: "onChange",
-  });
-  const onSend = async (formData: NotificationFormData) => {
-    setIsLoading(true);
-    const payload = {
-      send_users: formData.send_users,
-      notification_title: formData.notification_title,
-      message: formData.message,
-      module_id: String(document.id),
-      module_name: "Subscriber",
+const AddNotificationDialog = ({ document, onClose, getAllUserDataOptions }: { document: SubscriberItem; onClose: () => void; getAllUserDataOptions: SelectOption[]; }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const notificationSchema = z.object({
+        notification_title: z.string().min(3, "Title must be at least 3 characters long."),
+        send_users: z.array(z.number()).min(1, "Please select at least one user."),
+        message: z.string().min(10, "Message must be at least 10 characters long."),
+    });
+    type NotificationFormData = z.infer<typeof notificationSchema>;
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<NotificationFormData>({
+        resolver: zodResolver(notificationSchema),
+        defaultValues: { notification_title: `Regarding Subscriber: ${document.name}`, send_users: [], message: `This is a notification regarding subscriber "${document.name}" (${document.email}).` },
+        mode: 'onChange'
+    });
+
+    const onSend = async (formData: NotificationFormData) => {
+        setIsLoading(true);
+        const payload = { send_users: formData.send_users, notification_title: formData.notification_title, message: formData.message, module_id: String(document.id), module_name: 'Subscriber' };
+        try {
+            await dispatch(addNotificationAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
     };
-    try {
-      await dispatch(addNotificationAction(payload)).unwrap();
-      toast.push(
-        <Notification type="success" title="Notification Sent Successfully!" />
-      );
-      onClose();
-    } catch (error: any) {
-      toast.push(
-        <Notification
-          type="danger"
-          title="Failed to Send Notification"
-          children={error?.message || "An unknown error occurred."}
-        />
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Notify about: {document.name}</h5>
-      <Form onSubmit={handleSubmit(onSend)}>
-        <FormItem
-          label="Title"
-          invalid={!!errors.notification_title}
-          errorMessage={errors.notification_title?.message}
-        >
-          <Controller
-            name="notification_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </FormItem>
-        <FormItem
-          label="Send To"
-          invalid={!!errors.send_users}
-          errorMessage={errors.send_users?.message}
-        >
-          <Controller
-            name="send_users"
-            control={control}
-            render={({ field }) => (
-              <Select
-                isMulti
-                placeholder="Select User(s)"
-                options={getAllUserDataOptions}
-                value={getAllUserDataOptions.filter((o) =>
-                  field.value?.includes(o.value)
-                )}
-                onChange={(options: any) =>
-                  field.onChange(options?.map((o: any) => o.value) || [])
-                }
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Message"
-          invalid={!!errors.message}
-          errorMessage={errors.message?.message}
-        >
-          <Controller
-            name="message"
-            control={control}
-            render={({ field }) => <Input textArea {...field} rows={4} />}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            type="submit"
-            loading={isLoading}
-            disabled={!isValid || isLoading}
-          >
-            Send Notification
-          </Button>
-        </div>
-      </Form>
-    </Dialog>
-  );
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Notify about: {document.name}</h5>
+            <Form onSubmit={handleSubmit(onSend)}>
+                <FormItem label="Title" invalid={!!errors.notification_title} errorMessage={errors.notification_title?.message}><Controller name="notification_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+                <FormItem label="Send To" invalid={!!errors.send_users} errorMessage={errors.send_users?.message}><Controller name="send_users" control={control} render={({ field }) => (<Select isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(options: any) => field.onChange(options?.map((o: any) => o.value) || [])} />)} /></FormItem>
+                <FormItem label="Message" invalid={!!errors.message} errorMessage={errors.message?.message}><Controller name="message" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} /></FormItem>
+                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Send Notification</Button></div>
+            </Form>
+        </Dialog>
+    );
 };
-const AddScheduleDialog: React.FC<{
-  document: SubscriberItem;
-  onClose: () => void;
-}> = ({ document, onClose }) => {
-  const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useForm<ScheduleFormData>({
-    resolver: zodResolver(scheduleSchema),
-    defaultValues: {
-      event_title: `Follow-up with Subscriber ${document.name}`,
-      event_type: undefined,
-      date_time: null as any,
-      remind_from: null,
-      notes: `Regarding subscriber ${document.name} (${document.email}).`,
-    },
-    mode: "onChange",
-  });
-  const onAddEvent = async (data: ScheduleFormData) => {
-    setIsLoading(true);
-    const payload = {
-      module_id: Number(document.id),
-      module_name: "Subscriber",
-      event_title: data.event_title,
-      event_type: data.event_type,
-      date_time: dayjs(data.date_time).format("YYYY-MM-DDTHH:mm:ss"),
-      ...(data.remind_from && {
-        remind_from: dayjs(data.remind_from).format("YYYY-MM-DDTHH:mm:ss"),
-      }),
-      notes: data.notes || "",
+
+const AddScheduleDialog: React.FC<{ document: SubscriberItem; onClose: () => void; }> = ({ document, onClose }) => {
+    const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
+    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ScheduleFormData>({
+        resolver: zodResolver(scheduleSchema),
+        defaultValues: { event_title: `Follow-up with Subscriber ${document.name}`, event_type: undefined, date_time: null as any, remind_from: null, notes: `Regarding subscriber ${document.name} (${document.email}).` },
+        mode: 'onChange',
+    });
+    const onAddEvent = async (data: ScheduleFormData) => {
+        setIsLoading(true);
+        const payload = {
+            module_id: Number(document.id),
+            module_name: 'Subscriber',
+            event_title: data.event_title,
+            event_type: data.event_type,
+            date_time: dayjs(data.date_time).format('YYYY-MM-DDTHH:mm:ss'),
+            ...(data.remind_from && { remind_from: dayjs(data.remind_from).format("YYYY-MM-DDTHH:mm:ss") }),
+            notes: data.notes || '',
+        };
+        try {
+            await dispatch(addScheduleAction(payload)).unwrap();
+            toast.push(<Notification type="success" title="Event Scheduled" children={`Successfully scheduled event for ${document.name}.`} />);
+            onClose();
+        } catch (error: any) {
+            toast.push(<Notification type="danger" title="Scheduling Failed" children={error?.message || 'An unknown error occurred.'} />);
+        } finally {
+            setIsLoading(false);
+        }
     };
-    try {
-      await dispatch(addScheduleAction(payload)).unwrap();
-      toast.push(
-        <Notification
-          type="success"
-          title="Event Scheduled"
-          children={`Successfully scheduled event for ${document.name}.`}
-        />
-      );
-      onClose();
-    } catch (error: any) {
-      toast.push(
-        <Notification
-          type="danger"
-          title="Scheduling Failed"
-          children={error?.message || "An unknown error occurred."}
-        />
-      );
-    } finally {
-      setIsLoading(false);
+    return (
+        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+            <h5 className="mb-4">Add Schedule for Subscriber: {document.name}</h5>
+            <Form onSubmit={handleSubmit(onAddEvent)}>
+                <FormItem label="Event Title" invalid={!!errors.event_title} errorMessage={errors.event_title?.message}><Controller name="event_title" control={control} render={({ field }) => <Input {...field} />} /></FormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormItem label="Event Type" invalid={!!errors.event_type} errorMessage={errors.event_type?.message}><Controller name="event_type" control={control} render={({ field }) => (<Select placeholder="Select Type" options={eventTypeOptions} value={eventTypeOptions.find(o => o.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />)} /></FormItem>
+                    <FormItem label="Event Date & Time" invalid={!!errors.date_time} errorMessage={errors.date_time?.message}><Controller name="date_time" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+                </div>
+                <FormItem label="Reminder Date & Time (Optional)" invalid={!!errors.remind_from} errorMessage={errors.remind_from?.message}><Controller name="remind_from" control={control} render={({ field }) => (<DatePicker.DateTimepicker placeholder="Select date and time" value={field.value} onChange={field.onChange} />)} /></FormItem>
+                <FormItem label="Notes" invalid={!!errors.notes} errorMessage={errors.notes?.message}><Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} />} /></FormItem>
+                <div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button><Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Event</Button></div>
+            </Form>
+        </Dialog>
+    );
+};
+
+const SubscriberModals = ({ modalState, onClose, getAllUserDataOptions }: { modalState: ModalState; onClose: () => void; getAllUserDataOptions: SelectOption[]; }) => {
+    const { type, data: document, isOpen } = modalState;
+    if (!isOpen || !document) return null;
+    switch (type) {
+        case 'notification': return <AddNotificationDialog document={document} onClose={onClose} getAllUserDataOptions={getAllUserDataOptions} />;
+        case 'schedule': return <AddScheduleDialog document={document} onClose={onClose} />;
+        default: return null;
     }
-  };
-  return (
-    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-      <h5 className="mb-4">Add Schedule for Subscriber: {document.name}</h5>
-      <Form onSubmit={handleSubmit(onAddEvent)}>
-        <FormItem
-          label="Event Title"
-          invalid={!!errors.event_title}
-          errorMessage={errors.event_title?.message}
-        >
-          <Controller
-            name="event_title"
-            control={control}
-            render={({ field }) => <Input {...field} />}
-          />
-        </FormItem>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormItem
-            label="Event Type"
-            invalid={!!errors.event_type}
-            errorMessage={errors.event_type?.message}
-          >
-            <Controller
-              name="event_type"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  placeholder="Select Type"
-                  options={eventTypeOptions}
-                  value={eventTypeOptions.find((o) => o.value === field.value)}
-                  onChange={(opt: any) => field.onChange(opt?.value)}
-                />
-              )}
-            />
-          </FormItem>
-          <FormItem
-            label="Event Date & Time"
-            invalid={!!errors.date_time}
-            errorMessage={errors.date_time?.message}
-          >
-            <Controller
-              name="date_time"
-              control={control}
-              render={({ field }) => (
-                <DatePicker.DateTimepicker
-                  placeholder="Select date and time"
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
-            />
-          </FormItem>
-        </div>
-        <FormItem
-          label="Reminder Date & Time (Optional)"
-          invalid={!!errors.remind_from}
-          errorMessage={errors.remind_from?.message}
-        >
-          <Controller
-            name="remind_from"
-            control={control}
-            render={({ field }) => (
-              <DatePicker.DateTimepicker
-                placeholder="Select date and time"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            )}
-          />
-        </FormItem>
-        <FormItem
-          label="Notes"
-          invalid={!!errors.notes}
-          errorMessage={errors.notes?.message}
-        >
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => <Input textArea {...field} />}
-          />
-        </FormItem>
-        <div className="text-right mt-6">
-          <Button
-            type="button"
-            className="mr-2"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            type="submit"
-            loading={isLoading}
-            disabled={!isValid || isLoading}
-          >
-            Save Event
-          </Button>
-        </div>
-      </Form>
-    </Dialog>
-  );
 };
-const SubscriberModals = ({
-  modalState,
-  onClose,
-  getAllUserDataOptions,
-}: {
-  modalState: ModalState;
-  onClose: () => void;
-  getAllUserDataOptions: SelectOption[];
-}) => {
-  const { type, data: document, isOpen } = modalState;
-  if (!isOpen || !document) return null;
-  switch (type) {
-    case "notification":
-      return (
-        <AddNotificationDialog
-          document={document}
-          onClose={onClose}
-          getAllUserDataOptions={getAllUserDataOptions}
-        />
-      );
-    case "schedule":
-      return <AddScheduleDialog document={document} onClose={onClose} />;
-    default:
-      return null;
-  }
-};
+
 type SubscriberSearchProps = {
   onInputChange: (value: string) => void;
   ref?: Ref<HTMLInputElement>;
 };
-const SubscriberSearch = React.forwardRef<
-  HTMLInputElement,
-  SubscriberSearchProps
->(({ onInputChange }, ref) => (
-  <DebouceInput
+const SubscriberSearch = React.forwardRef<HTMLInputElement, SubscriberSearchProps>(({ onInputChange }, ref) => (
+  <DebounceInput
     ref={ref}
     className="w-full"
-    placeholder="Quick Search (ID, Email, Name, Mobile)..."
+    placeholder="Quick Search (Email, Name, Mobile)..."
     suffix={<TbSearch className="text-lg" />}
-    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-      onInputChange(e.target.value)
-    }
+    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onInputChange(e.target.value)}
   />
 ));
 SubscriberSearch.displayName = "SubscriberSearch";
-const SubscriberTableTools = ({
-  onSearchChange,
-  onFilter,
-  onExport,
-  onClearFilters,
-  columns,
-  filteredColumns,
-  setFilteredColumns,
-  activeFilterCount,
-}: {
+
+const SubscriberTableTools = ({ onSearchChange, onFilter, onExport, onImport, onClearFilters, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
   onExport: () => void;
+  onImport: () => void;
   onClearFilters: () => void;
   columns: ColumnDef<SubscriberItem>[];
   filteredColumns: ColumnDef<SubscriberItem>[];
-  setFilteredColumns: React.Dispatch<
-    React.SetStateAction<ColumnDef<SubscriberItem>[]>
-  >;
+  setFilteredColumns: React.Dispatch<React.SetStateAction<ColumnDef<SubscriberItem>[]>>;
   activeFilterCount: number;
+  isDataReady: boolean;
 }) => {
-  const isColumnVisible = (colId: string) =>
-    filteredColumns.some((c) => (c.id || c.accessorKey) === colId);
+  const isColumnVisible = (colId: string) => filteredColumns.some((c) => (c.id || c.accessorKey) === colId);
   const toggleColumn = (checked: boolean, colId: string) => {
     if (checked) {
-      const originalColumn = columns.find(
-        (c) => (c.id || c.accessorKey) === colId
-      );
+      const originalColumn = columns.find((c) => (c.id || c.accessorKey) === colId);
       if (originalColumn) {
         setFilteredColumns((prev) => {
           const newCols = [...prev, originalColumn];
           newCols.sort((a, b) => {
-            const indexA = columns.findIndex(
-              (c) => (c.id || c.accessorKey) === (a.id || a.accessorKey)
-            );
-            const indexB = columns.findIndex(
-              (c) => (c.id || c.accessorKey) === (b.id || b.accessorKey)
-            );
+            const indexA = columns.findIndex((c) => (c.id || c.accessorKey) === (a.id || a.accessorKey));
+            const indexB = columns.findIndex((c) => (c.id || c.accessorKey) === (b.id || b.accessorKey));
             return indexA - indexB;
           });
           return newCols;
         });
       }
     } else {
-      setFilteredColumns((prev) =>
-        prev.filter((c) => (c.id || c.accessorKey) !== colId)
-      );
+      setFilteredColumns((prev) => prev.filter((c) => (c.id || c.accessorKey) !== colId));
     }
   };
   return (
@@ -770,108 +384,51 @@ const SubscriberTableTools = ({
         <SubscriberSearch onInputChange={onSearchChange} />
       </div>
       <div className="flex flex-col sm:flex-row gap-1 w-full sm:w-auto">
-        <Dropdown
-          renderTitle={<Button icon={<TbColumns />} />}
-          placement="bottom-end"
-        >
+        <Dropdown renderTitle={<Button icon={<TbColumns />} />} placement="bottom-end">
           <div className="flex flex-col p-2">
-            <div className="font-semibold mb-1 border-b pb-1">
-              Toggle Columns
-            </div>
+            <div className="font-semibold mb-1 border-b pb-1">Toggle Columns</div>
             {columns.map((col) => {
               const id = col.id || (col.accessorKey as string);
               return (
-                col.header && (
-                  <div
-                    key={id}
-                    className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"
-                  >
-                    <Checkbox
-                      checked={isColumnVisible(id)}
-                      onChange={(checked) => toggleColumn(checked, id)}
-                    >
-                      {col.header as string}
-                    </Checkbox>
+                col.header && typeof col.header === "string" && (
+                  <div key={id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2">
+                    <Checkbox checked={isColumnVisible(id)} onChange={(checked) => toggleColumn(checked, id)}>{col.header as string}</Checkbox>
                   </div>
                 )
               );
             })}
           </div>
         </Dropdown>
-        <Tooltip title="Clear Filters">
-          <Button icon={<TbReload />} onClick={onClearFilters}></Button>
-        </Tooltip>
-        <Button
-          icon={<TbFilter />}
-          onClick={onFilter}
-          className="w-full sm:w-auto"
-        >
+        <Tooltip title="Clear Filters"><Button icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady}></Button></Tooltip>
+        <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>
           Filter{" "}
-          {activeFilterCount > 0 && (
-            <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-              {activeFilterCount}
-            </span>
-          )}
+          {activeFilterCount > 0 && (<span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>)}
         </Button>
-        <Button
-          icon={<TbCloudUpload />}
-          onClick={onExport}
-          className="w-full sm:w-auto"
-        >
-          Export
-        </Button>
+        <Button icon={<TbCloudDownload />} onClick={onImport} className="w-full sm:w-auto" disabled={!isDataReady}>Import</Button>
+        <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
       </div>
     </div>
   );
 };
 SubscriberTableTools.displayName = "SubscriberTableTools";
-const ActiveFiltersDisplay = ({
-  filterData,
-  onRemoveFilter,
-  onClearAll,
-}: {
+
+const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
   filterData: FilterFormData;
   onRemoveFilter: (key: keyof FilterFormData) => void;
   onClearAll: () => void;
 }) => {
-  const hasFilters =
-    (filterData.status && filterData.status !== "") ||
-    (filterData.dateRange &&
-      (filterData.dateRange[0] || filterData.dateRange[1]));
+  const hasFilters = (filterData.status && filterData.status !== "") || (filterData.dateRange && (filterData.dateRange[0] || filterData.dateRange[1]));
   if (!hasFilters) return null;
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">
-        Active Filters:
-      </span>
-      {filterData.status && (
-        <Tag prefix>
-          Status: {filterData.status}{" "}
-          <TbX
-            className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
-            onClick={() => onRemoveFilter("status")}
-          />
-        </Tag>
-      )}
-      {filterData.dateRange &&
-        (filterData.dateRange[0] || filterData.dateRange[1]) && (
-          <Tag prefix>
-            Date: {dayjs(filterData.dateRange[0]).format("MMM D")} -{" "}
-            {dayjs(filterData.dateRange[1]).format("MMM D, YYYY")}{" "}
-            <TbX
-              className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
-              onClick={() => onRemoveFilter("dateRange")}
-            />
+      <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mr-2">Active Filters:</span>
+      {filterData.status && (<Tag prefix>Status: {filterData.status} <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter("status")} /></Tag>)}
+      {filterData.dateRange && (filterData.dateRange[0] || filterData.dateRange[1]) && (
+          <Tag prefix>Date: {dayjs(filterData.dateRange[0]).format("MMM D")} -{" "}{dayjs(filterData.dateRange[1]).format("MMM D, YYYY")}{" "}
+            <TbX className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => onRemoveFilter("dateRange")} />
           </Tag>
         )}
-      <Button
-        size="xs"
-        variant="plain"
-        className="text-red-600 hover:text-red-500 hover:underline ml-auto"
-        onClick={onClearAll}
-      >
-        Clear All
-      </Button>
+      <Button size="xs" variant="plain" className="text-red-600 hover:text-red-500 hover:underline ml-auto" onClick={onClearAll}>Clear All</Button>
     </div>
   );
 };
@@ -880,242 +437,107 @@ const ActiveFiltersDisplay = ({
 const SubscribersListing = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const {
-    rawApiSubscribers = { data: [], counts: {} },
-    getAllUserData = [],
-    status: masterLoadingStatus = "idle",
-    error: masterError = null,
-  } = useSelector(masterSelector, shallowEqual);
-
+  const { rawApiSubscribers = { data: [], counts: {} }, getAllUserData = [], status: masterLoadingStatus = "idle", error: masterError = null, } = useSelector(masterSelector, shallowEqual);
+  
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAddEditDrawerOpen, setIsAddEditDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SubscriberItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<SubscriberItem | null>(null);
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(
-    filterFormSchema.parse({})
-  );
-  const [tableData, setTableData] = useState<TableQueries>({
-    pageIndex: 1,
-    pageSize: 10,
-    sort: { order: "desc", key: "subscribedDate" },
-    query: "",
-  });
+  const [filterCriteria, setFilterCriteria] = useState<FilterFormData>(filterFormSchema.parse({}));
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "subscribedDate" }, query: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
-  const [isSubmittingExportReason, setIsSubmittingExportReason] =
-    useState(false);
-  const [modalState, setModalState] = useState<ModalState>({
-    isOpen: false,
-    type: null,
-    data: null,
-  });
+  const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
+  const [modalState, setModalState] = useState<ModalState>({ isOpen: false, type: null, data: null });
   const [imageView, setImageView] = useState("");
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  const isDataReady = !initialLoading;
+  const tableLoading = initialLoading || isSubmitting || isDeleting;
 
   const openImageViewer = useCallback((path: string | null | undefined) => {
-    if (path) {
-      setImageView(path);
-      setIsImageViewerOpen(true);
-    } else {
-      toast.push(
-        <Notification title="No Image" type="info">
-          User has no profile picture.
-        </Notification>
-      );
-    }
+    if (path) { setImageView(path); setIsImageViewerOpen(true); }
+    else { toast.push(<Notification title="No Image" type="info">User has no profile picture.</Notification>); }
   }, []);
-  const closeImageViewer = useCallback(() => {
-    setIsImageViewerOpen(false);
-    setImageView("");
-  }, []);
-  const formatCustomDateTime = (dateStr: string | null | undefined) => {
-    if (!dateStr) return "N/A";
-    return dayjs(dateStr).format("D MMM YYYY, h:mm A");
-  };
+  const closeImageViewer = useCallback(() => { setIsImageViewerOpen(false); setImageView(""); }, []);
 
   useEffect(() => {
-    dispatch(getSubscribersAction());
-    dispatch(getAllUsersAction());
+    const fetchData = async () => {
+        setInitialLoading(true);
+        try {
+            await Promise.all([
+                dispatch(getSubscribersAction()),
+                dispatch(getAllUsersAction())
+            ]);
+        } catch (error) {
+            console.error("Failed to load subscriber data", error);
+            toast.push(<Notification type="danger" title="Error">Could not load subscriber data.</Notification>)
+        } finally {
+            setInitialLoading(false);
+        }
+    };
+    fetchData();
   }, [dispatch]);
+
   useEffect(() => {
     if (masterLoadingStatus === "failed" && masterError) {
-      const errorMessage =
-        typeof masterError === "string"
-          ? masterError
-          : "Failed to load subscribers.";
-      toast.push(
-        <Notification title="Loading Error" type="danger" duration={4000}>
-          {errorMessage}
-        </Notification>
-      );
+      const errorMessage = typeof masterError === "string" ? masterError : "Failed to load subscribers.";
+      toast.push(<Notification title="Loading Error" type="danger" duration={4000}>{errorMessage}</Notification>);
     }
   }, [masterLoadingStatus, masterError]);
 
-  const formMethods = useForm<AddEditSubscriberFormData>({
-    resolver: zodResolver(addEditSubscriberFormSchema),
-    mode: "onChange",
-  });
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors, isValid },
-    watch,
-  } = formMethods;
-  const currentStatusWatch = watch("status");
-  const exportReasonFormMethods = useForm<ExportReasonFormData>({
-    resolver: zodResolver(exportReasonSchema),
-    defaultValues: { reason: "" },
-    mode: "onChange",
-  });
-  const filterFormMethods = useForm<FilterFormData>({
-    resolver: zodResolver(filterFormSchema),
-  });
-  const getAllUserDataOptions = useMemo(
-    () =>
-      Array.isArray(getAllUserData)
-        ? getAllUserData.map((b: any) => ({ value: b.id, label: b.name }))
-        : [],
-    [getAllUserData]
-  );
-  const handleOpenModal = useCallback(
-    (type: ModalType, itemData: SubscriberItem) => {
-      setModalState({ isOpen: true, type, data: itemData });
-    },
-    []
-  );
-  const handleCloseModal = useCallback(() => {
-    setModalState({ isOpen: false, type: null, data: null });
-  }, []);
+  const formMethods = useForm<AddEditSubscriberFormData>({ resolver: zodResolver(addEditSubscriberFormSchema), mode: "onChange" });
+  const { control, handleSubmit, reset, formState: { errors, isValid } } = formMethods;
+  const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
+  const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema) });
+  const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((b: any) => ({ value: b.id, label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
+  const handleOpenModal = useCallback((type: ModalType, itemData: SubscriberItem) => { setModalState({ isOpen: true, type, data: itemData }); }, []);
+  const handleCloseModal = useCallback(() => { setModalState({ isOpen: false, type: null, data: null }); }, []);
 
   const mappedSubscribers = useMemo((): SubscriberItem[] => {
-    if (
-      !Array.isArray(rawApiSubscribers?.data) ||
-      rawApiSubscribers?.data.length === 0
-    )
-      return [];
-    return rawApiSubscribers.data
-      .map((apiItem: ApiSubscriberItem): SubscriberItem | null => {
-        if (
-          !apiItem ||
-          !apiItem.created_at ||
-          !apiItem.email ||
-          !apiItem.status
-        )
-          return null;
-        return {
-          id: apiItem.id,
-          email: apiItem.email,
-          name: apiItem.name || "",
-          mobile_no: apiItem.mobile || "",
-          subscribedDate: new Date(apiItem.created_at),
-          subscriptionType:
-            apiItem.subscription_type || SUBSCRIPTION_TYPE_OPTIONS[0].value,
-          source: apiItem.source || "",
-          status: apiItem.status,
-          rating: apiItem.rating
-            ? typeof apiItem.rating === "string"
-              ? parseInt(apiItem.rating, 10)
-              : apiItem.rating
-            : null,
-          note: apiItem.note || "",
-          unsubscribeReason: apiItem.reason || "",
-          raw_created_at: apiItem.created_at,
-          raw_updated_at: apiItem.updated_at,
-          updated_by_user: apiItem.updated_by_user,
-        };
-      })
-      .filter((item) => item !== null) as SubscriberItem[];
+    if (!Array.isArray(rawApiSubscribers?.data) || rawApiSubscribers?.data.length === 0) return [];
+    return rawApiSubscribers.data.map((apiItem: ApiSubscriberItem): SubscriberItem | null => {
+      if (!apiItem || !apiItem.created_at || !apiItem.email || !apiItem.status) return null;
+      return {
+        id: apiItem.id, email: apiItem.email, name: apiItem.name || "", mobile_no: apiItem.mobile || "",
+        subscribedDate: new Date(apiItem.created_at), subscriptionTypes: apiItem.subscription_types || [],
+        source: apiItem.source || "", status: apiItem.status, remarks: apiItem.remarks || "", // CORRECTED
+        raw_created_at: apiItem.created_at, raw_updated_at: apiItem.updated_at,
+        updated_by_user: apiItem.updated_by_user,
+      };
+    }).filter((item) => item !== null) as SubscriberItem[];
   }, [rawApiSubscribers?.data]);
 
-  const defaultFormValues: AddEditSubscriberFormData = useMemo(
-    () => ({
-      email: "",
-      name: "",
-      mobile_no: "",
-      subscribedDate: new Date(),
-      subscriptionType: SUBSCRIPTION_TYPE_OPTIONS[0].value,
-      source: "",
-      status: STATUS_OPTIONS[0].value,
-      rating: null,
-      note: "",
-      unsubscribeReason: "",
-    }),
-    []
-  );
-  const openAddDrawer = useCallback(() => {
-    reset(defaultFormValues);
-    setEditingItem(null);
+  const defaultFormValues: AddEditSubscriberFormData = useMemo(() => ({
+    email: "", name: "", mobile_no: "", subscriptionTypes: [], source: "", status: STATUS_OPTIONS[0].value, remarks: "",
+  }), []);
+  const openAddDrawer = useCallback(() => { reset(defaultFormValues); setEditingItem(null); setIsAddEditDrawerOpen(true); }, [reset, defaultFormValues]);
+  const openEditDrawer = useCallback((item: SubscriberItem) => {
+    setEditingItem(item);
+    reset({
+      email: item.email, name: item.name, mobile_no: item.mobile_no,
+      subscriptionTypes: item.subscriptionTypes, source: item.source,
+      status: item.status, remarks: item.remarks,
+    });
     setIsAddEditDrawerOpen(true);
-  }, [reset, defaultFormValues]);
-  const openEditDrawer = useCallback(
-    (item: SubscriberItem) => {
-      setEditingItem(item);
-      reset({
-        email: item.email,
-        name: item.name,
-        mobile_no: item.mobile_no,
-        subscribedDate: item.subscribedDate,
-        subscriptionType: item.subscriptionType,
-        source: item.source,
-        status: item.status,
-        rating: item.rating,
-        note: item.note,
-        unsubscribeReason: item.unsubscribeReason,
-      });
-      setIsAddEditDrawerOpen(true);
-    },
-    [reset]
-  );
-  const closeAddEditDrawer = useCallback(() => {
-    setEditingItem(null);
-    setIsAddEditDrawerOpen(false);
-  }, []);
+  }, [reset]);
+  const closeAddEditDrawer = useCallback(() => { setEditingItem(null); setIsAddEditDrawerOpen(false); }, []);
 
   const onSubmitHandler = async (data: AddEditSubscriberFormData) => {
-    let apiPayload = {};
     setIsSubmitting(true);
-    if (editingItem) {
-      apiPayload = {
-        _method: "PUT",
-        email: data.email,
-        name: data.name,
-        mobile: data.mobile_no,
-        created_at: dayjs(data.subscribedDate).toISOString(),
-        subscription_type: data.subscriptionType,
-        source: data.source,
-        status: data.status,
-        rating: data.rating ? Number(data.rating) : null,
-        note: data.note || null,
-        reason:
-          data.status === "Unsubscribed"
-            ? data.unsubscribeReason || null
-            : null,
-      };
-    } else {
-      apiPayload = {
-        email: data.email,
-        name: data.name,
-        mobile: data.mobile_no,
-        created_at: dayjs(data.subscribedDate).toISOString(),
-        subscription_type: data.subscriptionType,
-        source: data.source,
-        status: data.status,
-        rating: data.rating ? Number(data.rating) : null,
-        note: data.note || null,
-        reason:
-          data.status === "Unsubscribed"
-            ? data.unsubscribeReason || null
-            : null,
-      };
-    }
+    let apiPayload = {
+      email: data.email, name: data.name || null, mobile: data.mobile_no || null,
+      subscription_types: data.subscriptionTypes, source: data.source || null,
+      status: data.status, remarks: data.remarks || null, // CORRECTED
+    };
     try {
       if (editingItem) {
-        await dispatch(
-          editSubscriberAction({ id: editingItem.id, formData: apiPayload })
-        ).unwrap();
+        await dispatch(editSubscriberAction({ id: editingItem.id, formData: { ...apiPayload, _method: "PUT" } })).unwrap();
         toast.push(<Notification title="Subscriber Updated" type="success" />);
       } else {
         await dispatch(addSubscriberAction(apiPayload)).unwrap();
@@ -1124,100 +546,49 @@ const SubscribersListing = () => {
       closeAddEditDrawer();
       dispatch(getSubscribersAction());
     } catch (e: any) {
-      const errorMessage =
-        e?.response?.data?.message ||
-        e?.message ||
-        (editingItem ? "Update Failed" : "Add Failed");
-      toast.push(
-        <Notification
-          title={editingItem ? "Update Failed" : "Add Failed"}
-          type="danger"
-        >
-          {errorMessage}
-        </Notification>
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+      const errorMessage = e?.response?.data?.message || e?.message || (editingItem ? "Update Failed" : "Add Failed");
+      toast.push(<Notification title={editingItem ? "Update Failed" : "Add Failed"} type="danger">{errorMessage}</Notification>);
+    } finally { setIsSubmitting(false); }
   };
-  const handleDeleteClick = useCallback((item: SubscriberItem) => {
-    setItemToDelete(item);
-    setSingleDeleteConfirmOpen(true);
-  }, []);
+
+  const handleDeleteClick = useCallback((item: SubscriberItem) => { setItemToDelete(item); setSingleDeleteConfirmOpen(true); }, []);
   const onConfirmSingleDelete = useCallback(async () => {
     if (!itemToDelete) return;
     setIsDeleting(true);
     setSingleDeleteConfirmOpen(false);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.push(
-        <Notification
-          title="Subscriber Deleted"
-          type="success"
-        >{`Subscriber "${itemToDelete.name}" deleted.`}</Notification>
-      );
+      toast.push(<Notification title="Subscriber Deleted" type="success">{`Subscriber "${itemToDelete.email}" deleted.`}</Notification>);
       dispatch(getSubscribersAction());
     } catch (e: any) {
-      toast.push(
-        <Notification title="Delete Failed" type="danger">
-          {(e as Error).message}
-        </Notification>
-      );
+      toast.push(<Notification title="Delete Failed" type="danger">{(e as Error).message}</Notification>);
     } finally {
       setIsDeleting(false);
       setItemToDelete(null);
     }
   }, [dispatch, itemToDelete]);
-  const openFilterDrawer = useCallback(() => {
-    filterFormMethods.reset(filterCriteria);
-    setIsFilterDrawerOpen(true);
-  }, [filterFormMethods, filterCriteria]);
+
+  const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => {
-    setTableData((prev) => ({ ...prev, ...data }));
-  }, []);
-  const onApplyFiltersSubmit = useCallback(
-    (data: FilterFormData) => {
-      setFilterCriteria(data);
-      handleSetTableData({ pageIndex: 1 });
-      closeFilterDrawer();
-    },
-    [handleSetTableData, closeFilterDrawer]
-  );
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => { setTableData((prev) => ({ ...prev, ...data })); }, []);
+  const onApplyFiltersSubmit = useCallback((data: FilterFormData) => { setFilterCriteria(data); handleSetTableData({ pageIndex: 1 }); closeFilterDrawer(); }, [handleSetTableData, closeFilterDrawer]);
   const onClearFilters = useCallback(() => {
     const defaultFilters = filterFormSchema.parse({});
     filterFormMethods.reset(defaultFilters);
     setFilterCriteria(defaultFilters);
+    setRowSelection({});
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
   }, [filterFormMethods]);
-  const handleCardClick = (status: string) => {
-    onClearFilters();
-    const statusOption = FILTER_STATUS_OPTIONS.find(
-      (opt) => opt.value === status
-    );
-    if (statusOption) {
-      setFilterCriteria({ status: statusOption.value });
-    }
-  };
-  const handleRemoveFilter = (key: keyof FilterFormData) => {
-    setFilterCriteria((prev) => ({ ...prev, [key]: undefined }));
-  };
+
+  const handleCardClick = (status: string) => { onClearFilters(); setFilterCriteria({ status: status }); };
+  const handleRemoveFilter = (key: keyof FilterFormData) => { setFilterCriteria((prev) => ({ ...prev, [key]: undefined })); };
 
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: SubscriberItem[] = cloneDeep(mappedSubscribers);
-    if (
-      filterCriteria.dateRange &&
-      (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])
-    ) {
+    if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) {
       const [startDate, endDate] = filterCriteria.dateRange;
-      const start =
-        startDate && dayjs(startDate).isValid()
-          ? dayjs(startDate).startOf("day")
-          : null;
-      const end =
-        endDate && dayjs(endDate).isValid()
-          ? dayjs(endDate).endOf("day")
-          : null;
+      const start = startDate && dayjs(startDate).isValid() ? dayjs(startDate).startOf("day") : null;
+      const end = endDate && dayjs(endDate).isValid() ? dayjs(endDate).endOf("day") : null;
       processedData = processedData.filter((item) => {
         if (isNaN(item.subscribedDate.getTime())) return false;
         const itemDate = dayjs(item.subscribedDate);
@@ -1227,46 +598,25 @@ const SubscribersListing = () => {
         return true;
       });
     }
-    if (filterCriteria.status && filterCriteria.status !== "") {
-      processedData = processedData.filter(
-        (item) => item.status === filterCriteria.status
-      );
-    }
+    if (filterCriteria.status && filterCriteria.status !== "") { processedData = processedData.filter((item) => item.status === filterCriteria.status); }
     if (tableData.query && tableData.query.trim() !== "") {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter(
-        (item) =>
-          String(item.id).toLowerCase().includes(query) ||
-          item.email.toLowerCase().includes(query) ||
-          item.name.toLowerCase().includes(query) ||
-          item.mobile_no.toLowerCase().includes(query)
-      );
+      processedData = processedData.filter((item) => String(item.id).toLowerCase().includes(query) || item.email.toLowerCase().includes(query) || item.name.toLowerCase().includes(query) || item.mobile_no.toLowerCase().includes(query));
     }
     const { order, key } = tableData.sort as OnSortParam;
-    if (
-      order &&
-      key &&
-      processedData.length > 0 &&
-      processedData[0].hasOwnProperty(key)
-    ) {
+    if (order && key && processedData.length > 0 && Object.prototype.hasOwnProperty.call(processedData[0], key)) {
       processedData.sort((a, b) => {
         let aVal = a[key as keyof SubscriberItem] as any;
         let bVal = b[key as keyof SubscriberItem] as any;
         if (aVal instanceof Date && bVal instanceof Date) {
           if (isNaN(aVal.getTime())) return order === "asc" ? 1 : -1;
           if (isNaN(bVal.getTime())) return order === "asc" ? -1 : 1;
-          return order === "asc"
-            ? aVal.getTime() - bVal.getTime()
-            : bVal.getTime() - aVal.getTime();
+          return order === "asc" ? aVal.getTime() - bVal.getTime() : bVal.getTime() - aVal.getTime();
         }
-        if (typeof aVal === "number" && typeof bVal === "number") {
-          return order === "asc" ? aVal - bVal : bVal - aVal;
-        }
+        if (typeof aVal === "number" && typeof bVal === "number") { return order === "asc" ? aVal - bVal : bVal - aVal; }
         const strA = String(aVal ?? "").toLowerCase();
         const strB = String(bVal ?? "").toLowerCase();
-        return order === "asc"
-          ? strA.localeCompare(strB)
-          : strB.localeCompare(strA);
+        return order === "asc" ? strA.localeCompare(strB) : strB.localeCompare(strA);
       });
     }
     const currentTotal = processedData.length;
@@ -1274,253 +624,105 @@ const SubscribersListing = () => {
     const pageSize = tableData.pageSize as number;
     const startIndex = (pageIndex - 1) * pageSize;
     const dataForPage = processedData.slice(startIndex, startIndex + pageSize);
-    return {
-      pageData: dataForPage,
-      total: currentTotal,
-      allFilteredAndSortedData: processedData,
-    };
+    return { pageData: dataForPage, total: currentTotal, allFilteredAndSortedData: processedData };
   }, [mappedSubscribers, tableData, filterCriteria]);
 
   const handleOpenExportReasonModal = useCallback(() => {
-    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) {
-      toast.push(
-        <Notification title="No Data" type="info">
-          Nothing to export.
-        </Notification>
-      );
-      return;
-    }
+    if (!allFilteredAndSortedData || !allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; }
     exportReasonFormMethods.reset({ reason: "" });
     setIsExportReasonModalOpen(true);
   }, [allFilteredAndSortedData, exportReasonFormMethods]);
-  const handleConfirmExportWithReason = useCallback(
-    async (data: ExportReasonFormData) => {
-      setIsSubmittingExportReason(true);
-      const moduleName = "Subscribers";
-      const timestamp = dayjs().format("YYYYMMDD_HHmmss");
-      const fileName = `subscribers_export_${timestamp}.csv`;
-      try {
-        await dispatch(
-          submitExportReasonAction({
-            reason: data.reason,
-            module: moduleName,
-            file_name: fileName,
-          })
-        ).unwrap();
-        toast.push(
-          <Notification title="Export Reason Submitted" type="success" />
-        );
-        exportSubscribersToCsv(fileName, allFilteredAndSortedData);
-        setIsExportReasonModalOpen(false);
-      } catch (error: any) {
-        toast.push(
-          <Notification title="Operation Failed" type="danger">
-            {(error as Error).message || "Could not complete export."}
-          </Notification>
-        );
-      } finally {
-        setIsSubmittingExportReason(false);
-      }
-    },
-    [dispatch, allFilteredAndSortedData]
-  );
-  const handlePaginationChange = useCallback(
-    (page: number) => handleSetTableData({ pageIndex: page }),
-    [handleSetTableData]
-  );
-  const handleSelectChange = useCallback(
-    (value: number) => {
-      handleSetTableData({ pageSize: Number(value), pageIndex: 1 });
-    },
-    [handleSetTableData]
-  );
-  const handleSort = useCallback(
-    (sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleSearchChange = useCallback(
-    (query: string) => handleSetTableData({ query, pageIndex: 1 }),
-    [handleSetTableData]
-  );
-  const handleViewClick = useCallback(
-    (item: SubscriberItem) => {
-      navigate(`/app/crm/subscriber-details/${item.id}`);
-    },
-    [navigate]
-  );
+  const handleConfirmExportWithReason = useCallback(async (data: ExportReasonFormData) => {
+    setIsSubmittingExportReason(true);
+    const moduleName = "Subscribers";
+    const timestamp = dayjs().format("YYYYMMDD_HHmmss");
+    const fileName = `subscribers_export_${timestamp}.csv`;
+    try {
+      await dispatch(submitExportReasonAction({ reason: data.reason, module: moduleName, file_name: fileName })).unwrap();
+      toast.push(<Notification title="Export Reason Submitted" type="success" />);
+      exportSubscribersToCsv(fileName, allFilteredAndSortedData);
+      setIsExportReasonModalOpen(false);
+    } catch (error: any) {
+      toast.push(<Notification title="Operation Failed" type="danger">{(error as Error).message || "Could not complete export."}</Notification>);
+    } finally { setIsSubmittingExportReason(false); }
+  }, [dispatch, allFilteredAndSortedData]);
 
-  const columns: ColumnDef<SubscriberItem>[] = useMemo(
-    () => [
-      {
-        header: "Subscriber Info",
-        accessorKey: "name",
-        id: "subscriberInfo",
-        cell: (props) => {
-          const rowData = props.row.original;
-          return (
-            <div className="flex items-center gap-2">
-              <Avatar size="sm" shape="circle" className="mr-1">
-                {rowData.name?.[0]?.toUpperCase()}
-              </Avatar>
-              <div className="flex flex-col gap-0.5">
-                <span className="font-semibold">{rowData.name}</span>
-                <div className="text-xs text-gray-500">{rowData.email}</div>
-                <div className="text-xs text-gray-500">{rowData.mobile_no}</div>
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        header: "Type",
-        accessorKey: "subscriptionType",
-        id: "subscriptionType",
-        enableSorting: true,
-        cell: (props) => (
-          <Tag className="capitalize whitespace-nowrap">
-            {(props.getValue() as string) || "N/A"}
-          </Tag>
-        ),
-      },
-      {
-        header: "Status",
-        accessorKey: "status",
-        id: "status",
-        cell: (props) => {
-          const statusVal = props.getValue() as string;
-          return (
-            <Tag
-              className={`capitalize whitespace-nowrap  text-center ${
-                statusColors[statusVal] || statusColors.default
-              }`}
-            >
-              {statusVal || "N/A"}
-            </Tag>
-          );
-        },
-      },
-      {
-        header: "Subscribed Date",
-        accessorKey: "subscribedDate",
-        id: "subscribedDate",
-        enableSorting: true,
-        size: 180,
-        cell: (props) => {
-          const date = props.row.original.subscribedDate;
-          return !isNaN(date.getTime()) ? (
-            <span className="text-xs">
-              {dayjs(date).format("MMM DD, YYYY hh:mm A")}
-            </span>
-          ) : (
-            "Invalid Date"
-          );
-        },
-      },
-      {
-        header: "Updated Info",
-        accessorKey: "raw_updated_at",
-        enableSorting: true,
-        size: 220,
+  const handleBulkEmail = () => { toast.push(<Notification title="Action Triggered" type="info">Sending email to {Object.keys(rowSelection).length} selected subscribers...</Notification>); };
+  const handleBulkWhatsApp = () => { toast.push(<Notification title="Action Triggered" type="info">Sending WhatsApp to {Object.keys(rowSelection).length} selected subscribers...</Notification>); };
+  const handleFileImport = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      console.log("Selected file:", e.target.files[0]);
+      toast.push(<Notification title="File Selected" type="info">{e.target.files[0].name}</Notification>);
+    }
+  };
+  const processAndUploadImport = () => { toast.push(<Notification title="Import Started" type="success">File is being processed.</Notification>); setIsImportModalOpen(false); };
+
+  const handlePaginationChange = useCallback((page: number) => handleSetTableData({ pageIndex: page }), [handleSetTableData]);
+  const handleSelectChange = useCallback((value: number) => { handleSetTableData({ pageSize: Number(value), pageIndex: 1 }); }, [handleSetTableData]);
+  const handleSort = useCallback((sort: OnSortParam) => handleSetTableData({ sort, pageIndex: 1 }), [handleSetTableData]);
+  const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
+  const handleViewClick = useCallback((item: SubscriberItem) => { navigate(`/app/crm/subscriber-details/${item.id}`); }, [navigate]);
+
+  const columns: ColumnDef<SubscriberItem>[] = useMemo(() => [
+    {
+        id: "select",
+        header: ({ table }) => (<Checkbox checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} />),
+        cell: ({ row }) => (<Checkbox checked={row.getIsSelected()} disabled={!row.getCanSelect()} onChange={row.getToggleSelectedHandler()} />),
+    },
+    {
+        header: "Subscriber Info", accessorKey: "email", id: "subscriberInfo",
+        cell: (props) => { const rowData = props.row.original; return (<div className="flex items-center gap-2"><Avatar size="sm" shape="circle" className="mr-1">{rowData.email?.[0]?.toUpperCase()}</Avatar><div className="flex flex-col gap-0.5"><span className="font-semibold">{rowData.email}</span><div className="text-xs text-gray-500">{rowData.name || "No name provided"}</div></div></div>); },
+    },
+    {
+        header: "Type", accessorKey: "subscriptionTypes", id: "subscriptionTypes", enableSorting: false,
+        cell: (props) => { const types = props.getValue() as string[]; if (!types || types.length === 0) return "N/A"; return (<div className="flex flex-wrap gap-1 max-w-[200px]">{types.map((type) => (<Tag key={type} className="capitalize whitespace-nowrap">{type}</Tag>))}</div>); },
+    },
+    {
+        header: "Status", accessorKey: "status", id: "status",
+        cell: (props) => { const statusVal = props.getValue() as string; return (<Tag className={`capitalize whitespace-nowrap text-center ${statusColors[statusVal] || statusColors.default}`}>{statusVal || "N/A"}</Tag>); },
+    },
+    {
+        header: "Subscription Date", accessorKey: "subscribedDate", id: "subscribedDate", enableSorting: true, size: 180,
+        cell: (props) => { const date = props.row.original.subscribedDate; return !isNaN(date.getTime()) ? (<span className="text-xs">{dayjs(date).format("MMM DD, YYYY hh:mm A")}</span>) : "Invalid Date"; },
+    },
+    {
+        header: "Updated Info", accessorKey: "raw_updated_at", enableSorting: true, size: 220,
         cell: (props: CellContext<SubscriberItem, unknown>) => {
-          const { raw_updated_at, updated_by_user } = props.row.original;
-          return (
-            <div className="flex items-center gap-2">
-              <Tooltip title="View Profile Picture">
-                <Avatar
-                  src={updated_by_user?.profile_pic_path}
-                  shape="circle"
-                  size="sm"
-                  icon={<TbUserCircle />}
-                  className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
-                  onClick={() =>
-                    openImageViewer(updated_by_user?.profile_pic_path)
-                  }
-                />
-              </Tooltip>
-              <div>
-                <span className="font-semibold">
-                  {updated_by_user?.name || "N/A"}
-                </span>
-                <div className="text-xs">
-                  {updated_by_user?.roles?.[0]?.display_name || ""}
+            const { raw_updated_at, updated_by_user } = props.row.original;
+            return (
+                <div className="flex items-center gap-2">
+                    <Tooltip title="View Profile Picture"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /></Tooltip>
+                    <div><span className="font-semibold">{updated_by_user?.name || "N/A"}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ""}</div><div className="text-xs text-gray-500">{formatCustomDateTime(raw_updated_at)}</div></div>
                 </div>
-                <div className="text-xs text-gray-500">
-                  {formatCustomDateTime(raw_updated_at)}
-                </div>
-              </div>
-            </div>
-          );
+            );
         },
-      },
-      {
-        header: "Action",
-        id: "action",
-        size: 120,
-        meta: { HeaderClass: "text-center" },
+    },
+    {
+        header: "Action", id: "action", size: 120,
         cell: (props: CellContext<SubscriberItem, unknown>) => (
-          <div className="flex gap-1 items-center justify-center pr-1.5">
-            <Tooltip title="Edit Subscriber">
-              <div
-                className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600"
-                onClick={() => openEditDrawer(props.row.original)}
-                role="button"
-              >
-                <TbPencil />
-              </div>
-            </Tooltip>
-            {/* <Tooltip title="Send Test Email">
-              <div
-                className="text-xl cursor-pointer select-none text-gray-500 hover:text-orange-600"
-                role="button"
-              >
-                <TbMailForward size={18} />
-              </div>
-            </Tooltip>
-            <Tooltip title="Add to Campaign">
-              <div
-                className="text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600"
-                role="button"
-              >
-                <TbAlignBoxCenterBottom size={17} />
-              </div>
-            </Tooltip> */}
-            {/* <Tooltip title="Delete">
-              <div
-                className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600"
-                role="button"
-                onClick={() => handleDeleteClick(props.row.original)}
-              >
-                <TbTrash size={18} />
-              </div>
-            </Tooltip> */}
-          </div>
+            <div className="flex gap-2 items-center justify-center">
+                <Tooltip title="Edit Subscriber"><div className="text-xl cursor-pointer text-gray-500 hover:text-emerald-600" onClick={() => openEditDrawer(props.row.original)} role="button"><TbPencil /></div></Tooltip>
+                <Tooltip title="Delete"><div className="text-xl cursor-pointer select-none text-gray-500 hover:text-red-600" role="button" onClick={() => handleDeleteClick(props.row.original)}><TbTrash size={18} /></div></Tooltip>
+            </div>
         ),
-      },
-    ],
-    [openEditDrawer, handleDeleteClick, openImageViewer]
-  );
+    },
+  ], [openEditDrawer, handleViewClick, handleDeleteClick, openImageViewer]);
 
-  const [filteredColumns, setFilteredColumns] =
-    useState<ColumnDef<SubscriberItem>[]>(columns);
-  useEffect(() => {
-    setFilteredColumns(columns);
-  }, [columns]);
+  const [filteredColumns, setFilteredColumns] = useState<ColumnDef<SubscriberItem>[]>(columns);
+  useEffect(() => { setFilteredColumns(columns) }, [columns]);
 
-  const tableIsLoading = masterLoadingStatus === "loading" || isDeleting;
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (
-      filterCriteria.dateRange &&
-      (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])
-    )
-      count++;
-    if (filterCriteria.status && filterCriteria.status !== "") count++;
-    return count;
-  }, [filterCriteria]);
+  const activeFilterCount = useMemo(() => { let count = 0; if (filterCriteria.dateRange && (filterCriteria.dateRange[0] || filterCriteria.dateRange[1])) count++; if (filterCriteria.status && filterCriteria.status !== "") count++; return count; }, [filterCriteria]);
   const counts = rawApiSubscribers?.counts || {};
-  const cardClass =
-    "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
+  const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex gap-2 p-2";
+  const selectedRowCount = Object.keys(rowSelection).length;
+
+  const renderCardContent = (content: number | undefined) => {
+    if (initialLoading) {
+        return <Skeleton width={40} height={20} />;
+    }
+    return <h6 className="font-bold">{content ?? 0}</h6>;
+  };
 
   return (
     <>
@@ -1528,126 +730,28 @@ const SubscribersListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Subscribers</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
-              Add New
-            </Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}>Add New</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-4 gap-2">
-            <Tooltip title="Click to show all subscribers">
-              <div onClick={onClearFilters}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(
-                    cardClass,
-                    "border-blue-200 dark:border-blue-700/60"
-                  )}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200">
-                    <TbCaravan size={24} />
-                  </div>
-                  <div>
-                    <h6 className="text-blue-500 dark:text-blue-200">
-                      {counts?.total || 0}
-                    </h6>
-                    <span className="font-semibold text-xs">Total</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show new subscribers">
-              <div onClick={() => {}}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(
-                    cardClass,
-                    "border-violet-200 dark:border-violet-700/60"
-                  )}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200">
-                    <TbUserStar size={24} />
-                  </div>
-                  <div>
-                    <h6 className="text-violet-500 dark:text-violet-200">
-                      {counts?.new || 0}
-                    </h6>
-                    <span className="font-semibold text-xs">New</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show active subscribers">
-              <div onClick={() => handleCardClick("Active")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(
-                    cardClass,
-                    "border-green-200 dark:border-green-700/60"
-                  )}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200">
-                    <TbMailForward size={24} />
-                  </div>
-                  <div>
-                    <h6 className="text-green-500 dark:text-green-200">
-                      {counts?.active || 0}
-                    </h6>
-                    <span className="font-semibold text-xs">Active</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
-            <Tooltip title="Click to show unsubscribed">
-              <div onClick={() => handleCardClick("Unsubscribed")}>
-                <Card
-                  bodyClass={cardBodyClass}
-                  className={classNames(
-                    cardClass,
-                    "border-red-200 dark:border-red-700/60"
-                  )}
-                >
-                  <div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200">
-                    <TbCalendarCancel size={24} />
-                  </div>
-                  <div>
-                    <h6 className="text-red-500 dark:text-red-200">
-                      {counts?.unsubscribed || 0}
-                    </h6>
-                    <span className="font-semibold text-xs">Unsubscribed</span>
-                  </div>
-                </Card>
-              </div>
-            </Tooltip>
+            <Tooltip title="Click to show all subscribers"><div onClick={onClearFilters}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200 dark:border-blue-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-200"><TbCaravan size={24} /></div><div><div className="text-blue-500">{renderCardContent(counts?.total)}</div><span className="font-semibold text-xs">Total</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show new subscribers"><div onClick={() => {}}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-violet-200 dark:border-violet-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-violet-100 dark:bg-violet-500/20 text-violet-500 dark:text-violet-200"><TbUserStar size={24} /></div><div><div className="text-violet-500">{renderCardContent(counts?.new)}</div><span className="font-semibold text-xs">New</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show subscribed users"><div onClick={() => handleCardClick("Subscribed")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-green-200 dark:border-green-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-green-100 dark:bg-green-500/20 text-green-500 dark:text-green-200"><TbMailForward size={24} /></div><div><div className="text-green-500">{renderCardContent(counts?.subscribed)}</div><span className="font-semibold text-xs">Subscribed</span></div></Card></div></Tooltip>
+            <Tooltip title="Click to show unsubscribed users"><div onClick={() => handleCardClick("Unsubscribed")}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200 dark:border-red-700/60")}><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 dark:bg-red-500/20 text-red-500 dark:text-red-200"><TbCalendarCancel size={24} /></div><div><div className="text-red-500">{renderCardContent(counts?.unsubscribed)}</div><span className="font-semibold text-xs">Unsubscribed</span></div></Card></div></Tooltip>
           </div>
-          <SubscriberTableTools
-            onClearFilters={onClearFilters}
-            onSearchChange={handleSearchChange}
-            onFilter={openFilterDrawer}
-            onExport={handleOpenExportReasonModal}
-            columns={columns}
-            filteredColumns={filteredColumns}
-            setFilteredColumns={setFilteredColumns}
-            activeFilterCount={activeFilterCount}
-          />
-          <ActiveFiltersDisplay
-            filterData={filterCriteria}
-            onRemoveFilter={handleRemoveFilter}
-            onClearAll={onClearFilters}
-          />
+
+          {selectedRowCount > 0 ? (
+            <div className="flex justify-between items-center w-full mb-4 px-2 py-2 rounded-md bg-gray-100 dark:bg-gray-700">
+              <div className="font-semibold text-sm">{selectedRowCount} item{selectedRowCount > 1 ? "s" : ""} selected</div>
+              <div className="flex gap-2"><Button size="sm" icon={<TbMail />} onClick={handleBulkEmail}>Send Email</Button><Button size="sm" icon={<TbBrandWhatsapp />} onClick={handleBulkWhatsApp}>Send WhatsApp</Button></div>
+            </div>
+          ) : (
+            <SubscriberTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onImport={() => setIsImportModalOpen(true)} onExport={handleOpenExportReasonModal} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
+          )}
+
+          <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />
+
           <div className="mt-4 flex-grow overflow-auto">
-            <DataTable
-              columns={filteredColumns}
-              data={pageData}
-              loading={tableIsLoading}
-              pagingData={{
-                total: total,
-                pageIndex: tableData.pageIndex as number,
-                pageSize: tableData.pageSize as number,
-              }}
-              onPaginationChange={handlePaginationChange}
-              onSelectChange={handleSelectChange}
-              onSort={handleSort}
-              noData={!tableIsLoading && pageData.length === 0}
-            />
+            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading} pagingData={{ total: total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onRowSelectionChange={setRowSelection} rowSelection={rowSelection} enableRowSelection noData={!tableLoading && pageData.length === 0} />
           </div>
         </AdaptiveCard>
       </Container>
@@ -1676,13 +780,7 @@ const SubscribersListing = () => {
               loading={isSubmitting}
               disabled={!isValid || isSubmitting}
             >
-              {isSubmitting
-                ? editingItem
-                  ? "Saving..."
-                  : "Adding..."
-                : editingItem
-                ? "Save"
-                : "Save"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         }
@@ -1715,11 +813,7 @@ const SubscribersListing = () => {
             />
           </FormItem>
           <FormItem
-            label={
-              <div>
-                Name<span className="text-red-500"> *</span>
-              </div>
-            }
+            label="Name"
             invalid={!!errors.name}
             errorMessage={errors.name?.message}
           >
@@ -1729,7 +823,7 @@ const SubscribersListing = () => {
               render={({ field }) => (
                 <Input
                   {...field}
-                  placeholder="Enter Name"
+                  placeholder="Enter Name (Optional)"
                   prefix={<TbUserCircle />}
                 />
               )}
@@ -1737,11 +831,7 @@ const SubscribersListing = () => {
           </FormItem>
           <div className="md:grid grid-cols-2 gap-3">
             <FormItem
-              label={
-                <div>
-                  Mobile No.<span className="text-red-500"> *</span>
-                </div>
-              }
+              label="Mobile No."
               invalid={!!errors.mobile_no}
               errorMessage={errors.mobile_no?.message}
             >
@@ -1752,66 +842,14 @@ const SubscribersListing = () => {
                   <Input
                     {...field}
                     type="tel"
-                    placeholder="Enter Mobile No."
+                    placeholder="Enter Mobile No. (Optional)"
                     prefix={<TbPhone />}
                   />
                 )}
               />
             </FormItem>
             <FormItem
-              label={
-                <div>
-                  Subscription Date<span className="text-red-500"> *</span>
-                </div>
-              }
-              invalid={!!errors.subscribedDate}
-              errorMessage={errors.subscribedDate?.message}
-            >
-              <Controller
-                name="subscribedDate"
-                control={control}
-                render={({ field }) => (
-                  <DatePicker
-                    {...field}
-                    placeholder="Pick Subscription Date"
-                    value={field.value}
-                  />
-                )}
-              />
-            </FormItem>
-          </div>
-          <div className="md:grid grid-cols-2 gap-3">
-            <FormItem
-              label={
-                <div>
-                  Subscription Type<span className="text-red-500"> *</span>
-                </div>
-              }
-              invalid={!!errors.subscriptionType}
-              errorMessage={errors.subscriptionType?.message}
-            >
-              <Controller
-                name="subscriptionType"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    placeholder="Select Subscription Type"
-                    options={SUBSCRIPTION_TYPE_OPTIONS}
-                    value={SUBSCRIPTION_TYPE_OPTIONS.find(
-                      (opt) => opt.value === field.value
-                    )}
-                    onChange={(opt) => field.onChange(opt?.value)}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label={
-                <div>
-                  Source<span className="text-red-500"> *</span>
-                </div>
-              }
+              label="Source"
               invalid={!!errors.source}
               errorMessage={errors.source?.message}
             >
@@ -1821,104 +859,76 @@ const SubscribersListing = () => {
                 render={({ field }) => (
                   <Input
                     {...field}
-                    placeholder="Enter Source (e.g., Website, Facebook)"
+                    placeholder="e.g., Website (Optional)"
                     prefix={<TbWorld />}
                   />
                 )}
               />
             </FormItem>
           </div>
-          <div className="md:grid grid-cols-2 gap-3">
-            <FormItem
-              label={
-                <div>
-                  Status<span className="text-red-500"> *</span>
-                </div>
-              }
-              invalid={!!errors.status}
-              errorMessage={errors.status?.message}
-            >
-              <Controller
-                name="status"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    placeholder="Select Status"
-                    options={STATUS_OPTIONS}
-                    value={STATUS_OPTIONS.find(
-                      (opt) => opt.value === field.value
-                    )}
-                    onChange={(opt) => field.onChange(opt?.value)}
-                  />
-                )}
-              />
-            </FormItem>
-            <FormItem
-              label="Rating (1-5)"
-              invalid={!!errors.rating}
-              errorMessage={errors.rating?.message}
-            >
-              <Controller
-                name="rating"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    type="number"
-                    min="1"
-                    max="5"
-                    placeholder="Enter Rating (Optional)"
-                    value={field.value ?? ""}
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value === "" ? null : Number(e.target.value)
-                      )
-                    }
-                    prefix={<TbStar />}
-                  />
-                )}
-              />
-            </FormItem>
-          </div>
-          {currentStatusWatch === "Unsubscribed" && (
-            <FormItem
-              label={
-                <div>
-                  Unsubscribe Reason<span className="text-red-500"> *</span>
-                </div>
-              }
-              invalid={!!errors.unsubscribeReason}
-              errorMessage={errors.unsubscribeReason?.message}
-            >
-              <Controller
-                name="unsubscribeReason"
-                control={control}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    placeholder="Describe unsubscribe reason"
-                    textArea
-                    rows={3}
-                  />
-                )}
-              />
-            </FormItem>
-          )}
           <FormItem
-            label="Notes"
-            invalid={!!errors.note}
-            errorMessage={errors.note?.message}
+            label={
+              <div>
+                Subscription Type<span className="text-red-500"> *</span>
+              </div>
+            }
+            invalid={!!errors.subscriptionTypes}
+            errorMessage={errors.subscriptionTypes?.message}
           >
             <Controller
-              name="note"
+              name="subscriptionTypes"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  isMulti
+                  placeholder="Select Type(s)"
+                  options={SUBSCRIPTION_TYPE_OPTIONS}
+                  value={SUBSCRIPTION_TYPE_OPTIONS.filter((opt) =>
+                    field.value?.includes(opt.value)
+                  )}
+                  onChange={(options: any) =>
+                    field.onChange(options?.map((o: any) => o.value) || [])
+                  }
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label={
+              <div>
+                Status<span className="text-red-500"> *</span>
+              </div>
+            }
+            invalid={!!errors.status}
+            errorMessage={errors.status?.message}
+          >
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  placeholder="Select Status"
+                  options={STATUS_OPTIONS}
+                  value={STATUS_OPTIONS.find((opt) => opt.value === field.value)}
+                  onChange={(opt) => field.onChange(opt?.value)}
+                />
+              )}
+            />
+          </FormItem>
+          <FormItem
+            label="Remarks"
+            invalid={!!errors.remarks}
+            errorMessage={errors.remarks?.message}
+          >
+            <Controller
+              name="remarks"
               control={control}
               render={({ field }) => (
                 <Input
                   {...field}
-                  placeholder="Write a note (Optional)"
+                  placeholder="Write a remark (Optional)"
                   textArea
-                  rows={3}
+                  rows={4}
                   prefix={<TbFileText />}
                 />
               )}
@@ -1993,6 +1003,42 @@ const SubscribersListing = () => {
         </Form>
       </Drawer>
 
+      <Dialog
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onRequestClose={() => setIsImportModalOpen(false)}
+      >
+        <h5 className="mb-4">Import Subscribers</h5>
+        <p className="mb-4">
+          Select a CSV or Excel file. Please ensure the file columns match the
+          required format.
+        </p>
+        <div className="mb-4">
+          <a
+            href="/subscriber-import-template.csv"
+            download
+            className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
+          >
+            <TbCloudDownload /> Download Template
+          </a>
+        </div>
+        <FormItem label="Upload File">
+          <Input
+            type="file"
+            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+            onChange={handleFileImport}
+          />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button className="mr-2" onClick={() => setIsImportModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="solid" onClick={processAndUploadImport}>
+            Import Data
+          </Button>
+        </div>
+      </Dialog>
+
       <ConfirmDialog
         isOpen={singleDeleteConfirmOpen}
         type="danger"
@@ -2014,10 +1060,8 @@ const SubscribersListing = () => {
       >
         <p>
           Are you sure you want to delete the subscriber "
-          <strong>
-            {itemToDelete?.name} ({itemToDelete?.email})
-          </strong>
-          "? This action cannot be undone.
+          <strong>{itemToDelete?.email}</strong>"? This action cannot be
+          undone.
         </p>
       </ConfirmDialog>
 
@@ -2090,11 +1134,11 @@ const SubscribersListing = () => {
           {imageView ? (
             <img
               src={imageView}
-              alt="User"
+              alt="User Profile"
               className="max-w-full max-h-[80vh]"
             />
           ) : (
-            <p>No image.</p>
+            <p>No image available.</p>
           )}
         </div>
       </Dialog>

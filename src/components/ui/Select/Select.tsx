@@ -1,25 +1,54 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import cn from '../utils/classNames'
-import ReactSelect from 'react-select'
-import CreatableSelect from 'react-select/creatable'
-import AsyncSelect from 'react-select/async'
+import type { ComponentType, JSX, Ref } from 'react'
+import { HiCheck, HiChevronDown, HiX } from 'react-icons/hi'
+import type {
+    ClassNamesConfig,
+    GroupBase,
+    OptionProps,
+    Props as ReactSelectProps,
+    StylesConfig,
+} from 'react-select'
+import ReactSelect, { components } from 'react-select'
+import type { AsyncProps } from 'react-select/async'
+import type { CreatableProps } from 'react-select/creatable'
+import type { CommonProps, TypeAttributes } from '../@types/common'
 import { useConfig } from '../ConfigProvider'
 import { useForm, useFormItem } from '../Form/context'
 import { useInputGroup } from '../InputGroup/context'
-import { HiChevronDown, HiX } from 'react-icons/hi'
-import DefaultOption from './Option'
 import Spinner from '../Spinner/Spinner'
+import cn from '../utils/classNames'
 import { CONTROL_SIZES } from '../utils/constants'
-import type { CommonProps, TypeAttributes } from '../@types/common'
-import type {
-    Props as ReactSelectProps,
-    StylesConfig,
-    ClassNamesConfig,
-    GroupBase,
-} from 'react-select'
-import type { AsyncProps } from 'react-select/async'
-import type { CreatableProps } from 'react-select/creatable'
-import type { Ref, JSX } from 'react'
+import Option from './Option'
+
+// CSS for the custom checkbox with a lighter theme.
+/*
+<style>
+.custom-checkbox {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: 1px solid #d1d5db; // gray-300
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .custom-checkbox {
+    border: 1px solid #4b5563; // dark:gray-600
+}
+
+.custom-checkbox-checked {
+    color: white;
+    background-color: #3b82f6; // A pleasant blue (blue-500)
+    border-color: #3b82f6;
+}
+
+.select-option:hover .custom-checkbox:not(.custom-checkbox-checked) {
+    border-color: #93c5fd; // light blue on hover
+}
+</style>
+*/
 
 const DefaultDropdownIndicator = () => {
     return (
@@ -59,6 +88,34 @@ const DefaultLoadingIndicator = ({
     )
 }
 
+const DefaultOption = components.Option
+
+const CheckboxOption = <
+    Option,
+    IsMulti extends boolean,
+    Group extends GroupBase<Option>,
+>({
+    children,
+    isSelected,
+    ...rest
+}: OptionProps<Option, IsMulti, Group>) => {
+    return (
+        <DefaultOption {...rest}>
+            <div className="flex items-center gap-x-2">
+                <span
+                    className={cn(
+                        'custom-checkbox',
+                        isSelected && 'custom-checkbox-checked',
+                    )}
+                >
+                    <HiCheck className={cn(!isSelected && 'hidden')} />
+                </span>
+                <span>{children}</span>
+            </div>
+        </DefaultOption>
+    )
+}
+
 export type SelectProps<
     Option,
     IsMulti extends boolean = false,
@@ -69,9 +126,8 @@ export type SelectProps<
     CreatableProps<Option, IsMulti, Group> & {
         invalid?: boolean
         size?: TypeAttributes.ControlSize
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         field?: any
-        componentAs?: ReactSelect | CreatableSelect | AsyncSelect
+        componentAs?: ComponentType
     }
 
 function Select<
@@ -80,7 +136,7 @@ function Select<
     Group extends GroupBase<Option> = GroupBase<Option>,
 >(props: SelectProps<Option, IsMulti, Group>) {
     const {
-        components,
+        components: parentComponents,
         componentAs: Component = ReactSelect,
         size,
         styles,
@@ -88,6 +144,7 @@ function Select<
         classNames,
         field,
         invalid,
+        isMulti,
         ...rest
     } = props
 
@@ -103,69 +160,72 @@ function Select<
 
     const isSelectInvalid = invalid || formItemInvalid
 
-    const selectClass = cn(`select select-${selectSize}`, className)
+    const selectClass = cn('select', `select-${selectSize}`, className)
 
     return (
         <Component<Option, IsMulti, Group>
             className={selectClass}
+            isMulti={isMulti}
             classNames={
                 {
                     control: (state) =>
                         cn(
                             'select-control',
                             CONTROL_SIZES[selectSize].minH,
-                            state.isDisabled && 'opacity-50 cursor-not-allowed',
-                            (() => {
-                                const classes: string[] = [
-                                    'bg-gray-100 dark:bg-gray-700',
-                                ]
-
-                                const { isFocused } = state
-
-                                if (isFocused) {
-                                    classes.push(
-                                        'select-control-focused ring-1 ring-primary border-primary bg-transparent',
-                                    )
-                                }
-
-                                if (isSelectInvalid) {
-                                    classes.push(
-                                        'select-control-invalid bg-error-subtle',
-                                    )
-                                }
-
-                                if (isFocused && isSelectInvalid) {
-                                    classes.push('ring-error border-error')
-                                }
-
-                                return classes
-                            })(),
+                            state.isDisabled && 'opacity-50 bg-gray-100 cursor-not-allowed',
+                            // Base styles
+                            'bg-gray-50 dark:bg-gray-700',
+                            // Focused state
+                            state.isFocused && !isSelectInvalid &&
+                                'ring-1 ring-blue-300 border-blue-300 bg-white dark:bg-gray-700',
+                            // Invalid state
+                            isSelectInvalid && 'select-control-invalid bg-red-50 border-red-300',
+                            // Focused and invalid state
+                            state.isFocused && isSelectInvalid && 'ring-1 ring-red-300'
                         ),
-                    valueContainer: ({ isMulti, hasValue, selectProps }) =>
+                    valueContainer: ({
+                        isMulti: isMultiValue,
+                        hasValue,
+                        selectProps,
+                    }) =>
                         cn(
                             'select-value-container',
-                            isMulti &&
+                            isMultiValue &&
                                 hasValue &&
                                 selectProps.controlShouldRenderValue
                                 ? 'flex'
                                 : 'grid',
                         ),
-                    input: ({ value, isDisabled }) =>
+                    input: ({ isDisabled }) =>
                         cn(
                             'select-input-container',
                             isDisabled ? 'invisible' : 'visible',
-                            value && '[transform:translateZ(0)]',
                         ),
                     placeholder: () =>
                         cn(
                             'select-placeholder',
-                            isSelectInvalid ? 'text-error' : 'text-gray-400',
+                            isSelectInvalid ? 'text-red-500' : 'text-gray-400',
                         ),
                     indicatorsContainer: () => 'select-indicators-container',
+                    dropdownIndicator: (state) =>
+                        cn(
+                            'select-dropdown-indicator-container',
+                            state.isFocused && 'text-blue-600 dark:text-blue-300',
+                            'hover:text-blue-600 dark:hover:text-blue-300',
+                        ),
+                    option: (state) =>
+                        cn(
+                            'select-option', // Custom class for checkbox styling
+                            state.isSelected &&
+                                'bg-blue-100 text-blue-700 dark:bg-blue-500/30 dark:text-blue-200 font-semibold',
+                            state.isFocused &&
+                                !state.isSelected &&
+                                'bg-gray-100 dark:bg-gray-700/60',
+                        ),
                     singleValue: () => 'select-single-value',
-                    multiValue: () => 'select-multi-value',
+                    multiValue: () => 'select-multi-value bg-blue-100 text-blue-700 rounded',
                     multiValueLabel: () => 'select-multi-value-label',
-                    multiValueRemove: () => 'select-multi-value-remove',
+                    multiValueRemove: () => 'select-multi-value-remove hover:bg-blue-200 hover:text-blue-800',
                     menu: () => 'select-menu',
                     ...classNames,
                 } as ClassNamesConfig<Option, IsMulti, Group>
@@ -176,9 +236,6 @@ function Select<
                     control: () => ({}),
                     valueContainer: () => ({}),
                     input: ({
-                        margin,
-                        paddingTop,
-                        paddingBottom,
                         ...provided
                     }) => ({ ...provided }),
                     placeholder: () => ({}),
@@ -187,12 +244,6 @@ function Select<
                     multiValueLabel: () => ({}),
                     multiValueRemove: () => ({}),
                     menu: ({
-                        backgroundColor,
-                        marginTop,
-                        marginBottom,
-                        border,
-                        borderRadius,
-                        boxShadow,
                         ...provided
                     }) => ({ ...provided, zIndex: 50 }),
                     ...styles,
@@ -200,12 +251,14 @@ function Select<
             }
             components={{
                 IndicatorSeparator: () => null,
-                Option: DefaultOption,
+                Option: isMulti ? CheckboxOption : Option,
                 LoadingIndicator: DefaultLoadingIndicator,
                 DropdownIndicator: DefaultDropdownIndicator,
                 ClearIndicator: DefaultClearIndicator,
-                ...components,
+                ...parentComponents,
             }}
+            closeMenuOnSelect={!isMulti}
+            hideSelectedOptions={false}
             {...field}
             {...rest}
         />

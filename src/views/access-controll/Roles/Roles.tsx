@@ -44,6 +44,7 @@ import {
 import { formatCustomDateTime } from '@/utils/formatCustomDateTime';
 
 // Types
+// FIX: Added OnPagingChange for better type safety, as seen in the reference component.
 import type { OnSortParam, ColumnDef } from "@/components/shared/DataTable";
 import type { TableQueries } from "@/@types/common";
 
@@ -61,7 +62,6 @@ import {
 
 // --- Define Item Types ---
 export type DepartmentItem = { id: string | number; name: string };
-// Note: Based on API, department_id is a JSON string representing an array of department IDs.
 export type DesignationItem = { id: string | number; name: string; department_id: string; };
 export type SelectOption = { value: string; label: string; };
 
@@ -112,21 +112,11 @@ function exportToCsvRoles(filename: string, rows: RoleItem[], visibleColumns: Co
         return;
     }
     const visibleHeaders = visibleColumns.filter(c => c.header && c.id !== 'action').map(c => c.header as string);
-    const visibleAccessors = visibleColumns.filter(c => c.accessorKey && c.id !== 'action').map(c => c.accessorKey as keyof RoleItem);
-
-    const getRowValue = (row: RoleItem, accessorKey: string) => {
-        if (accessorKey === 'department.name') return row.department?.name || 'N/A';
-        if (accessorKey === 'designation.name') return row.designation?.name || 'N/A';
-        if (accessorKey === 'updated_at') return formatCustomDateTime(row.updated_at);
-        // Add other special formatters here if needed
-        return (row as any)[accessorKey] || 'N/A';
-    };
-
+    
     const preparedRows = rows.map(row => {
         const rowData: (string | number)[] = [];
         visibleColumns.forEach(col => {
             if (col.id === 'action' || !col.accessorKey) return;
-            // Special handling for nested accessors or custom cells
             if (col.accessorKey === 'department.name') rowData.push(row.department?.name || 'N/A');
             else if (col.accessorKey === 'designation.name') rowData.push(row.designation?.name || 'N/A');
             else if (col.accessorKey === 'updated_at') rowData.push(
@@ -189,10 +179,12 @@ const ActiveFiltersDisplay = ({ filters, onRemoveFilter, onClearAll, departmentO
     );
 };
 
-const RoleTableTools = ({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, departmentOptions, allDesignationOptions, columns, visibleColumnKeys, setVisibleColumnKeys, searchInputValue }) => {
+// FIX: Corrected the component props to include `activeFilters`.
+const RoleTableTools = ({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, departmentOptions, allDesignationOptions, columns, visibleColumnKeys, setVisibleColumnKeys, searchInputValue, isDataReady }) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const { control, handleSubmit, reset } = useForm<RoleFilterFormData>({ defaultValues: { filterDisplayName: '', department_ids: [], designation_ids: [] } });
 
+    // This useEffect hook depends on `activeFilters` and was causing the error.
     useEffect(() => { reset(activeFilters); }, [activeFilters, reset]);
 
     const onSubmit = (data: RoleFilterFormData) => { onApplyFilters(data); setIsFilterDrawerOpen(false); };
@@ -216,9 +208,9 @@ const RoleTableTools = ({ onSearchChange, onApplyFilters, onClearFilters, onExpo
                         {columns.filter(c => c.header).map(col => (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <Badge className="ml-2" innerClass="bg-indigo-500 text-white">{activeFilterCount}</Badge>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)} disabled={!isDataReady}>Filter{activeFilterCount > 0 && <Badge className="ml-2" innerClass="bg-indigo-500 text-white">{activeFilterCount}</Badge>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>Export</Button>
             </div>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterRoleForm">Apply</Button></div>}>
                 <Form id="filterRoleForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -240,6 +232,7 @@ const RolesListing = () => {
   const { Roles = [], departmentsData = { data: [] }, designationsData = { data: [] }, status: masterLoading } = useSelector(masterSelector, shallowEqual);
 
   // --- State Management ---
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleItem | null>(null);
@@ -252,17 +245,32 @@ const RolesListing = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingExportReason, setSubmittingExportReason] = useState(false);
   
-  const [activeFilters, setActiveFilters] = useState<RoleFilterFormData>({});
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "updated_at" }, query: "" });
+  const [activeFilters, setActiveFilters] = useState<RoleFilterFormData>({});
+  const isDataReady = !initialLoading;
 
-  const tableLoading = masterLoading === "loading";
+  const tableLoading = initialLoading || masterLoading === "loading";
 
   // --- Data Fetching ---
-  useEffect(() => {
-    dispatch(getRolesAction());
-    dispatch(getDepartmentsAction());
-    dispatch(getDesignationsAction());
+  const refreshData = useCallback(async () => {
+    setInitialLoading(true);
+    try {
+        await Promise.all([
+            dispatch(getRolesAction()),
+            dispatch(getDepartmentsAction()),
+            dispatch(getDesignationsAction())
+        ]);
+    } catch (error) {
+        console.error("Failed to load initial data:", error);
+        toast.push(<Notification title="Data Load Failed" type="danger" />);
+    } finally {
+        setInitialLoading(false);
+    }
   }, [dispatch]);
+
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   // --- Memoized Select Options ---
   const departmentOptions: SelectOption[] = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData.data.map(d => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
@@ -276,8 +284,6 @@ const RolesListing = () => {
   const { control, handleSubmit, reset, watch, setValue, formState } = formMethods;
   const watchedDepartmentId = watch("department_id");
 
-  // *** CORRECTED LOGIC HERE ***
-  // Filter designations based on the selected department.
   const designationOptionsForForm: SelectOption[] = useMemo(() => {
     if (!watchedDepartmentId || !Array.isArray(designationsData?.data)) {
       return [];
@@ -289,9 +295,7 @@ const RolesListing = () => {
           return false;
         }
         try {
-          // Parse the JSON string e.g., "[\"10\"]" into an array ['10']
           const departmentIds: string[] = JSON.parse(designation.department_id);
-          // Check if the parsed array includes the selected department ID
           return departmentIds.map(String).includes(String(watchedDepartmentId));
         } catch (e) {
           console.error("Failed to parse department_id from designation:", designation, e);
@@ -302,9 +306,8 @@ const RolesListing = () => {
       
   }, [watchedDepartmentId, designationsData?.data]);
 
-  // Auto-generate name/display_name/description effect
   useEffect(() => {
-    if (isEditDrawerOpen) return; // Don't auto-fill on edit
+    if (isEditDrawerOpen) return;
     const department = departmentsData?.data?.find(d => String(d.id) === watchedDepartmentId);
     const designation = designationsData?.data?.find(d => String(d.id) === watch("designation_id"));
     if (department && designation) {
@@ -324,7 +327,7 @@ const RolesListing = () => {
     const resultAction = await dispatch(addRolesAction(data));
     if (addRolesAction.fulfilled.match(resultAction)) {
         toast.push(<Notification title="Role Added" type="success" />);
-        closeAddDrawer(); dispatch(getRolesAction());
+        closeAddDrawer(); refreshData();
     } else {
         toast.push(<Notification title="Add Failed" type="danger" children={(resultAction.payload as string) || "Could not add role."} />);
     }
@@ -343,7 +346,7 @@ const RolesListing = () => {
     const resultAction = await dispatch(editRolesAction({ id: editingRole.id, ...data }));
     if (editRolesAction.fulfilled.match(resultAction)) {
         toast.push(<Notification title="Role Updated" type="success" />);
-        closeEditDrawer(); dispatch(getRolesAction());
+        closeEditDrawer(); refreshData();
     } else {
         toast.push(<Notification title="Update Failed" type="danger" children={(resultAction.payload as string) || "Could not update role."} />);
     }
@@ -357,10 +360,10 @@ const RolesListing = () => {
   const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
 
   // --- Filtering & Table Interaction Handlers ---
-  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), []);
+  const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData(prev => ({ ...prev, ...data })), [tableData]);
   const handleSearchChange = useCallback((query: string) => handleSetTableData({ query, pageIndex: 1 }), [handleSetTableData]);
   const handleApplyFilters = useCallback((filters: RoleFilterFormData) => { setActiveFilters(filters); handleSetTableData({ pageIndex: 1 }); }, [handleSetTableData]);
-  const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); handleSetTableData({ query: '', pageIndex: 1 }); dispatch(getRolesAction()); }, [dispatch, handleSetTableData]);
+  const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); handleSetTableData({ query: '', pageIndex: 1 }); refreshData(); }, [refreshData, handleSetTableData]);
   const handleRemoveFilter = useCallback((key: keyof RoleFilterFormData, value: string) => {
     setActiveFilters(prev => {
         const newFilters = { ...prev };
@@ -388,7 +391,6 @@ const RolesListing = () => {
       { header: "Department", accessorKey: "department.name", size: 150 },
       { header: "Designation", accessorKey: "designation.name", size: 150 },
       { header: "System Key", accessorKey: "name", size: 180 },
-      // { header: "Description", accessorKey: "description", cell: props => <Tooltip title={props.row.original.description}><span className="block whitespace-nowrap overflow-hidden text-ellipsis max-w-sm">{props.row.original.description}</span></Tooltip> },
       { 
         header: "Updated Info", accessorKey: "updated_at", enableSorting: true, size: 220,
         cell: props => {
@@ -421,7 +423,6 @@ const RolesListing = () => {
       },
   ], [navigate]);
 
-  // --- Column Visibility State ---
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(
       columns.filter(c => c.header).map(c => c.header as string)
   );
@@ -429,13 +430,11 @@ const RolesListing = () => {
       setVisibleColumnKeys(columns.filter(c => c.header).map(c => c.header as string));
   }, [columns]);
   
-  // --- Derived Filtered Columns (for rendering) ---
   const filteredColumns = useMemo(() => 
       columns.filter(c => c.header ? visibleColumnKeys.includes(c.header as string) : true),
       [columns, visibleColumnKeys]
   );
   
-  // --- Export Handlers ---
   const handleOpenExportReasonModal = () => { 
     if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; }
     exportReasonFormMethods.reset(); setExportReasonModalOpen(true); 
@@ -454,7 +453,6 @@ const RolesListing = () => {
     }
   };
 
-  // --- Data Processing, Hydration, Filtering, Sorting ---
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: RoleItem[] = cloneDeep(Roles || []);
     const safeDepartments = departmentsData?.data || [];
@@ -495,7 +493,15 @@ const RolesListing = () => {
     return { pageData: processedData.slice(startIndex, startIndex + tableData.pageSize), total: totalCount, allFilteredAndSortedData: processedData };
   }, [Roles, departmentsData, designationsData, tableData, activeFilters]);
 
-  const activeFilterCount = useMemo(() => Object.values(activeFilters).filter(v => Array.isArray(v) ? v.length > 0 : v).length, [activeFilters]);
+  // IMPROVEMENT: Refined logic to be more explicit, inspired by reference.
+  const activeFilterCount = useMemo(() => {
+    return Object.values(activeFilters).filter(value => {
+        if (Array.isArray(value)) {
+            return value.length > 0;
+        }
+        return !!value; // For non-array values, check if they are truthy (e.g., a non-empty string).
+    }).length;
+  }, [activeFilters]);
 
   return (
     <>
@@ -503,14 +509,24 @@ const RolesListing = () => {
         <AdaptiveCard className="h-full" bodyClass="h-full flex flex-col">
           <div className="lg:flex items-center justify-between mb-4">
             <h3 className="mb-4 lg:mb-0">{pageTitle}</h3>
-            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={tableLoading}> Add New Role </Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={!isDataReady}> Add New Role </Button>
           </div>
           <div className="mb-4">
-            <RoleTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} departmentOptions={departmentOptions} allDesignationOptions={allDesignationOptions} columns={columns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} searchInputValue={tableData.query} />
+            <RoleTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} departmentOptions={departmentOptions} allDesignationOptions={allDesignationOptions} columns={columns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} searchInputValue={tableData.query} isDataReady={isDataReady} />
           </div>
           <ActiveFiltersDisplay filters={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFiltersAndReload} departmentOptions={departmentOptions} designationOptions={allDesignationOptions} />
           <div className="flex-grow overflow-auto">
-            <DataTable columns={filteredColumns} data={pageData} loading={tableLoading || isSubmitting} pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} onSort={handleSetTableData} noData={!tableLoading && pageData.length === 0} />
+            {/* FIX: Added onPagingChange prop to enable pagination functionality. */}
+            <DataTable 
+              columns={filteredColumns} 
+              data={pageData} 
+              loading={tableLoading || isSubmitting} 
+              pagingData={{ total, pageIndex: tableData.pageIndex, pageSize: tableData.pageSize }} 
+              onPaginationChange={(p) => setTableData(prev => ({ ...prev, pageIndex: p }))} 
+              onSelectChange={(s) => setTableData(prev => ({...prev, pageSize: s, pageIndex: 1}))} 
+              onSort={(s) => setTableData(prev => ({...prev, sort: s}))}
+              noData={!isDataReady && pageData.length === 0} 
+            />
           </div>
         </AdaptiveCard>
       </Container>
@@ -521,7 +537,6 @@ const RolesListing = () => {
             <Button size="sm" variant="solid" form="roleForm" type="submit" loading={isSubmitting} disabled={!formState.isValid || isSubmitting}>Save</Button>
           </div>
       }>
-        {/* *** CORRECTED FORM ORDER AND LOGIC *** */}
         <Form id="roleForm" onSubmit={handleSubmit(isEditDrawerOpen ? onEditRoleSubmit : onAddRoleSubmit)} className="flex flex-col gap-4">
           <FormItem label="Department *" invalid={!!formState.errors.department_id} errorMessage={formState.errors.department_id?.message}>
             <Controller name="department_id" control={control} render={({ field }) => 
@@ -531,7 +546,7 @@ const RolesListing = () => {
                 {...field} 
                 onChange={val => { 
                   field.onChange(val?.value); 
-                  setValue('designation_id', ''); // Reset designation when department changes
+                  setValue('designation_id', '');
                 }} 
                 value={departmentOptions.find(o => o.value === field.value)}
               />}

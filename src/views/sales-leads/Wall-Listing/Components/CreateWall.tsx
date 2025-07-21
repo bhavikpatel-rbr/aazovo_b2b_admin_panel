@@ -75,7 +75,7 @@ const wallItemFormSchema = z.object({
 type SingleWallItemFormData = z.infer<typeof singleWallItemSchema>;
 type WallItemFormData = z.infer<typeof wallItemFormSchema>;
 type OptionType<T = string | number> = { value: T; label: string };
-const intentOptions: OptionType<WallIntent>[] = [{ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }, { value: "Exchange", label: "Exchange" }];
+const intentOptions: OptionType<WallIntent>[] = [{ value: "Buy", label: "Buy" }, { value: "Sell", label: "Sell" }];
 const productStatusOptions: OptionType[] = [{ value: "Active", label: "Active" }, { value: "Non-active", label: "Non-active" }];
 const statusOptions: OptionType[] = [{ value: "Pending", label: "Pending" }, { value: "Active", label: "Active" }, { value: "Rejected", label: "Rejected" }, { value: "inactive", label: "Inactive" }];
 const dummyCartoonTypes: OptionType[] = [{ value: "Master Cartoon", label: "Master Cartoon" }, { value: "Non Masster Cartoon", label: "Non Masster Cartoon" }];
@@ -136,7 +136,7 @@ const WallItemForm = () => {
   }, [isEditMode, itemId, getwallItemsData, formMethods]);
 
   const productOptions: OptionType<number>[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
-  const memberOptions: OptionType<number>[] = useMemo(() => Array.isArray(memberData) ? memberData.map((c: any) => ({ value: c.id, label: `(${c.member_code}) - ${c.name || 'N/A'}`, })) : [], [memberData]);
+  const memberOptions: OptionType<number>[] = useMemo(() => Array.isArray(memberData) ? memberData.map((c: any) => ({ value: c.id, label: `(${c.customer_code}) - ${c.name || 'N/A'}`, })) : [], [memberData]);
   const paymentTermsOption: OptionType<number>[] = useMemo(() => Array.isArray(PaymentTermsData) ? PaymentTermsData.map((p: any) => ({ value: p.id, label: p.term_name || 'Unnamed' })) : [], [PaymentTermsData]);
   const productSpecOptionsForSelect: OptionType<number>[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((s: any) => ({ value: s.id, label: s.name })) : [], [ProductSpecificationsData]);
   const salesPersonOptions: OptionType<number>[] = useMemo(() => Array.isArray(salesPerson) ? salesPerson.map((p: any) => ({ value: p.id, label: `(${p.employee_id}) - ${p.name || 'N/A'}` })) : [], [salesPerson]);

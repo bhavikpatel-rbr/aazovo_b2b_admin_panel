@@ -1,11 +1,11 @@
 // src/views/your-path/WallListing.tsx
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import classNames from "classnames";
 import dayjs from "dayjs";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import classNames from "classnames";
 
 // UI Components
 import AdaptiveCard from "@/components/shared/AdaptiveCard";
@@ -13,7 +13,6 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import Container from "@/components/shared/Container";
 import DataTable from "@/components/shared/DataTable";
 import DebouceInput from "@/components/shared/DebouceInput";
-import RichTextEditor from "@/components/shared/RichTextEditor";
 import StickyFooter from "@/components/shared/StickyFooter";
 import {
   Card,
@@ -24,23 +23,21 @@ import {
   Form,
   FormItem,
   Input,
+  Skeleton,
   Select as UiSelect,
 } from "@/components/ui";
-import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
 import Notification from "@/components/ui/Notification";
-import Select from "@/components/ui/Select";
+import Spinner from "@/components/ui/Spinner";
 import Tag from "@/components/ui/Tag";
 import toast from "@/components/ui/toast";
 import Tooltip from "@/components/ui/Tooltip";
-import Spinner from "@/components/ui/Spinner";
 
 
 // Icons
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
-  TbAlertTriangle,
   TbBell,
   TbBookmark,
   TbBox,
@@ -57,15 +54,12 @@ import {
   TbCloudUpload,
   TbColumns,
   TbCopy,
-  TbCurrencyDollar,
   TbEye,
   TbFilter,
   TbListDetails,
   TbMail,
-  TbMessageCircle,
   TbPackageExport,
   TbPencil,
-  TbPhoto,
   TbPlus,
   TbProgress,
   TbReload,
@@ -74,8 +68,7 @@ import {
   TbStack2,
   TbTagStarred,
   TbUser,
-  TbUserCircle,
-  TbX,
+  TbX
 } from "react-icons/tb";
 
 // Types
@@ -99,21 +92,21 @@ import {
   getAllCompany,
   getAllUsersAction,
   getBrandAction,
-  getParentCategoriesAction,
   getEmployeesAction,
+  getMatchingOpportunitiesAction,
   getMemberTypeAction,
+  getParentCategoriesAction,
   getProductsDataAsync,
   getProductSpecificationsAction,
   getSubcategoriesByCategoryIdAction,
   getWallListingAction,
   submitExportReasonAction,
-  getMatchingOpportunitiesAction, // Added new action
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import { config } from "localforage";
 import { shallowEqual, useSelector } from "react-redux";
 import { z } from "zod";
-import { config } from "localforage";
-import { encryptStorage } from "@/utils/secureLocalStorage";
 
 // --- Type Definitions ---
 export type ApiWallItemFromSource = any;
@@ -184,18 +177,18 @@ export type WallItem = {
 
 // --- NEW Type Definition for Matching Opportunity ---
 type MatchingOpportunityItem = {
-    id: number;
-    want_to: 'Buy' | 'Sell' | string;
-    product_name: string;
-    brand_name: string;
-    qty: string;
-    price: number | null;
-    device_condition: string;
-    color: string;
-    member_name: string;
-    member_code: string;
-    country_name: string;
-    leads_count: number;
+  id: number;
+  want_to: 'Buy' | 'Sell' | string;
+  product_name: string;
+  brand_name: string;
+  qty: string;
+  price: number | null;
+  device_condition: string;
+  color: string;
+  member_name: string;
+  member_code: string;
+  country_name: string;
+  leads_count: number;
 };
 
 // --- Zod Schemas ---
@@ -238,18 +231,18 @@ type ScheduleFormData = z.infer<typeof scheduleSchema>;
 
 // Zod Schema for Task Form
 const taskValidationSchema = z.object({
-    task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
-    assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
-    priority: z.string().min(1, 'Please select a priority.'),
-    due_date: z.date().nullable().optional(),
-    description: z.string().optional(),
+  task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
+  assign_to: z.array(z.number()).min(1, 'At least one assignee is required.'),
+  priority: z.string().min(1, 'Please select a priority.'),
+  due_date: z.date().nullable().optional(),
+  description: z.string().optional(),
 });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
 
 // Zod Schema for Activity Form
 const activitySchema = z.object({
-    item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
-    notes: z.string().optional(),
+  item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+  notes: z.string().optional(),
 });
 type ActivityFormData = z.infer<typeof activitySchema>;
 
@@ -369,71 +362,71 @@ const AddNotificationDialog: React.FC<{ wallItem: WallItem; onClose: () => void;
   );
 };
 const AssignTaskDialog: React.FC<{ wallItem: WallItem; onClose: () => void; getAllUserDataOptions: { value: any, label: string }[]; }> = ({ wallItem, onClose, getAllUserDataOptions }) => {
-    const dispatch = useAppDispatch();
-    const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
-        resolver: zodResolver(taskValidationSchema),
-        defaultValues: {
-            task_title: `Follow up on wall listing: ${wallItem.product_name}`,
-            assign_to: [],
-            priority: 'Medium',
-            due_date: null,
-            description: `Regarding wall item from ${wallItem.member_name} for product "${wallItem.product_name}".`,
-        },
-        mode: 'onChange'
-    });
+  const dispatch = useAppDispatch();
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<TaskFormData>({
+    resolver: zodResolver(taskValidationSchema),
+    defaultValues: {
+      task_title: `Follow up on wall listing: ${wallItem.product_name}`,
+      assign_to: [],
+      priority: 'Medium',
+      due_date: null,
+      description: `Regarding wall item from ${wallItem.member_name} for product "${wallItem.product_name}".`,
+    },
+    mode: 'onChange'
+  });
 
-    const onAssignTask = async (data: TaskFormData) => {
-        setIsLoading(true);
-        try {
-            const payload = {
-                ...data,
-                due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
-                module_id: String(wallItem.id),
-                module_name: 'WallListing',
-            };
-            await dispatch(addTaskAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Task Assigned" children={`Successfully assigned task for item #${wallItem.id}.`} />);
-            onClose();
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const onAssignTask = async (data: TaskFormData) => {
+    setIsLoading(true);
+    try {
+      const payload = {
+        ...data,
+        due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
+        module_id: String(wallItem.id),
+        module_name: 'WallListing',
+      };
+      await dispatch(addTaskAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Task Assigned" children={`Successfully assigned task for item #${wallItem.id}.`} />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
-            <Form onSubmit={handleSubmit(onAssignTask)}>
-                <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
-                    <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
-                </FormItem>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
-                        <Controller name="assign_to" control={control} render={({ field }) => (
-                            <UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />
-                        )} />
-                    </FormItem>
-                    <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
-                        <Controller name="priority" control={control} render={({ field }) => (
-                            <UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
-                        )} />
-                    </FormItem>
-                </div>
-                <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
-                    <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />} />
-                </FormItem>
-                <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
-                    <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
-                </FormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
-                </div>
-            </Form>
-        </Dialog>
-    );
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Assign Task for "{wallItem.product_name}"</h5>
+      <Form onSubmit={handleSubmit(onAssignTask)}>
+        <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
+          <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
+            <Controller name="assign_to" control={control} render={({ field }) => (
+              <UiSelect isMulti placeholder="Select User(s)" options={getAllUserDataOptions} value={getAllUserDataOptions.filter(o => field.value?.includes(o.value))} onChange={(opts: any) => field.onChange(opts?.map((o: any) => o.value) || [])} />
+            )} />
+          </FormItem>
+          <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
+            <Controller name="priority" control={control} render={({ field }) => (
+              <UiSelect placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt: any) => field.onChange(opt?.value)} />
+            )} />
+          </FormItem>
+        </div>
+        <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
+          <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value as Date} onChange={field.onChange} />} />
+        </FormItem>
+        <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
+          <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
+        </div>
+      </Form>
+    </Dialog>
+  );
 };
 const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
   const dispatch = useAppDispatch();
@@ -465,212 +458,203 @@ const AddScheduleDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> 
   );
 };
 const AddActivityDialog: React.FC<{ wallItem: WallItem; onClose: () => void; user: any; }> = ({ wallItem, onClose, user }) => {
-    const dispatch = useAppDispatch();
-    const [userData, setUserData] = useState<any>(null);
-    
-        useEffect(() => {
-            const { useEncryptApplicationStorage } = config;
-            try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
-            catch (error) { console.error("Error getting UserData:", error); }
-        }, []);
-    const [isLoading, setIsLoading] = useState(false);
-    const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
-        resolver: zodResolver(activitySchema),
-        defaultValues: { item: `Follow up on ${wallItem.product_name}`, notes: '' },
-        mode: 'onChange',
-    });
+  const dispatch = useAppDispatch();
+  const [userData, setUserData] = useState<any>(null);
+
+  useEffect(() => {
+    const { useEncryptApplicationStorage } = config;
+    try { setUserData(encryptStorage.getItem("UserData", !useEncryptApplicationStorage)); }
+    catch (error) { console.error("Error getting UserData:", error); }
+  }, []);
+  const [isLoading, setIsLoading] = useState(false);
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
+    resolver: zodResolver(activitySchema),
+    defaultValues: { item: `Follow up on ${wallItem.product_name}`, notes: '' },
+    mode: 'onChange',
+  });
 
 
-    const onAddActivity = async (data: ActivityFormData) => {
-        setIsLoading(true);
-        const payload = {
-            item: data.item,
-            notes: data.notes || '',
-            module_id: String(wallItem.id),
-            module_name: 'WallListing',
-            user_id: userData.id,
-        };
-        try {
-            await dispatch(addAllActionAction(payload)).unwrap();
-            toast.push(<Notification type="success" title="Activity Added" />);
-            onClose();
-        } catch (error: any) {
-            toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
-        } finally {
-            setIsLoading(false);
-        }
+  const onAddActivity = async (data: ActivityFormData) => {
+    setIsLoading(true);
+    const payload = {
+      item: data.item,
+      notes: data.notes || '',
+      module_id: String(wallItem.id),
+      module_name: 'WallListing',
+      user_id: userData.id,
     };
+    try {
+      await dispatch(addAllActionAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Activity Added" />);
+      onClose();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return (
-        <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
-            <h5 className="mb-4">Add Activity Log for "{wallItem.product_name}"</h5>
-            <Form onSubmit={handleSubmit(onAddActivity)}>
-                <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
-                    <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} />
-                </FormItem>
-                <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
-                    <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} />
-                </FormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button>
-                </div>
-            </Form>
-        </Dialog>
-    );
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Activity Log for "{wallItem.product_name}"</h5>
+      <Form onSubmit={handleSubmit(onAddActivity)}>
+        <FormItem label="Activity" invalid={!!errors.item} errorMessage={errors.item?.message}>
+          <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with member" />} />
+        </FormItem>
+        <FormItem label="Notes (Optional)" invalid={!!errors.notes} errorMessage={errors.notes?.message}>
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading} icon={<TbCheck />}>Save Activity</Button>
+        </div>
+      </Form>
+    </Dialog>
+  );
 };
 
 // --- NEW DIALOG COMPONENT ---
 const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
-    const dispatch = useAppDispatch();
-    const [data, setData] = useState<MatchingOpportunityItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true); // Use a local loading state
+  const dispatch = useAppDispatch();
+  const [data, setData] = useState<MatchingOpportunityItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // Use a local loading state
 
-    useEffect(() => {
-        const fetchOpportunities = async () => {
-            if (!wallItem.id) {
-                setIsLoading(false);
-                return;
-            }
-            setIsLoading(true);
-            try {
-                // Correctly pass the payload as an object and unwrap the result
-                const actionResult = await dispatch(getMatchingOpportunitiesAction(wallItem.id)).unwrap();
-                
-                if (actionResult?.data) {
-                    const formattedData = actionResult.data.map((item: any) => ({
-                        id: item.id,
-                        want_to: item.want_to,
-                        product_name: item.product_name,
-                        brand_name: item.brand_name,
-                        qty: item.qty,
-                        price: item.price,
-                        device_condition: item.device_condition,
-                        color: item.color,
-                        member_name: item.member_name,
-                        member_code: item.member_code,
-                        country_name: item.country_name,
-                        leads_count: item.leads_count,
-                    }));
-                    setData(formattedData);
-                } else {
-                    setData([]); // Ensure data is cleared if API returns nothing
-                }
-            } catch (error) {
-                console.error("Failed to fetch matching opportunities:", error);
-                toast.push(<Notification type="danger" title="Error">Could not load opportunities.</Notification>);
-                setData([]); // Clear data on error
-            } finally {
-                setIsLoading(false);
-            }
-        };
+  useEffect(() => {
+    const fetchOpportunities = async () => {
+      if (!wallItem.id) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        // Correctly pass the payload as an object and unwrap the result
+        const actionResult = await dispatch(getMatchingOpportunitiesAction(wallItem.id)).unwrap();
 
-        fetchOpportunities();
-    }, [dispatch, wallItem.id]);
+        if (actionResult?.data) {
+          const formattedData = actionResult.data.map((item: any) => ({
+            id: item.id,
+            want_to: item.want_to,
+            product_name: item.product_name,
+            brand_name: item.brand_name,
+            qty: item.qty,
+            price: item.price,
+            device_condition: item.device_condition,
+            color: item.color,
+            member_name: item.member_name,
+            member_code: item.member_code,
+            country_name: item.country_name,
+            leads_count: item.leads_count,
+          }));
+          setData(formattedData);
+        } else {
+          setData([]); // Ensure data is cleared if API returns nothing
+        }
+      } catch (error) {
+        console.error("Failed to fetch matching opportunities:", error);
+        toast.push(<Notification type="danger" title="Error">Could not load opportunities.</Notification>);
+        setData([]); // Clear data on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-   const columns: ColumnDef<MatchingOpportunityItem>[] = useMemo(() => [
-        {
-            header: 'Listing',
-            accessorKey: 'product_name',
-            cell: ({ row }) => {
-                const { want_to, product_name, brand_name, color, device_condition } = row.original;
-                const intent = want_to as WallIntent;
-                return (
-                    <div>
-                        <p className="font-semibold text-gray-900 dark:text-gray-100">{product_name}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-300">{brand_name}</p>
-                        <div className="flex items-center flex-wrap gap-1 mt-2">
-                            <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[intent] || ''}`}>{want_to}</Tag>
-                            <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{device_condition}</Tag>
-                            <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{color}</Tag>
-                        </div>
-                    </div>
-                );
-            }
-        },
-        {
-            header: 'Member',
-            accessorKey: 'member_name',
-            cell: ({ row }) => {
-                const { member_name, member_code, country_name } = row.original;
-                return (
-                    <div>
-                        <p className="font-semibold">{member_name}</p>
-                        <p className="text-xs text-gray-500">{member_code}</p>
-                        <p className="text-xs text-gray-500">{country_name}</p>
-                    </div>
-                );
-            }
-        },
-        {
-            header: 'Details',
-            accessorKey: 'qty',
-            cell: ({ row }) => {
-                const { qty, price } = row.original;
-                return (
-                    <div>
-                        <p>Qty: <span className="font-semibold">{qty}</span></p>
-                        <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
-                    </div>
-                );
-            }
-        },
-        {
-            header: 'Leads',
-            accessorKey: 'leads_count',
-            cell: ({row}) => <span className="font-semibold">{row.original.leads_count}</span>
-        },
-        // {
-        //     header: 'Actions',
-        //     id: 'actions',
-        //     cell: () => (
-        //         <div className="flex justify-end">
-        //             <Button size="sm" variant="solid">Create Lead</Button>
-        //         </div>
-        //     )
-        // }
-    ], []);
+    fetchOpportunities();
+  }, [dispatch, wallItem.id]);
 
-    return (
-        <Dialog
-            isOpen={true}
-            onClose={onClose}
-            onRequestClose={onClose}
-            width={1000}
-            bodyOpenClassName="overflow-hidden"
-        >
-            <div className="flex flex-col h-full max-h-[80vh]">
-                {/* Dialog Header */}
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                     <div className="flex items-center gap-2">
-                        <TbBulb className="text-2xl text-amber-500" />
-                        <h5 className="mb-0">Matching Opportunities for "{wallItem.product_name}"</h5>
-                    </div>
-                </div>
-
-                {/* Dialog Body */}
-                <div className="flex-grow overflow-y-auto px-6 py-4">
-                    {isLoading ? (
-                         <div className="flex justify-center items-center h-64">
-                            <Spinner size={40} />
-                         </div>
-                    ) : (
-                        <DataTable
-                            columns={columns}
-                            data={data}
-                            noData={data.length === 0}
-                                
-                        />
-                    )}
-                </div>
-
-                {/* Dialog Footer */}
-                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
-                    <Button variant="solid" onClick={onClose}>Close</Button>
-                </div>
+  const columns: ColumnDef<MatchingOpportunityItem>[] = useMemo(() => [
+    {
+      header: 'Listing',
+      accessorKey: 'product_name',
+      cell: ({ row }) => {
+        const { want_to, product_name, brand_name, color, device_condition } = row.original;
+        const intent = want_to as WallIntent;
+        return (
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{product_name}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300">{brand_name}</p>
+            <div className="flex items-center flex-wrap gap-1 mt-2">
+              <Tag className={`capitalize text-xs font-semibold border-0 ${intentTagColor[intent] || ''}`}>{want_to}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{device_condition}</Tag>
+              <Tag className="bg-gray-100 dark:bg-gray-700 text-xs">{color}</Tag>
             </div>
-        </Dialog>
-    );
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Member',
+      accessorKey: 'member_name',
+      cell: ({ row }) => {
+        const { member_name, member_code, country_name } = row.original;
+        return (
+          <div>
+            <p className="font-semibold">{member_name}</p>
+            <p className="text-xs text-gray-500">{member_code}</p>
+            <p className="text-xs text-gray-500">{country_name}</p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Details',
+      accessorKey: 'qty',
+      cell: ({ row }) => {
+        const { qty, price } = row.original;
+        return (
+          <div>
+            <p>Qty: <span className="font-semibold">{qty}</span></p>
+            <p>Price: <span className="font-semibold">{price ? `$${price}` : 'N/A'}</span></p>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Leads',
+      accessorKey: 'leads_count',
+      cell: ({ row }) => <span className="font-semibold">{row.original.leads_count}</span>
+    },
+  ], []);
+
+  return (
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      onRequestClose={onClose}
+      width={1000}
+      bodyOpenClassName="overflow-hidden"
+    >
+      <div className="flex flex-col h-full max-h-[80vh]">
+        {/* Dialog Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <TbBulb className="text-2xl text-amber-500" />
+            <h5 className="mb-0">Matching Opportunities for "{wallItem.product_name}"</h5>
+          </div>
+        </div>
+
+        {/* Dialog Body */}
+        <div className="flex-grow overflow-y-auto px-6 py-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Spinner size={40} />
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={data}
+              noData={data.length === 0}
+
+            />
+          )}
+        </div>
+
+        {/* Dialog Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-right">
+          <Button variant="solid" onClick={onClose}>Close</Button>
+        </div>
+      </div>
+    </Dialog>
+  );
 };
 
 const ShareWallLinkDialog: React.FC<{ wallItem: WallItem; onClose: () => void; }> = ({ wallItem, onClose }) => {
@@ -876,9 +860,28 @@ BookmarkButton.displayName = 'BookmarkButton';
 const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const initialFilterState = useMemo(() => ({
+    statuses: [],
+    assignedTo: [],
+    memberTypes: [],
+    continents: [],
+    countries: [],
+    states: '',
+    cities: '',
+    pincodes: '',
+    kycVerified: null as 'yes' | 'no' | null,
+    categories: [],
+    subCategories: [],
+    brands: [],
+    products: [],
+    productStatuses: [],
+    productSpecs: [],
+    wantTo: [],
+  }), []);
 
   const { user } = useSelector(authSelector);
-  const { wallListing, AllProductsData, ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
+  const { wallListing, AllProductsData = [], ParentCategories, subCategoriesForSelectedCategoryData, BrandData, MemberTypeData, ProductSpecificationsData, Employees, AllCompanyData, getAllUserData, status: masterLoadingStatus } = useSelector(masterSelector, shallowEqual);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isViewDrawerOpen, setIsViewDrawerOpen] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WallItem | null>(null);
@@ -892,7 +895,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "desc", key: "created_at" }, query: "" });
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
-  
+
   // --- ADDED for Image Viewer ---
   const [imageView, setImageView] = useState('');
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -914,55 +917,55 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   const mapApiToWallItem = useCallback(
     (apiItem: ApiWallItemFromSource): WallItem => ({
-        id: apiItem.id as number,
-        productId: apiItem.product_id,
-        product_name: apiItem.product?.name || 'N/A',
-        company_name: apiItem.company_name || "",
-        companyId: apiItem.company_id || undefined,
-        member_name: apiItem.member?.name || 'N/A',
-        memberId: String(apiItem.member?.id || ""),
-        memberTypeId: apiItem.member_type_id,
-        member_email: apiItem.member?.email || "",
-        member_phone: apiItem.member?.number || "",
-        product_category: apiItem.product?.category?.name || "",
-        productCategoryId: apiItem.product?.category_id,
-        product_subcategory: apiItem.product?.sub_category?.name || "",
-        subCategoryId: apiItem.product?.sub_category_id,
-        product_description: apiItem.product?.description || "",
-        product_specs: apiItem.product_spec?.name || "",
-        productSpecId: apiItem.product_spec_id,
-        product_status: apiItem.product_status,
-        quantity: Number(apiItem.qty) || 0,
-        price: Number(apiItem.price) || 0,
-        want_to: apiItem.want_to as WallIntent | string,
-        listing_type: apiItem.listing_type || "",
-        shipping_options: apiItem.shipping_options || "",
-        payment_method: apiItem.payment_method || "",
-        warranty: apiItem.warranty_info || "",
-        return_policy: apiItem.return_policy || "",
-        listing_url: apiItem.product_url || "",
-        brand: apiItem.product?.brand?.name || "",
-        brandId: apiItem.product?.brand_id,
-        product_images: apiItem.product?.product_images_array || [],
-        created_date: new Date(apiItem.created_at),
-        updated_at: new Date(apiItem.updated_at),
-        visibility: apiItem.visibility || "",
-        priority: apiItem.priority || "",
-        assigned_to: apiItem.assigned_to_name || "",
-        interaction_type: apiItem.interaction_type || "",
-        action: apiItem.action || "",
-        recordStatus: apiItem.status as WallRecordStatus,
-        cartoonTypeId: apiItem.cartoon_type_id,
-        deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null,
-        inquiry_count: Number(apiItem.inquiries) || 0,
-        share_count: Number(apiItem.share) || 0,
-        is_bookmarked: apiItem.bookmark === 1,
-        updated_by_user: apiItem.updated_by_user || null,
-        createdById: apiItem.created_by,
-        member: apiItem?.member || null,
+      id: apiItem.id as number,
+      productId: apiItem.product_id,
+      product_name: apiItem.product?.name || 'N/A',
+      company_name: apiItem.company_name || "",
+      companyId: apiItem.company_id || undefined,
+      member_name: apiItem.member?.name || 'N/A',
+      memberId: String(apiItem.member?.id || ""),
+      memberTypeId: apiItem.member_type_id,
+      member_email: apiItem.member?.email || "",
+      member_phone: apiItem.member?.number || "",
+      product_category: apiItem.product?.category?.name || "",
+      productCategoryId: apiItem.product?.category_id,
+      product_subcategory: apiItem.product?.sub_category?.name || "",
+      subCategoryId: apiItem.product?.sub_category_id,
+      product_description: apiItem.product?.description || "",
+      product_specs: apiItem.product_spec?.name || "",
+      productSpecId: apiItem.product_spec_id,
+      product_status: apiItem.product_status,
+      quantity: Number(apiItem.qty) || 0,
+      price: Number(apiItem.price) || 0,
+      want_to: apiItem.want_to as WallIntent | string,
+      listing_type: apiItem.listing_type || "",
+      shipping_options: apiItem.shipping_options || "",
+      payment_method: apiItem.payment_method || "",
+      warranty: apiItem.warranty_info || "",
+      return_policy: apiItem.return_policy || "",
+      listing_url: apiItem.product_url || "",
+      brand: apiItem.product?.brand?.name || "",
+      brandId: apiItem.product?.brand_id,
+      product_images: apiItem.product?.product_images_array || [],
+      created_date: new Date(apiItem.created_at),
+      updated_at: new Date(apiItem.updated_at),
+      visibility: apiItem.visibility || "",
+      priority: apiItem.priority || "",
+      assigned_to: apiItem.assigned_to_name || "",
+      interaction_type: apiItem.interaction_type || "",
+      action: apiItem.action || "",
+      recordStatus: apiItem.status as WallRecordStatus,
+      cartoonTypeId: apiItem.cartoon_type_id,
+      deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null,
+      inquiry_count: Number(apiItem.inquiries) || 0,
+      share_count: Number(apiItem.share) || 0,
+      is_bookmarked: apiItem.bookmark === 1,
+      updated_by_user: apiItem.updated_by_user || null,
+      createdById: apiItem.created_by,
+      member: apiItem?.member || null,
     }),
     []
-);
+  );
 
   const apiParams = useMemo(() => {
     const formatMultiSelect = (items: { value: any }[] | undefined) => { if (!items || items.length === 0) return undefined; return items.map((item) => item.value).join(","); };
@@ -979,10 +982,37 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     return params;
   }, [tableData, filterCriteria]);
 
-  useEffect(() => { dispatch(getWallListingAction(apiParams)); }, [dispatch, apiParams]);
   useEffect(() => {
-    dispatch(getProductsDataAsync()); dispatch(getParentCategoriesAction()); dispatch(getSubcategoriesByCategoryIdAction(0)); dispatch(getBrandAction()); dispatch(getMemberTypeAction()); dispatch(getProductSpecificationsAction()); dispatch(getEmployeesAction()); dispatch(getAllCompany()); dispatch(getAllUsersAction());
+    const fetchInitialData = async () => {
+      setInitialLoading(true);
+      try {
+        await Promise.all([
+          dispatch(getWallListingAction(apiParams)),
+          dispatch(getProductsDataAsync()),
+          dispatch(getParentCategoriesAction()),
+          dispatch(getSubcategoriesByCategoryIdAction(0)),
+          dispatch(getBrandAction()),
+          dispatch(getMemberTypeAction()),
+          dispatch(getProductSpecificationsAction()),
+          dispatch(getEmployeesAction()),
+          dispatch(getAllCompany()),
+          dispatch(getAllUsersAction())
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch initial data", error);
+        toast.push(<Notification type="danger" title="Error">Could not load initial data.</Notification>);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    fetchInitialData();
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!initialLoading) {
+      dispatch(getWallListingAction(apiParams));
+    }
+  }, [dispatch, apiParams, initialLoading]);
 
   const pageData = useMemo(() => { return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : []; }, [wallListing, mapApiToWallItem]);
   const total = wallListing?.data?.total || 0;
@@ -990,7 +1020,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const handleSetTableData = useCallback((data: Partial<TableQueries>) => setTableData((prev) => ({ ...prev, ...data })), []);
   const openAddDrawer = useCallback(() => navigate("/sales-leads/wall-item/add"), [navigate]);
   const openEditDrawer = useCallback((item: WallItem) => navigate("/sales-leads/wall-item/add", { state: item?.id }), [navigate]);
-  const openViewDrawer = useCallback((item: WallItem) => { navigate(`/sales-leads/wall-item/${item.id}`)}, []);
+  const openViewDrawer = useCallback((item: WallItem) => { navigate(`/sales-leads/wall-item/${item.id}`) }, []);
   const closeViewDrawer = useCallback(() => { setIsViewDrawerOpen(false); setEditingItem(null); }, []);
   const openFilterDrawer = useCallback(() => { filterFormMethods.reset(filterCriteria); setIsFilterDrawerOpen(true); }, [filterFormMethods, filterCriteria]);
   const closeFilterDrawer = useCallback(() => setIsFilterDrawerOpen(false), []);
@@ -1001,8 +1031,8 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   const handleSendEmail = useCallback((item: WallItem) => {
     if (!item.member_email) {
-        toast.push(<Notification type="warning" title="No Email Address" children="This member does not have a valid email address." />);
-        return;
+      toast.push(<Notification type="warning" title="No Email Address" children="This member does not have a valid email address." />);
+      return;
     }
     const subject = `Regarding your wall listing: ${item.product_name}`;
     const body = `Dear ${item.member_name},\n\nI am interested in your listing for "${item.product_name}".\n\nKind regards,`;
@@ -1012,8 +1042,8 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const handleSendWhatsapp = useCallback((item: WallItem) => {
     const phone = item.member_phone?.replace(/\D/g, '');
     if (!phone) {
-        toast.push(<Notification type="warning" title="No Mobile Number" children="This member does not have a valid phone number." />);
-        return;
+      toast.push(<Notification type="warning" title="No Mobile Number" children="This member does not have a valid phone number." />);
+      return;
     }
     const message = `Hi ${item.member_name}, I'm interested in your listing for "${item.product_name}".`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
@@ -1036,12 +1066,13 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     onClearFilters();
     if (type === 'status') {
       const statusOption = recordStatusOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-      if (statusOption) setFilterCriteria({ filterRecordStatuses: [statusOption] });
+      if (statusOption) setFilterCriteria({ ...initialFilterState, filterRecordStatuses: [statusOption] });
     } else if (type === 'intent') {
       const intentOption = intentOptions.find(opt => opt.value.toLowerCase() === value.toLowerCase());
-      if (intentOption) setFilterCriteria({ filterIntents: [intentOption] });
+      if (intentOption) setFilterCriteria({ ...initialFilterState, filterIntents: [intentOption] });
     }
   };
+
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => {
     setFilterCriteria(prev => {
       const newFilters = { ...prev };
@@ -1105,16 +1136,16 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                 {/* <span className="text-xs mt-2"><span className="font-semibold">ID :</span> {id || "N/A"}</span> */}
                 <div className="flex flex-col gap-1 text-xs">
                   {recordStatus && (
-                  <div className="flex items-center gap-2">
-                    <Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>
-                    {recordStatus}
-                    </Tag>
-                    {want_to && (
-                    <Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>
-                      {want_to}
-                    </Tag>
-                    )}
-                  </div>
+                    <div className="flex items-center gap-2">
+                      <Tag className={`${recordStatusColor[recordStatus] || recordStatusColor.Pending} font-semibold capitalize`}>
+                        {recordStatus}
+                      </Tag>
+                      {want_to && (
+                        <Tag className={`capitalize text-xs px-1 py-0.5 ${intentTagColor[intent] || productApiStatusColor.default}`}>
+                          {want_to}
+                        </Tag>
+                      )}
+                    </div>
                   )}
                 </div>
                 {/* <span className="text-xs"></span> */}
@@ -1124,11 +1155,11 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
         {
           header: "Company & Member", accessorKey: "company_name", size: 260, cell: ({ row }) => {
-            const { name, member_code, email, number } = row.original?.member || {};
+            const { name, customer_code, email, number, company_code } = row.original?.member || {};
             return (
               <div className="flex flex-col gap-0.5 text-xs">
                 <div className="mt-1 pt-1 dark:border-gray-700 w-full">
-                  {member_code && (<span className="font-semibold text-gray-500 dark:text-gray-400">{member_code} | </span>)}
+                  {customer_code ||company_code  && (<span className="font-semibold text-gray-500 dark:text-gray-400">{customer_code} | {company_code}</span>)}
                   {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
                   {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{email}</a>)}
                   {number && (<span className="block text-gray-600 dark:text-gray-300">{number}</span>)}
@@ -1139,7 +1170,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
         {
           header: "Details", accessorKey: "product_category", size: 280, cell: ({ row }) => {
-            const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition, quantity} = row?.original || {};
+            const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition, quantity } = row?.original || {};
             const currentProductApiStatus = product_status?.toLowerCase() || "default";
             const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
             return (
@@ -1158,15 +1189,15 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
 
       if (!isDashboard) {
         baseColumns.push({
-          header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" }, 
+          header: "Actions", id: "actions", size: 120, meta: { HeaderClass: "text-center" },
           cell: (props: CellContext<WallItem, any>) => (
-            <StyledActionColumn 
-              onViewDetail={() => openViewDrawer(props.row.original)} 
-              onEdit={() => openEditDrawer(props.row.original)} 
-              onOpenModal={handleOpenModal} 
+            <StyledActionColumn
+              onViewDetail={() => openViewDrawer(props.row.original)}
+              onEdit={() => openEditDrawer(props.row.original)}
+              onOpenModal={handleOpenModal}
               onSendEmail={() => handleSendEmail(props.row.original)}
               onSendWhatsapp={() => handleSendWhatsapp(props.row.original)}
-              rowData={props.row.original} 
+              rowData={props.row.original}
             />
           ),
         });
@@ -1194,6 +1225,26 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   const counts = wallListing?.counts || { active: 0, buy: 0, non_active: 0, pending: 0, rejected: 0, sell: 0, today: 0, total: 0 };
   const cardClass = "rounded-sm border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
 
+  const renderCardContent = (content: number | undefined, colorClass: string) => {
+    if (initialLoading) {
+      return <Skeleton width={40} height={20} />;
+    }
+    return <b className={colorClass}>{content ?? 0}</b>;
+  };
+
+  const skeletonColumns: ColumnDef<WallItem>[] = useMemo(() =>
+    columns.map((column) => ({
+      ...column,
+      cell: () => <Skeleton height={40} className="my-2" />,
+    })),
+    [columns]
+  );
+
+  const skeletonData = useMemo(() =>
+    Array.from({ length: tableData.pageSize }, (_, i) => ({ id: `skeleton-${i}` } as any)),
+    [tableData.pageSize]
+  );
+
   return (
     <>
       <Container className="h-auto">
@@ -1201,29 +1252,41 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           {!isDashboard && (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
               <h5 className="mb-2 sm:mb-0">Wall Listing</h5>
-              <div className="flex gap-2"><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>Add New</Button></div>
+              <div className="flex gap-2"><Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} disabled={initialLoading}>Add New</Button></div>
             </div>
           )}
           {!isDashboard && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 mt-4 gap-2 ">
-              <Tooltip title="Click to show all listings"><div onClick={onClearFilters}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-blue-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div className="flex flex-col"><b className="text-blue-500">{counts.total}</b><span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show listings created today"><div onClick={() => handleCardClick('status', 'today')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-emerald-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCalendar size={20} /></div><div className="flex flex-col"><b className="text-emerald-500">{counts.today}</b><span className="font-semibold text-[11px]">Today</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show 'Buy' listings"><div onClick={() => handleCardClick('intent', 'Buy')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div><div className="flex flex-col"><b className="text-violet-500">{counts.buy}</b><span className="font-semibold text-[11px]">Buy</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show 'Sell' listings"><div onClick={() => handleCardClick('intent', 'Sell')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-pink-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbPackageExport size={20} /></div><div className="flex flex-col"><b className="text-pink-500">{counts.sell}</b><span className="font-semibold text-[11px]">Sell</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show active listings"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-green-300")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div><div className="flex flex-col"><b className="text-green-500">{counts.active}</b><span className="font-semibold text-[11px]">Active</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show non-active listings"><div onClick={() => handleCardClick('status', 'Non-Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.non_active}</b><span className="font-semibold text-[11px]">Non Active</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show pending listings"><div onClick={() => handleCardClick('status', 'Pending')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-orange-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbProgress size={20} /></div><div className="flex flex-col"><b className="text-orange-500">{counts.pending}</b><span className="font-semibold text-[11px]">Pending</span></div></Card></div></Tooltip>
-              <Tooltip title="Click to show rejected listings"><div onClick={() => handleCardClick('status', 'Rejected')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col"><b className="text-red-500">{counts.rejected}</b><span className="font-semibold text-[11px]">Rejected</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show all listings"><div onClick={onClearFilters}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-blue-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbListDetails size={20} /></div><div className="flex flex-col">{renderCardContent(counts.total, "text-blue-500")}<span className="font-semibold text-[11px]">Total</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show listings created today"><div onClick={() => handleCardClick('status', 'today')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-emerald-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-500"><TbCalendar size={20} /></div><div className="flex flex-col">{renderCardContent(counts.today, "text-emerald-500")}<span className="font-semibold text-[11px]">Today</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show 'Buy' listings"><div onClick={() => handleCardClick('intent', 'Buy')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-violet-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-violet-100 text-violet-500"><TbBox size={20} /></div><div className="flex flex-col">{renderCardContent(counts.buy, "text-violet-500")}<span className="font-semibold text-[11px]">Buy</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show 'Sell' listings"><div onClick={() => handleCardClick('intent', 'Sell')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-pink-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-pink-100 text-pink-500"><TbPackageExport size={20} /></div><div className="flex flex-col">{renderCardContent(counts.sell, "text-pink-500")}<span className="font-semibold text-[11px]">Sell</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show active listings"><div onClick={() => handleCardClick('status', 'Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-green-300")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-green-100 text-green-500"><TbCircleCheck size={20} /></div><div className="flex flex-col">{renderCardContent(counts.active, "text-green-500")}<span className="font-semibold text-[11px]">Active</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show non-active listings"><div onClick={() => handleCardClick('status', 'Non-Active')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbCancel size={20} /></div><div className="flex flex-col">{renderCardContent(counts.non_active, "text-red-500")}<span className="font-semibold text-[11px]">Non Active</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show pending listings"><div onClick={() => handleCardClick('status', 'Pending')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-orange-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-orange-100 text-orange-500"><TbProgress size={20} /></div><div className="flex flex-col">{renderCardContent(counts.pending, "text-orange-500")}<span className="font-semibold text-[11px]">Pending</span></div></Card></div></Tooltip>
+              <Tooltip title="Click to show rejected listings"><div onClick={() => handleCardClick('status', 'Rejected')}><Card bodyClass="flex gap-2 p-1" className={classNames(cardClass, "border-red-200")}><div className="h-9 w-8 rounded-md flex items-center justify-center bg-red-100 text-red-500"><TbBoxOff size={20} /></div><div className="flex flex-col">{renderCardContent(counts.rejected, "text-red-500")}<span className="font-semibold text-[11px]">Rejected</span></div></Card></div></Tooltip>
             </div>
           )}
           <WallTableTools isDashboard={!!isDashboard} onSearchChange={handleSearchChange} onFilter={openFilterDrawer} onExport={handleOpenExportReasonModal} onImport={handleImportData} onClearFilters={onClearFilters} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
           {!isDashboard && <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} />}
           <div className="mt-4">
-            <WallTable
-              selectable={!isDashboard}
-              columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading"}
-              pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
-              selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} onSort={handleSort} />
+            {initialLoading ? (
+              <WallTable
+                columns={skeletonColumns}
+                data={skeletonData}
+                loading={false}
+                selectable={false}
+                pagingData={{ total: tableData.pageSize, pageIndex: 1, pageSize: tableData.pageSize }}
+                onPaginationChange={() => { }} onSelectChange={() => { }} onRowSelect={() => { }} onAllRowSelect={() => { }} onSort={() => { }}
+                selectedItems={[]}
+              />
+            ) : (
+              <WallTable
+                selectable={!isDashboard}
+                columns={filteredColumns} data={pageData} loading={masterLoadingStatus === "loading" && !initialLoading}
+                pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
+                selectedItems={selectedItems} onPaginationChange={handlePaginationChange} onSelectChange={handlePageSizeChange} onRowSelect={handleRowSelect} onAllRowSelect={handleAllRowSelect} onSort={handleSort} />
+            )}
           </div>
         </AdaptiveCard>
       </Container>
@@ -1259,7 +1322,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
               <FormItem label="Workflow Status"><Controller name="filterRecordStatuses" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Status..." options={recordStatusOptions} {...field} />)} /></FormItem>
               <FormItem label="Companies"><Controller name="filterCompanyIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select companies..." options={AllCompanyData?.map((p: any) => ({ value: p.id, label: p.company_name }))} {...field} />)} /></FormItem>
               <FormItem label="Intent (Want to)"><Controller name="filterIntents" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select intents..." options={intentOptions} {...field} />)} /></FormItem>
-              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
+              <FormItem label="Products"><Controller name="filterProductIds" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select products..." options={AllProductsData?.map((p: any) => ({ value: p.id, label: p.name })) || []} {...field} />)} /></FormItem>
               <FormItem label="Categories"><Controller name="categories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Categories..." options={ParentCategories.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Sub Categories"><Controller name="subcategories" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Sub Cate..." options={subCategoriesForSelectedCategoryData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>
               <FormItem label="Brands"><Controller name="brands" control={filterFormMethods.control} render={({ field }) => (<UiSelect isMulti placeholder="Select Brands..." options={BrandData?.map((p: any) => ({ value: p.id, label: p.name }))} {...field} />)} /></FormItem>

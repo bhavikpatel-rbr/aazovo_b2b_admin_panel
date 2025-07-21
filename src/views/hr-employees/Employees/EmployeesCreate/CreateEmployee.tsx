@@ -221,7 +221,7 @@ const employeeFormValidationSchema = z.object({
     registration: z.object({
         fullName: z.string().min(1, 'Full Name is required'),
         dateOfJoining: z.date({ required_error: "Date of joining is required." }),
-        mobileNumber: z.string().min(7, 'Mobile number must be at least 7 digits').regex(/^\d+$/, "Invalid phone number"),
+        mobileNumber: z.string().min(10, 'Mobile number must be at least 10 digits').regex(/^\d+$/, "Invalid phone number"),
         mobileNumberCode: requiredSelectSchema,
         email: z.string().min(1, 'Email is required').email('Invalid email format'),
         experience: z.string().min(1, 'Experience is required'),
@@ -308,7 +308,9 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
     const { CountriesData = [] } = useSelector(masterSelector);
     useEffect(() => { if (!Array.isArray(CountriesData) || CountriesData.length === 0) dispatch(getCountriesAction()); }, [dispatch, CountriesData]);
     const nationalityOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: String(c.id), label: c.name })) : [], [CountriesData]);
-    const statusOptions = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }];
+    const statusOptions = [  { value: "Active", label: "Active" },
+    { value: "Disabled", label: "Disabled" },
+    { value: "Blocked", label: "Blocked" },];
     const genderOptions = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }];
     const bloodGroupOptions = [{ value: 'A+', label: 'A+' }, { value: 'B+', label: 'B+' }, { value: 'O+', label: 'O+' }, { value: 'A-', label: 'A-' }, { value: 'B-', label: 'B-' }, { value: 'O-', label: 'O-' }, { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' }, { value: 'Other', label: 'Other' }];
     const maritalStatusOptions = [{ value: 'single', label: 'Single' }, { value: 'married', label: 'Married' }];

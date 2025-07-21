@@ -79,7 +79,6 @@ export const loginUserByEmailAction = createAsyncThunk<
         )
         return response?.data
       }
-      // console.log("response", response)
       dispatch(
         showMessage({
           ...defaultMessageObj,
@@ -151,7 +150,6 @@ export const updateUserProfilePictureAction = createAsyncThunk<
     try {
       // Call the API service function
       const response = await updateUserProfilePictureAsync(data)
-      console.log("response.profile_pic", response.data.profile_pic);
 
       // Check for successful response from the API
       if (response.data.status) {

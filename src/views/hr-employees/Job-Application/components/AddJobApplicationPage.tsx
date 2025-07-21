@@ -46,12 +46,13 @@ const familyDetailSchema = z.object({
     familyDateOfBirth: z.date().nullable(),
 });
 
+// MODIFIED: Made education dates required and more robust
 const educationalDetailSchema = z.object({
     degree: z.string().min(1, "Degree is required."),
     university: z.string().min(1, "University is required."),
     percentageGrade: z.string().min(1, "Percentage/Grade is required."),
-    educationFromDate: z.date({ required_error: "Start date is required." }),
-    educationToDate: z.date({ required_error: "End date is required." }),
+    educationFromDate: z.coerce.date({ required_error: "Start date is required.", invalid_type_error: "Invalid start date." }),
+    educationToDate: z.coerce.date({ required_error: "End date is required.", invalid_type_error: "Invalid end date." }),
     specialization: z.string().optional(),
 }).refine(data => {
     if (data.educationFromDate && data.educationToDate) return data.educationToDate >= data.educationFromDate;
@@ -81,8 +82,9 @@ export const applicationFormSchema = z.object({
     maritalStatus: z.string().optional().nullable(),
     bloodGroup: z.string().optional().nullable(),
     country: z.number().optional().nullable(),
-    state: z.string().optional().nullable(),
-    city: z.string().optional().nullable(),
+    // MODIFIED: Made state and city required fields
+    state: z.string().min(1, "State is required."),
+    city: z.string().min(1, "City is required."),
     localAddress: z.string().optional(),
     permanentAddress: z.string().optional(),
     jobTitle: z.string().min(1, "Job title is required."),
@@ -134,14 +136,12 @@ const transformFormStatusToApiStatus = (formStatusValue?: string): string => {
     return option ? option.label : formStatusValue;
 };
 
-// --- CORRECTED DATA TRANSFORMATION LOGIC ---
 const transformApiToFormData = (apiData: any): ApplicationFormData => {
     const safeJsonParse = (jsonString: string | null | object, defaultVal: any[] = []) => {
         if (!jsonString) return defaultVal;
-        if (typeof jsonString === 'object' && jsonString !== null) return jsonString; // Already parsed
+        if (typeof jsonString === 'object' && jsonString !== null) return jsonString;
         try {
             let parsed = JSON.parse(jsonString as string);
-            // Handle double-stringified JSON
             if (typeof parsed === 'string') {
                 parsed = JSON.parse(parsed);
             }
@@ -188,7 +188,6 @@ const transformApiToFormData = (apiData: any): ApplicationFormData => {
         emergencyRelation: apiData.emg_relation || "",
         emergencyMobileNo: apiData.emg_mobile_no || "",
 
-        // FIXED: Mapped keys to match the API response (e.g., familyName instead of name)
         familyDetails: safeJsonParse(apiData.family_details).map((fd: any) => ({
             familyName: fd.familyName || "",
             familyRelation: fd.familyRelation || "",
@@ -196,7 +195,6 @@ const transformApiToFormData = (apiData: any): ApplicationFormData => {
             familyDateOfBirth: parseDate(fd.dob || fd.familyDateOfBirth)
         })),
         
-        // FIXED: Mapped percentageGrade and made date parsing more robust
         educationalDetails: safeJsonParse(apiData.education_details).map((ed: any) => ({
             degree: ed.degree || "",
             university: ed.university || "",
@@ -227,7 +225,7 @@ const transformFormDataToApiPayload = (formData: ApplicationFormData, applicatio
         payload.append('_method', 'PUT');
     }
 
-    append('job_department_id', formData.department);
+    append('job_department_id', String(formData.department));
     append('name', formData.name);
     append('email', formData.email);
     append('mobile_no', formData.mobileNo);
@@ -304,7 +302,7 @@ const AddJobApplicationPage = () => {
     });
 
     useEffect(() => {
-        if (isEditMode && jobApplicationsData?.data) { // Ensure data is available before processing
+        if (isEditMode && jobApplicationsData?.data) { 
             const fetchApplicationData = () => {
                 setIsLoadingData(true);
                 try {
@@ -402,8 +400,9 @@ const AddJobApplicationPage = () => {
                             <FormItem label="Marital Status" error={errors.maritalStatus?.message}><Controller name="maritalStatus" control={control} render={({ field }) => <UiSelect placeholder="Select Marital Status" invalid={!!errors.maritalStatus} options={maritalStatusOptions} value={maritalStatusOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                             <FormItem label="Blood Group" error={errors.bloodGroup?.message}><Controller name="bloodGroup" control={control} render={({ field }) => <UiSelect placeholder="Select Blood Group" invalid={!!errors.bloodGroup} options={bloodGroupOptions} value={bloodGroupOptions.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isClearable />} /></FormItem>
                             <FormItem label="Country" error={errors.country?.message}><Controller name="country" control={control} render={({ field }) => <UiSelect placeholder="Select Country" invalid={!!errors.country} options={countryOptions} value={countryOptions.find(o => o.value === field.value)} onChange={opt => { field.onChange(opt?.value); setValue('state', '', { shouldValidate: true }); setValue('city', '', { shouldValidate: true }); }} isClearable />} /></FormItem>
-                            <FormItem label="State" error={errors.state?.message}><Controller name="state" control={control} render={({ field }) => <Input {...field} invalid={!!errors.state} placeholder="Enter State" />} /></FormItem>
-                            <FormItem label="City" error={errors.city?.message}><Controller name="city" control={control} render={({ field }) => <Input {...field} invalid={!!errors.city} placeholder="Enter City" />} /></FormItem>
+                            {/* MODIFIED: Added required indicator to State and City labels */}
+                            <FormItem label={<div>State<span className="text-red-500"> * </span></div>} error={errors.state?.message}><Controller name="state" control={control} render={({ field }) => <Input {...field} invalid={!!errors.state} placeholder="Enter State" />} /></FormItem>
+                            <FormItem label={<div>City<span className="text-red-500"> * </span></div>} error={errors.city?.message}><Controller name="city" control={control} render={({ field }) => <Input {...field} invalid={!!errors.city} placeholder="Enter City" />} /></FormItem>
                             <FormItem label="Local Address" error={errors.localAddress?.message} className="md:col-span-3"><Controller name="localAddress" control={control} render={({ field }) => <Input textArea rows={2} invalid={!!errors.localAddress} placeholder="Enter Local Address" {...field} />} /></FormItem>
                             <FormItem label="Permanent Address" error={errors.permanentAddress?.message} className="md:col-span-3"><Controller name="permanentAddress" control={control} render={({ field }) => <Input textArea rows={2} invalid={!!errors.permanentAddress} placeholder="Enter Permanent Address" {...field} />} /></FormItem>
                             <FormItem label={<div>Work Experience<span className="text-red-500"> * </span></div>} error={errors.workExperienceType?.message} className="md:col-span-3"><Controller name="workExperienceType" control={control} render={({ field }) => (<Radio.Group value={field.value} onChange={field.onChange}><Radio value="fresher">Fresher</Radio><Radio value="experienced">Experienced</Radio></Radio.Group>)} /></FormItem>
@@ -460,6 +459,7 @@ const AddJobApplicationPage = () => {
                                     <FormItem label={<div>Degree {index + 1}<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.degree?.message} className="mb-0"><Controller name={`educationalDetails.${index}.degree`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.degree} placeholder="e.g., B.Tech" />} /></FormItem>
                                     <FormItem label={<div>University<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.university?.message} className="mb-0"><Controller name={`educationalDetails.${index}.university`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.university} placeholder="Name of University" />} /></FormItem>
                                     <FormItem label={<div>Percentage/Grade<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.percentageGrade?.message} className="mb-0"><Controller name={`educationalDetails.${index}.percentageGrade`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.percentageGrade} placeholder="e.g., 75% or A+" />} /></FormItem>
+                                    {/* MODIFIED: The validation schema now properly requires these date fields */}
                                     <FormItem label={<div>From Date<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.educationFromDate?.message} className="mb-0"><Controller name={`educationalDetails.${index}.educationFromDate`} control={control} render={({ field }) => <DatePicker placeholder="Start Date" {...field} invalid={!!errors.educationalDetails?.[index]?.educationFromDate} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
                                     <FormItem label={<div>To Date<span className="text-red-500"> * </span></div>} error={errors.educationalDetails?.[index]?.educationToDate?.message} className="mb-0"><Controller name={`educationalDetails.${index}.educationToDate`} control={control} render={({ field }) => <DatePicker placeholder="End Date" {...field} invalid={!!errors.educationalDetails?.[index]?.educationToDate} value={field.value} onChange={date => field.onChange(date)} maxDate={new Date()} />} /></FormItem>
                                     <FormItem label="Specialization" error={errors.educationalDetails?.[index]?.specialization?.message} className="mb-0"><Controller name={`educationalDetails.${index}.specialization`} control={control} render={({ field }) => <Input {...field} invalid={!!errors.educationalDetails?.[index]?.specialization} placeholder="e.g., CS" />} /></FormItem>

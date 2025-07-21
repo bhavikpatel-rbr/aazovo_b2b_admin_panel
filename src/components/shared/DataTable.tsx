@@ -177,7 +177,7 @@ function DataTable<T>(props: DataTableProps<T>) {
     const finalColumns: ColumnDef<T>[] = useMemo(() => {
         const columns = columnsProp
 
-        
+
         return columns
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [columnsProp, selectable, loading, checkboxChecked])
@@ -227,7 +227,8 @@ function DataTable<T>(props: DataTableProps<T>) {
     }
 
     return (
-        <Loading loading={Boolean(loading && data.length !== 0)} type="cover">
+        <>
+            {/* // <Loading loading={Boolean(loading && data.length !== 0)} type="cover"> */}
             <Table {...rest}>
                 <THead>
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -242,10 +243,10 @@ function DataTable<T>(props: DataTableProps<T>) {
                                             <div
                                                 className={classNames(
                                                     header.column.getCanSort() &&
-                                                        'cursor-pointer select-none point',
+                                                    'cursor-pointer select-none point',
                                                     loading &&
-                                                        'pointer-events-none',
-                                                        header.column.columnDef.meta?.HeaderClass
+                                                    'pointer-events-none',
+                                                    header.column.columnDef.meta?.HeaderClass
                                                 )}
                                                 onClick={header.column.getToggleSortingHandler()}
                                             >
@@ -350,7 +351,8 @@ function DataTable<T>(props: DataTableProps<T>) {
                     />
                 </div>
             </div>
-        </Loading>
+            {/* // </Loading> */}
+        </>
     )
 }
 

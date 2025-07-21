@@ -18,7 +18,7 @@ import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
 import DebounceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog } from '@/components/ui'
+import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog, Skeleton } from '@/components/ui' // Import Skeleton
 
 // Icons
 import { TbPencil, TbTrash, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbFile, TbFileCheck, TbFileX, TbUserCircle } from 'react-icons/tb'
@@ -36,7 +36,7 @@ import {
     addDocumentTypeAction,
     editDocumentTypeAction,
     deleteDocumentTypeAction,
-    getDepartmentsAction, // Corrected Action Name
+    getDepartmentsAction,
     submitExportReasonAction,
 } from '@/reduxtool/master/middleware'
 import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
@@ -87,18 +87,16 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, departme
     );
 };
 
-const DocumentTypeTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, typeNameOptions, departmentOptions, columns, filteredColumns, setFilteredColumns, searchInputValue }, ref) => {
+const DocumentTypeTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, typeNameOptions, departmentOptions, columns, filteredColumns, setFilteredColumns, searchInputValue, isDataReady }, ref) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const { control, handleSubmit, setValue } = useForm<DocumentTypeFilterSchema>({ defaultValues: { names: [], departmentIds: [], status: [] } });
     
-    // === FIX FOR INFINITE LOOP ===
     const { names, departmentIds, status } = activeFilters;
     useEffect(() => {
         setValue('names', names || []);
         setValue('departmentIds', departmentIds || []);
         setValue('status', status || []);
     }, [names, departmentIds, status, setValue]);
-    // === END FIX ===
 
     const onSubmit = (data: DocumentTypeFilterSchema) => { onApplyFilters(data); setIsFilterDrawerOpen(false); };
     const onDrawerClear = () => { onApplyFilters({}); setIsFilterDrawerOpen(false); };
@@ -113,9 +111,9 @@ const DocumentTypeTableTools = React.forwardRef(({ onSearchChange, onApplyFilter
                         {(columns || []).map((col) => col.header && (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)} disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>Export</Button>
             </div>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterDocTypeForm">Apply</Button></div>}>
                 <Form id="filterDocTypeForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -132,6 +130,7 @@ DocumentTypeTableTools.displayName = 'DocumentTypeTableTools';
 // --- MAIN DOCUMENT TYPE COMPONENT ---
 const Documentmaster = () => {
     const dispatch = useAppDispatch();
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingDocType, setEditingDocType] = useState<DocumentTypeItem | null>(null);
@@ -146,20 +145,52 @@ const Documentmaster = () => {
     const [isImageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageToView, setImageToView] = useState<string | null>(null);
 
-    const { DocumentTypeData = [], departmentsData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector);
-
-    console.log("departmentsData",departmentsData?.data);
+    const { DocumentTypeData = [], departmentsData = { data: [] } } = useSelector(masterSelector);
+    const isDataReady = !initialLoading;
     
     const departmentOptionsForSelect = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: Department) => ({ value: d.id, label: d.name })) : [], [departmentsData?.data]);
     const typeNameOptionsForFilter = useMemo(() => Array.isArray(DocumentTypeData) ? [...new Set(DocumentTypeData.map(item => item.name))].sort().map(name => ({ value: name, label: name })) : [], [DocumentTypeData]);
     
-    useEffect(() => { dispatch(getDocumentTypeAction()); dispatch(getDepartmentsAction()); }, [dispatch]);
+    const refreshData = useCallback(async () => {
+        setInitialLoading(true);
+        try {
+            await Promise.all([
+                dispatch(getDocumentTypeAction()),
+                dispatch(getDepartmentsAction())
+            ]);
+        } catch (error) {
+            console.error("Failed to refresh data:", error);
+            toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload data.</Notification>);
+        } finally {
+            setInitialLoading(false);
+        }
+    }, [dispatch]);
+
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
 
     const formMethods = useForm<DocumentTypeFormData>({ resolver: zodResolver(documentTypeFormSchema), defaultValues: { name: "", department_id: [], status: 'Active' }, mode: "onChange" });
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
 
     const openImageViewer = (imageUrl: string | null | undefined) => { if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); } };
     const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
+
+    const openEditDrawer = useCallback((docType: DocumentTypeItem) => {
+        setEditingDocType(docType);
+        const departmentIds = (docType.departments || []).map(d => d.id);
+        formMethods.reset({
+            name: docType.name,
+            department_id: departmentIds,
+            status: docType.status || 'Active'
+        });
+        setIsEditDrawerOpen(true);
+    }, [formMethods]);
+
+    const handleDeleteClick = useCallback((type: DocumentTypeItem) => {
+        setTypeToDelete(type);
+        setSingleDeleteConfirmOpen(true);
+    }, []);
 
     const columns: ColumnDef<DocumentTypeItem>[] = useMemo(() => [
         { header: "Document Type Name", accessorKey: "name", enableSorting: true, size: 200 },
@@ -171,16 +202,6 @@ const Documentmaster = () => {
         size: 200,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const date = updated_at ? new Date(updated_at) : null;
-          const formattedDate = date
-            ? `${date.getDate()} ${date.toLocaleString("en-US", {
-                month: "short",
-              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
-            : "N/A";
           return (
             <div className="flex items-center gap-2">
               <Avatar
@@ -206,8 +227,8 @@ const Documentmaster = () => {
       },
 
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
-        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
-    ], [departmentOptionsForSelect]);
+        { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip><Tooltip title="Delete"><div className="text-lg p-1.5 cursor-pointer hover:text-red-500" onClick={() => handleDeleteClick(props.row.original)}><TbTrash /></div></Tooltip></div>) },
+    ], [departmentOptionsForSelect, openEditDrawer, handleDeleteClick]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<DocumentTypeItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns); }, [columns]);
@@ -253,25 +274,57 @@ const Documentmaster = () => {
         setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as string[] | undefined; if (!currentValues) return prev; const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } return newFilters; });
         handleSetTableData({ pageIndex: 1 });
     }, [handleSetTableData]);
-    const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getDocumentTypeAction()); };
+    const onClearFiltersAndReload = useCallback(() => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); refreshData(); }, [tableData, refreshData]);
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
     const handleCardClick = (status: 'Active' | 'Inactive' | 'All') => { handleSetTableData({ query: '', pageIndex: 1 }); if (status === 'All') { setActiveFilters({}); } else { setActiveFilters({ status: [status] }); } };
 
     const openAddDrawer = () => { formMethods.reset({ name: "", department_id: [], status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
-    const onAddDocumentTypeSubmit = async (data: DocumentTypeFormData) => { setIsSubmitting(true); try { await dispatch(addDocumentTypeAction(data)).unwrap(); toast.push(<Notification title="Document Type Added" type="success">{`Type "${data.name}" was successfully added.`}</Notification>); closeAddDrawer(); dispatch(getDocumentTypeAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
-    
-    const openEditDrawer = (docType: DocumentTypeItem) => {
-        setEditingDocType(docType);
-        const departmentIds = (docType.departments || []).map(d => d.id);
-        formMethods.reset({ name: docType.name, department_id: departmentIds, status: docType.status || 'Active' });
-        setIsEditDrawerOpen(true);
+    const onAddDocumentTypeSubmit = async (data: DocumentTypeFormData) => { 
+        setIsSubmitting(true); 
+        try { 
+            await dispatch(addDocumentTypeAction(data)).unwrap(); 
+            toast.push(<Notification title="Document Type Added" type="success">{`Type "${data.name}" was successfully added.`}</Notification>); 
+            closeAddDrawer(); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Add Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsSubmitting(false); 
+        } 
     };
-    const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingDocType(null); };
-    const onEditDocumentTypeSubmit = async (data: DocumentTypeFormData) => { if (!editingDocType?.id) return; setIsSubmitting(true); try { await dispatch(editDocumentTypeAction({ id: editingDocType.id, ...data })).unwrap(); toast.push(<Notification title="Document Type Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); closeEditDrawer(); dispatch(getDocumentTypeAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
     
-    const handleDeleteClick = (type: DocumentTypeItem) => { setTypeToDelete(type); setSingleDeleteConfirmOpen(true); };
-    const onConfirmSingleDelete = async () => { if (!typeToDelete?.id) return; setIsDeleting(true); try { await dispatch(deleteDocumentTypeAction({ id: typeToDelete.id })).unwrap(); toast.push(<Notification title="Document Type Deleted" type="success">{`"${typeToDelete.name}" was successfully deleted.`}</Notification>); dispatch(getDocumentTypeAction()); } catch (error: any) { toast.push(<Notification title="Failed to Delete Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsDeleting(false); setSingleDeleteConfirmOpen(false); setTypeToDelete(null); } };
+    const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingDocType(null); };
+    const onEditDocumentTypeSubmit = async (data: DocumentTypeFormData) => { 
+        if (!editingDocType?.id) return; 
+        setIsSubmitting(true); 
+        try { 
+            await dispatch(editDocumentTypeAction({ id: editingDocType.id, ...data })).unwrap(); 
+            toast.push(<Notification title="Document Type Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); 
+            closeEditDrawer(); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Update Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsSubmitting(false); 
+        } 
+    };
+    
+    const onConfirmSingleDelete = async () => { 
+        if (!typeToDelete?.id) return; 
+        setIsDeleting(true); 
+        try { 
+            await dispatch(deleteDocumentTypeAction({ id: typeToDelete.id })).unwrap(); 
+            toast.push(<Notification title="Document Type Deleted" type="success">{`"${typeToDelete.name}" was successfully deleted.`}</Notification>); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Delete Type" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsDeleting(false); 
+            setSingleDeleteConfirmOpen(false); 
+            setTypeToDelete(null); 
+        } 
+    };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
@@ -288,6 +341,13 @@ const Documentmaster = () => {
     const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
     const cardBodyClass = "flex items-center gap-2 p-2";
 
+    const renderCardContent = (count: number) => {
+        if (initialLoading) {
+            return <Skeleton width={40} height={20} />;
+        }
+        return <h6 className="text-sm">{count}</h6>;
+    };
+
     return (
         <>
             <Container className="h-auto">
@@ -297,17 +357,17 @@ const Documentmaster = () => {
                         <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer} className="w-full sm:w-auto mt-2 sm:mt-0">Add Document Type</Button>
                     </div>
                     <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
-                        <Tooltip title="Click to show all document types"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{(DocumentTypeData || []).length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show active document types"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{(DocumentTypeData || []).filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show inactive document types"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{(DocumentTypeData || []).filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show all document types"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div>{renderCardContent(DocumentTypeData.length)}<span className="text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active document types"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div>{renderCardContent(DocumentTypeData.filter(d => d.status === 'Active').length)}<span className="text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show inactive document types"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div>{renderCardContent(DocumentTypeData.filter(d => d.status === 'Inactive').length)}<span className="text-xs">Inactive</span></div></Card></div></Tooltip>
                     </div>
                     <div className="mb-4">
-                        <DocumentTypeTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} typeNameOptions={typeNameOptionsForFilter} departmentOptions={departmentOptionsForSelect} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} searchInputValue={tableData?.query} />
+                        <DocumentTypeTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} typeNameOptions={typeNameOptionsForFilter} departmentOptions={departmentOptionsForSelect} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} searchInputValue={tableData?.query} isDataReady={isDataReady} />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} departmentOptions={departmentOptionsForSelect} />
                     {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching document type(s).</div>}
                     <div className="flex-grow overflow-auto">
-                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={masterLoadingStatus === "loading" || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
+                        <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={initialLoading || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
                     </div>
                 </AdaptiveCard>
             </Container>

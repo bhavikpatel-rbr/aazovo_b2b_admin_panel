@@ -202,7 +202,7 @@ const AddLeadPage = () => {
     if (!Array.isArray(memberData)) return [];
     return memberData.map((member: ApiLookupItem) => ({
       value: member.id,
-      label: `(${member.member_code}) - ${member.name || 'N/A'}`,
+      label: `(${member.customer_code}) - ${member.name || 'N/A'}`,
     }));
   }, [memberData]);
 
@@ -210,7 +210,7 @@ const AddLeadPage = () => {
     if (!Array.isArray(salesPerson)) return [];
     return salesPerson.map((product: ApiLookupItem) => ({
       value: product.id,
-      label: `(${product.member_code}) - ${product.name || 'N/A'}`,
+      label: `(${product.customer_code}) - ${product.name || 'N/A'}`,
       // label: product.name,
     }));
   }, [salesPerson]);

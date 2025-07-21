@@ -34,6 +34,7 @@ import {
   Form,
   FormItem,
   Input,
+  Skeleton, // Import Skeleton
   Table,
   Tag,
 } from "@/components/ui";
@@ -90,6 +91,7 @@ import {
   getAllUsersAction,
   getBrandAction,
   getCategoriesAction,
+  getParentCategoriesAction,
   getPriceListAction,
   getSubcategoriesByCategoryIdAction,
   submitExportReasonAction,
@@ -258,7 +260,6 @@ function exportToCsv(filename: string, rows: PriceListItem[]) {
   );
 }
 
-// MODIFICATION: Removed 'Status' from the Excel export
 function exportToExcel(
   filename: string,
   data: (PriceListItem & { qty: string })[]
@@ -288,7 +289,6 @@ function exportToExcel(
   );
 }
 
-// MODIFICATION: Removed 'Status' from the PDF export
 function exportToPdf(
   filename: string,
   title: string,
@@ -486,6 +486,7 @@ const PriceListTableTools = forwardRef(
       dispatch,
       isFilterDrawerOpen,
       setIsFilterDrawerOpen,
+      isDataReady, // <-- Receive isDataReady prop
     },
     ref
   ) => {
@@ -506,7 +507,6 @@ const PriceListTableTools = forwardRef(
       );
     }, [activeFilters, setValue]);
 
-    // FIX 2: Expose a reset function via ref for the parent to call
     useImperativeHandle(ref, () => ({
       resetDrawerForm: () => {
         reset();
@@ -528,10 +528,9 @@ const PriceListTableTools = forwardRef(
       setIsFilterDrawerOpen(false);
     };
 
-    // FIX 3: Make the drawer's "Clear" button reset the form state
     const onDrawerClear = () => {
-      reset(); // Resets the form to its default values
-      onApplyFilters({}); // Clears the filters in the parent component
+      reset();
+      onApplyFilters({});
       setIsFilterDrawerOpen(false);
     };
     const toggleColumn = (checked: boolean, colHeader: string) => {
@@ -593,10 +592,12 @@ const PriceListTableTools = forwardRef(
             title="Clear Filters & Reload"
             icon={<TbReload />}
             onClick={onClearFilters}
+            disabled={!isDataReady}
           />
           <Button
             icon={<TbFilter />}
             onClick={() => setIsFilterDrawerOpen(true)}
+            disabled={!isDataReady}
           >
             Filter
             {activeFilterCount > 0 && (
@@ -605,7 +606,7 @@ const PriceListTableTools = forwardRef(
               </span>
             )}
           </Button>
-          <Button icon={<TbCloudUpload />} onClick={onExport}>
+          <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>
             Export
           </Button>
         </div>
@@ -988,6 +989,7 @@ const PriceList = () => {
   const [isTodayPriceDrawerOpen, setIsTodayPriceDrawerOpen] = useState(false);
   const [editingPriceListItem, setEditingPriceListItem] =
     useState<PriceListItem | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isExportSelectedReasonModalOpen, setIsExportSelectedReasonModalOpen] =
@@ -1022,12 +1024,13 @@ const PriceList = () => {
   const {
     priceListData = { data: [], counts: {} },
     productsMasterData = [],
-    status: masterLoadingStatus = "idle",
-    CategoriesData: GlobalCategoriesData = [],
+    ParentCategories = [],
     subCategoriesForSelectedCategoryData = [],
     BrandData = [],
     getAllUserData = [],
   } = useSelector(masterSelector, shallowEqual);
+
+  const isDataReady = !initialLoading;
 
   const productOptions = useMemo(
     () =>
@@ -1041,11 +1044,13 @@ const PriceList = () => {
   );
   const categoryOptions = useMemo(
     () =>
-      Array.isArray(GlobalCategoriesData)
-        ? GlobalCategoriesData.map((c) => ({ value: c.id, label: c.name }))
+      Array.isArray(ParentCategories)
+        ? ParentCategories.map((c) => ({ value: c.id, label: c.name }))
         : [],
-    [GlobalCategoriesData]
+    [ParentCategories]
   );
+  console.log("ParentCategories",ParentCategories);
+  
   const subCategoryOptions = useMemo(
     () =>
       Array.isArray(subCategoriesForSelectedCategoryData)
@@ -1066,18 +1071,32 @@ const PriceList = () => {
   const getAllUserDataOptions = useMemo(
     () =>
       Array.isArray(getAllUserData)
-        ? getAllUserData.map((b) => ({ value: b.id, label: b.name }))
+        ? getAllUserData.map((b) => ({ value: b.id, label:`(${b.employee_id}) - ${b.name || 'N/A'}`  }))
         : [],
     [getAllUserData]
   );
+  
+  const refreshData = useCallback(async () => {
+      setInitialLoading(true);
+      try {
+          await Promise.all([
+              dispatch(getPriceListAction()),
+              dispatch(getAllProductAction()),
+              dispatch(getParentCategoriesAction()),
+              dispatch(getBrandAction()),
+              dispatch(getAllUsersAction()),
+          ]);
+      } catch (error) {
+          console.error("Failed to refresh data:", error);
+          toast.push(<Notification title="Data Load Failed" type="danger">Could not load initial data.</Notification>);
+      } finally {
+          setInitialLoading(false);
+      }
+  }, [dispatch]);
 
   useEffect(() => {
-    dispatch(getPriceListAction());
-    dispatch(getAllProductAction());
-    dispatch(getCategoriesAction());
-    dispatch(getBrandAction());
-    dispatch(getAllUsersAction());
-  }, [dispatch]);
+      refreshData();
+  }, [refreshData]);
 
   const addFormMethods = useForm<PriceListFormData>({
     resolver: zodResolver(priceListFormSchema),
@@ -1091,7 +1110,6 @@ const PriceList = () => {
     },
     mode: "onChange",
   });
-  // FIX 1: The 'useForm' hook for editing requires 'defaultValues' to be initialized.
   const editFormMethods = useForm<PriceListFormData>({
     resolver: zodResolver(priceListFormSchema),
     defaultValues: {
@@ -1343,8 +1361,6 @@ const PriceList = () => {
         header: "Qty",
         id: "qty",
         size: 150,
-        // This is the original, correct cell renderer.
-        // It will no longer crash after we apply the next fixes.
         cell: ({ row, column }) => {
           const rowId = row.original.id;
           const { quantities, handleQtyChange } = column.columnDef.meta as any;
@@ -1564,8 +1580,6 @@ const PriceList = () => {
     },
     [handleSetTableData]
   );
-  // FIX 2 & 3: Consolidated function to clear all filters and reload data.
-  // It resets the parent state, resets the drawer form via ref, and re-fetches.
   const onClearFiltersAndReload = useCallback(() => {
     setActiveFilters({});
     setTableData((prev) => ({ ...prev, query: "", pageIndex: 1 }));
@@ -1573,8 +1587,8 @@ const PriceList = () => {
     if (filterToolsRef.current) {
       filterToolsRef.current.resetDrawerForm();
     }
-    dispatch(getPriceListAction());
-  }, [dispatch]);
+    refreshData();
+  }, [refreshData]);
 
   const handleCardClick = (
     filterType: "status" | "date" | "all",
@@ -1591,7 +1605,6 @@ const PriceList = () => {
     }
   };
 
-  // MODIFICATION: Removed 'Status' from the copied text
   const handleCopySelected = useCallback(() => {
     if (selectedItemsData.length === 0) {
       toast.push(
@@ -1775,7 +1788,6 @@ const PriceList = () => {
     });
   }, [priceListData?.data]);
 
-  // MODIFICATION: Removed 'Status' from the shareable text
   const generateShareableText = () => {
     let message = `*Today's Price List (${new Date().toLocaleDateString()})*\n\n-----------------------------------\n`;
     todayPriceListData.forEach((item) => {
@@ -1863,6 +1875,19 @@ const PriceList = () => {
       />
     );
   };
+  
+  const renderCardContent = (content: string | number | undefined, isFloat = false) => {
+    if (initialLoading) {
+      return <Skeleton width={50} height={20} />;
+    }
+    const value = content ?? "0";
+    if (isFloat) {
+      const num = parseFloat(String(value));
+      return <h6 className="text-gray-700">{!isNaN(num) ? num.toFixed(2) : "0.00"}</h6>;
+    }
+    return <h6 className="text-gray-700">{value}</h6>;
+  };
+
   return (
     <>
       <Container className="h-auto">
@@ -1897,9 +1922,7 @@ const PriceList = () => {
                   <TbReceipt size={24} />
                 </div>
                 <div>
-                  <h6 className="text-blue-500">
-                    {priceListData?.counts?.total}
-                  </h6>
+                  <div className="text-blue-500">{renderCardContent(priceListData?.counts?.total)}</div>
                   <span className="font-semibold text-xs">Total Listed</span>
                 </div>
               </Card>
@@ -1916,9 +1939,7 @@ const PriceList = () => {
                   <TbDeviceWatchDollar size={24} />
                 </div>
                 <div>
-                  <h6 className="text-violet-500">
-                    {priceListData?.counts?.today}
-                  </h6>
+                  <div className="text-violet-500">{renderCardContent(priceListData?.counts?.today)}</div>
                   <span className="font-semibold text-xs">Today Listed</span>
                 </div>
               </Card>
@@ -1931,11 +1952,7 @@ const PriceList = () => {
                 <TbClockDollar size={24} />
               </div>
               <div>
-                <h6 className="text-orange-500">
-                  {parseFloat(priceListData?.counts?.avg_base || "0").toFixed(
-                    2
-                  )}
-                </h6>
+                <div className="text-orange-500">{renderCardContent(priceListData?.counts?.avg_base, true)}</div>
                 <span className="font-semibold text-xs">Avg Base (₹)</span>
               </div>
             </Card>
@@ -1947,9 +1964,7 @@ const PriceList = () => {
                 <TbPencilDollar size={24} />
               </div>
               <div>
-                <h6 className="text-gray-500">
-                  {parseFloat(priceListData?.counts?.avg_nlc || "0").toFixed(2)}
-                </h6>
+                <div className="text-gray-500">{renderCardContent(priceListData?.counts?.avg_nlc, true)}</div>
                 <span className="font-semibold text-xs">Avg NLC ($)</span>
               </div>
             </Card>
@@ -1965,9 +1980,7 @@ const PriceList = () => {
                   <TbDiscount size={24} />
                 </div>
                 <div>
-                  <h6 className="text-green-500">
-                    {priceListData?.counts?.active}
-                  </h6>
+                  <div className="text-green-500">{renderCardContent(priceListData?.counts?.active)}</div>
                   <span className="font-semibold text-xs">Active</span>
                 </div>
               </Card>
@@ -1984,9 +1997,7 @@ const PriceList = () => {
                   <TbDiscountOff size={24} />
                 </div>
                 <div>
-                  <h6 className="text-red-500">
-                    {priceListData?.counts?.inactive}
-                  </h6>
+                  <div className="text-red-500">{renderCardContent(priceListData?.counts?.inactive)}</div>
                   <span className="font-semibold text-xs">Inactive</span>
                 </div>
               </Card>
@@ -2021,6 +2032,7 @@ const PriceList = () => {
                 dispatch={dispatch}
                 isFilterDrawerOpen={isFilterDrawerOpen}
                 setIsFilterDrawerOpen={setIsFilterDrawerOpen}
+                isDataReady={isDataReady}
               />
             )}
           </div>
@@ -2043,7 +2055,7 @@ const PriceList = () => {
               columns={filteredColumns}
               data={pageData}
               noData={pageData.length <= 0}
-              loading={masterLoadingStatus === "loading" || isSubmitting}
+              loading={initialLoading || isSubmitting}
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
@@ -2203,7 +2215,6 @@ const PriceList = () => {
               <br />
               <span className="font-semibold">Created At:</span>{" "}
               <span>
-                {/* {formatCustomDateTime(editingPriceListItem.created_at)} */}
                 {editingPriceListItem.created_at
                   ? `${new Date(
                       editingPriceListItem.created_at

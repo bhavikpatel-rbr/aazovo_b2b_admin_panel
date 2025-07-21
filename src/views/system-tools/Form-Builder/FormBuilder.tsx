@@ -1,6 +1,4 @@
-// src/views/your-path/FormBuilder.tsx
-
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, Ref, useEffect } from "react";
 import cloneDeep from "lodash/cloneDeep";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -31,7 +29,8 @@ import {
   Radio,
   Dialog,
   Avatar,
-  DatePicker, // --- MODIFIED: Added DatePicker ---
+  DatePicker,
+  Skeleton,
 } from "@/components/ui";
 import { Controller, useForm } from "react-hook-form";
 
@@ -76,8 +75,8 @@ import {
   getDepartmentsAction,
   getCategoriesAction,
   submitExportReasonAction,
-  addTaskAction, // --- MODIFIED: Added addTaskAction ---
-  getAllUsersAction, // --- MODIFIED: Added getAllUsersAction ---
+  addTaskAction,
+  getAllUsersAction,
 } from "@/reduxtool/master/middleware";
 import { masterSelector } from "@/reduxtool/master/masterSlice";
 
@@ -135,7 +134,7 @@ export type FormBuilderItem = {
 
 export type GeneralCategoryListItem = { id: string | number; name: string };
 export type DepartmentListItem = { id: string | number; name: string };
-export type SelectOption = { value: any; label: string }; // --- MODIFIED: Added SelectOption type ---
+export type SelectOption = { value: any; label: string };
 
 const filterFormSchema = z.object({
   filterStatus: z.array(z.string()).optional(),
@@ -150,7 +149,6 @@ const exportReasonSchema = z.object({
 });
 type ExportReasonFormData = z.infer<typeof exportReasonSchema>;
 
-// --- MODIFIED: Add Task schema, type, and options ---
 const taskValidationSchema = z.object({
   task_title: z.string().min(3, 'Task title must be at least 3 characters.'),
   assign_to: z.array(z.string()).min(1, 'At least one assignee is required.'),
@@ -213,7 +211,6 @@ function exportFormsToCsvLogic(filename: string, rows: FormBuilderItem[]) {
     return true;
 }
 
-// --- MODIFIED: ActionColumn now accepts onAssignToTask ---
 const ActionColumn = ({ item, onEdit, onViewDetail, onClone, onAssignToTask }: { item: FormBuilderItem; onEdit: (id: number) => void; onViewDetail: (item: FormBuilderItem) => void; onClone: (item: FormBuilderItem) => void; onAssignToTask: () => void; }) => (
     <div className="flex items-center justify-center gap-1">
         <Tooltip title="Edit"><div className={`text-xl cursor-pointer select-none text-gray-500 hover:text-emerald-600`} role="button" onClick={() => onEdit(item.id)}><TbPencil /></div></Tooltip>
@@ -249,7 +246,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll, departme
   );
 };
 
-const FormBuilderTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, searchVal, columns, filteredColumns, setFilteredColumns, activeFilterCount }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; searchVal: string; columns: ColumnDef<FormBuilderItem>[]; filteredColumns: ColumnDef<FormBuilderItem>[]; setFilteredColumns: (cols: ColumnDef<FormBuilderItem>[]) => void; activeFilterCount: number; }) => {
+const FormBuilderTableTools = ({ onSearchChange, onFilter, onExport, onClearFilters, searchVal, columns, filteredColumns, setFilteredColumns, activeFilterCount, isDataReady }: { onSearchChange: (query: string) => void; onFilter: () => void; onExport: () => void; onClearFilters: () => void; searchVal: string; columns: ColumnDef<FormBuilderItem>[]; filteredColumns: ColumnDef<FormBuilderItem>[]; setFilteredColumns: (cols: ColumnDef<FormBuilderItem>[]) => void; activeFilterCount: number; isDataReady: boolean; }) => {
     const toggleColumn = (checked: boolean, colHeader: string) => {
         if (checked) {
              const newCols = [...filteredColumns, columns.find(c => c.header === colHeader)!].sort((a, b) => columns.findIndex(c => c.header === a.header) - columns.findIndex(c => c.header === b.header));
@@ -266,15 +263,14 @@ const FormBuilderTableTools = ({ onSearchChange, onFilter, onExport, onClearFilt
                 <Dropdown renderTitle={<Button title="Filter Columns" icon={<TbColumns />} />} placement="bottom-end">
                     <div className="flex flex-col p-2"><div className='font-semibold mb-1 border-b pb-1'>Toggle Columns</div>{columns.filter(c => c.id !== 'select' && c.header).map(col => (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} >{col.header}</Checkbox></div>))}</div>
                 </Dropdown>
-                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload"></Button>
-                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto">Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto">Export</Button>
+                <Button icon={<TbReload />} onClick={onClearFilters} title="Clear Filters & Reload" disabled={!isDataReady}></Button>
+                <Button icon={<TbFilter />} onClick={onFilter} className="w-full sm:w-auto" disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} className="w-full sm:w-auto" disabled={!isDataReady}>Export</Button>
             </div>
         </div>
     );
 };
 
-// --- MODIFIED: New Dialog component for Assigning Task ---
 const AssignTaskDialog = ({ 
     isOpen, 
     onClose, 
@@ -348,12 +344,11 @@ const AssignTaskDialog = ({
     );
 };
 
-
 const FormBuilder = () => {
   const dispatch = useAppDispatch();
-  // --- MODIFIED: Destructure getAllUserData ---
   const { formsData: rawFormsData = [], status: masterLoadingStatus = "idle", CategoriesData = [], departmentsData = { data: [] }, getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
-
+  
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
@@ -366,26 +361,38 @@ const FormBuilder = () => {
   const [singleDeleteConfirmOpen, setSingleDeleteConfirmOpen] = useState(false);
   const [isImageViewerOpen, setImageViewerOpen] = useState(false);
   const [imageToView, setImageToView] = useState<string | null>(null);
-
-  // --- MODIFIED: Add state for task assignment dialog ---
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [taskTargetItem, setTaskTargetItem] = useState<FormBuilderItem | null>(null);
+  const isDataReady = !initialLoading;
 
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
   const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
   
-  // --- MODIFIED: Add options for user selection ---
-  const allUserOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: b.name })) : [], [getAllUserData]);
+  const allUserOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
   const categoryFilterOptions = useMemo(() => (CategoriesData || []).map((cat: GeneralCategoryListItem) => ({ value: String(cat.id), label: cat.name })), [CategoriesData]);
   const departmentFilterOptions = useMemo(() => (departmentsData?.data || []).map((dept: DepartmentListItem) => ({ value: String(dept.id), label: dept.name })), [departmentsData?.data]);
   const statusFilterOptions = useMemo(() => FORM_STATUS_OPTIONS, []);
 
-  useEffect(() => {
-    dispatch(getFormBuilderAction());
-    dispatch(getCategoriesAction());
-    dispatch(getDepartmentsAction());
-    dispatch(getAllUsersAction()); // --- MODIFIED: Fetch users on component mount ---
+  const refreshData = useCallback(async () => {
+    setInitialLoading(true);
+    try {
+        await Promise.all([
+            dispatch(getFormBuilderAction()),
+            dispatch(getCategoriesAction()),
+            dispatch(getDepartmentsAction()),
+            dispatch(getAllUsersAction())
+        ]);
+    } catch (error) {
+        console.error("Failed to refresh form builder data:", error);
+        toast.push(<Notification title="Data Load Failed" type="danger">Could not load necessary data.</Notification>);
+    } finally {
+        setInitialLoading(false);
+    }
   }, [dispatch]);
+
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   const handleEdit = (id: number) => navigate(`/system-tools/formbuilder-edit/${id}`);
   const openViewDialog = (item: FormBuilderItem) => navigate(`/system-tools/formbuilder-edit/${item.id}?preview=true`);
@@ -402,6 +409,7 @@ const FormBuilder = () => {
     try {
       await dispatch(deleteFormBuilderAction({ id: itemToDelete.id })).unwrap();
       toast.push(<Notification title="Form Deleted" type="success">{`Form "${itemToDelete.form_name}" deleted.`}</Notification>);
+      refreshData();
     } catch (e: any) {
       toast.push(<Notification title="Delete Failed" type="danger" children={e.message || "Could not delete form."} />);
     } finally {
@@ -418,6 +426,7 @@ const FormBuilder = () => {
       await dispatch(deleteAllFormBuildersAction({ ids: idsToDelete })).unwrap();
       toast.push(<Notification title="Forms Deleted" type="success">{`${selectedItems.length} form(s) deleted.`}</Notification>);
       setSelectedItems([]);
+      refreshData();
     } catch (e: any) {
       toast.push(<Notification title="Delete Failed" type="danger" children={e.message || "Could not delete selected forms."} />);
     } finally {
@@ -443,6 +452,7 @@ const FormBuilder = () => {
     filterFormMethods.reset({});
     setFilterCriteria({});
     handleSetTableData({ pageIndex: 1, query: "" });
+    refreshData();
   };
   
   const handleRemoveFilter = useCallback((key: keyof FilterFormData, value: any) => {
@@ -465,7 +475,6 @@ const FormBuilder = () => {
     handleSetTableData({ pageIndex: 1, query: "" });
   };
   
-  // --- MODIFIED: Add handlers for task dialog ---
   const openAssignToTaskModal = useCallback((item: FormBuilderItem) => {
     setTaskTargetItem(item);
     setIsTaskModalOpen(true);
@@ -490,7 +499,7 @@ const FormBuilder = () => {
         toast.push(<Notification type="success" title="Task Assigned Successfully!" />);
         closeAssignToTaskModal();
     } catch (error: any) {
-        toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
+        toast.push(<Notification title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
     } finally {
         setIsProcessing(false);
     }
@@ -569,7 +578,6 @@ const FormBuilder = () => {
     { header: "Que", accessorKey: "questionCount", size: 90, enableSorting: true, meta: { tdClass: "text-center", thClass: "text-center" }, cell: (props) => <Tag className="capitalize font-semibold border-emerald-300 dark:border-emerald-500 border-1 bg-emerald-100 dark:bg-emerald-700">{props.row.original.questionCount || 0}</Tag> },
     { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => (<Tag className={classNames("capitalize", statusColors[props.row.original.status] || statusColors.Draft)}>{props.row.original.status || "N/A"}</Tag>) },
     { header: "Type", accessorKey: "is_external", size: 120, cell: (props) => { const isExternal = props.row.original.is_external; return (<Tag className={classNames("capitalize", isExternal ? "border-sky-300 dark:border-sky-500 border-1 bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-100" : "border-fuchsia-300 dark:border-fuchsia-500 border-1 bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-500/20 dark:text-fuchsia-100")}>{isExternal ? "External" : "Internal"}</Tag>); }, },
-    // { header: 'Updated Info', accessorKey: 'updated_at', enableSorting: true, size: 200, cell: (props) => { const { updated_at, updated_by_user } = props.row.original; const formattedDate = updated_at ? new Date(updated_at).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'; return (<div className="flex items-center gap-2"><Avatar src={updated_by_user?.profile_pic_path} shape="circle" size="sm" icon={<TbUserCircle />} className="cursor-pointer hover:ring-2 hover:ring-indigo-500" onClick={() => openImageViewer(updated_by_user?.profile_pic_path)} /><div><span>{updated_by_user?.name || 'N/A'}</span><div className="text-xs">{updated_by_user?.roles?.[0]?.display_name || ''}</div><div className="text-xs text-gray-500">{formattedDate}</div></div></div>); } },
     { header: "Actions", id: "action", size: 120, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<ActionColumn 
         item={props.row.original} 
         onEdit={handleEdit} 
@@ -583,32 +591,39 @@ const FormBuilder = () => {
   useEffect(() => { setFilteredColumns(baseColumns) }, []);
 
   const activeFilterCount = useMemo(() => Object.values(filterCriteria).filter(v => (Array.isArray(v) ? v.length > 0 : !!v)).length, [filterCriteria]);
-  const tableLoading = masterLoadingStatus === "pending" || isProcessing;
+  const tableLoading = isProcessing;
 
+  const renderCardContent = (content: number | undefined) => {
+    if (initialLoading) {
+      return <Skeleton width={50} height={20} />;
+    }
+    return <h6>{content ?? '...'}</h6>;
+  };
+  
   return (
     <>
       <Container className="h-auto">
         <AdaptiveCard className="h-full" bodyClass="h-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <h5 className="mb-2 sm:mb-0">Form Builder</h5>
-            <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/system-tools/formbuilder-create")} disabled={tableLoading}>Add New Form</Button>
+            <Button variant="solid" icon={<TbPlus />} onClick={() => navigate("/system-tools/formbuilder-create")} disabled={!isDataReady}>Add New Form</Button>
           </div>
           
           <div className="grid grid-cols-2 sm:grid-cols-4 mb-4 gap-4">
-            <Tooltip title="View All Forms"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbFileText size={24}/></div><div><h6 className="text-blue-500">{counts?.total ?? '...'}</h6><span className="font-semibold text-xs">Total Forms</span></div></Card></div></Tooltip>
-            <Tooltip title="Filter by Status: Active"><div className="cursor-pointer" onClick={() => handleCardClick('Active')}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-emerald-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-600"><TbCircleCheck size={24}/></div><div><h6 className="text-emerald-600">{counts?.Active ?? '...'}</h6><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
-            <Tooltip title="Filter by Status: Inactive"><div className="cursor-pointer" onClick={() => handleCardClick('Inactive')}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-600"><TbCircleX size={24}/></div><div><h6 className="text-red-500">{counts?.Inactive ?? '...'}</h6><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
-            <Tooltip title="Filter by Status: Draft"><div className="cursor-pointer" onClick={() => handleCardClick('Draft')}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-gray-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-600"><TbPencil size={24}/></div><div><h6 className="text-gray-600">{counts?.Draft ?? '...'}</h6><span className="font-semibold text-xs">Drafts</span></div></Card></div></Tooltip>
+            <Tooltip title="View All Forms"><div className="cursor-pointer" onClick={() => handleCardClick()}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-blue-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-blue-100 text-blue-500"><TbFileText size={24}/></div><div><div className="text-blue-500">{renderCardContent(counts?.total)}</div><span className="font-semibold text-xs">Total Forms</span></div></Card></div></Tooltip>
+            <Tooltip title="Filter by Status: Active"><div className="cursor-pointer" onClick={() => handleCardClick('Active')}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-emerald-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-emerald-100 text-emerald-600"><TbCircleCheck size={24}/></div><div><div className="text-emerald-600">{renderCardContent(counts?.Active)}</div><span className="font-semibold text-xs">Active</span></div></Card></div></Tooltip>
+            <Tooltip title="Filter by Status: Inactive"><div className="cursor-pointer" onClick={() => handleCardClick('Inactive')}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-red-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-red-100 text-red-600"><TbCircleX size={24}/></div><div><div className="text-red-500">{renderCardContent(counts?.Inactive)}</div><span className="font-semibold text-xs">Inactive</span></div></Card></div></Tooltip>
+            <Tooltip title="Filter by Status: Draft"><div className="cursor-pointer" onClick={() => handleCardClick('Draft')}><Card bodyClass="flex gap-2 p-2 hover:shadow-lg transition-shadow" className="rounded-md border border-gray-200"><div className="h-12 w-12 rounded-md flex items-center justify-center bg-gray-100 text-gray-600"><TbPencil size={24}/></div><div><div className="text-gray-600">{renderCardContent(counts?.Draft)}</div><span className="font-semibold text-xs">Drafts</span></div></Card></div></Tooltip>
           </div>
 
-          <FormBuilderTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportReasonModal} searchVal={tableData.query as string} columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} />
+          <FormBuilderTableTools onClearFilters={onClearFilters} onSearchChange={handleSearchChange} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportReasonModal} searchVal={tableData.query as string} columns={baseColumns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} activeFilterCount={activeFilterCount} isDataReady={isDataReady} />
           
           <ActiveFiltersDisplay filterData={filterCriteria} onRemoveFilter={handleRemoveFilter} onClearAll={onClearFilters} departmentOptions={departmentFilterOptions} categoryOptions={categoryFilterOptions} />
           
           {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching form(s).</div>}
           
           <div className="mt-4">
-            <DataTable columns={filteredColumns} data={pageData} noData={!tableLoading && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectable checkboxChecked={(row) => selectedItems.some((item) => item.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
+            <DataTable columns={filteredColumns} data={pageData} noData={!isDataReady && pageData.length === 0} loading={initialLoading || tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number, }} selectable checkboxChecked={(row) => selectedItems.some((item) => item.id === row.id)} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectChange} onSort={handleSort} onCheckBoxChange={handleRowSelect} onIndeterminateCheckBoxChange={handleAllRowSelect} />
           </div>
         </AdaptiveCard>
       </Container>
@@ -643,7 +658,6 @@ const FormBuilder = () => {
       <ConfirmDialog isOpen={singleDeleteConfirmOpen} type="danger" title="Delete Form" onClose={() => setSingleDeleteConfirmOpen(false)} onConfirm={onConfirmSingleDelete} loading={isProcessing} confirmButtonColor="red-600"><p>Are you sure you want to delete the form "<strong>{itemToDelete?.form_name}</strong>"?</p></ConfirmDialog>
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Export" onClose={() => setIsExportReasonModalOpen(false)} onRequestClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} cancelText="Cancel" confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}><Form id="exportFormsReasonForm" onSubmit={(e) => { e.preventDefault(); exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)(); }} className="flex flex-col gap-4 mt-2"><FormItem label="Reason:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
     
-      {/* --- MODIFIED: Render the new Assign Task Dialog --- */}
       <AssignTaskDialog
         isOpen={isTaskModalOpen}
         onClose={closeAssignToTaskModal}

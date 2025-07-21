@@ -29,12 +29,16 @@ import {
 // --- Types, Redux and Helpers ---
 import { getCompanyByIdAction } from '@/reduxtool/master/middleware';
 import { useAppDispatch } from '@/reduxtool/store';
+import { FORMERR } from 'dns';
 
 // --- TYPE DEFINITIONS (Matching the provided JSON) ---
 interface OfficeInfo { id: number; office_type: string; office_name: string; state: string; city: string; zip_code: string; gst_number: string; address: string; office_email: string; contact_person: string | null; office_phone: string | null; }
 interface FilledForm { id: number; accountdoc_id: number; created_at: string; form_data?: { uploads_doc_s?: { [key: string]: string | undefined; } } }
 interface TransactionDoc { id: number; company_document: string; invoice_number: string; status: string; created_at: string; filled_form?: FilledForm; }
-interface ApiSingleCompanyItem { id: number; company_code: string; company_name: string; status: string; primary_email_id: string; primary_contact_number: string; primary_contact_number_code: string; alternate_contact_number?: string | null; alternate_contact_number_code?: string | null; alternate_email_id?: string | null; general_contact_number?: string | null; general_contact_number_code?: string | null; ownership_type: string; owner_name: string; company_address?: string | null; country_id: number; state?: string | null; city?: string | null; zip_code?: string | null; gst_number: string; pan_number: string; trn_number?: string | null; tan_number?: string | null; establishment_year?: string | null; no_of_employees?: number | null; company_website?: string | null; primary_business_type?: string | null; kyc_verified: boolean; enable_billing: boolean; billing_due?: string; company_logo?: string | null; primary_account_number?: string | null; primary_bank_name?: string | null; primary_ifsc_code?: string | null; primary_swift_code?: string | null; secondary_account_number?: string | null; secondary_bank_name?: string | null; secondary_ifsc_code?: string | null; secondary_swift_code?: string | null; aadhar_card_file?: string | null; aadhar_card_verified?: boolean; pan_card_file?: string | null; pan_card_verified?: boolean; gst_certificate_file?: string | null; gst_certificate_verified?: boolean; office_photo_file?: string | null; office_photo_verified?: boolean; cancel_cheque_file?: string | null; cancel_cheque_verified?: boolean; visiting_card_file?: string | null; visiting_card_verified?: boolean; authority_letter_file?: string | null; authority_letter_verified?: boolean; ABCQ_file?: string | null; ABCQ_verified?: boolean; other_document_file?: string | null; other_document_verified?: boolean; created_at: string; country?: { name: string }; continent?: { name: string }; company_certificate?: Array<{ id: number; certificate_name: string; upload_certificate_path: string | null }>; company_bank_details?: Array<{ id: number; type: string; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string }>; company_member_management?: Array<{ id: number; person_name: string; member_id: string; designation: string; number: string; }>; company_team_members?: Array<{ id: number; person_name: string; team_name: string; designation: string; number: string; }>; office_info?: OfficeInfo[]; company_spot_verification?: Array<{ id: number; verified_by_name?: string; verified: boolean; remark: string | null; photo_upload: string | null; }>; transaction_docs?: TransactionDoc[]; }
+interface Reference { id: number; person_name: string; designation?: string; contact_number?: string; relation?: string; }
+interface EnableBillingDocument { id: number; document_name: string; document: string; }
+interface ApiSingleCompanyItem { id: number; company_code: string; company_name: string; status: string; primary_email_id: string; primary_contact_number: string; primary_contact_number_code: string; alternate_contact_number?: string | null; alternate_email_id?: string | null; general_contact_number?: string | null; general_contact_number_code?: string | null; ownership_type: string; owner_name: string; company_address?: string | null; country_id: number; state?: string | null; city?: string | null; zip_code?: string | null; gst_number: string; pan_number: string; trn_number?: string | null; tan_number?: string | null; establishment_year?: string | null; no_of_employees?: number | null; company_website?: string | null; primary_business_type?: string | null; kyc_verified: boolean; enable_billing: boolean; billing_due?: string; company_logo?: string | null; primary_account_number?: string | null; primary_bank_name?: string | null; primary_ifsc_code?: string | null; primary_swift_code?: string | null; secondary_account_number?: string | null; secondary_bank_name?: string | null; secondary_ifsc_code?: string | null; secondary_swift_code?: string | null; aadhar_card_file?: string | null; aadhar_card_verified?: boolean; pan_card_file?: string | null; pan_card_verified?: boolean; gst_certificate_file?: string | null; gst_certificate_verified?: boolean; office_photo_file?: string | null; office_photo_verified?: boolean; cancel_cheque_file?: string | null; cancel_cheque_verified?: boolean; visiting_card_file?: string | null; visiting_card_verified?: boolean; authority_letter_file?: string | null; authority_letter_verified?: boolean; ABCQ_file?: string | null; ABCQ_verified?: boolean; other_document_file?: string | null; other_document_verified?: boolean; created_at: string; country?: { name: string }; continent?: { name: string }; company_certificate?: Array<{ id: number; certificate_name: string; upload_certificate_path: string | null }>; company_bank_details?: Array<{ id: number; type: string; bank_account_number: string; bank_name: string; ifsc_code: string; swift_code?: string }>; company_member_management?: Array<{ id: number; person_name: string; member_id: string; designation: string; number: string; }>; company_team_members?: Array<{ id: number; person_name: string; team_name: string; designation: string; number: string; }>; office_info?: OfficeInfo[]; company_spot_verification?: Array<{ id: number; verified_by_name?: string; verified: boolean; remark: string | null; photo_upload: string | null; }>; transaction_docs?: TransactionDoc[]; company_references?: Reference[]; enable_billing_documents?: EnableBillingDocument[]; }
+
 
 // --- VIEWER & CARD COMPONENTS ---
 interface DocumentRecord {
@@ -154,7 +158,7 @@ const DocumentCard: React.FC<{ document: DocumentRecord; onPreview: () => void }
 // --- REUSABLE HELPER COMPONENTS ---
 const getCompanyStatusClass = (status?: string) => { const s = status?.toLowerCase() || ''; switch (s) { case 'active': case 'approved': case 'verified': return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100'; case 'inactive': return 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100'; case 'blocked': case 'non verified': return 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100'; case 'pending': return 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100'; default: return 'bg-gray-100 text-gray-500'; } };
 const CompanyProfileHeader = ({ company }: { company: ApiSingleCompanyItem }) => { const navigate = useNavigate(); return <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4"><div className="flex items-center gap-4"><div><h4 className="font-bold">({company.company_code}) - {company.company_name}</h4><div className="flex items-center gap-2 mb-1 text-sm"><TbMail className="text-gray-400" /> <p>{company.primary_email_id}</p></div>{company.primary_contact_number && (<div className="flex items-center gap-2 text-sm"><TbPhone className="text-gray-400" /> <p>{company.primary_contact_number_code} {company.primary_contact_number}</p></div>)}<div className="mt-2"><Tag className={`${getCompanyStatusClass(company.status)} capitalize`}>{company.status || 'N/A'}</Tag></div></div></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm"><div className="flex items-center gap-2"><TbUserCircle className="text-gray-400" /><span className="font-semibold">Owner:</span><span>{company.owner_name}</span></div><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">GST:</span><span>{company.gst_number || 'N/A'}</span></div><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">PAN NO:</span><span>{company.pan_number || 'N/A'}</span></div></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm"><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TAN No:</span><span>{company.tan_number || 'N/A'}</span></div><div className="flex items-center gap-2"><TbLicense className='text-gray-400' /><span className="font-semibold">TRN NO:</span><span>{company.trn_number || 'N/A'}</span></div></div><div className="flex flex-col sm:flex-row lg:flex-col gap-2"><Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/business-entities/company-edit/${company.id}`)}>Edit Company</Button><Button icon={<TbArrowLeft />} onClick={() => navigate('/business-entities/company')}>Back to List</Button></div></div> };
-const companyViewNavigationList = [{ label: "Details", link: "details", icon: <TbUser /> },{ label: "Kyc Documents", link: "documents", icon: <TbFileText /> },{ label: "Bank & Billing", link: "bank", icon: <TbBuildingBank /> },{ label: "Members", link: "members", icon: <TbUsersGroup /> },{ label: "Teams", link: "teams", icon: <TbUsersGroup /> },{ label: "Offices", link: "offices", icon: <TbBuilding /> },{ label: "Verification", link: "verification", icon: <TbLicense /> },{ label: "Transactions", link: "transactions", icon: <TbCoinRupee /> }];
+const companyViewNavigationList = [{ label: "Details", link: "details", icon: <TbUser /> },{ label: "Kyc Documents", link: "documents", icon: <TbFileText /> },{ label: "Bank", link: "bank", icon: <TbBuildingBank /> },{ label: "Accessibility", link: "accessibility", icon: <TbFileDescription /> },{ label: "References", link: "references", icon: <TbUserSearch /> },{ label: "Members", link: "members", icon: <TbUsersGroup /> },{ label: "Teams", link: "teams", icon: <TbUsersGroup /> },{ label: "Offices", link: "offices", icon: <TbBuilding /> },{ label: "Verification", link: "verification", icon: <TbLicense /> },{ label: "Transactions", link: "transactions", icon: <TbCoinRupee /> }];
 const CompanyViewNavigator = ({ activeSection, onNavigate }: { activeSection: string; onNavigate: (s: string) => void; }) => <div className="flex flex-row items-center justify-between gap-x-1 md:gap-x-2 py-2 flex-nowrap overflow-x-auto">{companyViewNavigationList.map((nav) => <button type="button" key={nav.link} className={classNames("cursor-pointer px-2 md:px-3 py-2 rounded-md group text-center transition-colors duration-150 flex-1 basis-0 min-w-max flex items-center justify-center gap-2", "hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none", activeSection === nav.link ? "bg-indigo-50 dark:bg-indigo-700/60 text-indigo-600 dark:text-indigo-200 font-semibold" : "bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200")} onClick={() => onNavigate(nav.link)} title={nav.label}>{nav.icon}<span className="font-medium text-xs sm:text-sm truncate">{nav.label}</span></button>)}</div>;
 const DetailSection = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode; }) => <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-600 last:mb-0 last:pb-0 last:border-b-0"><div className="flex items-center gap-2 mb-4">{React.cloneElement(icon as React.ReactElement, { size: 22 })}<h5 className="mb-0">{title}</h5></div><div>{children}</div></div>;
 const InfoPair = ({ label, value }: { label: string; value?: React.ReactNode; }) => <div className="grid grid-cols-2 py-1.5"><span className="font-semibold text-gray-700 dark:text-gray-300">{label}</span><span className="break-words">{value || <span className="text-gray-400">N/A</span>}</span></div>;
@@ -163,18 +167,160 @@ const InfoCard = ({ title, data }: { title: string, data: { label: string, value
 
 // --- TAB VIEW COMPONENTS ---
 const DetailsTabView = ({ company }: { company: ApiSingleCompanyItem }) => <div><DetailSection title="Basic Information" icon={<TbBuilding />}><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8"><InfoPair label="Ownership Type" value={company.ownership_type} /><InfoPair label="No. of Employees" value={company.no_of_employees} /><InfoPair label="Primary Business" value={company.primary_business_type} /><InfoPair label="Establishment Year" value={company.establishment_year} /></div></DetailSection><DetailSection title="Contact Information" icon={<TbPhone />}><div className="grid grid-cols-1 md:grid-cols-2 gap-x-8"><InfoPair label="Alternate Email" value={company.alternate_email_id} /><InfoPair label="Alternate Contact" value={company.alternate_contact_number ? `${company.alternate_contact_number_code} ${company.alternate_contact_number}` : 'N/A'} /><InfoPair label="Landline" value={company.general_contact_number ? `${company.general_contact_number_code} ${company.general_contact_number}` : 'N/A'} /><InfoPair label="Website" value={company.company_website ? <a href={company.company_website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{company.company_website}</a> : 'N/A'} /></div></DetailSection><DetailSection title="Address" icon={<TbWorld />}><div className="grid grid-cols-1 md:grid-cols-2 gap-x-8"><InfoPair label="Full Address" value={company.company_address} /><InfoPair label="City" value={company.city} /><InfoPair label="State" value={company.state} /><InfoPair label="Zip Code" value={company.zip_code} /><InfoPair label="Country" value={company.country?.name} /><InfoPair label="Continent" value={company.continent?.name} /></div></DetailSection></div>;
-const BankAndBillingTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const allBanks = [{ id: -1, type: 'Primary', bank_account_number: company.primary_account_number, bank_name: company.primary_bank_name, ifsc_code: company.primary_ifsc_code, swift_code: company.primary_swift_code },{ id: -2, type: 'Secondary', bank_account_number: company.secondary_account_number, bank_name: company.secondary_bank_name, ifsc_code: company.secondary_ifsc_code, swift_code: company.secondary_swift_code }, ...(company.company_bank_details || []).map(b => ({ ...b, type: b.type || 'Other' }))].filter(b => b && b.bank_account_number); return <div><DetailSection title="Billing Status" icon={<TbReportMoney />}><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8"><InfoPair label="KYC Verified" value={company.kyc_verified ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} /><InfoPair label="Enabled Billing" value={company.enable_billing ? <Tag className="bg-emerald-500 text-white">Yes</Tag> : <Tag className="bg-red-500 text-white">No</Tag>} /><InfoPair label="Enabled Billing Due Date" value={company.billing_due ? dayjs(company.billing_due).format('D MMM YYYY, h:mm A') : 'N/A'} /></div></DetailSection><DetailSection title="Bank Details" icon={<TbBuildingBank />}>{allBanks.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{allBanks.map(bank => (<InfoCard key={bank.id} title={`${bank.type} Bank`} data={[{ label: "Account No.", value: bank.bank_account_number },{ label: "Bank Name", value: bank.bank_name },{ label: "IFSC Code", value: bank.ifsc_code },{ label: "Swift Code", value: bank.swift_code }]} />))}</div> : <NoDataMessage message="No bank details found." />}</DetailSection></div> };
+
+const BankTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
+    const allBanks = [
+        { id: -1, type: 'Primary', bank_account_number: company.primary_account_number, bank_name: company.primary_bank_name, ifsc_code: company.primary_ifsc_code, swift_code: company.primary_swift_code },
+        { id: -2, type: 'Secondary', bank_account_number: company.secondary_account_number, bank_name: company.secondary_bank_name, ifsc_code: company.secondary_ifsc_code, swift_code: company.secondary_swift_code },
+        ...(company.company_bank_details || []).map(b => ({ ...b, type: b.type || 'Other' }))
+    ].filter(b => b && b.bank_account_number);
+
+    return (
+        <div>
+            <DetailSection title="Bank Details" icon={<TbBuildingBank />}>
+                {allBanks.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {allBanks.map(bank => (
+                            <InfoCard key={bank.id} title={`${bank.type} Bank`} data={[{ label: "Account No.", value: bank.bank_account_number },{ label: "Bank Name", value: bank.bank_name },{ label: "IFSC Code", value: bank.ifsc_code },{ label: "Swift Code", value: bank.swift_code }]} />
+                        ))}
+                    </div>
+                ) : (
+                    <NoDataMessage message="No bank details found." />
+                )}
+            </DetailSection>
+        </div>
+    );
+};
+
+const AccessibilityTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
+    const [viewerState, setViewerState] = useState({ isOpen: false, index: 0 });
+
+    const getFileType = (url: string | null): 'image' | 'pdf' | 'other' => {
+        if (!url) return 'other';
+        const extension = url.split('.').pop()?.toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) return 'image';
+        if (extension === 'pdf') return 'pdf';
+        return 'other';
+    };
+
+    const billingDocs = useMemo((): DocumentRecord[] => {
+        return (company.enable_billing_documents || []).map((doc, index) => ({
+            name: `Billing Document ${doc.document_name || index + 1}`,
+            url: doc.document,
+            type: getFileType(doc.document),
+            verified: true, // Assuming these are verified
+        }));
+    }, [company]);
+
+    const handlePreview = (index: number) => setViewerState({ isOpen: true, index });
+    const handleCloseViewer = () => setViewerState({ isOpen: false, index: 0 });
+    const handleNext = () => setViewerState(prev => ({ ...prev, index: Math.min(prev.index + 1, billingDocs.length - 1) }));
+    const handlePrev = () => setViewerState(prev => ({ ...prev, index: Math.max(prev.index - 1, 0) }));
+ function formatDueDateInDays(dueDateString :any) {
+    console.log("dueDateString",dueDateString);
+    
+    const formattedDate = dueDateString
+                ? dayjs(dueDateString).format("D MMM, YYYY")
+                : "N/A";
+  // Create Date objects for the due date and today
+  const dueDate = new Date(formattedDate);
+  const today = new Date();
+
+  // To ensure we're comparing days, not times, reset the time part to midnight
+  dueDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  // Calculate the difference in milliseconds
+  const diffTime = dueDate.getTime() - today.getTime();
+
+  // Convert the difference from milliseconds to days
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+console.log("diffDays",diffDays);
+
+  // Return a formatted string based on the difference
+  if (diffDays > 1) {
+    return `in ${diffDays} days`;
+  } else if (diffDays === 1) {
+    return `Tomorrow`;
+  } else if (diffDays === 0) {
+    return `Today`;
+  } else if (diffDays === -1) {
+    return `Yesterday (1 day overdue)`;
+  } else {
+    // The date is in the past
+    return `N/A`;
+  }
+}
+console.log("company.billing_due",company);
+
+    return (
+        <div className="space-y-6">
+            <DetailSection title="Billing & KYC Status" icon={<TbReportMoney />}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8">
+                    <InfoPair label="KYC Verified" value={company.kyc_verified ? <Tag className="bg-emerald-100 text-emerald-700">Yes</Tag> : <Tag className="bg-red-100 text-red-700">No</Tag>} />
+                    <InfoPair label="Enabled Billing" value={company.enable_billing ? <Tag className="bg-emerald-100 text-emerald-700">Yes</Tag> : <Tag className="bg-red-100 text-red-700">No</Tag>} />
+                    <InfoPair label="Billing Due Date" value={company.billing_due ? formatDueDateInDays(company.due_after_3_months_date) : 'N/A'} />
+                </div>
+            </DetailSection>
+
+            <DetailSection title="Enable Billing Documents" icon={<TbFileDescription />}>
+                {billingDocs.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                            {billingDocs.map((doc, index) => (
+                                <DocumentCard key={index} document={doc} onPreview={() => handlePreview(index)} />
+                            ))}
+                        </div>
+                        <DocumentViewer
+                            isOpen={viewerState.isOpen}
+                            onClose={handleCloseViewer}
+                            documents={billingDocs}
+                            currentIndex={viewerState.index}
+                            onNext={handleNext}
+                            onPrev={handlePrev}
+                        />
+                    </>
+                ) : (
+                    <NoDataMessage message="No billing documents are available." />
+                )}
+            </DetailSection>
+        </div>
+    );
+};
+
+const ReferencesTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
+    const references = company.company_references || [];
+console.log("references",references);
+
+    if (references.length === 0) {
+        return <NoDataMessage message="No references found for this company." />;
+    }
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {references.map(ref => (
+                <InfoCard
+                    key={ref.id}
+                    title={ref.person_name || 'Reference'}
+                    data={[
+                        { label: 'Company ID', value: ref.company_id },
+                        { label: 'Contact', value: ref.number },
+                        { label: 'Remark', value: ref.remark },
+                    ]}
+                />
+            ))}
+        </div>
+    );
+};
+
 const MembersTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const members = company.company_member_management || []; if (members.length === 0) return <NoDataMessage message="No members are assigned." />; return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{members.map(m => (<InfoCard key={m.id} title={m.person_name} data={[{ label: 'Designation', value: m.designation },{ label: 'Member ID', value: m.member_id },{ label: 'Contact', value: m.number }]} />))}</div> };
 const TeamsTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const teams = company.company_team_members || []; if (teams.length === 0) return <NoDataMessage message="No team members found." />; return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{teams.map(t => (<InfoCard key={t.id} title={t.person_name} data={[{ label: 'Team', value: t.team_name },{ label: 'Designation', value: t.designation },{ label: 'Contact', value: t.number }]} />))}</div> };
 const OfficesTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const offices = company.office_info || []; if (offices.length === 0) return <NoDataMessage message="No office locations found." />; return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{offices.map(o => (<InfoCard key={o.id} title={o.office_name} data={[{ label: 'Type', value: o.office_type },{ label: 'Address', value: o.address },{ label: 'Location', value: `${o.city}, ${o.state}` },{ label: 'Contact Person', value: o.contact_person }]} />))}</div> };
 const VerificationTabView = ({ company }: { company: ApiSingleCompanyItem }) => { const verifications = company.company_spot_verification || []; if (verifications.length === 0) return <NoDataMessage message="No spot verifications found." />; return <div className="space-y-4">{verifications.map(v => <Card key={v.id} bodyClass='p-4'><div className="flex justify-between items-center"><h6 className="font-semibold">Verified by {v.verified_by_name || 'Unknown'}</h6>{v.verified ? <Tag className='bg-emerald-100 text-emerald-700'>Verified</Tag> : <Tag className='bg-red-100 text-red-700'>Not Verified</Tag>}</div>{v.remark && <p className="text-sm mt-2 text-gray-600"><TbMessage2 className='inline-block mr-2' />{v.remark}</p>}{v.photo_upload && <Button size='sm' className='mt-2' onClick={() => window.open(v.photo_upload || '', '_blank')}>View Photo</Button>}</Card>)}</div> };
-
-// --- TransactionsTabView (MODIFIED) ---
 const TransactionsTabView = ({ company }: { company: ApiSingleCompanyItem }) => {
     const allTransactions = useMemo(() => company.transaction_docs || [], [company]);
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
 
-    // State for the document viewer
     const [viewerState, setViewerState] = useState<{
         isOpen: boolean;
         docs: DocumentRecord[];
@@ -210,7 +356,6 @@ const TransactionsTabView = ({ company }: { company: ApiSingleCompanyItem }) => 
         return String(id).padStart(5, '0');
     };
 
-    // Viewer control functions
     const handlePreview = (docs: DocumentRecord[], index: number) => {
         setViewerState({ isOpen: true, docs, index });
     };
@@ -379,7 +524,9 @@ const CompanyView = () => {
         switch (activeSection) {
             case "details": return <DetailsTabView company={company} />;
             case "documents": return <DocumentsTabView company={company} />;
-            case "bank": return <BankAndBillingTabView company={company} />;
+            case "bank": return <BankTabView company={company} />;
+            case "accessibility": return <AccessibilityTabView company={company} />;
+            case "references": return <ReferencesTabView company={company} />;
             case "members": return <MembersTabView company={company} />;
             case "teams": return <TeamsTabView company={company} />;
             case "offices": return <OfficesTabView company={company} />;

@@ -134,8 +134,8 @@ export interface MemberFormSchema {
   landline_number?: string;
   fax_number?: string;
   alternate_email?: string;
-  botim_id?: string;
-  skype_id?: string;
+  botim?: string;
+  skype?: string;
   we_chat?: string;
   website?: string;
   business_type?: string;
@@ -164,14 +164,14 @@ export interface MemberFormSchema {
   favourite_product_id?: Array<{ label: string; value: string }>;
   business_opportunity?: Array<{ label: string; value: string }>;
   member_grade?: string | { label: string; value: string };
-  relationship_manager?: string | { label: string; value: string };
+  relationship_manager_id?: string | { label: string; value: string };
   remarks?: string;
   linkedin_profile?: string;
   facebook_profile?: string;
-  instagram_handle?: string;
+  instagram_profile?: string;
   is_blacklisted?: boolean;
   dealing_in_bulk?: string | { label: string; value: string };
-  member_profiles?: {
+  dynamic_member_profiles?: {
     db_id?: number; // Add this to store the database ID of the profile
     member_type?: { label: string; value: string | number };
     brands?: Array<{ label: string; value: string | number }>;
@@ -246,7 +246,7 @@ interface ApiSingleCustomerItem {
   favourite_products?: string;
   business_opportunity?: string;
   member_grade?: string;
-  relationship_manager?: string;
+  relationship_manager_id?: string;
   remarks?: string;
   linkedin_profile?: string;
   facebook_profile?: string;
@@ -381,11 +381,10 @@ const filterFormSchema = z.object({
 type FilterFormData = z.infer<typeof filterFormSchema>;
 
 // --- Helper Functions ---
-// In src/views/members/MemberFormPage.tsx
-
 /**
  * Transforms API data into the format required by the form.
- * It now accepts master data lists to correctly map interested categories and sub-categories.
+ * This version correctly handles various data types from the API response,
+ * including parsing stringified JSON arrays and providing safe fallbacks.
  */
 const transformApiToFormSchema = (
   formData: any, // API response data for a single customer
@@ -396,40 +395,51 @@ const transformApiToFormSchema = (
 
   // Helper to convert a simple value to a { value, label } object for Select components
   const toSelectOption = (value: string | undefined | null) =>
-    value ? { value: value, label: value } : undefined;
+    value ? { value: String(value), label: String(value) } : undefined;
+
+  // Helper to parse a JSON string that's supposed to be an array of primitives
+  const parseJsonStringToArray = (
+    jsonString: string | undefined | null
+  ): any[] => {
+    if (
+      !jsonString ||
+      typeof jsonString !== "string" ||
+      !jsonString.startsWith("[")
+    ) {
+      return [];
+    }
+    try {
+      const data = JSON.parse(jsonString);
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      console.error("Failed to parse JSON string to array:", jsonString, e);
+      return [];
+    }
+  };
 
   // Helper to parse a JSON string of IDs and map them to { value, label } objects
   // using a provided master list for name lookups.
   const createOptionsFromIdString = (idString: string, masterList: any[]) => {
-    if (!idString || typeof idString !== 'string' || !idString.startsWith('[')) {
+    const ids = parseJsonStringToArray(idString);
+    if (!ids.length || !masterList || !masterList.length) {
       return [];
     }
-    try {
-      const ids: (string | number)[] = JSON.parse(idString);
-      if (!Array.isArray(ids)) return [];
-
-      // Create a lookup map for efficient name retrieval
-      const masterMap = new Map(masterList.map(item => [String(item.id), item.name]));
-
-      return ids.map(id => ({
-        value: String(id),
-        label: masterMap.get(String(id)) || `Unknown ID: ${id}` // Provide a fallback label
-      }));
-    } catch (e) {
-      console.error("Failed to parse ID string or map options:", e);
-      return [];
-    }
+    const masterMap = new Map(
+      masterList.map((item) => [String(item.id), item.name])
+    );
+    return ids.map((id) => ({
+      value: String(id),
+      label: masterMap.get(String(id)) || `Unknown ID: ${id}`,
+    }));
   };
 
-  const normalizeCountryCode = (code: string | undefined | null) =>
-    code ? code.replace(/^\+\+/, "+") : undefined;
-
   const createCountryCodeOption = (code: string | undefined | null) => {
-    const normalized = normalizeCountryCode(code);
+    const normalized = code ? String(code).replace(/^\+\+/, "+") : undefined;
     return normalized ? { value: normalized, label: normalized } : undefined;
   };
 
   return {
+    // Personal Details
     id: formData.id,
     name: formData.name || "",
     email: formData.email || "",
@@ -438,79 +448,124 @@ const transformApiToFormSchema = (
     company_name_temp: formData.company_temp || "",
     company_name: formData.company_actual || "",
     status: toSelectOption(formData.status),
-    continent_id: formData.continent ? { value: String(formData.continent.id), label: formData.continent.name } : undefined,
-    country_id: formData.country ? { value: String(formData.country.id), label: formData.country.name } : undefined,
+
+    continent_id: formData.continent
+      ? { value: String(formData.continent.id), label: formData.continent.name }
+      : { value: String(formData.continent_id), label: 'Loading...' },
+    country_id: formData.country
+      ? { value: String(formData.country.id), label: formData.country.name }
+      : { value: String(formData.country_id), label: 'Loading...' },
     state: formData.state || "",
     city: formData.city || "",
     pincode: formData.pincode || "",
     address: formData.address || "",
-    whatsapp_number: formData.whatsApp_no || "",
-    whatsapp_country_code: createCountryCodeOption(formData.whatsapp_country_code),
+
+    // Contact & Social Info
+    whatsapp_number: formData.whatsapp_no || "",
+    whatsapp_country_code: createCountryCodeOption(
+      formData.whatsapp_country_code
+    ),
     alternate_contact_number: formData.alternate_contact_number || "",
-    alternate_contact_country_code: createCountryCodeOption(formData.alternate_contact_number_code),
+    alternate_contact_country_code: createCountryCodeOption(
+      formData.alternate_contact_number_code
+    ),
     landline_number: formData.landline_number || "",
     fax_number: formData.fax_number || "",
     alternate_email: formData.alternate_email || "",
-    botim_id: formData.botim_id || "",
-    skype_id: formData.skype_id || "",
-    we_chat: formData.wechat_id || "",
-    linkedin_profile: formData.linkedIn_profile || "",
+    botim: formData.botim || "",
+    skype: formData.skype || "",
+    we_chat: formData.we_chat || "",
+    linkedin_profile: formData.linkedin_profile || "",
     facebook_profile: formData.facebook_profile || "",
-    instagram_handle: formData.instagram_handle || "",
+    instagram_profile: formData.instagram_profile || "",
     website: formData.website || "",
-    business_opportunity: Array.isArray(formData.business_opportunity)
-      ? formData.business_opportunity.map((item: string) => ({ value: item, label: item }))
-      : [],
+
+    // Member Profile Section
+    business_opportunity: parseJsonStringToArray(
+      formData.business_opportunity
+    ).map((item: string) => ({ value: item, label: item })),
     business_type: toSelectOption(formData.business_type),
-    favourite_product_id: formData.favourite_products_list?.map((p: any) => ({ value: String(p.id), label: p.name })) || [],
+    favourite_product_id:
+      formData.favourite_products_list?.map((p: any) => ({
+        value: String(p.id),
+        label: p.name,
+      })) || [],
     interested_in: toSelectOption(formData.interested_in),
-
-    // --- START: CORRECTED DROPDOWN POPULATION ---
-    interested_category_ids: createOptionsFromIdString(formData.interested_category_ids, allCategories),
-    interested_subcategory_ids: createOptionsFromIdString(formData.interested_subcategory_ids, allSubCategories),
-    // --- END: CORRECTED DROPDOWN POPULATION ---
-
+    interested_category_ids: createOptionsFromIdString(
+      formData.interested_category_ids,
+      allCategories
+    ),
+    interested_subcategory_ids: createOptionsFromIdString(
+      formData.interested_subcategory_ids,
+      allSubCategories
+    ),
     member_grade: toSelectOption(formData.member_grade),
-    relationship_manager: formData.relationship_manager ? { value: String(formData.relationship_manager.id), label: formData.relationship_manager.name } : undefined,
+    relationship_manager_id: formData.relationship_manager
+      ? {
+        value: formData.relationship_manager.id,
+        label: formData.relationship_manager.name,
+      } : undefined,
     dealing_in_bulk: formData.dealing_in_bulk || "No",
     remarks: formData.remarks || "",
 
-    member_profiles: formData.dynamic_member_profiles?.map((apiProfile: any) => {
-      const createSelectOptions = (idJsonString: string, names: string[]) => {
-        try {
-          if (typeof idJsonString !== 'string' || !idJsonString.startsWith('[')) return [];
-          const ids: (string | number)[] = JSON.parse(idJsonString);
-          const safeNames = Array.isArray(names) ? names : [];
-          if (!Array.isArray(ids) || ids.length !== safeNames.length) return [];
-          return ids.map((id, index) => ({
-            value: id,
-            label: safeNames[index],
-          }));
-        } catch (e) {
-          console.error("Failed to parse ID JSON string:", idJsonString, e);
-          return [];
-        }
-      };
+    dynamic_member_profiles: formData.dynamic_member_profiles?.map((apiProfile: any) => {
+        const createSelectOptions = (idJsonString: string, names: string[]) => {
+          try {
+            if (
+              typeof idJsonString !== "string" ||
+              !idJsonString.startsWith("[")
+            )
+              return [];
+            const ids: (string | number)[] = JSON.parse(idJsonString);
+            const safeNames = Array.isArray(names) ? names : [];
+            if (!Array.isArray(ids) || ids.length !== safeNames.length)
+              return [];
+            return ids.map((id, index) => ({
+              value: id,
+              label: safeNames[index],
+            }));
+          } catch (e) {
+            console.error(
+              "Failed to parse ID JSON string:",
+              idJsonString,
+              e
+            );
+            return [];
+          }
+        };
+        return {
+          db_id: apiProfile.id,
+          member_type: {
+            value: apiProfile.member_type.id,
+            label: apiProfile.member_type.name,
+          },
+          brands: createSelectOptions(
+            apiProfile.brand_id,
+            apiProfile.brand_names
+          ),
+          categories: createSelectOptions(
+            apiProfile.category_id,
+            apiProfile.category_names
+          ),
+          sub_categories: createSelectOptions(
+            apiProfile.sub_category_id,
+            apiProfile.sub_category_names
+          ),
+        };
+      }) || [],
 
-      return {
-        db_id: apiProfile.id,
-        member_type: { value: apiProfile.member_type.id, label: apiProfile.member_type.name },
-        brands: createSelectOptions(apiProfile.brand_id, apiProfile.brand_names),
-        categories: createSelectOptions(apiProfile.category_id, apiProfile.category_names),
-        sub_categories: createSelectOptions(apiProfile.sub_category_id, apiProfile.sub_category_names),
-      };
-    }) || [],
-
-    product_upload_permission: formData.product_upload_permission === "1" || formData.product_upload_permission === true,
+    // Accessibility & Membership
+    product_upload_permission:
+      formData.product_upload_permission === true ||
+      formData.product_upload_permission === "1",
     wall_enquiry_permission: toSelectOption(formData.wall_enquiry_permission),
     trade_inquiry_allowed: toSelectOption(formData.trade_inquiry_allowed),
-    membership_plan_text: formData.membership_plan_current || "",
+    membership_plan_text: formData.membership_plan || "",
     upgrade_plan: toSelectOption(formData.upgrade_your_plan),
-    is_blacklisted: formData.is_blacklisted === "1" || formData.is_blacklisted === true,
+    is_blacklisted:
+      formData.is_blacklisted === true || formData.is_blacklisted === "1",
   };
 };
-
-// In src/views/members/MemberFormPage.tsx
 
 const preparePayloadForApi = (
   formData: Partial<MemberFormSchema>,
@@ -518,16 +573,18 @@ const preparePayloadForApi = (
 ): any => {
   const getValue = (field: any) => (typeof field === 'object' && field !== null && 'value' in field ? field.value : field);
 
+  console.log(formData, 'formData');
+
   const payload: any = {
-    // ... (all other personal/contact/etc. fields remain the same as before) ...
+    ...formData,
     id: formData.id,
     name: formData.name || "",
     number: formData.mobile_no || "",
     number_code: getValue(formData.contact_country_code) || null,
     email: formData.email || "",
     company_temp: formData.company_name_temp || "",
-    company_actual: formData.company_name || "",
-    company_code: formData.company_code || null, // New field added to payload
+    company_actual: getValue(formData.company_name) || "",
+    company_code: formData.company_code || null,
     status: getValue(formData.status) || null,
     continent_id: getValue(formData.continent_id) || null,
     country_id: getValue(formData.country_id) || null,
@@ -535,20 +592,20 @@ const preparePayloadForApi = (
     city: formData.city || "",
     pincode: formData.pincode || "",
     address: formData.address || "",
-    whatsApp_no: formData.whatsapp_number || "",
+    whatsapp_no: formData.whatsapp_number || null,
     whatsapp_country_code: getValue(formData.whatsapp_country_code) || null,
-    alternate_contact_number: formData.alternate_contact_number || "",
+    alternate_contact_number: formData.alternate_contact_number || null,
     alternate_contact_number_code: getValue(formData.alternate_contact_country_code) || null,
-    landline_number: formData.landline_number || "",
-    fax_number: formData.fax_number || "",
-    alternate_email: formData.alternate_email || "",
-    botim_id: formData.botim_id || "",
-    skype_id: formData.skype_id || "",
-    wechat_id: formData.we_chat || "",
-    linkedIn_profile: formData.linkedin_profile || "",
-    facebook_profile: formData.facebook_profile || "",
-    instagram_handle: formData.instagram_handle || "",
-    website: formData.website || "",
+    landline_number: formData.landline_number || null,
+    fax_number: formData.fax_number || null,
+    alternate_email: formData.alternate_email || null,
+    // botim: formData.botim || null,
+    // skype: formData.skype || null,
+    // we_chat: formData.we_chat || null,
+    linkedin_profile: formData.linkedin_profile || null,
+    facebook_profile: formData.facebook_profile || null,
+    // instagram_profile: formData.instagram_profile || null,
+    website: formData.website || null,
     business_opportunity: formData.business_opportunity?.map(p => getValue(p)) || [],
     business_type: getValue(formData.business_type) || null,
     favourite_product_id: formData.favourite_product_id?.map(p => getValue(p)) || [],
@@ -556,42 +613,34 @@ const preparePayloadForApi = (
     interested_category_ids: formData.interested_category_ids?.map(c => getValue(c)) || [],
     interested_subcategory_ids: formData.interested_subcategory_ids?.map(sc => getValue(sc)) || [],
     member_grade: getValue(formData.member_grade) || null,
-    relationship_manager_id: getValue(formData.relationship_manager) || null,
+    relationship_manager_id: getValue(formData.relationship_manager_id) || null,
     dealing_in_bulk: formData.dealing_in_bulk || "No",
     remarks: formData.remarks || "",
     product_upload_permission: formData.product_upload_permission ? "1" : "0",
-    wall_enquiry_permission: getValue(formData.wall_enquiry_permission) || null, // Updated
-    trade_inquiry_allowed: getValue(formData.trade_inquiry_allowed) || null, // Updated
-    membership_plan_current: formData.membership_plan_text || "",
+    wall_enquiry_permission: getValue(formData.wall_enquiry_permission) || null,
+    trade_inquiry_allowed: getValue(formData.trade_inquiry_allowed) || null,
+    membership_plan: formData.membership_plan_text || "",
     upgrade_your_plan: getValue(formData.upgrade_plan) || null,
     is_blacklisted: formData.is_blacklisted ? "1" : "0",
   };
 
-  // --- START: CORRECTED DYNAMIC MEMBER PROFILE PAYLOAD PREPARATION ---
-  if (formData.member_profiles) {
-    payload.dynamic_member_profiles = formData.member_profiles.map(formProfile => {
+  if (formData.dynamic_member_profiles) {
+    payload.dynamic_member_profiles = formData.dynamic_member_profiles.map(formProfile => {
       const apiProfile: any = {
-        // Include the database ID if it exists (for updates)
         id: formProfile.db_id,
         member_type_id: getValue(formProfile.member_type),
         brand_id: formProfile.brands?.map(b => getValue(b)) || [],
         category_id: formProfile.categories?.map(c => getValue(c)) || [],
         sub_category_id: formProfile.sub_categories?.map(sc => getValue(sc)) || [],
       };
-
-      // The backend should ignore the 'id' field if it's undefined (for new profiles)
       if (apiProfile.id === undefined) {
         delete apiProfile.id;
       }
-
       return apiProfile;
     });
   }
-  // --- END: CORRECTED DYNAMIC MEMBER PROFILE PAYLOAD PREPARATION ---
 
-  if (!isEditMode && formData.password) {
-    payload.password = formData.password;
-  } else if (isEditMode && formData.password) {
+  if ((!isEditMode && formData.password) || (isEditMode && formData.password)) {
     payload.password = formData.password;
   }
 
@@ -1907,7 +1956,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "member_profiles" as "member_profiles",
+    name: "dynamic_member_profiles" as "dynamic_member_profiles",
   });
 
   // Mock options if data not available, replace with real data from selectors
@@ -1928,10 +1977,10 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     label: sc.name,
   }));
 
-  const allproductOptions = AllProducts.map((sc: any) => ({
+  const allproductOptions = AllProducts?.lenfth > 0 && AllProducts?.map((sc: any) => ({
     value: parseInt(sc.id),
     label: sc.name,
-  }));
+  })) || [];
 
 
 
@@ -2122,16 +2171,17 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
         </FormItem>
         <FormItem
           label="Relationship Manager"
-          invalid={!!errors.relationship_manager}
-          errorMessage={errors.relationship_manager?.message as string}
+          invalid={!!errors.relationship_manager_id}
+          errorMessage={errors.relationship_manager_id?.message as string}
         >
           <Controller
-            name="relationship_manager"
+            name="relationship_manager_id"
             control={control}
             render={({ field }) => (
               <Select
                 {...field}
                 placeholder="Select RM"
+                // value={managerOptions.find((o) => o.value === field.value)}
                 options={managerOptions}
                 isClearable
               />
@@ -2184,14 +2234,14 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
             <div className="grid md:grid-cols-2 gap-x-4 gap-y-2">
               <FormItem
                 label={`Member Type ${index + 1}`}
-                invalid={!!errors.member_profiles?.[index]?.member_type}
+                invalid={!!errors.dynamic_member_profiles?.[index]?.member_type}
                 errorMessage={
-                  errors.member_profiles?.[index]?.member_type
+                  errors.dynamic_member_profiles?.[index]?.member_type
                     ?.message as string
                 }
               >
                 <Controller
-                  name={`member_profiles.${index}.member_type`}
+                  name={`dynamic_member_profiles.${index}.member_type`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -2205,13 +2255,13 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               </FormItem>
               <FormItem
                 label="Select Brand(s)"
-                invalid={!!errors.member_profiles?.[index]?.brands}
+                invalid={!!errors.dynamic_member_profiles?.[index]?.brands}
                 errorMessage={
-                  errors.member_profiles?.[index]?.brands?.message as string
+                  errors.dynamic_member_profiles?.[index]?.brands?.message as string
                 }
               >
                 <Controller
-                  name={`member_profiles.${index}.brands`}
+                  name={`dynamic_member_profiles.${index}.brands`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -2226,14 +2276,14 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               </FormItem>
               {/* <FormItem
                 label="Select Category(s)"
-                invalid={!!errors.member_profiles?.[index]?.categories}
+                invalid={!!errors.dynamic_member_profiles?.[index]?.categories}
                 errorMessage={
-                  errors.member_profiles?.[index]?.categories
+                  errors.dynamic_member_profiles?.[index]?.categories
                     ?.message as string
                 }
               >
                 <Controller
-                  name={`member_profiles.${index}.categories`}
+                  name={`dynamic_member_profiles.${index}.categories`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -2248,14 +2298,14 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
               </FormItem> */}
               <FormItem
                 label="Select Sub Category(s)"
-                invalid={!!errors.member_profiles?.[index]?.sub_categories}
+                invalid={!!errors.dynamic_member_profiles?.[index]?.sub_categories}
                 errorMessage={
-                  errors.member_profiles?.[index]?.sub_categories
+                  errors.dynamic_member_profiles?.[index]?.sub_categories
                     ?.message as string
                 }
               >
                 <Controller
-                  name={`member_profiles.${index}.sub_categories`}
+                  name={`dynamic_member_profiles.${index}.sub_categories`}
                   control={control}
                   render={({ field }) => (
                     <Select
@@ -2352,7 +2402,7 @@ const PersonalDetailsComponent = ({
             name="name"
             control={control}
             render={({ field }) => (
-              <Input placeholder="Member’s full name" {...field} onInput={(e:any) => { if (e.target.value) e.target.value = e.target.value.toUppercash() }} />
+              <Input placeholder="Member’s full name" {...field} onInput={(e: any) => { if (e.target.value) e.target.value = e.target.value.toUppercash() }} />
             )}
           />
         </FormItem>
@@ -2679,22 +2729,22 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
         </FormItem>
         <FormItem
           label="Botim ID"
-          invalid={!!errors.botim_id}
-          errorMessage={errors.botim_id?.message}
+          invalid={!!errors.botim}
+          errorMessage={errors.botim?.message}
         >
           <Controller
-            name="botim_id"
+            name="botim"
             control={control}
             render={({ field }) => <Input {...field} placeholder="Botim ID" />}
           />
         </FormItem>
         <FormItem
           label="Skype ID"
-          invalid={!!errors.skype_id}
-          errorMessage={errors.skype_id?.message}
+          invalid={!!errors.skype}
+          errorMessage={errors.skype?.message}
         >
           <Controller
-            name="skype_id"
+            name="skype"
             control={control}
             render={({ field }) => <Input {...field} placeholder="Skype ID" />}
           />
@@ -2738,11 +2788,11 @@ const ContactDetailsComponent = ({ control, errors }: FormSectionBaseProps) => {
         </FormItem>
         <FormItem
           label="Instagram Handle"
-          invalid={!!errors.instagram_handle}
-          errorMessage={errors.instagram_handle?.message}
+          invalid={!!errors.instagram_profile}
+          errorMessage={errors.instagram_profile?.message}
         >
           <Controller
-            name="instagram_handle"
+            name="instagram_profile"
             control={control}
             render={({ field }) => (
               <Input {...field} placeholder="@instagram" />
@@ -2911,6 +2961,17 @@ const MemberFormComponent = (props: {
             (typeof val === "object" && !!val?.value),
           { message: "Country is required" }
         ),
+      continent_id: z
+        .union([
+          z.string(),
+          z.object({ value: z.string().min(1), label: z.string() }),
+        ])
+        .refine(
+          (val) =>
+            (typeof val === "string" && val.trim() !== "") ||
+            (typeof val === "object" && !!val?.value),
+          { message: "Country is required" }
+        ),
       interested_category_ids: z
         .array(z.any())
         .min(1, { message: "Interested categories are required." }),
@@ -3052,7 +3113,9 @@ const MemberCreate = () => {
   // --- START: CORRECTED STATE MANAGEMENT ---
   const {
     ParentCategories = [],
-    subCategoriesForSelectedCategoryData = []
+    subCategoriesForSelectedCategoryData = [],
+    CountriesData = [],
+    ContinentsData = []
   } = useSelector(masterSelector, shallowEqual);
 
   const [initialData, setInitialData] = useState<Partial<MemberFormSchema> | null>(null);
@@ -3093,8 +3156,8 @@ const MemberCreate = () => {
     landline_number: "",
     fax_number: "",
     alternate_email: "",
-    botim_id: "",
-    skype_id: "",
+    botim: "",
+    skype: "",
     we_chat: "",
     website: "",
     business_type: "",
@@ -3123,14 +3186,14 @@ const MemberCreate = () => {
     favourite_product_id: [],
     business_opportunity: [],
     member_grade: undefined,
-    relationship_manager: undefined,
+    relationship_manager_id: undefined,
     remarks: "",
     linkedin_profile: "",
     facebook_profile: "",
-    instagram_handle: "",
+    instagram_profile: "",
     is_blacklisted: false,
     dealing_in_bulk: undefined,
-    member_profiles: [],
+    dynamic_member_profiles: [],
   });
 
   useEffect(() => {
@@ -3159,7 +3222,7 @@ const MemberCreate = () => {
             // After fetching member, fetch their actual company info
             await dispatch(getActualCompanyAction(id));
 
-            const apiMemberData: ApiSingleCustomerItem = response;
+            const apiMemberData: any = response;
 
             // Pass the master data arrays to the transformer function for lookups
             const transformed = transformApiToFormSchema(
@@ -3167,6 +3230,21 @@ const MemberCreate = () => {
               ParentCategories,
               subCategoriesForSelectedCategoryData
             );
+
+            // Post-transformation processing to resolve IDs to full objects for Selects
+            if (apiMemberData.country_id && CountriesData.length) {
+              const country = CountriesData.find(c => String(c.id) === String(apiMemberData.country_id));
+              if (country) {
+                transformed.country_id = { value: String(country.id), label: country.name };
+              }
+            }
+            if (apiMemberData.continent_id && ContinentsData.length) {
+              const continent = ContinentsData.find(c => String(c.id) === String(apiMemberData.continent_id));
+              if (continent) {
+                transformed.continent_id = { value: String(continent.id), label: continent.name };
+              }
+            }
+
 
             setInitialData({ ...emptyForm, ...transformed });
           } else {
@@ -3194,7 +3272,7 @@ const MemberCreate = () => {
       };
 
       // Only fetch data if master data is available, to avoid race conditions
-      if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0) {
+      if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0 && CountriesData.length > 0 && ContinentsData.length > 0) {
         fetchMemberData();
       }
     } else {
@@ -3207,7 +3285,9 @@ const MemberCreate = () => {
     navigate,
     dispatch,
     ParentCategories,
-    subCategoriesForSelectedCategoryData
+    subCategoriesForSelectedCategoryData,
+    CountriesData,
+    ContinentsData
   ]);
   // --- END: CORRECTED useEffect ---
 
@@ -3221,7 +3301,7 @@ const MemberCreate = () => {
       isEditMode
     );
 
-    console.log(payload, "Payload to be sent to API", formValues);
+    console.log("Payload to be sent to API:", payload);
 
     try {
       if (isEditMode && id) {

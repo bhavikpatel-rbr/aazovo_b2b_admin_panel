@@ -16,9 +16,9 @@ import Button from '@/components/ui/Button'
 import Notification from '@/components/ui/Notification'
 import toast from '@/components/ui/toast'
 import ConfirmDialog from '@/components/shared/ConfirmDialog'
-import DebounceInput from '@/components/shared/DebouceInput' // Corrected typo
+import DebounceInput from '@/components/shared/DebouceInput'
 import Select from '@/components/ui/Select'
-import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog } from '@/components/ui'
+import { Drawer, Form, FormItem, Input, Tag, Dropdown, Checkbox, Card, Avatar, Dialog, Skeleton } from '@/components/ui' // Import Skeleton
 
 // Icons
 import { TbPencil, TbSearch, TbFilter, TbPlus, TbCloudUpload, TbReload, TbX, TbColumns, TbFile, TbFileCheck, TbFileX, TbUserCircle } from 'react-icons/tb'
@@ -82,7 +82,7 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }) => {
     );
 };
 
-const ContinentTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, continentNameOptions, columns, filteredColumns, setFilteredColumns, searchInputValue }, ref) => {
+const ContinentTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, onClearFilters, onExport, activeFilters, activeFilterCount, continentNameOptions, columns, filteredColumns, setFilteredColumns, searchInputValue, isDataReady }, ref) => {
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
     const { control, handleSubmit, setValue } = useForm<ContinentFilterSchema>({ defaultValues: { names: [], status: [] }, });
     useEffect(() => { setValue('names', activeFilters.names || []); setValue('status', activeFilters.status || []); }, [activeFilters, setValue]);
@@ -99,9 +99,9 @@ const ContinentTableTools = React.forwardRef(({ onSearchChange, onApplyFilters, 
                         {columns.map((col) => col.header && (<div key={col.header as string} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md py-1.5 px-2"><Checkbox name={col.header as string} checked={isColumnVisible(col.header as string)} onChange={(checked) => toggleColumn(checked, col.header as string)} />{col.header}</div>))}
                     </div>
                 </Dropdown>
-                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} />
-                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
-                <Button icon={<TbCloudUpload />} onClick={onExport}>Export</Button>
+                <Button title="Clear Filters & Reload" icon={<TbReload />} onClick={onClearFilters} disabled={!isDataReady} />
+                <Button icon={<TbFilter />} onClick={() => setIsFilterDrawerOpen(true)} disabled={!isDataReady}>Filter{activeFilterCount > 0 && <span className="ml-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-white text-xs font-semibold px-2 py-0.5 rounded-full">{activeFilterCount}</span>}</Button>
+                <Button icon={<TbCloudUpload />} onClick={onExport} disabled={!isDataReady}>Export</Button>
             </div>
             <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={() => setIsFilterDrawerOpen(false)} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onDrawerClear}>Clear</Button><Button size="sm" variant="solid" type="submit" form="filterContinentForm">Apply</Button></div>}>
                 <Form id="filterContinentForm" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -117,6 +117,7 @@ ContinentTableTools.displayName = 'ContinentTableTools';
 // --- MAIN CONTINENTS COMPONENT ---
 const Continents = () => {
     const dispatch = useAppDispatch();
+    const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingContinent, setEditingContinent] = useState<ContinentItem | null>(null);
@@ -128,10 +129,25 @@ const Continents = () => {
     const [isImageViewerOpen, setImageViewerOpen] = useState(false);
     const [imageToView, setImageToView] = useState<string | null>(null);
 
-    const { ContinentsData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
+    const { ContinentsData = [] } = useSelector(masterSelector, shallowEqual);
+    const isDataReady = !initialLoading;
     const continentNameOptionsForFilter = useMemo(() => Array.isArray(ContinentsData) ? [...new Set(ContinentsData.map(doc => doc.name))].sort().map(name => ({ value: name, label: name })) : [], [ContinentsData]);
 
-    useEffect(() => { dispatch(getContinentsAction()); }, [dispatch]);
+    const refreshData = useCallback(async () => {
+        setInitialLoading(true);
+        try {
+            await dispatch(getContinentsAction());
+        } catch (error) {
+            console.error("Failed to refresh data:", error);
+            toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload continent data.</Notification>);
+        } finally {
+            setInitialLoading(false);
+        }
+    }, [dispatch]);
+
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
 
     const formMethods = useForm<ContinentFormData>({ resolver: zodResolver(continentFormSchema), defaultValues: { name: "", status: 'Active' }, mode: "onChange" });
     const exportReasonFormMethods = useForm<ExportReasonFormData>({ resolver: zodResolver(exportReasonSchema), defaultValues: { reason: "" }, mode: "onChange" });
@@ -140,6 +156,12 @@ const Continents = () => {
         if (imageUrl) { setImageToView(imageUrl); setImageViewerOpen(true); }
     };
     const closeImageViewer = () => { setImageViewerOpen(false); setImageToView(null); };
+
+    const openEditDrawer = useCallback((continent: ContinentItem) => {
+        setEditingContinent(continent);
+        formMethods.reset({ name: continent.name, status: continent.status || 'Active' });
+        setIsEditDrawerOpen(true);
+    }, [formMethods]);
 
     const columns: ColumnDef<ContinentItem>[] = useMemo(() => [
         { header: "Continent Name", accessorKey: "name", enableSorting: true, size: 380 },
@@ -150,16 +172,6 @@ const Continents = () => {
         size: 180,
         cell: (props) => {
           const { updated_at, updated_by_user } = props.row.original;
-          const date = updated_at ? new Date(updated_at) : null;
-          const formattedDate = date
-            ? `${date.getDate()} ${date.toLocaleString("en-US", {
-                month: "short",
-              })} ${date.getFullYear()}, ${date.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}`
-            : "N/A";
           return (
             <div className="flex items-center gap-2">
               <Avatar
@@ -185,7 +197,7 @@ const Continents = () => {
       },
         { header: "Status", accessorKey: "status", enableSorting: true, size: 100, cell: (props) => (<Tag className={classNames({ "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700": props.row.original.status === 'Active', "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700": props.row.original.status === 'Inactive' })}>{props.row.original.status}</Tag>) },
         { header: 'Action', id: 'action', size: 80, meta: { HeaderClass: "text-center", cellClass: "text-center" }, cell: (props) => (<div className="flex items-center justify-center gap-2"><Tooltip title="Edit"><div className="text-lg p-1.5 cursor-pointer hover:text-blue-500" onClick={() => openEditDrawer(props.row.original)}><TbPencil /></div></Tooltip></div>) },
-    ], []);
+    ], [openEditDrawer]);
 
     const [filteredColumns, setFilteredColumns] = useState<ColumnDef<ContinentItem>[]>(columns);
     useEffect(() => { setFilteredColumns(columns); }, [columns]);
@@ -228,7 +240,13 @@ const Continents = () => {
         setActiveFilters(prev => { const newFilters = { ...prev }; const currentValues = prev[key] as string[] | undefined; if (!currentValues) return prev; const newValues = currentValues.filter(item => item !== value); if (newValues.length > 0) { (newFilters as any)[key] = newValues; } else { delete newFilters[key]; } return newFilters; });
         handleSetTableData({ pageIndex: 1 });
     }, [handleSetTableData]);
-    const onClearFiltersAndReload = () => { setActiveFilters({}); setTableData({ ...tableData, query: '', pageIndex: 1 }); dispatch(getContinentsAction()); };
+    
+    const onClearFiltersAndReload = useCallback(() => { 
+        setActiveFilters({}); 
+        setTableData({ ...tableData, query: '', pageIndex: 1 }); 
+        refreshData();
+    }, [tableData, refreshData]);
+
     const handleClearAllFilters = useCallback(() => onClearFiltersAndReload(), [onClearFiltersAndReload]);
 
     const handleCardClick = (status: 'Active' | 'Inactive' | 'All') => {
@@ -239,10 +257,35 @@ const Continents = () => {
 
     const openAddDrawer = () => { formMethods.reset({ name: "", status: 'Active' }); setIsAddDrawerOpen(true); };
     const closeAddDrawer = () => { setIsAddDrawerOpen(false); };
-    const onAddContinentSubmit = async (data: ContinentFormData) => { setIsSubmitting(true); try { await dispatch(addContinentAction({ name: data.name, status: data.status })).unwrap(); toast.push(<Notification title="Continent Added" type="success">{`Continent "${data.name}" was successfully added.`}</Notification>); closeAddDrawer(); dispatch(getContinentsAction()); } catch (error: any) { toast.push(<Notification title="Failed to Add Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
-    const openEditDrawer = (doc: ContinentItem) => { setEditingContinent(doc); formMethods.reset({ name: doc.name, status: doc.status || 'Active' }); setIsEditDrawerOpen(true); };
+    const onAddContinentSubmit = async (data: ContinentFormData) => { 
+        setIsSubmitting(true); 
+        try { 
+            await dispatch(addContinentAction({ name: data.name, status: data.status })).unwrap(); 
+            toast.push(<Notification title="Continent Added" type="success">{`Continent "${data.name}" was successfully added.`}</Notification>); 
+            closeAddDrawer(); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Add Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsSubmitting(false); 
+        } 
+    };
+    
     const closeEditDrawer = () => { setIsEditDrawerOpen(false); setEditingContinent(null); };
-    const onEditContinentSubmit = async (data: ContinentFormData) => { if (!editingContinent?.id) return; setIsSubmitting(true); try { await dispatch(editContinentAction({ id: editingContinent.id, name: data.name, status: data.status })).unwrap(); toast.push(<Notification title="Continent Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); closeEditDrawer(); dispatch(getContinentsAction()); } catch (error: any) { toast.push(<Notification title="Failed to Update Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>); } finally { setIsSubmitting(false); } };
+    const onEditContinentSubmit = async (data: ContinentFormData) => { 
+        if (!editingContinent?.id) return; 
+        setIsSubmitting(true); 
+        try { 
+            await dispatch(editContinentAction({ id: editingContinent.id, name: data.name, status: data.status })).unwrap(); 
+            toast.push(<Notification title="Continent Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>); 
+            closeEditDrawer(); 
+            refreshData(); 
+        } catch (error: any) { 
+            toast.push(<Notification title="Failed to Update Continent" type="danger">{error.message || "An unexpected error occurred."}</Notification>); 
+        } finally { 
+            setIsSubmitting(false); 
+        } 
+    };
 
     const handleOpenExportReasonModal = () => { if (!allFilteredAndSortedData.length) { toast.push(<Notification title="No Data" type="info">Nothing to export.</Notification>); return; } exportReasonFormMethods.reset(); setIsExportReasonModalOpen(true); };
     const handleConfirmExportWithReason = async (data: ExportReasonFormData) => {
@@ -261,6 +304,13 @@ const Continents = () => {
     const cardClass = "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
     const cardBodyClass = "flex items-center gap-2 p-2";
 
+    const renderCardContent = (count: number) => {
+        if (initialLoading) {
+            return <Skeleton width={40} height={20} />;
+        }
+        return <h6 className="text-sm">{count}</h6>;
+    };
+
     return (
         <>
             <Container className="h-auto">
@@ -272,9 +322,9 @@ const Continents = () => {
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 w-full sm:w-auto mb-4 gap-4">
-                        <Tooltip title="Click to show all continents"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div><h6 className="text-sm">{ContinentsData.length}</h6><span className="text-xs">Total</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show active continents"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div><h6 className="text-sm">{ContinentsData.length > 0 && ContinentsData.filter(d => d.status === 'Active').length}</h6><span className="text-xs">Active</span></div></Card></div></Tooltip>
-                        <Tooltip title="Click to show inactive continents"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div><h6 className="text-sm">{ContinentsData.length > 0 &&ContinentsData.filter(d => d.status === 'Inactive').length}</h6><span className="text-xs">Inactive</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show all continents"><div onClick={() => handleCardClick('All')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-blue-200")}><div className="p-2 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-100"><TbFile size={20} /></div><div>{renderCardContent(ContinentsData.length)}<span className="text-xs">Total</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show active continents"><div onClick={() => handleCardClick('Active')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-emerald-200")}><div className="p-2 rounded-md bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100"><TbFileCheck size={20} /></div><div>{renderCardContent(ContinentsData.filter(d => d.status === 'Active').length)}<span className="text-xs">Active</span></div></Card></div></Tooltip>
+                        <Tooltip title="Click to show inactive continents"><div onClick={() => handleCardClick('Inactive')}><Card bodyClass={cardBodyClass} className={classNames(cardClass, "border-red-200")}><div className="p-2 rounded-md bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100"><TbFileX size={20} /></div><div>{renderCardContent(ContinentsData.filter(d => d.status === 'Inactive').length)}<span className="text-xs">Inactive</span></div></Card></div></Tooltip>
                     </div>
                     <div className="mb-4">
                         <ContinentTableTools
@@ -289,6 +339,7 @@ const Continents = () => {
                             filteredColumns={filteredColumns}
                             setFilteredColumns={setFilteredColumns}
                             searchInputValue={tableData?.query}
+                            isDataReady={isDataReady}
                         />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
@@ -298,7 +349,7 @@ const Continents = () => {
                             columns={filteredColumns}
                             data={pageData}
                             noData={pageData.length <= 0}
-                            loading={masterLoadingStatus === "loading" || isSubmitting}
+                            loading={initialLoading || isSubmitting}
                             pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }}
                             onPaginationChange={handlePaginationChange}
                             onSelectChange={handleSelectPageSizeChange}

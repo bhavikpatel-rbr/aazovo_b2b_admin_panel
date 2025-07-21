@@ -95,6 +95,7 @@ import {
   getMailTemplatesAction,
   getMatchingOpportunitiesAction,
   getMemberAction,
+  getMemberlistingAction,
   getMembersAction,
   getMemberTypeAction,
   getNotificationAction,
@@ -102,6 +103,7 @@ import {
   getOfferById,
   getOffersAction,
   getOpportunitiesAction,
+  getOpportunitieslistingAction,
   getParentCategoriesAction,
   getpartnerAction,
   getPaymentTermAction,
@@ -110,6 +112,7 @@ import {
   getPriceListAction,
   getProductsAction,
   getProductsDataAsync,
+  getProductslistingAction,
   getProductSpecificationsAction,
   getReportingTo,
   getRequestFeedbacksAction,
@@ -132,49 +135,49 @@ import {
 } from "./middleware";
 
 const INITIAL_STATE: any = {
-  unitData: "",
-  LeadsData: "",
-  PaymentTermsData: "",
+  unitData: [],
+  LeadsData: [],
+  PaymentTermsData: [],
   DocumentTypeData: [],
-  CurrencyData: "",
-  ContinentsData: "",
-  CountriesData: "",
-  DocumentListData: "",
-  memberData: "",
-  allProducts: "",
-  productsMasterData: "",
-  autoMatchData: "",
-  buyerListings: "",
-  sellerListings: "",
-  requestFeedbacksData: "",
-  emailTemplatesData: "",
-  autoEmailTemplatesData: "",
-  mailTemplatesData: "",
-  emailCampaignsData: "",
-  usersData: "",
-  autoEmailsData: "",
-  rowData: "",
-  categoryData: "",
-  rawApiSubscribers: "",
-  bugReportsData: "",
-  jobPostsData: "",
-  jobDepartmentsData: "",
-  domainsData: "",
-  numberSystemsData: "",
-  departmentsData: "",
-  designationsData: "",
-  ProductSpecificationsData: "",
-  trendingCarouselData: "",
-  trendingImagesData: "",
-  rawProfileArrayFromState: "",
-  slidersData: "",
-  ProductsData: "",
-  priceListData: "",
-  wallItemsData: "",
-  CategoriesData: "",
-  apiExportMappings: "",
-  BlogsData: "",
-  BrandData: "",
+  CurrencyData: [],
+  ContinentsData: [],
+  CountriesData: [],
+  DocumentListData: [],
+  memberData: [],
+  allProducts: [],
+  productsMasterData: [],
+  autoMatchData: [],
+  buyerListings: [],
+  sellerListings: [],
+  requestFeedbacksData: [],
+  emailTemplatesData: [],
+  autoEmailTemplatesData: [],
+  mailTemplatesData: [],
+  emailCampaignsData: [],
+  usersData: [],
+  autoEmailsData: [],
+  rowData: [],
+  categoryData: [],
+  rawApiSubscribers: [],
+  bugReportsData: [],
+  jobPostsData: [],
+  jobDepartmentsData: [],
+  domainsData: [],
+  numberSystemsData: [],
+  departmentsData: [],
+  designationsData: [],
+  ProductSpecificationsData: [],
+  trendingCarouselData: [],
+  trendingImagesData: [],
+  rawProfileArrayFromState: [],
+  slidersData: [],
+  ProductsData: [],
+  priceListData: [],
+  wallItemsData: [],
+  CategoriesData: [],
+  apiExportMappings: [],
+  BlogsData: [],
+  BrandData: [],
   inquiryList: [],
   CompanyData: [],
   AllProductsData: [],
@@ -184,7 +187,7 @@ const INITIAL_STATE: any = {
   partnerData: [],
   jobApplicationsData: [],
   wallListing: [],
-  formsData: "",
+  formsData: [],
   activityLogsData: [],
   Opportunities: [],
   Offers: [],
@@ -213,18 +216,18 @@ const INITIAL_STATE: any = {
   getAllAction: [],
   getaccountdoc: [],
   formResponse: [],
-  filledFormData:[],
+  filledFormData: [],
   startFormData: [],
   accountDocumentById: 0,
   getfromIDcompanymemberData: [],
   AllCountData: [],
-  actualCompanyData:[],
+  actualCompanyData: [],
 };
 
 const masterSlice = createSlice({
   name: "master",
   initialState: INITIAL_STATE,
-  reducers: {},
+  reducers: { resetMasterState: () => INITIAL_STATE, },
   extraReducers: (builder) => {
     builder.addCase(getUnitAction.fulfilled, (state, { payload }) => ({
       ...state,
@@ -369,6 +372,10 @@ const masterSlice = createSlice({
     builder.addCase(getProductsAction.fulfilled, (state, { payload }) => ({
       ...state,
       ProductsData: payload,
+    }));
+    builder.addCase(getProductslistingAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      ProductslistData: payload,
     }));
     // builder.addCase(addPriceListAction.fulfilled, (state, { payload }) => ({
     //   ...state,
@@ -575,6 +582,10 @@ const masterSlice = createSlice({
       ...state,
       MemberData: payload,
     }));
+    builder.addCase(getMemberlistingAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      MemberlistData: payload,
+    }));
     builder.addCase(getMatchingOpportunitiesAction.fulfilled, (state, { payload }) => ({
       ...state,
       matchingOpportunities: payload,
@@ -638,6 +649,10 @@ const masterSlice = createSlice({
     builder.addCase(getActivityLogAction.fulfilled, (state, { payload }) => ({
       ...state,
       activityLogsData: payload,
+    }));
+    builder.addCase(getOpportunitieslistingAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      Opportunitieslist: payload,
     }));
     builder.addCase(getOpportunitiesAction.fulfilled, (state, { payload }) => ({
       ...state,
@@ -747,11 +762,11 @@ const masterSlice = createSlice({
       ...state,
       getaccountdoc: payload,
     }));
-     builder.addCase(getbyIDaccountdocAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(getbyIDaccountdocAction.fulfilled, (state, { payload }) => ({
       ...state,
       accountDocumentById: payload,
     }));
-     builder.addCase(getfromIDcompanymemberAction.fulfilled, (state, { payload }) => ({
+    builder.addCase(getfromIDcompanymemberAction.fulfilled, (state, { payload }) => ({
       ...state,
       getfromIDcompanymemberData: payload,
     }));
@@ -780,9 +795,9 @@ const masterSlice = createSlice({
       actualCompanyData: payload,
     }));
   },
-  
-});
 
+});
+export const { resetMasterState } = masterSlice.actions
 export const masterSelector = (state: RootState) => state?.Master;
 
 export default masterSlice.reducer;
