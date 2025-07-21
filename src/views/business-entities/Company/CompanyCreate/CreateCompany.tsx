@@ -34,9 +34,8 @@ import {
   addMemberAction, // Import the action to add a member
   getEmployeesListingAction,
   editCompanyAction,
-  getBrandAction,
-  getCategoriesAction,
   getCompanyAction,
+  getCategoriesAction, // Note: This seems unused, kept for now but consider removing if not needed.
   getCompanyByIdAction,
   getContinentsAction,
   getCountriesAction,
@@ -62,13 +61,13 @@ interface ImageViewerProps {
 const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(startIndex);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
-  };
+  }, [images.length]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
     setCurrentIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
-  };
+  }, [images.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,7 +79,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ images, startIndex, onClose }
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [handleNext, handlePrev, onClose]);
 
   if (!images || images.length === 0) {
     return null;
@@ -276,7 +275,6 @@ interface EnabledBillingDocItemFE {
   document?: File | string | null;
 }
 
-// --- MODIFICATION START: Added is_default fields for primary/secondary banks ---
 export interface CompanyFormSchema {
   id?: string | number;
   company_name?: string;
@@ -368,7 +366,6 @@ export interface CompanyFormSchema {
   company_spot_verification?: SpotVerificationItemFE[];
   company_references?: ReferenceItemFE[];
 }
-// --- MODIFICATION END ---
 
 export interface FormSectionBaseProps {
   control: Control<CompanyFormSchema>;
@@ -377,7 +374,6 @@ export interface FormSectionBaseProps {
   getValues: UseFormReturn<CompanyFormSchema>['getValues'];
 }
 
-// --- MODIFICATION START: Added is_default to API response for primary/secondary ---
 interface ApiSingleCompanyItem {
   id: number;
   company_name?: string;
@@ -468,7 +464,6 @@ interface ApiSingleCompanyItem {
   company_spot_verification?: Array<{ id: number; verified_by_id?: string | number; verified_by_name?: string; verified: boolean | string; remark: string | null; photo_upload: string | null; }>;
   company_references?: Array<{ id: number; person_name: string; company_id: string; number: string; remark: string | null; }>;
 }
-// --- MODIFICATION END ---
 
 // --- Helper to transform API data to CompanyFormSchema for EDIT mode ---
 const transformApiToFormSchema = (
@@ -586,7 +581,6 @@ const transformApiToFormSchema = (
     other_document_remark: apiData.other_document_remark || "",
     other_document_remark_enabled: stringToBoolean(apiData.other_document_verified),
 
-    // --- MODIFICATION START: Transform is_default for all bank types ---
     primary_account_number: apiData.primary_account_number || '',
     primary_bank_name: apiData.primary_bank_name || '',
     primary_benificeiry_name: apiData.primary_benificeiry_name || '',
@@ -611,17 +605,16 @@ const transformApiToFormSchema = (
       verification_photo: bank.verification_photo || null,
       is_default: stringToBoolean(bank.is_default),
     })) || [],
-    // --- MODIFICATION END ---
 
     USER_ACCESS: stringToBoolean(apiData.kyc_verified),
     billing_documents: apiData.billing_documents?.map(doc => ({
       id: String(doc.id),
-      document_name: findOptionByValue(documentTypeOptions, doc.document_name),
+      document_name: findOptionByValue(documentTypeOptions, doc.document_name as any), // Cast to any to handle potential type mismatch
       document: doc.document || null,
     })) || [],
     enabled_billing_docs: apiData.enable_billing_documents?.map(doc => ({
       id: String(doc.id),
-      document_name: findOptionByValue(documentTypeOptions, doc.document_name),
+      document_name: findOptionByValue(documentTypeOptions, doc.document_name as any), // Cast to any
       document: doc.document || null
     })) || [],
 
@@ -664,24 +657,16 @@ const preparePayloadForApi = (
 
   const appendField = (key: string, value: any) => {
     if (value === null || value === undefined) {
-      apiPayload.append(key, "");
+      // Keep it empty for backend
     } else if (typeof value === 'boolean') {
       apiPayload.append(key, value ? "1" : "0");
-    } else if (typeof value === 'object' && !Array.isArray(value) && value.value !== undefined && value.label !== undefined) {
-      apiPayload.append(key, value.value);
     } else if (value instanceof File) {
       apiPayload.append(key, value);
+    } else if (typeof value === 'object' && !Array.isArray(value) && value.value !== undefined) {
+      apiPayload.append(key, value.value);
     }
     else {
       apiPayload.append(key, String(value));
-    }
-  };
-
-  const appendFileIfExists = (key: string, value: any) => {
-    if (value instanceof File) {
-      apiPayload.append(key, value);
-    } else if (value === null || value === '') {
-      apiPayload.append(key, '');
     }
   };
 
@@ -689,8 +674,7 @@ const preparePayloadForApi = (
     apiPayload.append("id", String(data.id));
     apiPayload.append("_method", "PUT");
   }
-
-  // --- MODIFICATION START: Add is_default fields to simple fields list ---
+  
   const simpleFields: (keyof CompanyFormSchema)[] = [
     "company_name", "primary_contact_number", "primary_contact_number_code", "general_contact_number", "general_contact_number_code",
     "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
@@ -699,20 +683,20 @@ const preparePayloadForApi = (
     "primary_account_number", "primary_benificeiry_name", "primary_bank_name", "primary_ifsc_code", "primary_swift_code", "primary_is_default",
     "secondary_account_number", "secondary_benificeiry_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code", "secondary_is_default"
   ];
-  // --- MODIFICATION END ---
-  simpleFields.forEach(field => appendField(field, data[field]));
+  simpleFields.forEach(field => {
+    if (data[field] !== undefined) appendField(field, data[field])
+  });
 
   appendField("kyc_verified", data.USER_ACCESS);
-
   appendField("company_logo", data.company_logo);
   appendField("primary_bank_verification_photo", data.primary_bank_verification_photo);
   appendField("secondary_bank_verification_photo", data.secondary_bank_verification_photo);
 
   // Certificates
   data.company_certificate?.forEach((cert: CertificateItemFE, index: number) => {
-    apiPayload.append(`company_certificate[${index}][certificate_id]`, cert.certificate_id || "");
-    apiPayload.append(`company_certificate[${index}][certificate_name]`, cert.certificate_name || "");
-    apiPayload.append(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
+    appendField(`company_certificate[${index}][certificate_id]`, cert.certificate_id);
+    appendField(`company_certificate[${index}][certificate_name]`, cert.certificate_name);
+    appendField(`company_certificate[${index}][upload_certificate]`, cert.upload_certificate);
   });
 
   // Office Info
@@ -743,24 +727,24 @@ const preparePayloadForApi = (
     { feFileKey: "other_document_file", beFileKey: "other_document_file", feVerifyKey: "other_document_remark_enabled", beVerifyKey: "other_document_verified", feRemarkKey: "other_document_remark", beRemarkKey: "other_document_remark" },
   ];
   kycDocsConfig.forEach(doc => {
-    apiPayload.append(doc.beFileKey, data[doc.feFileKey]);
-    apiPayload.append(doc.beVerifyKey, data[doc.feVerifyKey] ? "1" : "0");
-    apiPayload.append(doc.beRemarkKey, data[doc.feRemarkKey] || "");
+    appendField(doc.beFileKey, data[doc.feFileKey]);
+    appendField(doc.beVerifyKey, data[doc.feVerifyKey]);
+    appendField(doc.beRemarkKey, data[doc.feRemarkKey]);
   });
 
   data.company_bank_details?.forEach((bank: CompanyBankDetailItemFE, index: number) => {
-    apiPayload.append(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number || '');
-    apiPayload.append(`company_bank_details[${index}][bank_name]`, bank.bank_name || '');
-    apiPayload.append(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code || '');
-    apiPayload.append(`company_bank_details[${index}][swift_code]`, bank.swift_code || '');
-    apiPayload.append(`company_bank_details[${index}][type]`, bank.type?.value || 'Other');
-    apiPayload.append(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
-    apiPayload.append(`company_bank_details[${index}][is_default]`, bank.is_default ? "1" : "0");
+    appendField(`company_bank_details[${index}][bank_account_number]`, bank.bank_account_number);
+    appendField(`company_bank_details[${index}][bank_name]`, bank.bank_name);
+    appendField(`company_bank_details[${index}][ifsc_code]`, bank.ifsc_code);
+    appendField(`company_bank_details[${index}][swift_code]`, bank.swift_code);
+    appendField(`company_bank_details[${index}][type]`, bank.type?.value);
+    appendField(`company_bank_details[${index}][verification_photo]`, bank.verification_photo);
+    appendField(`company_bank_details[${index}][is_default]`, bank.is_default);
   });
 
   data.billing_documents?.forEach((doc: BillingDocItemFE, index: number) => {
-    apiPayload.append(`billing_documents[${index}][document_name]`, doc.document_name?.value || "");
-    apiPayload.append(`billing_documents[${index}][document]`, doc.document);
+    appendField(`billing_documents[${index}][document_name]`, doc.document_name?.value);
+    appendField(`billing_documents[${index}][document]`, doc.document);
   });
 
   data.enabled_billing_docs?.forEach((doc: EnabledBillingDocItemFE, index: number) => {
@@ -772,31 +756,31 @@ const preparePayloadForApi = (
   });
 
   data.company_members?.forEach((member: CompanyMemberItemFE, index: number) => {
-    apiPayload.append(`company_member_management[${index}][member_id]`, member.member_id?.value || '');
-    apiPayload.append(`company_member_management[${index}][designation]`, member.designation || '');
-    apiPayload.append(`company_member_management[${index}][person_name]`, member.person_name || '');
-    apiPayload.append(`company_member_management[${index}][number]`, member.number || '');
+    appendField(`company_member_management[${index}][member_id]`, member.member_id?.value);
+    appendField(`company_member_management[${index}][designation]`, member.designation);
+    appendField(`company_member_management[${index}][person_name]`, member.person_name);
+    appendField(`company_member_management[${index}][number]`, member.number);
   });
 
   data.company_teams?.forEach((member: CompanyTeamItemFE, index: number) => {
-    apiPayload.append(`company_team_members[${index}][team_name]`, member.team_name || '');
-    apiPayload.append(`company_team_members[${index}][designation]`, member.designation || '');
-    apiPayload.append(`company_team_members[${index}][person_name]`, member.person_name || '');
-    apiPayload.append(`company_team_members[${index}][number]`, member.number || '');
+    appendField(`company_team_members[${index}][team_name]`, member.team_name);
+    appendField(`company_team_members[${index}][designation]`, member.designation);
+    appendField(`company_team_members[${index}][person_name]`, member.person_name);
+    appendField(`company_team_members[${index}][number]`, member.number);
   });
 
   data.company_spot_verification?.forEach((item: SpotVerificationItemFE, index: number) => {
-    apiPayload.append(`company_spot_verification[${index}][verified]`, item.verified ? "1" : "0");
+    appendField(`company_spot_verification[${index}][verified]`, item.verified);
     appendField(`company_spot_verification[${index}][verified_by_id]`, item.verified_by_id);
-    apiPayload.append(`company_spot_verification[${index}][remark]`, item.remark || "");
-    apiPayload.append(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
+    appendField(`company_spot_verification[${index}][remark]`, item.remark);
+    appendField(`company_spot_verification[${index}][photo_upload]`, item.photo_upload);
   });
 
   data.company_references?.forEach((ref: ReferenceItemFE, index: number) => {
-    apiPayload.append(`company_references[${index}][person_name]`, ref.person_name || "");
-    apiPayload.append(`company_references[${index}][company_id]`, ref.company_id?.value || "");
-    apiPayload.append(`company_references[${index}][number]`, ref.number || "");
-    apiPayload.append(`company_references[${index}][remark]`, ref.remark || "");
+    appendField(`company_references[${index}][person_name]`, ref.person_name);
+    appendField(`company_references[${index}][company_id]`, ref.company_id?.value);
+    appendField(`company_references[${index}][number]`, ref.number);
+    appendField(`company_references[${index}][remark]`, ref.remark);
   });
 
   return apiPayload;
@@ -859,23 +843,24 @@ const CompanyDetailsSection = ({
   } = useSelector(masterSelector);
   const { watch } = formMethods;
 
-  const countryOptions = CountriesData.map((value: any) => ({
+  const countryOptions = useMemo(() => CountriesData.map((value: any) => ({
     value: String(value.id),
     label: value.name,
-  }));
+  })), [CountriesData]);
 
-  const countryCodeOptions = CountriesData
+  const countryCodeOptions = useMemo(() => CountriesData
     .filter((c: any) => c.phone_code)
     .map((c: any) => ({
       value: `${c.phone_code}`,
       label: `${c.phone_code}`,
     }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .sort((a, b) => a.label.localeCompare(b.label)), [CountriesData]);
 
-  const continentOptions = ContinentsData.map((value: any) => ({
+  const continentOptions = useMemo(() => ContinentsData.map((value: any) => ({
     value: String(value.id),
     label: value.name,
-  }));
+  })), [ContinentsData]);
+
   const ownershipTypeOptions = [
     { value: "Sole Proprietorship", label: "Sole Proprietorship" },
     { value: "Partner", label: "Partner" },
@@ -1112,7 +1097,7 @@ const CompanyDetailsSection = ({
     </Card>
   );
 };
-// --- START: New Helper Component for Generic File Viewing ---
+
 const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: () => void; }) => {
   const fileUrl = useMemo(() => (file instanceof File ? URL.createObjectURL(file) : file), [file]);
   const fileName = useMemo(() => (file instanceof File ? file.name : (file.split('/').pop() || 'file')), [file]);
@@ -1175,7 +1160,6 @@ const GenericFileViewer = ({ file, onClose }: { file: File | string; onClose: ()
     </div>
   );
 };
-// --- END: New Helper Component ---
 // --- KYCDetailSection ---
 const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch, getValues } = formMethods;
@@ -1196,8 +1180,6 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
     const subject = `${docLabel} for ${companyName}`;
     const message = `Please find the ${docLabel} for ${companyName}.`;
 
-    // --- Case 1: The file is an existing URL (already saved) ---
-    // We can create mailto: and whatsapp: links.
     if (typeof file === 'string' && (file.startsWith('http') || file.startsWith('blob:'))) {
       const fullMessage = `${message}\n\nLink: ${file}`;
       const encodedMessage = encodeURIComponent(fullMessage);
@@ -1216,27 +1198,21 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
       return;
     }
 
-    // --- Case 2: The file is a new File object (not yet saved) ---
-    // We must use the Web Share API to share the actual file content.
     if (file instanceof File) {
-      // Check if the browser supports the Web Share API for files
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-          // This opens the device's native share dialog (on mobile, Windows, ChromeOS, etc.)
           await navigator.share({
             files: [file],
             title: subject,
             text: message,
           });
         } catch (error: any) {
-          // The user might cancel the share dialog, which is not a real error. We ignore it.
           if (error.name !== 'AbortError') {
             console.error("Web Share API failed:", error);
             toast.push(<Notification type="danger" title="Sharing Failed">Could not share the file directly.</Notification>);
           }
         }
       } else {
-        // This is the fallback for browsers that do NOT support sharing local files (e.g., Firefox, Safari on macOS)
         toast.push(
           <Notification type="info" title="Action Required" duration={6000}>
             To share this new file, please save the company first. Your browser doesn't support direct sharing of unsaved files.
@@ -1245,8 +1221,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
       }
       return;
     }
-
-    // Fallback for any other unexpected type
+    
     toast.push(<Notification type="danger" title="Unsupported File">Cannot share this file type.</Notification>);
 
   }, [getValues]);
@@ -1286,17 +1261,17 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
       }));
   }, [kycDocs, watchedFileValues]);
 
-  const openImageViewer = (docLabel: string) => {
+  const openImageViewer = useCallback((docLabel: string) => {
     const index = imageDocsForViewer.findIndex(img => img.alt === docLabel);
     if (index > -1) {
       setSelectedImageIndex(index);
       setViewerIsOpen(true);
     }
-  };
+  }, [imageDocsForViewer]);
 
-  const closeImageViewer = () => setViewerIsOpen(false);
+  const closeImageViewer = useCallback(() => setViewerIsOpen(false), []);
 
-  const handlePreviewClick = (fileValue: File | string | null | undefined, docLabel: string) => {
+  const handlePreviewClick = useCallback((fileValue: File | string | null | undefined, docLabel: string) => {
     if (!fileValue) return;
 
     const isImage = (file: unknown): boolean => {
@@ -1308,9 +1283,9 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
     if (isImage(fileValue)) {
       openImageViewer(docLabel);
     } else {
-      setViewingFile(fileValue);
+      setViewingFile(fileValue as File | string);
     }
-  };
+  }, [openImageViewer]);
 
   return (
     <Card id="kycDocuments">
@@ -1410,7 +1385,6 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
 };
 
 // --- BankDetailsSection ---
-// --- MODIFICATION START: Complete rewrite of BankDetailsSection for new logic ---
 const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch, setValue, getValues } = formMethods;
   const bankTypeOptions = [{ value: "Primary", label: "Primary" }, { value: "Secondary", label: "Secondary" }, { value: "Other", label: "Other" }];
@@ -1419,7 +1393,8 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 
   const primaryBankPhotoValue = watch("primary_bank_verification_photo");
   const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
-
+  
+  // --- OPTIMIZATION START: Memoize handler functions to prevent re-creation on each render ---
   const handleShare = useCallback((shareType: 'email' | 'whatsapp', file: File | string | null, docLabel: string) => {
     if (!file) {
       toast.push(<Notification type="warning" title="No File">No document to share.</Notification>);
@@ -1454,24 +1429,25 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
     }
   }, [getValues]);
 
-  const handleSetDefaultBank = (type: 'primary' | 'secondary' | 'additional', index?: number) => {
+  const handleSetDefaultBank = useCallback((type: 'primary' | 'secondary' | 'additional', index?: number) => {
     // Reset all defaults first
-    setValue('primary_is_default', false);
-    setValue('secondary_is_default', false);
+    setValue('primary_is_default', false, { shouldDirty: true });
+    setValue('secondary_is_default', false, { shouldDirty: true });
     const additionalBanks = getValues('company_bank_details') || [];
     const updatedAdditionalBanks = additionalBanks.map(bank => ({ ...bank, is_default: false }));
 
     // Set the new default
     if (type === 'primary') {
-      setValue('primary_is_default', true);
+      setValue('primary_is_default', true, { shouldDirty: true });
     } else if (type === 'secondary') {
-      setValue('secondary_is_default', true);
+      setValue('secondary_is_default', true, { shouldDirty: true });
     } else if (type === 'additional' && index !== undefined) {
       updatedAdditionalBanks[index].is_default = true;
     }
 
     setValue('company_bank_details', updatedAdditionalBanks, { shouldDirty: true, shouldTouch: true });
-  };
+  }, [getValues, setValue]);
+  // --- OPTIMIZATION END ---
 
   return (
     <Card id="bankDetails">
@@ -1599,8 +1575,6 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
     </Card>
   );
 };
-// --- MODIFICATION END ---
-
 
 // --- SpotVerificationSection ---
 const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
@@ -1660,11 +1634,8 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
 // --- ReferenceSection ---
 const ReferenceSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { CompanyData } = useSelector(masterSelector);
-  const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    dispatch(getCompanyAction());
-  }, [dispatch]);
+  // --- OPTIMIZATION: Removed redundant API call. Data is fetched by the parent component. ---
 
   const companyOptions = useMemo(() =>
     (CompanyData?.data || []).map((c: any) => ({
@@ -1707,18 +1678,16 @@ const ReferenceSection = ({ control, errors, formMethods }: FormSectionBaseProps
 const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { watch } = formMethods;
 
-  const dispatch = useAppDispatch();
   const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
   const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs" });
   const { DocumentListData = [] } = useSelector(masterSelector);
 
+  // --- OPTIMIZATION: Removed redundant API call. Data is fetched by the parent component. ---
+
   const documentTypeOptions = useMemo(() => {
     return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
   }, [DocumentListData]);
-
-  useEffect(() => {
-    dispatch(getDocumentListAction());;
-  }, [dispatch]);
+  
   return (
     <Card id="accessibility">
       <h4 className="mb-6">Accessibility & Configuration</h4>
@@ -1743,7 +1712,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
           return (
             <Card key={item.id} className="border dark:border-gray-600 rounded-md" bodyClass="p-4">
               <div className="md:grid grid-cols-1 md:grid-cols-9 gap-4 items-start">
-                <FormItem label={`Doc Name ${index + 1}`} className="md:col-span-4" invalid={!!errors.billing_documents?.[index]?.document_name} errorMessage={errors.billing_documents?.[index]?.document_name?.message as string}>
+                <FormItem label={`Doc Name ${index + 1}`} className="md:col-span-4" invalid={!!errors.billing_documents?.[index]?.document_name} errorMessage={(errors.billing_documents?.[index]?.document_name as any)?.message as string}>
                   <Controller name={`billing_documents.${index}.document_name`} control={control} render={({ field }) => (
                     <Select
                       placeholder="Document Name"
@@ -1872,8 +1841,10 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
 
 
   useEffect(() => {
-    dispatch(getParentCategoriesAction());;
+    // Fetches categories only when this modal is opened. Good for performance.
+    dispatch(getParentCategoriesAction());
   }, [dispatch]);
+
   const countryOptions = useMemo(() =>
     CountriesData?.map((country: any) => ({ value: String(country.id), label: country.name }))
     , [CountriesData]);
@@ -1918,7 +1889,7 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
           <Controller name="status" control={control} render={({ field }) => (<Select {...field} placeholder="Select Status" options={statusOptions} />)} />
         </FormItem>
         <FormItem label="Full Name" invalid={!!errors.name} errorMessage={errors.name?.message}>
-          <Controller name="name" control={control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle />} placeholder="Member’s full name" onInput={(e) => { if (e.target.value) e.target.value = e.target.value.toUpperCase() }} />)} />
+          <Controller name="name" control={control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle />} placeholder="Member’s full name" onInput={(e: any) => { if (e.target.value) e.target.value = e.target.value.toUpperCase() }} />)} />
         </FormItem>
         <FormItem label="Mobile Number" invalid={!!errors.mobile_no || !!errors.contact_country_code} errorMessage={errors.mobile_no?.message || errors.contact_country_code?.message}>
           <div className="flex items-center gap-2">
@@ -1960,12 +1931,12 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
   const { MemberData } = useSelector(masterSelector);
   const { fields, append, remove } = useFieldArray({ control, name: "company_members" });
 
-  // State to manage the modal visibility
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  
+  // --- OPTIMIZATION: Removed redundant API call. Data is fetched by the parent component. ---
 
   const memberOptions = useMemo(() => {
     const data = MemberData?.data || MemberData || [];
-
     return Array.isArray(data)
       ? data.map((m: any) => ({
         value: String(m.id),
@@ -1975,18 +1946,11 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
       : [];
   }, [MemberData]);
 
-  useEffect(() => {
-    if (!MemberData) {
-      dispatch(getMemberAction());
-    }
-  }, [dispatch, MemberData]);
-
-  // Callback to handle successful member creation from the modal
-  const handleMemberAdded = () => {
+  const handleMemberAdded = useCallback(() => {
     setIsAddMemberModalOpen(false);
-    // Refetch the member list to ensure the new member is in the dropdown
+    // Refetch the member list to ensure the new member is in the dropdown. This is a good pattern.
     dispatch(getMemberAction());
-  };
+  }, [dispatch]);
 
   return (
     <>
@@ -2053,7 +2017,6 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
         ))}
       </Card>
 
-      {/* Modal Dialog for adding a new member */}
       <Dialog
         isOpen={isAddMemberModalOpen}
         onClose={() => setIsAddMemberModalOpen(false)}
@@ -2120,8 +2083,6 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
   const { onFormSubmit, defaultValues, isEditMode, onDiscard, isSubmitting } = props;
   const [activeSection, setActiveSection] = useState<string>(companyNavigationList[0].link);
 
-  const fileValidation = z.any().refine(val => val !== null && val !== undefined && val !== '', { message: "File is required." });
-
   const companySchema = z.object({
     id: z.union([z.string(), z.number()]).optional(),
     company_name: z.string().trim().min(1, "Company Name is required."),
@@ -2130,11 +2091,11 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     alternate_email_id: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
     ownership_type: z.object({ label: z.string(), value: z.string().min(1, "Ownership Type is required.") }, { required_error: "Ownership Type is required." }),
     owner_name: z.string().trim().min(1, "Owner/Director Name is required."),
-    city: z.string().trim(),
+    city: z.string().trim().optional(),
     country_id: z.object({ label: z.string(), value: z.string().min(1, "Country is required.") }, { required_error: "Country is required." }),
     continent_id: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
     establishment_year: z.string().trim().regex(/^\d{4}$/, "Invalid year format (YYYY).").optional().or(z.literal("")).nullable(),
-    no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d+$/).optional().nullable(), z.literal("")]).optional().nullable(),
+    no_of_employees: z.union([z.number().int().positive().optional().nullable(), z.string().regex(/^\d*$/).optional().nullable(), z.literal("")]).optional().nullable(),
     company_website: z.string().trim().url("Invalid website URL.").optional().or(z.literal("")).nullable(),
     company_logo: z.any().optional().nullable(),
     primary_business_type: z.object({ label: z.string(), value: z.string() }).optional().nullable(),
@@ -2142,18 +2103,18 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     notification_email: z.string().trim().email("Invalid email format.").optional().or(z.literal("")).nullable(),
 
     company_certificate: z.array(z.object({
-      certificate_id: z.any(),
-      certificate_name: z.string().trim(),
+      certificate_id: z.any().optional(),
+      certificate_name: z.string().trim().optional(),
       upload_certificate: z.any().optional().nullable(),
     })).optional(),
     office_info: z.array(z.object({
       office_type: z.object({ label: z.string(), value: z.string() }, { required_error: "Office type is required." }),
-      office_name: z.string().trim(),
-      address: z.string().trim(),
+      office_name: z.string().trim().optional(),
+      address: z.string().trim().optional(),
       country_id: z.object({ label: z.string(), value: z.string() }, { required_error: "Country is required." }),
-      state: z.string().trim(),
-      city: z.string().trim(),
-      zip_code: z.string().trim().regex(/^\d{3,10}$/, "Invalid ZIP code format."),
+      state: z.string().trim().optional(),
+      city: z.string().trim().optional(),
+      zip_code: z.string().trim().regex(/^\d{3,10}$/, "Invalid ZIP code format.").optional(),
       gst_number: z.string().trim().optional().or(z.literal("")).nullable(),
       contact_person: z.string().trim().optional().nullable(),
       office_email: z.string().trim().email("Invalid email format.").optional().nullable(),
@@ -2166,9 +2127,8 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     cancel_cheque_file: z.any().optional().nullable(),
     office_photo_file: z.any().optional().nullable(),
 
-    // --- MODIFICATION START: Update Zod schema for primary/secondary bank details ---
     primary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    primary_contact_number: z.string().trim().regex(/^[0-9]{10}$/, "Invalid contact number").optional().or(z.literal("")).nullable(),
+    primary_contact_number: z.string().trim().regex(/^[0-9]{7,15}$/, "Invalid contact number").optional().or(z.literal("")).nullable(),
     primary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_benificeiry_name: z.string().trim().optional().or(z.literal("")).nullable(),
     primary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
@@ -2191,15 +2151,14 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
       type: z.object({ label: z.string(), value: z.string().min(1, "Bank type required") }, { required_error: "Bank type is required" }),
       is_default: z.boolean().optional(),
     })).optional(),
-    // --- MODIFICATION END ---
 
     USER_ACCESS: z.boolean({ required_error: "User Access selection is required" }),
     billing_documents: z.array(z.object({
-      document_name: z.object({ label: z.string(), value: z.number() }, { required_error: "Document type is required." }),
+      document_name: z.any(),
       document: z.any().optional().nullable(),
     })).optional(),
     enabled_billing_docs: z.array(z.object({
-      document_name: z.object({ label: z.string(), value: z.number() }, { required_error: "Document type is required." }),
+      document_name: z.any(),
       document: z.any().optional().nullable()
     })).optional(),
 
@@ -2342,19 +2301,14 @@ const CompanyCreate = () => {
   const isEditMode = Boolean(id);
 
   const [initialData, setInitialData] = useState<Partial<CompanyFormSchema> | null>(null);
-  const [pageLoading, setPageLoading] = useState(isEditMode);
+  const [pageLoading, setPageLoading] = useState(true);
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList, DocumentListData } = useSelector(masterSelector);
 
-
-
-  const documentTypeOptions = useMemo(() => {
-    return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
-  }, [DocumentListData]);
-
-  const getEmptyFormValues = (): CompanyFormSchema => ({
+  // --- OPTIMIZATION START: Centralized and efficient data fetching logic ---
+  const getEmptyFormValues = useCallback((): CompanyFormSchema => ({
     company_name: "", primary_contact_number: "", primary_contact_number_code: undefined,
     general_contact_number: "", general_contact_number_code: undefined,
     alternate_contact_number: "", alternate_contact_number_code: null,
@@ -2383,68 +2337,72 @@ const CompanyCreate = () => {
     USER_ACCESS: false, billing_documents: [], enabled_billing_docs: [],
     company_members: [], company_teams: [],
     company_spot_verification: [], company_references: [],
-  });
+  }), []);
 
+  // Effect 1: Fetch all static lookup data once on component mount.
   useEffect(() => {
     dispatch(getCountriesAction());
     dispatch(getContinentsAction());
-    dispatch(getBrandAction());
     dispatch(getEmployeesListingAction());
-    dispatch(getCategoriesAction());
     dispatch(getMemberAction());
     dispatch(getCompanyAction());
     dispatch(getDocumentListAction());
   }, [dispatch]);
 
+  // Memoize a flag to check if all lookup data is ready, preventing the next effect from running too often.
+  const lookupsReady = useMemo(() => {
+    return !!(
+      CountriesData?.length &&
+      ContinentsData?.length &&
+      MemberData &&
+      AllCompaniesData &&
+      EmployeesList &&
+      DocumentListData
+    );
+  }, [AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData]);
+
+
+  // Effect 2: Initialize the form. Runs for Add mode immediately, or for Edit mode once lookups are ready.
   useEffect(() => {
-    const lookupsReady = CountriesData?.length > 0 && ContinentsData?.length > 0 && MemberData && AllCompaniesData && EmployeesList;
+    if (isEditMode) {
+      // For edit mode, wait for an ID and for all lookups to be loaded.
+      if (id && lookupsReady) {
+        const fetchCompanyData = async () => {
+          try {
+            const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
+            if (actionResult) {
+              const documentTypeOptions = Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
+              const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.customer_code}) - ${m.name}` }));
+              const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
+              const allEmployeesForSelect = (Array.isArray(employeeDataSource) ? employeeDataSource : []).map((m: any) => ({ value: String(m.id), label: `(${m.employee_id}) - ${m.name || 'N/A'}` }));
+              const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: `(${c.company_code}) - ${c.company_name}` }));
 
-    if (isEditMode && id && lookupsReady) {
-      const fetchCompanyData = async () => {
-        setPageLoading(true);
-        try {
-          const actionResult = await dispatch(getCompanyByIdAction(id)).unwrap();
-          if (actionResult) {
-            const allMembersForSelect = (MemberData?.data || []).map((m: any) => ({ value: String(m.id), label: `(${m.customer_code}) - ${m.name}` }));
-
-            const employeeDataSource = EmployeesList?.data?.data || EmployeesList?.data || EmployeesList;
-            const employeeList = Array.isArray(employeeDataSource) ? employeeDataSource : [];
-            const allEmployeesForSelect = employeeList.map((m: any) => ({
-              value: String(m.id),
-              label: `(${m.employee_id}) - ${m.name || 'N/A'}`,
-            }));
-
-            const allCompaniesForRefSelect = (AllCompaniesData?.data || []).map((c: any) => ({ value: String(c.id), label: `(${c.company_code}) - ${c.company_name}` }));
-            const transformed = transformApiToFormSchema(
-              actionResult,
-              CountriesData,
-              ContinentsData,
-              allMembersForSelect,
-              allEmployeesForSelect,
-              allCompaniesForRefSelect,
-              documentTypeOptions,
-            );
-            setInitialData({ ...getEmptyFormValues(), ...transformed });
-          } else {
-            toast.push(<Notification type="danger" title="Fetch Error"> Company data not found. </Notification>);
+              const transformed = transformApiToFormSchema(actionResult, CountriesData, ContinentsData, allMembersForSelect, allEmployeesForSelect, allCompaniesForRefSelect, documentTypeOptions);
+              setInitialData({ ...getEmptyFormValues(), ...transformed });
+            } else {
+              toast.push(<Notification type="danger" title="Fetch Error">Company data not found.</Notification>);
+              navigate("/business-entities/company");
+            }
+          } catch (error: any) {
+            toast.push(<Notification type="danger" title="Fetch Error">{error?.message || "Error fetching company data."}</Notification>);
             navigate("/business-entities/company");
+          } finally {
+            setPageLoading(false);
           }
-        } catch (error: any) {
-          toast.push(<Notification type="danger" title="Fetch Error"> {error?.message || "Error fetching company data."} </Notification>);
-          navigate("/business-entities/company");
-        } finally {
-          setPageLoading(false);
-        }
-      };
-      fetchCompanyData();
-    } else if (!isEditMode) {
+        };
+        fetchCompanyData();
+      }
+      // If lookups aren't ready yet, we simply wait. The pageLoading state remains true.
+    } else {
+      // For add mode, we don't need to wait for lookups.
       setInitialData(getEmptyFormValues());
       setPageLoading(false);
     }
-  }, [id, navigate, dispatch, isEditMode, AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData, documentTypeOptions]);
+  }, [isEditMode, lookupsReady, dispatch, navigate, getEmptyFormValues]);
 
-
-  const handleFormSubmit = async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
+  // --- OPTIMIZATION END ---
+  
+  const handleFormSubmit = useCallback(async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
     const payload = preparePayloadForApi(formValues, isEditMode);
 
@@ -2462,11 +2420,9 @@ const CompanyCreate = () => {
       if (error?.response?.data?.errors) {
         const validationErrors = error.response.data.errors;
         Object.keys(validationErrors).forEach((key) => {
-          let formKey = key as keyof CompanyFormSchema;
           const message = Array.isArray(validationErrors[key]) ? validationErrors[key][0] : validationErrors[key];
-
           try {
-            formMethods.setError(formKey, { type: "manual", message: message });
+            formMethods.setError(key as keyof CompanyFormSchema, { type: "manual", message: message });
           } catch (e) {
             console.warn(`API error for unmapped/unexpected key: ${key} - ${message}`);
           }
@@ -2478,7 +2434,7 @@ const CompanyCreate = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [dispatch, isEditMode, id, navigate]);
 
   const openDiscardDialog = () => setDiscardConfirmationOpen(true);
   const closeDiscardDialog = () => setDiscardConfirmationOpen(false);
