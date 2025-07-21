@@ -1,3 +1,4 @@
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import cloneDeep from "lodash/cloneDeep";
@@ -32,6 +33,7 @@ import {
   FormItem,
   Input,
   Select as UiSelect,
+  Skeleton, // ADDED
   Tag,
 } from "@/components/ui";
 import Avatar from "@/components/ui/Avatar";
@@ -1351,6 +1353,7 @@ const ProductTableTools = ({
   filteredColumns,
   setFilteredColumns,
   activeFilterCount,
+  isDataReady, // ADDED
 }: {
   onSearchChange: (query: string) => void;
   onFilter: () => void;
@@ -1361,6 +1364,7 @@ const ProductTableTools = ({
     React.SetStateAction<ColumnDef<ProductItem>[]>
   >;
   activeFilterCount: number;
+  isDataReady: boolean; // ADDED
 }) => {
   const isColumnVisible = (colId: string) =>
     filteredColumns.some((c) => (c.id || c.accessorKey) === colId);
@@ -1428,11 +1432,13 @@ const ProductTableTools = ({
           icon={<TbReload />}
           onClick={onClearFilters}
           title="Clear Filters & Reload"
+          disabled={!isDataReady} // ADDED
         ></Button>
         <Button
           icon={<TbFilter />}
           onClick={onFilter}
           className="w-full sm:w-auto"
+          disabled={!isDataReady} // ADDED
         >
           Filter{" "}
           {activeFilterCount > 0 && (
@@ -1649,16 +1655,36 @@ const Products = () => {
     status: masterLoadingStatus,
   } = useSelector(masterSelector);
 
-  // MODIFIED: Fetch master data on initial component mount
-  useEffect(() => {
-    dispatch(getDomainsAction());
-    dispatch(getParentCategoriesAction());
-    dispatch(getBrandAction());
-    dispatch(getUnitAction());
-    dispatch(getCountriesAction());
-    dispatch(getAllUsersAction());
+  const [initialLoading, setInitialLoading] = useState(true); // ADDED
+  const isDataReady = !initialLoading; // ADDED
+
+  const refreshData = useCallback(async () => { // ADDED
+    setInitialLoading(true);
+    try {
+      await Promise.all([
+        dispatch(getProductslistingAction({ page: 1, per_page: 10 })),
+        dispatch(getDomainsAction()),
+        dispatch(getParentCategoriesAction()),
+        dispatch(getBrandAction()),
+        dispatch(getUnitAction()),
+        dispatch(getCountriesAction()),
+        dispatch(getAllUsersAction()),
+      ]);
+    } catch (error) {
+      console.error("Failed to refresh data:", error);
+      toast.push(
+        <Notification title="Data Refresh Failed" type="danger">
+          Could not reload data.
+        </Notification>
+      );
+    } finally {
+      setInitialLoading(false);
+    }
   }, [dispatch]);
 
+  useEffect(() => { // ADDED
+    refreshData();
+  }, [refreshData]);
 
   const [currentListTab, setCurrentListTab] = useState<string>(TABS.ALL);
   const [currentFormTab, setCurrentFormTab] = useState<string>(
@@ -1679,37 +1705,39 @@ const Products = () => {
     query: "",
   });
 
-  // MODIFIED: This effect now triggers API calls for products based on table state
+  const isMounted = useRef(false); // ADDED
   useEffect(() => {
-    const fetchData = () => {
-      const apiParams: Record<string, any> = {
-        page: tableData.pageIndex,
-        per_page: tableData.pageSize,
-        search: tableData.query,
-        sort_key: tableData.sort.key,
-        sort_order: tableData.sort.order,
-        name_or_sku: filterCriteria.filterNameOrSku,
-        'category_ids[]': filterCriteria.filterCategoryIds,
-        'sub_category_ids[]': filterCriteria.filterSubCategoryIds,
-        'brand_ids[]': filterCriteria.filterBrandIds,
-        status: filterCriteria.filterStatuses?.map(s => s.charAt(0).toUpperCase() + s.slice(1))?.[0] // API might need "Active", not ["Active"] and only one status
+    if (isMounted.current) {
+      const fetchData = () => {
+        const apiParams: Record<string, any> = {
+          page: tableData.pageIndex,
+          per_page: tableData.pageSize,
+          search: tableData.query,
+          sort_key: tableData.sort.key,
+          sort_order: tableData.sort.order,
+          name_or_sku: filterCriteria.filterNameOrSku,
+          "category_ids[]": filterCriteria.filterCategoryIds,
+          "sub_category_ids[]": filterCriteria.filterSubCategoryIds,
+          "brand_ids[]": filterCriteria.filterBrandIds,
+          status:
+            filterCriteria.filterStatuses
+              ?.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+              ?.join(",") || (currentListTab === TABS.PENDING ? "Pending" : ""),
+        };
+
+        const cleanedParams = Object.fromEntries(
+          Object.entries(apiParams).filter(
+            ([_, v]) =>
+              v != null && v !== "" && (!Array.isArray(v) || v.length > 0)
+          )
+        );
+
+        dispatch(getProductslistingAction(cleanedParams));
       };
-
-      if (currentListTab === TABS.PENDING) {
-        apiParams.status = "Pending";
-      }
-
-      // Clean up empty/null values before sending to API
-      const cleanedParams = Object.fromEntries(
-        Object.entries(apiParams).filter(
-          ([_, v]) => v != null && v !== "" && (!Array.isArray(v) || v.length > 0)
-        )
-      );
-
-      // MODIFIED: Use the correct action name
-      dispatch(getProductslistingAction(cleanedParams));
-    };
-    fetchData();
+      fetchData();
+    } else {
+      isMounted.current = true;
+    }
   }, [dispatch, tableData, filterCriteria, currentListTab]);
 
   // --- MODAL STATE MANAGEMENT (NEW) ---
@@ -1953,13 +1981,13 @@ const Products = () => {
   const { data: rawProductsData = [] } = paginatedData;
 
   const paginationInfo = useMemo(() => ({
-    total: paginatedData.total || 0,
+    total: countsData.active + countsData.inactive + countsData.pending + countsData.rejected + countsData.draft || 0,
     active: countsData.active || 0,
     inactive: countsData.inactive || 0,
     pending: countsData.pending || 0,
-    rejected: countsData.rejected || 0, // Assuming these might exist
+    rejected: countsData.rejected || 0,
     draft: countsData.draft || 0,
-  }), [paginatedData, countsData]);
+  }), [countsData]);
 
   const mappedProducts: ProductItem[] = useMemo(() => {
     if (!Array.isArray(rawProductsData)) return [];
@@ -2339,7 +2367,7 @@ const Products = () => {
           );
         }
         closeAddEditDrawer();
-        // No manual refetch needed due to useEffect hook
+        refreshData(); // MODIFIED
       } catch (error: any) {
         const errorMsg =
           error?.response?.data?.message ||
@@ -2368,6 +2396,7 @@ const Products = () => {
       newThumbImageFile,
       galleryImages,
       thumbImagePreviewUrl,
+      refreshData, // MODIFIED
     ]
   );
 
@@ -2407,7 +2436,7 @@ const Products = () => {
           </Notification>
         );
       }
-      // No manual refetch needed
+      refreshData(); // MODIFIED
     } catch (error: any) {
       toast.push(
         <Notification type="danger" title="Delete Failed">
@@ -2418,7 +2447,7 @@ const Products = () => {
       setIsSubmittingForm(false);
       setDeleteConfirm({ isOpen: false, item: null, isBulk: false });
     }
-  }, [dispatch, deleteConfirm, selectedItems]);
+  }, [dispatch, deleteConfirm, selectedItems, refreshData]); // MODIFIED
 
   const handleChangeStatusClick = useCallback((product: ProductItem) => {
     setProductForStatusChange(product);
@@ -2444,7 +2473,7 @@ const Products = () => {
           Product status changed to {selectedNewStatus}.
         </Notification>
       );
-      // No manual refetch needed
+      refreshData(); // MODIFIED
     } catch (error: any) {
       toast.push(
         <Notification type="danger" title="Status Update Failed">
@@ -2456,7 +2485,7 @@ const Products = () => {
       setIsChangeStatusDialogOpen(false);
       setProductForStatusChange(null);
     }
-  }, [dispatch, productForStatusChange, selectedNewStatus]);
+  }, [dispatch, productForStatusChange, selectedNewStatus, refreshData]); // MODIFIED
 
   const openViewDetailModal = useCallback((product: ProductItem) => {
     navigate(`/product-management/product/${product.id}`);
@@ -2582,7 +2611,7 @@ const Products = () => {
           processed.
         </Notification>
       );
-      // No manual refetch needed
+      refreshData(); // MODIFIED
       closeImportModal();
     } catch (apiError: any) {
       toast.push(
@@ -2594,7 +2623,7 @@ const Products = () => {
     } finally {
       setIsImporting(false);
     }
-  }, [selectedFile, importModalType, closeImportModal]);
+  }, [selectedFile, importModalType, closeImportModal, refreshData]); // MODIFIED
 
   const handlePaginationChange = useCallback(
     (page: number) => setTableData((prev) => ({ ...prev, pageIndex: page })),
@@ -2664,9 +2693,11 @@ const Products = () => {
     setFilterFormValue("filterSubCategoryIds", []);
     setTableData((prev) => ({ ...prev, pageIndex: 1, query: "" }));
     closeFilterDrawer();
-  }, [resetFilterForm, setFilterFormValue, closeFilterDrawer]);
+    refreshData(); // MODIFIED
+  }, [resetFilterForm, setFilterFormValue, closeFilterDrawer, refreshData]); // MODIFIED
 
   const handleCardClick = (status: ProductStatus | "all") => {
+    if (!isDataReady) return; // ADDED
     onClearFilters();
     if (status !== "all") {
       setFilterCriteria({ filterStatuses: [status] });
@@ -2801,16 +2832,16 @@ const Products = () => {
   const cardClass =
     "rounded-md border transition-shadow duration-200 ease-in-out cursor-pointer hover:shadow-lg";
   const cardBodyClass = "flex items-center gap-2 p-2";
-
-  if (isLoadingData && !rawProductsData?.length) {
-    return (
-      <Container className="h-full">
-        <div className="h-full flex flex-col items-center justify-center">
-          <Spinner size="xl" /> <p className="mt-2">Loading Products...</p>
-        </div>
-      </Container>
-    );
-  }
+  const tableLoading = initialLoading || isSubmittingForm || isLoadingData; // ADDED
+  const renderCardContent = ( // ADDED
+    content: string | number | undefined,
+    colorClass: string
+  ) => {
+    if (initialLoading) {
+      return <Skeleton width={40} height={24} />;
+    }
+    return <h6 className={colorClass}>{content ?? "..."}</h6>;
+  };
 
   return (
     <>
@@ -2823,29 +2854,38 @@ const Products = () => {
                 <Dropdown.Item
                   eventKey="Export Product"
                   onClick={() => handleOpenExportReasonModal("products")}
+                  disabled={!isDataReady} // ADDED
                 >
                   Export Products
                 </Dropdown.Item>
                 <Dropdown.Item
                   eventKey="Import Product"
                   onClick={() => openImportModal("products")}
+                  disabled={!isDataReady} // ADDED
                 >
                   Import Products
                 </Dropdown.Item>
                 <Dropdown.Item
                   eventKey="Export Keywords"
                   onClick={() => handleOpenExportReasonModal("keywords")}
+                  disabled={!isDataReady} // ADDED
                 >
                   Export Keywords
                 </Dropdown.Item>
                 <Dropdown.Item
                   eventKey="Import Keywords"
                   onClick={() => openImportModal("keywords")}
+                  disabled={!isDataReady} // ADDED
                 >
                   Import Keywords
                 </Dropdown.Item>
               </Dropdown>
-              <Button variant="solid" icon={<TbPlus />} onClick={openAddDrawer}>
+              <Button
+                variant="solid"
+                icon={<TbPlus />}
+                onClick={openAddDrawer}
+                disabled={!isDataReady} // ADDED
+              >
                 Add New
               </Button>
             </div>
@@ -2861,7 +2901,7 @@ const Products = () => {
                     <TbBrandProducthunt size={24} />
                   </div>
                   <div>
-                    <h6 className="text-blue-500">{paginationInfo.total}</h6>
+                    {renderCardContent(paginationInfo.total, "text-blue-500")}
                     <span className="font-semibold text-[11px]">Total</span>
                   </div>
                 </Card>
@@ -2877,9 +2917,7 @@ const Products = () => {
                     <TbCircleCheck size={24} />
                   </div>
                   <div>
-                    <h6 className="text-green-500">
-                      {paginationInfo.active}
-                    </h6>
+                    {renderCardContent(paginationInfo.active, "text-green-500")}
                     <span className="font-semibold text-[11px]">Active</span>
                   </div>
                 </Card>
@@ -2895,9 +2933,7 @@ const Products = () => {
                     <TbCancel size={24} />
                   </div>
                   <div>
-                    <h6 className="text-slate-500">
-                      {paginationInfo.inactive}
-                    </h6>
+                    {renderCardContent(paginationInfo.inactive, "text-slate-500")}
                     <span className="font-semibold text-[11px]">Inactive</span>
                   </div>
                 </Card>
@@ -2913,9 +2949,7 @@ const Products = () => {
                     <TbProgress size={24} />
                   </div>
                   <div>
-                    <h6 className="text-orange-500">
-                      {paginationInfo.pending}
-                    </h6>
+                    {renderCardContent(paginationInfo.pending, "text-orange-500")}
                     <span className="font-semibold text-[11px]">Pending</span>
                   </div>
                 </Card>
@@ -2931,9 +2965,7 @@ const Products = () => {
                     <TbCircleX size={24} />
                   </div>
                   <div>
-                    <h6 className="text-red-500">
-                      {paginationInfo.rejected}
-                    </h6>
+                    {renderCardContent(paginationInfo.rejected, "text-red-500")}
                     <span className="font-semibold text-[11px]">Rejected</span>
                   </div>
                 </Card>
@@ -2949,9 +2981,7 @@ const Products = () => {
                     <TbRefresh size={24} />
                   </div>
                   <div>
-                    <h6 className="text-violet-500">
-                      {paginationInfo.draft}
-                    </h6>
+                    {renderCardContent(paginationInfo.draft, "text-violet-500")}
                     <span className="font-semibold text-[11px]">Draft</span>
                   </div>
                 </Card>
@@ -2983,6 +3013,7 @@ const Products = () => {
               filteredColumns={filteredColumns}
               setFilteredColumns={setFilteredColumns}
               activeFilterCount={activeFilterCount}
+              isDataReady={isDataReady} // ADDED
             />
           </div>
           <ActiveFiltersDisplay
@@ -2996,7 +3027,7 @@ const Products = () => {
             <DataTable
               columns={filteredColumns}
               data={pageData}
-              loading={isLoadingData}
+              loading={tableLoading} // MODIFIED
               pagingData={{
                 total,
                 pageIndex: tableData.pageIndex as number,
