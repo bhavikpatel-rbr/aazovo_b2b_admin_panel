@@ -1202,10 +1202,12 @@ const PriceList = () => {
         product_id: String(item.product_id),
         price: item.price,
         usd_rate: item.usd_rate,
-        expance: item.expance,
-        margin: item.margin,
+        expance: String(item.expance),
+        margin: String(item.margin),
         status: item.status,
       });
+      console.log("item",item);
+      
       setIsEditDrawerOpen(true);
     },
     [editFormMethods]
