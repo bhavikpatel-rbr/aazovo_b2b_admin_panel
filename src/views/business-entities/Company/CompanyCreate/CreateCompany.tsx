@@ -672,7 +672,7 @@ const preparePayloadForApi = (
     apiPayload.append("id", String(data.id));
     apiPayload.append("_method", "PUT");
   }
-  
+
   const simpleFields: (keyof CompanyFormSchema)[] = [
     "company_name", "primary_contact_number", "primary_contact_number_code", "general_contact_number", "general_contact_number_code",
     "alternate_contact_number", "alternate_contact_number_code", "primary_email_id", "alternate_email_id", "ownership_type", "owner_name",
@@ -845,30 +845,30 @@ const CompanyDetailsSection = ({
     // 1. Create a map to store unique countries by ID.
     const uniqueCountriesMap = new Map();
     (CountriesData || []).forEach((country: any) => {
-        uniqueCountriesMap.set(country.id, country);
+      uniqueCountriesMap.set(country.id, country);
     });
     // 2. Convert map values back to an array and then map to options.
     return Array.from(uniqueCountriesMap.values()).map((value: any) => ({
-        value: String(value.id),
-        label: value.name,
+      value: String(value.id),
+      label: value.name,
     }));
   }, [CountriesData]);
 
   const countryCodeOptions = useMemo(() => {
-      // 1. Create a Set to store unique phone codes.
-      const uniqueCodes = new Set<string>();
-      (CountriesData || []).forEach((c: any) => {
-          if (c.phone_code) {
-              uniqueCodes.add(`${c.phone_code}`);
-          }
-      });
-      // 2. Convert set to an array, sort, and map to options.
-      return Array.from(uniqueCodes)
-          .sort((a, b) => a.localeCompare(b))
-          .map(code => ({
-              value: code,
-              label: code,
-          }));
+    // 1. Create a Set to store unique phone codes.
+    const uniqueCodes = new Set<string>();
+    (CountriesData || []).forEach((c: any) => {
+      if (c.phone_code) {
+        uniqueCodes.add(`${c.phone_code}`);
+      }
+    });
+    // 2. Convert set to an array, sort, and map to options.
+    return Array.from(uniqueCodes)
+      .sort((a, b) => a.localeCompare(b))
+      .map(code => ({
+        value: code,
+        label: code,
+      }));
   }, [CountriesData]);
 
   const continentOptions = useMemo(() => ContinentsData.map((value: any) => ({
@@ -1236,7 +1236,7 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
       }
       return;
     }
-    
+
     toast.push(<Notification type="danger" title="Unsupported File">Cannot share this file type.</Notification>);
 
   }, [getValues]);
@@ -1313,16 +1313,16 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
           return (
             <div key={doc.name}>
               <label className="flex items-center gap-2 mb-1">
-                <Controller 
-                  name={doc.enabledName} 
-                  control={control} 
+                <Controller
+                  name={doc.enabledName}
+                  control={control}
                   render={({ field }) => (
-                    <Checkbox 
-                      checked={!!field.value} 
-                      onChange={field.onChange} 
-                      disabled={!fileValue} 
+                    <Checkbox
+                      checked={!!field.value}
+                      onChange={field.onChange}
+                      disabled={!fileValue}
                     />
-                  )} 
+                  )}
                 />
                 {doc.label} {doc.required && <span className="text-red-500">*</span>}
               </label>
@@ -1418,7 +1418,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 
   const primaryBankPhotoValue = watch("primary_bank_verification_photo");
   const secondaryBankPhotoValue = watch("secondary_bank_verification_photo");
-  
+
   // --- OPTIMIZATION START: Memoize handler functions to prevent re-creation on each render ---
   const handleShare = useCallback((shareType: 'email' | 'whatsapp', file: File | string | null, docLabel: string) => {
     if (!file) {
@@ -1708,7 +1708,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
   const documentTypeOptions = useMemo(() => {
     return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
   }, [DocumentListData]);
-  
+
   return (
     <Card id="accessibility">
       <h4 className="mb-6">Accessibility & Configuration</h4>
@@ -1869,27 +1869,27 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
   const countryOptions = useMemo(() => {
     const uniqueCountriesMap = new Map();
     (CountriesData || []).forEach((country: any) => {
-        uniqueCountriesMap.set(country.id, country);
+      uniqueCountriesMap.set(country.id, country);
     });
-    return Array.from(uniqueCountriesMap.values()).map((country: any) => ({ 
-        value: String(country.id), 
-        label: country.name 
+    return Array.from(uniqueCountriesMap.values()).map((country: any) => ({
+      value: String(country.id),
+      label: country.name
     }));
   }, [CountriesData]);
 
   const countryCodeOptions = useMemo(() => {
     const uniqueCodes = new Set<string>();
     (CountriesData || []).forEach((c: any) => {
-        if (c.phone_code) {
-            uniqueCodes.add(`+${c.phone_code}`);
-        }
+      if (c.phone_code) {
+        uniqueCodes.add(`+${c.phone_code}`);
+      }
     });
     return Array.from(uniqueCodes)
-        .sort((a, b) => a.localeCompare(b))
-        .map(code => ({ 
-            value: code, 
-            label: code 
-        }));
+      .sort((a, b) => a.localeCompare(b))
+      .map(code => ({
+        value: code,
+        label: code
+      }));
   }, [CountriesData]);
 
   const categoryOptions = useMemo(() =>
@@ -1970,7 +1970,7 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
   const { fields, append, remove } = useFieldArray({ control, name: "company_members" });
 
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-  
+
   const memberOptions = useMemo(() => {
     const data = MemberData?.data || MemberData || [];
     return Array.isArray(data)
@@ -2024,15 +2024,15 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
                       onChange={(selectedOption) => {
                         field.onChange(selectedOption);
 
-                        const fullMember = memberOptions.find(opt => opt.value === selectedOption?.value);
+                        // const fullMember = memberOptions.find(opt => opt.value === selectedOption?.value);
 
-                        if (fullMember && fullMember.status?.toLowerCase() !== 'active') {
-                          toast.push(
-                            <Notification type="warning" title="Member Inactive" duration={4000}>
-                              The selected member '{fullMember.label}' is currently not active.
-                            </Notification>
-                          );
-                        }
+                        // if (fullMember && fullMember.status?.toLowerCase() !== 'Active') {
+                        //   toast.push(
+                        //     <Notification type="warning" title="Member Inactive" duration={4000}>
+                        //       The selected member '{fullMember.label}' is currently not active.
+                        //     </Notification>
+                        //   );
+                        // }
                       }}
                     />
                   )}
@@ -2429,7 +2429,7 @@ const CompanyCreate = () => {
       setPageLoading(false);
     }
   }, [isEditMode, id, lookupsReady, dispatch, navigate, getEmptyFormValues, AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData]);
-  
+
   const handleFormSubmit = useCallback(async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
     const payload = preparePayloadForApi(formValues, isEditMode);
