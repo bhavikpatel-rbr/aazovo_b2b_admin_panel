@@ -2287,9 +2287,28 @@ export const getMemberAsync = async () => {
   }
 }
 
+export const getPageAsync = async () => {
+  try {
+    const response = await axiosInstance.get(`${config.apiURL}/master/page`)
+    return response
+    // return undefined; // Placeholder for actual implementation
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
 export const addMemberAsync = async (unitData: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/customer`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+
+export const addPageAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/page`, unitData)
     return response
   } catch (err) {
     return isAxiosError(err)
@@ -2304,6 +2323,14 @@ export const editMemberAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+export const editPageAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/page/${unitData?.id}`, { _method: "PUT", ...unitData })
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 export const deleteMemberAsync = async (unitData: any) => {
   try {
@@ -2313,10 +2340,26 @@ export const deleteMemberAsync = async (unitData: any) => {
     return isAxiosError(err)
   }
 }
+export const deletePageAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.delete(`${config.apiURL}/master/page/${unitData.id}`)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
 
 export const deleteAllMemberAsync = async (unitData: any) => {
   try {
     const response = await axiosInstance.post(`${config.apiURL}/customer/delete`, unitData)
+    return response
+  } catch (err) {
+    return isAxiosError(err)
+  }
+}
+export const deleteAllPageAsync = async (unitData: any) => {
+  try {
+    const response = await axiosInstance.post(`${config.apiURL}/master/page/delete`, unitData)
     return response
   } catch (err) {
     return isAxiosError(err)

@@ -9,6 +9,7 @@ import {
   addEmployeesAction,
   addInquiriesAction,
   addMemberAction,
+  addPageAction,
   addNotificationAction,
   // addNotificationAction,
   addpartnerAction,
@@ -17,6 +18,7 @@ import {
   apiGetEmployeeById,
   deleteAllcompanyAction,
   deleteAllMemberAction,
+  deleteAllPageAction,
   deleteAllpartnerAction,
   deleteAllUnitAction,
   deletecompanyAction,
@@ -25,6 +27,7 @@ import {
   deleteCurrencyAction,
   deleteDocumentTypeAction,
   deleteMemberAction,
+  deletePageAction,
   deletepartnerAction,
   deletePaymentTermAction,
   deleteUnitAction,
@@ -36,6 +39,7 @@ import {
   editEmployeesAction,
   editInquiriesAction,
   editMemberAction,
+  editPageAction,
   editpartnerAction,
   editPaymentTermAction,
   editUnitAction,
@@ -131,7 +135,8 @@ import {
   getUsersAction,
   getWallItemById,
   getWallItemsAction,
-  getWallListingAction
+  getWallListingAction,
+  getPageAction
 } from "./middleware";
 
 const INITIAL_STATE: any = {
@@ -145,6 +150,7 @@ const INITIAL_STATE: any = {
   DocumentListData: [],
   memberData: [],
   allProducts: [],
+  PageData: [],
   productsMasterData: [],
   autoMatchData: [],
   buyerListings: [],
@@ -597,13 +603,29 @@ const masterSlice = createSlice({
     builder.addCase(addMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
     }));
+    builder.addCase(addPageAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }));
+    builder.addCase(getPageAction.fulfilled, (state, { payload }) => ({
+      ...state,
+      PageData: payload,
+    }));
     builder.addCase(editMemberAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }));
+    builder.addCase(editPageAction.fulfilled, (state, { payload }) => ({
       ...state,
     }));
     builder.addCase(deleteMemberAction.fulfilled, (state, { payload }) => ({
       ...state,
     }));
+    builder.addCase(deletePageAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }));
     builder.addCase(deleteAllMemberAction.fulfilled, (state, { payload }) => ({
+      ...state,
+    }));
+    builder.addCase(deleteAllPageAction.fulfilled, (state, { payload }) => ({
       ...state,
     }));
 
