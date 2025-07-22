@@ -2595,7 +2595,7 @@ const CompanyCreate = () => {
       setInitialData(getEmptyFormValues());
       setPageLoading(false);
     }
-  }, [isEditMode, id, lookupsReady, dispatch, navigate, getEmptyFormValues, AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData]);
+  }, [isEditMode, dispatch, navigate, getEmptyFormValues]);
 
   const handleFormSubmit = useCallback(async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
