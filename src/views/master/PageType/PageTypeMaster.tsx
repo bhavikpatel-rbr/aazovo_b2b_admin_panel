@@ -30,8 +30,8 @@ import type { ColumnDef, OnSortParam } from '@/components/shared/DataTable'
 // Redux Imports
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import {
-    addMemberTypeAction,
-    editMemberTypeAction,
+    addPageAction,
+    editPageAction,
     getPageAction,
     submitExportReasonAction
 } from '@/reduxtool/master/middleware'
@@ -264,7 +264,7 @@ const MemberTypeMaster = () => {
     const onAddMemberTypeSubmit = async (data: MemberTypeFormData) => {
         setIsSubmitting(true);
         try {
-            await dispatch(addMemberTypeAction(data)).unwrap();
+            await dispatch(addPageAction(data)).unwrap();
             toast.push(<Notification title="Page Type Added" type="success">{`Page Type "${data.name}" was successfully added.`}</Notification>);
             closeAddDrawer();
             refreshData();
@@ -280,7 +280,7 @@ const MemberTypeMaster = () => {
         if (!editingMemberType?.id) return;
         setIsSubmitting(true);
         try {
-            await dispatch(editMemberTypeAction({ id: editingMemberType.id, ...data })).unwrap();
+            await dispatch(editPageAction({ id: editingMemberType.id, ...data })).unwrap();
             toast.push(<Notification title="Page Type Updated" type="success">{`"${data.name}" was successfully updated.`}</Notification>);
             closeEditDrawer();
             refreshData();
