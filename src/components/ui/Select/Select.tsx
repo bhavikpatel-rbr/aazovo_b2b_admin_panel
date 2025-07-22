@@ -145,6 +145,7 @@ function Select<
         field,
         invalid,
         isMulti,
+        isClearable = true, // Default to true to show clear indicator
         ...rest
     } = props
 
@@ -259,6 +260,7 @@ function Select<
             }}
             closeMenuOnSelect={!isMulti}
             hideSelectedOptions={false}
+            isClearable={isClearable} // Pass isClearable prop
             {...field}
             {...rest}
         />
