@@ -347,7 +347,7 @@ export interface CompanyFormSchema {
   primary_bank_verification_photo?: File | string | null;
   primary_is_default?: boolean;
   secondary_account_number?: string;
-  secondary_benificeiry_number?: string;
+  secondary_benificeiry_name?: string;
   secondary_bank_name?: string;
   secondary_ifsc_code?: string;
   secondary_swift_code?: string;
@@ -448,7 +448,7 @@ interface ApiSingleCompanyItem {
   primary_bank_verification_photo?: string | null;
   primary_is_default?: boolean | string;
   secondary_account_number?: string | null;
-  secondary_benificeiry_number?: string | null;
+  secondary_benificeiry_name?: string | null;
   secondary_bank_name?: string | null;
   secondary_ifsc_code?: string | null;
   secondary_swift_code?: string | null;
@@ -587,7 +587,7 @@ const transformApiToFormSchema = (
     primary_bank_verification_photo: apiData.primary_bank_verification_photo || null,
     primary_is_default: stringToBoolean(apiData.primary_is_default),
     secondary_account_number: apiData.secondary_account_number || '',
-    secondary_benificeiry_number: apiData?.secondary_benificeiry_number || '',
+    secondary_benificeiry_name: apiData?.secondary_benificeiry_name || '',
     secondary_bank_name: apiData.secondary_bank_name || '',
     secondary_ifsc_code: apiData.secondary_ifsc_code || '',
     secondary_swift_code: apiData.secondary_swift_code || '',
@@ -679,7 +679,7 @@ const preparePayloadForApi = (
     "company_address", "city", "state", "zip_code", "country_id", "continent_id", "gst_number", "pan_number", "trn_number", "tan_number",
     "establishment_year", "no_of_employees", "company_website", "primary_business_type", "status", "support_email", "notification_email",
     "primary_account_number", "primary_benificeiry_name", "primary_bank_name", "primary_ifsc_code", "primary_swift_code", "primary_is_default",
-    "secondary_account_number", "secondary_benificeiry_number", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code", "secondary_is_default"
+    "secondary_account_number", "secondary_benificeiry_name", "secondary_bank_name", "secondary_ifsc_code", "secondary_swift_code", "secondary_is_default"
   ];
   simpleFields.forEach(field => {
     if (data[field] !== undefined) appendField(field, data[field])
@@ -1516,8 +1516,8 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
 
       <h4 className="mb-6">Bank Details (Secondary)</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
-        <FormItem label="Secondary Beneficiary Number" invalid={!!errors.secondary_benificeiry_number} errorMessage={errors.secondary_benificeiry_number?.message as string}>
-          <Controller name="secondary_benificeiry_number" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
+        <FormItem label="Secondary Beneficiary Number" invalid={!!errors.secondary_benificeiry_name} errorMessage={errors.secondary_benificeiry_name?.message as string}>
+          <Controller name="secondary_benificeiry_name" control={control} render={({ field }) => (<Input placeholder="Secondary Account No." {...field} />)} />
         </FormItem>
         <FormItem label="Secondary Bank Name" invalid={!!errors.secondary_bank_name} errorMessage={errors.secondary_bank_name?.message as string}>
           <Controller name="secondary_bank_name" control={control} render={({ field }) => (<Input type="text" {...field} placeholder="Enter Bank Name" />)} />
@@ -2171,7 +2171,7 @@ const CompanyFormComponent = (props: CompanyFormComponentProps) => {
     primary_bank_verification_photo: z.any().optional().nullable(),
     primary_is_default: z.boolean().optional(),
     secondary_account_number: z.string().trim().optional().or(z.literal("")).nullable(),
-    secondary_benificeiry_number: z.string().trim().optional().or(z.literal("")).nullable(),
+    secondary_benificeiry_name: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_bank_name: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_ifsc_code: z.string().trim().optional().or(z.literal("")).nullable(),
     secondary_swift_code: z.string().trim().optional().or(z.literal("")).nullable(),
@@ -2365,7 +2365,7 @@ const CompanyCreate = () => {
     other_document_file: null, other_document_remark: "", other_document_remark_enabled: false,
     primary_account_number: "", primary_benificeiry_name: "", primary_bank_name: "", primary_ifsc_code: "",
     primary_swift_code: "", primary_bank_verification_photo: null, primary_is_default: false,
-    secondary_account_number: "", secondary_benificeiry_number: "", secondary_bank_name: "", secondary_ifsc_code: "",
+    secondary_account_number: "", secondary_benificeiry_name: "", secondary_bank_name: "", secondary_ifsc_code: "",
     secondary_swift_code: "", secondary_bank_verification_photo: null, secondary_is_default: false,
     company_bank_details: [],
     USER_ACCESS: false, billing_documents: [], enabled_billing_docs: [],
