@@ -859,7 +859,7 @@ const CompanyDetailsSection = ({
       const uniqueCodes = new Set<string>();
       (CountriesData || []).forEach((c: any) => {
           if (c.phone_code) {
-              uniqueCodes.add(`+${c.phone_code}`);
+              uniqueCodes.add(`${c.phone_code}`);
           }
       });
       // 2. Convert set to an array, sort, and map to options.
