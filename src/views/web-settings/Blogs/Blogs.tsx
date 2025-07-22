@@ -130,6 +130,7 @@ export type BlogFormData = z.infer<typeof blogFormSchema>;
 // --- Zod Schema for Filter Form ---
 const filterFormSchema = z.object({
   filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  filterCreatedBy: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
   date: z.tuple([z.date().nullable(), z.date().nullable()]).nullable().optional(),
 });
 type FilterFormData = z.infer<typeof filterFormSchema>;
@@ -226,8 +227,9 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
     onClearAll: () => void;
 }) => {
     const activeStatuses = filterData.filterStatus || [];
+    const activeCreators = filterData.filterCreatedBy || [];
     const activeDateRange = filterData.date;
-    const hasActiveFilters = activeStatuses.length > 0 || !!activeDateRange;
+    const hasActiveFilters = activeStatuses.length > 0 || activeCreators.length > 0 || !!activeDateRange;
 
     if (!hasActiveFilters) { return null; }
 
@@ -238,6 +240,12 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: {
                 <Tag key={`status-${status.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
                     Status: {status.label}
                     <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterStatus', status.value)} />
+                </Tag>
+            ))}
+            {activeCreators.map((creator) => (
+                <Tag key={`creator-${creator.value}`} prefix className="bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100 border border-gray-300 dark:border-gray-500">
+                    Author: {creator.label}
+                    <TbX className="ml-1 h-3 w-3 cursor-pointer" onClick={() => onRemoveFilter('filterCreatedBy', creator.value)} />
                 </Tag>
             ))}
             {activeDateRange && (
@@ -510,13 +518,13 @@ const Blogs = () => {
         const newFilters = { ...prev };
         if (key === 'date') {
             delete newFilters.date;
-        } else if (key === 'filterStatus') {
-            const currentValues = prev.filterStatus || [];
+        } else if (key === 'filterStatus' || key === 'filterCreatedBy') {
+            const currentValues = prev[key] || [];
             const newValues = currentValues.filter(item => item.value !== value);
             if (newValues.length > 0) {
-                newFilters.filterStatus = newValues;
+                (newFilters as any)[key] = newValues;
             } else {
-                delete newFilters.filterStatus;
+                delete (newFilters as any)[key];
             }
         }
         return newFilters;
@@ -525,12 +533,30 @@ const Blogs = () => {
   }, [handleSetTableData]);
 
   // --- Data Processing ---
+  const creatorOptions = useMemo(() => {
+    const creators = new Map();
+    (BlogsData?.data || []).forEach(blog => {
+        if (blog.updated_by_user?.name) {
+            creators.set(blog.updated_by_user.name, {
+                value: blog.updated_by_user.name,
+                label: blog.updated_by_user.name,
+            });
+        }
+    });
+    return Array.from(creators.values());
+  }, [BlogsData?.data]);
+
   const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
     let processedData: BlogItem[] = cloneDeep(BlogsData?.data || []);
     
     if (activeFilters.filterStatus && activeFilters.filterStatus.length > 0) {
         const selectedStatuses = new Set(activeFilters.filterStatus.map(opt => opt.value));
         processedData = processedData.filter(item => selectedStatuses.has(item.status));
+    }
+    
+    if (activeFilters.filterCreatedBy && activeFilters?.filterCreatedBy?.length > 0) {
+        const selectedCreators = new Set(activeFilters?.filterCreatedby?.map(opt => opt.value));
+        processedData = processedData?.filter(item => item?.updated_by_user?.name && selectedCreators.has(item?.updated_by_user?.name));
     }
 
     if (activeFilters.date) {
@@ -585,7 +611,7 @@ const Blogs = () => {
   // --- Column Definitions ---
   const baseColumns: ColumnDef<BlogItem>[] = useMemo(
     () => [
-      { header: "Icon", accessorKey: "icon_full_path", enableSorting: false, size: 60, meta: { headerClass: "text-center", cellClass: "text-center" }, cell: (props) => { const iconPath = props.row.original.icon_full_path; return (<Avatar size={40} shape="circle" src={iconPath || undefined} icon={!iconPath ? <TbFileText /> : undefined} onClick={() => openImageViewer(iconPath)} className={iconPath ? "cursor-pointer hover:ring-2 hover:ring-indigo-500" : ""}>{!iconPath ? props.row.original.title?.charAt(0).toUpperCase() : null}</Avatar>); }, },
+      { header: "Icon", accessorKey: "icon_full_path", enableSorting: false, size: 60, meta: { headerClass: "text-center", cellClass: "text-center" }, cell: (props) => { const iconPath = props.row.original.icon_full_path; return (<Avatar size={40} shape="square" src={iconPath || undefined} icon={!iconPath ? <TbFileText /> : undefined} onClick={() => openImageViewer(iconPath)} className={iconPath ? "cursor-pointer hover:ring-2 hover:ring-indigo-500" : ""}>{!iconPath ? props.row.original.title?.charAt(0).toUpperCase() : null}</Avatar>); }, },
       { header: "Title", accessorKey: "title", enableSorting: true, size: 240, cell: (props) => <span>{props.getValue<string>()}</span>, },
       { header: "Author", accessorKey: "author", enableSorting: true, size: 150, cell: (props) => <span>{props.getValue<string>() || "N/A"}</span>, },
       { header: "Tags", accessorKey: "tags", enableSorting: true, size: 180, cell: (props) => { const tags = props.getValue<string | null>(); if (!tags) return <span>-</span>; return (<div className="flex flex-wrap gap-1 max-w-[170px]">{tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((t) => (<Tag key={t} className="bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-100 text-[11px] border-b border-emerald-300 dark:border-emerald-700">{t}</Tag>))}</div>); }, },
@@ -622,7 +648,7 @@ const Blogs = () => {
       { header: "Status", accessorKey: "status", enableSorting: true, size: 80, cell: (props) => { const status = props.row.original.status; return (<Tag className={classNames("capitalize font-semibold border-0", blogStatusColor[status] || blogStatusColor.Draft)}>{status}</Tag>); }, },
       { header: "Actions", id: "action", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 80, cell: (props) => (<ActionColumn onEdit={() => openEditDrawer(props.row.original)} onDelete={() => handleDeleteClick(props.row.original)} />), },
     ],
-    [openEditDrawer, handleDeleteClick]
+    []
   );
 
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<string[]>(() =>
@@ -734,8 +760,8 @@ const Blogs = () => {
               <Controller name="meta_descr" control={drawer.methods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ""} placeholder="SEO Description (max 160 chars)" rows={3} />)} />
             </FormItem>
             <FormItem label={`Blog Image${drawer.type === "edit" && editingBlog?.icon_full_path && iconPreview === editingBlog.icon_full_path ? " (Change?)" : ""}`} invalid={!!drawer.methods.formState.errors.icon} errorMessage={drawer.methods.formState.errors.icon?.message as string | undefined}>
-              {drawer.type === "edit" && iconPreview && editingBlog?.icon_full_path === iconPreview && (<div className="text-right"><img src={iconPreview} alt="Current Icon" className="w-auto h-auto max-w-full border p-1 rounded-md mt-2 mb-2"/></div>)}
-              {iconPreview && (drawer.methods.watch("icon") instanceof File || (drawer.type === "edit" && editingBlog?.icon_full_path !== iconPreview)) && (<img src={iconPreview} alt="Icon Preview" className="w-auto h-auto max-w-full border p-1 rounded-md mt-2 mb-2"/>)}
+              {drawer.type === "edit" && iconPreview && editingBlog?.icon_full_path === iconPreview && (<div className="text-right"><img src={iconPreview} alt="Current Icon" className="w-40 h-40 object-cover border p-1 rounded-md mt-2 mb-2"/></div>)}
+              {iconPreview && (drawer.methods.watch("icon") instanceof File || (drawer.type === "edit" && editingBlog?.icon_full_path !== iconPreview)) && (<img src={iconPreview} alt="Icon Preview" className="w-40 h-40 object-cover border p-1 rounded-md mt-2 mb-2"/>)}
               {!iconPreview && drawer.type === "edit" && editingBlog?.icon_full_path && !drawer.methods.watch("icon") && (<p className="text-xs text-gray-500 mb-1">Current icon will be removed. Upload a new one if needed.</p>)}
               <Input type="file" accept="image/*" onChange={(e) => handleIconChange(e, drawer.methods)} className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
             </FormItem>
@@ -807,6 +833,7 @@ const Blogs = () => {
       <Drawer title="Filters" isOpen={isFilterDrawerOpen} onClose={closeFilterDrawer} onRequestClose={closeFilterDrawer} width={400} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={onClearFiltersAndReload} type="button">Clear</Button><Button size="sm" variant="solid" form="filterBlogForm" type="submit">Apply</Button></div>}>
         <Form id="filterBlogForm" onSubmit={filterFormMethods.handleSubmit(onApplyFiltersSubmit)} className="flex flex-col gap-4">
           <FormItem label="Status"><Controller name="filterStatus" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select status..." options={blogStatusOptions} value={field.value || []} onChange={(selectedVal) => field.onChange(selectedVal || [])} />)} /></FormItem>
+          <FormItem label="Created By"><Controller name="filterCreatedBy" control={filterFormMethods.control} render={({ field }) => (<Select isMulti placeholder="Select author..." options={creatorOptions} value={field.value || []} onChange={(selectedVal) => field.onChange(selectedVal || [])} />)} /></FormItem>
         </Form>
       </Drawer>
       <ConfirmDialog 
