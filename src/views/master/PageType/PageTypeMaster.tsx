@@ -219,8 +219,8 @@ const MemberTypeMaster = () => {
     const { pageData, total, allFilteredAndSortedData } = useMemo(() => {
         const sourceData = MemberTypeData || [];
         let processedData: MemberTypeItem[] = cloneDeep(sourceData);
-        if (activeFilters.names?.length) { const names = new Set(activeFilters?.name.map(n => n.toLowerCase())); processedData = processedData?.filter(item => names.has(item.name.toLowerCase())); }
-        if (activeFilters.status?.length) { const statuses = new Set(activeFilters.status); processedData = processedData.filter(item => statuses.has(item.status)); }
+        if (activeFilters.names?.length) { const names = new Set(activeFilters?.names?.map(n => n.toLowerCase())); processedData = processedData?.filter(item => names.has(item.name.toLowerCase())); }
+        if (activeFilters.status?.length) { const statuses = new Set(activeFilters.status); processedData = processedData?.filter(item => statuses.has(item.status)); }
 
         if (tableData.query) {
             const query = tableData.query.toLowerCase().trim();
