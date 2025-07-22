@@ -343,7 +343,7 @@ const Continents = () => {
                         />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
-                    {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching continent(s).</div>}
+                    {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching continent.</div>}
                     <div className="flex-grow overflow-auto">
                         <DataTable
                             columns={filteredColumns}

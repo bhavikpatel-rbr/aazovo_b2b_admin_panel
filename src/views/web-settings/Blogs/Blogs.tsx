@@ -701,7 +701,7 @@ const Blogs = () => {
           <div className="mt-3">
             
             <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
-          {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching Blog(s).</div>}
+          {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching Blog.</div>}
           </div>
           <div className="flex-grow overflow-y-auto mt-4">
             <BlogsTable

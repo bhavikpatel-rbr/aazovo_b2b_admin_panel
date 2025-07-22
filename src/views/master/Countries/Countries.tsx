@@ -285,7 +285,7 @@ const Countries = () => {
             const query = tableData.query.toLowerCase().trim();
             processedData = processedData.filter(item =>
                 item.name?.toLowerCase().includes(query) ||
-                item.continent_id?.toLowerCase().includes(query) ||
+                item.region?.toLowerCase().includes(query) ||
                 item.iso_code?.toLowerCase().includes(query) ||
                 item.phone_code?.toLowerCase().includes(query) ||
                 item.status?.toLowerCase().includes(query) ||
@@ -467,7 +467,7 @@ const Countries = () => {
                         <CountryTableTools onSearchChange={handleSearchChange} onApplyFilters={handleApplyFilters} onClearFilters={onClearFiltersAndReload} onExport={handleOpenExportReasonModal} activeFilters={activeFilters} activeFilterCount={activeFilterCount} countryNameOptions={countryNameOptionsForFilter} regionOptions={regionOptions} countryIsoOptions={countryIsoOptionsForFilter} columns={columns} filteredColumns={filteredColumns} setFilteredColumns={setFilteredColumns} searchInputValue={tableData?.query} isDataReady={isDataReady} />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
-                    {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching countr(y/ies).</div>}
+                    {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching countries.</div>}
                     <div className="flex-grow overflow-auto">
                         <DataTable columns={filteredColumns} data={pageData} noData={pageData.length <= 0} loading={initialLoading || isSubmitting || isDeleting} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} onPaginationChange={handlePaginationChange} onSelectChange={handleSelectPageSizeChange} onSort={handleSort} />
                     </div>

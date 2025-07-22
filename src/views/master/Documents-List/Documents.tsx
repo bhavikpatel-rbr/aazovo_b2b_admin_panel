@@ -1054,7 +1054,7 @@ useEffect(() => {
           />
           {(activeFilterCount > 0 || tableData.query) && (
             <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
-              Found <strong>{total}</strong> matching document(s).
+              Found <strong>{total}</strong> matching document.
             </div>
           )}
           <div className="flex-grow overflow-auto">

@@ -513,7 +513,7 @@ const ExportMapping = () => {
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} />
                     {(activeFilterCount > 0 || tableData.query) && isDataReady && (
-                        <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching record(s).</div>
+                        <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching record.</div>
                     )}
                     <div className="flex-grow overflow-auto">
                         <DataTable

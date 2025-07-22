@@ -51,6 +51,7 @@ import {
     deleteMultipleTrendingImagesAction,
     getAllProductAction,
     submitExportReasonAction,
+    getPageAction,
 } from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { Link } from 'react-router-dom'
@@ -67,10 +68,6 @@ function formatCustomDateTime(dateString: string | null | undefined): string {
 }
 
 // --- Constants & Types ---
-const pageNameOptionsConst = [{ value: 'Home Page', label: 'Home Page' }, { value: 'Engineering Page', label: 'Engineering Page' }, { value: 'Plastic Page', label: 'Plastic Page' },];
-const pageNameValues = pageNameOptionsConst.map(opt => opt.value) as [string, ...string[]];
-const apiStatusOptions: { value: 'Active' | 'Inactive'; label: string }[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
-const statusColor: Record<'Active' | 'Inactive', string> = { Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700", Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700" };
 
 export type ProductOption = { value: string; label: string; id?: string | number, name?: string };
 export type TrendingPageImageItem =
@@ -83,12 +80,7 @@ export type TrendingPageImageItem =
     };
 
 // --- Zod Schemas ---
-const trendingPageImageFormSchema = z.object({
-    page_name: z.enum(pageNameValues, { errorMap: () => ({ message: 'Please select a page name.' }) }),
-    status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }),
-    trendingProducts: z.array(z.string()).min(1, 'Please select at least one product.').optional().default([]),
-});
-type TrendingPageImageFormData = z.infer<typeof trendingPageImageFormSchema>;
+
 
 const filterFormSchema = z.object({
     filterPageNames: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -204,8 +196,19 @@ const SelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: { selec
 // --- Main Component: Trending Images ---
 const TrendingImages = () => {
     const dispatch = useAppDispatch();
-    const { trendingImagesData = [], productsMasterData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
+    const { PageData: pageName = [], trendingImagesData = [], productsMasterData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
 
+    const pageNameOptionsConst =  useMemo(() => Array.from(new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(p => p.name))).map(name => ({ value: name, label: name })), [pageName?.data]);;
+    const pageNameValues = pageNameOptionsConst.map(opt => opt.value) as [string, ...string[]];
+    const apiStatusOptions: { value: 'Active' | 'Inactive'; label: string }[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
+    const statusColor: Record<'Active' | 'Inactive', string> = { Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700", Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700" };
+
+    const trendingPageImageFormSchema = z.object({
+        page_name: z.enum(pageNameValues, { errorMap: () => ({ message: 'Please select a page name.' }) }),
+        status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }),
+        trendingProducts: z.array(z.string()).min(1, 'Please select at least one product.').optional().default([]),
+    });
+    type TrendingPageImageFormData = z.infer<typeof trendingPageImageFormSchema>;
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<TrendingPageImageItem | null>(null);
@@ -222,7 +225,7 @@ const TrendingImages = () => {
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false)
     const [imageToView, setImageToView] = useState<string | null>(null)
 
-    useEffect(() => { dispatch(getTrendingImagesAction()); dispatch(getAllProductAction()); }, [dispatch]);
+    useEffect(() => { dispatch(getTrendingImagesAction()); dispatch(getAllProductAction()); dispatch(getPageAction()); }, [dispatch]);
 
     const addFormMethods = useForm<TrendingPageImageFormData>({ resolver: zodResolver(trendingPageImageFormSchema), defaultValues: { page_name: pageNameValues[0], trendingProducts: [], status: 'Active' }, mode: 'onChange' });
     const editFormMethods = useForm<TrendingPageImageFormData>({ resolver: zodResolver(trendingPageImageFormSchema), mode: 'onChange' });
@@ -231,19 +234,17 @@ const TrendingImages = () => {
 
     const productSelectOptions: ProductOption[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: ProductOption) => ({ value: String(p.id), label: `${p.name}`.trim() })) : [], [productsMasterData]);
     const productNameMap = useMemo(() => new Map(productSelectOptions.map(opt => [opt.value, opt.label])), [productSelectOptions]);
-    const dynamicPageNameOptions = useMemo(() => Array.from(new Set((Array.isArray(trendingImagesData) ? trendingImagesData : []).map(p => p.page_name))).map(name => ({ value: name, label: name })), [trendingImagesData]);
+    const dynamicPageNameOptions = useMemo(() => Array.from(new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(p => p.name))).map(name => ({ value: name, label: name })), [pageName?.data]);
     const addPageNameOptions = useMemo(() => {
-        // Get a Set of all page names that are already in use
-        const existingPageNames = new Set(
-            (Array.isArray(trendingImagesData) ? trendingImagesData : []).map(item => item.page_name)
-        );
-        // Return only the options that are NOT in the existing set
+        const existingPageNames = new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(item => item.name));
         return pageNameOptionsConst.filter(option => !existingPageNames.has(option.value));
-    }, [trendingImagesData]);
+    }, [pageName?.data]);
+
     const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
         const sourceData: TrendingPageImageItem[] = Array.isArray(trendingImagesData) ? trendingImagesData : [];
         let processedData: TrendingPageImageItem[] = cloneDeep(sourceData);
 
+        
         const initialCounts = { total: sourceData.length, active: sourceData.filter(i => i.status === 'Active').length, inactive: sourceData.filter(i => i.status === 'Inactive').length, };
 
         if (activeFilters.filterPageNames?.length) {
@@ -256,7 +257,7 @@ const TrendingImages = () => {
         }
         if (tableData.query) {
             const query = tableData.query.toLowerCase().trim();
-            processedData = processedData.filter(item => String(item.page_name).toLowerCase().includes(query) || String(item.id).toLowerCase().includes(query));
+            processedData = processedData.filter(item => String(item.page_name).toLowerCase().includes(query) || String(item.id).toLowerCase().includes(query) || String(Object.keys(item.product_names)).toLowerCase().includes(query) || String(item.status).toLowerCase().includes(query));
         }
 
         const { order, key } = tableData.sort;
@@ -322,7 +323,7 @@ const TrendingImages = () => {
                     </div>
                     <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} allColumns={baseColumns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} activeFilterCount={activeFilterCount} />
                     <div className="mt-4"><ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFilters} /></div>
-                    {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching item(s).</div>}
+                    {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching item.</div>}
                     <div className="mt-4 flex-grow overflow-y-auto">
                         <DataTable selectable columns={visibleColumns} data={pageData} noData={!tableLoading && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} checkboxChecked={(row) => selectedItems.some(s => s.id === row.id)} onPaginationChange={(p) => handleSetTableData({ pageIndex: p })} onSelectChange={(s) => handleSetTableData({ pageSize: s, pageIndex: 1 })} onSort={(s) => handleSetTableData({ sort: s })} onCheckBoxChange={(c, r) => setSelectedItems(p => c ? [...p, r] : p.filter(i => i.id !== r.id))} onIndeterminateCheckBoxChange={(c, rs) => { const rIds = new Set(rs.map(r => r.original.id)); setSelectedItems(p => c ? [...p, ...rs.map(r => r.original).filter(r => !p.some(i => i.id === r.id))] : p.filter(i => !rIds.has(i.id))) }} />
                     </div>

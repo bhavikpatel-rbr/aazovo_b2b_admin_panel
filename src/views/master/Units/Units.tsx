@@ -357,7 +357,7 @@ const Units = () => {
                         />
                     </div>
                     <ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={handleClearAllFilters} categoryOptions={categoryOptionsForSelect} />
-                    {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching unit(s).</div>}
+                    {(activeFilterCount > 0 || tableData.query) && <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching unit.</div>}
                     <div className="flex-grow overflow-auto">
                         <DataTable
                             columns={filteredColumns}
