@@ -135,8 +135,8 @@ const bugStatusColor: Record<BugReportStatusApi, string> = {
 const bugReportFormSchema = z.object({
   name: z.string().min(1, "Name is required.").max(100, "Name too long"),
   email: z.string().email("Invalid email format.").min(1, "Email is required."),
-  mobile_no: z.string().max(20, "Mobile number too long.").optional().or(z.literal("")),
-  report: z.string().min(10, "Report description must be at least 10 characters.").max(5000, "Report too long"),
+  mobile_no: z.string().min(10, "Mobile number must be at least 10 characters.").max(20, "Mobile number too long."),
+  // report: z.string().min(10, "Report description must be at least 10 characters.").max(5000, "Report too long"),
   severity: z.enum(["Low", "Medium", "High"], { required_error: "Severity is required." }),
   status: z.enum(["New", "Under Review", "Resolved", "Unresolved"], { required_error: "Status is required." }),
   attachment: z.any().optional(),
@@ -336,7 +336,7 @@ const BugReportNotificationDialog = ({ bugReport, onClose, getAllUserDataOptions
       toast.push(<Notification type="success" title="Notification Sent Successfully!" />);
       onClose();
     } catch (error: any) {
-      toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.message || "An unknown error occurred."} />);
+      toast.push(<Notification type="danger" title="Failed to Send Notification" children={error?.data?.message || "An unknown error occurred."} />);
     } finally {
       setIsLoading(false);
     }
@@ -364,7 +364,7 @@ const BugReportScheduleDialog: React.FC<{ bugReport: BugReportItem; onClose: () 
       event_type: undefined,
       date_time: null as any,
       remind_from: null,
-      notes: `Regarding bug report: "${bugReport.report.substring(0, 50)}..."`,
+      notes: `Regarding bug report: "${bugReport?.report?.substring(0, 50)}..."`,
     },
     mode: 'onChange',
   });
@@ -757,9 +757,9 @@ const BugReportListing = () => {
 
   const renderDrawerForm = (currentFormMethods: typeof formMethods) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-      <FormItem label={<div>Name<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}><Controller name="name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbUserCircle className="text-lg" />} placeholder="Your Name" />)} /></FormItem>
-      <FormItem label={<div>Email<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.email} errorMessage={currentFormMethods.formState.errors.email?.message}><Controller name="email" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="email" prefix={<TbMail className="text-lg" />} placeholder="your.email@example.com" />)} /></FormItem>
-      <FormItem label="Mobile No." className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.mobile_no} errorMessage={currentFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="tel" prefix={<TbPhone className="text-lg" />} placeholder="+XX-XXXXXXXXXX" />)} /></FormItem>
+      <FormItem label={<div>Name<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}><Controller name="name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Your Name" />)} /></FormItem>
+      <FormItem label={<div>Email<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.email} errorMessage={currentFormMethods.formState.errors.email?.message}><Controller name="email" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="email" placeholder="your.email@example.com" />)} /></FormItem>
+      <FormItem label={<div>Mobile No.<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.mobile_no} errorMessage={currentFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="tel"  placeholder="+XX-XXXXXXXXXX" />)} /></FormItem>
       <FormItem label="Severity" className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.severity} errorMessage={currentFormMethods.formState.errors.severity?.message}><Controller name="severity" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Severity" value={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }].find((opt) => opt.value === field.value)} options={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }]} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem>
       <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
         <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" value={BUG_REPORT_STATUS_OPTIONS.find((opt) => opt.value === field.value)} options={BUG_REPORT_STATUS_OPTIONS} onChange={(opt) => field.onChange(opt?.value)} />)} />

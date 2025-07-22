@@ -202,7 +202,7 @@ const NumberSystems = () => {
     }
     if (tableData.query) {
       const query = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter(item => (item.name?.toLowerCase() ?? "").includes(query));
+      processedData = processedData.filter(item => (item.name?.toLowerCase() ?? "").includes(query) || item?.country_ids?.split(',')?.map(id => countryOptions?.find(c => c.value === id)?.label?.toLowerCase() ?? "")?.some(name => name.includes(query)));
     }
 
     const { order, key } = tableData.sort;
