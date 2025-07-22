@@ -2060,7 +2060,7 @@ const PriceList = () => {
           />
           {(activeFilterCount > 0 || tableData.query) && (
             <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
-              Found <strong>{total}</strong> matching item(s).
+              Found <strong>{total}</strong> matching item.
             </div>
           )}
           <div className="flex-grow overflow-auto">

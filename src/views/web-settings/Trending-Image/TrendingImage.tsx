@@ -239,13 +239,12 @@ const TrendingImages = () => {
         const existingPageNames = new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(item => item.name));
         return pageNameOptionsConst.filter(option => !existingPageNames.has(option.value));
     }, [pageName?.data]);
-    console.log(dynamicPageNameOptions, addPageNameOptions, 'dynamicPageNameOptions');
-
 
     const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
         const sourceData: TrendingPageImageItem[] = Array.isArray(trendingImagesData) ? trendingImagesData : [];
         let processedData: TrendingPageImageItem[] = cloneDeep(sourceData);
 
+        
         const initialCounts = { total: sourceData.length, active: sourceData.filter(i => i.status === 'Active').length, inactive: sourceData.filter(i => i.status === 'Inactive').length, };
 
         if (activeFilters.filterPageNames?.length) {
@@ -258,7 +257,7 @@ const TrendingImages = () => {
         }
         if (tableData.query) {
             const query = tableData.query.toLowerCase().trim();
-            processedData = processedData.filter(item => String(item.page_name).toLowerCase().includes(query) || String(item.id).toLowerCase().includes(query));
+            processedData = processedData.filter(item => String(item.page_name).toLowerCase().includes(query) || String(item.id).toLowerCase().includes(query) || String(Object.keys(item.product_names)).toLowerCase().includes(query) || String(item.status).toLowerCase().includes(query));
         }
 
         const { order, key } = tableData.sort;
@@ -324,7 +323,7 @@ const TrendingImages = () => {
                     </div>
                     <ItemTableTools onSearchChange={(q) => handleSetTableData({ query: q, pageIndex: 1 })} onFilter={() => setIsFilterDrawerOpen(true)} onExport={handleOpenExportModal} onClearAll={onClearAllFilters} allColumns={baseColumns} visibleColumnKeys={visibleColumnKeys} setVisibleColumnKeys={setVisibleColumnKeys} activeFilterCount={activeFilterCount} />
                     <div className="mt-4"><ActiveFiltersDisplay filterData={activeFilters} onRemoveFilter={handleRemoveFilter} onClearAll={onClearAllFilters} /></div>
-                    {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching item(s).</div>}
+                    {(activeFilterCount > 0 || tableData.query) && <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">Found <strong>{total}</strong> matching item.</div>}
                     <div className="mt-4 flex-grow overflow-y-auto">
                         <DataTable selectable columns={visibleColumns} data={pageData} noData={!tableLoading && pageData.length === 0} loading={tableLoading} pagingData={{ total, pageIndex: tableData.pageIndex as number, pageSize: tableData.pageSize as number }} checkboxChecked={(row) => selectedItems.some(s => s.id === row.id)} onPaginationChange={(p) => handleSetTableData({ pageIndex: p })} onSelectChange={(s) => handleSetTableData({ pageSize: s, pageIndex: 1 })} onSort={(s) => handleSetTableData({ sort: s })} onCheckBoxChange={(c, r) => setSelectedItems(p => c ? [...p, r] : p.filter(i => i.id !== r.id))} onIndeterminateCheckBoxChange={(c, rs) => { const rIds = new Set(rs.map(r => r.original.id)); setSelectedItems(p => c ? [...p, ...rs.map(r => r.original).filter(r => !p.some(i => i.id === r.id))] : p.filter(i => !rIds.has(i.id))) }} />
                     </div>
