@@ -1722,7 +1722,7 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
         <div className="flex justify-between items-center">
           <h5 className="mb-0">Billing Documents</h5>
           <div className="flex gap-2">
-            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: null, document: null })}> Add Billing Doc </Button>
+            <Button type="button" icon={<TbPlus />} size="sm" onClick={() => append({ document_name: null, document: null })}> Add Document </Button>
             <Button type="button" icon={<TbPlus />} size="sm" onClick={() => appendEnabled({ document_name: null, document: null })}> Add Enable Billing Documents </Button>
           </div>
         </div>
