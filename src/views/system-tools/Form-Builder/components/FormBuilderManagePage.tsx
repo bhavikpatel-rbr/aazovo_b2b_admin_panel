@@ -1,22 +1,24 @@
 // src/views/your-path/FormBuilderManagePage.tsx
 
-import React, { useEffect, useState, useMemo } from "react";
-import { useForm, Controller, useFieldArray, Control } from "react-hook-form";
-import { NavLink, useNavigate, useParams, useLocation } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useEffect, useMemo, useState } from "react";
+import { Control, Controller, useFieldArray, useForm } from "react-hook-form";
+import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 
 // UI Components
-import { Form, FormItem } from "@/components/ui/Form";
-import Card from "@/components/ui/Card";
 import Container from "@/components/shared/Container";
-import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
-import Checkbox from "@/components/ui/Checkbox";
-import Button from "@/components/ui/Button";
-import Notification from "@/components/ui/Notification";
-import toast from "@/components/ui/toast";
+import StickyFooter from "@/components/shared/StickyFooter";
 import { DatePicker, Radio } from "@/components/ui";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import Checkbox from "@/components/ui/Checkbox";
+import { Form, FormItem } from "@/components/ui/Form";
+import Input from "@/components/ui/Input";
+import Notification from "@/components/ui/Notification";
+import Select from "@/components/ui/Select";
+import toast from "@/components/ui/toast";
+import { masterSelector } from "@/reduxtool/master/masterSlice";
 import { BiChevronRight } from "react-icons/bi";
 import {
   TbCirclePlus,
@@ -26,15 +28,14 @@ import {
   TbTrash,
 } from "react-icons/tb";
 import { useSelector } from "react-redux";
-import { masterSelector } from "@/reduxtool/master/masterSlice";
-import StickyFooter from "@/components/shared/StickyFooter";
 
 import {
-  editFormBuilderAction,
   addFormBuilderAction,
-  getDepartmentsAction,
+  editFormBuilderAction,
   getCategoriesAction,
+  getDepartmentsAction,
   getFormBuilderAction,
+  getParentCategoriesAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
 
@@ -120,20 +121,20 @@ const QuestionComponent: React.FC<{ sectionIndex: number; questionIndex: number;
   const { fields: optionFields, append: appendOption, remove: removeOption } = useFieldArray({ control, name: `sections.${sectionIndex}.questions.${questionIndex}.options` });
   const currentQuestionType = watch(`sections.${sectionIndex}.questions.${questionIndex}.question_type`);
   const showOptionsEditor = ["Radio", "Checkbox", "SingleChoiceDropdown", "MultiChoiceDropdown"].includes(currentQuestionType);
-  
+
   return (
-      <Card className="mt-3" bodyClass="p-2 flex flex-col gap-2 bg-gray-50 dark:bg-gray-700/50 border-gray-300 border rounded-lg">
-        <div className="flex justify-between items-start"><h6 className="text-sm font-semibold">Question {questionIndex + 1}</h6>{!isPreviewMode && (<div className="flex gap-1"><Button type="button" size="xs" icon={<TbCopy />} title="Clone Question" onClick={() => cloneQuestion(watch(`sections.${sectionIndex}.questions.${questionIndex}`))} /><Button type="button" size="xs" icon={<TbTrash />} title="Delete Question" onClick={() => removeQuestion(questionIndex)} /></div>)}</div>
-        <div className="grid md:grid-cols-3 gap-2">
+    <Card className="mt-3" bodyClass="p-2 flex flex-col gap-2 bg-gray-50 dark:bg-gray-700/50 border-gray-300 border rounded-lg">
+      <div className="flex justify-between items-start"><h6 className="text-sm font-semibold">Question {questionIndex + 1}</h6>{!isPreviewMode && (<div className="flex gap-1"><Button type="button" size="xs" icon={<TbCopy />} title="Clone Question" onClick={() => cloneQuestion(watch(`sections.${sectionIndex}.questions.${questionIndex}`))} /><Button type="button" size="xs" icon={<TbTrash />} title="Delete Question" onClick={() => removeQuestion(questionIndex)} /></div>)}</div>
+      <div className="grid md:grid-cols-3 gap-2">
         <FormItem className="mb-0" label="Question Text" invalid={!!control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_text`).error} errorMessage={control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_text`).error?.message}><Controller control={control} name={`sections.${sectionIndex}.questions.${questionIndex}.question_text`} render={({ field }) => <Input {...field} placeholder="Write Question" disabled={isPreviewMode} />} /></FormItem>
         <FormItem className="mb-0" label="Answer Type" invalid={!!control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_type`).error} errorMessage={control.getFieldState(`sections.${sectionIndex}.questions.${questionIndex}.question_type`).error?.message}><Controller control={control} name={`sections.${sectionIndex}.questions.${questionIndex}.question_type`} render={({ field }) => <Select placeholder="Select Answer Type" options={PAGE_QUESTION_TYPE_OPTIONS} value={PAGE_QUESTION_TYPE_OPTIONS.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} isDisabled={isPreviewMode} />} /></FormItem><FormItem label=" " className="flex items-center pt-5 mb-0"><Controller name={`sections.${sectionIndex}.questions.${questionIndex}.is_required`} control={control} render={({ field }) => <Checkbox checked={field.value} onChange={field.onChange} disabled={isPreviewMode}>Required</Checkbox>} /></FormItem></div>
-        {showOptionsEditor && (<Card bodyClass="p-2 bg-gray-100 dark:bg-gray-800 rounded"><h6 className="text-xs font-semibold mb-2">Options:</h6>{optionFields.map((optField, optIndex) => <QuestionOptionItem key={optField.id} nestIndex={[sectionIndex, questionIndex]} optionIndex={optIndex} control={control} removeOption={removeOption} isPreviewMode={isPreviewMode} />)}{!isPreviewMode && <Button type="button" size="sm" icon={<TbPlus />} onClick={() => appendOption({ label: "", value: "" })}>Add Option</Button>}</Card>)}
-        {isPreviewMode && currentQuestionType === "Text" && <Input type="text" placeholder="Preview: Text Input" disabled />}
-        {isPreviewMode && currentQuestionType === "Number" && <Input type="number" placeholder="Preview: Number Input" disabled />}
-        {isPreviewMode && currentQuestionType === "Textarea" && <Input textArea placeholder="Preview: Text Area" disabled />}
-        {isPreviewMode && currentQuestionType === "FileUpload" && <Input type="file" disabled />}
-        {isPreviewMode && currentQuestionType === "Date" && <DatePicker placeholder="Preview: Date Picker" disabled />}
-      </Card>
+      {showOptionsEditor && (<Card bodyClass="p-2 bg-gray-100 dark:bg-gray-800 rounded"><h6 className="text-xs font-semibold mb-2">Options:</h6>{optionFields.map((optField, optIndex) => <QuestionOptionItem key={optField.id} nestIndex={[sectionIndex, questionIndex]} optionIndex={optIndex} control={control} removeOption={removeOption} isPreviewMode={isPreviewMode} />)}{!isPreviewMode && <Button type="button" size="sm" icon={<TbPlus />} onClick={() => appendOption({ label: "", value: "" })}>Add Option</Button>}</Card>)}
+      {isPreviewMode && currentQuestionType === "Text" && <Input type="text" placeholder="Preview: Text Input" disabled />}
+      {isPreviewMode && currentQuestionType === "Number" && <Input type="number" placeholder="Preview: Number Input" disabled />}
+      {isPreviewMode && currentQuestionType === "Textarea" && <Input textArea placeholder="Preview: Text Area" disabled />}
+      {isPreviewMode && currentQuestionType === "FileUpload" && <Input type="file" disabled />}
+      {isPreviewMode && currentQuestionType === "Date" && <DatePicker placeholder="Preview: Date Picker" disabled />}
+    </Card>
   );
 };
 
@@ -166,7 +167,7 @@ const FormBuilderManagePage = () => {
   const isEditMode = !!formIdFromParams && !cloneFromId;
   const [isLoading, setIsLoading] = useState(false);
 
-  const { formsData = [], CategoriesData = [], departmentsData = { data: [] } } = useSelector(masterSelector);
+  const { formsData = [], ParentCategories: CategoriesData = [], departmentsData = { data: [] } } = useSelector(masterSelector);
 
   const departmentOptionsForSelect = useMemo(() => (departmentsData?.data || []).map((d: DepartmentListItem) => ({ value: String(d.id), label: d.name })), [departmentsData?.data]);
   const categoryOptionsForSelect = useMemo(() => (CategoriesData || []).map((c: GeneralCategoryListItem) => ({ value: String(c.id), label: c.name })), [CategoriesData]);
@@ -174,12 +175,12 @@ const FormBuilderManagePage = () => {
   const formMethods = useForm<PageFormBuilderFormData>({
     resolver: zodResolver(pageFormBuilderSchema),
     defaultValues: {
-      form_name: "", 
+      form_name: "",
       status: "Draft",
       is_external: false,
-      department_ids: [], 
+      department_ids: [],
       category_ids: [],
-      form_title: "", 
+      form_title: "",
       form_description: "",
       sections: [{ section_title: "Section 1", section_description: "", questions: [{ question_text: "", question_type: pageQuestionTypeValues[0], is_required: false, options: [] }] }],
     },
@@ -190,6 +191,7 @@ const FormBuilderManagePage = () => {
 
   useEffect(() => {
     if (!departmentsData?.data.length) dispatch(getDepartmentsAction());
+    dispatch(getParentCategoriesAction())
     if (!CategoriesData.length) dispatch(getCategoriesAction());
     const idForLoadingCheck = formIdFromParams || cloneFromId;
     if (idForLoadingCheck && !formsData.length) {
@@ -220,13 +222,13 @@ const FormBuilderManagePage = () => {
               section_description: backendSec.description || "",
               questions: Array.isArray(backendSec.questions)
                 ? backendSec.questions.map((backendQues: any) => ({
-                    question_text: backendQues.question || "",
-                    question_type: mapApiTypeToPageType(backendQues.question_type || "text"),
-                    is_required: backendQues.required || false,
-                    options: (backendQues.question_option && typeof backendQues.question_option === 'string' && backendQues.question_label && typeof backendQues.question_label === 'string')
-                               ? backendQues.question_option.split(',').map((val: string, index: number) => ({ id: String(Math.random()), label: backendQues.question_label.split(',')[index]?.trim() || val.trim(), value: val.trim() }))
-                               : [],
-                  })) : [],
+                  question_text: backendQues.question || "",
+                  question_type: mapApiTypeToPageType(backendQues.question_type || "text"),
+                  is_required: backendQues.required || false,
+                  options: (backendQues.question_option && typeof backendQues.question_option === 'string' && backendQues.question_label && typeof backendQues.question_label === 'string')
+                    ? backendQues.question_option.split(',').map((val: string, index: number) => ({ id: String(Math.random()), label: backendQues.question_label.split(',')[index]?.trim() || val.trim(), value: val.trim() }))
+                    : [],
+                })) : [],
             }));
           }
         } catch (e) {
@@ -234,9 +236,9 @@ const FormBuilderManagePage = () => {
           toast.push(<Notification title="Error" type="danger">Could not load form structure.</Notification>);
           parsedPageSections = [{ section_title: "Section 1 (Error Loading)", section_description: "", questions: [{ question_text: "", question_type: pageQuestionTypeValues[0], is_required: false, options: [] }] }];
         }
-        
+
         if (parsedPageSections.length === 0) {
-            parsedPageSections.push({ section_title: "Section 1", section_description: "", questions: [{ question_text: "", question_type: pageQuestionTypeValues[0], is_required: false, options: [] }] });
+          parsedPageSections.push({ section_title: "Section 1", section_description: "", questions: [{ question_text: "", question_type: pageQuestionTypeValues[0], is_required: false, options: [] }] });
         }
 
         const baseResetData = {
@@ -254,7 +256,7 @@ const FormBuilderManagePage = () => {
           baseResetData.form_name = `${formDataFromRedux.form_name || "Form"} (Copy)`;
           baseResetData.status = "Draft";
         }
-        
+
         reset(baseResetData);
       } else if (!isPreviewMode) {
         toast.push(<Notification title="Error" type="danger">Form not found.</Notification>);
@@ -288,7 +290,7 @@ const FormBuilderManagePage = () => {
     const finalPayload = {
       form_name: data.form_name,
       status: data.status,
-      is_external: data.is_external ? 1: 0,
+      is_external: data.is_external ? 1 : 0,
       department_ids: JSON.stringify(data.department_ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id))),
       category_ids: JSON.stringify(data.category_ids.map(id => parseInt(id, 10)).filter(id => !isNaN(id))),
       form_title: data.form_title,
@@ -326,7 +328,7 @@ const FormBuilderManagePage = () => {
     <Container className="h-full">
       <div className="flex items-center mb-3">
         <NavLink to="/system-tools/form-builder" className="flex items-center gap-1 group">
-            <h5 className="font-semibold group-hover:text-primary-600">Form Builder</h5>
+          <h5 className="font-semibold group-hover:text-primary-600">Form Builder</h5>
         </NavLink>
         <BiChevronRight size={22} />
         <h5 className="font-semibold text-gray-400">{pageTitleText}</h5>
@@ -341,31 +343,31 @@ const FormBuilderManagePage = () => {
             <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} invalid={!!errors.status} errorMessage={errors.status?.message}>
               <Controller control={control} name="status" render={({ field }) => <Select {...field} options={FORM_STATUS_OPTIONS} placeholder="Select Status" value={FORM_STATUS_OPTIONS.find(o => o.value === field.value)} onChange={opt => field.onChange(opt?.value)} isDisabled={isPreviewMode} />} />
             </FormItem>
-             <FormItem label="Form Type *" invalid={!!errors.is_external} errorMessage={errors.is_external?.message as string} className="pt-2 md:pt-0">
-                <Controller
-                  name="is_external"
-                  control={control}
-                  render={({ field }) => (
-                    <Radio.Group value={String(field.value)} onChange={(val) => field.onChange(val === 'true')} disabled={isPreviewMode}>
-                      <Radio value="false">Internal</Radio>
-                      <Radio value="true">External</Radio>
-                    </Radio.Group>
-                  )}
-                />
+            <FormItem label="Form Type *" invalid={!!errors.is_external} errorMessage={errors.is_external?.message as string} className="pt-2 md:pt-0">
+              <Controller
+                name="is_external"
+                control={control}
+                render={({ field }) => (
+                  <Radio.Group value={String(field.value)} onChange={(val) => field.onChange(val === 'true')} disabled={isPreviewMode}>
+                    <Radio value="false">Internal</Radio>
+                    <Radio value="true">External</Radio>
+                  </Radio.Group>
+                )}
+              />
             </FormItem>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2">
             <FormItem label={<div>Departments<span className="text-red-500"> *</span></div>} invalid={!!errors.department_ids} errorMessage={errors.department_ids?.message as string}>
-              <Controller control={control} name="department_ids" render={({ field }) => (<Select isMulti placeholder="Select Departments" options={departmentOptionsForSelect} value={departmentOptionsForSelect.filter(opt => field.value?.includes(opt.value))} onChange={opts => field.onChange(opts ? opts.map(o => o.value) : [])} isDisabled={isPreviewMode}/>)} />
+              <Controller control={control} name="department_ids" render={({ field }) => (<Select isMulti placeholder="Select Departments" options={departmentOptionsForSelect} value={departmentOptionsForSelect.filter(opt => field.value?.includes(opt.value))} onChange={opts => field.onChange(opts ? opts.map(o => o.value) : [])} isDisabled={isPreviewMode} />)} />
             </FormItem>
             <FormItem label={<div>Categories<span className="text-red-500"> *</span></div>} invalid={!!errors.category_ids} errorMessage={errors.category_ids?.message as string}>
-              <Controller control={control} name="category_ids" render={({ field }) => (<Select isMulti placeholder="Select Categories" options={categoryOptionsForSelect} value={categoryOptionsForSelect.filter(opt => field.value?.includes(opt.value))} onChange={opts => field.onChange(opts ? opts.map(o => o.value) : [])} isDisabled={isPreviewMode}/>)} />
+              <Controller control={control} name="category_ids" render={({ field }) => (<Select isMulti placeholder="Select Categories" options={categoryOptionsForSelect} value={categoryOptionsForSelect.filter(opt => field.value?.includes(opt.value))} onChange={opts => field.onChange(opts ? opts.map(o => o.value) : [])} isDisabled={isPreviewMode} />)} />
             </FormItem>
             <FormItem label={<div>Form Display Title<span className="text-red-500"> *</span></div>} invalid={!!errors.form_title} errorMessage={errors.form_title?.message}>
               <Controller control={control} name="form_title" render={({ field }) => <Input {...field} placeholder="Enter Form Display Title" disabled={isPreviewMode} />} />
             </FormItem>
             <FormItem className="mb-0" label="Form Display Description" invalid={!!errors.form_description} errorMessage={errors.form_description?.message}>
-              <Controller control={control} name="form_description" render={({ field }) => <Input {...field}  placeholder="Write a brief description" disabled={isPreviewMode} />} />
+              <Controller control={control} name="form_description" render={({ field }) => <Input {...field} placeholder="Write a brief description" disabled={isPreviewMode} />} />
             </FormItem>
           </div>
         </Card>
@@ -380,26 +382,26 @@ const FormBuilderManagePage = () => {
             </div>
           )}
         </div>
-        
+
         {!isPreviewMode && (
-            <StickyFooter
-                className="py-4 px-4 flex items-center justify-end mt-3"
-                stickyClass="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border rounded-lg bg-white dark:bg-gray-800 shadow-lg"
-            >
-                <div className="flex items-center gap-2">
-                    <Button size="sm" type="button" className="w-24" onClick={() => navigate("/system-tools/form-builder")}>Cancel</Button>
-                    <Button size="sm" type="submit" variant="solid" className="w-28" loading={isSubmitting || isLoading} disabled={!isValid || isSubmitting || isLoading}>
-                        {isEditMode ? "Save Form" : "Create Form"} 
-                    </Button>
-                </div>
-            </StickyFooter>
+          <StickyFooter
+            className="py-4 px-4 flex items-center justify-end mt-3"
+            stickyClass="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border rounded-lg bg-white dark:bg-gray-800 shadow-lg"
+          >
+            <div className="flex items-center gap-2">
+              <Button size="sm" type="button" className="w-24" onClick={() => navigate("/system-tools/form-builder")}>Cancel</Button>
+              <Button size="sm" type="submit" variant="solid" className="w-28" loading={isSubmitting || isLoading} disabled={!isValid || isSubmitting || isLoading}>
+                {isEditMode ? "Save Form" : "Create Form"}
+              </Button>
+            </div>
+          </StickyFooter>
         )}
       </Form>
 
       {isPreviewMode && (
-         <div className="mt-3 text-right">
-            <Button type="button" variant="solid" onClick={() => navigate("/system-tools/form-builder")}>Close Preview</Button>
-         </div>
+        <div className="mt-3 text-right">
+          <Button type="button" variant="solid" onClick={() => navigate("/system-tools/form-builder")}>Close Preview</Button>
+        </div>
       )}
     </Container>
   );
