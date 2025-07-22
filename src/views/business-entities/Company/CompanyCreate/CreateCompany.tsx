@@ -1,5 +1,3 @@
-// src/views/companies/CompanyForm.tsx (or your file name)
-
 import classNames from "classnames";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import {
@@ -1231,11 +1229,11 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
   const kycDocs = useMemo(() => [
     { label: "Aadhar Card", name: "aadhar_card_file" as const, remarkName: "aadhar_card_remark" as const, enabledName: "aadhar_card_remark_enabled" as const, required: isIndiaSelected },
     { label: "PAN Card", name: "pan_card_file" as const, remarkName: "pan_card_remark" as const, enabledName: "pan_card_remark_enabled" as const, required: isIndiaSelected },
-    { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const, required: true },
+    { label: "GST Certificate", name: "gst_certificate_file" as const, remarkName: "gst_certificate_remark" as const, enabledName: "gst_certificate_remark_enabled" as const, required: false },
     { label: "Visiting Card", name: "visiting_card_file" as const, remarkName: "visiting_card_remark" as const, enabledName: "visiting_card_remark_enabled" as const },
-    { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: true },
+    { label: "Office Photo", name: "office_photo_file" as const, remarkName: "office_photo_remark" as const, enabledName: "office_photo_remark_enabled" as const, required: false },
     { label: "Authority Letter", name: "authority_letter_file" as const, remarkName: "authority_letter_remark" as const, enabledName: "authority_letter_remark_enabled" as const },
-    { label: "Cancelled Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: true },
+    { label: "Cancelled Cheque", name: "cancel_cheque_file" as const, remarkName: "cancel_cheque_remark" as const, enabledName: "cancel_cheque_remark_enabled" as const, required: false },
     { label: "194Q Declaration", name: "ABCQ_file" as const, remarkName: "ABCQ_remark" as const, enabledName: "ABCQ_remark_enabled" as const },
     { label: "Other Document", name: "other_document_file" as const, remarkName: "other_document_remark" as const, enabledName: "other_document_remark_enabled" as const },
   ], [isIndiaSelected]);
@@ -1298,7 +1296,17 @@ const KYCDetailSection = ({ control, errors, formMethods }: FormSectionBaseProps
           return (
             <div key={doc.name}>
               <label className="flex items-center gap-2 mb-1">
-                <Controller name={doc.enabledName} control={control} render={({ field }) => (<Checkbox checked={!!field.value} onChange={field.onChange} />)} />
+                <Controller 
+                  name={doc.enabledName} 
+                  control={control} 
+                  render={({ field }) => (
+                    <Checkbox 
+                      checked={!!field.value} 
+                      onChange={field.onChange} 
+                      disabled={!fileValue} 
+                    />
+                  )} 
+                />
                 {doc.label} {doc.required && <span className="text-red-500">*</span>}
               </label>
               <FormItem invalid={!!(errors as any)[doc.name]} errorMessage={(errors as any)[doc.name]?.message as string} >
@@ -1635,8 +1643,6 @@ const SpotVerificationSection = ({ control, errors, formMethods }: FormSectionBa
 const ReferenceSection = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   const { CompanyData } = useSelector(masterSelector);
 
-  // --- OPTIMIZATION: Removed redundant API call. Data is fetched by the parent component. ---
-
   const companyOptions = useMemo(() =>
     (CompanyData?.data || []).map((c: any) => ({
       value: String(c.id),
@@ -1681,8 +1687,6 @@ const AccessibilitySection = ({ control, errors, formMethods }: FormSectionBaseP
   const { fields, append, remove } = useFieldArray({ control, name: "billing_documents" });
   const { fields: enabledFields, append: appendEnabled, remove: removeEnabled } = useFieldArray({ control, name: "enabled_billing_docs" });
   const { DocumentListData = [] } = useSelector(masterSelector);
-
-  // --- OPTIMIZATION: Removed redundant API call. Data is fetched by the parent component. ---
 
   const documentTypeOptions = useMemo(() => {
     return Array.isArray(DocumentListData) ? DocumentListData.map((d: any) => ({ value: d.id, label: d.name })) : [];
@@ -1933,8 +1937,6 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
 
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   
-  // --- OPTIMIZATION: Removed redundant API call. Data is fetched by the parent component. ---
-
   const memberOptions = useMemo(() => {
     const data = MemberData?.data || MemberData || [];
     return Array.isArray(data)
@@ -1948,7 +1950,6 @@ const MemberManagementSection = ({ control, errors, formMethods }: FormSectionBa
 
   const handleMemberAdded = useCallback(() => {
     setIsAddMemberModalOpen(false);
-    // Refetch the member list to ensure the new member is in the dropdown. This is a good pattern.
     dispatch(getMemberAction());
   }, [dispatch]);
 
@@ -2307,7 +2308,6 @@ const CompanyCreate = () => {
 
   const { CountriesData, ContinentsData, MemberData, CompanyData: AllCompaniesData, EmployeesList, DocumentListData } = useSelector(masterSelector);
 
-  // --- OPTIMIZATION START: Centralized and efficient data fetching logic ---
   const getEmptyFormValues = useCallback((): CompanyFormSchema => ({
     company_name: "", primary_contact_number: "", primary_contact_number_code: undefined,
     general_contact_number: "", general_contact_number_code: undefined,
@@ -2349,7 +2349,6 @@ const CompanyCreate = () => {
     dispatch(getDocumentListAction());
   }, [dispatch]);
 
-  // Memoize a flag to check if all lookup data is ready, preventing the next effect from running too often.
   const lookupsReady = useMemo(() => {
     return !!(
       CountriesData?.length &&
@@ -2365,7 +2364,6 @@ const CompanyCreate = () => {
   // Effect 2: Initialize the form. Runs for Add mode immediately, or for Edit mode once lookups are ready.
   useEffect(() => {
     if (isEditMode) {
-      // For edit mode, wait for an ID and for all lookups to be loaded.
       if (id && lookupsReady) {
         const fetchCompanyData = async () => {
           try {
@@ -2392,15 +2390,11 @@ const CompanyCreate = () => {
         };
         fetchCompanyData();
       }
-      // If lookups aren't ready yet, we simply wait. The pageLoading state remains true.
     } else {
-      // For add mode, we don't need to wait for lookups.
       setInitialData(getEmptyFormValues());
       setPageLoading(false);
     }
-  }, [isEditMode, lookupsReady, dispatch, navigate, getEmptyFormValues]);
-
-  // --- OPTIMIZATION END ---
+  }, [isEditMode, id, lookupsReady, dispatch, navigate, getEmptyFormValues, AllCompaniesData, CountriesData, ContinentsData, DocumentListData, EmployeesList, MemberData]);
   
   const handleFormSubmit = useCallback(async (formValues: CompanyFormSchema, formMethods: UseFormReturn<CompanyFormSchema>) => {
     setIsSubmitting(true);
