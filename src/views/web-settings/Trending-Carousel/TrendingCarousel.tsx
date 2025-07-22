@@ -93,7 +93,7 @@ const trendingCarouselFormSchema = z.object({
     imageFile: z.instanceof(File, { message: 'Image is required.' }).optional().nullable()
         .refine((file) => !file || file.size <= 5 * 1024 * 1024, `Max file size is 5MB.`)
         .refine((file) => !file || ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type), 'Only .jpg, .jpeg, .png, .webp, .gif files are accepted.'),
-    links: z.string().url({ message: 'Please enter a valid URL (e.g., https://example.com).' }).optional().nullable().or(z.literal('')),
+    links: z.string().url({ message: 'Please enter a valid URL (e.g., https://example.com).' }),
     status: z.enum(['Active', 'Inactive'], { required_error: 'Status is required.' }),
 })
 type TrendingCarouselFormData = z.infer<typeof trendingCarouselFormSchema>;
