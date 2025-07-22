@@ -151,7 +151,7 @@ const jobPostFormSchema = z.object({
     experience: z.string().min(1, 'Experience level is required.').max(50, 'Experience too long (max 50 chars).'),
     vacancies: z.string().min(1, 'Vacancies information is required.').max(50, 'Vacancies information too long (max 50 chars).'),
     status: z.enum(jobPostStatusFormValues, { errorMap: () => ({ message: 'Please select a status.' }) }),
-    job_plateforms: z.array(jobPlatformSchema).min(1, 'At least one job platform is required.'),
+    job_plateforms: z.array(jobPlatformSchema).optional(),
 })
 type JobPostFormData = z.infer<typeof jobPostFormSchema>
 const filterFormSchema = z.object({ filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterDepartment: z.array(z.object({ value: z.string(), label: z.string() })).optional() })
@@ -561,7 +561,7 @@ console.log("departmentsData",departmentsData?.data);
                 <FormItem label="Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.description} errorMessage={currentFormMethods.formState.errors.description?.message}><Controller name="description" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ''} placeholder="Detailed job description..." rows={3} />)} /></FormItem>
             </div>
             <div className="md:col-span-2 mt-4">
-                <div className="flex justify-between items-center mb-2"><h6 className="text-gray-700 dark:text-gray-200">Job Platforms<span className="text-red-500"> *</span></h6><Button type="button" size="sm" variant="outline" onClick={() => append({ portal: '', link: '', application_count: 0, id: null })}>Add Platform</Button></div>
+                <div className="flex justify-between items-center mb-2"><h6 className="text-gray-700 dark:text-gray-200">Job Platforms</h6><Button type="button" size="sm" variant="outline" onClick={() => append({ portal: '', link: '', application_count: 0, id: null })}>Add Platform</Button></div>
                 {currentFormMethods.formState.errors.job_plateforms && !currentFormMethods.formState.errors.job_plateforms.root && !Array.isArray(currentFormMethods.formState.errors.job_plateforms) && (<div className="text-red-500 text-xs mb-2">{currentFormMethods.formState.errors.job_plateforms.message}</div>)}
                 {fields.map((field, index) => (
                     <div key={field.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-x-3 gap-y-2 border p-3 rounded-md mb-3 items-end border-gray-200">
