@@ -90,8 +90,7 @@ export type FormItem = {
   customer_code: string;
   interested_in: string | null;
   number: string;
-  customer_code: string;
-  email: string;
+    email: string;
   company_temp: string | null;
   company_actual: string | null;
   company_code: string | null;
@@ -194,7 +193,6 @@ const transformApiData = (apiResponse: any): { status: boolean; message: string;
         customer_code: apiItem.customer_code,
         interested_in: apiItem.interested_for,
         number: apiItem.mobile_no,
-        customer_code: apiItem.phonecode,
         email: apiItem.email,
         company_temp: apiItem.company_name_tmp,
         company_actual: apiItem.company_name,
@@ -851,7 +849,6 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
           </div>
           <div className="text-xs text-gray-500 pl-10">
             <div>{row.original.email}</div>
-            <div>{row.original.customer_code} {row.original.number}</div>
             <div>{row.original.country?.name}</div>
           </div>
         </div>
