@@ -841,18 +841,35 @@ const CompanyDetailsSection = ({
   } = useSelector(masterSelector);
   const { watch } = formMethods;
 
-  const countryOptions = useMemo(() => CountriesData.map((value: any) => ({
-    value: String(value.id),
-    label: value.name,
-  })), [CountriesData]);
+  const countryOptions = useMemo(() => {
+    // 1. Create a map to store unique countries by ID.
+    const uniqueCountriesMap = new Map();
+    (CountriesData || []).forEach((country: any) => {
+        uniqueCountriesMap.set(country.id, country);
+    });
+    // 2. Convert map values back to an array and then map to options.
+    return Array.from(uniqueCountriesMap.values()).map((value: any) => ({
+        value: String(value.id),
+        label: value.name,
+    }));
+  }, [CountriesData]);
 
-  const countryCodeOptions = useMemo(() => CountriesData
-    .filter((c: any) => c.phone_code)
-    .map((c: any) => ({
-      value: `${c.phone_code}`,
-      label: `${c.phone_code}`,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label)), [CountriesData]);
+  const countryCodeOptions = useMemo(() => {
+      // 1. Create a Set to store unique phone codes.
+      const uniqueCodes = new Set<string>();
+      (CountriesData || []).forEach((c: any) => {
+          if (c.phone_code) {
+              uniqueCodes.add(`+${c.phone_code}`);
+          }
+      });
+      // 2. Convert set to an array, sort, and map to options.
+      return Array.from(uniqueCodes)
+          .sort((a, b) => a.localeCompare(b))
+          .map(code => ({
+              value: code,
+              label: code,
+          }));
+  }, [CountriesData]);
 
   const continentOptions = useMemo(() => ContinentsData.map((value: any) => ({
     value: String(value.id),
@@ -1849,14 +1866,31 @@ const MemberAddForm = ({ onSuccess, onCancel }: { onSuccess: () => void; onCance
     dispatch(getParentCategoriesAction());
   }, [dispatch]);
 
-  const countryOptions = useMemo(() =>
-    CountriesData?.map((country: any) => ({ value: String(country.id), label: country.name }))
-    , [CountriesData]);
+  const countryOptions = useMemo(() => {
+    const uniqueCountriesMap = new Map();
+    (CountriesData || []).forEach((country: any) => {
+        uniqueCountriesMap.set(country.id, country);
+    });
+    return Array.from(uniqueCountriesMap.values()).map((country: any) => ({ 
+        value: String(country.id), 
+        label: country.name 
+    }));
+  }, [CountriesData]);
 
-  const countryCodeOptions = useMemo(() =>
-    [...new Set(CountriesData?.map((c: any) => `+${c.phone_code}`))]
-      .filter(Boolean).sort((a, b) => a.localeCompare(b)).map(code => ({ value: code, label: code }))
-    , [CountriesData]);
+  const countryCodeOptions = useMemo(() => {
+    const uniqueCodes = new Set<string>();
+    (CountriesData || []).forEach((c: any) => {
+        if (c.phone_code) {
+            uniqueCodes.add(`+${c.phone_code}`);
+        }
+    });
+    return Array.from(uniqueCodes)
+        .sort((a, b) => a.localeCompare(b))
+        .map(code => ({ 
+            value: code, 
+            label: code 
+        }));
+  }, [CountriesData]);
 
   const categoryOptions = useMemo(() =>
     ParentCategories.map((c: any) => ({ value: String(c.id), label: c.name }))
