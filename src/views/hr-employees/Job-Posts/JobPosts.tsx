@@ -85,6 +85,7 @@ import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { BsThreeDotsVertical } from 'react-icons/bs'
 import classNames from 'classnames'
 import { formatCustomDateTime } from '@/utils/formatCustomDateTime'
+import { RichTextEditor } from '@/components/shared'
 
 // --- Define Types ---
 export type SelectOption = { value: any; label: string };
@@ -142,16 +143,16 @@ const taskSchema = z.object({
 });
 type TaskFormData = z.infer<typeof taskSchema>;
 
-const jobPlatformSchema = z.object({ id: z.union([z.string(), z.number(), z.null()]).optional(), portal: z.string().min(1, 'Portal selection is required.'), link: z.string().url('Must be a valid URL (e.g., https://...).'), application_count: z.coerce.number({ invalid_type_error: 'Count must be a number.' }).int('Count must be a whole number.').min(0, 'Count must be non-negative.') })
+const jobPlatformSchema = z.object({ id: z.union([z.string(), z.number(), z.null()]).optional().nullable(), portal: z.string().optional().nullable(), link: z.string().url('Must be a valid URL (e.g., https://...).'), application_count: z.coerce.number({ invalid_type_error: 'Count must be a number.' }).int('Count must be a whole number.').min(0, 'Count must be non-negative.') })
 const jobPostFormSchema = z.object({
     job_title: z.string().min(1, 'Job Title is required.').max(150, 'Title too long (max 150 chars).'),
     job_department_id: z.string().min(1, 'Please select a department.'),
-    description: z.string().min(1, 'Description is required.').max(10000, 'Description too long (max 10000 chars).').optional().or(z.literal('')),
-    location: z.string().min(1, 'Location is required.').max(100, 'Location too long (max 100 chars).'),
-    experience: z.string().min(1, 'Experience level is required.').max(50, 'Experience too long (max 50 chars).'),
-    vacancies: z.string().min(1, 'Vacancies information is required.').max(50, 'Vacancies information too long (max 50 chars).'),
+    description: z.string().optional().or(z.literal('')),
+    location: z.string().optional().nullable(),
+    experience: z.string().optional().nullable(),
+    vacancies: z.string().optional().nullable(),
     status: z.enum(jobPostStatusFormValues, { errorMap: () => ({ message: 'Please select a status.' }) }),
-    job_plateforms: z.array(jobPlatformSchema).optional(),
+    job_plateforms: z.any().optional().nullable(),
 })
 type JobPostFormData = z.infer<typeof jobPostFormSchema>
 const filterFormSchema = z.object({ filterStatus: z.array(z.object({ value: z.string(), label: z.string() })).optional(), filterDepartment: z.array(z.object({ value: z.string(), label: z.string() })).optional() })
@@ -171,8 +172,8 @@ function exportJobPostsToCsv(filename: string, rows: JobPostItem[], departmentOp
 export type ModalType = 'email' | 'whatsapp' | 'notification' | 'task' | 'schedule' | 'share'
 export interface ModalState { isOpen: boolean; type: ModalType | null; data: JobPostItem | null }
 interface JobPostModalsProps { modalState: ModalState; onClose: () => void; userOptions: SelectOption[] }
-const taskPriorityOptions: SelectOption[] = [ { value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' } ];
-const eventTypeOptions: SelectOption[] = [ { value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Task', label: 'Task' }, { value: 'Reminder', label: 'Reminder' } ];
+const taskPriorityOptions: SelectOption[] = [{ value: 'Low', label: 'Low' }, { value: 'Medium', label: 'Medium' }, { value: 'High', label: 'High' }];
+const eventTypeOptions: SelectOption[] = [{ value: 'Meeting', label: 'Meeting' }, { value: 'Demo', label: 'Product Demo' }, { value: 'IntroCall', label: 'Introductory Call' }, { value: 'FollowUpCall', label: 'Follow-up Call' }, { value: 'Task', label: 'Task' }, { value: 'Reminder', label: 'Reminder' }];
 
 // --- Individual Dialog Components ---
 const SendEmailDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => {
@@ -183,7 +184,7 @@ const SendEmailDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> =
         toast.push(<Notification type="success" title="Opening Email Client" />);
         onClose();
     };
-    return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Send Email about "{jobPost.job_title}"</h5><p>This will open your default email client with a pre-filled template. Are you sure you want to proceed?</p><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={onSendEmail}>Proceed</Button></div></Dialog>) 
+    return (<Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}><h5 className="mb-4">Send Email about "{jobPost.job_title}"</h5><p>This will open your default email client with a pre-filled template. Are you sure you want to proceed?</p><div className="text-right mt-6"><Button type="button" className="mr-2" onClick={onClose}>Cancel</Button><Button variant="solid" onClick={onSendEmail}>Proceed</Button></div></Dialog>)
 }
 
 const SendWhatsAppDialog: React.FC<{ jobPost: JobPostItem; onClose: () => void }> = ({ jobPost, onClose }) => {
@@ -390,8 +391,8 @@ const JobPostsListing = () => {
     const navigate = useNavigate();
     const { jobPostsData = { data: [], counts: {} }, departmentsData = { data: [] }, getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
     const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData.data.map((dept: JobDepartmentListItem) => ({ value: String(dept.id), label: dept.name })) : [], [departmentsData?.data]);
-    const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: `(${user.employee_id}) - ${user.name || 'N/A'}`})) : [], [getAllUserData]);
-console.log("departmentsData",departmentsData?.data);
+    const userOptions: SelectOption[] = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(user => ({ value: String(user.id), label: `(${user.employee_id}) - ${user.name || 'N/A'}` })) : [], [getAllUserData]);
+    console.log("departmentsData", departmentsData?.data);
 
     const [initialLoading, setInitialLoading] = useState(true);
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -418,11 +419,11 @@ console.log("departmentsData",departmentsData?.data);
             setImageViewerSrc(src);
         }
     };
-    
+
     const [filterCriteria, setFilterCriteria] = useState<FilterFormData>({ filterStatus: [], filterDepartment: [] });
     const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: 'desc', key: 'created_at' }, query: '' });
     const [selectedItems, setSelectedItems] = useState<JobPostItem[]>([]);
-    
+
     useEffect(() => {
         const fetchData = async () => {
             setInitialLoading(true);
@@ -441,7 +442,7 @@ console.log("departmentsData",departmentsData?.data);
         };
         fetchData();
     }, [dispatch]);
-    
+
     const defaultFormValues: JobPostFormData = useMemo(() => ({ job_title: '', job_department_id: departmentOptions[0]?.value || '', description: '', location: '', experience: '', vacancies: '1', status: 'Active', job_plateforms: [{ portal: '', link: '', application_count: 0, id: null }] }), [departmentOptions]);
     const formMethods = useForm<JobPostFormData>({ resolver: zodResolver(jobPostFormSchema), defaultValues: defaultFormValues, mode: 'onChange' });
     useEffect(() => { if ((isAddDrawerOpen || isEditDrawerOpen) && departmentOptions.length > 0 && !formMethods.getValues('job_department_id')) { formMethods.setValue('job_department_id', defaultFormValues.job_department_id, { shouldValidate: true }) } }, [departmentOptions, isAddDrawerOpen, isEditDrawerOpen, formMethods, defaultFormValues.job_department_id]);
@@ -508,28 +509,28 @@ console.log("departmentsData",departmentsData?.data);
     const handleSearchChange = useCallback((query: string) => handleSetTableData({ query: query, pageIndex: 1 }), [handleSetTableData]);
     const handleRowSelect = useCallback((checked: boolean, row: JobPostItem) => { setSelectedItems((prev) => checked ? prev.some((item) => item.id === row.id) ? prev : [...prev, row] : prev.filter((item) => item.id !== row.id)) }, []);
     const handleAllRowSelect = useCallback((checked: boolean, currentRows: Row<JobPostItem>[]) => { const cPOR = currentRows.map((r) => r.original); if (checked) setSelectedItems((pS) => { const pSIds = new Set(pS.map((i) => i.id)); const nRTA = cPOR.filter((r) => !pSIds.has(r.id)); return [...pS, ...nRTA] }); else { const cPRIds = new Set(cPOR.map((r) => r.id)); setSelectedItems((pS) => pS.filter((i) => !cPRIds.has(i.id))) } }, []);
-    
+
     const columns: ColumnDef<JobPostItem>[] = useMemo(() => [
         { header: 'Job Title', accessorKey: 'job_title', size: 150, enableSorting: true, cell: (props) => { const value = props.getValue<string>() || ''; const maxLength = 20; const isTrimmed = value.length > maxLength; const displayValue = isTrimmed ? `${value.slice(0, maxLength)}...` : value; return (<Tooltip title={isTrimmed ? value : ''}><span className="font-semibold cursor-help">{displayValue}</span></Tooltip>) } },
         { header: 'Department', accessorKey: 'job_department_id', size: 160, enableSorting: true, cell: (props) => { return props?.row?.original?.job_department?.name || "" } },
         { header: 'Location', accessorKey: 'location', size: 130, enableSorting: true },
         { header: 'Vacancies', accessorKey: 'vacancies', size: 90, enableSorting: true, meta: { cellClass: 'text-center', headerClass: 'text-center' } },
         { header: 'Status', accessorKey: 'status', size: 100, enableSorting: true, cell: (props) => { const statusVal = props.getValue<JobPostStatusApi>(); return (<Tag className={classNames('capitalize whitespace-nowrap text-center', jobStatusColor[statusVal] || 'bg-gray-100 text-gray-600')}>{statusVal}</Tag>) } },
-        { 
-            header: 'Updated Info', 
-            accessorKey: 'updated_at', 
-            enableSorting: true, 
-            size: 200, 
-            cell: (props) => { 
-                const { updated_at, updated_by_user } = props.row.original; 
+        {
+            header: 'Updated Info',
+            accessorKey: 'updated_at',
+            enableSorting: true,
+            size: 200,
+            cell: (props) => {
+                const { updated_at, updated_by_user } = props.row.original;
                 const formattedDate = updated_at ? formatCustomDateTime(updated_at) : 'N/A';
                 return (
                     <div className="flex items-center gap-2">
-                        <Avatar 
-                            src={updated_by_user?.profile_pic_path} 
-                            shape="circle" 
-                            size="sm" 
-                            icon={<TbUserCircle />} 
+                        <Avatar
+                            src={updated_by_user?.profile_pic_path}
+                            shape="circle"
+                            size="sm"
+                            icon={<TbUserCircle />}
                             className="cursor-pointer hover:ring-2 hover:ring-indigo-500"
                             onClick={() => openImageViewer(updated_by_user?.profile_pic_path)}
                         />
@@ -539,8 +540,8 @@ console.log("departmentsData",departmentsData?.data);
                             <div className="text-xs text-gray-500">{formattedDate}</div>
                         </div>
                     </div>
-                ); 
-            } 
+                );
+            }
         },
         { header: 'Actions', id: 'actions', meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => (<ActionColumn item={props.row.original} onEdit={openEditDrawer} onOpenModal={handleOpenModal} />) },
     ], [departmentOptions, openEditDrawer, handleOpenModal]);
@@ -558,7 +559,8 @@ console.log("departmentsData",departmentsData?.data);
                 <FormItem label="Location" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.location} errorMessage={currentFormMethods.formState.errors.location?.message}><Controller name="location" control={currentFormMethods.control} render={({ field }) => (<Input {...field} prefix={<TbMapPin />} placeholder="e.g., Remote, New York" />)} /></FormItem>
                 <FormItem label="Experience Required" invalid={!!currentFormMethods.formState.errors.experience} errorMessage={currentFormMethods.formState.errors.experience?.message}><Controller name="experience" control={currentFormMethods.control} render={({ field }) => (<Input {...field} placeholder="e.g., 2+ Years, Entry Level" />)} /></FormItem>
                 <FormItem label="Total Vacancies" invalid={!!currentFormMethods.formState.errors.vacancies} errorMessage={currentFormMethods.formState.errors.vacancies?.message}><Controller name="vacancies" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="text" prefix={<TbUsers />} placeholder="e.g., 5 or 'Multiple'" />)} /></FormItem>
-                <FormItem label="Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.description} errorMessage={currentFormMethods.formState.errors.description?.message}><Controller name="description" control={currentFormMethods.control} render={({ field }) => (<Input textArea {...field} value={field.value ?? ''} placeholder="Detailed job description..." rows={3} />)} /></FormItem>
+                <FormItem label="Description" className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.description} errorMessage={currentFormMethods.formState.errors.description?.message}>
+                    <Controller name="description" control={currentFormMethods.control} render={({ field }) => (<RichTextEditor {...field} content={field.value} onChange={(val) => field.onChange(val.html)} placeholder="Detailed job description..." />)} /></FormItem>
             </div>
             <div className="md:col-span-2 mt-4">
                 <div className="flex justify-between items-center mb-2"><h6 className="text-gray-700 dark:text-gray-200">Job Platforms</h6><Button type="button" size="sm" variant="outline" onClick={() => append({ portal: '', link: '', application_count: 0, id: null })}>Add Platform</Button></div>
