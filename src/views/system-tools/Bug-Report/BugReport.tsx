@@ -90,8 +90,12 @@ import {
   getBugReportsAction,
   submitExportReasonAction,
   addTaskAction,
+  addAllActionAction,
 } from "@/reduxtool/master/middleware";
 import { useAppDispatch } from "@/reduxtool/store";
+import { authSelector } from "@/reduxtool/auth/authSlice";
+import { encryptStorage } from "@/utils/secureLocalStorage";
+import { config } from "localforage";
 
 // --- Define Types & Constants ---
 export type BugReportStatusApi = "New" | "Under Review" | "Resolved" | "Unresolved" | "Read" | "Unread" | string;
@@ -167,10 +171,17 @@ const taskValidationSchema = z.object({
 });
 type TaskFormData = z.infer<typeof taskValidationSchema>;
 
+// --- MODIFICATION: ADDED SCHEMA FOR ACTIVITY FORM ---
+const activitySchema = z.object({
+  item: z.string().min(3, "Activity item is required and must be at least 3 characters."),
+  notes: z.string().optional(),
+});
+type ActivityFormData = z.infer<typeof activitySchema>;
+
 const taskPriorityOptions: SelectOption[] = [
-    { value: 'Low', label: 'Low' },
-    { value: 'Medium', label: 'Medium' },
-    { value: 'High', label: 'High' },
+  { value: 'Low', label: 'Low' },
+  { value: 'Medium', label: 'Medium' },
+  { value: 'High', label: 'High' },
 ];
 
 const eventTypeOptions: SelectOption[] = [
@@ -218,22 +229,24 @@ const itemPath = (filename: any) => {
   return filename ? `${baseUrl}/storage/attachments/bug_reports/${filename}` : "#";
 };
 
-const ActionColumn = ({ 
-    onEdit, 
-    onViewDetail, 
-    onAddNotification, 
-    onAddSchedule,
-    onSendEmail,
-    onSendWhatsapp,
-    onAssignToTask
-}: { 
-    onEdit: () => void; 
-    onViewDetail: () => void; 
-    onAddNotification: () => void; 
-    onAddSchedule: () => void;
-    onSendEmail: () => void;
-    onSendWhatsapp: () => void;
-    onAssignToTask: () => void;
+const ActionColumn = ({
+  onEdit,
+  onViewDetail,
+  onAddNotification,
+  onAddSchedule,
+  onSendEmail,
+  onSendWhatsapp,
+  onAssignToTask,
+  onAddActivity,
+}: {
+  onEdit: () => void;
+  onViewDetail: () => void;
+  onAddNotification: () => void;
+  onAddSchedule: () => void;
+  onSendEmail: () => void;
+  onSendWhatsapp: () => void;
+  onAssignToTask: () => void;
+  onAddActivity: () => void;
 }) => (
   <div className="flex items-center justify-center text-center">
     <Tooltip title="View Details"><button className={`text-xl cursor-pointer select-none text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700`} role="button" onClick={onViewDetail}><TbEye /></button></Tooltip>
@@ -244,7 +257,11 @@ const ActionColumn = ({
       <Dropdown.Item className="flex items-center gap-2" onClick={onAssignToTask}><TbUser size={18} /> <span className="text-xs">Assign Task</span></Dropdown.Item>
       <Dropdown.Item className="flex items-center gap-2" onClick={onAddSchedule}><TbCalendarClock size={18} /> <span className="text-xs">Add Schedule</span></Dropdown.Item>
       <Dropdown.Item className="flex items-center gap-2" onClick={onAddNotification}><TbBell size={18} /> <span className="text-xs">Add Notification</span></Dropdown.Item>
-      <Dropdown.Item className="flex items-center gap-2"><TbTagStarred size={18} /><span className="text-xs">Add Active</span>{" "}</Dropdown.Item>
+      {/* --- MODIFICATION: ADDED MENU ITEM --- */}
+      <Dropdown.Item className="flex items-center gap-2" onClick={onAddActivity}>
+        <TbTagStarred size={18} />
+        <span className="text-xs">Add Activity</span>
+      </Dropdown.Item>
     </Dropdown>
   </div>
 );
@@ -403,83 +420,135 @@ const BugReportScheduleDialog: React.FC<{ bugReport: BugReportItem; onClose: () 
   );
 };
 
-const AssignTaskDialog = ({ 
-    isOpen, 
-    onClose, 
-    bugReport, 
-    onSubmit, 
-    employeeOptions,
-    isLoading,
-}: { 
-    isOpen: boolean; 
-    onClose: () => void; 
-    bugReport: BugReportItem | null;
-    onSubmit: (data: TaskFormData) => void;
-    employeeOptions: SelectOption[];
-    isLoading: boolean;
+const AssignTaskDialog = ({
+  isOpen,
+  onClose,
+  bugReport,
+  onSubmit,
+  employeeOptions,
+  isLoading,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  bugReport: BugReportItem | null;
+  onSubmit: (data: TaskFormData) => void;
+  employeeOptions: SelectOption[];
+  isLoading: boolean;
 }) => {
-    const { control, handleSubmit, reset, formState: { errors, isValid } } = useForm<TaskFormData>({
-        resolver: zodResolver(taskValidationSchema),
-        mode: 'onChange',
-    });
+  const { control, handleSubmit, reset, formState: { errors, isValid } } = useForm<TaskFormData>({
+    resolver: zodResolver(taskValidationSchema),
+    mode: 'onChange',
+  });
 
-    useEffect(() => {
-        if (bugReport) {
-            reset({
-                task_title: `Resolve Bug Report from ${bugReport.name} (ID: ${bugReport.id})`,
-                assign_to: [],
-                priority: 'Medium',
-                due_date: null,
-                description: bugReport.report,
-            });
-        }
-    }, [bugReport, reset]);
+  useEffect(() => {
+    if (bugReport) {
+      reset({
+        task_title: `Resolve Bug Report from ${bugReport.name} (ID: ${bugReport.id})`,
+        assign_to: [],
+        priority: 'Medium',
+        due_date: null,
+        description: bugReport.report,
+      });
+    }
+  }, [bugReport, reset]);
 
-    const handleDialogClose = () => {
-        reset();
-        onClose();
-    };
+  const handleDialogClose = () => {
+    reset();
+    onClose();
+  };
 
-    if (!bugReport) return null;
+  if (!bugReport) return null;
 
-    return (
-        <Dialog isOpen={isOpen} onClose={handleDialogClose} onRequestClose={handleDialogClose}>
-            <h5 className="mb-4">Assign Task for Bug Report</h5>
-            <Form onSubmit={handleSubmit(onSubmit)}>
-                <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
-                    <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
-                </FormItem>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
-                        <Controller name="assign_to" control={control} render={({ field }) => (
-                            <Select isMulti placeholder="Select User(s)" options={employeeOptions} value={employeeOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />
-                        )} />
-                    </FormItem>
-                    <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
-                        <Controller name="priority" control={control} render={({ field }) => (
-                            <Select placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />
-                        )} />
-                    </FormItem>
-                </div>
-                <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
-                    <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} />
-                </FormItem>
-                <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
-                    <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
-                </FormItem>
-                <div className="text-right mt-6">
-                    <Button type="button" className="mr-2" onClick={handleDialogClose} disabled={isLoading}>Cancel</Button>
-                    <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
-                </div>
-            </Form>
-        </Dialog>
-    );
+  return (
+    <Dialog isOpen={isOpen} onClose={handleDialogClose} onRequestClose={handleDialogClose}>
+      <h5 className="mb-4">Assign Task for Bug Report</h5>
+      <Form onSubmit={handleSubmit(onSubmit)}>
+        <FormItem label="Task Title" invalid={!!errors.task_title} errorMessage={errors.task_title?.message}>
+          <Controller name="task_title" control={control} render={({ field }) => <Input {...field} autoFocus />} />
+        </FormItem>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormItem label="Assign To" invalid={!!errors.assign_to} errorMessage={errors.assign_to?.message}>
+            <Controller name="assign_to" control={control} render={({ field }) => (
+              <Select isMulti placeholder="Select User(s)" options={employeeOptions} value={employeeOptions.filter(o => field.value?.includes(o.value))} onChange={(opts) => field.onChange(opts?.map(o => o.value) || [])} />
+            )} />
+          </FormItem>
+          <FormItem label="Priority" invalid={!!errors.priority} errorMessage={errors.priority?.message}>
+            <Controller name="priority" control={control} render={({ field }) => (
+              <Select placeholder="Select Priority" options={taskPriorityOptions} value={taskPriorityOptions.find(p => p.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />
+            )} />
+          </FormItem>
+        </div>
+        <FormItem label="Due Date (Optional)" invalid={!!errors.due_date} errorMessage={errors.due_date?.message}>
+          <Controller name="due_date" control={control} render={({ field }) => <DatePicker placeholder="Select date" value={field.value} onChange={field.onChange} />} />
+        </FormItem>
+        <FormItem label="Description" invalid={!!errors.description} errorMessage={errors.description?.message}>
+          <Controller name="description" control={control} render={({ field }) => <Input textArea {...field} rows={4} />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={handleDialogClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Assign Task</Button>
+        </div>
+      </Form>
+    </Dialog>
+  );
 };
 
+// --- MODIFICATION: ADDED NEW DIALOG COMPONENT ---
+const AddActivityDialog: React.FC<{
+  bugReport: BugReportItem;
+  onClose: () => void;
+  onSubmit: (data: ActivityFormData) => void;
+  isLoading: boolean;
+}> = ({ bugReport, onClose, onSubmit, isLoading }) => {
+  const { control, handleSubmit, formState: { errors, isValid } } = useForm<ActivityFormData>({
+    resolver: zodResolver(activitySchema),
+    defaultValues: { item: `Checked bug report from ${bugReport.name}`, notes: "" },
+    mode: "onChange",
+  });
+
+  return (
+    <Dialog isOpen={true} onClose={onClose} onRequestClose={onClose}>
+      <h5 className="mb-4">Add Activity for Bug Report</h5>
+      <Form onSubmit={handleSubmit(onSubmit)}>
+        <FormItem
+          label="Activity"
+          invalid={!!errors.item}
+          errorMessage={errors.item?.message}
+        >
+          <Controller name="item" control={control} render={({ field }) => <Input {...field} placeholder="e.g., Followed up with developer" />} />
+        </FormItem>
+        <FormItem
+          label="Notes (Optional)"
+          invalid={!!errors.notes}
+          errorMessage={errors.notes?.message}
+        >
+          <Controller name="notes" control={control} render={({ field }) => <Input textArea {...field} placeholder="Add relevant details..." />} />
+        </FormItem>
+        <div className="text-right mt-6">
+          <Button type="button" className="mr-2" onClick={onClose} disabled={isLoading}>Cancel</Button>
+          <Button variant="solid" type="submit" loading={isLoading} disabled={!isValid || isLoading}>Save Activity</Button>
+        </div>
+      </Form>
+    </Dialog>
+  );
+};
 
 // --- Main Component: BugReportListing ---
 const BugReportListing = () => {
   const dispatch = useAppDispatch();
+  const { useEncryptApplicationStorage } = config;
+  const [user, setuserData] = useState<any>(null);
+  useEffect(() => {
+    const getUserData = () => {
+      try {
+        return encryptStorage.getItem("UserData", !useEncryptApplicationStorage);
+      } catch (error) {
+        console.error("Error getting UserData:", error);
+        return null;
+      }
+    };
+    setuserData(getUserData());
+  }, []);
   const { bugReportsData: rawBugReportsData = { data: [], counts: {} }, status: masterLoadingStatus = "idle", getAllUserData = [] } = useSelector(masterSelector, shallowEqual);
 
   const getAllUserDataOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map(b => ({ value: String(b.id), label: `(${b.employee_id}) - ${b.name || 'N/A'}` })) : [], [getAllUserData]);
@@ -509,20 +578,25 @@ const BugReportListing = () => {
   const [filteredColumns, setFilteredColumns] = useState<ColumnDef<BugReportItem>[]>([]);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [taskTargetItem, setTaskTargetItem] = useState<BugReportItem | null>(null);
+
+  // --- MODIFICATION: ADDED STATE FOR ACTIVITY MODAL ---
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [activityTargetItem, setActivityTargetItem] = useState<BugReportItem | null>(null);
+
   const isDataReady = !initialLoading;
 
   const refreshData = useCallback(async () => {
     setInitialLoading(true);
     try {
-        await Promise.all([
-            dispatch(getAllUsersAction()),
-            dispatch(getBugReportsAction())
-        ]);
+      await Promise.all([
+        dispatch(getAllUsersAction()),
+        dispatch(getBugReportsAction())
+      ]);
     } catch (error) {
-        console.error("Failed to refresh data:", error);
-        toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload bug reports.</Notification>);
+      console.error("Failed to refresh data:", error);
+      toast.push(<Notification title="Data Refresh Failed" type="danger">Could not reload bug reports.</Notification>);
     } finally {
-        setInitialLoading(false);
+      setInitialLoading(false);
     }
   }, [dispatch]);
 
@@ -560,43 +634,81 @@ const BugReportListing = () => {
     setIsTaskModalOpen(false);
   }, []);
 
+  // --- MODIFICATION: ADDED HANDLERS FOR ACTIVITY MODAL ---
+  const openActivityModal = useCallback((item: BugReportItem) => {
+    setActivityTargetItem(item);
+    setIsActivityModalOpen(true);
+  }, []);
+  const closeActivityModal = useCallback(() => {
+    setActivityTargetItem(null);
+    setIsActivityModalOpen(false);
+  }, []);
+
   const handleSendEmail = useCallback((item: BugReportItem) => {
-      const subject = `Regarding Bug Report ID: ${item.id}`;
-      const body = `Hello,\n\nThis email is regarding the following bug report:\n\n- ID: ${item.id}\n- Reported By: ${item.name} (${item.email})\n- Reported On: ${dayjs(item.created_at).format("DD MMM YYYY, h:mm A")}\n- Severity: ${item.severity}\n- Status: ${item.status}\n\nReport Details:\n${item.report}\n\nRegards,\nThe Support Team`;
-      window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    const subject = `Regarding Bug Report ID: ${item.id}`;
+    const body = `Hello,\n\nThis email is regarding the following bug report:\n\n- ID: ${item.id}\n- Reported By: ${item.name} (${item.email})\n- Reported On: ${dayjs(item.created_at).format("DD MMM YYYY, h:mm A")}\n- Severity: ${item.severity}\n- Status: ${item.status}\n\nReport Details:\n${item.report}\n\nRegards,\nThe Support Team`;
+    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
   }, []);
 
   const handleSendWhatsapp = useCallback((item: BugReportItem) => {
-      const message = `*Bug Report Details*\n\n*ID:* ${item.id}\n*Reported By:* ${item.name} (${item.email})\n*Reported On:* ${dayjs(item.created_at).format("DD MMM YYYY, h:mm A")}\n*Severity:* ${item.severity}\n*Status:* ${item.status}\n\n*Report:*\n${item.report}`;
-      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    const message = `*Bug Report Details*\n\n*ID:* ${item.id}\n*Reported By:* ${item.name} (${item.email})\n*Reported On:* ${dayjs(item.created_at).format("DD MMM YYYY, h:mm A")}\n*Severity:* ${item.severity}\n*Status:* ${item.status}\n\n*Report:*\n${item.report}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   }, []);
 
   const handleConfirmAddTask = async (data: TaskFormData) => {
     if (!taskTargetItem) return;
     setIsSubmitting(true);
     try {
-        const payload = {
-            ...data,
-            due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
-            module_id: String(taskTargetItem.id),
-            module_name: 'BugReport',
-        };
-        await dispatch(addTaskAction(payload)).unwrap();
-        toast.push(<Notification type="success" title="Task Assigned Successfully!" />);
-        closeAssignToTaskModal();
+      const payload = {
+        ...data,
+        due_date: data.due_date ? dayjs(data.due_date).format('YYYY-MM-DD') : undefined,
+        module_id: String(taskTargetItem.id),
+        module_name: 'BugReport',
+      };
+      await dispatch(addTaskAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Task Assigned Successfully!" />);
+      closeAssignToTaskModal();
     } catch (error: any) {
-        toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
+      toast.push(<Notification type="danger" title="Failed to Assign Task" children={error?.message || 'An unknown error occurred.'} />);
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
+
+  // --- MODIFICATION: ADDED SUBMISSION HANDLER FOR ACTIVITY ---
+  const handleConfirmAddActivity = async (data: ActivityFormData) => {
+    if (!activityTargetItem || !user?.id) {
+      toast.push(<Notification type="danger" title="Error" children="Cannot add activity. Target item or current user is missing." />);
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        item: data.item,
+        notes: data.notes || '',
+        module_id: String(activityTargetItem.id),
+        module_name: 'BugReport' as const,
+        user_id: user.id,
+      };
+      await dispatch(addAllActionAction(payload)).unwrap();
+      toast.push(<Notification type="success" title="Activity Added Successfully!" />);
+      closeActivityModal();
+    } catch (error: any) {
+      toast.push(<Notification type="danger" title="Failed to Add Activity" children={error?.message || 'An unknown error occurred.'} />);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
 
   const onSubmitHandler = async (data: BugReportFormData) => {
     setIsSubmitting(true);
     const formDataPayload = new FormData();
     Object.entries(data).forEach(([key, value]) => {
-      if (key !== 'attachment' && value != null) {
+      if (key !== 'attachment' && key !== 'report' && value != null) {
         formDataPayload.append(key, value as string);
+      } else if (key === 'report' && value != null) {
+        formDataPayload.append(key, value as string)
       }
     });
     if (selectedFile) formDataPayload.append("attachment", selectedFile);
@@ -697,7 +809,7 @@ const BugReportListing = () => {
     }
     if (tableData.query) {
       const queryLower = tableData.query.toLowerCase().trim();
-      processedData = processedData.filter((item) => item.name.toLowerCase().includes(queryLower) || item.email.toLowerCase().includes(queryLower) || item.report.toLowerCase().includes(queryLower) || (item.mobile_no && item.mobile_no.toLowerCase().includes(queryLower)) || (item.updated_by_name?.toLowerCase() ?? "").includes(queryLower));
+      processedData = processedData.filter((item) => item.name.toLowerCase().includes(queryLower) || item.email.toLowerCase().includes(queryLower) || (item.mobile_no && item.mobile_no.toLowerCase().includes(queryLower)) || (item.updated_by_name?.toLowerCase() ?? "").includes(queryLower));
     }
     const { order, key } = tableData.sort as OnSortParam;
     if (order && key) {
@@ -740,16 +852,20 @@ const BugReportListing = () => {
     { header: "Reported On", accessorKey: "created_at", size: 200, enableSorting: true, cell: (props) => (<div className="text-xs">{dayjs(props.getValue<string>()).format("DD MMM YYYY, h:mm A")}</div>) },
     { header: "Severity", accessorKey: "severity", size: 120, cell: (props) => (<span>{props.row.original.severity}</span>) },
     { header: "Status", accessorKey: "status", size: 120, enableSorting: true, cell: (props) => { const statusVal = props.getValue<BugReportStatusApi>(); return (<Tag className={classNames("capitalize whitespace-nowrap text-center", bugStatusColor[statusVal] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>{statusVal || "N/A"}</Tag>); } },
-    { header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100, cell: (props) => (<ActionColumn 
-        onEdit={() => openEditDrawer(props.row.original)} 
-        onViewDetail={() => openViewModal(props.row.original)} 
-        onAddNotification={() => openNotificationModal(props.row.original)} 
+    {
+      header: "Actions", id: "actions", meta: { HeaderClass: "text-center", cellClass: "text-center" }, size: 100,
+      cell: (props) => (<ActionColumn
+        onEdit={() => openEditDrawer(props.row.original)}
+        onViewDetail={() => openViewModal(props.row.original)}
+        onAddNotification={() => openNotificationModal(props.row.original)}
         onAddSchedule={() => openScheduleModal(props.row.original)}
         onSendEmail={() => handleSendEmail(props.row.original)}
         onSendWhatsapp={() => handleSendWhatsapp(props.row.original)}
         onAssignToTask={() => openAssignToTaskModal(props.row.original)}
-    />) },
-  ], [openEditDrawer, openViewModal, openNotificationModal, openScheduleModal, handleSendEmail, handleSendWhatsapp, openAssignToTaskModal]);
+        onAddActivity={() => openActivityModal(props.row.original)} // --- MODIFICATION: PASSING HANDLER ---
+      />)
+    },
+  ], [openEditDrawer, openViewModal, openNotificationModal, openScheduleModal, handleSendEmail, handleSendWhatsapp, openAssignToTaskModal, openActivityModal]); // --- MODIFICATION: ADDED DEPENDENCY ---
 
   useEffect(() => { setFilteredColumns(baseColumns) }, [baseColumns]);
 
@@ -759,7 +875,7 @@ const BugReportListing = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
       <FormItem label={<div>Name<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.name} errorMessage={currentFormMethods.formState.errors.name?.message}><Controller name="name" control={currentFormMethods.control} render={({ field }) => (<Input {...field} placeholder="Your Name" />)} /></FormItem>
       <FormItem label={<div>Email<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.email} errorMessage={currentFormMethods.formState.errors.email?.message}><Controller name="email" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="email" placeholder="your.email@example.com" />)} /></FormItem>
-      <FormItem label={<div>Mobile No.<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.mobile_no} errorMessage={currentFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="tel"  placeholder="+XX-XXXXXXXXXX" />)} /></FormItem>
+      <FormItem label={<div>Mobile No.<span className="text-red-500"> *</span></div>} className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.mobile_no} errorMessage={currentFormMethods.formState.errors.mobile_no?.message}><Controller name="mobile_no" control={currentFormMethods.control} render={({ field }) => (<Input {...field} type="tel" placeholder="+XX-XXXXXXXXXX" />)} /></FormItem>
       <FormItem label="Severity" className="md:col-span-1" invalid={!!currentFormMethods.formState.errors.severity} errorMessage={currentFormMethods.formState.errors.severity?.message}><Controller name="severity" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Severity" value={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }].find((opt) => opt.value === field.value)} options={[{ label: "Low", value: "Low" }, { label: "Medium", value: "Medium" }, { label: "High", value: "High" }]} onChange={(opt) => field.onChange(opt?.value)} />)} /></FormItem>
       <FormItem label={<div>Status<span className="text-red-500"> *</span></div>} className="md:col-span-2" invalid={!!currentFormMethods.formState.errors.status} errorMessage={currentFormMethods.formState.errors.status?.message}>
         <Controller name="status" control={currentFormMethods.control} render={({ field }) => (<Select placeholder="Select Status" value={BUG_REPORT_STATUS_OPTIONS.find((opt) => opt.value === field.value)} options={BUG_REPORT_STATUS_OPTIONS} onChange={(opt) => field.onChange(opt?.value)} />)} />
@@ -771,84 +887,84 @@ const BugReportListing = () => {
 
   const renderViewDetails = (item: BugReportItem) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 p-4 border rounded-lg bg-white dark:bg-gray-800 shadow-lg border-emerald-300">
-        <div className="flex items-start">
-          <TbInfoCircle className="text-xl mr-2 mt-1 text-gray-500 dark:text-gray-400" />
-          <p className="text-sm text-gray-800 dark:text-gray-100">
-            <span className="font-semibold text-gray-500 dark:text-gray-400">Status:</span>{" "}
-            <Tag className={classNames("capitalize text-sm ml-1", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>
-              {item.status}
-            </Tag>
-          </p>
-        </div>
-        <div className="flex justify-end items-start">
-          <Dropdown
-            renderTitle={
-              <Button size="xs" variant="twoTone" disabled={isChangingStatus}>
-                Change Status
-              </Button>
-            }
-          >
-            {BUG_REPORT_STATUS_OPTIONS.map((opt) => (
-              <Dropdown.Item key={opt.value} onClick={() => handleChangeStatus(item, opt.value)}>
-                Mark as {opt.label}
-              </Dropdown.Item>
-            ))}
-          </Dropdown>
-        </div>
-        <div className="flex items-start">
-          <TbUserCircle className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
-          <p className="text-sm text-gray-800 dark:text-gray-100">
-            <span className="font-semibold text-gray-500 dark:text-gray-400">Name:</span> {item.name}
-          </p>
-        </div>
-        <div className="flex items-start">
-          <TbMail className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
-          <p className="text-sm text-gray-800 dark:text-gray-100">
-            <span className="font-semibold text-gray-500 dark:text-gray-400">Email:</span> {item.email}
-          </p>
-        </div>
-        {item.mobile_no && (
-          <div className="flex items-start">
-            <TbPhone className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
-            <p className="text-sm text-gray-800 dark:text-gray-100">
-              <span className="font-semibold text-gray-500 dark:text-gray-400">Mobile No.:</span> {item.mobile_no}
-            </p>
-          </div>
-        )}
-        {item.created_at && (
-          <div className="flex items-start">
-            <TbCalendarEvent className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
-            <p className="text-sm text-gray-800 dark:text-gray-100">
-              <span className="font-semibold text-gray-500 dark:text-gray-400">Reported On:</span>{" "}
-              {new Date(item.created_at).toLocaleString("en-US", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
-            </p>
-          </div>
-        )}
-        {item.attachment && (
-          <div className="flex items-start col-span-full">
-            <TbPaperclip className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
-            <p className="text-sm text-gray-800 dark:text-gray-100 break-all">
-              <span className="font-semibold text-gray-500 dark:text-gray-400">Attachment:</span>{" "}
-              <a href={item.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                {item.attachment}
-              </a>
-            </p>
-          </div>
-        )}
-        <div className="flex items-start col-span-full">
-          <TbFileDescription className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
-          <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
-            <span className="font-semibold text-gray-500 dark:text-gray-400">Report Description:</span> {item.report}
-          </p>
-        </div>
+      <div className="flex items-start">
+        <TbInfoCircle className="text-xl mr-2 mt-1 text-gray-500 dark:text-gray-400" />
+        <p className="text-sm text-gray-800 dark:text-gray-100">
+          <span className="font-semibold text-gray-500 dark:text-gray-400">Status:</span>{" "}
+          <Tag className={classNames("capitalize text-sm ml-1", bugStatusColor[item.status] || "bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-100")}>
+            {item.status}
+          </Tag>
+        </p>
       </div>
+      <div className="flex justify-end items-start">
+        <Dropdown
+          renderTitle={
+            <Button size="xs" variant="twoTone" disabled={isChangingStatus}>
+              Change Status
+            </Button>
+          }
+        >
+          {BUG_REPORT_STATUS_OPTIONS.map((opt) => (
+            <Dropdown.Item key={opt.value} onClick={() => handleChangeStatus(item, opt.value)}>
+              Mark as {opt.label}
+            </Dropdown.Item>
+          ))}
+        </Dropdown>
+      </div>
+      <div className="flex items-start">
+        <TbUserCircle className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+        <p className="text-sm text-gray-800 dark:text-gray-100">
+          <span className="font-semibold text-gray-500 dark:text-gray-400">Name:</span> {item.name}
+        </p>
+      </div>
+      <div className="flex items-start">
+        <TbMail className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+        <p className="text-sm text-gray-800 dark:text-gray-100">
+          <span className="font-semibold text-gray-500 dark:text-gray-400">Email:</span> {item.email}
+        </p>
+      </div>
+      {item.mobile_no && (
+        <div className="flex items-start">
+          <TbPhone className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">Mobile No.:</span> {item.mobile_no}
+          </p>
+        </div>
+      )}
+      {item.created_at && (
+        <div className="flex items-start">
+          <TbCalendarEvent className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">Reported On:</span>{" "}
+            {new Date(item.created_at).toLocaleString("en-US", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })}
+          </p>
+        </div>
+      )}
+      {item.attachment && (
+        <div className="flex items-start col-span-full">
+          <TbPaperclip className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+          <p className="text-sm text-gray-800 dark:text-gray-100 break-all">
+            <span className="font-semibold text-gray-500 dark:text-gray-400">Attachment:</span>{" "}
+            <a href={item.attachment_full_path} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              {item.attachment}
+            </a>
+          </p>
+        </div>
+      )}
+      <div className="flex items-start col-span-full">
+        <TbFileDescription className="text-xl mr-2 text-gray-500 dark:text-gray-400" />
+        <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">
+          <span className="font-semibold text-gray-500 dark:text-gray-400">Report Description:</span> {item.report}
+        </p>
+      </div>
+    </div>
   );
 
   const tableLoading = initialLoading || isSubmitting || isDeleting || isChangingStatus;
@@ -895,8 +1011,18 @@ const BugReportListing = () => {
       <ConfirmDialog isOpen={isExportReasonModalOpen} type="info" title="Reason for Exporting Bug Reports" onClose={() => setIsExportReasonModalOpen(false)} onCancel={() => setIsExportReasonModalOpen(false)} onConfirm={exportReasonFormMethods.handleSubmit(handleConfirmExportWithReason)} loading={isSubmittingExportReason} confirmText={isSubmittingExportReason ? "Submitting..." : "Submit & Export"} confirmButtonProps={{ disabled: !exportReasonFormMethods.formState.isValid || isSubmittingExportReason }}><Form id="exportBugReportsReasonForm" onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4 mt-2"><FormItem label="Please provide a reason for exporting this data:" invalid={!!exportReasonFormMethods.formState.errors.reason} errorMessage={exportReasonFormMethods.formState.errors.reason?.message}><Controller name="reason" control={exportReasonFormMethods.control} render={({ field }) => (<Input textArea {...field} placeholder="Enter reason..." rows={3} />)} /></FormItem></Form></ConfirmDialog>
       {isNotificationModalOpen && notificationItem && (
         <BugReportNotificationDialog bugReport={notificationItem} onClose={closeNotificationModal} getAllUserDataOptions={getAllUserDataOptions} />
-        )}
-      {isScheduleModalOpen && scheduleItem && (<BugReportScheduleDialog bugReport={scheduleItem} onClose={closeScheduleModal} />)}
+      )}
+      {isScheduleModalOpen && scheduleItem && (
+        <BugReportScheduleDialog bugReport={scheduleItem} onClose={closeScheduleModal} />
+      )}
+      {isActivityModalOpen && activityTargetItem && (
+        <AddActivityDialog
+          bugReport={activityTargetItem}
+          onClose={closeActivityModal}
+          onSubmit={handleConfirmAddActivity}
+          isLoading={isSubmitting}
+        />
+      )}
       <AssignTaskDialog
         isOpen={isTaskModalOpen}
         onClose={closeAssignToTaskModal}
