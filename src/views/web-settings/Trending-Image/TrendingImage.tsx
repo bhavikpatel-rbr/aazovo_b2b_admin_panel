@@ -51,6 +51,7 @@ import {
     deleteMultipleTrendingImagesAction,
     getAllProductAction,
     submitExportReasonAction,
+    getPageAction,
 } from '@/reduxtool/master/middleware'
 import { masterSelector } from '@/reduxtool/master/masterSlice'
 import { Link } from 'react-router-dom'
@@ -204,7 +205,7 @@ const SelectedFooter = ({ selectedItems, onDeleteSelected, isDeleting }: { selec
 // --- Main Component: Trending Images ---
 const TrendingImages = () => {
     const dispatch = useAppDispatch();
-    const { trendingImagesData = [], productsMasterData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
+    const { PageData: pageName = [], trendingImagesData = [], productsMasterData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
 
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -222,7 +223,7 @@ const TrendingImages = () => {
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false)
     const [imageToView, setImageToView] = useState<string | null>(null)
 
-    useEffect(() => { dispatch(getTrendingImagesAction()); dispatch(getAllProductAction()); }, [dispatch]);
+    useEffect(() => { dispatch(getTrendingImagesAction()); dispatch(getAllProductAction()); dispatch(getPageAction()); }, [dispatch]);
 
     const addFormMethods = useForm<TrendingPageImageFormData>({ resolver: zodResolver(trendingPageImageFormSchema), defaultValues: { page_name: pageNameValues[0], trendingProducts: [], status: 'Active' }, mode: 'onChange' });
     const editFormMethods = useForm<TrendingPageImageFormData>({ resolver: zodResolver(trendingPageImageFormSchema), mode: 'onChange' });
@@ -231,15 +232,12 @@ const TrendingImages = () => {
 
     const productSelectOptions: ProductOption[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: ProductOption) => ({ value: String(p.id), label: `${p.name}`.trim() })) : [], [productsMasterData]);
     const productNameMap = useMemo(() => new Map(productSelectOptions.map(opt => [opt.value, opt.label])), [productSelectOptions]);
-    const dynamicPageNameOptions = useMemo(() => Array.from(new Set((Array.isArray(trendingImagesData) ? trendingImagesData : []).map(p => p.page_name))).map(name => ({ value: name, label: name })), [trendingImagesData]);
+    const dynamicPageNameOptions = useMemo(() => Array.from(new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(p => p.name))).map(name => ({ value: name, label: name })), [pageName?.data]);
     const addPageNameOptions = useMemo(() => {
-        // Get a Set of all page names that are already in use
-        const existingPageNames = new Set(
-            (Array.isArray(trendingImagesData) ? trendingImagesData : []).map(item => item.page_name)
-        );
-        // Return only the options that are NOT in the existing set
+        const existingPageNames = new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(item => item.name));
         return pageNameOptionsConst.filter(option => !existingPageNames.has(option.value));
-    }, [trendingImagesData]);
+    }, [pageName?.data]);
+    
     const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
         const sourceData: TrendingPageImageItem[] = Array.isArray(trendingImagesData) ? trendingImagesData : [];
         let processedData: TrendingPageImageItem[] = cloneDeep(sourceData);
