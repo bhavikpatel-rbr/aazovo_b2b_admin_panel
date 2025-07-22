@@ -109,7 +109,7 @@ export type SliderItem = {
 };
 
 // --- Zod Schemas & Constants ---
-const displayPageOptionsConst = [ { value: "Home Page", label: "Home Page" }, { value: "Electronics Page", label: "Electronics Page" }, { value: "Engineering Page", label: "Engineering Page" }, { value: "Plastic Page", label: "Plastic Page" }, { value: "Gallery Page", label: "Gallery Page" } ];
+const displayPageOptionsConst = [ { value: "Home", label: "Home" }, { value: "Electronics", label: "Electronics" }, { value: "Engineering", label: "Engineering" }, { value: "Plastic", label: "Plastic" }, { value: "Gallery", label: "Gallery" } ];
 const displayPageValues = displayPageOptionsConst.map((opt) => opt.value) as [ string, ...string[] ];
 const sourceOptionsConst = [ { value: "web", label: "Web Only" }, { value: "mobile", label: "Mobile Only" }, { value: "both", label: "Web & Mobile (Both)" }, ];
 
