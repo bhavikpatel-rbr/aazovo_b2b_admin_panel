@@ -117,7 +117,6 @@ const blogFormSchema = z.object({
   meta_title: z.string().max(70, "Meta Title too long").optional().nullable(),
   meta_descr: z
     .string()
-    .max(160, "Meta Description too long")
     .optional()
     .nullable(),
   meta_keyword: z
@@ -706,7 +705,7 @@ const Blogs = () => {
             </FormItem>
             <div className="grid grid-cols-2 gap-4">
               <FormItem label="Slug / URL" invalid={!!drawer.methods.formState.errors.slug} errorMessage={drawer.methods.formState.errors.slug?.message as string | undefined}>
-                <Controller name="slug" control={drawer.methods.control} render={({ field }) => (<Input {...field} value={field.value ?? ""} placeholder="e.g., my-awesome-blog-post" />)} />
+                <Controller name="slug" control={drawer.methods.control} render={({ field }) => (<Input readOnly {...field} value={field.value ?? ""} placeholder="e.g., my-awesome-blog-post" />)} />
               </FormItem>
               <FormItem label={<div>Status<span className="text-red-500"> * </span></div>} invalid={!!drawer.methods.formState.errors.status} errorMessage={drawer.methods.formState.errors.status?.message as string | undefined} isRequired>
                 <Controller name="status" control={drawer.methods.control} render={({ field }) => (<Select placeholder="Select Status" options={blogStatusOptions} value={blogStatusOptions.find((opt) => opt.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} />)} />
