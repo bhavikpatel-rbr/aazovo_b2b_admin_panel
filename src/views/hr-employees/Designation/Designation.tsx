@@ -102,7 +102,7 @@ const designationFormSchema = z.object({
     .min(1, "Designation name is required.")
     .max(150, "Designation name cannot exceed 150 characters."),
   department_id: z.array(z.string()).min(1, "At least one department is required."),
-  reporting_manager: z.string().min(1, "Reporting person is required."),
+  reporting_manager: z.string().optional().nullable(),
   status: z.enum(["Active", "Inactive"], {
     required_error: "Status is required.",
   }),
@@ -565,6 +565,8 @@ const DesignationListing = () => {
     (item: DesignationItem) => {
       setEditingItem(item);
       const departmentIds = item.department.map(d => String(d.id));
+      console.log("item.reporting_manager?.id",item.reporting_manager?.id);
+      console.log("departmentIds",departmentIds);
       
       formMethods.reset({
         name: item.name,
@@ -891,7 +893,7 @@ const DesignationListing = () => {
           />
         )} />
       </FormItem>
-      <FormItem label={<div>Reporting To<span className="text-red-500"> *</span></div>} invalid={!!currentFormMethods.formState.errors.reporting_manager} errorMessage={currentFormMethods.formState.errors.reporting_manager?.message}>
+      <FormItem label={<div>Reporting To</div>} invalid={!!currentFormMethods.formState.errors.reporting_manager} errorMessage={currentFormMethods.formState.errors.reporting_manager?.message}>
         <Controller name="reporting_manager" control={currentFormMethods.control} render={({ field }) => (
             <Select
                 ref={field.ref}
@@ -977,7 +979,7 @@ const DesignationListing = () => {
       <Drawer title="Add Designation" isOpen={isAddDrawerOpen} onClose={closeAddDrawer} onRequestClose={closeAddDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeAddDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="designationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting}>{isSubmitting ? "Adding..." : "Save"}</Button></div>}>
         <Form id="designationForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-y-6">{renderDrawerForm(formMethods)}</Form>
       </Drawer>
-      <Drawer title="Edit Designation" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={480} onRequestClose={closeEditDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editDesignationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting || !formMethods.formState.isDirty}>{isSubmitting ? "Saving..." : "Save"}</Button></div>}>
+      <Drawer title="Edit Designation" isOpen={isEditDrawerOpen} onClose={closeEditDrawer} width={480} onRequestClose={closeEditDrawer} footer={<div className="text-right w-full"><Button size="sm" className="mr-2" onClick={closeEditDrawer} disabled={isSubmitting}>Cancel</Button><Button size="sm" variant="solid" form="editDesignationForm" type="submit" loading={isSubmitting} disabled={!formMethods.formState.isValid || isSubmitting }>{isSubmitting ? "Saving..." : "Save"}</Button></div>}>
         <Form id="editDesignationForm" onSubmit={formMethods.handleSubmit(onSubmitHandler)} className="flex flex-col gap-y-6 relative pb-28">{renderDrawerForm(formMethods)}
           {editingItem && (<div className="absolute bottom-0 w-full"><div className="grid grid-cols-2 text-xs bg-gray-100 dark:bg-gray-700 p-2 rounded mt-3"><div><b className="font-semibold text-primary">Latest Update:</b><br /><p className="text-sm font-semibold">{editingItem.updated_by_user?.name || "N/A"}</p><p>{editingItem.updated_by_user?.roles?.[0]?.display_name || "N/A"}</p></div><div className="text-right"><br /><span className="font-semibold">Created At:</span> <span>{editingItem.created_at ? formatCustomDateTime(editingItem.created_at) : "N/A"}</span><br /><span className="font-semibold">Updated At:</span> <span>{editingItem.updated_at ? formatCustomDateTime(editingItem.updated_at) : "N/A"}</span></div></div></div>)}
         </Form>
