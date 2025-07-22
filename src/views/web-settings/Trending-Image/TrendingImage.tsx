@@ -68,10 +68,6 @@ function formatCustomDateTime(dateString: string | null | undefined): string {
 }
 
 // --- Constants & Types ---
-const pageNameOptionsConst = [{ value: 'Home Page', label: 'Home Page' }, { value: 'Engineering Page', label: 'Engineering Page' }, { value: 'Plastic Page', label: 'Plastic Page' },];
-const pageNameValues = pageNameOptionsConst.map(opt => opt.value) as [string, ...string[]];
-const apiStatusOptions: { value: 'Active' | 'Inactive'; label: string }[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
-const statusColor: Record<'Active' | 'Inactive', string> = { Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700", Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700" };
 
 export type ProductOption = { value: string; label: string; id?: string | number, name?: string };
 export type TrendingPageImageItem =
@@ -84,12 +80,7 @@ export type TrendingPageImageItem =
     };
 
 // --- Zod Schemas ---
-const trendingPageImageFormSchema = z.object({
-    page_name: z.enum(pageNameValues, { errorMap: () => ({ message: 'Please select a page name.' }) }),
-    status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }),
-    trendingProducts: z.array(z.string()).min(1, 'Please select at least one product.').optional().default([]),
-});
-type TrendingPageImageFormData = z.infer<typeof trendingPageImageFormSchema>;
+
 
 const filterFormSchema = z.object({
     filterPageNames: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -207,6 +198,17 @@ const TrendingImages = () => {
     const dispatch = useAppDispatch();
     const { PageData: pageName = [], trendingImagesData = [], productsMasterData = [], status: masterLoadingStatus = 'idle' } = useSelector(masterSelector);
 
+    const pageNameOptionsConst =  useMemo(() => Array.from(new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(p => p.name))).map(name => ({ value: name, label: name })), [pageName?.data]);;
+    const pageNameValues = pageNameOptionsConst.map(opt => opt.value) as [string, ...string[]];
+    const apiStatusOptions: { value: 'Active' | 'Inactive'; label: string }[] = [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' },];
+    const statusColor: Record<'Active' | 'Inactive', string> = { Active: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100 border-b border-emerald-300 dark:border-emerald-700", Inactive: "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100 border-b border-red-300 dark:border-red-700" };
+
+    const trendingPageImageFormSchema = z.object({
+        page_name: z.enum(pageNameValues, { errorMap: () => ({ message: 'Please select a page name.' }) }),
+        status: z.enum(['Active', 'Inactive'], { required_error: "Status is required." }),
+        trendingProducts: z.array(z.string()).min(1, 'Please select at least one product.').optional().default([]),
+    });
+    type TrendingPageImageFormData = z.infer<typeof trendingPageImageFormSchema>;
     const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<TrendingPageImageItem | null>(null);
@@ -237,7 +239,9 @@ const TrendingImages = () => {
         const existingPageNames = new Set((Array.isArray(pageName?.data) ? pageName?.data : []).map(item => item.name));
         return pageNameOptionsConst.filter(option => !existingPageNames.has(option.value));
     }, [pageName?.data]);
-    
+    console.log(dynamicPageNameOptions, addPageNameOptions, 'dynamicPageNameOptions');
+
+
     const { pageData, total, allFilteredAndSortedData, counts } = useMemo(() => {
         const sourceData: TrendingPageImageItem[] = Array.isArray(trendingImagesData) ? trendingImagesData : [];
         let processedData: TrendingPageImageItem[] = cloneDeep(sourceData);
