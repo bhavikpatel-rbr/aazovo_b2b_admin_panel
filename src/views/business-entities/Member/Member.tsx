@@ -90,7 +90,7 @@ export type FormItem = {
   customer_code: string;
   interested_in: string | null;
   number: string;
-    email: string;
+  email: string;
   company_temp: string | null;
   company_actual: string | null;
   company_code: string | null;
@@ -187,52 +187,52 @@ const eventTypeOptions = [{ value: 'Meeting', label: 'Meeting' }, { value: 'Foll
 // This function transforms the new API data structure into the `FormItem` format used by the UI components.
 // In a real application, this logic would live inside the Redux middleware or slice.
 const transformApiData = (apiResponse: any): { status: boolean; message: string; counts: any; data: { data: FormItem[], total: number; pageIndex: number; pageSize: number; } } => {
-    const transformedItems = (apiResponse?.data?.data || []).map((apiItem: any): FormItem => ({
-        id: apiItem.id,
-        name: apiItem.name,
-        customer_code: apiItem.customer_code,
-        interested_in: apiItem.interested_for,
-        number: apiItem.mobile_no,
-        email: apiItem.email,
-        company_temp: apiItem.company_name_tmp,
-        company_actual: apiItem.company_name,
-        company_code: apiItem.customer_code_permanent,
-        business_type: apiItem.business_type,
-        status: apiItem.status as "Active" | "Disabled" | "Unregistered",
-        country: apiItem.country,
-        continent: apiItem.continent,
-        relationship_manager: apiItem.relationship_manager,
-        dynamic_member_profiles: apiItem.dynamic_member_profiles || [],
-        profile_completion: apiItem.profile_completion,
-        business_opportunity: apiItem.business_opportunity,
-        member_grade: apiItem.member_grade,
-        created_at: apiItem.created_at,
-        full_profile_pic: apiItem.full_profile_pic,
-        brand_name: apiItem.brand_name,
-        whatsapp_country_code: apiItem.phonecode,
-        whatsApp_no: apiItem.whatsapp_no,
-        alternate_contact_number_code: '', // Not in API response
-        alternate_contact_number: apiItem.alt_mobile,
-        alternate_email: apiItem.alt_email,
-        website: apiItem.website,
-        dealing_in_bulk: apiItem.dealing_in_bulk,
-        created_by_user: apiItem.created_by_user,
-        updated_by_user: apiItem.updated_by_user,
-        category: apiItem.category,
-        subcategory: apiItem.subcategory,
-    }));
+  const transformedItems = (apiResponse?.data?.data || []).map((apiItem: any): FormItem => ({
+    id: apiItem.id,
+    name: apiItem.name,
+    customer_code: apiItem.customer_code,
+    interested_in: apiItem.interested_for,
+    number: apiItem.mobile_no,
+    email: apiItem.email,
+    company_temp: apiItem.company_name_tmp,
+    company_actual: apiItem.company_name,
+    company_code: apiItem.customer_code_permanent,
+    business_type: apiItem.business_type,
+    status: apiItem.status as "Active" | "Disabled" | "Unregistered",
+    country: apiItem.country,
+    continent: apiItem.continent,
+    relationship_manager: apiItem.relationship_manager,
+    dynamic_member_profiles: apiItem.dynamic_member_profiles || [],
+    profile_completion: apiItem.profile_completion,
+    business_opportunity: apiItem.business_opportunity,
+    member_grade: apiItem.member_grade,
+    created_at: apiItem.created_at,
+    full_profile_pic: apiItem.full_profile_pic,
+    brand_name: apiItem.brand_name,
+    whatsapp_country_code: apiItem.phonecode,
+    whatsApp_no: apiItem.whatsapp_no,
+    alternate_contact_number_code: '', // Not in API response
+    alternate_contact_number: apiItem.alt_mobile,
+    alternate_email: apiItem.alt_email,
+    website: apiItem.website,
+    dealing_in_bulk: apiItem.dealing_in_bulk,
+    created_by_user: apiItem.created_by_user,
+    updated_by_user: apiItem.updated_by_user,
+    category: apiItem.category,
+    subcategory: apiItem.subcategory,
+  }));
 
-    return {
-        status: apiResponse.status,
-        message: apiResponse.message,
-        counts: apiResponse.counts,
-        data: {
-            data: transformedItems,
-            total: apiResponse.data?.total || 0,
-            pageIndex: apiResponse.data?.current_page || 1,
-            pageSize: apiResponse.data?.per_page || 10,
-        }
-    };
+  return {
+    status: apiResponse.status,
+    message: apiResponse.message,
+    counts: apiResponse.counts,
+    data: {
+      data: transformedItems,
+      total: apiResponse.data?.total || 0,
+      pageIndex: apiResponse.data?.current_page || 1,
+      pageSize: apiResponse.data?.per_page || 10,
+    }
+  };
 };
 
 // --- END: NEW DATA TRANSFORMATION LOGIC ---
@@ -685,7 +685,7 @@ const MemberListProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const memberList = useMemo(() => MemberData?.data?.data || [], [MemberData]);
 
 
-  
+
   const userOptions = useMemo(() => Array.isArray(getAllUserData) ? getAllUserData.map((u: any) => ({ value: u.id, label: `(${u.employee_id}) - ${u.name || 'N/A'}` })) : [], [getAllUserData]);
 
   return (<MemberListContext.Provider value={{ memberList, setSelectedMembers, selectedMembers, userOptions }}>{children}</MemberListContext.Provider>);
@@ -755,10 +755,10 @@ const ActiveFiltersDisplay = ({ filterData, onRemoveFilter, onClearAll }: { filt
 const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: FilterFormData; setFilterCriteria: React.Dispatch<React.SetStateAction<FilterFormData>>; }) => {
   const dispatch = useAppDispatch();
   const { MemberlistData: MemberData } = useSelector(masterSelector);
-    const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { setSelectedMembers, userOptions } = useMemberList();
 
-  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 20, sort: { order: "", key: "" }, query: "" });
+  const [tableData, setTableData] = useState<TableQueries>({ pageIndex: 1, pageSize: 10, sort: { order: "", key: "" }, query: "" });
   const [isFilterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [isExportReasonModalOpen, setIsExportReasonModalOpen] = useState(false);
   const [isSubmittingExportReason, setIsSubmittingExportReason] = useState(false);
@@ -768,50 +768,53 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const filterFormMethods = useForm<FilterFormData>({ resolver: zodResolver(filterFormSchema), defaultValues: filterCriteria });
 
   useEffect(() => { filterFormMethods.reset(filterCriteria); }, [filterCriteria, filterFormMethods]);
-  
-  // NEW: Effect to fetch data when table state or filters change.
+
   useEffect(() => {
-    const fetchMembers = () => {
-      const formatFilterForApi = (data: any[] | undefined) => {
-        if (!data || data.length === 0) return undefined;
-        return data.map((d: { value: any }) => d.value).join(',');
+     setIsLoading(true);
+    const timerId = setTimeout(() => {
+      const fetchMembers = () => {
+        const formatFilterForApi = (data: any[] | undefined) => {
+          if (!data || data.length === 0) return undefined;
+          return data.map((d: { value: any }) => d.value).join(',');
+        };
+
+        const [startDate, endDate] = filterCriteria.filterCreatedAt || [null, null];
+
+        const params: any = {
+          page: tableData.pageIndex,
+          per_page: tableData.pageSize,
+          search: tableData.query || undefined,
+          sort_key: tableData.sort.key || undefined,
+          sort_order: tableData.sort.order || undefined,
+          status: formatFilterForApi(filterCriteria.filterStatus),
+          business_type: formatFilterForApi(filterCriteria.filterBusinessType),
+          country: formatFilterForApi(filterCriteria.filterCountry),
+          business_opportunity: formatFilterForApi(filterCriteria.filterBusinessOpportunity),
+          interested_in: formatFilterForApi(filterCriteria.filterInterestedFor),
+          grade: formatFilterForApi(filterCriteria.memberGrade),
+          relationship_manager: formatFilterForApi(filterCriteria.filterRM),
+          member_type: formatFilterForApi(filterCriteria.filterMemberType),
+          created_date: (startDate && endDate) ? `${dayjs(startDate).format('YYYY-MM-DD')} ~ ${dayjs(endDate).format('YYYY-MM-DD')}` : undefined,
+        };
+
+        // Clean up undefined params before dispatching
+        Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+        setIsLoading(true);
+        dispatch(getMemberlistingAction(params));
       };
-
-      const [startDate, endDate] = filterCriteria.filterCreatedAt || [null, null];
-
-      const params: any = {
-        page: tableData.pageIndex,
-        per_page: tableData.pageSize,
-        search: tableData.query || undefined,
-        sort_key: tableData.sort.key || undefined,
-        sort_order: tableData.sort.order || undefined,
-        status: formatFilterForApi(filterCriteria.filterStatus),
-        business_type: formatFilterForApi(filterCriteria.filterBusinessType),
-        country: formatFilterForApi(filterCriteria.filterCountry),
-        business_opportunity: formatFilterForApi(filterCriteria.filterBusinessOpportunity),
-        interested_in: formatFilterForApi(filterCriteria.filterInterestedFor),
-        grade: formatFilterForApi(filterCriteria.memberGrade),
-        relationship_manager: formatFilterForApi(filterCriteria.filterRM),
-        member_type: formatFilterForApi(filterCriteria.filterMemberType),
-        created_date: (startDate && endDate) ? `${dayjs(startDate).format('YYYY-MM-DD')} ~ ${dayjs(endDate).format('YYYY-MM-DD')}` : undefined,
-      };
-
-      // Clean up undefined params before dispatching
-      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
-      setIsLoading(true);
-      dispatch(getMemberlistingAction(params));
+      fetchMembers();
+    }, 500);
+    return () => {
+      clearTimeout(timerId);
     };
-    fetchMembers();
   }, [dispatch, tableData, filterCriteria]);
-
-
-  useEffect(() => {if(MemberData?.data?.data) setIsLoading(false)}, [MemberData]);
+  useEffect(() => { if (MemberData?.data?.data) setIsLoading(false) }, [MemberData]);
   const onApplyFiltersSubmit = (data: FilterFormData) => { setFilterCriteria(data); setTableData(prev => ({ ...prev, pageIndex: 1 })); setFilterDrawerOpen(false); };
 
   const onClearFilters = useCallback(() => {
     setFilterCriteria({});
     filterFormMethods.reset({});
-    setTableData((prev) => ({ ...prev, query: '', pageIndex: 1, sort: {order: '', key: ''}}));
+    setTableData((prev) => ({ ...prev, query: '', pageIndex: 1, sort: { order: '', key: '' } }));
     sessionStorage.removeItem('memberFilterState');
   }, [setFilterCriteria, filterFormMethods]);
 
@@ -835,7 +838,7 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const pageData = useMemo(() => MemberData?.data?.data || [], [MemberData]);
   const total = useMemo(() => MemberData?.data?.total || 0, [MemberData]);
 
-  
+
   const columns: ColumnDef<FormItem>[] = useMemo(() => [
     {
       header: "Member", accessorKey: "name", id: "member", size: 200, cell: ({ row }) => (
@@ -1053,7 +1056,7 @@ const FormListSelected = () => {
       const ids = selectedMembers.map(data => data.id);
       await dispatch(deleteAllMemberAction({ ids: ids.join(",") })).unwrap();
       toast.push(<Notification title="Members Deleted" type="success" />);
-      dispatch(getMemberlistingAction({page: 1, per_page: 20})); // Re-fetch the first page after deletion
+      dispatch(getMemberlistingAction({ page: 1, per_page: 20 })); // Re-fetch the first page after deletion
       setSelectedMembers([]);
     } catch (error: any) {
       toast.push(<Notification title="Failed to Delete" type="danger" children={error.message} />);
@@ -1096,7 +1099,7 @@ const FormListSelected = () => {
 // MODIFIED: Main component updated to handle persisted filters and read counts from API.
 const Member = () => {
   const navigate = useNavigate();
-  const { MemberlistData:MemberData } = useSelector(masterSelector);
+  const { MemberlistData: MemberData } = useSelector(masterSelector);
 
   const MEMBER_FILTER_STORAGE_KEY = 'memberFilterState';
 
