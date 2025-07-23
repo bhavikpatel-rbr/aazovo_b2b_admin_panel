@@ -77,19 +77,19 @@ import {
   deleteRequestFeedbackAction,
   editMemberAction,
   editRequestFeedbackAction,
-  getAllProductsAction,
-  getActualCompanyAction, // Added new action
+  getActualCompanyAction,
+  getAllProductAction, // Added new action
   getBrandAction,
-  getParentCategoriesAction,
   getCompanyAction,
   getContinentsAction,
   getCountriesAction,
-  getEmployeesAction,
   getMemberByIdAction,
   getMemberTypeAction,
+  getParentCategoriesAction,
   // Actions for the listing component
   getRequestFeedbacksAction,
-  getSubcategoriesByCategoryIdAction
+  getSubcategoriesByCategoryIdAction,
+  getUsersAction
 } from "@/reduxtool/master/middleware";
 
 // Types
@@ -509,50 +509,50 @@ const transformApiToFormSchema = (
     remarks: formData.remarks || "",
 
     dynamic_member_profiles: formData.dynamic_member_profiles?.map((apiProfile: any) => {
-        const createSelectOptions = (idJsonString: string, names: string[]) => {
-          try {
-            if (
-              typeof idJsonString !== "string" ||
-              !idJsonString.startsWith("[")
-            )
-              return [];
-            const ids: (string | number)[] = JSON.parse(idJsonString);
-            const safeNames = Array.isArray(names) ? names : [];
-            if (!Array.isArray(ids) || ids.length !== safeNames.length)
-              return [];
-            return ids.map((id, index) => ({
-              value: id,
-              label: safeNames[index],
-            }));
-          } catch (e) {
-            console.error(
-              "Failed to parse ID JSON string:",
-              idJsonString,
-              e
-            );
+      const createSelectOptions = (idJsonString: string, names: string[]) => {
+        try {
+          if (
+            typeof idJsonString !== "string" ||
+            !idJsonString.startsWith("[")
+          )
             return [];
-          }
-        };
-        return {
-          db_id: apiProfile.id,
-          member_type: {
-            value: apiProfile.member_type.id,
-            label: apiProfile.member_type.name,
-          },
-          brands: createSelectOptions(
-            apiProfile.brand_id,
-            apiProfile.brand_names
-          ),
-          categories: createSelectOptions(
-            apiProfile.category_id,
-            apiProfile.category_names
-          ),
-          sub_categories: createSelectOptions(
-            apiProfile.sub_category_id,
-            apiProfile.sub_category_names
-          ),
-        };
-      }) || [],
+          const ids: (string | number)[] = JSON.parse(idJsonString);
+          const safeNames = Array.isArray(names) ? names : [];
+          if (!Array.isArray(ids) || ids.length !== safeNames.length)
+            return [];
+          return ids.map((id, index) => ({
+            value: id,
+            label: safeNames[index],
+          }));
+        } catch (e) {
+          console.error(
+            "Failed to parse ID JSON string:",
+            idJsonString,
+            e
+          );
+          return [];
+        }
+      };
+      return {
+        db_id: apiProfile.id,
+        member_type: {
+          value: apiProfile.member_type.id,
+          label: apiProfile.member_type.name,
+        },
+        brands: createSelectOptions(
+          apiProfile.brand_id,
+          apiProfile.brand_names
+        ),
+        categories: createSelectOptions(
+          apiProfile.category_id,
+          apiProfile.category_names
+        ),
+        sub_categories: createSelectOptions(
+          apiProfile.sub_category_id,
+          apiProfile.sub_category_names
+        ),
+      };
+    }) || [],
 
     // Accessibility & Membership
     product_upload_permission:
@@ -1941,15 +1941,15 @@ const NavigatorComponent = (props: {
 };
 
 // --- Section Components (Updated) ---
-const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
+const MemberProfileComponent = ({ control, errors, formMethods }: FormSectionBaseProps) => {
   // Assuming these are fetched from Redux. You must implement the respective actions and reducers.
   const {
     BrandData = [],
     ParentCategories = [],
     subCategoriesForSelectedCategoryData = [],
     ProductsData = [],
-    Employees = [],
-    AllProducts = [],
+    usersData = [],
+    productsMasterData = [],
     MemberTypeData = []
 
   } = useSelector(masterSelector);
@@ -1958,7 +1958,16 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     control,
     name: "dynamic_member_profiles" as "dynamic_member_profiles",
   });
-
+  const { watch } = formMethods;
+  const dispatch = useAppDispatch();
+  const selectedCat = watch("interested_category_ids");
+  useEffect(() => {
+    if (selectedCat && selectedCat.length > 0) {
+      dispatch(getSubcategoriesByCategoryIdAction(selectedCat ? selectedCat.map((c: any) => c.value).toString() : ""));
+    }else{
+      dispatch(getSubcategoriesByCategoryIdAction(""));
+    }
+  }, [selectedCat])
   // Mock options if data not available, replace with real data from selectors
   const productOptions = ProductsData?.data?.map((p: any) => ({
     value: String(p.id),
@@ -1977,10 +1986,12 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     label: sc.name,
   }));
 
-  const allproductOptions = AllProducts?.lenfth > 0 && AllProducts?.map((sc: any) => ({
+
+  const allproductOptions = productsMasterData?.length > 0 && productsMasterData?.map((sc: any) => ({
     value: parseInt(sc.id),
     label: sc.name,
   })) || [];
+
 
 
 
@@ -1996,9 +2007,9 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
     { value: "C", label: "C" },
     { value: "D", label: "D" },
   ];
-  const managerOptions = Employees.map((m: any) => ({
+  const managerOptions = usersData.map((m: any) => ({
     value: String(m.id),
-    label: m.name,
+    label: `(${m.employee_id}) ${m.name}`,
   }));
   const yesNoOptions = [
     { value: "Yes", label: "Yes" },
@@ -2338,9 +2349,7 @@ const PersonalDetailsComponent = ({
     CompanyData = [],
     actualCompanyData, // Fetched via new action
   } = useSelector(masterSelector);
-
   const { setValue } = formMethods;
-
   const showActualCompany = isEditMode && actualCompanyData && actualCompanyData.id;
 
   useEffect(() => {
@@ -3203,9 +3212,9 @@ const MemberCreate = () => {
     dispatch(getBrandAction());
     dispatch(getParentCategoriesAction());
     // Fetch all subcategories by passing 0 or a non-existent ID
-    dispatch(getSubcategoriesByCategoryIdAction(0));
-    dispatch(getEmployeesAction());
-    dispatch(getAllProductsAction());
+
+    dispatch(getUsersAction());
+    dispatch(getAllProductAction());
     dispatch(getMemberTypeAction());
   }, [dispatch]);
 

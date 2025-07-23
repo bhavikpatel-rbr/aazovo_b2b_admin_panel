@@ -321,7 +321,7 @@ export interface CompanyFormSchema {
   primary_ifsc_code?: string;
   primary_bank_verification_photo?: File | string | null;
   secondary_account_number?: string;
-  Secondary_benificeiry_name?: string;
+  secondary_benificeiry_name?: string;
   secondary_bank_name?: string;
   secondary_ifsc_code?: string;
   secondary_bank_verification_photo?: File | string | null;
@@ -377,7 +377,7 @@ interface ApiSingleCompanyItem {
   primary_bank_name?: string;
   primary_ifsc_code?: string;
   primary_bank_verification_photo?: string;
-  Secondary_benificeiry_name?: string;
+  secondary_benificeiry_name?: string;
   secondary_account_number?: string;
   secondary_bank_name?: string;
   secondary_ifsc_code?: string;
@@ -527,7 +527,7 @@ const transformApiToFormSchema = (
     primary_ifsc_code: apiData.primary_ifsc_code,
     primary_bank_verification_photo: apiData.primary_bank_verification_photo,
     secondary_account_number: apiData.secondary_account_number,
-    Secondary_benificeiry_name: apiData.Secondary_benificeiry_name,
+    secondary_benificeiry_name: apiData.secondary_benificeiry_name,
     secondary_bank_name: apiData.secondary_bank_name,
     secondary_ifsc_code: apiData.secondary_ifsc_code,
     secondary_bank_verification_photo: apiData.secondary_bank_verification_photo,
@@ -617,7 +617,7 @@ const preparePayloadForApi = (formData: CompanyFormSchema, isEditMode: boolean):
     "general_contact_number_code", "alternate_email_id", "alternate_contact_number",
     "alternate_contact_number_code", "ownership_type", "tan_number", "trn_number",
     "establishment_year", "no_of_employees", "partner_website", "notification_email",
-    "primary_account_number","primary_benificeiry_name","Secondary_benificeiry_name", "primary_bank_name", "primary_ifsc_code",
+    "primary_account_number","primary_benificeiry_name","secondary_benificeiry_name", "primary_bank_name", "primary_ifsc_code",
     "secondary_account_number", "secondary_bank_name", "secondary_ifsc_code",
     "billing_cycle"
   ];
@@ -1701,7 +1701,7 @@ const BankDetailsSection = ({ control, errors, formMethods }: FormSectionBasePro
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
         <FormItem label="Secondary Beneficiary Name">
           <Controller
-            name="Secondary_benificeiry_name"
+            name="secondary_benificeiry_name"
             control={control} render={({ field }) => (
               <Input type="text" {...field} placeholder="Enter Beneficiary Name" />
             )} />
