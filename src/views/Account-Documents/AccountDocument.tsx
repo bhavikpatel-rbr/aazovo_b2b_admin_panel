@@ -1098,7 +1098,7 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
           const companyId = data?.data?.company_id;
           const formData = {
             company_document: data?.data?.company_document,
-            document_type: data?.data?.document_type,
+            document_type:parseInt(data?.data?.document_type),
             document_number: data?.data?.document_number,
             invoice_number: data?.data?.invoice_number,
             form_id: data?.data?.form_id,
