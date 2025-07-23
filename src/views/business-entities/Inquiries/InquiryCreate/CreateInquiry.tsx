@@ -19,8 +19,7 @@ import Spinner from "@/components/ui/Spinner";
 
 // Icons
 import { BiChevronRight } from "react-icons/bi";
-// MODIFICATION: Import more icons for previews
-import { HiOutlineTrash, HiOutlinePhotograph, HiOutlineDocumentText } from "react-icons/hi";
+import { HiOutlineTrash, HiOutlineDocumentText, HiX } from "react-icons/hi";
 
 // Redux
 import { useAppDispatch } from "@/reduxtool/store";
@@ -34,6 +33,40 @@ import {
 
 // Services
 import axiosInstance from '@/services/api/api';
+
+
+// --- Image Preview Modal Component ---
+interface ImagePreviewModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  imageUrl: string;
+}
+
+const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ isOpen, onClose, imageUrl }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+      onClick={onClose}
+    >
+      <div
+        className="relative p-4 bg-white dark:bg-gray-800 rounded-lg max-w-4xl max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()} // Prevent closing modal when clicking inside
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 p-1 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600"
+          aria-label="Close"
+        >
+          <HiX className="w-6 h-6" />
+        </button>
+        <img src={imageUrl} alt="Image Preview" className="w-full h-full object-contain max-h-[85vh]" />
+      </div>
+    </div>
+  );
+};
+
 
 // --- Helper to format Date object to "YYYY-MM-DD" string ---
 const formatDateForApi = (date: Date | string | null | undefined): string | null => {
@@ -64,7 +97,7 @@ const inquiryFormSchema = z.object({
   inquiry_description: z.string().trim().optional().nullable(),
   inquiry_status: z.string().min(1, "Status is required."),
   assigned_to: z.union([z.string(), z.number()]).nullable().optional(),
-  department: z.array(z.union([z.string(), z.number()])).nullable().optional(), 
+  department: z.array(z.union([z.string(), z.number()])).nullable().optional(),
   inquiry_date: z.date({ required_error: "Inquiry date is required." }).nullable(),
   response_date: z.date().optional().nullable(),
   resolution_date: z.date().optional().nullable(),
@@ -72,7 +105,7 @@ const inquiryFormSchema = z.object({
   inquiry_resolution: z.string().trim().optional().nullable(),
   feedback_status: z.string().optional().nullable(),
   inquiry_from: z.string().optional().nullable(),
-  inquiry_attachments: z.any().optional(), 
+  inquiry_attachments: z.any().optional(),
 });
 type InquiryFormData = z.infer<typeof inquiryFormSchema>;
 
@@ -89,7 +122,7 @@ const formDefaultValues: InquiryFormData = {
   inquiry_description: null,
   inquiry_status: "Open",
   assigned_to: null,
-  department: [], 
+  department: [],
   inquiry_date: new Date(),
   response_date: null,
   resolution_date: null,
@@ -97,7 +130,7 @@ const formDefaultValues: InquiryFormData = {
   inquiry_resolution: null,
   feedback_status: null,
   inquiry_from: null,
-  inquiry_attachments: [], 
+  inquiry_attachments: [],
 };
 
 // --- Transform API data to Form Data ---
@@ -143,14 +176,23 @@ const transformApiDataToForm = (apiData: any): InquiryFormData => {
     inquiry_resolution: apiData.resolution_notes || apiData.inquiry_resolution || null,
     feedback_status: apiData.feedback_status || null,
     inquiry_from: apiData.inquiry_from || null,
-    inquiry_attachments: [], 
+    inquiry_attachments: [],
   };
 };
 
+// --- Type Definitions ---
 type ApiLookupItem = { id: string | number; name: string;[key: string]: any; };
 type ExistingAttachment = { name: string; url: string; originalName: string; };
-// MODIFICATION: Type for the new preview state
 type NewAttachmentPreview = { name: string; url: string; type: string; };
+
+// --- Helper functions to identify file types ---
+const isImageFile = (fileNameOrType: string): boolean => {
+    return /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(fileNameOrType) || /^image\//.test(fileNameOrType);
+};
+const isPdfFile = (fileNameOrType: string): boolean => {
+    return /\.pdf$/i.test(fileNameOrType) || fileNameOrType === 'application/pdf';
+};
+
 
 const CreateInquiry = () => {
   const dispatch = useAppDispatch();
@@ -165,35 +207,20 @@ const CreateInquiry = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
   const [attachmentsToRemove, setAttachmentsToRemove] = useState<string[]>([]);
-  // MODIFICATION: State to hold new file previews
   const [newAttachmentPreviews, setNewAttachmentPreviews] = useState<NewAttachmentPreview[]>([]);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
   const { departmentsData, usersData = [], status: masterLoadingStatus = "idle" } = useSelector(masterSelector, shallowEqual);
 
   const departmentOptions = useMemo(() => departmentsData?.data?.map((c: ApiLookupItem) => ({ value: String(c.id), label: c.name })) || [], [departmentsData]);
   const usersDataOptions = useMemo(() => Array.isArray(usersData) ? usersData.map((sp: ApiLookupItem) => ({ value: String(sp.id), label: `(${sp.employee_id}) - ${sp.name || 'N/A'}` })) : [], [usersData]);
 
-  const inquiryTypeOptions = [
-    { value: "New Product Inquiry", label: "New Product Inquiry" },
-    { value: "Services Inquiry", label: "Services Inquiry" },
-    { value: "Price Quotation", label: "Price Quotation" },
-    { value: "General Inquiry", label: "General Inquiry" },
-    { value: "Marketing Inquiry", label: "Marketing Inquiry" },
-    { value: "Membership Inquiry", label: "Membership Inquiry" },
-    { value: "Partnership Inquiry", label: "Partnership Inquiry" },
-    { value: "Others", label: "Others" }];
+  const inquiryTypeOptions = [ { value: "New Product Inquiry", label: "New Product Inquiry" }, { value: "Services Inquiry", label: "Services Inquiry" }, { value: "Price Quotation", label: "Price Quotation" }, { value: "General Inquiry", label: "General Inquiry" }, { value: "Marketing Inquiry", label: "Marketing Inquiry" }, { value: "Membership Inquiry", label: "Membership Inquiry" }, { value: "Partnership Inquiry", label: "Partnership Inquiry" }, { value: "Others", label: "Others" }];
   const priorityOptions = [{ value: "Low", label: "Low" }, { value: "Medium", label: "Medium" }, { value: "High", label: "High" }];
   const statusOptions = [{ value: "Open", label: "Open" }, { value: "In Progress", label: "In Progress" }, { value: "Resolved", label: "Resolved" }, { value: "On Hold", label: "On Hold" }, { value: "Rejected", label: "Rejected" }, { value: "Closed", label: "Closed" }];
   const feedbackStatusOptions = [{ value: "Received", label: "Received" }, { value: "Pending", label: "Pending" }, { value: "Positive", label: "Positive" }, { value: "Neutral", label: "Neutral" }, { value: "Negative", label: "Negative" }];
-  const inquiryFromOptions = [{ value: "Website", label: "Website (Inquiry Form)" },
-  { value: "Phone", label: "Phone" }, { value: "Email", label: "Email" },
-  { value: "Walk-in", label: "Walk-in" },
-  { value: "Social Media", label: "Social Media" },
-  { value: "Trade Show/Event", label: "Trade Show/Event" },
-  { value: "Partner", label: "Partner/Reseller" },
-  { value: "Whatsapp", label: "Whatsapp" },
-  { value: "Referral", label: "Referral" },
-  { value: "Others", label: "Others" }];
+  const inquiryFromOptions = [{ value: "Website", label: "Website (Inquiry Form)" }, { value: "Phone", label: "Phone" }, { value: "Email", label: "Email" }, { value: "Walk-in", label: "Walk-in" }, { value: "Social Media", label: "Social Media" }, { value: "Trade Show/Event", label: "Trade Show/Event" }, { value: "Partner", label: "Partner/Reseller" }, { value: "Whatsapp", label: "Whatsapp" }, { value: "Referral", label: "Referral" }, { value: "Others", label: "Others" }];
 
   const { control, handleSubmit, formState: { errors, isDirty }, reset, setValue, getValues } = useForm<InquiryFormData>({
     defaultValues: formDefaultValues,
@@ -201,7 +228,6 @@ const CreateInquiry = () => {
   });
 
   useEffect(() => {
-    // ... no changes in this useEffect ...
     const fetchDropdownData = async () => {
       setInitialDataFetched(false);
       try {
@@ -215,9 +241,8 @@ const CreateInquiry = () => {
     };
     fetchDropdownData();
   }, [dispatch]);
-  
+
   useEffect(() => {
-    // ... no changes in this useEffect ...
     if (isEditMode && inquiryIDFromState && initialDataFetched) {
       const fetchInquiryData = async () => {
         try {
@@ -263,11 +288,10 @@ const CreateInquiry = () => {
   }, [inquiryIDFromState, isEditMode, reset, navigate, initialDataFetched, dispatch]);
 
   useEffect(() => {
-    // ... no changes in this useEffect ...
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (isDirty && !isSubmitting) {
         event.preventDefault();
-        event.returnValue = ''; 
+        event.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -276,36 +300,39 @@ const CreateInquiry = () => {
     };
   }, [isDirty, isSubmitting]);
 
-  // MODIFICATION: Add effect to clean up object URLs to prevent memory leaks
   useEffect(() => {
     return () => {
       newAttachmentPreviews.forEach(preview => URL.revokeObjectURL(preview.url));
     };
   }, [newAttachmentPreviews]);
 
-
-  const handleRemoveExistingAttachment = (attachment: ExistingAttachment) => {
-    setExistingAttachments(prev => prev.filter(att => att.url !== attachment.url));
-    setAttachmentsToRemove(prev => [...prev, attachment.name]);
-    if (!isDirty) {
-      setValue("company_name", control._formValues.company_name, { shouldDirty: true }); 
+  const handlePreviewClick = (url: string, fileIdentifier: string) => {
+    if (isImageFile(fileIdentifier)) {
+        setSelectedImageUrl(url);
+        setIsImageModalOpen(true);
+    } else if (isPdfFile(fileIdentifier)) {
+        window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 
-  // MODIFICATION: Function to handle removing a newly selected file from the preview list
-  const handleRemoveNewAttachment = (indexToRemove: number) => {
-    // Remove from preview state
+  const handleRemoveExistingAttachment = (e: React.MouseEvent, attachment: ExistingAttachment) => {
+    e.stopPropagation();
+    setExistingAttachments(prev => prev.filter(att => att.url !== attachment.url));
+    setAttachmentsToRemove(prev => [...prev, attachment.name]);
+    if (!isDirty) {
+      setValue("company_name", control._formValues.company_name, { shouldDirty: true });
+    }
+  };
+
+  const handleRemoveNewAttachment = (e: React.MouseEvent, indexToRemove: number) => {
+    e.stopPropagation();
     setNewAttachmentPreviews(previews => previews.filter((_, index) => index !== indexToRemove));
-    
-    // Remove from react-hook-form state
     const currentFiles = getValues('inquiry_attachments') || [];
     const updatedFiles = Array.from(currentFiles).filter((_, index) => index !== indexToRemove);
     setValue('inquiry_attachments', updatedFiles, { shouldDirty: true });
   };
 
-
   const handleCancel = () => {
-    // MODIFICATION: Also check for new attachments
     if (isDirty || attachmentsToRemove.length > 0 || newAttachmentPreviews.length > 0) {
       setIsConfirmCancelDialogOpen(true);
     } else {
@@ -317,7 +344,7 @@ const CreateInquiry = () => {
     reset(formDefaultValues);
     setExistingAttachments([]);
     setAttachmentsToRemove([]);
-    setNewAttachmentPreviews([]); // MODIFICATION: Reset previews state
+    setNewAttachmentPreviews([]);
     navigate("/business-entities/inquiries");
   };
 
@@ -327,7 +354,6 @@ const CreateInquiry = () => {
   };
 
   const onSubmit = async (data: InquiryFormData) => {
-    // ... no changes in this function ...
     setIsSubmitting(true);
     const apiPayloadObject: any = {
       company_id: 1,
@@ -349,7 +375,9 @@ const CreateInquiry = () => {
       feedback_status: data.feedback_status || null,
       inquiry_from: data.inquiry_from || null,
     };
+
     const formDataPayload = new FormData();
+
     for (const key in apiPayloadObject) {
       if (Object.prototype.hasOwnProperty.call(apiPayloadObject, key)) {
         const value = apiPayloadObject[key];
@@ -358,9 +386,11 @@ const CreateInquiry = () => {
         }
       }
     }
+
     if (Array.isArray(data.department) && data.department.length > 0) {
         formDataPayload.append('department_id', data.department.join(','));
     }
+
     if (Array.isArray(data.inquiry_attachments) && data.inquiry_attachments.length > 0) {
       data.inquiry_attachments.forEach((file: any) => {
         if (file instanceof File) {
@@ -368,11 +398,13 @@ const CreateInquiry = () => {
         }
       });
     }
+
     if (isEditMode && attachmentsToRemove.length > 0) {
       attachmentsToRemove.forEach(fileName => {
         formDataPayload.append('attachments_to_remove[]', fileName);
       });
     }
+
     try {
       if (isEditMode && data.id) {
         formDataPayload.append('id', String(data.id));
@@ -422,7 +454,6 @@ const CreateInquiry = () => {
             <div className="flex justify-center items-center py-10"> <Spinner size="lg" /></div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-6">
-              {/* Rows 1-3 ... no changes here */}
               <FormItem label={<>Inquiry Date <span className="text-red-500">*</span></>} invalid={!!errors.inquiry_date} errorMessage={errors.inquiry_date?.message as string} >
                 <Controller name="inquiry_date" control={control} render={({ field }) => (<DatePicker {...field} value={field.value} onChange={field.onChange} placeholder="Select Inquiry Date" />)} />
               </FormItem>
@@ -497,48 +528,62 @@ const CreateInquiry = () => {
                 <Controller name="inquiry_subject" control={control} render={({ field }) => <Input {...field} placeholder="Enter Subject of Inquiry" />} />
               </FormItem>
 
-              <FormItem label="Resolution (Notes)" invalid={!!errors.inquiry_resolution} errorMessage={errors.inquiry_resolution?.message} className="md:col-span-2 lg:col-span-3" >
+              <FormItem label="Resolution (Notes)" invalid={!!errors.inquiry_resolution} errorMessage={errors.inquiry_resolution?.message} className="md:col-span-2 lg:col-span-4" >
                 <Controller name="inquiry_resolution" control={control} render={({ field }) => <Input textArea rows={4} {...field} value={field.value || ''} placeholder="Enter Resolution Notes" />} />
               </FormItem>
 
-              {/* --- MODIFICATION: Updated Attachments Section --- */}
-              <FormItem label="Attachments" className="lg:col-span-1">
-                {/* Display existing files */}
-                {existingAttachments.length > 0 && (
-                  <div className="mb-2">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Existing Files:</p>
-                    <ul className="mt-1 text-xs text-gray-500 dark:text-gray-400 list-none p-0">
-                      {existingAttachments.map((file, index) => (
-                        <li key={index} className="flex items-center justify-between py-1">
-                          <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline truncate" title={`View ${file.originalName}`}>
-                            {file.originalName}
-                          </a>
-                          <Button type="button" shape="circle" size="sm" icon={<HiOutlineTrash />} variant="plain" className="text-red-500 hover:text-red-700 ml-2" onClick={() => handleRemoveExistingAttachment(file)} title={`Remove ${file.originalName}`} />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                {/* Display new file previews */}
-                {newAttachmentPreviews.length > 0 && (
-                  <div className="flex flex-col gap-2 mt-2">
-                     <p className="text-sm font-medium text-gray-700 dark:text-gray-200">New Files to Upload:</p>
-                    {newAttachmentPreviews.map((preview, index) => (
-                      <div key={index} className="flex items-center gap-3 p-2 border rounded-md dark:border-gray-600">
-                        {preview.type.startsWith("image/") ? (
-                          <img src={preview.url} alt={preview.name} className="w-12 h-12 object-cover rounded" />
-                        ) : (
-                          <div className="w-12 h-12 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded">
-                            <HiOutlineDocumentText className="w-6 h-6 text-gray-500" />
-                          </div>
-                        )}
-                        <span className="text-sm truncate flex-1" title={preview.name}>{preview.name}</span>
-                        <Button type="button" shape="circle" size="sm" icon={<HiOutlineTrash />} variant="plain" className="text-red-500 hover:text-red-700" onClick={() => handleRemoveNewAttachment(index)} title={`Remove ${preview.name}`} />
+              <FormItem label="Attachments" className="md:col-span-2 lg:col-span-4">
+                <div className="flex flex-col gap-3">
+                  {existingAttachments.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Existing Files:</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        {existingAttachments.map((file, index) => {
+                          const isImage = isImageFile(file.originalName);
+                          const isPdf = isPdfFile(file.originalName);
+                          return (
+                            <div key={index} title={file.originalName} onClick={() => handlePreviewClick(file.url, file.originalName)} className={`relative group border rounded-md dark:border-gray-600 overflow-hidden ${isImage || isPdf ? 'cursor-pointer' : ''}`}>
+                              {isImage ? (
+                                <img src={file.url} alt={file.originalName} className="h-24 w-full object-cover" />
+                              ) : (
+                                <div className="h-24 w-full flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-700 text-center p-2">
+                                  {isPdf ? <HiOutlineDocumentText className="h-8 w-8 text-red-500" /> : <HiOutlineDocumentText className="h-8 w-8 text-gray-400" />}
+                                  <span className="text-xs mt-1 truncate w-full">{file.originalName}</span>
+                                </div>
+                              )}
+                              <Button type="button" shape="circle" size="xs" icon={<HiOutlineTrash />} className="absolute top-1 right-1 bg-black bg-opacity-50 text-white opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => handleRemoveExistingAttachment(e, file)} title={`Remove ${file.originalName}`} />
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
+
+                  {newAttachmentPreviews.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">New Files to Upload:</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        {newAttachmentPreviews.map((preview, index) => {
+                          const isImage = isImageFile(preview.type);
+                          const isPdf = isPdfFile(preview.type);
+                          return (
+                            <div key={index} title={preview.name} onClick={() => handlePreviewClick(preview.url, preview.type)} className={`relative group border rounded-md dark:border-gray-600 overflow-hidden ${isImage || isPdf ? 'cursor-pointer' : ''}`}>
+                              {isImage ? (
+                                <img src={preview.url} alt={preview.name} className="h-24 w-full object-cover" />
+                              ) : (
+                                <div className="h-24 w-full flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-700 text-center p-2">
+                                  {isPdf ? <HiOutlineDocumentText className="h-8 w-8 text-red-500" /> : <HiOutlineDocumentText className="h-8 w-8 text-gray-400" />}
+                                  <span className="text-xs mt-1 truncate w-full">{preview.name}</span>
+                                </div>
+                              )}
+                              <Button type="button" shape="circle" size="xs" icon={<HiOutlineTrash />} className="absolute top-1 right-1 bg-black bg-opacity-50 text-white opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => handleRemoveNewAttachment(e, index)} title={`Remove ${preview.name}`} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <Controller
                   name="inquiry_attachments"
@@ -553,21 +598,15 @@ const CreateInquiry = () => {
                         const files = e.target.files;
                         if (files) {
                           const fileArray = Array.from(files);
-                          // Update react-hook-form state
                           onChange(fileArray);
-                          // Create and set previews
-                          const previews = fileArray.map(file => ({
-                            name: file.name,
-                            url: URL.createObjectURL(file),
-                            type: file.type
-                          }));
+                          const previews = fileArray.map(file => ({ name: file.name, url: URL.createObjectURL(file), type: file.type }));
                           setNewAttachmentPreviews(previews);
                         } else {
                           onChange([]);
                           setNewAttachmentPreviews([]);
                         }
                       }}
-                      className="mt-2"
+                      className="mt-4"
                     />
                   )}
                 />
@@ -594,6 +633,12 @@ const CreateInquiry = () => {
           )}
         </AdaptiveCard>
       </Container>
+
+      <ImagePreviewModal
+        isOpen={isImageModalOpen}
+        imageUrl={selectedImageUrl || ''}
+        onClose={() => setIsImageModalOpen(false)}
+      />
 
       <ConfirmDialog
         isOpen={isConfirmCancelDialogOpen}
