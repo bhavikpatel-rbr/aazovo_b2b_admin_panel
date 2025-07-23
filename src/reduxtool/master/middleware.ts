@@ -901,7 +901,7 @@ export const getProductsAction = createAsyncThunk(
     try {
       const response: AxiosResponse<any> = await getProductAsync()
       if (response?.data?.status === true) {
-        return response?.data
+        return response?.data?.data
       }
 
       return rejectWithValue(response)
@@ -4999,7 +4999,7 @@ export const addEmployeesAction = createAsyncThunk<any, any>(
     try {
       const response: AxiosResponse<any> = await addEmployeeListAsync(payload);
 
-      if (response?.status === true || response?.status === 200) {
+      if (response?.status === true) {
         dispatch(getEmployeesListingAction())
         return response?.data
       } else {
@@ -5027,7 +5027,7 @@ export const editEmployeesAction = createAsyncThunk(
   async (payload, { rejectWithValue, dispatch }) => {
     try {
       const response: AxiosResponse<any> = await editEmployeeListAsync(payload);
-      if (response?.status === true || response?.status === 200) {
+      if (response?.status === true || response?.data?.status === true) {
         dispatch(getEmployeesListingAction())
         return response?.data
       } else {

@@ -20,12 +20,12 @@ import { HiOutlineTrash } from 'react-icons/hi';
 import { TbPlus, TbTrash, TbX, TbChevronLeft, TbChevronRight, TbFile, TbFileSpreadsheet, TbFileTypePdf } from "react-icons/tb";
 
 // Redux
-import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById } from '@/reduxtool/master/middleware';
+import { addEmployeesAction, editEmployeesAction, apiGetEmployeeById, getParentCategoriesAction } from '@/reduxtool/master/middleware';
 import { masterSelector } from '@/reduxtool/master/masterSlice';
 import {
     getRolesAction, getDepartmentsAction, getDesignationsAction,
     getCountriesAction, getCategoriesAction,
-    getBrandAction, getAllProductsAction, getMemberAction, getEmployeesListingAction
+    getBrandAction, getProductsAction, getMemberAction, getEmployeesListingAction
 } from '@/reduxtool/master/middleware';
 
 
@@ -394,18 +394,22 @@ const DocumentSubmissionSection = ({ control, errors, formMethods }: FormSection
 };
 
 const RoleResponsibilitySection = ({ control, errors }: FormSectionBaseProps) => {
-    const { Roles, departmentsData, designationsData, BrandData, CategoriesData, AllProducts, MemberData, EmployeesList, CountriesData } = useSelector(masterSelector);
+    const { Roles, departmentsData, designationsData, BrandData, ParentCategories, ProductsData, EmployeesList, CountriesData } = useSelector(masterSelector);
+console.log("productOptions",EmployeesList);
+console.log("productOptions",EmployeesList);
+
 
     const toOptions = (data: any, labelKey = 'name', valueKey = 'id') => Array.isArray(data) ? data.map((item) => ({ value: String(item[valueKey]), label: item[labelKey] })) : [];
     const roleOptions = useMemo(() => Array.isArray(Roles) ? Roles.map((r: any) => ({ value: String(r.id), label: r.display_name })) : [], [Roles]);
     const departmentOptions = useMemo(() => toOptions(departmentsData?.data), [departmentsData]);
     const designationOptions = useMemo(() => toOptions(designationsData?.data), [designationsData]);
     const countryOptions = useMemo(() => toOptions(CountriesData), [CountriesData]);
-    const categoryOptions = useMemo(() => toOptions(CategoriesData), [CategoriesData]);
+    const categoryOptions = useMemo(() => toOptions(ParentCategories), [ParentCategories]);
     const brandOptions = useMemo(() => toOptions(BrandData), [BrandData]);
-    const productOptions = useMemo(() => toOptions(AllProducts), [AllProducts]);
-    const reportingHrOptions = useMemo(() => toOptions(EmployeesList?.data?.data), [EmployeesList]);
-    const reportingHeadOptions = useMemo(() => toOptions(MemberData.data), [MemberData]);
+    const productOptions = useMemo(() => toOptions(ProductsData), [ProductsData]);
+    
+    const reportingHrOptions = useMemo(() => toOptions(EmployeesList?.data), [EmployeesList]);
+    const reportingHeadOptions = useMemo(() => toOptions(EmployeesList?.data), [EmployeesList]);
     return (
         <Card id="roleResponsibility"><h4 className="mb-6">Role & Responsibility</h4><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
             <FormItem label="Role" invalid={!!errors.roleResponsibility?.roleId} errorMessage={(errors.roleResponsibility?.roleId as any)?.message}><Controller name="roleResponsibility.roleId" control={control} render={({ field }) => <Select placeholder="Select Role" options={roleOptions} {...field} />} /></FormItem>
@@ -688,9 +692,9 @@ const EmployeeFormPage = () => {
         dispatch(getDepartmentsAction());
         dispatch(getDesignationsAction());
         dispatch(getCountriesAction());
-        dispatch(getCategoriesAction());
+        dispatch(getParentCategoriesAction());
         dispatch(getBrandAction());
-        dispatch(getAllProductsAction());
+        dispatch(getProductsAction());
         dispatch(getMemberAction());
         dispatch(getEmployeesListingAction());
     }, [dispatch]);
@@ -710,11 +714,11 @@ const EmployeeFormPage = () => {
         const departmentOptions = toOptions(lookups.departmentsData?.data);
         const designationOptions = toOptions(lookups.designationsData?.data);
         const countryOptions = toOptions(lookups.CountriesData);
-        const categoryOptions = toOptions(lookups.CategoriesData || []);
+        const categoryOptions = toOptions(lookups.ParentCategories || []);
         const brandOptions = toOptions(lookups.BrandData || []);
-        const productOptions = toOptions(lookups.AllProducts || []);
-        const reportingHrOptions = toOptions(lookups.EmployeesList?.data?.data);
-        const reportingHeadOptions = toOptions(lookups.MemberData?.data);
+        const productOptions = toOptions(lookups.ProductsData || []);
+        const reportingHrOptions = toOptions(lookups.EmployeesList?.data);
+        const reportingHeadOptions = toOptions(lookups.EmployeesList?.data);
 
         return {
             id: String(apiData.id),
