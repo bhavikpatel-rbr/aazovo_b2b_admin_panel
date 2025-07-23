@@ -133,7 +133,8 @@ const prepareDefaultValues = (structure: FormStructure, savedData: any): any => 
 // --- Reusable Field Components ---
 const MultiCheckboxField: FC<{ control: Control<any>, field: FormField }> = ({ control, field }) => {
     return (
-        <FormItem label={field.label} className="md:col-span-2 lg:col-span-3">
+        // Updated to span 2 columns on small screens and up
+        <FormItem label={field.label} className="sm:col-span-2">
             <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mt-2`}>
                 {field.options?.map(option => (
                     <div key={option.name} className="flex items-center gap-2">
@@ -182,7 +183,7 @@ const renderField = (
 
         case 'file':
             return (
-                <FormItem {...commonProps} className="col-span-2 md:col-span-1">
+                <FormItem {...commonProps}>
                     <Controller
                         name={field.name}
                         control={control}
@@ -200,8 +201,9 @@ const renderField = (
                 </FormItem>
             );
         case 'textarea':
+             // Updated to span 2 columns on small screens and up
             return (
-                <FormItem {...commonProps} className="md:col-span-2 lg:col-span-3">
+                <FormItem {...commonProps} className="sm:col-span-2">
                     <Controller name={field.name} control={control} render={({ field: controllerField }) => (
                         <Input textArea placeholder={`Enter ${field.label}...`} {...controllerField} />
                     )} />
@@ -514,11 +516,6 @@ const FillUpForm = () => {
     const currentSectionData = formStructure.sections.find(s => s.id === activeSection);
 
     return (
-
-
-
-
-
         <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900/50">
             {/* Header Area */}
             <header className="flex-shrink-0 p-6 pb-0">
@@ -541,78 +538,80 @@ const FillUpForm = () => {
                 </Card>
             </header>
 
-            {/* Main Content */}
-            <main className="flex-grow flex flex-col md:flex-row gap-6 p-6 overflow-hidden">
-                {/* Left Column: Document Preview */}
-                <div className="w-full md:w-2/5 flex">
-                    <Card className="w-full" bodyClass="h-full flex flex-col">
-                        <div className="flex justify-between items-center flex-shrink-0">
-                            <h5 className="mb-0">Documents</h5>
-                            {previewEntries.length > 0 && (
-                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    {currentPreviewIndex + 1} / {previewEntries.length}
-                                </span>
-                            )}
-                        </div>
+                      {/* Main Content: Updated with a permanent thumbnail footer on the image viewer */}
+            <main className="flex-grow grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 overflow-hidden h-20">
+                {/* Left Column: Document Preview (Full-Bleed) */}
+                <div className="h-[511px] flex">
+                    {/*
+                      The 'group' class on the Card is still used to control the hover effect for the TOP overlay.
+                    */}
+                    <Card className="w-full" bodyClass="h-full p-0 relative group overflow-hidden">
+                        {previewEntries.length > 0 ? (
+                            <>
+                                {/* Main Image: Fills the entire card, leaving space at the bottom for the permanent thumbnail bar */}
+                                <img
+                                    src={previewEntries[currentPreviewIndex][1]}
+                                    alt={`Preview for ${previewEntries[currentPreviewIndex][0]}`}
+                                    className="w-full h-full object-contain cursor-pointer"
+                                    onClick={openFullScreen}
+                                />
 
-                        <div className="flex-grow flex flex-col justify-center items-center min-h-0">
-                            {previewEntries.length > 0 ? (
-                                <div className="w-full h-full flex flex-col">
-                                    <div
-                                        className="flex-grow relative w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md flex justify-center items-center overflow-hidden cursor-pointer"
-                                        onClick={openFullScreen}
-                                    >
-                                        {/* This wrapper constrains the image's maximum size */}
-                                        <div className="relative w-full h-full max-h-[500px]">
-                                            <img
-                                                src={previewEntries[currentPreviewIndex][1]}
-                                                alt={`Preview for ${previewEntries[currentPreviewIndex][0]}`}
-                                                className="absolute top-0 left-0 w-full h-full object-contain"
-                                            />
+                                {/* Top Overlay: Title & Counter (Still appears only on hover for a clean look) */}
+                                <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/60 to-transparent transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+                                    <div className="flex justify-between items-start text-white">
+                                        <div>
+                                            <h5 className="mb-0 text-white">Documents</h5>
+                                            <p className="text-sm text-gray-200 truncate" title={previewEntries[currentPreviewIndex][0]}>
+                                                {previewEntries[currentPreviewIndex][0].split('.').pop()?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                            </p>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-center font-semibold text-gray-700 dark:text-gray-200 truncate" title={previewEntries[currentPreviewIndex][0]}>
-                                            {previewEntries[currentPreviewIndex][0].split('.').pop()?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                                        </p>
+                                        <span className="text-sm font-medium bg-black/30 px-2 py-1 rounded-md">
+                                            {currentPreviewIndex + 1} of {previewEntries.length}
+                                        </span>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="w-full h-full flex justify-center items-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md">
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">No documents to preview.</p>
-                                </div>
-                            )}
-                        </div>
 
-                        {previewEntries.length > 0 && (
-                            <div className="flex-shrink-0 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <div className="flex gap-3 overflow-x-auto pb-1">
-                                    {previewEntries.map(([fieldName, imageUrl], index) => (
-                                        <button
-                                            key={fieldName}
-                                            type="button"
-                                            className={classNames('w-16 h-16 flex-shrink-0 rounded-md overflow-hidden border-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500', {
-                                                'border-indigo-500': currentPreviewIndex === index,
-                                                'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500': currentPreviewIndex !== index
-                                            })}
-                                            onClick={() => setCurrentPreviewIndex(index)}
-                                        >
-                                            <img src={imageUrl} alt={`Thumbnail for ${fieldName}`} className="w-full h-full object-cover" />
-                                        </button>
-                                    ))}
+                                {/* 
+                                  KEY CHANGE: Bottom Thumbnail Bar 
+                                  - It's now always visible (no more group-hover opacity).
+                                  - It has a blurred, semi-transparent background for readability.
+                                  - It's positioned at the absolute bottom (`bottom-0`).
+                                */}
+                                <div className="absolute bottom-0 left-0 right-0 z-10 p-3 bg-black/70 backdrop-blur-sm">
+                                    <div className="flex gap-3 overflow-x-auto pb-1">
+                                        {previewEntries.map(([fieldName, imageUrl], index) => (
+                                            <button
+                                                key={fieldName}
+                                                type="button"
+                                                className={classNames('w-16 h-16 flex-shrink-0 rounded-md overflow-hidden border-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500', {
+                                                    'border-indigo-400': currentPreviewIndex === index,
+                                                    'border-transparent hover:border-indigo-400': currentPreviewIndex !== index
+                                                })}
+                                                onClick={() => setCurrentPreviewIndex(index)}
+                                            >
+                                                <img src={imageUrl} alt={`Thumbnail for ${fieldName}`} className="w-full h-full object-cover" />
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
+                            </>
+                        ) : (
+                            // Fallback for when there are no images
+                            <div className="w-full h-full flex justify-center items-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">No documents to preview.</p>
                             </div>
                         )}
                     </Card>
                 </div>
 
-                {/* Right Column: Form Fields */}
-                <div className="w-full md:w-3/5 flex">
+                {/* Right Column: Form Fields (No changes here) */}
+                <div className="h-[511px] flex">
                     <Card className="w-full" bodyClass="h-full flex flex-col">
                         <form onSubmit={handleSubmit(onFormSubmit)} className="h-full flex flex-col">
                             {currentSectionData && (
                                 <div className="flex-grow overflow-y-auto pr-4 -mr-4">
-                                    <div id={currentSectionData.id} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-4">
+                                     {/* Simplified grid for better readability on various screen sizes */}
+                                    <div id={currentSectionData.id} className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
                                         {currentSectionData.fields.map(field => renderField(field, control, handleFileChange))}
                                     </div>
                                 </div>
@@ -621,9 +620,8 @@ const FillUpForm = () => {
                     </Card>
                 </div>
             </main>
-
             {/* Footer */}
-            <footer className="flex-shrink-0 p-6 pt-0">
+            <footer className="flex-shrink-0 pt-0">
                 <Card>
                     <div className="flex justify-between items-center">
                         <div>
@@ -633,15 +631,22 @@ const FillUpForm = () => {
                                 onClick={() => navigate(-1)}
                                 disabled={isSubmitting}
                             >
-                                Discard
+                                Cancel
                             </Button>
                         </div>
                         <div className="flex items-center gap-2">
                             <Button type="button" onClick={handlePreviousSection} disabled={isSubmitting || activeIndex === 0}>Previous</Button>
-                            <Button type="button" onClick={handleNextSection} disabled={isSubmitting || activeIndex === sectionIds.length - 1}>Next</Button>
-                            <Button variant="solid" type="button" onClick={handleSubmit(onFormSubmit)} loading={isSubmitting}>
-                                {isSubmitting ? 'Saving...' : 'Submit'}
-                            </Button>
+                            
+                             {/* Improved UX: "Next" button becomes "Submit" on the last section */}
+                             {activeIndex < sectionIds.length - 1 ? (
+                                <Button variant="solid" type="button" onClick={handleNextSection} disabled={isSubmitting}>
+                                    Next
+                                </Button>
+                            ) : (
+                                <Button variant="solid" type="button" onClick={handleSubmit(onFormSubmit)} loading={isSubmitting}>
+                                    {isSubmitting ? 'Saving...' : 'Submit Form'}
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </Card>
@@ -667,26 +672,25 @@ const FillUpForm = () => {
                         <button
                             onClick={(e) => { e.stopPropagation(); handlePreviousPreview(); }}
                             disabled={currentPreviewIndex === 0}
-                            className="absolute left-4 md:left-10 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 disabled:opacity-0 disabled:cursor-not-allowed rounded-full p-2 transition-all z-50"
+                            className="absolute left-4 md:left-10 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 disabled:opacity-20 disabled:cursor-not-allowed rounded-full p-2 transition-all z-50"
                             aria-label="Previous image"
                         >
                             <BiChevronLeft className="text-white h-8 w-8" />
                         </button>
                     )}
 
-                    {/* Image */}
-
+                    {/* Image and Caption Container */}
                     <div
-                        className="relative max-w-full max-h-full"
+                        className="relative max-w-full max-h-full flex flex-col items-center justify-center"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <img src={previewEntries[currentPreviewIndex][1]} alt="Full-screen preview" className="object-contain" style={{
-                            maxHeight: '90vh',
-                            maxWidth: 'min(90vw, 1400px)'
+                        <img src={previewEntries[currentPreviewIndex][1]} alt="Full-screen preview" className="block object-contain" style={{
+                            maxHeight: 'calc(90vh - 4rem)', // Leave space for caption
+                            maxWidth: '90vw'
                         }} />
-                        <div className="absolute bottom-5 text-center bg-black/50 text-white py-1.5 px-4 rounded-md text-sm">
+                        <div className="mt-4 text-center bg-black/50 text-white py-1.5 px-4 rounded-md text-sm">
                             <strong>{previewEntries[currentPreviewIndex][0].split('.').pop()?.replace(/_/g, ' ')}</strong>
-                            ({currentPreviewIndex + 1} / {previewEntries.length})
+                            {' '}({currentPreviewIndex + 1} / {previewEntries.length})
                         </div>
                     </div>
 
@@ -695,7 +699,7 @@ const FillUpForm = () => {
                         <button
                             onClick={(e) => { e.stopPropagation(); handleNextPreview(); }}
                             disabled={currentPreviewIndex >= previewEntries.length - 1}
-                            className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 disabled:opacity-0 disabled:cursor-not-allowed rounded-full p-2 transition-all z-50"
+                            className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 disabled:opacity-20 disabled:cursor-not-allowed rounded-full p-2 transition-all z-50"
                             aria-label="Next image"
                         >
                             <BiChevronRight className="text-white h-8 w-8" />
@@ -708,5 +712,3 @@ const FillUpForm = () => {
 }
 
 export default FillUpForm;
-
-

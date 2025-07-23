@@ -1707,37 +1707,42 @@ const Products = () => {
 
   const isMounted = useRef(false); // ADDED
   useEffect(() => {
-    if (isMounted.current) {
-      const fetchData = () => {
-        const apiParams: Record<string, any> = {
-          page: tableData.pageIndex,
-          per_page: tableData.pageSize,
-          search: tableData.query,
-          sort_key: tableData.sort.key,
-          sort_order: tableData.sort.order,
-          name_or_sku: filterCriteria.filterNameOrSku,
-          "category_ids[]": filterCriteria.filterCategoryIds,
-          "sub_category_ids[]": filterCriteria.filterSubCategoryIds,
-          "brand_ids[]": filterCriteria.filterBrandIds,
-          status:
-            filterCriteria.filterStatuses
-              ?.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-              ?.join(",") || (currentListTab === TABS.PENDING ? "Pending" : ""),
+    const timerId = setTimeout(() => {
+      if (isMounted.current) {
+        const fetchData = () => {
+          const apiParams: Record<string, any> = {
+            page: tableData.pageIndex,
+            per_page: tableData.pageSize,
+            search: tableData.query,
+            sort_key: tableData.sort.key,
+            sort_order: tableData.sort.order,
+            name_or_sku: filterCriteria.filterNameOrSku,
+            "category_ids[]": filterCriteria.filterCategoryIds,
+            "sub_category_ids[]": filterCriteria.filterSubCategoryIds,
+            "brand_ids[]": filterCriteria.filterBrandIds,
+            status:
+              filterCriteria.filterStatuses
+                ?.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+                ?.join(",") || (currentListTab === TABS.PENDING ? "Pending" : ""),
+          };
+
+          const cleanedParams = Object.fromEntries(
+            Object.entries(apiParams).filter(
+              ([_, v]) =>
+                v != null && v !== "" && (!Array.isArray(v) || v.length > 0)
+            )
+          );
+
+          dispatch(getProductslistingAction(cleanedParams));
         };
-
-        const cleanedParams = Object.fromEntries(
-          Object.entries(apiParams).filter(
-            ([_, v]) =>
-              v != null && v !== "" && (!Array.isArray(v) || v.length > 0)
-          )
-        );
-
-        dispatch(getProductslistingAction(cleanedParams));
-      };
-      fetchData();
-    } else {
-      isMounted.current = true;
-    }
+        fetchData();
+      } else {
+        isMounted.current = true;
+      }
+    }, 500);
+    return () => {
+      clearTimeout(timerId);
+    };
   }, [dispatch, tableData, filterCriteria, currentListTab]);
 
   // --- MODAL STATE MANAGEMENT (NEW) ---
@@ -3457,12 +3462,12 @@ const Products = () => {
                     name="description"
                     control={formControl}
                     render={({ field }) => (
-                      <Input
-                        textArea
-                        {...field}
-                        rows={8}
-                        value={field.value ?? ""}
+                      <RichTextEditor
+                        content={field.value}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
                       />
+
                     )}
                   />
                 </FormItem>
@@ -3475,11 +3480,10 @@ const Products = () => {
                     name="short_description"
                     control={formControl}
                     render={({ field }) => (
-                      <Input
-                        textArea
-                        {...field}
-                        rows={4}
-                        value={field.value ?? ""}
+                       <RichTextEditor
+                        content={field.value}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
                       />
                     )}
                   />
@@ -3493,11 +3497,10 @@ const Products = () => {
                     name="payment_term"
                     control={formControl}
                     render={({ field }) => (
-                      <Input
-                        textArea
-                        {...field}
-                        rows={3}
-                        value={field.value ?? ""}
+                       <RichTextEditor
+                        content={field.value}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
                       />
                     )}
                   />
@@ -3511,11 +3514,10 @@ const Products = () => {
                     name="delivery_details"
                     control={formControl}
                     render={({ field }) => (
-                      <Input
-                        textArea
-                        {...field}
-                        rows={3}
-                        value={field.value ?? ""}
+                       <RichTextEditor
+                        content={field.value}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
                       />
                     )}
                   />
@@ -3529,11 +3531,10 @@ const Products = () => {
                     name="product_specification"
                     control={formControl}
                     render={({ field }) => (
-                      <Input
-                        textArea
-                        {...field}
-                        rows={5}
-                        value={field.value ?? ""}
+                       <RichTextEditor
+                        content={field.value}
+                        onChange={(val) => field.onChange(val.html)}
+                        className="flex-grow min-h-[150px] sm:min-h-[200px]"
                       />
                     )}
                   />

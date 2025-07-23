@@ -3314,51 +3314,56 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   // SERVER-SIDE CHANGE: This effect now orchestrates the server-side data fetching.
   useEffect(() => {
-    const fetchOpportunitiesData = (tab: string) => {
-        const tableData = tableQueries[tab];
-        if (!tableData) return;
-
-        const payload: any = {
-            page: tableData.pageIndex,
-            per_page: tableData.pageSize,
-            sort_field: (tableData.sort as ColumnSort).key,
-            sort_order: (tableData.sort as ColumnSort).order,
-            search: tableData.query,
-            status: filters.statuses.join(','),
-            assigned_to: filters.assignedTo.join(','),
-            member_type: filters.memberTypes.join(','),
-            continent: filters.continents.join(','),
-            country: filters.countries.join(','),
-            state: filters.states,
-            city: filters.cities,
-            pincode: filters.pincodes,
-            kyc_verified: filters.kycVerified,
-            category: filters.categories.join(','),
-            sub_category: filters.subCategories.join(','),
-            brand: filters.brands.join(','),
-            product: filters.products.join(','),
-            product_status: filters.productStatuses.join(','),
-            product_spec: filters.productSpecs.join(','),
-        };
-        
-        let want_to_filter = [...filters.wantTo];
-        if (tab === TABS.SELLER) {
-            want_to_filter = ['Sell'];
-        } else if (tab === TABS.BUYER) {
-            want_to_filter = ['Buy'];
-        }
-        payload.want_to = want_to_filter.join(',');
-
-        dispatch(getOpportunitieslistingAction(payload));
+     const timerId = setTimeout(() => {
+       const fetchOpportunitiesData = (tab: string) => {
+           const tableData = tableQueries[tab];
+           if (!tableData) return;
+   
+           const payload: any = {
+               page: tableData.pageIndex,
+               per_page: tableData.pageSize,
+               sort_field: (tableData.sort as ColumnSort).key,
+               sort_order: (tableData.sort as ColumnSort).order,
+               search: tableData.query,
+               status: filters.statuses.join(','),
+               assigned_to: filters.assignedTo.join(','),
+               member_type: filters.memberTypes.join(','),
+               continent: filters.continents.join(','),
+               country: filters.countries.join(','),
+               state: filters.states,
+               city: filters.cities,
+               pincode: filters.pincodes,
+               kyc_verified: filters.kycVerified,
+               category: filters.categories.join(','),
+               sub_category: filters.subCategories.join(','),
+               brand: filters.brands.join(','),
+               product: filters.products.join(','),
+               product_status: filters.productStatuses.join(','),
+               product_spec: filters.productSpecs.join(','),
+           };
+           
+           let want_to_filter = [...filters.wantTo];
+           if (tab === TABS.SELLER) {
+               want_to_filter = ['Sell'];
+           } else if (tab === TABS.BUYER) {
+               want_to_filter = ['Buy'];
+           }
+           payload.want_to = want_to_filter.join(',');
+   
+           dispatch(getOpportunitieslistingAction(payload));
+       };
+       
+       if(!initialLoading) {
+         if (currentTab === TABS.AUTO_MATCH) {
+             dispatch(getAutoMatchDataAction());
+             return;
+         }
+         fetchOpportunitiesData(currentTab);
+       }
+    }, 600);
+    return () => {
+      clearTimeout(timerId);
     };
-    
-    if(!initialLoading) {
-      if (currentTab === TABS.AUTO_MATCH) {
-          dispatch(getAutoMatchDataAction());
-          return;
-      }
-      fetchOpportunitiesData(currentTab);
-    }
   }, [dispatch, currentTab, tableQueries, filters, initialLoading]);
   
   useEffect(() => {
