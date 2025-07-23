@@ -984,10 +984,17 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
   const handleAllRowSelect = (c: boolean, r: Row<FormItem>[]) => setSelectedMembers(c ? r.map(i => i.original) : []);
 
   const { businessTypeOptions, businessOpportunityOptions, memberGradeOptions, countryOptions, rmOptions, memberTypeOptions } = useMemo(() => {
+    const unique = (arr: (string | null | undefined)[]) => [...new Set(arr.filter(Boolean))].map(item => ({ value: item as string, label: item as string }));
     return {
-      businessTypeOptions: [], businessOpportunityOptions: [], memberGradeOptions: [], countryOptions: [], rmOptions: [], memberTypeOptions: []
+      businessTypeOptions: unique(pageData.map(f => f.business_type)),
+      businessOpportunityOptions: unique(pageData.flatMap(f => f.business_opportunity?.split(',').map(s => s.trim()))),
+      memberGradeOptions: unique(pageData.map(f => f.member_grade)),
+      countryOptions: unique(pageData.map(f => f.country?.name)),
+      rmOptions: unique(pageData.map(f => f.relationship_manager?.name)),
+      memberTypeOptions: unique(pageData.flatMap(f => f.dynamic_member_profiles.map(p => p.member_type?.name))),
     }
-  }, []);
+  }, [pageData]);
+
 
   return (
     <>
