@@ -914,12 +914,12 @@ const FormListTable = ({ filterCriteria, setFilterCriteria }: { filterCriteria: 
               <h6>Dynamic Profiles for {row.original.name}</h6>
               <Table className="mt-4">
                 <thead className="bg-gray-100 dark:bg-gray-700">
-                  <Tr><Td>Member Type</Td><Td>Brands</Td><Td>Categories</Td><Td>Sub Categories</Td></Tr>
+                  <Tr><Td>Member Type</Td><Td>Brands</Td><Td>Sub Categories</Td></Tr>
                 </thead>
                 <tbody>
                   {dynamic_member_profiles?.length > 0 ? (
                     dynamic_member_profiles.map(p => (
-                      <Tr key={p.id}><Td>{p.member_type?.name || 'N/A'}</Td><Td>{p.brand_names?.join(', ') || 'N/A'}</Td><Td>{p.category_names?.join(', ') || 'N/A'}</Td><Td>{p.sub_category_names?.join(', ') || 'N/A'}</Td></Tr>
+                      <Tr key={p.id}><Td>{p.member_type?.name || 'N/A'}</Td><Td>{p.brand_names?.join(', ') || 'N/A'}</Td><Td>{p.sub_category_names?.join(', ') || 'N/A'}</Td></Tr>
                     ))
                   ) : <Tr><Td colSpan={4} className="text-center">No dynamic profiles available.</Td></Tr>}
                 </tbody>
