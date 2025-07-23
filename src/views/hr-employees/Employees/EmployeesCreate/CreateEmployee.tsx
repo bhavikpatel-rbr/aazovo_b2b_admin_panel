@@ -199,8 +199,8 @@ interface EquipmentItemFE {
 
 interface EmployeeFormSchema {
     id?: string;
-    registration: { fullName: string; dateOfJoining: Date | null; mobileNumber: string; mobileNumberCode: { label: string, value: string }; email: string; experience: string; password?: string; };
-    personalInformation: { status: { label: string, value: string }; dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; maritual_status: { label: string, value: string } | null; };
+    registration: { fullName: string; dateOfJoining: Date | null; mobileNumber: string; mobileNumberCode: { label: string, value: string }; email: string; experience: string; password?: string; status: { label: string, value: string }; jobStatus: { label: string, value: string } | null; };
+    personalInformation: { dateOfBirth: Date | null; age: number | string; gender: { label: string, value: string } | null; nationalityId: { label: string, value: string } | null; bloodGroup: { label: string, value: string } | null; permanentAddress: string; localAddress: string; maritual_status: { label: string, value: string } | null; };
     roleResponsibility: { roleId: { label: string, value: string } | null; departmentId: { label: string, value: string }[]; designationId: { label: string, value: string } | null; countryId: { label: string, value: string }[]; categoryId: { label: string, value: string }[]; subcategoryId: { label: string, value: string }[]; brandId: { label: string, value: string }[]; productServiceId: { label: string, value: string }[]; reportingHrId: { label: string, value: string }[]; reportingHeadId: { label: string, value: string } | null; };
     training: { inductionDateCompletion: Date | null; inductionRemarks: string; departmentTrainingDateCompletion: Date | null; departmentTrainingRemarks: string; };
     offBoarding: { exit_interview_conducted: 'yes' | 'no' | ''; exit_interview_remark: string; resignation_letter_received: 'yes' | 'no' | ''; resignation_letter_remark: string; company_assets_returned: 'all' | 'partial' | 'none' | ''; assets_returned_remarks: string; full_and_final_settlement: 'yes' | 'no' | ''; fnf_remarks: string; notice_period_status: 'served' | 'waived' | ''; notice_period_remarks: string; };
@@ -265,6 +265,18 @@ const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
         .filter((c: any) => c.phone_code)
         .map((c: any) => ({ value: `+${c.phone_code}`, label: `+${c.phone_code} (${c.name})` }))
         .sort((a, b) => a.label.localeCompare(b.label)) : [], [CountriesData]);
+    
+    const statusOptions = [
+        { value: "Active", label: "Active" },
+        { value: "Disabled", label: "Disabled" },
+        { value: "Blocked", label: "Blocked" },
+    ];
+    
+    const jobStatusOptions = [
+        { value: 'Probation', label: 'Probation' },
+        { value: 'On notice', label: 'On notice' },
+        { value: 'Warning', label: 'Warning' },
+    ];
 
     return (
         <Card id="registration"><h4 className="mb-6">Registration</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -275,6 +287,8 @@ const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
             <FormItem label={<>Email <span className="text-red-500">*</span></>} invalid={!!errors.registration?.email} errorMessage={errors.registration?.email?.message}><Controller name="registration.email" control={control} render={({ field }) => <Input type="email" placeholder="employee@company.com" {...field} />} /></FormItem>
             <FormItem label="Experience" invalid={!!errors.registration?.experience} errorMessage={errors.registration?.experience?.message}><Controller name="registration.experience" control={control} render={({ field }) => <Input placeholder="e.g., 3 years" {...field} />} /></FormItem>
             <FormItem label="Password" invalid={!!errors.registration?.password} errorMessage={errors.registration?.password?.message}><Controller name="registration.password" control={control} render={({ field }) => <Input type="password" placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"} {...field} />} /></FormItem>
+            <FormItem label="Status" invalid={!!(errors.registration as any)?.status} errorMessage={(errors.registration as any)?.status?.message}><Controller name="registration.status" control={control} defaultValue={{ value: 'Active', label: 'Active' }} render={({ field }) => <Select placeholder="Select Status" options={statusOptions} {...field} />} /></FormItem>
+            <FormItem label="Job Status" invalid={!!(errors.registration as any)?.jobStatus} errorMessage={(errors.registration as any)?.jobStatus?.message}><Controller name="registration.jobStatus" control={control} render={({ field }) => <Select placeholder="Select Job Status" options={jobStatusOptions} {...field} />} /></FormItem>
         </div></Card>
     );
 };
@@ -283,23 +297,19 @@ const PersonalInformationSection = ({ control, errors }: FormSectionBaseProps) =
     const { CountriesData = [] } = useSelector(masterSelector);
     useEffect(() => { if (!Array.isArray(CountriesData) || CountriesData.length === 0) dispatch(getCountriesAction()); }, [dispatch, CountriesData]);
     const nationalityOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData.map((c: any) => ({ value: String(c.id), label: c.name })) : [], [CountriesData]);
-    const statusOptions = [  { value: "Active", label: "Active" },
-    { value: "Disabled", label: "Disabled" },
-    { value: "Blocked", label: "Blocked" },];
     const genderOptions = [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }];
     const bloodGroupOptions = [{ value: 'A+', label: 'A+' }, { value: 'B+', label: 'B+' }, { value: 'O+', label: 'O+' }, { value: 'A-', label: 'A-' }, { value: 'B-', label: 'B-' }, { value: 'O-', label: 'O-' }, { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' }, { value: 'Other', label: 'Other' }];
     const maritalStatusOptions = [{ value: 'single', label: 'Single' }, { value: 'married', label: 'Married' }];
     return (
         <Card id="personalInformation"><h4 className="mb-6">Personal Information</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FormItem label="Status" invalid={!!errors.personalInformation?.status} errorMessage={(errors.personalInformation?.status as any)?.message}><Controller name="personalInformation.status" control={control} defaultValue={{ value: 'Active', label: 'Active' }} render={({ field }) => <Select placeholder="Select Status" options={statusOptions} {...field} />} /></FormItem>
             <FormItem label="Date of Birth" invalid={!!errors.personalInformation?.dateOfBirth} errorMessage={errors.personalInformation?.dateOfBirth?.message}><Controller name="personalInformation.dateOfBirth" control={control} render={({ field }) => <DatePicker placeholder="Select Date" value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Age" invalid={!!errors.personalInformation?.age} errorMessage={errors.personalInformation?.age?.message}><Controller name="personalInformation.age" control={control} render={({ field }) => <Input type="number" placeholder="Enter Age" {...field} onChange={e => field.onChange(parseInt(e.target.value) || '')} />} /></FormItem>
             <FormItem label="Gender" invalid={!!errors.personalInformation?.gender} errorMessage={(errors.personalInformation?.gender as any)?.message}><Controller name="personalInformation.gender" control={control} render={({ field }) => <Select placeholder="Select Gender" options={genderOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Marital Status" invalid={!!errors.personalInformation?.maritual_status} errorMessage={(errors.personalInformation?.maritual_status as any)?.message}><Controller name="personalInformation.maritual_status" control={control} render={({ field }) => <Select placeholder="Select Marital Status" options={maritalStatusOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Nationality" invalid={!!errors.personalInformation?.nationalityId} errorMessage={(errors.personalInformation?.nationalityId as any)?.message}><Controller name="personalInformation.nationalityId" control={control} render={({ field }) => <Select placeholder="Select Nationality" options={nationalityOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
             <FormItem label="Blood Group" invalid={!!errors.personalInformation?.bloodGroup} errorMessage={(errors.personalInformation?.bloodGroup as any)?.message}><Controller name="personalInformation.bloodGroup" control={control} render={({ field }) => <Select placeholder="Select Blood Group" options={bloodGroupOptions} value={field.value} onChange={field.onChange} />} /></FormItem>
-            <FormItem label="Permanent Address" invalid={!!errors.personalInformation?.permanentAddress} errorMessage={errors.personalInformation?.permanentAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.permanentAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Permanent Address" {...field} />} /></FormItem>
-            <FormItem label="Local Address" invalid={!!errors.personalInformation?.localAddress} errorMessage={errors.personalInformation?.localAddress?.message} className="md:col-span-2 lg:col-span-3"><Controller name="personalInformation.localAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Local Address" {...field} />} /></FormItem>
+            <FormItem label="Permanent Address" invalid={!!errors.personalInformation?.permanentAddress} errorMessage={errors.personalInformation?.permanentAddress?.message} className="md:col-span-2 lg:col-span-2"><Controller name="personalInformation.permanentAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Permanent Address" {...field} />} /></FormItem>
+            <FormItem label="Local Address" invalid={!!errors.personalInformation?.localAddress} errorMessage={errors.personalInformation?.localAddress?.message} className="md:col-span-2 lg:col-span-1"><Controller name="personalInformation.localAddress" control={control} render={({ field }) => <Input textArea placeholder="Enter Local Address" {...field} />} /></FormItem>
         </div></Card>
     );
 };
@@ -526,7 +536,9 @@ const EmployeeFormComponent = ({ onFormSubmit, defaultValues, isEdit = false, is
         formData.append('email', values.registration?.email || '');
         formData.append('experience', values.registration?.experience || '');
         if (values.registration.password) formData.append('password', values.registration.password);
-        formData.append('status', objToValue(values.personalInformation?.status));
+        formData.append('status', objToValue(values.registration?.status));
+        formData.append('job_status', objToValue(values.registration?.jobStatus));
+        
         formData.append('date_of_birth', formatDate(values.personalInformation?.dateOfBirth));
         formData.append('age', String(values.personalInformation?.age || ''));
         formData.append('gender', objToValue(values.personalInformation?.gender));
@@ -713,9 +725,10 @@ const EmployeeFormPage = () => {
                 mobileNumberCode: { value: apiData.mobile_number_code || '', label: apiData.mobile_number_code || '' },
                 email: apiData.email || '',
                 experience: apiData.experience || '',
+                status: { value: apiData.status || 'Active', label: apiData.status || 'Active' },
+                jobStatus: apiData.job_status ? { value: apiData.job_status, label: apiData.job_status } : null,
             },
             personalInformation: {
-                status: { value: apiData.status || 'Active', label: apiData.status || 'Active' },
                 dateOfBirth: apiData.date_of_birth ? new Date(apiData.date_of_birth) : null,
                 age: apiData.age || '',
                 gender: apiData.gender ? { value: apiData.gender, label: apiData.gender } : null,
