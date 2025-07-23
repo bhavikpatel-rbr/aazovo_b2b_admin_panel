@@ -1037,14 +1037,14 @@ const RequestAndFeedbackListing = () => {
         </FormItem>
         {/* MODIFIED: Using dynamic categoryOptions */}
         <FormItem
-          label={<div>Category<span className="text-red-500"> *</span></div>}
+          label={<div>Category</div>}
           invalid={!!errors.category_id}
           errorMessage={errors.category_id?.message}
         >
           <Controller name="category_id" control={control} render={({ field }) => <Select placeholder="Select Category" options={categoryOptions} value={categoryOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbCategory />} />} />
         </FormItem>
         <FormItem
-          label={<div>Department<span className="text-red-500"> *</span></div>}
+          label={<div>Department</div>}
           className="md:col-span-2"
           invalid={!!errors.department_id}
           errorMessage={errors.department_id?.message}
@@ -1052,7 +1052,7 @@ const RequestAndFeedbackListing = () => {
           <Controller name="department_id" control={control} render={({ field }) => <Select placeholder="Select Department" options={departmentOptions} value={departmentOptions.find((o) => o.value === field.value)} onChange={(opt) => field.onChange(opt?.value)} prefix={<TbBuildingStore />} />} />
         </FormItem>
         <FormItem
-          label={<div>Description<span className="text-red-500"> *</span></div>}
+          label={<div>Description</div>}
           className="md:col-span-2"
           invalid={!!errors.feedback_details}
           errorMessage={errors.feedback_details?.message}
@@ -1088,7 +1088,7 @@ const RequestAndFeedbackListing = () => {
           {removeExistingAttachment && <div className="mt-1 text-xs text-red-500">Current attachment will be removed.</div>}
         </FormItem>
         <FormItem
-          label={<div>Status<span className="text-red-500"> *</span></div>}
+          label={<div>Status</div>}
           className="md:col-span-2"
           invalid={!!errors.status}
           errorMessage={errors.status?.message}
