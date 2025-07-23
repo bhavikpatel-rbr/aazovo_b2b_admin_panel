@@ -261,11 +261,20 @@ const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
     const { CountriesData = [] } = useSelector(masterSelector);
     useEffect(() => { if (!Array.isArray(CountriesData) || CountriesData.length === 0) dispatch(getCountriesAction()); }, [dispatch, CountriesData]);
 
-    const countryCodeOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData
-        .filter((c: any) => c.phone_code)
-        .map((c: any) => ({ value: `+${c.phone_code}`, label: `+${c.phone_code} (${c.name})` }))
-        .sort((a, b) => a.label.localeCompare(b.label)) : [], [CountriesData]);
-    
+    // const countryCodeOptions = useMemo(() => Array.isArray(CountriesData) ? CountriesData
+    //     .filter((c: any) => c.phone_code)
+    //     .map((c: any) => ({ value: `+${c.phone_code}`, label: `+${c.phone_code} (${c.name})` }))
+    //     .sort((a, b) => a.label.localeCompare(b.label)) : [], [CountriesData]);
+    const countryCodeOptions = useMemo(() => {
+    const uniqueCountriesMap = new Map();
+    (CountriesData || []).forEach((country: any) => {
+      uniqueCountriesMap.set(country.id, country);
+    });
+    return Array.from(uniqueCountriesMap.values()).map((value: any) => ({
+      value: String(value.id),
+      label: value.phone_code,
+    }));
+  }, [CountriesData]);
     const statusOptions = [
         { value: "Active", label: "Active" },
         { value: "Disabled", label: "Disabled" },
