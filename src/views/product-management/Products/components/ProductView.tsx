@@ -188,8 +188,8 @@ const ProductHeader = ({ product }: { product: ProductData }) => {
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm">
-        <InfoPair label="Created By" value={product.created_by_user.name} />
-        <InfoPair label="Created At" value={dayjs(product.created_at).format('DD MMM YYYY')} />
+        <InfoPair label="Created By" value={product?.created_by_user?.name} />
+        <InfoPair label="Created At" value={dayjs(product?.created_at).format('DD MMM YYYY')} />
       </div>
       <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
         {/* <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/product-management/products`)}>Edit Product</Button> */}
@@ -225,8 +225,8 @@ const ProductDetailsTabView = ({ product }: { product: ProductData }) => (
                 <InfoPair label="SKU Code" value={product.sku_code} />
                 <InfoPair label="HSN Code" value={product.hsn_code} />
                 <InfoPair label="Status" value={<Tag className={`${getStatusClass(product.status)} capitalize`}>{product.status}</Tag>} />
-                <InfoPair label="Base Unit" value={product.unit1.name} />
-                <InfoPair label="Country of Origin" value={product.country.name} />
+                <InfoPair label="Base Unit" value={product?.unit1?.name} />
+                <InfoPair label="Country of Origin" value={product?.country?.name} />
             </div>
         </DetailSection>
 
