@@ -64,7 +64,8 @@ import {
   deleteAllAutoEmailTemplatesAction,
   getCategoriesAction, // Action to fetch categories for templates
   getDepartmentsAction, // Action to fetch departments for templates
-  submitExportReasonAction, // ADDED for export reason
+  submitExportReasonAction,
+  getParentCategoriesAction, // ADDED for export reason
 } from "@/reduxtool/master/middleware"; // Adjust path
 import { masterSelector } from "@/reduxtool/master/masterSlice"; // Adjust path
 import dayjs from "dayjs";
@@ -301,7 +302,7 @@ const AutoEmailTemplatesListing = () => {
   const dispatch = useAppDispatch();
   const {
     autoEmailTemplatesData = {}, // Data for the table
-    CategoriesData = [],    // Data for category dropdown
+    ParentCategories = [],    // Data for category dropdown
     departmentsData = [],   // Data for department dropdown
   } = useSelector(masterSelector, shallowEqual);
 
@@ -341,7 +342,7 @@ const AutoEmailTemplatesListing = () => {
   }, []);
 
 
-  const categoryOptions = useMemo(() => Array.isArray(CategoriesData) ? CategoriesData.map((c: ApiAETCategory) => ({ value: String(c.id), label: c.name })) : [], [CategoriesData]);
+  const categoryOptions = useMemo(() => Array.isArray(ParentCategories) ? ParentCategories.map((c: ApiAETCategory) => ({ value: String(c.id), label: c.name })) : [], [ParentCategories]);
   const departmentOptions = useMemo(() => Array.isArray(departmentsData?.data) ? departmentsData?.data.map((d: ApiAETDepartment) => ({ value: String(d.id), label: d.name })) : [], [departmentsData?.data]);
 
   useEffect(() => {
@@ -350,7 +351,7 @@ const AutoEmailTemplatesListing = () => {
         try {
             await Promise.all([
                 dispatch(getAutoEmailTemplatesAction()),
-                dispatch(getCategoriesAction()),
+                dispatch(getParentCategoriesAction()),
                 dispatch(getDepartmentsAction()),
             ]);
         } catch (error) {

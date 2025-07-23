@@ -635,9 +635,12 @@ const RecipientFilterModal = ({
     [CompanyData]
   );
   const brandOptions = useMemo(() =>
-    BrandData?.data?.map((b: any) => ({ value: String(b.id), label: b.name })),
+    BrandData?.map((b: any) => ({ value: String(b.id), label: b.name })),
     [BrandData]
   );
+
+  console.log("BrandData",BrandData);
+  
   const categoryOptions = useMemo(() =>
     (CategoriesData || []).map((c: any) => ({ value: String(c.id), label: c.name })),
     [CategoriesData]
@@ -893,7 +896,7 @@ const RecipientFilterModal = ({
           <h6 className="font-semibold">Wall Filter</h6>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4">
             <FormItem label="Favourite Brand">
-              <Controller name="favourite_brand" control={recipientFilterForm.control} render={({ field }) => <Select {...field} value={brandOptions.find(o => o.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : '')} options={brandOptions} isClearable placeholder="Select Brand" />} />
+              <Controller name="favourite_brand" control={recipientFilterForm.control} render={({ field }) => <Select {...field} value={brandOptions?.find(o => o.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : '')} options={brandOptions} isClearable placeholder="Select Brand" />} />
             </FormItem>
             <FormItem label="Product spec">
               <Controller name="product_spec_id" control={recipientFilterForm.control} render={({ field }) => <Select {...field} value={productSpecOptions.find(o => o.value === field.value) || null} onChange={(option) => field.onChange(option ? option.value : '')} options={productSpecOptions} isClearable placeholder="Select Spec" />} />
