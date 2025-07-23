@@ -117,14 +117,14 @@ type TaskStatusDisplay = typeof taskStatusLabelsDisplay[number];
 // --- Zod Schema ---
 const createTaskSchema = z.object({
   task_title: z.string().min(1, "Task title is required.").max(255),
-  module_name: z.string().min(1, "Module name is required."),
+  module_name: z.string().optional().nullable(),
   module_id: z.string().optional(),
-  assignedToIds: z.array(z.string()).min(1, "Assign to at least one member."),
+  assignedToIds: z.array(z.string()).optional().nullable(),
   status: z.enum(taskStatusLabelsApi, { required_error: "Status is required." }), // Updated validation
   priority: z.enum(["Low", "Medium", "High", "Urgent"], { required_error: "Priority is required." }),
-  department_id: z.string().min(1, "Department is required."),
+  department_id: z.string().optional().nullable(),
   dueDate: z.date({ required_error: "Due date is required." }),
-  note_remark: z.string().min(1, "Note/Remark is required.").max(1000),
+  note_remark: z.string().optional().nullable() ,
   additional_description: z.string().optional(),
   activity_type: z.string().optional(),
 });
@@ -360,7 +360,15 @@ const CreateTaskPage = () => {
     data.assignedToIds.forEach(id => formDataPayload.append("assign_to[]", id));
     formDataPayload.append("status", data.status);
     formDataPayload.append("priority", data.priority);
-    formDataPayload.append("department_id", data.department_id);
+    console.log("data.department_id",data.department_id);
+    console.log("data.department_id",typeof(data.department_id));
+    
+    if (data.department_id != 'null') {
+      
+      formDataPayload.append("department_id", data.department_id);
+    }else{
+       formDataPayload.append("department_id", '');
+    }
     formDataPayload.append("due_data", dayjs(data.dueDate).format('YYYY-MM-DD HH:mm:ss'));
     formDataPayload.append("note_remark", data.note_remark);
     if (data.additional_description) formDataPayload.append("additional_description", data.additional_description);
@@ -446,7 +454,7 @@ const CreateTaskPage = () => {
 
             {/* Assigned to */}
             <div className="flex items-start">
-              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 pt-2">Assigned to: <span className="text-red-500">*</span></label>
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0 pt-2">Assigned to: </label>
               <div className="w-full">
                 <div className="flex items-center gap-1 flex-wrap">
                   <UsersAvatarGroup users={assignedMembers} onAvatarClick={(member: FormUser) => handleRemoveMember(member.id)} nameKey="name" imgKey="img" avatarGroupProps={{ maxCount: 4 }} />
@@ -504,7 +512,7 @@ const CreateTaskPage = () => {
 
             {/* Priority */}
             <div className="flex items-center">
-              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Priority: <span className="text-red-500">*</span></label>
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Priority: </label>
               <div className="w-full">
                 <Controller name="priority" control={control}
                   render={({ field }) => (
@@ -518,7 +526,7 @@ const CreateTaskPage = () => {
 
             {/* Department */}
             <div className="flex items-center">
-              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Department: <span className="text-red-500">*</span></label>
+              <label className="font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] shrink-0">Department: </label>
               <div className="w-full">
                 <Controller name="department_id" control={control}
                   render={({ field }) => (
@@ -541,7 +549,7 @@ const CreateTaskPage = () => {
 
             {/* Note / Remark */}
             <div className="flex flex-col">
-              <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Note / Remark: <span className="text-red-500">*</span></label>
+              <label className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Note / Remark: </label>
               <div className="w-full">
                 <Controller name="note_remark" control={control} render={({ field }) => <Input {...field} textArea rows={5} placeholder="Enter task note or remark..." />} />
                 {errors.note_remark && <p className="text-red-500 text-xs mt-1">{errors.note_remark.message}</p>}
