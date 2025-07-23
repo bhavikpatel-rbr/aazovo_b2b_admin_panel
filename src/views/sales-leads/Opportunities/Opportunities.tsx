@@ -200,9 +200,7 @@ export type ApiOpportunityItem = {
   updated_by_role?: string;
   device_condition?: string | null;
   device_type?: string | null;
-  member?: {
-      favourite_brands_list?: { name: string }[];
-  } | null;
+  member?: any | null;
 };
 export type AutoSpbApiItem = {
   id: number;
@@ -3420,6 +3418,7 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
           qty: (typeof apiItem.qty === "string" ? parseInt(apiItem.qty, 10) : apiItem.qty) ?? undefined,
           product_status_listing: apiItem.product_status || apiItem.product_status_listing,
           want_to: apiItem.want_to || undefined,
+          member: apiItem.member || {},
           company_name: apiItem.company_name || "N/A",
           company_id: apiItem.company_id || undefined,
           customer_name: apiItem.customer_name || "N/A",
@@ -3895,10 +3894,10 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
         {
           header: "Member",
-          accessorKey: "company_name",
+          accessorKey: "member",
           size: 100,
           cell: ({ row }) => {
-            const item = row.original;
+            const item = row?.original?.member || {};
             return (
               <div className="text-xs space-y-2">
                 {" "}
@@ -3910,14 +3909,14 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                   />{" "}
                   <span className="font-semibold text-gray-800 dark:text-gray-100">
                     {" "}
-                    {item.customer_name} ({item.customer_code}){" "}
+                    {item.name}{" "}
                   </span>{" "}
-                  <Tooltip
+                  {/* <Tooltip  
                     title={item.company_verified ? "Verified" : "Not Verified"}
                   >
                     {" "}
                     
-                  </Tooltip>{" "}
+                  </Tooltip>{" "} */}
                 </div>{" "}
                 <div className="pl-6 border-l ml-1.5 dark:border-gray-600 space-y-1.5">
                   {" "}
@@ -3951,14 +3950,14 @@ const Opportunities = ({ isDashboard }: { isDashboard?: boolean }) => {
                     icon={<TbPhone size={13} />}
                     text={
                       <div className="flex items-center gap-1.5">
-                        <span>{item.mobile_no || "N/A"}</span>
-                        {item.mobile_no && (
+                        <span>{item.number || "N/A"}</span>
+                        {item.number && (
                           <Tooltip title="Copy number">
                             <button
                               className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleCopyClick(item.mobile_no);
+                                handleCopyClick(item.number);
                               }}
                             >
                               <TbCopy

@@ -12,7 +12,7 @@ import Button from '@/components/ui/Button';
 import Notification from '@/components/ui/Notification';
 import Spinner from '@/components/ui/Spinner';
 import toast from '@/components/ui/toast';
-import { DatePicker, Select, Table } from '@/components/ui'; // Ensure these are imported
+import { DatePicker, Select, Table } from '@/components/ui';
 import THead from '@/components/ui/Table/THead';
 import Tr from '@/components/ui/Table/Tr';
 import TBody from '@/components/ui/Table/TBody';
@@ -29,7 +29,7 @@ import {
 } from 'react-icons/tb';
 
 // Redux (Assuming similar structure)
-import { getProductById } from '@/reduxtool/master/middleware'; // Placeholder for your actual Redux thunk
+// import { getProductById } from '@/reduxtool/master/middleware'; // This would be the real thunk
 import { useAppDispatch } from '@/reduxtool/store';
 
 
@@ -38,8 +38,6 @@ interface User {
     id: number;
     name: string;
     profile_pic_path?: string;
-    email: string;
-    employee_id?: string;
 }
 
 interface Category {
@@ -65,8 +63,6 @@ interface Unit {
 interface MemberInfo {
     id: number;
     name: string;
-    email: string;
-    number: string;
 }
 
 interface WallEnquiryItem {
@@ -82,19 +78,14 @@ interface WallEnquiryItem {
     member: MemberInfo;
 }
 
-// Updated ProductLead to include optional fields for filtering
 interface ProductLead {
     id: number;
     name: string;
     status: string;
     created_at: string;
-    created_by_user: User;
     brand: Brand;
-    // Optional fields to match filter requirements
-    type?: string;
-    company?: string;
-    source?: string;
-    want_to?: 'Buy' | 'Sell';
+    category: Category;
+    sub_category: Category;
 }
 
 interface ProductData {
@@ -106,11 +97,11 @@ interface ProductData {
     description: string | null;
     short_description: string | null;
     product_keywords: string | null;
-    thumb_image_full_path: string;
+    icon_full_path: string;
     created_at: string;
     updated_at: string;
-    created_by_user: User;
-    updated_by_user: User;
+    created_by_user: User | null;
+    updated_by_user: User | null;
     category: Category;
     sub_category: Category;
     brand: Brand;
@@ -129,21 +120,15 @@ interface ProductData {
     meta_keyword: string | null;
 }
 
-interface ProductApiResponse {
-    status: boolean;
-    message: string;
-    data: ProductData;
-}
-
 // --- Reusable Helper Components ---
 const getStatusClass = (status?: string) => {
   const s = status?.toLowerCase() || '';
   switch (s) {
-    case 'active': case 'approved': case 'verified': case 'buy':
+    case 'active': case 'approved': case 'buy':
       return 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-100';
-    case 'inactive': case 'new':
+    case 'inactive':
       return 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-100';
-    case 'blocked': case 'rejected': case 'sell':
+    case 'sell':
       return 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-100';
     case 'pending':
       return 'bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-100';
@@ -177,7 +162,7 @@ const ProductHeader = ({ product }: { product: ProductData }) => {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <Avatar size={60} src={product.thumb_image_full_path} shape="square" icon={<TbBox />} />
+        <Avatar size={60} src={product.icon_full_path} shape="square" icon={<TbBox />} />
         <div>
           <h4 className="font-bold">{product.name}</h4>
           <p className="text-sm text-gray-500">SKU: {product.sku_code}</p>
@@ -188,11 +173,10 @@ const ProductHeader = ({ product }: { product: ProductData }) => {
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-y-2 gap-x-4 text-sm">
-        <InfoPair label="Created By" value={product.created_by_user.name} />
-        <InfoPair label="Created At" value={dayjs(product.created_at).format('DD MMM YYYY')} />
+        <InfoPair label="Created By" value={product?.created_by_user?.name} />
+        <InfoPair label="Created At" value={dayjs(product?.created_at).format('DD MMM YYYY')} />
       </div>
       <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
-        {/* <Button variant="solid" icon={<TbPencil />} onClick={() => navigate(`/product-management/products`)}>Edit Product</Button> */}
         <Button icon={<TbArrowLeft />} onClick={() => navigate('/product-management/products')}>Back to List</Button>
       </div>
     </div>
@@ -202,7 +186,7 @@ const ProductHeader = ({ product }: { product: ProductData }) => {
 const productNavigationList = [
   { label: "Product Details", link: "details", icon: <TbBox /> },
   { label: "Wall Enquiries", link: "enquiries", icon: <TbClipboardList /> },
-  { label: "Product Leads", link: "leads", icon: <TbUserSearch /> },
+  { label: "Related Product Leads", link: "leads", icon: <TbUserSearch /> },
   { label: "Keywords & SEO", link: "keywords", icon: <TbKey /> },
 ];
 
@@ -225,8 +209,8 @@ const ProductDetailsTabView = ({ product }: { product: ProductData }) => (
                 <InfoPair label="SKU Code" value={product.sku_code} />
                 <InfoPair label="HSN Code" value={product.hsn_code} />
                 <InfoPair label="Status" value={<Tag className={`${getStatusClass(product.status)} capitalize`}>{product.status}</Tag>} />
-                <InfoPair label="Base Unit" value={product.unit1.name} />
-                <InfoPair label="Country of Origin" value={product.country.name} />
+                <InfoPair label="Base Unit" value={product?.unit1?.name} />
+                <InfoPair label="Country of Origin" value={product?.country?.name} />
             </div>
         </DetailSection>
 
@@ -243,13 +227,13 @@ const ProductDetailsTabView = ({ product }: { product: ProductData }) => (
                 {product.short_description && (
                     <>
                         <h6 className="font-semibold text-gray-700 dark:text-gray-300">Short Description</h6>
-                        <p className="mt-1 text-sm mb-4">{product.short_description}</p>
+                        <div className="mt-1 text-sm mb-4 prose dark:prose-invert" dangerouslySetInnerHTML={{ __html: product.short_description }} />
                     </>
                 )}
                 {product.description && (
                     <>
                         <h6 className="font-semibold text-gray-700 dark:text-gray-300">Full Description</h6>
-                        <p className="mt-1 text-sm">{product.description}</p>
+                        <div className="mt-1 text-sm prose dark:prose-invert" dangerouslySetInnerHTML={{ __html: product.description }} />
                     </>
                 )}
             </DetailSection>
@@ -379,22 +363,16 @@ const ProductLeadsTabView = ({ leads }: { leads: ProductLead[] }) => {
     // --- Filter States ---
     const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
     const [statusFilter, setStatusFilter] = useState<{ label: string, value: string } | null>(null);
-    const [typeFilter, setTypeFilter] = useState<{ label: string, value: string } | null>(null);
-    const [companyFilter, setCompanyFilter] = useState<{ label: string, value: string } | null>(null);
-    const [sourceFilter, setSourceFilter] = useState<{ label: string, value: string } | null>(null);
-    const [wantToFilter, setWantToFilter] = useState<{ label: string, value: string } | null>(null);
+    const [brandFilter, setBrandFilter] = useState<{ label: string, value: string } | null>(null);
     
-    // --- Dynamic options (will work if data is available) ---
+    // --- Dynamic options ---
     const createOptions = (key: keyof ProductLead) => useMemo(() =>
         [...new Set(leads.map(lead => lead[key]).filter(Boolean))]
-        .map(value => ({ label: value as string, value: value as string })), [leads]);
+        .map(value => ({ label: (value as { name: string }).name || value, value: (value as { name: string }).name || value })), [leads]);
     
     const statusOptions = createOptions('status');
-    const typeOptions = createOptions('type');
-    const companyOptions = createOptions('company');
-    const sourceOptions = createOptions('source');
-    const wantToOptions = createOptions('want_to');
-    
+    const brandOptions = createOptions('brand');
+
     // --- Filtering Logic ---
     const filteredLeads = useMemo(() => {
         let filtered = [...leads];
@@ -407,25 +385,19 @@ const ProductLeadsTabView = ({ leads }: { leads: ProductLead[] }) => {
             });
         }
         if (statusFilter?.value) filtered = filtered.filter(l => l.status === statusFilter.value);
-        if (typeFilter?.value) filtered = filtered.filter(l => l.type === typeFilter.value);
-        if (companyFilter?.value) filtered = filtered.filter(l => l.company === companyFilter.value);
-        if (sourceFilter?.value) filtered = filtered.filter(l => l.source === sourceFilter.value);
-        if (wantToFilter?.value) filtered = filtered.filter(l => l.want_to === wantToFilter.value);
+        if (brandFilter?.value) filtered = filtered.filter(l => l.brand.name === brandFilter.value);
 
         return filtered;
-    }, [leads, dateRange, statusFilter, typeFilter, companyFilter, sourceFilter, wantToFilter]);
+    }, [leads, dateRange, statusFilter, brandFilter]);
 
     const handleResetFilters = () => {
         setDateRange([null, null]);
         setStatusFilter(null);
-        setTypeFilter(null);
-        setCompanyFilter(null);
-        setSourceFilter(null);
-        setWantToFilter(null);
+        setBrandFilter(null);
     };
 
     if (!leads || leads.length === 0) {
-        return <NoDataMessage message="No product leads found." />;
+        return <NoDataMessage message="No related product leads found." />;
     }
 
     return (
@@ -435,23 +407,23 @@ const ProductLeadsTabView = ({ leads }: { leads: ProductLead[] }) => {
                     <div className="flex items-center gap-2">
                         <TbFilter size={20} /> <h5 className="mb-0">Filters</h5>
                     </div>
-                    <Button icon={<TbReload />} onClick={handleResetFilters} title="Reset Filters" disabled={!dateRange[0] && !statusFilter && !typeFilter && !companyFilter && !sourceFilter && !wantToFilter}/>
+                    <Button icon={<TbReload />} onClick={handleResetFilters} title="Reset Filters" disabled={!dateRange[0] && !statusFilter && !brandFilter}/>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <DatePicker.DatePickerRange value={dateRange} onChange={setDateRange} placeholder="Filter by date"/>
                     <Select isClearable placeholder="Filter by status" options={statusOptions} value={statusFilter} onChange={setStatusFilter} />
-                    <Select isClearable placeholder="Filter by type" options={typeOptions} value={typeFilter} onChange={setTypeFilter} />
-                    <Select isClearable placeholder="Filter by company" options={companyOptions} value={companyFilter} onChange={setCompanyFilter} />
-                    <Select isClearable placeholder="Filter by source" options={sourceOptions} value={sourceFilter} onChange={setSourceFilter} />
-                    <Select isClearable placeholder="Filter by want to" options={wantToOptions} value={wantToFilter} onChange={setWantToFilter} />
+                    <Select isClearable placeholder="Filter by brand" options={brandOptions} value={brandFilter} onChange={setBrandFilter} />
                 </div>
             </Card>
             <Card>
                 <Table>
                     <THead>
                         <Tr>
-                            <Th>Lead ID</Th><Th>Company</Th><Th>Want To</Th>
-                            <Th>Type</Th><Th>Source</Th><Th>Status</Th>
+                            <Th>Lead Product ID</Th>
+                            <Th>Product Name</Th>
+                            <Th>Brand</Th>
+                            <Th>Category</Th>
+                            <Th>Status</Th>
                             <Th>Created At</Th>
                         </Tr>
                     </THead>
@@ -460,16 +432,15 @@ const ProductLeadsTabView = ({ leads }: { leads: ProductLead[] }) => {
                             filteredLeads.map(lead => (
                                 <Tr key={lead.id}>
                                     <Td>#{lead.id}</Td>
-                                    <Td>{lead.company || 'N/A'}</Td>
-                                    <Td>{lead.want_to ? <Tag className={`${getStatusClass(lead.want_to)} font-semibold`}>{lead.want_to}</Tag> : 'N/A'}</Td>
-                                    <Td>{lead.type || 'N/A'}</Td>
-                                    <Td>{lead.source || 'N/A'}</Td>
+                                    <Td className="font-semibold">{lead.name}</Td>
+                                    <Td>{lead.brand?.name || 'N/A'}</Td>
+                                    <Td>{lead.category?.name || 'N/A'}</Td>
                                     <Td><Tag className={getStatusClass(lead.status)}>{lead.status}</Tag></Td>
                                     <Td>{dayjs(lead.created_at).format('DD MMM YYYY, h:mm A')}</Td>
                                 </Tr>
                             ))
                         ) : (
-                             <Tr><Td colSpan={7}><NoDataMessage message="No leads match the current filters." /></Td></Tr>
+                             <Tr><Td colSpan={6}><NoDataMessage message="No leads match the current filters." /></Td></Tr>
                         )}
                     </TBody>
                 </Table>
@@ -477,6 +448,7 @@ const ProductLeadsTabView = ({ leads }: { leads: ProductLead[] }) => {
         </div>
     );
 };
+
 
 const ProductKeywordsTabView = ({ product }: { product: ProductData }) => {
     const keywords = useMemo(() => {
@@ -526,36 +498,27 @@ const ProductView = () => {
     const [activeSection, setActiveSection] = useState<string>(productNavigationList[0].link);
 
     useEffect(() => {
-        const fetchProduct = async () => {
+        const fetchProduct = () => {
             if (!id) {
                 toast.push(<Notification type="danger" title="Error">No Product ID provided.</Notification>);
                 navigate('/products/list');
                 return;
             }
             setLoading(true);
-            try {
-                const response = await dispatch(getProductById(id)).unwrap();
-                setProduct(response);
-                // --- MOCK IMPLEMENTATION using provided JSON ---
-                // NOTE: I've added mock data for the new optional fields in `product_leads` to demonstrate filtering.
-                // const mockApiResponse: ProductApiResponse = {"status":true,"message":"Product found","data":{"id":1,"category_id":1,"sub_category_id":5,"brand_id":1,"sku_code":"hhfghfh","name":"IPHONE 16E 5G 8GB 256GB","unit_id":1,"country_id":254,"color":null,"hsn_code":"85171300","shelf_life":null,"packaging_size":"10x10","packaging_type":"Box","tax_rate":"18","procurement_lead_time":"5 days","slug":"iphone-16e-5g-8gb-256gb","description":"This is the full, detailed description of the iPhone 16E.","short_description":"A brief summary of the iPhone 16E.","payment_term":"Net 30","delivery_details":"Standard shipping.","thumb_image":"prod_thumb_image_1751973575.jpg","status":"Active","product_keywords":"IPH16E, iPhone 16, Apple Mobile","created_by":1,"updated_by":1,"meta_title":"Buy iPhone 16E 5G 8GB 256GB Online","meta_descr":"Get the best deals on the new iPhone 16E.","meta_keyword":"iphone 16e, apple, 5g mobile","created_at":"2025-07-08T11:19:35.000000Z","updated_at":"2025-07-13T04:46:50.000000Z","thumb_image_full_path":"https://aazovo.omcommunication.co/product_thumb_images/prod_thumb_image_1751973575.jpg","created_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com","profile_pic_path":"https://aazovo.omcommunication.co/storage/users/profile_pics/686e018a3d879.jpg"},"updated_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com"},"category":{"id":1,"name":"ELECTRONICS"},"sub_category":{"id":5,"name":"MOBILE"},"brand":{"id":1,"name":"APPLE"},"country":{"id":254,"name":"Global"},"unit1":{"id":1,"name":"Pcs"},
-                // "product_leads":[
-                //     {"id":1, "name":"IPHONE 16E Lead", "status":"New", "created_at":"2025-07-10T11:00:00Z", "created_by_user":{"id":1, "name":"Tushar Joshi", "profile_pic_path":"https://..."},"brand":{"id":1, "name":"APPLE"}, "type": "Webform", "company": "Global Tech", "source": "Organic Search", "want_to": "Buy"},
-                //     {"id":2, "name":"IPHONE 16E Lead", "status":"Contacted", "created_at":"2025-07-11T14:30:00Z", "created_by_user":{"id":1, "name":"Tushar Joshi", "profile_pic_path":"https://..."},"brand":{"id":1, "name":"APPLE"}, "type": "Phone Call", "company": "Device Resellers Inc.", "source": "PPC Campaign", "want_to": "Sell"},
-                //     {"id":3, "name":"IPHONE 16E Lead", "status":"New", "created_at":"2025-07-12T09:00:00Z", "created_by_user":{"id":1, "name":"Tushar Joshi", "profile_pic_path":"https://..."},"brand":{"id":1, "name":"APPLE"}, "type": "Webform", "company": "Global Tech", "source": "Referral", "want_to": "Buy"}
-                // ],
-                // "wall_enquiries":[
-                //     {"id":1,"want_to":"Sell","qty":"250","price":null,"status":"Active","product_status":"Active","device_condition":"New","created_at":"2025-07-11T12:26:04.000000Z","created_by_user":null,"member":{"id":6,"name":"North America Traders","email":"contact@northamerica.com","number":"9714800002"}},
-                //     {"id":2,"want_to":"Sell","qty":"1","price":"1200","status":"Active","product_status":"Active","device_condition":"Used - Like New","created_at":"2025-07-10T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com"},"member":{"id":7,"name":"European Distributors","email":"sales@eurodist.com","number":"1234567890"}},
-                //     {"id":3,"want_to":"Buy","qty":"300","price":null,"status":"Pending","product_status":"Active","device_condition":"New","created_at":"2025-07-09T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi","email":"admin@admin.com"},"member":{"id":8,"name":"Asia Pacific Imports","email":"imports@asiapac.com","number":"0987654321"}}
-                // ]}};
-                // setProduct(mockApiResponse.data);
-
-            } catch (error: any) {
-                toast.push(<Notification type="danger" title="Fetch Error">{error?.message || 'Failed to load product data.'}</Notification>);
-            } finally {
+            
+            // --- MOCK API RESPONSE ---
+            // In a real app, this would be an API call e.g., dispatch(getProductById(id))
+            const apiResponse = {"id":3924,"category_id":8,"sub_category_id":13,"brand_id":113,"sku_code":"test","name":"test1","unit":0,"country_id":1,"color":"Red","hsn_code":"12345","shelf_life":"Lef","packaging_size":"xl","packaging_type":"Pack","tax_rate":"12","procurement_lead_time":"12","slug":"test1","description":"<p>test</p>","short_description":"<p>test</p>","payment_term":"test","delivery_details":"test","thumb_image":null,"icon":"product_icon_1746708750.jpg","product_images":"","status":"Pending","unit_id":1,"licence":null,"currency_id":null,"product_specification":"[{\"name\":null,\"value\":null}]","meta_title":null,"meta_descr":null,"meta_keyword":null,"created_at":"2025-05-08T07:22:30.000000Z","updated_at":"2025-07-23T17:17:03.000000Z","domain_ids":null,"time":10,"time_type":"2","product_material":"test","minimum_order_quantity":null,"user_id":10774,"product_keywords":"Demo","supplier_product_code":"Demo","created_by":null,"updated_by":1,"thumb_image_full_path":"https://api.omcommunication.co/product_thumb_images","icon_full_path":"https://api.omcommunication.co/product_icons/product_icon_1746708750.jpg","product_images_array":[],"domains":[],"product_leads":[],"created_by_user":null,"updated_by_user":{"id":1,"name":"Super Admin","profile_pic":"687e86b59d4aa.png","profile_pic_path":"https://api.omcommunication.co/storage/users/profile_pics/687e86b59d4aa.png","roles":[{"id":1,"display_name":"Super Admin","pivot":{"user_id":1,"role_id":1}}]},"category":{"id":8,"name":"ENGINEERING"},"sub_category":{"id":13,"name":"AGRICULTURE EQUIPMENTS AND PARTS"},"brand":{"id":113,"name":"Demo-1"},"country":{"id":1,"name":"India"},"user":null,"unit1":{"id":1,"name":"Pcs"},"currency":null,
+                "wall_enquiries":[
+                    {"id":1,"want_to":"Sell","qty":"250","price":null,"status":"Active","product_status":"Active","device_condition":"New","created_at":"2025-07-11T12:26:04.000000Z","created_by_user":null,"member":{"id":6,"name":"North America Traders"}},
+                    {"id":2,"want_to":"Sell","qty":"1","price":"1200","status":"Active","product_status":"Active","device_condition":"Used - Like New","created_at":"2025-07-10T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi"},"member":{"id":7,"name":"European Distributors"}},
+                    {"id":3,"want_to":"Buy","qty":"300","price":null,"status":"Pending","product_status":"Active","device_condition":"New","created_at":"2025-07-09T12:26:04.000000Z","created_by_user":{"id":1,"name":"Tushar Joshi"},"member":{"id":8,"name":"Asia Pacific Imports"}}
+                ]};
+            
+            setTimeout(() => { // Simulate network delay
+                setProduct(apiResponse as unknown as ProductData);
                 setLoading(false);
-            }
+            }, 500);
         };
         fetchProduct();
     }, [id, navigate, dispatch]);
@@ -581,7 +544,7 @@ const ProductView = () => {
                 <Card className="text-center p-8">
                     <h4 className="mb-4">Product Not Found</h4>
                     <p>The product you are looking for does not exist or could not be loaded.</p>
-                    <Button className="mt-4" onClick={() => navigate('/products/list')}>Back to List</Button>
+                    <Button className="mt-4" onClick={() => navigate('/product-management/products')}>Back to List</Button>
                 </Card>
             </Container>
         );
@@ -590,7 +553,7 @@ const ProductView = () => {
     return (
         <Container className="h-full">
             <div className="flex gap-1 items-end mb-4">
-                <NavLink to="/products/list"><h6 className="font-semibold hover:text-primary-600">Products</h6></NavLink>
+                <NavLink to="/product-management/products"><h6 className="font-semibold hover:text-primary-600">Products</h6></NavLink>
                 <BiChevronRight size={18} />
                 <h6 className="font-semibold text-primary-600">{product.name || `Product #${id}`}</h6>
             </div>
