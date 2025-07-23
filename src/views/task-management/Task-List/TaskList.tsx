@@ -1855,7 +1855,7 @@ console.log("phone",phone);
                             <div className="flex flex-col gap-1 text-[12px]">
                                 {task.category && (
                                     <span className="flex items-center gap-1">
-                                        <b className="font-semibold">Category:</b>
+                                        
                                         <Tag className="text-xs bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-100">
                                             {task.category}
                                         </Tag>
