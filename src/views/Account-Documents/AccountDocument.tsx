@@ -1267,9 +1267,9 @@ const AddEditDocumentDrawer = ({ isOpen, onClose, editingId }: any) => {
                   placeholder="Select Document Type"
                   options={DocumentListDataOptions}
                   value={DocumentListDataOptions?.find(
-                    (o) => o.value == field.value
+                    (o) => o.label == field.value
                   )}
-                  onChange={(opt: any) => field.onChange(opt?.value)}
+                  onChange={(opt: any) => field.onChange(opt?.label)}
                 />
               )}
             />
@@ -2752,7 +2752,7 @@ const AccountDocument = () => {
                 </Card>
               </div>
             </Tooltip>
-            <Tooltip title="Total Aazovo documents">
+            {/* <Tooltip title="Total Aazovo documents"> */}
               <div className="cursor-default">
                 <Card
                   bodyClass={cardBodyClass}
@@ -2767,8 +2767,8 @@ const AccountDocument = () => {
                   </div>
                 </Card>
               </div>
-            </Tooltip>
-            <Tooltip title="Total OMC documents">
+            {/* </Tooltip> */}
+            {/* <Tooltip title="Total OMC documents"> */}
               <div className="cursor-default">
                 <Card
                   bodyClass={cardBodyClass}
@@ -2783,7 +2783,7 @@ const AccountDocument = () => {
                   </div>
                 </Card>
               </div>
-            </Tooltip>
+            {/* </Tooltip> */}
           </div>
           <AccountDocumentTableTools
             onSearchChange={handleSearchChange}
