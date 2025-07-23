@@ -1009,9 +1009,14 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (!initialLoading) {
-      dispatch(getWallListingAction(apiParams));
-    }
+     const timerId = setTimeout(() => {
+       if (!initialLoading) {
+         dispatch(getWallListingAction(apiParams));
+       }
+    }, 500);
+    return () => {
+      clearTimeout(timerId);
+    };
   }, [dispatch, apiParams, initialLoading]);
 
   const pageData = useMemo(() => { return Array.isArray(wallListing?.data?.data) ? wallListing.data.data.map(mapApiToWallItem) : []; }, [wallListing, mapApiToWallItem]);
