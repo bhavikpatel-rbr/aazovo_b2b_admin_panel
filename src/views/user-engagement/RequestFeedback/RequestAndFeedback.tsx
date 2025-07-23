@@ -170,20 +170,17 @@ const requestFeedbackFormSchema = z.object({
     .min(1, "Email is required."),
   mobile_no: z.string().min(1, "Mobile number is required.").max(20),
   company_name: z.string().max(150).optional().or(z.literal("")).nullable(),
-  type: z.enum(["Request", "Feedback"], {
-    errorMap: () => ({ message: "Please select a type." }),
-  }),
-  category_id: z.string().min(1, "Category is required."), // MODIFIED
-  department_id: z.string().min(1, "Department is required."),
+  type: z.enum(["Request", "Feedback"]).optional().nullable(),
+  category_id: z.string().optional().nullable(),
+  department_id: z.string().optional().nullable(),
   feedback_details: z
     .string()
-    .min(10, "Description must be at least 10 characters.")
-    .max(5000),
+   .optional().nullable(),
   status: z.enum(["Pending", "In progress", "Resolved", "Rejected"], {
     errorMap: () => ({ message: "Please select a status." }),
   }),
   rating: z.string().optional().nullable(),
-  attachment: z.any().optional(),
+  attachment: z.any().optional().nullable(),
 });
 type RequestFeedbackFormData = z.infer<typeof requestFeedbackFormSchema>;
 
@@ -644,13 +641,15 @@ const RequestAndFeedbackListing = () => {
       setEditingItem(item);
       setSelectedFile(null);
       setRemoveExistingAttachment(false);
+      console.log("item.category_id",item);
+      
       reset({
         name: item.name,
         email: item.email,
         mobile_no: item.mobile_no,
         company_name: item.company_name || "",
         type: item.type,
-        category_id: String(item.category_id), // MODIFIED
+        category_id: item.category_id != null ? String(item.category_id) : '', // MODIFIED
         department_id: String(item.department_id),
         feedback_details: item.feedback_details,
         status: item.status,
@@ -680,8 +679,15 @@ const RequestAndFeedbackListing = () => {
       if (value !== null && value !== undefined && value !== "")
         formData.append(key, String(value));
     });
+    console.log("editingItem",editingItem);
+    
     if (editingItem) {
       formData.append("_method", "PUT");
+     console.log("editingItem.category_id",editingItem.category_id);
+     console.log("editingItem.category_id",editingItem.category_id == null);
+      formData.append('department_id', editingItem.department_id == null ? '' : editingItem.department_id);
+    formData.append('category_id', editingItem.category_id == null ? '' : editingItem.category_id);
+     
       if (selectedFile instanceof File)
         formData.append("attachment", selectedFile);
       else if (removeExistingAttachment && editingItem.attachment)
