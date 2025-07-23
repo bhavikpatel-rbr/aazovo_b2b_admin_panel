@@ -1162,14 +1162,14 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
         {
           header: "Member", accessorKey: "member", size: 260, cell: ({ row }) => {
-            const { name, member_code, email, number } = row.original?.member || {};
+            const { name, member_code, email, number, number_code } = row.original?.member || {};
             return (
               <div className="flex flex-col gap-0.5 text-xs">
                 <div className="mt-1 pt-1 dark:border-gray-700 w-full">
                   {member_code && (<span className="font-semibold text-gray-500 dark:text-gray-400">{member_code} </span>)}
                   {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
                   {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{email}</a>)}
-                  {number && (<span className="block text-gray-600 dark:text-gray-300">{number}</span>)}
+                  {number && (<span className="block text-gray-600 dark:text-gray-300">{number_code} {number}</span>)}
                 </div>
               </div>
             );
