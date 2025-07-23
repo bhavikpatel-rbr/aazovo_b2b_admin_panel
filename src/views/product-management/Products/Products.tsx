@@ -1986,7 +1986,7 @@ const Products = () => {
   const { data: rawProductsData = [] } = paginatedData;
 
   const paginationInfo = useMemo(() => ({
-    total: countsData.active + countsData.inactive + countsData.pending + countsData.rejected + countsData.draft || 0,
+    total: countsData.total ,
     active: countsData.active || 0,
     inactive: countsData.inactive || 0,
     pending: countsData.pending || 0,
