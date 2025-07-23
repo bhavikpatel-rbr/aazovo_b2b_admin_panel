@@ -2018,7 +2018,7 @@ const MemberProfileComponent = ({ control, errors }: FormSectionBaseProps) => {
       <h4 className="mb-6">Additional Member Profile</h4>
       <div className="grid md:grid-cols-3 gap-4">
         <FormItem
-          label={<div>Interested Categories<span className="text-red-500"> * </span></div>}
+          label={<div>Interested Categories</div>}
           invalid={!!errors.interested_category_ids}
           errorMessage={errors.interested_category_ids?.message as string}
         >
@@ -2974,7 +2974,7 @@ const MemberFormComponent = (props: {
         ),
       interested_category_ids: z
         .array(z.any())
-        .min(1, { message: "Interested categories are required." }),
+        .optional().nullable(),
     })
     .passthrough();
   const formMethods = useForm<MemberFormSchema>({
