@@ -157,6 +157,7 @@ export type WallItem = {
   assigned_to: string;
   interaction_type: string;
   action: string;
+  created_from: string;
   recordStatus?: WallRecordStatus;
   cartoonTypeId?: number | null;
   deviceCondition?: WallProductCondition | null;
@@ -956,6 +957,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       action: apiItem.action || "",
       recordStatus: apiItem.status as WallRecordStatus,
       cartoonTypeId: apiItem.cartoon_type_id,
+      created_from: apiItem.created_from || "",
       deviceCondition: (apiItem.device_condition as WallProductCondition | null) || null,
       inquiry_count: Number(apiItem.inquiries) || 0,
       share_count: Number(apiItem.share) || 0,
@@ -1009,10 +1011,10 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
   }, [dispatch]);
 
   useEffect(() => {
-     const timerId = setTimeout(() => {
-       if (!initialLoading) {
-         dispatch(getWallListingAction(apiParams));
-       }
+    const timerId = setTimeout(() => {
+      if (!initialLoading) {
+        dispatch(getWallListingAction(apiParams));
+      }
     }, 500);
     return () => {
       clearTimeout(timerId);
@@ -1159,12 +1161,12 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
           },
         },
         {
-          header: "Company & Member", accessorKey: "company_name", size: 260, cell: ({ row }) => {
-            const { name, customer_code, email, number, company_code } = row.original?.member || {};
+          header: "Member", accessorKey: "member", size: 260, cell: ({ row }) => {
+            const { name, member_code, email, number } = row.original?.member || {};
             return (
               <div className="flex flex-col gap-0.5 text-xs">
                 <div className="mt-1 pt-1 dark:border-gray-700 w-full">
-                  {customer_code ||company_code  && (<span className="font-semibold text-gray-500 dark:text-gray-400">{customer_code} | {company_code}</span>)}
+                  {member_code && (<span className="font-semibold text-gray-500 dark:text-gray-400">{member_code} </span>)}
                   {name && (<span className="font-semibold text-gray-800 dark:text-gray-100">{name}</span>)}
                   {email && (<a href={`mailto:${email}`} className="block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{email}</a>)}
                   {number && (<span className="block text-gray-600 dark:text-gray-300">{number}</span>)}
@@ -1175,7 +1177,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
         },
         {
           header: "Details", accessorKey: "product_category", size: 280, cell: ({ row }) => {
-            const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, deviceCondition, quantity } = row?.original || {};
+            const { product_category, product_subcategory, product_specs, product_status, cartoonTypeId, created_from, deviceCondition, quantity } = row?.original || {};
             const currentProductApiStatus = product_status?.toLowerCase() || "default";
             const cartoonTypeName = dummyCartoonTypes.find((ct) => ct.id === cartoonTypeId)?.name;
             return (
@@ -1183,6 +1185,7 @@ const WallListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                 <div className="flex items-center"><TbStack2 className="text-base text-blue-500 dark:text-blue-400 ml-2" /><span className="text-gray-700 dark:text-gray-300" style={{ minWidth: 35 }}>Qty: {quantity ?? "N/A"}</span></div>
                 <span>{product_category || "N/A"}{product_subcategory ? ` / ${product_subcategory}` : ""}</span>
                 {product_specs && (<Tooltip title={product_specs}><span className="truncate max-w-[250px]">{product_specs.length > 30 ? product_specs.substring(0, 30) + "..." : product_specs}</span></Tooltip>)}
+                {created_from && (<span><b>Created from:</b> {created_from}</span>)}
                 {product_status && (<span><Tag className={`capitalize text-xs px-1 py-0.5 ${productApiStatusColor[currentProductApiStatus] || productApiStatusColor.default}`}>{product_status}</Tag></span>)}
                 {cartoonTypeName && (<span>{cartoonTypeName}</span>)}
                 {deviceCondition && (<span>{deviceCondition}</span>)}
