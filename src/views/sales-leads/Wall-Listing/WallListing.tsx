@@ -593,12 +593,12 @@ const MatchingOpportunitiesDialog: React.FC<{ wallItem: WallItem; onClose: () =>
       header: 'Member',
       accessorKey: 'member',
       cell: ({ row }) => {
-        const { name, member_code, number_code, number } = row.original;       
+        const { name, member_code, number_code, number } = row.original;
         return (
           <div>
-            NAME: <p className="font-semibold">{name}</p>
-            Code: <p className="text-xs text-gray-500">{member_code}</p>
-            Number: <p className="text-xs text-gray-500">{number_code} {number}</p>
+            <p className="font-semibold">{name}</p>
+            <p className="text-xs text-gray-500">{member_code}</p>
+            <p className="text-xs text-gray-500">{number_code} {number}</p>
           </div>
         );
       }
