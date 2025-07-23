@@ -1532,7 +1532,7 @@ const EmailTemplatesListing = () => {
             render={({ field }) => (
               <Input
                 {...field}
-                prefix={<TbMailBolt />}
+              
                 placeholder="Internal Template Name"
               />
             )}
@@ -1553,7 +1553,7 @@ const EmailTemplatesListing = () => {
             render={({ field }) => (
               <Input
                 {...field}
-                prefix={<TbKey />}
+              
                 placeholder="e.g., WELCOME_EMAIL_V1"
               />
             )}
@@ -1576,7 +1576,7 @@ const EmailTemplatesListing = () => {
             render={({ field }) => (
               <Input
                 {...field}
-                prefix={<TbFileDescription />}
+              
                 placeholder="Actual Email Title/Subject"
               />
             )}
