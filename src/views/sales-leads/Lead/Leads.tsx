@@ -1,4 +1,3 @@
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import classNames from "classnames";
 import dayjs from "dayjs";
@@ -170,7 +169,7 @@ const activitySchema = z.object({
 type ActivityFormData = z.infer<typeof activitySchema>;
 
 // --- UI Constants ---
-const leadStatusColor: Record<LeadStatus | "default", string> = {
+const leadStatusColor: Record<LeadStatus | "default" | string, string> = {
   New: "bg-sky-100 text-sky-700 dark:bg-sky-700/30 dark:text-sky-200",
   Contacted: "bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200",
   Qualified:
@@ -183,9 +182,14 @@ const leadStatusColor: Record<LeadStatus | "default", string> = {
     "bg-amber-100 text-amber-700 dark:bg-amber-700/30 dark:text-amber-200",
   Won: "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200",
   Lost: "bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-200",
+  Completed: "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200",
+  Accepted: "bg-lime-100 text-lime-700 dark:bg-lime-700/30 dark:text-lime-200",
+  Assigned: "bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-200",
+  Cancelled: "bg-gray-100 text-gray-500 dark:bg-gray-700/30 dark:text-gray-400",
+  "Deal Done": "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-200",
   default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
 };
-const enquiryTypeColor: Record<EnquiryType | "default", string> = {
+const enquiryTypeColor: Record<EnquiryType | "default" | string, string> = {
   "Product Info":
     "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
   "Quote Request":
@@ -199,7 +203,9 @@ const enquiryTypeColor: Record<EnquiryType | "default", string> = {
     "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-700/30 dark:text-fuchsia-200",
   Other: "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-200",
   "Wall Listing": "bg-gray-100 text-gray-700",
-  "Manual Lead": "bg-blue-100 text-blue-700",
+  'Manual lead': "bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200",
+  'Wall lead': "bg-stone-100 text-stone-700 dark:bg-stone-700/30 dark:text-stone-200",
+  'Product lead': "bg-violet-100 text-violet-700 dark:bg-violet-700/30 dark:text-violet-200",
   "From Inquiry": "bg-indigo-100 text-indigo-700",
   default: "bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-200",
 };
@@ -455,6 +461,7 @@ type LeadListItem = {
   lead_number: string;
   lead_status: LeadStatus;
   enquiry_type: EnquiryType;
+  lead_info: any;
   productId?: number;
   productName: string;
   customerId: string | number;
@@ -470,7 +477,7 @@ type LeadListItem = {
   sourceSupplierName?: string;
   rawApiData: any;
   buyer: any;
-  supplier: any;
+  seller: any;
   member_email?: string;
   member_phone?: string;
   formId: any;
@@ -2127,28 +2134,25 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       (apiLead: any): LeadListItem => ({
         id: apiLead.id,
         lead_number: apiLead.lead_number || `LD-${apiLead.id}`,
-        lead_status: apiLead.lead_status || "New",
-        enquiry_type: apiLead.enquiry_type || "Other",
+        lead_status: apiLead.status || apiLead.lead_status || "New",
+        enquiry_type: apiLead.lead_type || apiLead.enquiry_type || "Other",
+        lead_info: apiLead.lead_info,
         productId: apiLead.product?.id,
         productName: apiLead.product?.name ?? "N/A",
-        customerId: String(
-          apiLead.customer?.id ?? (apiLead.member_id || "N/A")
-        ),
+        customerId: String(apiLead.customer?.id ?? apiLead.customer_id ?? "N/A"),
         customerName: apiLead.customer?.name ?? "N/A",
-        lead_intent: apiLead.lead_intent || "Buy",
+        lead_intent: (apiLead.want_to as LeadIntent) || "Buy",
         qty: apiLead.qty,
         target_price: apiLead.target_price,
-        assigned_sales_person_id: apiLead.assigned_sales_person_id,
+        assigned_sales_person_id: apiLead.sales_person_id,
         salesPersonName: apiLead.sales_person_name,
         createdAt: new Date(apiLead.created_at),
-        updatedAt: apiLead.updated_at
-          ? new Date(apiLead.updated_at)
-          : undefined,
-        source_supplier_id: apiLead.source_supplier_id,
+        updatedAt: apiLead.updated_at ? new Date(apiLead.updated_at) : undefined,
+        source_supplier_id: apiLead.source_member_id,
         sourceSupplierName: apiLead.source_supplier?.name,
         rawApiData: apiLead,
-        buyer: apiLead.lead_member_detail,
-        supplier: apiLead.source_supplier,
+        buyer: apiLead.lead_info?.buyer,
+        seller: apiLead.lead_info?.seller,
         member_email: apiLead.customer?.email,
         member_phone: apiLead.customer?.mobile_no,
         formId: apiLead.form_id,
@@ -2161,7 +2165,7 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
     total: number;
     allFilteredAndSortedData: LeadListItem[];
   } => {
-    let processedData: LeadListItem[] = mappedLeads;
+    let processedData = mappedLeads;
     if (filterCriteria.dateRange?.[0] || filterCriteria.dateRange?.[1]) {
       const [start, end] = filterCriteria.dateRange.map((d) =>
         d ? dayjs(d) : null
@@ -2286,12 +2290,8 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
 
   const handleStartProcess = useCallback(
     async (lead: LeadListItem) => {
-      console.log("lead", lead);
-
       try {
         const formId = lead?.formId;
-        console.log(lead);
-
         if (formId) {
           navigate(`/start-process/${lead.id}/${formId}`);
         } else {
@@ -2625,33 +2625,34 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
       },
       {
         header: "Member",
-        accessorKey: "customerName",
+        accessorKey: "lead_info",
         size: 200,
         cell: (props: CellContext<LeadListItem, any>) => {
-          const { buyer, supplier } = props.row.original;
+          const { buyer, seller } = props.row.original;
+          const hasBuyer = buyer && typeof buyer === 'object' && buyer.name;
+          const hasSeller = seller && typeof seller === 'object' && seller.name;
+
           return (
             <div className="flex flex-col gap-1.5">
-              <div>
-                {buyer ? (
-                  <>
-                    <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Buyer : {buyer.customer_code}</div>
-                    <div className="text-sm truncate">{buyer.name}</div>
-                  </>
-                ) : (
-                  <div className="text-xs text-gray-400 italic">No Buyer Info</div>
-                )}
-              </div>
-              {buyer && supplier && <hr className="border-t border-dashed border-gray-200 dark:border-gray-600 my-1" />}
-              <div>
-                {supplier ? (
-                  <>
-                    <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Supplier : {supplier.customer_code}</div>
-                    <div className="text-sm truncate">{supplier.name}</div>
-                  </>
-                ) : (
-                  <div className="text-xs text-gray-400 italic">No Supplier Info</div>
-                )}
-              </div>
+              {hasBuyer ? (
+                <div>
+                  <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Buyer : {buyer.member_code || ''}</div>
+                  <div className="text-sm truncate">{buyer.name}</div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400 italic">No Buyer Info</div>
+              )}
+
+              {hasBuyer && hasSeller && <hr className="border-t border-dashed border-gray-200 dark:border-gray-600 my-1" />}
+
+              {hasSeller ? (
+                <div>
+                  <div className="font-bold text-xs text-gray-800 dark:text-gray-200">Seller : {seller.member_code || ''}</div>
+                  <div className="text-sm truncate">{seller.name}</div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400 italic">No Seller Info</div>
+              )}
             </div>
           );
         },
@@ -2922,11 +2923,12 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                 let displayValue: React.ReactNode;
                 const nameDisplayKeys = [
                   "buyer",
-                  "supplier",
+                  "seller",
                   "product",
                   "customer",
                   "created_by_user",
                   "updated_by_user",
+                  "lead_info",
                 ];
                 if ((key === "created_at" || key === "updated_at") && value) {
                   displayValue = dayjs(value).format("DD MMM, YYYY h:mm A");
@@ -2940,14 +2942,14 @@ const LeadsListing = ({ isDashboard }: { isDashboard?: boolean }) => {
                   ) {
                     displayValue = String(value.name);
                   } else {
-                    displayValue = <span className="text-gray-400">-</span>;
+                    return null; // Don't display complex objects without a 'name'
                   }
                 } else if (
                   typeof value === "object" &&
                   value !== null &&
                   !(value instanceof Date)
                 ) {
-                  return null;
+                  return null; // Skip other complex objects
                 } else {
                   displayValue =
                     value === null || value === undefined || value === "" ? (
