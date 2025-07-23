@@ -389,12 +389,12 @@ const AddJobApplicationPage = () => {
                         reset(formData);
                     } else {
                         toast.push(<Notification title="Not Found" type="danger">Job application not found.</Notification>);
-                        navigate('/hr-employees/job-applications');
+                        navigate('/hr-employees/job-application');
                     }
                 } catch (error) {
                     console.error("Error processing application data:", error);
                     toast.push(<Notification title="Error" type="danger">Failed to process application data.</Notification>);
-                    navigate('/hr-employees/job-applications');
+                    navigate('/hr-employees/job-application');
                 } finally {
                     setIsLoadingData(false);
                 }
@@ -473,7 +473,7 @@ const AddJobApplicationPage = () => {
 
     const handleCancel = () => {
         if (isDirty) setCancelConfirmOpen(true);
-        else navigate('/hr-employees/job-applications');
+        else navigate('/hr-employees/job-application');
     };
 
     if (isLoadingData) {
@@ -485,7 +485,7 @@ const AddJobApplicationPage = () => {
             <FormContainer>
                 <form onSubmit={handleSubmit(onSubmitHandler)}>
                     <div className='flex gap-1 items-center mb-3'>
-                        <NavLink to="/hr-employees/job-applications"><h6 className='font-semibold hover:text-primary-600'>Job Applications</h6></NavLink>
+                        <NavLink to="/hr-employees/job-application"><h6 className='font-semibold hover:text-primary-600'>Job Applications</h6></NavLink>
                         <BiChevronRight size={18} className="text-gray-500" />
                         <h6 className='font-semibold text-primary-600'>{isEditMode ? 'Edit Application' : 'Add New Application'}</h6>
                     </div>
@@ -639,7 +639,7 @@ const AddJobApplicationPage = () => {
                 </form>
             </FormContainer>
 
-            <ConfirmDialog isOpen={cancelConfirmOpen} type="warning" title="Discard Changes?" onClose={() => setCancelConfirmOpen(false)} onConfirm={() => { setCancelConfirmOpen(false); reset(); navigate('/hr-employees/job-applications'); }} onCancel={() => setCancelConfirmOpen(false)}>
+            <ConfirmDialog isOpen={cancelConfirmOpen} type="warning" title="Discard Changes?" onClose={() => setCancelConfirmOpen(false)} onConfirm={() => { setCancelConfirmOpen(false); reset(); navigate('/hr-employees/job-application'); }} onCancel={() => setCancelConfirmOpen(false)}>
                 <p>You have unsaved changes. Discard them and leave?</p>
             </ConfirmDialog>
 
