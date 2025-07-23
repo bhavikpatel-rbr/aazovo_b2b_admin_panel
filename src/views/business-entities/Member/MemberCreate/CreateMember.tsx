@@ -3283,11 +3283,7 @@ const MemberCreate = () => {
     id,
     isEditMode,
     navigate,
-    dispatch,
-    ParentCategories,
-    subCategoriesForSelectedCategoryData,
-    CountriesData,
-    ContinentsData
+    dispatch
   ]);
   // --- END: CORRECTED useEffect ---
 
