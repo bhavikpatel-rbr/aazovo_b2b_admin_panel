@@ -271,7 +271,7 @@ const RegistrationSection = ({ control, errors }: FormSectionBaseProps) => {
       uniqueCountriesMap.set(country.id, country);
     });
     return Array.from(uniqueCountriesMap.values()).map((value: any) => ({
-      value: String(value.id),
+      value: value.phone_code,
       label: value.phone_code,
     }));
   }, [CountriesData]);
