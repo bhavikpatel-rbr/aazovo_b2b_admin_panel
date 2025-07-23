@@ -31,7 +31,7 @@ import {
   Avatar,
   Dialog,
   Skeleton,
-} from "@/components/ui"; // Skeleton Imported
+} from "@/components/ui";
 
 // Icons
 import {
@@ -579,6 +579,15 @@ const ActiveFiltersDisplay = ({
           />
         </Tag>
       ))}
+      {filterSubCategoryIds?.map((item) => (
+        <Tag key={`subcat-${item.value}`} prefix>
+            SubCat: {item.label}{' '}
+            <TbX
+                className="ml-1 h-3 w-3 cursor-pointer hover:text-red-500"
+                onClick={() => onRemoveFilter('filterSubCategoryIds', item.value)}
+            />
+        </Tag>
+      ))}
       {filterDepartmentIds?.map((item) => (
         <Tag key={`dept-${item.value}`} prefix>
           Dept: {item.label}{" "}
@@ -719,7 +728,6 @@ const EmailTemplatesListing = () => {
     emailTemplatesData: rawEmailTemplatesData = {},
     ParentCategories: CategoriesData = [],
     subCategoriesForSelectedCategoryData,
-    aetSubCategories = [],
     BrandData = [],
     Roles = [],
     departmentsData = [],
@@ -727,6 +735,7 @@ const EmailTemplatesListing = () => {
   } = useSelector(masterSelector, shallowEqual);
 
   const [initialLoading, setInitialLoading] = useState(true);
+  const [isSubCategoryLoading, setIsSubCategoryLoading] = useState(false);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] =
@@ -770,16 +779,18 @@ const EmailTemplatesListing = () => {
         : [],
     [CategoriesData]
   );
-  const allSubCategoryOptionsForFilter = useMemo(
+
+  const subCategoryOptions = useMemo(
     () =>
-      Array.isArray(aetSubCategories)
-        ? aetSubCategories.map((sc: ApiLookupItem) => ({
+      Array.isArray(subCategoriesForSelectedCategoryData)
+        ? subCategoriesForSelectedCategoryData?.map((sc: ApiLookupItem) => ({
             value: String(sc.id),
             label: sc.name,
           }))
         : [],
-    [aetSubCategories]
+    [subCategoriesForSelectedCategoryData]
   );
+
   const brandOptions = useMemo(
     () =>
       Array.isArray(BrandData)
@@ -821,37 +832,17 @@ const EmailTemplatesListing = () => {
     [designationsData?.data]
   );
 
-  // --- MODIFICATION: Changed value type to string for consistency ---
-  const [subCategoryOptionsForForm, setSubcategoryOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
-
-  // --- MODIFICATION: This effect now correctly populates local state ---
-  useEffect(() => {
-    if (subCategoriesForSelectedCategoryData) {
-      setSubcategoryOptions(
-        subCategoriesForSelectedCategoryData?.map((sc: any) => ({
-          value: String(sc.id), // Ensure value is a string
-          label: sc.name,
-        })) || []
-      );
-    }
-  }, [subCategoriesForSelectedCategoryData]);
-
   useEffect(() => {
     const fetchData = async () => {
       setInitialLoading(true);
       try {
         await Promise.all([
           dispatch(getEmailTemplatesAction()),
-          dispatch(getCategoriesAction()),
           dispatch(getBrandAction()),
           dispatch(getRolesAction()),
           dispatch(getDepartmentsAction()),
           dispatch(getDesignationsAction()),
           dispatch(getParentCategoriesAction()),
-          // Fetch all subcategories initially for the filter dropdown
-          dispatch(getSubcategoriesByCategoryIdAction(0)),
         ]);
       } catch (error) {
         console.error("Failed to fetch initial data", error);
@@ -877,7 +868,7 @@ const EmailTemplatesListing = () => {
     reset,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = formMethods;
   const variablesFieldArray = useFieldArray({ control, name: "variables" });
   const selectedCategoryIdForForm = watch("category_id");
@@ -892,25 +883,62 @@ const EmailTemplatesListing = () => {
     mode: "onChange",
   });
 
-  // --- MODIFICATION: This effect now only runs for the "Add" drawer ---
+  // Effect for handling subcategory logic in the Add/Edit form
   useEffect(() => {
-    // This logic should only apply when creating a NEW template and the user changes the category
-    if (selectedCategoryIdForForm && isAddDrawerOpen) {
-      dispatch(
-        getSubcategoriesByCategoryIdAction(Number(0))
-      );
-      setValue("sub_category_id", null, {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
+    if (!isAddDrawerOpen && !isEditDrawerOpen) return;
+
+    const fetchSubCategories = async (categoryId: string) => {
+      setIsSubCategoryLoading(true);
+      await dispatch(getSubcategoriesByCategoryIdAction(Number(categoryId)));
+      setIsSubCategoryLoading(false);
+    };
+
+    if (selectedCategoryIdForForm) {
+      if (dirtyFields.category_id) {
+        setValue("sub_category_id", null, { shouldDirty: true });
+      }
+      fetchSubCategories(selectedCategoryIdForForm);
+    } else {
+      dispatch(getSubcategoriesByCategoryIdAction(""));
+      setValue("sub_category_id", null, { shouldDirty: true });
     }
-  }, [selectedCategoryIdForForm, isAddDrawerOpen, dispatch, setValue]);
+  }, [
+    selectedCategoryIdForForm,
+    isAddDrawerOpen,
+    isEditDrawerOpen,
+    dirtyFields.category_id,
+    dispatch,
+    setValue,
+  ]);
+
+  // Effect for handling subcategory logic in the Filter drawer
+  const watchedFilterCategoryIds =
+    filterFormMethods.watch("filterCategoryIds");
+  useEffect(() => {
+    if (!isFilterDrawerOpen) return;
+
+    const categoryIds =
+      watchedFilterCategoryIds?.map((item) => item.value) || [];
+
+    if (categoryIds.length > 0) {
+      const categoryIdsString = categoryIds.join(",");
+      dispatch(getSubcategoriesByCategoryIdAction(categoryIdsString));
+    } else {
+      dispatch(getSubcategoriesByCategoryIdAction(""));
+      filterFormMethods.setValue("filterSubCategoryIds", []);
+    }
+  }, [
+    watchedFilterCategoryIds,
+    isFilterDrawerOpen,
+    dispatch,
+    filterFormMethods.setValue,
+  ]);
 
   const openAddDrawer = useCallback(() => {
     reset({
       name: "",
       template_id: "",
-      category_id: categoryOptions[0]?.value || "",
+      category_id: "",
       sub_category_id: null,
       brand_id: null,
       role_id: null,
@@ -922,14 +950,9 @@ const EmailTemplatesListing = () => {
     });
     variablesFieldArray.replace([]);
     setEditingTemplate(null);
-    setSubcategoryOptions([]); // Clear previous options
-    if (categoryOptions[0]?.value) {
-      dispatch(
-        getSubcategoriesByCategoryIdAction(Number(0))
-      );
-    }
+    dispatch(getSubcategoriesByCategoryIdAction("")); // Clear subcategories
     setIsAddDrawerOpen(true);
-  }, [reset, categoryOptions, variablesFieldArray, dispatch]);
+  }, [reset, variablesFieldArray, dispatch]);
 
   const closeAddDrawer = useCallback(() => setIsAddDrawerOpen(false), []);
 
@@ -938,28 +961,25 @@ const EmailTemplatesListing = () => {
     setIsEditDrawerOpen(true);
   }, []);
 
-  // --- MODIFICATION: This is the primary fix for the edit mode issue ---
+  // Correctly populates the edit form, fetching subcategories first
   useEffect(() => {
     if (isEditDrawerOpen && editingTemplate) {
       const populateForm = async () => {
-        setInitialLoading(true); // Show loading state for subcategory select
+        setIsSubCategoryLoading(true);
         const initialCategoryId = String(editingTemplate.category_id);
         try {
-          // 1. Await the subcategories for the correct category ID
           if (initialCategoryId) {
             await dispatch(
-              getSubcategoriesByCategoryIdAction(Number(0))
+              getSubcategoriesByCategoryIdAction(Number(initialCategoryId))
             ).unwrap();
           }
 
-          // 2. NOW, reset the form. The subcategory options will be in the store
-          // and the local state will be updated, allowing the select to find the value.
           reset({
             name: editingTemplate.name,
             template_id: editingTemplate.template_id,
             category_id: initialCategoryId,
             sub_category_id: editingTemplate.sub_category_id
-              ? String(editingTemplate.sub_category_id) // Ensure value is a string
+              ? String(editingTemplate.sub_category_id)
               : null,
             brand_id: editingTemplate.brand_id
               ? String(editingTemplate.brand_id)
@@ -985,7 +1005,7 @@ const EmailTemplatesListing = () => {
             </Notification>
           );
         } finally {
-          setInitialLoading(false); // Hide loading state
+          setIsSubCategoryLoading(false);
         }
       };
       populateForm();
@@ -1216,7 +1236,7 @@ const EmailTemplatesListing = () => {
             String(item.category_id),
           subCategoryName:
             item.sub_category?.name ||
-            allSubCategoryOptionsForFilter.find(
+            subCategoryOptions.find(
               (sc) => sc.value === String(item.sub_category_id)
             )?.label ||
             (item.sub_category_id ? String(item.sub_category_id) : "N/A"),
@@ -1245,12 +1265,24 @@ const EmailTemplatesListing = () => {
       : [];
 
     let processedData = cloneDeep(sourceDataWithDisplayNames);
-    if (filterCriteria.filterStatus?.length) {
-      const statuses = filterCriteria.filterStatus.map((s) => s.value);
-      processedData = processedData.filter((item) =>
-        statuses.includes(item.status)
-      );
+
+    const filterIsActive = (key: keyof FilterFormData) =>
+      filterCriteria[key] && (filterCriteria[key] as any[]).length > 0;
+
+    if (filterIsActive("filterStatus")) {
+        const statuses = filterCriteria.filterStatus!.map((s) => s.value);
+        processedData = processedData.filter((item) => statuses.includes(item.status));
     }
+    if (filterIsActive("filterCategoryIds")) {
+        const ids = new Set(filterCriteria.filterCategoryIds!.map((c) => c.value));
+        processedData = processedData.filter((item) => ids.has(String(item.category_id)));
+    }
+    if (filterIsActive("filterSubCategoryIds")) {
+        const ids = new Set(filterCriteria.filterSubCategoryIds!.map((sc) => sc.value));
+        processedData = processedData.filter((item) => ids.has(String(item.sub_category_id)));
+    }
+    // ... add other filters similarly
+
     if (tableData.query) {
       const q = tableData.query.toLowerCase().trim();
       processedData = processedData.filter((item) =>
@@ -1287,7 +1319,7 @@ const EmailTemplatesListing = () => {
     tableData,
     filterCriteria,
     categoryOptions,
-    allSubCategoryOptionsForFilter,
+    subCategoryOptions,
     brandOptions,
     roleOptions,
     departmentOptions,
@@ -1608,7 +1640,7 @@ const EmailTemplatesListing = () => {
         <FormItem
           label="SubCategory"
           invalid={!!currentErrors.sub_category_id}
-          errorMessage={currentErrors.sub_category_id?.message}
+          errorMessage={currentErrors.sub_category_id?.message as string}
         >
           <Controller
             name="sub_category_id"
@@ -1616,20 +1648,15 @@ const EmailTemplatesListing = () => {
             render={({ field }) => (
               <Select
                 placeholder="Select SubCategory"
-                options={subCategoryOptionsForForm}
-                value={subCategoryOptionsForForm.find(
+                options={subCategoryOptions}
+                value={subCategoryOptions.find(
                   (o) => o.value === field.value
                 )}
                 onChange={(opt) => field.onChange(opt?.value)}
                 isClearable
                 prefix={<TbApps />}
-                // --- MODIFICATION: Improved UX ---
-                isDisabled={
-                  !currentWatch("category_id") ||
-                  initialLoading ||
-                  (isAddDrawerOpen && subCategoryOptionsForForm.length === 0)
-                }
-                loading={initialLoading}
+                isDisabled={!currentWatch("category_id") || isSubCategoryLoading}
+                loading={isSubCategoryLoading}
               />
             )}
           />
@@ -2122,10 +2149,11 @@ const EmailTemplatesListing = () => {
               render={({ field }) => (
                 <Select
                   isMulti
-                  placeholder="Any SubCategory"
-                  options={allSubCategoryOptionsForFilter}
+                  placeholder="Select category first..."
+                  options={subCategoryOptions}
                   value={field.value || []}
                   onChange={(val) => field.onChange(val || [])}
+                  disabled={!watchedFilterCategoryIds || watchedFilterCategoryIds.length === 0}
                 />
               )}
             />
