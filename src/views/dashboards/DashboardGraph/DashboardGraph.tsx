@@ -1,25 +1,22 @@
 import React, { useState, useMemo } from 'react';
 import Chart from 'react-apexcharts';
 
-// --- ENTERPRISE-GRADE MOCK DATA WAREHOUSE ---
+// --- ENTERPRISE-GRADE MOCK DATA WAREHOUSE (Refactored for Leads) ---
 const aazovoEnterpriseData = {
-    financials: {
-        revenueStreams: { "Subscriptions": 1250000, "Commissions": 850000, "Featured Listings": 350000 },
-        revenueQuarters: ['Q1', 'Q2', 'Q3', 'Q4'],
-        revenueByCategory: [
-            { name: 'Industrial Machinery', data: [120, 150, 180, 200] },
-            { name: 'Electronics & Components', data: [100, 110, 130, 160] },
-            { name: 'Construction Materials', data: [80, 85, 90, 105] },
-            { name: 'Business Services', data: [50, 60, 75, 80] },
-        ],
-        arpuHistory: [35, 38, 42, 48, 51, 55], // Avg Revenue Per User
-    },
     sales: {
+        // Core Lead Metrics
         leadsLast30Days: 210, prevLeadsLast30Days: 180,
-        opportunitiesWon: 52,
+        opportunitiesCreated: 75, prevOpportunitiesCreated: 65,
+        opportunitiesWon: 52, prevOpportunitiesWon: 48,
         winRate: 0.247, prevWinRate: 0.22,
         salesCycleDays: 28, prevSalesCycleDays: 32,
-        wonValueBySource: { "Partner Referrals": 850000, "Paid Campaigns": 620000, "Organic Search": 450000, "Direct": 280000 },
+        
+        // Data for Funnel and Source Analysis (by count)
+        leadsBySource: { "Organic Search": 80, "Paid Campaigns": 65, "Partner Referrals": 45, "Direct": 20 },
+        opportunitiesCreatedBySource: { "Organic Search": 30, "Paid Campaigns": 25, "Partner Referrals": 15, "Direct": 5 },
+        wonDealsBySource: { "Partner Referrals": 22, "Paid Campaigns": 15, "Organic Search": 12, "Direct": 3 },
+
+        // Sales Team Performance (unchanged)
         salesTeamPerformance: [
             { name: 'A. Chen', deals: 45, quota: 40 },
             { name: 'B. Singh', deals: 38, quota: 40 },
@@ -30,7 +27,6 @@ const aazovoEnterpriseData = {
     users: {
         totalActiveBuyers: 5200, totalActiveSellers: 1800,
         buyerGrowth: [{ name: 'New Buyers', data: [310, 400, 280, 510] }, { name: 'Returning Buyers', data: [1100, 1250, 1400, 1600] }],
-        // Cohort analysis: % of users from a signup month who are still active in subsequent months
         retentionCohort: [
             { name: 'May-24', data: [100, 65, 55, 48, 45, 42, 41] },
             { name: 'Jun-24', data: [100, 70, 62, 55, 51, 49] },
@@ -43,12 +39,12 @@ const aazovoEnterpriseData = {
     },
     marketplace: {
         dealVolumeByCategory: { "Electronics": 1250, "Industrial": 980, "Textiles": 750, "Chemicals": 550, "Services": 400 },
-        dealVelocityHistory: [45, 42, 38, 35, 32, 28], // Avg days from listing to closed deal
+        dealVelocityHistory: [45, 42, 38, 35, 32, 28],
         wallListingTrend: [
             { name: 'Buy Listings (RFQs)', data: [1200, 1250, 1400, 1500, 1800, 1900] },
             { name: 'Sell Listings', data: [3500, 3600, 3800, 4100, 4200, 4500] }
         ],
-        geoDealData: [{ x: 'USA', y: 1250 }, { x: 'China', y: 980 }, { x: 'Germany', y: 650 }, { x: 'India', y: 550 }, { x: 'Brazil', y: 420 }, { x: 'UK', y: 380 }, { x: 'Vietnam', y: 310 }, { x: 'Canada', y: 280 }],
+        geoDealData: [{ x: 'USA', y: 1250 }, { x: 'China', y: 980 }, { x: 'Germany', y: 650 }, { x: 'India', y: 550 }, { x: 'Brazil', y: 420 }],
     },
     operations: {
         supportTickets: { analysis: [{ name: 'Opened', data: [460, 520] }, { name: 'Resolved', data: [455, 515] }] },
@@ -57,7 +53,7 @@ const aazovoEnterpriseData = {
     }
 };
 
-// --- UI & HELPER COMPONENTS (No major changes needed) ---
+// --- UI & HELPER COMPONENTS (Unchanged) ---
 const DashboardCard = ({ children, gridColumn, style }) => (
     <div style={{ backgroundColor: '#ffffff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e9ecef', gridColumn, display: 'flex', flexDirection: 'column', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', ...style }}>
         {children}
@@ -79,26 +75,20 @@ const KpiCard = ({ title, value, trend, unit = '', color = '#212529' }) => (
     </DashboardCard>
 );
 
-// --- VIEW COMPONENTS ---
+// --- VIEW COMPONENTS (Refactored) ---
 
-const FinancialsView = ({ data }) => (
+const LeadFunnelView = ({ data }) => (
     <>
-        <DashboardCard gridColumn="span 8"><CardHeader title="Quarterly Revenue by Category" />
-            <Chart options={{ chart: { type: 'bar', stacked: true, toolbar: { show: false } }, plotOptions: { bar: { columnWidth: '60%', borderRadius: 5 } }, dataLabels: { enabled: false }, xaxis: { categories: data.revenueQuarters }, yaxis: { labels: { formatter: (val) => `$${val / 1000}k` } }, legend: { position: 'top', horizontalAlign: 'right' } }} series={data.revenueByCategory} type="bar" height={350} />
-        </DashboardCard>
-        <DashboardCard gridColumn="span 4"><CardHeader title="Revenue by Source" subtitle="YTD breakdown" />
-            <Chart options={{ chart: { type: 'donut' }, labels: data.revenueStreams.labels, legend: { position: 'bottom' } }} series={data.revenueStreams.series} type="donut" height={350} />
-        </DashboardCard>
-        <DashboardCard gridColumn="span 12"><CardHeader title="Average Revenue Per User (ARPU)" subtitle="Monthly trend showing user value" />
-            <Chart options={{ chart: { type: 'area', toolbar: { show: false } }, stroke: { curve: 'smooth' }, colors: ['#007bff'], markers: { size: 4 }, yaxis: { labels: { formatter: (val) => `$${val}` } } }} series={[{ name: 'ARPU', data: data.arpuHistory }]} type="area" height={250} />
+        <DashboardCard gridColumn="span 12"><CardHeader title="Lead to Win Funnel by Source" subtitle="Tracking conversion stages across different channels" />
+            <Chart options={{ chart: { type: 'bar', stacked: true, toolbar: { show: false } }, plotOptions: { bar: { columnWidth: '60%', borderRadius: 5 } }, dataLabels: { enabled: false }, xaxis: { categories: data.sourceLabels }, legend: { position: 'top', horizontalAlign: 'right' } }} series={data.funnelSeries} type="bar" height={400} />
         </DashboardCard>
     </>
 );
 
 const SalesView = ({ data }) => (
     <>
-        <DashboardCard gridColumn="span 7"><CardHeader title="Won Deal Value by Lead Source" subtitle="Which channels deliver the most revenue" />
-            <Chart options={{ chart: { type: 'bar' }, plotOptions: { bar: { borderRadius: 4, horizontal: true, distributed: true } }, legend: { show: false }, xaxis: { categories: data?.wonValueBySource?.labels, labels: { formatter: (val) => `$${val / 1000}k` } } }} series={[{ data: data.wonValueBySource.series }]} type="bar" height={350} />
+        <DashboardCard gridColumn="span 7"><CardHeader title="Won Deals by Lead Source" subtitle="Which channels deliver the most closed deals" />
+            <Chart options={{ chart: { type: 'bar' }, plotOptions: { bar: { borderRadius: 4, horizontal: true, distributed: true } }, legend: { show: false }, xaxis: { categories: data?.wonDealsBySource?.labels } }} series={[{ name: 'Won Deals', data: data.wonDealsBySource.series }]} type="bar" height={350} />
         </DashboardCard>
         <DashboardCard gridColumn="span 5"><CardHeader title="Sales Team Performance" subtitle="Deals closed vs. quota" />
             <Chart options={{ chart: { type: 'bar' }, plotOptions: { bar: { columnWidth: '60%' } }, colors: ['#0052cc', '#dc3545'], xaxis: { categories: data.salesTeamPerformance.labels }, yaxis: { title: { text: 'Deals Closed' } }, dataLabels: { enabled: false } }} series={data.salesTeamPerformance.series} type="bar" height={350} />
@@ -134,28 +124,36 @@ const MarketplaceHealthView = ({ data }) => (
 
 // --- THE ENTERPRISE DASHBOARD COMPONENT ---
 const AazovoEnterpriseDashboard = () => {
-    const [activeTab, setActiveTab] = useState('marketplace');
+    const [activeTab, setActiveTab] = useState('sales');
 
     const processedData = useMemo(() => {
-        const { financials, sales, users, marketplace } = aazovoEnterpriseData;
+        const { sales, users, marketplace } = aazovoEnterpriseData;
         const calculateTrend = (current, previous) => (((current - previous) / previous) * 100).toFixed(1);
+
+        const leadSources = Object.keys(sales.leadsBySource);
 
         return {
             kpi: {
-                totalRevenue: { value: Object.values(financials.revenueStreams).reduce((s, v) => s + v, 0) / 1000000, unit: 'M', trend: 8.2, color: '#0052cc' },
-                arpu: { value: financials.arpuHistory.at(-1), unit: '$', trend: 5.8, color: '#007bff' },
+                // REPLACED REVENUE KPIs WITH LEAD KPIs
                 newLeads: { value: sales.leadsLast30Days, trend: calculateTrend(sales.leadsLast30Days, sales.prevLeadsLast30Days), color: '#17a2b8' },
+                opportunitiesWon: { value: sales.opportunitiesWon, trend: calculateTrend(sales.opportunitiesWon, sales.prevOpportunitiesWon), color: '#007bff' },
+                leadConversionRate: { value: ((sales.opportunitiesCreated / sales.leadsLast30Days) * 100).toFixed(1), unit: '%', trend: 8.3, color: '#6f42c1' },
                 winRate: { value: (sales.winRate * 100).toFixed(1), unit: '%', trend: calculateTrend(sales.winRate, sales.prevWinRate), color: '#28a745' },
                 salesCycle: { value: sales.salesCycleDays, unit: ' Days', trend: calculateTrend(sales.salesCycleDays, sales.prevSalesCycleDays) * -1, color: '#ffc107' },
                 dealVelocity: { value: marketplace.dealVelocityHistory.at(-1), unit: ' Days', trend: -7.1, color: '#fd7e14' },
             },
-            financials: {
-                revenueByCategory: financials.revenueByCategory, revenueQuarters: financials.revenueQuarters,
-                revenueStreams: { labels: Object.keys(financials.revenueStreams), series: Object.values(financials.revenueStreams) },
-                arpuHistory: financials.arpuHistory,
+            // NEW LEAD FUNNEL DATA
+            leadFunnel: {
+                sourceLabels: leadSources,
+                funnelSeries: [
+                    { name: 'Leads', data: leadSources.map(s => sales.leadsBySource[s]) },
+                    { name: 'Opportunities', data: leadSources.map(s => sales.opportunitiesCreatedBySource[s]) },
+                    { name: 'Won Deals', data: leadSources.map(s => sales.wonDealsBySource[s]) },
+                ]
             },
             sales: {
-                wonValueBySource: { labels: Object.keys(sales.wonValueBySource), series: Object.values(sales.wonValueBySource) },
+                // UPDATED to show count instead of value
+                wonDealsBySource: { labels: Object.keys(sales.wonDealsBySource), series: Object.values(sales.wonDealsBySource) },
                 salesTeamPerformance: {
                     labels: sales.salesTeamPerformance.map(p => p.name),
                     series: [{ name: 'Deals Closed', data: sales.salesTeamPerformance.map(p => p.deals) }, { name: 'Quota', data: sales.salesTeamPerformance.map(p => p.quota) }]
@@ -175,7 +173,7 @@ const AazovoEnterpriseDashboard = () => {
             <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
                 <div>
                     <h1 style={{ fontSize: '2.25rem', fontWeight: 'bold', margin: 0 }}>Aazovo Enterprise Dashboard</h1>
-                    <p style={{ marginTop: '0.5rem', color: '#6c757d' }}>Strategic Command Center for Marketplace, Sales, and User Analytics</p>
+                    <p style={{ marginTop: '0.5rem', color: '#6c757d' }}>Strategic Command Center for Sales, User, and Marketplace Analytics</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ border: '1px solid #dee2e6', borderRadius: '8px', padding: '0.75rem 1rem', backgroundColor: 'white' }}>Last 30 Days</div>
@@ -185,9 +183,10 @@ const AazovoEnterpriseDashboard = () => {
 
             <main>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                    <KpiCard title="Total Revenue" value={`$${processedData?.kpi?.totalRevenue}`} {...processedData.kpi.totalRevenue} />
-                    <KpiCard title="Monthly ARPU" {...processedData.kpi.arpu} />
+                    {/* UPDATED KPI CARDS */}
                     <KpiCard title="New Leads" {...processedData.kpi.newLeads} />
+                    <KpiCard title="Opportunities Won" {...processedData.kpi.opportunitiesWon} />
+                    <KpiCard title="Lead Conv. Rate" {...processedData.kpi.leadConversionRate} />
                     <KpiCard title="Win Rate" {...processedData.kpi.winRate} />
                     <KpiCard title="Sales Cycle" {...processedData.kpi.salesCycle} />
                     <KpiCard title="Deal Velocity" {...processedData.kpi.dealVelocity} />
@@ -195,18 +194,20 @@ const AazovoEnterpriseDashboard = () => {
 
                 <DashboardCard gridColumn="span 12" style={{ padding: 0 }}>
                     <div style={{ display: 'flex', borderBottom: '1px solid #dee2e6', padding: '0 1.5rem' }}>
-                        {['marketplace', 'users', 'sales', 'financials'].map(tab => (
+                        {/* UPDATED TABS */}
+                        {['sales', 'leadFunnel', 'users', 'marketplace'].map(tab => (
                             <button key={tab} onClick={() => setActiveTab(tab)} style={{
                                 padding: '1rem 1.5rem', border: 'none', background: 'none', cursor: 'pointer',
                                 borderBottom: activeTab === tab ? '3px solid #0052cc' : '3px solid transparent',
                                 fontWeight: activeTab === tab ? 600 : 500,
                                 color: activeTab === tab ? '#0052cc' : '#495057',
                                 textTransform: 'capitalize', fontSize: '1rem'
-                            }}>{tab}</button>
+                            }}>{tab === 'leadFunnel' ? 'Lead Funnel' : tab}</button>
                         ))}
                     </div>
                     <div style={{ padding: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
-                        {activeTab === 'financials' && <FinancialsView data={processedData.financials} />}
+                        {/* UPDATED VIEW RENDERING */}
+                        {activeTab === 'leadFunnel' && <LeadFunnelView data={processedData.leadFunnel} />}
                         {activeTab === 'sales' && <SalesView data={processedData.sales} />}
                         {activeTab === 'users' && <UserAnalyticsView data={processedData.users} />}
                         {activeTab === 'marketplace' && <MarketplaceHealthView data={processedData.marketplace} />}

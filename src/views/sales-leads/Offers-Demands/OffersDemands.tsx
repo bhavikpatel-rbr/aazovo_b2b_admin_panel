@@ -2574,7 +2574,7 @@ const OffersDemands = () => {
         enableSorting: true,
         size: 70,
         cell: (props: CellContext<OfferDemandItem, any>) => (
-          <span className="font-mono text-xs">
+          <span className="font-semibold text-xs">
             {props.row.original.originalApiItem.id}
           </span>
         ),

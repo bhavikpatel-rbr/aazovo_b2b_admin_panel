@@ -23,7 +23,6 @@ import {
   getAllProductAction,
   getMembersAction,
   getOfferById,
-  // MODIFICATION: Import the new action to fetch product price
   getProductPriceAction,
   getProductsAction,
   getProductSpecificationsAction,
@@ -32,11 +31,11 @@ import {
 import { useAppDispatch } from "@/reduxtool/store";
 import { useSelector } from "react-redux";
 
-// --- Zod Schema Definitions (No changes needed to schema) ---
+// --- Zod Schema Definitions ---
 const priceListItemSchema = z.object({
   color: z.string(),
   qty: z.number().optional(),
-  price: z.number().optional(), // Price is now populated programmatically
+  price: z.number().optional(), // Price is now populated programmatically and editable
 });
 
 const productDataSchema = z.object({
@@ -94,9 +93,9 @@ const CreateOffer = () => {
   } = useSelector(masterSelector);
 
   // Memoized Select Options
-  const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: u.name })) : [], [usersData]);
+  const userOptions: OptionType[] = useMemo(() => Array.isArray(usersData) ? usersData.map((u: any) => ({ value: u.id, label: `(${u.employee_id}) - ${u.name || 'N/A'}` })) : [], [usersData]);
   const productOptions: OptionType[] = useMemo(() => Array.isArray(productsMasterData) ? productsMasterData.map((p: any) => ({ value: p.id, label: p.name })) : [], [productsMasterData]);
-  const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label: m.name })) : [], [memberData]);
+  const memberOptions: OptionType[] = useMemo(() => Array.isArray(memberData) ? memberData.map((m: any) => ({ value: m.id, label:`(${m.customer_code}) - ${m.name || 'N/A'}` })) : [], [memberData]);
   const statusOptions: OptionType[] = [{ value: "active", label: "active" }, { value: "non-active", label: "non-active" }];
   const productSpecOptions: OptionType[] = useMemo(() => Array.isArray(ProductSpecificationsData) ? ProductSpecificationsData.map((spec: any) => ({ value: spec.id, label: spec.name })) : [], [ProductSpecificationsData]);
 
@@ -162,70 +161,55 @@ const CreateOffer = () => {
     }
   }, [isEdit, location.state, reset]);
 
-  // --- MODIFICATION: Handle product change, fetch price, and update form state ---
+  // MODIFICATION: Handle product change, fetch price, and update form state for products with/without color
   const handleProductChange = useCallback(async (groupIndex: number, productId: number | null) => {
     setValue(`product_data.${groupIndex}.product_id`, productId);
     
-    // Clear items if product is deselected
     if (!productId) {
       setValue(`product_data.${groupIndex}.items`, []);
       return;
     }
 
-    // Find product details to get available colors
     const productDetails = ProductsData.find((p: any) => parseInt(p.id) === productId);
-    const colors = productDetails?.color?.split(',') || [];
+    const colors = productDetails?.color?.split(',').map((c: string) => c.trim()).filter(Boolean) || [];
     
     let productPrice: number | undefined = undefined;
     try {
-      // Dispatch action to fetch the price for the selected product
       const result = await dispatch(getProductPriceAction(productId)).unwrap();
       if (result.status && result.sales_price) {
         productPrice = parseFloat(result.sales_price);
       } else {
-        toast.push(<Notification title="Warning" type="warning">Could not fetch price for the selected product. It will not be included in calculations.</Notification>);
+        toast.push(<Notification title="Warning" type="warning">Could not fetch price. You can enter it manually.</Notification>);
       }
     } catch (error) {
-       toast.push(<Notification title="Price Error" type="danger">Failed to fetch product price.</Notification>);
+       toast.push(<Notification title="Price Error" type="danger">Failed to fetch product price. You can enter it manually.</Notification>);
        console.error("Failed to fetch product price:", error);
     }
     
-    // Create new items with the fetched price
-    const newItems = colors
-      .map((c: string) => c.trim())
-      .filter(Boolean)
-      .map((color: string) => ({ 
+    let newItems: { color: string; qty?: number; price?: number }[] = [];
+
+    if (colors.length > 0) {
+      newItems = colors.map((color: string) => ({ 
         color, 
         qty: undefined, 
-        price: productPrice // Set the fetched price for each color variant
+        price: productPrice 
       }));
+    } else {
+      newItems = [{
+        color: '', // Empty string signifies no specific color
+        qty: undefined,
+        price: productPrice
+      }];
+    }
 
     setValue(`product_data.${groupIndex}.items`, newItems, { shouldValidate: true });
   }, [dispatch, setValue, ProductsData]);
 
-  const totals = useMemo(() => {
-    let totalQty = 0;
-    let totalPrice = 0;
-    watchedProductGroups.forEach(group => {
-      group.items.forEach(item => {
-        totalQty += item.qty || 0;
-        // Calculation remains correct as item.price is populated from the API
-        totalPrice += (item.qty || 0) * (item.price || 0);
-      });
-    });
-    return { totalQty, totalPrice };
-  }, [watchedProductGroups]);
-
-  // Note generation logic remains correct
+  // MODIFICATION: Reworked note generation for clarity and to include price
   const handleGenerateAndCopyNotes = () => {
     const relevantGroups = watchedProductGroups.filter(
         g => g.product_id && g.items.some(i => i.qty && i.qty > 0)
     );
-
-    if (relevantGroups.length === 0) {
-      toast.push(<Notification title="No Data" type="warning">Enter a quantity for at least one item.</Notification>);
-      return;
-    }
 
     let messageA = "";
     let messageB = "";
@@ -240,26 +224,33 @@ const CreateOffer = () => {
 
         if (itemsWithQty.length > 0) {
             let groupAMessage = `WTS\n${productName}\n`;
-            itemsWithQty.forEach(item => {
-          groupAMessage += `${item.qty}\n`;
-          groupAMessage += `${item.color}\n`;
-            });
-            if (specLabel) groupAMessage += `${specLabel}\n`;
-            groupAMessage += `${productStatus}\n`;
-            messageA += groupAMessage + '\n';
+            let groupBMessage = `WTS\n${productName}\n`;
 
-            let groupBMessage = 'WTS\n';
-            if (itemsWithQty.length > 0) {
-          // Only print product name and price once
-          const price = itemsWithQty[0].price || 0;
-          groupBMessage += `${productName} @$${price.toFixed(2)}\n`;
-          itemsWithQty.forEach(item => {
-              groupBMessage += `${item.qty}\n`;
-              groupBMessage += `${item.color}\n`;
-          });
+            itemsWithQty.forEach(item => {
+                let lineA = `${item.qty}`;
+                if (item.color) {
+                    lineA += ` ${item.color}`;
+                }
+                groupAMessage += lineA + '\n';
+
+                let lineB = `${item.qty}`;
+                if (item.color) {
+                    lineB += ` ${item.color}`;
+                }
+                if (item.price !== undefined) {
+                    lineB += ` @$${item.price.toFixed(2)}`;
+                }
+                groupBMessage += lineB + '\n';
+            });
+
+            if (specLabel) {
+                groupAMessage += `${specLabel}\n`;
+                groupBMessage += `${specLabel}\n`;
             }
-            if (specLabel) groupBMessage += `${specLabel}\n`;
+            groupAMessage += `${productStatus}\n`;
             groupBMessage += `${productStatus}\n`;
+            
+            messageA += groupAMessage + '\n';
             messageB += groupBMessage + '\n';
         }
     });
@@ -269,7 +260,7 @@ const CreateOffer = () => {
     toast.push(<Notification title="Success" type="info">Notes generated and copied below.</Notification>);
   };
 
-  // --- MODIFICATION: Updated form submission logic to map spec_id to product_spec ---
+  // Updated form submission logic
   const onFormSubmit = useCallback(async (data: OfferFormData) => {
     setIsSubmitting(true);
     const apiPayload = {
@@ -279,13 +270,12 @@ const CreateOffer = () => {
       groupB: data.groupB,
       assign_user: data.assign_user,
       product_data: data.product_data
-          .filter(p => p.product_id) // Ensure product is selected
+          .filter(p => p.product_id) 
           .map(group => {
-              // Map the form's 'spec_id' to the API's 'product_spec'
               const { spec_id, ...restOfGroup } = group;
               return {
                   ...restOfGroup,
-                  product_spec: spec_id, // Send spec_id as product_spec
+                  product_spec: spec_id, 
                   items: group.items.filter(item => item.qty && item.qty > 0)
               }
           }),
@@ -389,21 +379,52 @@ const CreateOffer = () => {
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            {/* MODIFICATION: Removed Price column from table header */}
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
+                                    {/* MODIFICATION: Add Price column and set widths */}
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Price</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Qty</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                 {watchedProductGroups[index].items.map((item, itemIndex) => (
                                 <tr key={`${field.id}-item-${itemIndex}`}>
-                                    <td className="px-4 py-3 whitespace-nowrap font-semibold">{item.color}</td>
+                                    <td className="px-4 py-3 whitespace-nowrap font-semibold">{item.color || '-'}</td>
+                                    {/* MODIFICATION: Add editable price input */}
                                     <td className="px-2 py-1 whitespace-nowrap">
-                                      <Controller name={`product_data.${index}.items.${itemIndex}.qty`} control={control} render={({ field }) => <Input {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} value={field.value ?? ''} type="number" size="sm" placeholder="0" />} />
+                                      <Controller
+                                        name={`product_data.${index}.items.${itemIndex}.price`}
+                                        control={control}
+                                        render={({ field }) => (
+                                          <Input
+                                            {...field}
+                                            onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)}
+                                            value={field.value ?? ''}
+                                            type="number"
+                                            size="sm"
+                                            placeholder="0.00"
+                                            step="0.01"
+                                          />
+                                        )}
+                                      />
                                     </td>
-                                    {/* MODIFICATION: Removed Price input column from table body */}
+                                    <td className="px-2 py-1 whitespace-nowrap">
+                                      <Controller
+                                        name={`product_data.${index}.items.${itemIndex}.qty`}
+                                        control={control}
+                                        render={({ field }) => (
+                                          <Input
+                                            {...field}
+                                            onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)}
+                                            value={field.value ?? ''}
+                                            type="number"
+                                            size="sm"
+                                            placeholder="0"
+                                          />
+                                        )}
+                                      />
+                                    </td>
                                 </tr>
                                 ))}
                             </tbody>
@@ -419,10 +440,6 @@ const CreateOffer = () => {
             <Button type="button" variant="outline" icon={<TbFileText />} onClick={handleGenerateAndCopyNotes}>
                 Generate Notes
             </Button>
-            <div className="flex items-center gap-4">
-                {/* <Input value={totals.totalQty} prefix="Total Qty:" className="w-48" /> */}
-                {/* <Input readOnly value={`$${totals.totalPrice.toFixed(2)}`} prefix="Total Price:" className="w-56" /> */}
-            </div>
         </div>
       </Card>
 
