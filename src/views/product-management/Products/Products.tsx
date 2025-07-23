@@ -1707,37 +1707,42 @@ const Products = () => {
 
   const isMounted = useRef(false); // ADDED
   useEffect(() => {
-    if (isMounted.current) {
-      const fetchData = () => {
-        const apiParams: Record<string, any> = {
-          page: tableData.pageIndex,
-          per_page: tableData.pageSize,
-          search: tableData.query,
-          sort_key: tableData.sort.key,
-          sort_order: tableData.sort.order,
-          name_or_sku: filterCriteria.filterNameOrSku,
-          "category_ids[]": filterCriteria.filterCategoryIds,
-          "sub_category_ids[]": filterCriteria.filterSubCategoryIds,
-          "brand_ids[]": filterCriteria.filterBrandIds,
-          status:
-            filterCriteria.filterStatuses
-              ?.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-              ?.join(",") || (currentListTab === TABS.PENDING ? "Pending" : ""),
-        };
-
-        const cleanedParams = Object.fromEntries(
-          Object.entries(apiParams).filter(
-            ([_, v]) =>
-              v != null && v !== "" && (!Array.isArray(v) || v.length > 0)
-          )
-        );
-
-        dispatch(getProductslistingAction(cleanedParams));
-      };
-      fetchData();
-    } else {
-      isMounted.current = true;
-    }
+     const timerId = setTimeout(() => {
+       if (isMounted.current) {
+         const fetchData = () => {
+           const apiParams: Record<string, any> = {
+             page: tableData.pageIndex,
+             per_page: tableData.pageSize,
+             search: tableData.query,
+             sort_key: tableData.sort.key,
+             sort_order: tableData.sort.order,
+             name_or_sku: filterCriteria.filterNameOrSku,
+             "category_ids[]": filterCriteria.filterCategoryIds,
+             "sub_category_ids[]": filterCriteria.filterSubCategoryIds,
+             "brand_ids[]": filterCriteria.filterBrandIds,
+             status:
+               filterCriteria.filterStatuses
+                 ?.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+                 ?.join(",") || (currentListTab === TABS.PENDING ? "Pending" : ""),
+           };
+   
+           const cleanedParams = Object.fromEntries(
+             Object.entries(apiParams).filter(
+               ([_, v]) =>
+                 v != null && v !== "" && (!Array.isArray(v) || v.length > 0)
+             )
+           );
+   
+           dispatch(getProductslistingAction(cleanedParams));
+         };
+         fetchData();
+       } else {
+         isMounted.current = true;
+       }
+    }, 500);
+    return () => {
+      clearTimeout(timerId);
+    };
   }, [dispatch, tableData, filterCriteria, currentListTab]);
 
   // --- MODAL STATE MANAGEMENT (NEW) ---
