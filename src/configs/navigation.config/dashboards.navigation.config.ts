@@ -21,6 +21,22 @@ const dashboardsNavigationConfig: NavigationTree[] = [
             },
         },
         subMenu: [
+              {
+                key: 'dashboard.analytics',
+                path: `${DASHBOARDS_PREFIX_PATH}/dashboard-analytics`,
+                title: 'Analytics',
+                translateKey: 'nav.dashboard.analytics',
+                icon: 'active',
+                type: NAV_ITEM_TYPE_ITEM,
+                authority: [ADMIN, USER],
+                meta: {
+                    description: {
+                        translateKey: 'nav.dashboard.analytics',
+                        label: 'Analytics',
+                    },
+                },
+                subMenu: [],
+            },
             {
                 key: 'dashboard.main',
                 path: `${DASHBOARDS_PREFIX_PATH}/main`,

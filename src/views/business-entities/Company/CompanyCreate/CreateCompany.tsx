@@ -183,7 +183,7 @@ const DocumentPlaceholder = ({ fileName, fileUrl }: { fileName: string; fileUrl:
       className="w-full h-full p-2 flex flex-col items-center justify-center text-center"
     >
       {getFileIcon()}
-      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all truncate">
+      <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all">
         {fileName}
       </p>
     </div>
