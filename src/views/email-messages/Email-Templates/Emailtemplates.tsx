@@ -146,11 +146,8 @@ const statusOptions: SelectOption[] = [
 ];
 
 const variableTypeOptions: SelectOption[] = [
-  { value: "string", label: "String" },
-  { value: "number", label: "Number" },
-  { value: "date", label: "Date" },
-  { value: "boolean", label: "Boolean" },
-  { value: "array", label: "Array" },
+  { value: "text", label: "text" },
+  { value: "image", label: "image" },
 ];
 
 // --- Zod Schema for Add/Edit Email Template Form ---
@@ -159,7 +156,7 @@ const variableSchema = z.object({
     .string()
     .min(1, "Variable name is required.")
     .max(50, "Name too long"),
-  type: z.enum(["string", "number", "date", "boolean", "array"], {
+  type: z.enum(["text", "image"], {
     required_error: "Variable type is required.",
   }),
 });
