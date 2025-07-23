@@ -204,7 +204,7 @@ const WallItemForm = () => {
                   <h5 className="font-semibold mb-4">Editing Wall Item</h5>
                   <div className="grid md:grid-cols-3 gap-4">
                       <FormItem label={<div>Status<span className="text-red-500"> *</span></div>}>
-                        <Controller name="wallItems.0.status" control={formMethods.control} render={({ field }) => (<UiSelect options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
+                        <Controller name="wallItems.0.status" control={formMethods.control} render={({ field }) => (<UiSelect isDisabled={true}  options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={opt => field.onChange(opt?.value)} />)} />
                         {formMethods.formState.errors.wallItems?.[0]?.status && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].status.message}</p>}
                       </FormItem>
                       <FormItem label={<div>Product Name<span className="text-red-500"> *</span></div>}>
@@ -255,7 +255,7 @@ const WallItemForm = () => {
                                 {formMethods.formState.errors.wallItems?.[0]?.member_id && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].member_id.message}</p>}
                             </FormItem>
                             <FormItem label={<div>Status<span className="text-red-500"> *</span></div>}>
-                                <Controller name="wallItems.0.status" control={formMethods.control} render={({ field }) => (<UiSelect options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={opt => syncCommonField('status', opt?.value)} /> )}/>
+                                <Controller name="wallItems.0.status" control={formMethods.control} render={({ field }) => (<UiSelect isDisabled options={statusOptions} value={statusOptions.find(opt => opt.value === field.value)} onChange={opt => syncCommonField('status', opt?.value)} /> )}/>
                                 {formMethods.formState.errors.wallItems?.[0]?.status && <p className="text-red-500 text-xs mt-1">{formMethods.formState.errors.wallItems[0].status.message}</p>}
                             </FormItem>
                             <FormItem label={<div>Product Status<span className="text-red-500"> *</span></div>}>
