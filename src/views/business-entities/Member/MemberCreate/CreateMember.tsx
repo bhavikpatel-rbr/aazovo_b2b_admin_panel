@@ -3211,8 +3211,6 @@ const MemberCreate = () => {
     dispatch(getCompanyAction());
     dispatch(getBrandAction());
     dispatch(getParentCategoriesAction());
-    // Fetch all subcategories by passing 0 or a non-existent ID
-
     dispatch(getUsersAction());
     dispatch(getAllProductAction());
     dispatch(getMemberTypeAction());
@@ -3221,11 +3219,15 @@ const MemberCreate = () => {
   // --- START: CORRECTED useEffect for fetching and transforming data ---
   useEffect(() => {
     const emptyForm = getEmptyFormValues();
+    console.log("isEditMode && id",isEditMode);
+    console.log("isEditMode && id",id);
+    
     if (isEditMode && id) {
       const fetchMemberData = async () => {
         setPageLoading(true);
         try {
           const response = await dispatch(getMemberByIdAction(id)).unwrap();
+
 
           if (response) {
             // After fetching member, fetch their actual company info
@@ -3280,10 +3282,11 @@ const MemberCreate = () => {
         }
       };
 
+      
       // Only fetch data if master data is available, to avoid race conditions
-      if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0 && CountriesData.length > 0 && ContinentsData.length > 0) {
+      // if (ParentCategories.length > 0 && subCategoriesForSelectedCategoryData.length > 0 && CountriesData.length > 0 && ContinentsData.length > 0) {
         fetchMemberData();
-      }
+      // }
     } else {
       setInitialData(emptyForm);
       setPageLoading(false);
